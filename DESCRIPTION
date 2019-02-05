@@ -1,0 +1,19 @@
+Package: invivoPKfit
+Type: Package
+Title: Fits HTTK Models to In Vivo PK Data Sets
+Version: 1.5
+Date: 2018-6-9
+Author: Caroline Ring, John Wambaugh
+Maintainer: John Wambaugh <wambaugh.john@epa.gov>
+Description: Takes in vivo toxicokinietc concentration-time data 
+    and fits parameters of 1-compartment and 2-compartment models for each chemical.
+License: GPL-3
+LazyData: TRUE
+Depends: httk
+Imports: data.table, PK, MASS, minqa, numDeriv, optimx, pracma, scales,
+        ggplot2, RColorBrewer
+Suggests: knitr, gdata, stringr
+RoxygenNote: 5.0.1
+VignetteBuilder: knitr
+NeedsCompilation: no
+Packaged: 2018-07-27 14:45:05 UTC; jwambaug
