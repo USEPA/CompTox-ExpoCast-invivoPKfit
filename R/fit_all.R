@@ -155,13 +155,23 @@ fit_all <- function(data.set,
     PK.fit.table[,Vd.po:=Vd.po*Mean.po.Dose]
 
   } else {
+    params.by.cas <- data.table(CAS=sort(unique(data.set$CAS)),stringsAsFactors=F)
     #get the rat parameters for the 1-compartment model for each chemical
     if (model=='1compartment')
     {
-      params.by.cas <- data.set[, httk::parameterize_1comp(chem.cas=CAS,
-                                                     default.to.human=TRUE,
-                                                     species="Rat"),
-                                by=CAS]
+      if (any(params.by.cas$CAS %in% get_cheminfo()))
+        params.by.cas <- params.by.cas[CAS %in% get_cheminfo(), 
+        httk::parameterize_1comp(chem.cas=CAS,
+        default.to.human=TRUE,
+        species="Rat"),
+        by=CAS]
+# Wambaugh et al. (2018) medians:
+# apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kelim:=0.25]
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Vdist:=5.56]
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=0.31]
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kgutabs:=2.19]
+      
       if (modelfun=="analytic") params.by.cas[, setdiff(names(params.by.cas),
                                                         c("CAS",
                                                           "kelim",
@@ -176,10 +186,18 @@ fit_all <- function(data.set,
     #                                                  default.to.human=TRUE,
     #                                                  species="Rat"),
     #                             by=CAS]
-      tmp <- data.set[, httk::parameterize_1comp(chem.cas=CAS,
-                                                 default.to.human=TRUE,
-                                                 species="Rat"),
-                      by=CAS]
+      if (any(params.by.cas$CAS %in% get_cheminfo()))
+        params.by.cas <- params.by.cas[CAS %in% get_cheminfo(), 
+        httk::parameterize_1comp(chem.cas=CAS,
+        default.to.human=TRUE,
+        species="Rat"),
+        by=CAS]
+# Wambaugh et al. (2018) medians:
+# apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kelim:=0.25]
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Vdist:=5.56]
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=0.31]
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kgutabs:=2.19]
       params.by.cas <- tmp[, .(CAS, Vdist,kelim, Rblood2plasma,
                                MW, hematocrit, million.cells.per.gliver)]
       #Since we don't yet have 2comp predictions,
@@ -199,15 +217,8 @@ fit_all <- function(data.set,
                                                           "V1",
                                                           "Fgutabs",
                                                           "kgutabs")):=NULL]
-                                                        
-     
     }
-    
-    
-    
-    data.set <- merge(data.set,
-                      params.by.cas,
-                      by='CAS')
+    data.set <- merge(data.set,params.by.cas,by="CAS")
     paramnames <- names(params.by.cas)
     paramnames <- paramnames[paramnames!='CAS']
     #Replace spaces in references with "."

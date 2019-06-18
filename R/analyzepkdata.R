@@ -83,6 +83,7 @@ analyze.pk.data <- function(fitdata,
   {
     elim.data <- subset(fitdata,Route=="iv"&!is.na(Value))
     elim.data$Value <- elim.data$Value/elim.data$Dose
+    elim.data <- subset(elim.data,Dose>0)
     opt.params["kelim"] <- log(max(-lm(log(Value) ~ Time,data=elim.data)$coefficients["Time"],0.0001))
     if (is.na(opt.params["kelim"])) opt.params["kelim"] <- log(1)
     Vd.data <- subset(elim.data,Time==min(Time))
@@ -103,6 +104,7 @@ analyze.pk.data <- function(fitdata,
   } else if ("po" %in% fitdata$Route) {
     elim.data <- subset(fitdata,Route=="po"&!is.na(Value))
     elim.data$Value <- elim.data$Value/elim.data$Dose
+    elim.data <- subset(elim.data,Dose>0)
     max.time <- as.numeric(elim.data[Value==max(Value),"Time"])
     elim.data <- subset(elim.data,Time>=max.time)
     opt.params["kelim"] <- log(max(-lm(log(Value) ~ Time,data=elim.data)$coefficients["Time"],0.0001))
