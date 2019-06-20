@@ -30,6 +30,9 @@ analyze.pk.data <- function(fitdata,
 
   cat(paste("Optimizing data for CAS-RN ",this.cas,"\n",sep=""))
 
+  #Set a plausible upper bound for sigma:
+  MAXSIGMA <- 3*mean(fitdata$Value,na.rm=T)
+
   #Initialize output table with HTTK-predicted parameter values
   out.dt <- fitdata[1,paramnames, with=FALSE]
   out.dt[, param.value.type:='Predicted']
@@ -52,7 +55,7 @@ analyze.pk.data <- function(fitdata,
   these.params[sapply(refs,
                       function(x) paste('sigma2',
                                         x,
-                                        sep='.'))] <- rep(0.2,
+                                        sep='.'))] <- rep(MAXSIGMA/10,
                                                           length(refs))
   
   #log-transform the model parameters
@@ -195,7 +198,7 @@ analyze.pk.data <- function(fitdata,
 
   #specify upper bounds of params to optimize (on a log scale!!)
   upper[] <- log(1000)
-  upper[regexpr("sigma",names(upper))!=-1]<-log(3) 
+  upper[regexpr("sigma",names(upper))!=-1]<-log(MAXSIGMA) 
   if (model=='2compartment'){
     upper["Ralphatokelim"] <- log(100)
     upper["Fbetaofalpha"] <- log(0.75) #on a log scale!
@@ -290,7 +293,7 @@ analyze.pk.data <- function(fitdata,
     #then redo optimization
   #  if ("Fgutabs" %in% names(opt.params)) browser()
     opt.params <- ln.means+runif(length(ln.means),-0.1,0.1)
-    opt.params[regexpr("sigma",names(opt.params))!=-1] <- log(1)
+    opt.params[regexpr("sigma",names(opt.params))!=-1] <- opt.params[regexpr("sigma",names(opt.params))!=-1]+1
     opt.params[opt.params<=lower] <- lower[opt.params<=lower]+0.1
     opt.params[opt.params>=upper] <- upper[opt.params>=upper]-0.1
     
@@ -386,7 +389,7 @@ analyze.pk.data <- function(fitdata,
 
   # If any of the parameters were not optimized or if the the model does not fit well:
 #  if (any(ln.means==as.vector(opt.params[names(ln.means)])) | any(sigmas>1))
-  if (any(ln.means==as.vector(orig.params[names(ln.means)])) | any(sigmas>1))
+  if (any(ln.means==as.vector(orig.params[names(ln.means)])) | any(sigmas>MAXSIGMA))
   {
     out.dt[,LogLikelihood:=0]
     out.dt[,AIC:=Inf]

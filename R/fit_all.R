@@ -265,33 +265,29 @@ fit_all <- function(data.set,
     PK.fit.table <- PK.fit.bind
     if (model=="1compartment")
     {
-      
-      #Get HTTK-predicted total clearance for each CAS    L/h/kg BW
-      PK.fit.table[param.value.type=="Predicted",
-                   CLtot:=httk::calc_total_clearance(chem.cas=CAS,
-                                               species="Rat",
-                                               default.to.human=TRUE,
-                                               suppress.messages=TRUE),
-                   by=CAS]
+      if (any(PK.fit.table$CAS %in% get_cheminfo()))
+      {
+        #Get HTTK-predicted total clearance for each CAS    L/h/kg BW
+        PK.fit.table[param.value.type=="Predicted" &
+          CAS %in% get_cheminfo(),
+          CLtot:=httk::calc_total_clearance(chem.cas=CAS,
+  # Need to fix this:
+          species="Rat",
+          default.to.human=TRUE,
+          suppress.messages=TRUE),
+                     by=CAS]
+      } else {
+        PK.fit.table[param.value.type=="Predicted" &
+          !(CAS %in% get_cheminfo()),
+          CLtot:=as.numeric(NA),by=CAS]
+      }
   
       #Get stats for fitted total clearance :    L/kg body weight/h
       PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
                                            "Fitted geometric mean",
                                            "Fitted mode"),
                    CLtot:=Vdist*kelim]
-  #    PK.fit.table[param.value.type %in% c("Fitted arithmetic std dev",
-  #                                         "Fitted geometric std dev"),
-  #                 CLtot:=sqrt(Vdist^2+kelim^2)]
   
-      #Get HTTK-predicted Css for 1-compartment model
-      PK.fit.table[param.value.type=="Predicted",
-                   Css:=httk::calc_analytic_css(chem.cas=CAS,
-                                          species="Rat",
-                                          output.units='mg/L',
-                                          model='1compartment',
-                                          default.to.human=TRUE,
-                                          suppress.messages=TRUE),
-                   by=CAS]
   
       #Get statistics for Css from fitted CLtot values
       #Get stats for fitted total clearance:
@@ -359,16 +355,28 @@ fit_all <- function(data.set,
       #the 1 in the denominator = time interval between doses = 1 day
       PK.fit.table[param.value.type!="Predicted",
                    Css:=(Fgutabs*1)/(CLtot*24)]
-      PK.fit.table[param.value.type=="Predicted",
-                   Css:=httk::calc_analytic_css(chem.cas=CAS,
-                                                species="Rat",
-                                                output.units='mg/L',
-                                                model='1compartment',
-                                                default.to.human=TRUE,
-                                                suppress.messages=TRUE),
-                   by=CAS]
+
     }
-  }
+    
+    if (any(PK.fit.table$CAS %in% get_cheminfo()))
+    {
+      #Get HTTK-predicted Css
+      PK.fit.table[param.value.type=="Predicted" &
+        CAS %in% get_cheminfo(),
+        Css:=httk::calc_analytic_css(chem.cas=CAS,
+# Fix this:
+        species="Rat",
+        output.units='mg/L',
+        model=model,
+        default.to.human=TRUE,
+        suppress.messages=TRUE),
+        by=CAS]
+    } else {
+      PK.fit.table[param.value.type=="Predicted" &
+        !(CAS %in% get_cheminfo()),
+        Css:=as.numeric(NA),by=CAS]
+    }
+}
   
   return(PK.fit.table)
 }
