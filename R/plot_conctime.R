@@ -1,13 +1,39 @@
-#written by Caroline Ring
-#modified by John Wambaugh
-
+#' plot_conctime
+#'
+#' Creates a PDF of the fits from \code{\link{fit_all}} and data together
+#'
+#' @param PK.fit.table Table of parameter estimates from \code(\link(fit_all))
+#' @param data.set A data.table of concentration vs. time data for a given
+#'  chemical
+#' @param model Analytic model to evaluate. Currently only "1compartment" or
+#'  "2compartment" are implemented.
+#' @param mean.type (Defaults to fitted geometric mean")
+#' @param factor.list Evaluate model separately for each combination of 
+#'  'chemical, source lab, nominal dose, and route
+#'
+#' @return None
+#'
+#' @import RColorBrewer
+#' #import scale 
+#' @depends ggplot2
+#'
+#' @export
+#'
+#' @author{Caroline Ring, John Wambaugh}
 plot_conctime <- function(PK.fit.table,
                           data.set,
                           model,
-                          mean.type="Fitted geometric mean")
+                          mean.type="Fitted geometric mean".
+                          factor.list=c(Compound, 
+                                    Data.Analyzed, 
+                                    Dose.nominal, 
+                                    Route,
+                                    fit,
+                                    param.value.type,
+                                    LOQ))
 {
   scientific_10 <- function(x) {                                  
-    out <- gsub("1e", "10^", scientific_format()(x))              
+    out <- gsub("1e", "10^", scales::scientific_format()(x))              
     out <- gsub("\\+","",out)                                     
     out <- gsub("10\\^01","10",out)                               
     out <- parse(text=gsub("10\\^00","1",out))                    
@@ -90,12 +116,7 @@ plot_conctime <- function(PK.fit.table,
                                                         kelim=kelim,
                                                         kgutabs=kgutabs,
                                                         Fgutabs=Fgutabs)), 
-                               by=.(Compound, #eval model separately for each combination of chemical, source lab, nominal dose, and route
-                                    Data.Analyzed, 
-                                    Dose.nominal, 
-                                    Route,
-                                    param.value.type,
-                                    LOQ)]
+                               by=.(factor.list)]
   } else if (model == "2compartment"){
     bestfit.invivo<-PK.fit.merge[, 
                                  evalfun(model=unique(model),
@@ -122,7 +143,7 @@ plot_conctime <- function(PK.fit.table,
   bestfit.invivo[Ccompartment<0,Ccompartment:=0]
   
   num.cols <-max(PK.fit.merge[,length(unique(Data.Analyzed)),by=Compound]$V1)
-  colvals <- brewer.pal(n=num.cols,name='Set2')
+  colvals <- RColorBrewer::brewer.pal(n=num.cols,name='Set2')
   shapevals <- rep(21,length(colvals))
   if (model=="1compartment")
   {

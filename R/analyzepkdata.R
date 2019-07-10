@@ -1,6 +1,3 @@
-#written by Caroline Ring
-#modified by John Wambaugh
-#
 #'Actually does the fitting
 #'
 #'Fits model parameters to concentration vs. time data for a given chemical
@@ -13,6 +10,8 @@
 #'  the full ODE model
 #'@param model The model to fit, either "1compartment" or "2compartment" (other
 #'  models not implemented for now)
+#'
+#' @author Caroline Ring, John Wambaugh
 #'
 #'@return A single row of fitted parameter values (arithmetic means, geometric
 #'  means, modes, arithmetic standard deviations, and geometric standard

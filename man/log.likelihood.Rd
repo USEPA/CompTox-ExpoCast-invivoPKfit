@@ -4,13 +4,12 @@
 \alias{log.likelihood}
 \title{The log-likelihood function used for fitting}
 \usage{
-\method{log}{likelihood}(params, dt = NULL, modelfun = "full",
-  model = "1compartment")
+\method{log}{likelihood}(params, DT, modelfun, model)
 }
 \arguments{
 \item{params}{A named list of parameter values}
 
-\item{dt}{Concentration-time data for a given chemical}
+\item{DT}{Concentration-time data for a given chemical}
 
 \item{modelfun}{"analytic" to use the analytic model solution, "full" to use
 the full ODE model}
@@ -23,4 +22,3 @@ the full ODE model}
 \description{
 The log-likelihood function used for fitting
 }
-

@@ -4,7 +4,7 @@
 \alias{fit_all}
 \title{Main fitting function}
 \usage{
-fit_all(data.set, model = "1compartment", modelfun = "analytic")
+fit_all(data.set, model, modelfun = NA)
 }
 \arguments{
 \item{data.set}{A table of concentration-time data. Preferably
@@ -25,4 +25,6 @@ A data.table of fitted parameter values for each chemical.
 Fits parameters of a specified model to concentration-time data given in
 data.set
 }
-
+\author{
+Caroline Ring, John Wambaugh
+}

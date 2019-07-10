@@ -4,8 +4,8 @@
 \alias{fitfun}
 \title{Compute model-predicted concentration values for a vector of time values}
 \usage{
-fitfun(design.times, design.dose, design.iv, design.times.max, design.time.step,
-  modelfun, model, model.params)
+fitfun(design.times, design.dose, design.iv, design.times.max,
+  design.time.step, modelfun, model, model.params)
 }
 \arguments{
 \item{design.times}{A vector of times from the design matrix}
@@ -23,7 +23,9 @@ ODE model}
 
 \item{model}{"1compartment" or "2compartment"}
 
-\item{model.params}{A named vector of model parameter values.}
+\item{model.params}{A named vector of model parameter values.
+      
+author Caroline Ring, John Wambaugh}
 }
 \value{
 A vector of the model-predicted plasma concentration values of the
@@ -32,4 +34,3 @@ A vector of the model-predicted plasma concentration values of the
 \description{
 Compute model-predicted concentration values for a vector of time values
 }
-

@@ -1,6 +1,3 @@
-#written by Caroline Ring
-#modified by John Wambaugh
-#
 #' Main fitting function
 #'
 #' Fits parameters of a specified model to concentration-time data given in
@@ -16,6 +13,8 @@
 #'   faster).
 #'
 #' @return A data.table of fitted parameter values for each chemical.
+#'
+#' @author Caroline Ring, John Wambaugh
 #'
 #' @export
 

@@ -8,8 +8,8 @@
 #'   (\code{iv.dose} FALSE), \code{params} must also include: \describe{ 
 #'   \item{Fgutabs}{Oral bioavailability} \item{kgutabs}{Rate of absorption from
 #'   gut} }
-#written by Caroline Ring
-#modified by John Wambaugh
+#'
+#' author Caroline Ring, John Wambaugh
 #
 #' @param time A vector of time values, in hours
 #' @param dose A dose in mg/kg
