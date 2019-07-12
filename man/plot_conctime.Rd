@@ -5,7 +5,9 @@
 \title{plot_conctime}
 \usage{
 plot_conctime(PK.fit.table, data.set, model,
-  mean.type = "Fitted geometric mean")
+  mean.type = "Fitted geometric mean", factor.list = c("Compound",
+  "Data.Analyzed", "Dose.nominal", "Route", "fit", "param.value.type",
+  "LOQ"))
 }
 \arguments{
 \item{PK.fit.table}{Table of parameter estimates from \code(\link(fit_all))}
@@ -14,8 +16,12 @@ plot_conctime(PK.fit.table, data.set, model,
 chemical}
 
 \item{model}{Analytic model to evaluate. Currently only "1compartment" or
- "2compartment" are implemented.
-#param mean.type (Defaults to fitted geometric mean")}
+"2compartment" are implemented.}
+
+\item{mean.type}{(Defaults to fitted geometric mean")}
+
+\item{factor.list}{Evaluate model separately for each combination of 
+'chemical, source lab, nominal dose, and route}
 }
 \value{
 None

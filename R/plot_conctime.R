@@ -7,15 +7,24 @@
 #'  chemical
 #' @param model Analytic model to evaluate. Currently only "1compartment" or
 #'  "2compartment" are implemented.
-#' @param mean.type (Defaults to fitted geometric mean")
-#' @param factor.list Evaluate model separately for each combination of 
-#'  'chemical, source lab, nominal dose, and route
+#' @param mean.type (Defaults to fitted geometric mean)
+#' @param fit.factors Add a trend-line using the fit for each combination of the
+#'  factors listed in this character vector. (defaults to Compound, 
+#'  Dose.nominal, Data.Analyzed, and Route)
+#' @param plot.split.factor For each compound, make a separate plot for each
+#'  unique value of this factor (defaults to Route)
+#' #param shape.factor Indicate this factor by shape in the plots (defaulta to
+#'  Data.Analyzed)
+#' @param color.factor Indicate this factor by color in the plots (defaults to
+#'  Data.Analyzed')
+#' @param Add a curve for the HTTK predictions, if available (default = FALSE)
+#' @param omit.zero Drop zero dose values from plots (default = TRUE)
 #'
 #' @return None
 #'
 #' @import RColorBrewer
-#' #import scale 
-#' @depends ggplot2
+#' @importfrom scales scientific_format
+#' @import ggplot2
 #'
 #' @export
 #'
@@ -23,14 +32,17 @@
 plot_conctime <- function(PK.fit.table,
                           data.set,
                           model,
-                          mean.type="Fitted geometric mean".
-                          factor.list=c(Compound, 
-                                    Data.Analyzed, 
-                                    Dose.nominal, 
-                                    Route,
-                                    fit,
-                                    param.value.type,
-                                    LOQ))
+                          mean.type="Fitted geometric mean",
+                          fit.factors=c("Compound", 
+                                    "Data.Analyzed", 
+                                    "Dose.nominal", 
+                                    "Route",
+                                    "LOQ"),
+                          plot.split.factor="Route",
+                          shape.factor="Data.Analyzed",
+                          color.factor="Data.Analyzed",
+                          plot.httk.pred=F,
+                          omit.zero=T)
 {
   scientific_10 <- function(x) {                                  
     out <- gsub("1e", "10^", scales::scientific_format()(x))              
@@ -40,7 +52,9 @@ plot_conctime <- function(PK.fit.table,
   }  
 
   data.set <- copy(data.set)
-  if (model=="1compartment")
+  if (omit.zero) data.set <- data.set[Dose>0,]
+  
+  if (plot.httk.pred)
   {
      PK.fit.table <- copy(PK.fit.table[param.value.type %in% c("Predicted",
                                                             mean.type), ])
@@ -54,7 +68,7 @@ plot_conctime <- function(PK.fit.table,
   #(e.g. 5.11=5.1, 5.26=5.2, 1.01=1.0,0.98=1.0, etc.)
   data.set[, 
            Dose.nominal:=round(mean(Dose), digits=1),
-           by=.(Compound, CAS, Source, Route)]
+           by=.(Compound, CAS, Source, Route, Dose)]
   data.set[, Dose.nominal.units.type:=paste(Dose.nominal, "mg/kg", Route)]
   setkey(data.set, Compound, CAS, Source)
   #Replace spaces in data.set references with periods, to match PK.fit.table style
@@ -80,7 +94,7 @@ plot_conctime <- function(PK.fit.table,
                         PK.fit.table,
                         by=intersect(names(data.set), names(PK.fit.table)),
                         allow.cartesian=TRUE,all.y=T)
-  
+                                       
   #create a nominal dose + route column for labeling plots later
   PK.fit.merge[, studyid.nominal:=paste(Dose.nominal, 'mg/kg', Route)]
  # PK.fit.merge<-PK.fit.merge[!is.na(Time),]
@@ -116,7 +130,7 @@ plot_conctime <- function(PK.fit.table,
                                                         kelim=kelim,
                                                         kgutabs=kgutabs,
                                                         Fgutabs=Fgutabs)), 
-                               by=.(factor.list)]
+                               by=fit.factors]
   } else if (model == "2compartment"){
     bestfit.invivo<-PK.fit.merge[, 
                                  evalfun(model=unique(model),
@@ -131,25 +145,21 @@ plot_conctime <- function(PK.fit.table,
                                                     V1=V1,
                                                     kgutabs=kgutabs,
                                                     Fgutabs=Fgutabs)), 
-                                 by=.(Compound, #eval model separately for each combination of chemical, source lab, nominal dose, and route
-                                      Data.Analyzed, 
-                                      Dose.nominal, 
-                                      Route,
-                                      param.value.type,
-                                      LOQ)]
+                                 by=fit.factors]
   }
   bestfit.invivo[, studyid.nominal:=paste(Dose.nominal, 'mg/kg', Route)]
-  bestfit.invivo[param.value.type=="Predicted", Data.Analyzed:="in vitro predicted"]
+  if (plot.httk.pred) bestfit.invivo[param.value.type=="Predicted", 
+    Data.Analyzed:="in vitro predicted"]
   bestfit.invivo[Ccompartment<0,Ccompartment:=0]
   
-  num.cols <-max(PK.fit.merge[,length(unique(Data.Analyzed)),by=Compound]$V1)
-  colvals <- RColorBrewer::brewer.pal(n=num.cols,name='Set2')
-  shapevals <- rep(21,length(colvals))
-  if (model=="1compartment")
+# Select optimal colors
+  colorvals <- RColorBrewer::brewer.pal(n=max(PK.fit.merge[,
+    length(unique(color.factor)),by=Compound]$V1),name='Set2')
+
+  if (plot.httk.pred)
   {
-    colvals <- c('grey',colvals)
-    names(colvals)[1] <- 'in vitro predicted'
-    shapevals <- c(NA, shapevals)
+    colorvals <- c('grey',colorvals)
+    names(colorvals)[1] <- 'in vitro predicted'
   }
   
   pdf(paste(gsub(" ","",model),"-",gsub(" ","",mean.type),"-",Sys.Date(),".pdf",sep=""))
@@ -163,47 +173,46 @@ plot_conctime <- function(PK.fit.table,
     
     max.conc <- 10^ceiling(log10(max(unique(as.numeric(PK.fit.merge[Compound==cm,]$Value)),na.rm=T)))
 
-    num.cols <- length(unique(PK.fit.merge[Compound==cm,Data.Analyzed]))
-    plotted.data <- sort(unique(PK.fit.merge[Compound==cm,Data.Analyzed]))
-    if (model=="1compartment")
+    plotted.data <- sort(unique(PK.fit.merge[Compound==cm,(color.factor)]))
+    if (plot.httk.pred)
     {
-      
-      names(colvals)[2:(1+length(plotted.data))] <- plotted.data
+      names(colorvals)[2:(1+length(plotted.data))] <- plotted.data
     } else {
-      names(colvals) <- plotted.data
+      names(colorvals) <- plotted.data
     }
-    names(shapevals) <- names(colvals)
- #   if ("Joint Analysis" %in% names(shapevals)) shapevals["Joint Analysis"] <- NA
     
     if (is.finite(PK.fit.merge[Compound==cm,]$AIC[1]))
     {
       
-      p <- ggplot(data=bestfit.invivo[Compound==cm, ]) +
+      p <- ggplot2::ggplot(data=bestfit.invivo[Compound==cm, ]) +
         ggtitle(paste(cm," (",model,")",sep=""))+
-        geom_line(aes(x=time, y=Ccompartment, color=Data.Analyzed)) +
+        geom_line(aes(x=time, y=Ccompartment, color=color.factor)) +
         geom_point(data=PK.fit.merge[Compound==cm&Data.Analyzed!="Joint Analysis",], 
-                   aes(x=Time, y=Value, color=Data.Analyzed, shape=Data.Analyzed), size=3) +
+                   aes(x=Time, y=Value, 
+                   color=color.factor, 
+                   shape=shape.factor), 
+                   size=3) +
         facet_wrap(facets=~studyid.nominal, scales="free") +
         geom_hline(aes(yintercept=2*mean(LOQ)),color="Blue",linetype="dashed")+
-        annotate("text",x=(max.time+min.time)/2,y=2*mean(bestfit.invivo[Compound==cm,"LOQ"]),label="Limit of Quantitiation")+
+        annotate("text",x=(max.time+min.time)/2,
+          y=2*mean(bestfit.invivo[Compound==cm,"LOQ"]),
+          label="Limit of Quantitiation")+
         scale_x_continuous(limits = c(min.time,max.time)) +
         scale_y_log10(label=scientific_10,limits=c(min.conc,max.conc)) + 
-        scale_color_manual(values=colvals) +
-        scale_shape_manual(values=shapevals,guide=F)+
+        scale_color_manual(values=colorvals) +
         xlab("Time (h)") + ylab("Concentration (mg/L)") + 
         theme_bw() +
         theme(aspect.ratio = 1)
     } else {
-      p <- ggplot(data=PK.fit.merge[Compound==cm,]) +
+      p <- ggplot2::ggplot(data=PK.fit.merge[Compound==cm,]) +
         ggtitle(paste(cm," (",model,"): Optimizer Failed, No Curve Fit",sep=""))+
-        geom_point(aes(x=Time, y=Value, color=Data.Analyzed, shape=Data.Analyzed), size=3) +
+        geom_point(aes(x=Time, y=Value, color=color.factor, shape=shape.factor), size=3) +
         facet_wrap(facets=~studyid.nominal, scales="free") +
         geom_hline(aes(yintercept=2*mean(LOQ)),color="Blue",linetype="dashed")+
         annotate("text",x=(max.time+min.time)/2,y=2*mean(bestfit.invivo[Compound==cm,"LOQ"]),label="Limit of Quantitiation")+
         scale_x_continuous(limits = c(min.time,max.time)) +
         scale_y_log10(label=scientific_10,limits=c(min.conc,max.conc)) + 
-        scale_color_manual(values=colvals) +
-        scale_shape_manual(values=shapevals,guide=F)+
+        scale_color_manual(values=colorvals) +
         xlab("Time (h)") + ylab("Concentration (mg/L)") + 
         theme_bw() +
         theme(aspect.ratio = 1) 
