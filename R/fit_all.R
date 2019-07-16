@@ -11,6 +11,9 @@
 #'   analytic solution to the model, or the full ODE model. Presently,
 #'   "analytic" is recommended (because the analytic solution is exact and much
 #'   faster).
+#' #param ratio between the weights used to report the data and the weights used 
+#'   for the dose. For example, ug/L data and mg/kg/day dose would be 0.001
+#'   (defaults to 1) 
 #'
 #' @return A data.table of fitted parameter values for each chemical.
 #'
@@ -20,11 +23,15 @@
 
 fit_all <- function(data.set,
                     model,
-                    modelfun=NA)
+                    modelfun=NA,
+                    ratio.data.to.dose=1)
 {
 
   data.set <- data.table::copy(data.set)
 
+  # This way the weight units cancel (must still pay attention to denominator
+  # of data to determine units for Vd):
+  data.set[,Value:=Value*ratio.data.to.dose]
   
   #Ignore data close to LOQ:
   data.set[Value<2*LOQ,Value:=NA]

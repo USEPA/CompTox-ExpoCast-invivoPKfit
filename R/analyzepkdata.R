@@ -196,7 +196,7 @@ analyze.pk.data <- function(fitdata,
   upper <- unlist(opt.params)
 
   #specify upper bounds of params to optimize (on a log scale!!)
-  upper[] <- log(1000)
+  upper[] <- log(1e6)
   upper[regexpr("sigma",names(upper))!=-1]<-log(MAXSIGMA) 
   if (model=='2compartment'){
     upper["Ralphatokelim"] <- log(100)
