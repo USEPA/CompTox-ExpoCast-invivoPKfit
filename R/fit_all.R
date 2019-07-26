@@ -322,7 +322,22 @@ fit_all <- function(data.set,
                                            "Fitted geometric mean",
                                            "Fitted mode"),
                    tpeak.oral:=log(kgutabs/kelim)/(kgutabs-kelim)]
-     
+ 
+       PK.fit.table[param.value.type %in% c("Predicted",
+                                           "Fitted arithmetic mean",
+                                           "Fitted geometric mean",
+                                           "Fitted mode"),
+                   Cpeak.oral.1mgkg:=analytic_1comp_fun(
+                     params=list(
+                       Fgutabs = 1,
+                       kgutabs = kgutabs,
+                       kelim =kelim,
+                       Vdist = Vdist
+                       ),
+                     dose=1, 
+                     tpeak.oral, 
+                     iv.dose=F)[,"Ccompartment"]]
+    
     } else if(model=="2compartment")
     {
       PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
