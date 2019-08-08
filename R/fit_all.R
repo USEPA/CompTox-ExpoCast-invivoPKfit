@@ -25,7 +25,11 @@ fit_all <- function(data.set,
 {
 
   data.set <- data.table::copy(data.set)
-
+  if (is.character(class(data.set$Dose)))
+  {
+    cat("Column \"Dose\" converted to numeric.")
+    data.set$Dose <- as.numeric(data.set$Dose)
+  }
   
   #Ignore data close to LOQ:
   data.set[Value<2*LOQ,Value:=NA]
