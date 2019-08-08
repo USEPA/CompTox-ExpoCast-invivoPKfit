@@ -1,3 +1,6 @@
+#written by Caroline Ring
+#modified by John Wambaugh
+#
 #'Compute model-predicted concentration values for a vector of time values
 #'
 #'@param design.times A vector of times from the design matrix
@@ -9,8 +12,6 @@
 #'  ODE model
 #'@param model "1compartment" or "2compartment"
 #'@param model.params A named vector of model parameter values.
-#'       
-#' author Caroline Ring, John Wambaugh
 #'
 #'@return A vector of the model-predicted plasma concentration values of the
 #'  same length as design.times, for each time in design.times

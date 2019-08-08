@@ -1,3 +1,6 @@
+#written by Caroline Ring
+#modified by John Wambaugh
+#
 #'Actually does the fitting
 #'
 #'Fits model parameters to concentration vs. time data for a given chemical
@@ -10,8 +13,6 @@
 #'  the full ODE model
 #'@param model The model to fit, either "1compartment" or "2compartment" (other
 #'  models not implemented for now)
-#'
-#' @author Caroline Ring, John Wambaugh
 #'
 #'@return A single row of fitted parameter values (arithmetic means, geometric
 #'  means, modes, arithmetic standard deviations, and geometric standard
@@ -196,7 +197,7 @@ analyze.pk.data <- function(fitdata,
   upper <- unlist(opt.params)
 
   #specify upper bounds of params to optimize (on a log scale!!)
-  upper[] <- log(1e6)
+  upper[] <- log(1000)
   upper[regexpr("sigma",names(upper))!=-1]<-log(MAXSIGMA) 
   if (model=='2compartment'){
     upper["Ralphatokelim"] <- log(100)

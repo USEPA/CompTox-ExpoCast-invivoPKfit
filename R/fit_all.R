@@ -1,3 +1,6 @@
+#written by Caroline Ring
+#modified by John Wambaugh
+#
 #' Main fitting function
 #'
 #' Fits parameters of a specified model to concentration-time data given in
@@ -11,27 +14,18 @@
 #'   analytic solution to the model, or the full ODE model. Presently,
 #'   "analytic" is recommended (because the analytic solution is exact and much
 #'   faster).
-#' #param ratio between the weights used to report the data and the weights used 
-#'   for the dose. For example, ug/L data and mg/kg/day dose would be 0.001
-#'   (defaults to 1) 
 #'
 #' @return A data.table of fitted parameter values for each chemical.
-#'
-#' @author Caroline Ring, John Wambaugh
 #'
 #' @export
 
 fit_all <- function(data.set,
                     model,
-                    modelfun=NA,
-                    ratio.data.to.dose=1)
+                    modelfun=NA)
 {
 
   data.set <- data.table::copy(data.set)
 
-  # This way the weight units cancel (must still pay attention to denominator
-  # of data to determine units for Vd):
-  data.set[,Value:=Value*ratio.data.to.dose]
   
   #Ignore data close to LOQ:
   data.set[Value<2*LOQ,Value:=NA]
@@ -165,18 +159,19 @@ fit_all <- function(data.set,
     #get the rat parameters for the 1-compartment model for each chemical
     if (model=='1compartment')
     {
-      if (any(params.by.cas$CAS %in% get_cheminfo()))
-        params.by.cas <- params.by.cas[CAS %in% get_cheminfo(), 
-        httk::parameterize_1comp(chem.cas=CAS,
-        default.to.human=TRUE,
-        species="Rat"),
-        by=CAS]
+      params.by.cas[CAS %in% get_cheminfo(model='1compartment'),
+      c("kelim", "Vdist", "Fgutabs", "kgutabs") := 
+      httk::parameterize_1comp(chem.cas=CAS,
+      default.to.human=TRUE,
+      species="Rat")[c("kelim","Vdist","Fgutabs","kgutabs")],
+      by=CAS]
 # Wambaugh et al. (2018) medians:
 # apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kelim:=0.25]
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Vdist:=5.56]
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=0.31]
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=0.99]
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kgutabs:=2.19]
+      
       
       if (modelfun=="analytic") params.by.cas[, setdiff(names(params.by.cas),
                                                         c("CAS",
@@ -184,8 +179,6 @@ fit_all <- function(data.set,
                                                           "Vdist",
                                                           "Fgutabs",
                                                           "kgutabs")):=NULL]
-      params.by.cas[, Fgutabs:=0.99] #Assume 99% bioavailability for everything
-      params.by.cas[, kgutabs:=1]
     } else if (model=='2compartment') {
     # Use this when parameterize_2comp is implemented in httk
     #   params.by.cas <- data.set[, httk::parameterize_2comp(chem.cas=CAS,
@@ -193,10 +186,11 @@ fit_all <- function(data.set,
     #                                                  species="Rat"),
     #                             by=CAS]
       if (any(params.by.cas$CAS %in% get_cheminfo()))
-        params.by.cas <- params.by.cas[CAS %in% get_cheminfo(), 
+        params.by.cas[CAS %in% get_cheminfo(),
+        c("kelim", "Vdist", "Fgutabs", "kgutabs") := 
         httk::parameterize_1comp(chem.cas=CAS,
         default.to.human=TRUE,
-        species="Rat"),
+        species="Rat")[c("kelim","Vdist","Fgutabs","kgutabs")],
         by=CAS]
 # Wambaugh et al. (2018) medians:
 # apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
@@ -322,22 +316,7 @@ fit_all <- function(data.set,
                                            "Fitted geometric mean",
                                            "Fitted mode"),
                    tpeak.oral:=log(kgutabs/kelim)/(kgutabs-kelim)]
- 
-       PK.fit.table[param.value.type %in% c("Predicted",
-                                           "Fitted arithmetic mean",
-                                           "Fitted geometric mean",
-                                           "Fitted mode"),
-                   Cpeak.oral.1mgkg:=analytic_1comp_fun(
-                     params=list(
-                       Fgutabs = 1,
-                       kgutabs = kgutabs,
-                       kelim =kelim,
-                       Vdist = Vdist
-                       ),
-                     dose=1, 
-                     tpeak.oral, 
-                     iv.dose=F)[,"Ccompartment"]]
-    
+     
     } else if(model=="2compartment")
     {
       PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
@@ -397,6 +376,7 @@ fit_all <- function(data.set,
         !(CAS %in% get_cheminfo()),
         Css:=as.numeric(NA),by=CAS]
     }
+  
 }
   
   return(PK.fit.table)

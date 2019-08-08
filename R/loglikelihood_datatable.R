@@ -1,14 +1,15 @@
+#written by Caroline Ring
+#modified by John Wambaugh
+#
 #' The log-likelihood function used for fitting
 #'
 #' @param params A named list of parameter values
 #' @param DT Concentration-time data for a given chemical
-#' @param modelfun "analytic" to use the analytic model solution, "full" to use
+#'@param modelfun "analytic" to use the analytic model solution, "full" to use
 #'  the full ODE model
-#' @param model The model to fit, either "1compartment" or "2compartment" (other
+#'@param model The model to fit, either "1compartment" or "2compartment" (other
 #'  models not implemented for now)
 #'
-#@ Author Caroline Ring, John Wambaugh
-#
 #'  @return A log-likelihood value for the data given the parameter values in params
 
 log.likelihood<- function(params,
