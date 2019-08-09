@@ -30,7 +30,14 @@ fit_all <- function(data.set,
     cat("Column \"Dose\" converted to numeric.")
     data.set$Dose <- as.numeric(data.set$Dose)
   }
-  
+  # Right now code only recognizes "po" and "iv" as routes (my bad):
+  data.set[Route=="oral",Route:="po"]
+  # How many >LOQ observations do we have per chemical/species/reference?
+  data.set[,N.Obs.Ref:=dim(subset(.SD,!is.na(Value)))[1],by=.(Reference,CAS,Species)]
+  # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma'):
+  data.set[,Usable:=N.Obs.Ref>3,by=.(CAS,Reference,Species,Route)]
+  data.set <- data.set[Usable==TRUE]  
+
   #Ignore data close to LOQ:
   data.set[Value<2*LOQ,Value:=NA]
 
@@ -243,7 +250,6 @@ fit_all <- function(data.set,
     if (length(multi.ref.cas)>0)
     {
       data.set.multi.ref <- subset(data.set,CAS %in% multi.ref.cas)
-      
                               
       PK.fit.separate <- data.set.multi.ref[,             
                                analyze.pk.data(fitdata=.SD,

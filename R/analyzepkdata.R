@@ -55,7 +55,7 @@ analyze.pk.data <- function(fitdata,
   these.params[sapply(refs,
                       function(x) paste('sigma2',
                                         x,
-                                        sep='.'))] <- rep(MAXSIGMA/10,
+                                        sep='.'))] <- rep(MAXSIGMA/100,
                                                           length(refs))
   
   #log-transform the model parameters
@@ -393,7 +393,7 @@ analyze.pk.data <- function(fitdata,
   {
     out.dt[,LogLikelihood:=0]
     out.dt[,AIC:=Inf]
-    cat("Some parameters were not optimized or sigma>1. Returning AIC=INF.\n")
+    cat(paste("Some parameters were not optimized or sigma >",MAXSIGMA,". Returning AIC=INF.\n"))
   } else if (model=='1compartment')
   {
     # Check for bad one-compartment model fits:
