@@ -28,6 +28,18 @@ fit_all <- function(data.set,
 {
 
   data.set <- data.table::copy(data.set)
+  if (is.character(class(data.set$Dose)))
+  {
+    cat("Column \"Dose\" converted to numeric.\n")
+    data.set$Dose <- as.numeric(data.set$Dose)
+  }
+  # Right now code only recognizes "po" and "iv" as routes (my bad):
+  data.set[Route=="oral",Route:="po"]
+  # How many >LOQ observations do we have per chemical/species/reference?
+  data.set[,N.Obs.Ref:=dim(subset(.SD,!is.na(Value)))[1],by=.(Reference,CAS,Species)]
+  # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma'):
+  data.set[,Usable:=N.Obs.Ref>3,by=.(CAS,Reference,Species,Route)]
+  data.set <- data.set[Usable==TRUE]
 
   # This way the weight units cancel (must still pay attention to denominator
   # of data to determine units for Vd):
@@ -165,17 +177,18 @@ fit_all <- function(data.set,
     #get the rat parameters for the 1-compartment model for each chemical
     if (model=='1compartment')
     {
-      if (any(params.by.cas$CAS %in% get_cheminfo()))
-        params.by.cas <- params.by.cas[CAS %in% get_cheminfo(), 
+      if (any(params.by.cas$CAS%in%get_cheminfo(model='1compartment')))
+        params.by.cas[CAS %in% get_cheminfo(model='1compartment'),
+        c("kelim", "Vdist", "Fgutabs", "kgutabs") := 
         httk::parameterize_1comp(chem.cas=CAS,
         default.to.human=TRUE,
-        species="Rat"),
+        species=Species)[c("kelim","Vdist","Fgutabs","kgutabs")],
         by=CAS]
 # Wambaugh et al. (2018) medians:
 # apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kelim:=0.25]
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Vdist:=5.56]
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=0.31]
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=0.33]
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kgutabs:=2.19]
       
       if (modelfun=="analytic") params.by.cas[, setdiff(names(params.by.cas),
@@ -193,10 +206,11 @@ fit_all <- function(data.set,
     #                                                  species="Rat"),
     #                             by=CAS]
       if (any(params.by.cas$CAS %in% get_cheminfo()))
-        params.by.cas <- params.by.cas[CAS %in% get_cheminfo(), 
+        params.by.cas[CAS %in% get_cheminfo(),
+        c("kelim", "Vdist", "Fgutabs", "kgutabs") := 
         httk::parameterize_1comp(chem.cas=CAS,
         default.to.human=TRUE,
-        species="Rat"),
+        species=Species)[c("kelim","Vdist","Fgutabs","kgutabs")],
         by=CAS]
 # Wambaugh et al. (2018) medians:
 # apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
@@ -278,7 +292,7 @@ fit_all <- function(data.set,
           CAS %in% get_cheminfo(),
           CLtot:=httk::calc_total_clearance(chem.cas=CAS,
   # Need to fix this:
-          species="Rat",
+          species=Species,
           default.to.human=TRUE,
           suppress.messages=TRUE),
                      by=CAS]
@@ -386,7 +400,7 @@ fit_all <- function(data.set,
         CAS %in% get_cheminfo(),
         Css:=httk::calc_analytic_css(chem.cas=CAS,
 # Fix this:
-        species="Rat",
+        species=Species,
         output.units='mg/L',
         model=model,
         default.to.human=TRUE,
