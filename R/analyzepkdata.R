@@ -54,8 +54,9 @@ analyze.pk.data <- function(fitdata,
   these.params[sapply(refs,
                       function(x) paste('sigma2',
                                         x,
-                                        sep='.'))] <- rep(MAXSIGMA/100,
-                                                          length(refs))
+                                        sep='.'))] <- rep(max(MAXSIGMA/100,
+                                                            0.1),
+                                                        length(refs))
   
   #log-transform the model parameters
   these.params <- lapply(these.params,log)

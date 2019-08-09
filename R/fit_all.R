@@ -188,7 +188,7 @@ fit_all <- function(data.set,
 # apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kelim:=0.25]
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Vdist:=5.56]
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=0.33]
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=1.0]
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kgutabs:=2.19]
       
       if (modelfun=="analytic") params.by.cas[, setdiff(names(params.by.cas),
@@ -197,8 +197,6 @@ fit_all <- function(data.set,
                                                           "Vdist",
                                                           "Fgutabs",
                                                           "kgutabs")):=NULL]
-      params.by.cas[, Fgutabs:=0.99] #Assume 99% bioavailability for everything
-      params.by.cas[, kgutabs:=1]
     } else if (model=='2compartment') {
     # Use this when parameterize_2comp is implemented in httk
     #   params.by.cas <- data.set[, httk::parameterize_2comp(chem.cas=CAS,
@@ -216,7 +214,7 @@ fit_all <- function(data.set,
 # apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kelim:=0.25]
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Vdist:=5.56]
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=0.31]
+      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=1.0]
       params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kgutabs:=2.19]
       params.by.cas <- tmp[, .(CAS, Vdist,kelim, Rblood2plasma,
                                MW, hematocrit, million.cells.per.gliver)]
@@ -225,9 +223,6 @@ fit_all <- function(data.set,
       params.by.cas[, V1:=1]
       params.by.cas[, Ralphatokelim:=1.2]
       params.by.cas[, Fbetaofalpha:=0.8]
-  #    params.by.cas[, kelim:=max(-lm(log(Value)~Time,subset(chem.invivo.PK.data,Compound=="Carbendazim"))$coefficients[2],10^-5)]
-      params.by.cas[, Fgutabs:=0.99] #Assume 99% bioavailability for everything
-      params.by.cas[, kgutabs:=1]
     
       if (modelfun=="analytic") params.by.cas[, setdiff(names(params.by.cas),
                                                         c("CAS",
