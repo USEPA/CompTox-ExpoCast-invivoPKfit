@@ -35,11 +35,18 @@ fit_all <- function(data.set,
   }
   # Right now code only recognizes "po" and "iv" as routes (my bad):
   data.set[Route=="oral",Route:="po"]
+  data.set[Route=="intravenous",Route:="iv"]
+  data.set <- data.set[Route %in% c("po","iv")]
+  
   # How many >LOQ observations do we have per chemical/species/reference?
   data.set[,N.Obs.Ref:=dim(subset(.SD,!is.na(Value)))[1],by=.(Reference,CAS,Species)]
   # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma'):
   data.set[,Usable:=N.Obs.Ref>3,by=.(CAS,Reference,Species,Route)]
   data.set <- data.set[Usable==TRUE]
+  
+  # Harmonize the compound names:
+  data.set[,Compound:=tolower(Compound)]
+  
 
   # This way the weight units cancel (must still pay attention to denominator
   # of data to determine units for Vd):
@@ -168,74 +175,78 @@ fit_all <- function(data.set,
     }
     
     PK.fit.table <- as.data.table(PK.fit.table)
+    
+    
     # Multiply by dose to return from normalized uinits:
     PK.fit.table[,Vd.iv:=Vd.iv*Mean.iv.Dose]
     PK.fit.table[,Vd.po:=Vd.po*Mean.po.Dose]
 
   } else {
-    params.by.cas <- data.table(CAS=sort(unique(data.set$CAS)),stringsAsFactors=F)
+  
+    params.by.cas.spec <- data.set[,unique(.SD[,.(Compound)]),by=.(CAS,Species)]
+
     #get the rat parameters for the 1-compartment model for each chemical
     if (model=='1compartment')
     {
-      if (any(params.by.cas$CAS%in%get_cheminfo(model='1compartment')))
-        params.by.cas[CAS %in% get_cheminfo(model='1compartment'),
+      if (any(params.by.cas.spec$CAS%in%get_cheminfo(model='1compartment')))
+        params.by.cas.spec[CAS %in% get_cheminfo(model='1compartment'),
         c("kelim", "Vdist", "Fgutabs", "kgutabs") := 
         httk::parameterize_1comp(chem.cas=CAS,
         default.to.human=TRUE,
         species=Species)[c("kelim","Vdist","Fgutabs","kgutabs")],
-        by=CAS]
+        by=c("CAS","Species")]
 # Wambaugh et al. (2018) medians:
 # apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kelim:=0.25]
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Vdist:=5.56]
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=1.0]
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kgutabs:=2.19]
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), kelim:=0.25]
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), Vdist:=5.56]
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), Fgutabs:=1.0]
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), kgutabs:=2.19]
       
-      if (modelfun=="analytic") params.by.cas[, setdiff(names(params.by.cas),
-                                                        c("CAS",
-                                                          "kelim",
-                                                          "Vdist",
-                                                          "Fgutabs",
-                                                          "kgutabs")):=NULL]
+#      if (modelfun=="analytic") params.by.cas.spec[, setdiff(names(params.by.cas.spec),
+#                                                        c("CAS",
+#                                                          "kelim",
+#                                                          "Vdist",
+#                                                          "Fgutabs",
+#                                                          "kgutabs")):=NULL]
     } else if (model=='2compartment') {
     # Use this when parameterize_2comp is implemented in httk
     #   params.by.cas <- data.set[, httk::parameterize_2comp(chem.cas=CAS,
     #                                                  default.to.human=TRUE,
     #                                                  species="Rat"),
     #                             by=CAS]
-      if (any(params.by.cas$CAS %in% get_cheminfo()))
-        params.by.cas[CAS %in% get_cheminfo(),
+      if (any(params.by.cas.spec$CAS %in% get_cheminfo()))
+        params.by.cas.spec[CAS %in% get_cheminfo(),
         c("kelim", "Vdist", "Fgutabs", "kgutabs") := 
         httk::parameterize_1comp(chem.cas=CAS,
         default.to.human=TRUE,
         species=Species)[c("kelim","Vdist","Fgutabs","kgutabs")],
-        by=CAS]
+        by=c("CAS","Species")]
 # Wambaugh et al. (2018) medians:
 # apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kelim:=0.25]
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Vdist:=5.56]
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), Fgutabs:=1.0]
-      params.by.cas[!params.by.cas$CAS%in%get_cheminfo(), kgutabs:=2.19]
-      params.by.cas <- tmp[, .(CAS, Vdist,kelim, Rblood2plasma,
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), kelim:=0.25]
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), Vdist:=5.56]
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), Fgutabs:=1.0]
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), kgutabs:=2.19]
+      params.by.cas.spec <- tmp[, .(CAS, Vdist,kelim, Rblood2plasma,
                                MW, hematocrit, million.cells.per.gliver)]
       #Since we don't yet have 2comp predictions,
       #just choose some arbitrary numbers as starting points for the fit.
-      params.by.cas[, V1:=1]
-      params.by.cas[, Ralphatokelim:=1.2]
-      params.by.cas[, Fbetaofalpha:=0.8]
+      params.by.cas.spec[, V1:=1]
+      params.by.cas.spec[, Ralphatokelim:=1.2]
+      params.by.cas.spec[, Fbetaofalpha:=0.8]
     
-      if (modelfun=="analytic") params.by.cas[, setdiff(names(params.by.cas),
-                                                        c("CAS",
-                                                          "kelim",
-                                                          "Ralphatokelim",
-                                                          "Fbetaofalpha",
-                                                          "V1",
-                                                          "Fgutabs",
-                                                          "kgutabs")):=NULL]
+#      if (modelfun=="analytic") params.by.cas.spec[, setdiff(names(params.by.cas.spec),
+#                                                        c("CAS",
+#                                                          "kelim",
+#                                                          "Ralphatokelim",
+#                                                          "Fbetaofalpha",
+#                                                          "V1",
+#                                                          "Fgutabs",
+#                                                          "kgutabs")):=NULL]
     }
-    data.set <- merge(data.set,params.by.cas,by="CAS")
-    paramnames <- names(params.by.cas)
-    paramnames <- paramnames[paramnames!='CAS']
+    data.set <- merge(data.set,params.by.cas.spec,by=c("Species","Compound","CAS"))
+    paramnames <- names(params.by.cas.spec)
+    paramnames <- paramnames[!(paramnames%in%c("CAS","Species","Compound"))]
     #Replace spaces in references with "."
     data.set[, Reference:=gsub(Reference,
                             pattern=' ',
@@ -247,9 +258,9 @@ fit_all <- function(data.set,
                                              paramnames=paramnames,
                                              modelfun=modelfun,
                                              model=model),
-                             by=CAS]
+                             by=c("CAS","Species")]
 
-    multi.ref.cas <- data.set[,length(unique(Reference))>1,by=CAS]
+    multi.ref.cas <- data.set[,length(unique(Reference))>1,by=c("CAS","Species")]
     multi.ref.cas <- subset(multi.ref.cas,V1==T)$CAS
     if (length(multi.ref.cas)>0)
     {
@@ -263,7 +274,7 @@ fit_all <- function(data.set,
                                                modelfun=modelfun,
                                                model=model,
                                                this.reference=Reference),
-                               by=c("CAS","Reference")]
+                               by=c("CAS","Species","Reference")]
                                
   
       
@@ -290,11 +301,11 @@ fit_all <- function(data.set,
           species=Species,
           default.to.human=TRUE,
           suppress.messages=TRUE),
-                     by=CAS]
+                     by=c("CAS","Species")]
       } else {
         PK.fit.table[param.value.type=="Predicted" &
-          !(CAS %in% get_cheminfo()),
-          CLtot:=as.numeric(NA),by=CAS]
+          !(CAS %in% get_cheminfo(species=Species)),
+          CLtot:=as.numeric(NA),by=c("CAS","Species")]
       }
   
       #Get stats for fitted total clearance :    L/kg body weight/h
@@ -400,15 +411,15 @@ fit_all <- function(data.set,
         model=model,
         default.to.human=TRUE,
         suppress.messages=TRUE),
-        by=CAS]
+        by=c("CAS","Species")]
     } else {
       PK.fit.table[param.value.type=="Predicted" &
         !(CAS %in% get_cheminfo()),
-        Css:=as.numeric(NA),by=CAS]
+        Css:=as.numeric(NA),by=c("CAS","Species")]
     }
 }
   
-  return(PK.fit.table)
+  return(PK.fit.table[param.value.type%in%c("Predicted","Fitted geometric mean")])
 }
 
 

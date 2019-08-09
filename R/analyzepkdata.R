@@ -24,22 +24,21 @@ analyze.pk.data <- function(fitdata,
                             model,
                             this.reference=NULL) 
 {
+  UPPERBOUNDARY <- 1e4
+  
   #take a copy of input data table so it behaves as though passed by value
   fitdata <- data.table::copy(fitdata)
 
   cat(paste("Optimizing data for CAS-RN ",this.cas,"\n",sep=""))
 
   #Set a plausible upper bound for sigma:
-  MAXSIGMA <- 3*mean(fitdata$Value,na.rm=T)
+  MAXSIGMA <- 3*median(fitdata$Value,na.rm=T)
 
   #Initialize output table with HTTK-predicted parameter values
   out.dt <- fitdata[1,paramnames, with=FALSE]
   out.dt[, param.value.type:='Predicted']
 
   these.params <- as.list(fitdata[1, paramnames, with=FALSE])
-  #Set oral fraction absorbed to 0.99 (as a starting point for optimizer)
-  #because 1 is on a boundary
-  these.params["Fgutabs"] <- 0.99
 
   # If there is no reference column, add on in:
   if (!is.null(this.reference))
@@ -173,7 +172,7 @@ analyze.pk.data <- function(fitdata,
       out.dt[regexpr(",",Data.Analyzed)!=-1, Data.Analyzed:='Joint Analysis']
     } else {
       out.dt[, Data.Analyzed:=this.reference]
-      out.dt[,Reference:=NULL]
+      out.dt[,Reference:=this.reference]
     }    
     out.dt[,LogLikelihood:=as.numeric(NA)]
     out.dt[,AIC:=as.numeric(NA)]
@@ -197,7 +196,7 @@ analyze.pk.data <- function(fitdata,
   upper <- unlist(opt.params)
 
   #specify upper bounds of params to optimize (on a log scale!!)
-  upper[] <- log(1e6)
+  upper[] <- log(UPPERBOUNDARY)
   upper[regexpr("sigma",names(upper))!=-1]<-log(MAXSIGMA) 
   if (model=='2compartment'){
     upper["Ralphatokelim"] <- log(100)
