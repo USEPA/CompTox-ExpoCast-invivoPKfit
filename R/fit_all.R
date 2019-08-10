@@ -291,62 +291,24 @@ fit_all <- function(data.set,
     PK.fit.table <- PK.fit.bind
     if (model=="1compartment")
     {
-      if (any(PK.fit.table$CAS %in% get_cheminfo()))
-      {
-        #Get HTTK-predicted total clearance for each CAS    L/h/kg BW
-        PK.fit.table[param.value.type=="Predicted" &
-          CAS %in% get_cheminfo(),
-          CLtot:=httk::calc_total_clearance(chem.cas=CAS,
-  # Need to fix this:
-          species=Species,
-          default.to.human=TRUE,
-          suppress.messages=TRUE),
-                     by=c("CAS","Species")]
-      } else {
-        PK.fit.table[param.value.type=="Predicted" &
-          !(CAS %in% get_cheminfo(species=Species)),
-          CLtot:=as.numeric(NA),by=c("CAS","Species")]
-      }
-  
       #Get stats for fitted total clearance :    L/kg body weight/h
-      PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
-                                           "Fitted geometric mean",
-                                           "Fitted mode"),
-                   CLtot:=Vdist*kelim]
+      PK.fit.table[,CLtot:=Vdist*kelim]
   
   
       #Get statistics for Css from fitted CLtot values
       #Get stats for fitted total clearance:
-      PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
-                                           "Fitted geometric mean",
-                                           "Fitted mode"),
-                   Css:=Fgutabs/(24*CLtot)] # 1 mg/kg/day / L/day/kg -> mg/L
-  
-      # PK.fit.table[, Css.arith.se := -Css.arith* #propagation of uncertainty
-      #            CLtot.arith.se/
-      #            CLtot.arith]
-      # PK.fit.table[, Css.geo.se := -Css.geo* #propagation of uncertainty
-      #            CLtot.geo.se/
-      #            CLtot.geo]
-  
+      PK.fit.table[,
+                   Css:=ifelse(is.na(Fgutabs),1,Fgutabs)/(24*CLtot)] # 1 mg/kg/day / L/day/kg -> mg/L
+    
       #Get statistics for halflife from fitted values
-      PK.fit.table[param.value.type %in% c("Predicted",
-                                           "Fitted arithmetic mean",
-                                           "Fitted geometric mean",
-                                           "Fitted mode"),
+      PK.fit.table[,
                    halflife:=log(2)/kelim]
   
   
-      PK.fit.table[param.value.type %in% c("Predicted",
-                                           "Fitted arithmetic mean",
-                                           "Fitted geometric mean",
-                                           "Fitted mode"),
+      PK.fit.table[,
                    tpeak.oral:=log(kgutabs/kelim)/(kgutabs-kelim)]
  
-       PK.fit.table[param.value.type %in% c("Predicted",
-                                           "Fitted arithmetic mean",
-                                           "Fitted geometric mean",
-                                           "Fitted mode"),
+       PK.fit.table[,
                    Cpeak.oral.1mgkg:=analytic_1comp_fun(
                      params=list(
                        Fgutabs = 1,
@@ -398,26 +360,7 @@ fit_all <- function(data.set,
                    Css:=(Fgutabs*1)/(CLtot*24)]
 
     }
-    
-    if (any(PK.fit.table$CAS %in% get_cheminfo()))
-    {
-      #Get HTTK-predicted Css
-      PK.fit.table[param.value.type=="Predicted" &
-        CAS %in% get_cheminfo(),
-        Css:=httk::calc_analytic_css(chem.cas=CAS,
-# Fix this:
-        species=Species,
-        output.units='mg/L',
-        model=model,
-        default.to.human=TRUE,
-        suppress.messages=TRUE),
-        by=c("CAS","Species")]
-    } else {
-      PK.fit.table[param.value.type=="Predicted" &
-        !(CAS %in% get_cheminfo()),
-        Css:=as.numeric(NA),by=c("CAS","Species")]
     }
-}
   
   return(PK.fit.table[param.value.type%in%c("Predicted","Fitted geometric mean")])
 }
