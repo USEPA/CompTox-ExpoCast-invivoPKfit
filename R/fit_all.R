@@ -362,6 +362,8 @@ fit_all <- function(data.set,
     }
     }
   
+  PK.fit.table <- PK.fit.table[order(Compound,Species)]
+  
   return(PK.fit.table[param.value.type%in%c("Predicted","Fitted geometric mean")])
 }
 
