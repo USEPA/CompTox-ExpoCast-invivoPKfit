@@ -28,6 +28,12 @@ fit_all <- function(data.set,
 {
 
   data.set <- data.table::copy(data.set)
+  
+  N.PREV <- dim(data.set)[1]
+  cat(paste(N.PREV,"concentration vs. time observations loaded.\n"))
+  cat(paste(length(unique(data.set$CAS)),"unique chemicals and",
+        length(unique(data.set$Species)),"unique species.\n"))
+  
   if (is.character(class(data.set$Dose)))
   {
     cat("Column \"Dose\" converted to numeric.\n")
@@ -37,17 +43,15 @@ fit_all <- function(data.set,
   data.set[Route=="oral",Route:="po"]
   data.set[Route=="intravenous",Route:="iv"]
   data.set <- data.set[Route %in% c("po","iv")]
-  
-  # How many >LOQ observations do we have per chemical/species/reference?
-  data.set[,N.Obs.Ref:=dim(subset(.SD,!is.na(Value)))[1],by=.(Reference,CAS,Species)]
-  # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma'):
-  data.set[,Usable:=N.Obs.Ref>3,by=.(CAS,Reference,Species,Route)]
-  data.set <- data.set[Usable==TRUE]
+  cat(paste("Restricting to intravenous and oral routes eliminates",
+      N.PREV - dim(data.set)[1],"observations.\n"))
+  cat(paste(length(unique(data.set$CAS)),"unique chemicals and",
+        length(unique(data.set$Species)),"unique species remain.\n"))
+  N.PREV <- dim(data.set)[1]
   
   # Harmonize the compound names:
   data.set[,Compound:=tolower(Compound)]
   
-
   # This way the weight units cancel (must still pay attention to denominator
   # of data to determine units for Vd):
   data.set[,Value:=Value*ratio.data.to.dose]
@@ -58,11 +62,30 @@ fit_all <- function(data.set,
   #set an iv variable to TRUE/FALSE
   data.set[Route=='iv', iv:=TRUE]
   data.set[Route!='iv', iv:=FALSE]
-  data.set[, Time.Days:=Time/24]  #convert time from hours to days
+
+  #convert time from hours to days
+  data.set <- data.set[!is.na(Time)]
+  cat(paste("Requiting time to have a value != NA eliminates",
+      N.PREV - dim(data.set)[1],"observations.\n"))
+  cat(paste(length(unique(data.set$CAS)),"unique chemicals and",
+        length(unique(data.set$Species)),"unique species remain.\n"))
+  N.PREV <- dim(data.set)[1]
+  data.set[, Time.Days:=Time/24]  
   data.set[, c('Max.Time.Days',
                'Time.Steps.PerHour'):=list(max(Time.Days),
                                         1/min(diff(c(0,sort(unique(Time)))))),
            by=.(CAS, Dose, Route)]
+
+  # How many >LOQ observations do we have per chemical/species/reference?
+  data.set[,N.Obs.Ref:=dim(subset(.SD,!is.na(Value)))[1],by=.(Reference,CAS,Species)]
+  # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma'):
+  data.set[,Usable:=N.Obs.Ref>3,by=.(CAS,Reference,Species,Route)]
+  data.set <- data.set[Usable==TRUE]
+  cat(paste("Restricting to references with more than three observations above LOQ eliminates",
+      N.PREV - dim(data.set)[1],"observations.\n"))
+  cat(paste(length(unique(data.set$CAS)),"unique chemicals and",
+        length(unique(data.set$Species)),"unique species remain.\n"))
+  N.PREV <- dim(data.set)[1]
   
   #Non-comapartmental fits:
   if (model=="noncompartment")
@@ -188,19 +211,19 @@ fit_all <- function(data.set,
     #get the rat parameters for the 1-compartment model for each chemical
     if (model=='1compartment')
     {
-      if (any(params.by.cas.spec$CAS%in%get_cheminfo(model='1compartment')))
-        params.by.cas.spec[CAS %in% get_cheminfo(model='1compartment'),
-        c("kelim", "Vdist", "Fgutabs", "kgutabs") := 
-        httk::parameterize_1comp(chem.cas=CAS,
-        default.to.human=TRUE,
-        species=Species)[c("kelim","Vdist","Fgutabs","kgutabs")],
-        by=c("CAS","Species")]
+#      if (any(params.by.cas.spec$CAS%in%get_cheminfo(model='1compartment')))
+#        params.by.cas.spec[CAS %in% get_cheminfo(model='1compartment',species=Species),
+#        c("kelim", "Vdist", "Fgutabs", "kgutabs") := 
+#        httk::parameterize_1comp(chem.cas=CAS,
+#        default.to.human=TRUE,
+#        species=Species)[c("kelim","Vdist","Fgutabs","kgutabs")],
+#        by=c("CAS","Species")]
 # Wambaugh et al. (2018) medians:
 # apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
-      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), kelim:=0.25]
-      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), Vdist:=5.56]
-      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), Fgutabs:=1.0]
-      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), kgutabs:=2.19]
+      params.by.cas.spec[, kelim:=0.25]
+      params.by.cas.spec[, Vdist:=5.56]
+      params.by.cas.spec[, Fgutabs:=1.0]
+      params.by.cas.spec[, kgutabs:=2.19]
       
 #      if (modelfun=="analytic") params.by.cas.spec[, setdiff(names(params.by.cas.spec),
 #                                                        c("CAS",
@@ -286,7 +309,7 @@ fit_all <- function(data.set,
     PK.fit.bind[, model:=model]
     PK.fit.bind[, model.type:=modelfun]
     
-    
+                  
     #Do post fit calculations:
     PK.fit.table <- PK.fit.bind
     if (model=="1compartment")
