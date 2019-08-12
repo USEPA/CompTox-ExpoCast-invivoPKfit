@@ -33,7 +33,7 @@ fit_all <- function(data.set,
   cat(paste(N.PREV,"concentration vs. time observations loaded.\n"))
   cat(paste(length(unique(data.set$CAS)),"unique chemicals,",
         length(unique(data.set$Species)),"unique species, and",
-        length(unique(data.set$References)),"unique references.\n"))
+        length(unique(data.set$Reference)),"unique references.\n"))
   
   if (is.character(class(data.set$Dose)))
   {
@@ -46,9 +46,10 @@ fit_all <- function(data.set,
   data.set <- data.set[Route %in% c("po","iv")]
   cat(paste("Restricting to intravenous and oral routes eliminates",
       N.PREV - dim(data.set)[1],"observations.\n"))
-  cat(paste(length(unique(data.set$CAS)),"unique chemicals,",
+  cat(paste(dim(data.set)[1],"observations of",
+        length(unique(data.set$CAS)),"unique chemicals,",
         length(unique(data.set$Species)),"unique species, and",
-        length(unique(data.set$References)),"unique references remain.\n"))
+        length(unique(data.set$Reference)),"unique references remain.\n"))
   N.PREV <- dim(data.set)[1]
   
   # Harmonize the compound names:
@@ -67,11 +68,12 @@ fit_all <- function(data.set,
 
   #convert time from hours to days
   data.set <- data.set[!is.na(Time)]
-  cat(paste("Requiting time to have a value != NA eliminates",
+  cat(paste("Requiring time to have a value != NA eliminates",
       N.PREV - dim(data.set)[1],"observations.\n"))
-  cat(paste(length(unique(data.set$CAS)),"unique chemicals,",
+  cat(paste(dim(data.set)[1],"observations of",
+        length(unique(data.set$CAS)),"unique chemicals,",
         length(unique(data.set$Species)),"unique species, and",
-        length(unique(data.set$References)),"unique references remain.\n"))
+        length(unique(data.set$Reference)),"unique references remain.\n"))
   N.PREV <- dim(data.set)[1]
   data.set[, Time.Days:=Time/24]  
   data.set[, c('Max.Time.Days',
@@ -86,25 +88,25 @@ fit_all <- function(data.set,
   data.set <- data.set[Usable==TRUE]
   cat(paste("Restricting to references with more than three observations above LOQ eliminates",
       N.PREV - dim(data.set)[1],"observations.\n"))
-  cat(paste(length(unique(data.set$CAS)),"unique chemicals,",
+  cat(paste(dim(data.set)[1],"observations of",
+        length(unique(data.set$CAS)),"unique chemicals,",
         length(unique(data.set$Species)),"unique species, and",
-        length(unique(data.set$References)),"unique references remain.\n"))
+        length(unique(data.set$Reference)),"unique references remain.\n"))
   N.PREV <- dim(data.set)[1]
   
-  # Because IV dose is administered instantaneously in the model, we can't 
+  # Because doses are administered instantaneously in the model, we can't 
   # handle early time points below LOQ:
-  data.set[,Usable:=T]
-  data.set <- data.set[Route=="iv" & 
-                       Time < .SD[which(Value==max(Value)),Time] &
-                       is.na(Value),
-                       Usable:=F,
-                       by=.(Route,Reference,CAS,Species)]
+  data.set[,
+           Usable:=ifelse(Time >= .SD[Value==max(Value,na.rm=T),Time] |
+                 !is.na(Value),T,F),
+           by=.(Route,Reference,CAS,Species)]
   data.set <- data.set[Usable==TRUE]
-  cat(paste("Restricting to references with more than three observations above LOQ eliminates",
+  cat(paste("Eliminating observations for doses that are below LOQ before the peak conc. is reached eliminates",
       N.PREV - dim(data.set)[1],"observations.\n"))
-  cat(paste(length(unique(data.set$CAS)),"unique chemicals,",
+  cat(paste(dim(data.set)[1],"observations of",
+        length(unique(data.set$CAS)),"unique chemicals,",
         length(unique(data.set$Species)),"unique species, and",
-        length(unique(data.set$References)),"unique references remain.\n"))
+        length(unique(data.set$Reference)),"unique references remain.\n"))
   N.PREV <- dim(data.set)[1]
 
   #Non-comapartmental fits:
