@@ -224,8 +224,9 @@ analyze.pk.data <- function(fitdata,
     lower["V1"] <- log(0.01)
     lower["Ralphatokelim"] <- 0
   }
-  if ("Fgutabs" %in% unlist(opt.params)){
-    lower["Fgutabs"] <- log(0.05) #on a log scale!
+  if ("Fgutabs" %in% names(lower))
+  {
+    lower["Fgutabs"] <- log(0.05)
   }
   # Curve fitting doesn't really work if we let the standard deviation of the measurements get too small:
   lower[regexpr("sigma",names(lower))!=-1]<-log(0.00001)
