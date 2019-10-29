@@ -272,8 +272,8 @@ fit_all <- function(data.set,
       params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), Vdist:=5.56]
       params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), Fgutabs:=1.0]
       params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), kgutabs:=2.19]
-      params.by.cas.spec <- tmp[, .(CAS, Vdist,kelim, Rblood2plasma,
-                               MW, hematocrit, million.cells.per.gliver)]
+#      params.by.cas.spec <- tmp[, .(CAS, Vdist,kelim, Rblood2plasma,
+#                               MW, hematocrit, million.cells.per.gliver)]
       #Since we don't yet have 2comp predictions,
       #just choose some arbitrary numbers as starting points for the fit.
       params.by.cas.spec[, V1:=1]
@@ -339,6 +339,13 @@ fit_all <- function(data.set,
       #Get stats for fitted total clearance :    L/kg body weight/h
       PK.fit.table[,CLtot:=Vdist*kelim]
   
+#      browser()
+#      PK.fit.table[,
+#                   AUC1mgkg:=kgutabs/Vdist/(kgutabs-kelim)*(
+#                     exp(-kgutabs*Tmax)/kgutabs  -exp(-kelim*Tmax)/kelim-
+#                     1/kgutabs + 1/kelim)]
+#      if (!is.na(Fgutabs)) PK.fit.table[,AUC1mgkg:=Fgutabs*AUC1mgkg]
+      
   
       #Get statistics for Css from fitted CLtot values
       #Get stats for fitted total clearance:
@@ -409,7 +416,7 @@ fit_all <- function(data.set,
   
   PK.fit.table <- PK.fit.table[order(Compound,Species)]
   
-  return(PK.fit.table[param.value.type%in%c("Predicted","Fitted geometric mean")])
+  return(PK.fit.table[param.value.type%in%c("Predicted","Fitted geometric mean","Fitted geometric std dev")])
 }
 
 
