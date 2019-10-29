@@ -45,8 +45,8 @@ cp_2comp <- function(params, time, dose, iv.dose)
   alpha <- params$Ralphatokelim*(params$kelim+10^-6)
   beta <- params$Fbetaofalpha*alpha
   
-  # try to keep k12 positive:
-  k21 <- min(alpha*beta/params$kelim,alpha+beta-params$kelim)
+  # try to keep k21 and k12 positive:
+  k21 <- max(min(alpha*beta/params$kelim,alpha+beta-params$kelim),0)
   k12 <- alpha + beta - params$kelim - k21
   
   alphabeta.sum <- alpha + beta

@@ -188,7 +188,11 @@ analyze.pk.data <- function(fitdata,
                                    names(opt.params))]
 
   #
+  #
+  #
   # THIS IS WHERE OPTIMIZER UPPER BOUNDS ARE SET
+  #
+  #
   #
   
   #change from a named list of params to optimize to a named vector of params to
@@ -199,7 +203,7 @@ analyze.pk.data <- function(fitdata,
   upper[] <- log(UPPERBOUNDARY)
   upper[regexpr("sigma",names(upper))!=-1]<-log(MAXSIGMA) 
   if (model=='2compartment'){
-    upper["Ralphatokelim"] <- log(100)
+    upper["Ralphatokelim"] <- log(1000)
     upper["Fbetaofalpha"] <- log(0.75) #on a log scale!
    }
   if ("Fgutabs" %in% unlist(opt.params)){
@@ -210,9 +214,13 @@ analyze.pk.data <- function(fitdata,
   }
   # Force initial values to be within bounds:
   opt.params[opt.params>upper] <- upper[opt.params>upper]-0.1
-  
+ 
+  #
+  #
   #
   # THIS IS WHERE OPTIMIZER LOWER BOUNDS ARE SET
+  #
+  #
   #
   
   # Default lower bound of 10^-8 except for parameters where this wouldn't make sense:
