@@ -1,6 +1,3 @@
-#written by Caroline Ring
-#modified by John Wambaugh
-#
 #' Main fitting function
 #'
 #' Fits parameters of a specified model to concentration-time data given in
@@ -14,29 +11,53 @@
 #'   analytic solution to the model, or the full ODE model. Presently,
 #'   "analytic" is recommended (because the analytic solution is exact and much
 #'   faster).
+#' #param ratio between the weights used to report the data and the weights used 
+#'   for the dose. For example, ug/L data and mg/kg/day dose would be 0.001
+#'   (defaults to 1) 
 #'
 #' @return A data.table of fitted parameter values for each chemical.
+#'
+#' @author Caroline Ring, John Wambaugh
 #'
 #' @export
 
 fit_all <- function(data.set,
                     model,
-                    modelfun=NA)
+                    modelfun=NA,
+                    ratio.data.to.dose=1)
 {
 
   data.set <- data.table::copy(data.set)
-
-  # Not a lot of Imazalil oral data so skip for now:
-  #data.set <- subset(data.set,
-  #                   Compound != "Imazalil" |
-  #                     Route=="iv")
   
-  #So now we have a data set composed of:
-  #the TNO data
-  #the RTI data
-  #the NHEERL data
+  N.PREV <- dim(data.set)[1]
+  cat(paste(N.PREV,"concentration vs. time observations loaded.\n"))
+  cat(paste(length(unique(data.set$CAS)),"unique chemicals,",
+        length(unique(data.set$Species)),"unique species, and",
+        length(unique(data.set$Reference)),"unique references.\n"))
   
-  #Now proceed to the analysis
+  if (is.character(class(data.set$Dose)))
+  {
+    cat("Column \"Dose\" converted to numeric.\n")
+    data.set$Dose <- as.numeric(data.set$Dose)
+  }
+  # Right now code only recognizes "po" and "iv" as routes (my bad):
+  data.set[Route=="oral",Route:="po"]
+  data.set[Route=="intravenous",Route:="iv"]
+  data.set <- data.set[Route %in% c("po","iv")]
+  cat(paste("Restricting to intravenous and oral routes eliminates",
+      N.PREV - dim(data.set)[1],"observations.\n"))
+  cat(paste(dim(data.set)[1],"observations of",
+        length(unique(data.set$CAS)),"unique chemicals,",
+        length(unique(data.set$Species)),"unique species, and",
+        length(unique(data.set$Reference)),"unique references remain.\n"))
+  N.PREV <- dim(data.set)[1]
+  
+  # Harmonize the compound names:
+  data.set[,Compound:=tolower(Compound)]
+  
+  # This way the weight units cancel (must still pay attention to denominator
+  # of data to determine units for Vd):
+  data.set[,Value:=Value*ratio.data.to.dose]
   
   #Ignore data close to LOQ:
   data.set[Value<2*LOQ,Value:=NA]
@@ -44,12 +65,50 @@ fit_all <- function(data.set,
   #set an iv variable to TRUE/FALSE
   data.set[Route=='iv', iv:=TRUE]
   data.set[Route!='iv', iv:=FALSE]
-  data.set[, Time.Days:=Time/24]  #convert time from hours to days
+
+  #convert time from hours to days
+  data.set <- data.set[!is.na(Time)]
+  cat(paste("Requiring time to have a value != NA eliminates",
+      N.PREV - dim(data.set)[1],"observations.\n"))
+  cat(paste(dim(data.set)[1],"observations of",
+        length(unique(data.set$CAS)),"unique chemicals,",
+        length(unique(data.set$Species)),"unique species, and",
+        length(unique(data.set$Reference)),"unique references remain.\n"))
+  N.PREV <- dim(data.set)[1]
+  data.set[, Time.Days:=Time/24]  
   data.set[, c('Max.Time.Days',
                'Time.Steps.PerHour'):=list(max(Time.Days),
                                         1/min(diff(c(0,sort(unique(Time)))))),
            by=.(CAS, Dose, Route)]
+
+  # How many >LOQ observations do we have per chemical/species/reference?
+  data.set[,N.Obs.Ref:=dim(subset(.SD,!is.na(Value)))[1],by=.(Reference,CAS,Species)]
+  # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma'):
+  data.set[,Usable:=N.Obs.Ref>3,by=.(CAS,Reference,Species,Route)]
+  data.set <- data.set[Usable==TRUE]
+  cat(paste("Restricting to references with more than three observations above LOQ eliminates",
+      N.PREV - dim(data.set)[1],"observations.\n"))
+  cat(paste(dim(data.set)[1],"observations of",
+        length(unique(data.set$CAS)),"unique chemicals,",
+        length(unique(data.set$Species)),"unique species, and",
+        length(unique(data.set$Reference)),"unique references remain.\n"))
+  N.PREV <- dim(data.set)[1]
   
+  # Because doses are administered instantaneously in the model, we can't 
+  # handle early time points below LOQ:
+  data.set[,
+           Usable:=ifelse(Time >= .SD[Value==max(Value,na.rm=T),Time] |
+                 !is.na(Value),T,F),
+           by=.(Route,Reference,CAS,Species)]
+  data.set <- data.set[Usable==TRUE]
+  cat(paste("Eliminating observations for doses that are below LOQ before the peak conc. is reached eliminates",
+      N.PREV - dim(data.set)[1],"observations.\n"))
+  cat(paste(dim(data.set)[1],"observations of",
+        length(unique(data.set$CAS)),"unique chemicals,",
+        length(unique(data.set$Species)),"unique species, and",
+        length(unique(data.set$Reference)),"unique references remain.\n"))
+  N.PREV <- dim(data.set)[1]
+
   #Non-comapartmental fits:
   if (model=="noncompartment")
   {
@@ -89,18 +148,6 @@ fit_all <- function(data.set,
         this.row <- rbind(this.row,this.row)
         rownames(this.row) <- NULL
         this.row[2,"param.value.type"] <- "Estimated std dev"
-        if (this.subset$Reference[1]=="NHEERL 2015")
-        {
-          this.row[,"Source"] <- "NHEERL 2015"
-          this.row[,"Reference"] <- "NHEERL.2015"
-        } else if (this.subset$Reference[1]=="RTI 2015")
-        {  
-          this.row[,"Source"] <- "RTI 2015"
-          this.row[,"Reference"] <- "RTI.2015"
-        } else {
-          this.row[,"Source"] <- "TNO Lit. Review" 
-          this.row[,"Reference"] <- paste(gsub(" ","\\.",sort(unique(this.subset$Reference))),sep=", ",collapse=", ")
-        }
         for (this.route in unique(this.subset$Route))
         {
           this.route.subset <- subset(this.subset,Route==this.route)
@@ -173,174 +220,158 @@ fit_all <- function(data.set,
     }
     
     PK.fit.table <- as.data.table(PK.fit.table)
+    
+    
     # Multiply by dose to return from normalized uinits:
     PK.fit.table[,Vd.iv:=Vd.iv*Mean.iv.Dose]
     PK.fit.table[,Vd.po:=Vd.po*Mean.po.Dose]
 
   } else {
+  
+    params.by.cas.spec <- data.set[,unique(.SD[,.(Compound)]),by=.(CAS,Species)]
+
     #get the rat parameters for the 1-compartment model for each chemical
     if (model=='1compartment')
     {
-      params.by.cas <- data.set[, httk::parameterize_1comp(chem.cas=CAS,
-                                                     default.to.human=TRUE,
-                                                     species="Rat"),
-                                by=CAS]
-      if (modelfun=="analytic") params.by.cas[, setdiff(names(params.by.cas),
-                                                        c("CAS",
-                                                          "kelim",
-                                                          "Vdist",
-                                                          "Fgutabs",
-                                                          "kgutabs")):=NULL]
-  #    params.by.cas[, kelim:=kelim+10^-5]
-  #    params.by.cas[, kelim:=max(-lm(log(Value)~Time,subset(chem.invivo.PK.data,Compound=="Carbendazim"))$coefficients[2],10^-5)]
-      params.by.cas[, Fgutabs:=0.99] #Assume 99% bioavailability for everything
-      params.by.cas[, kgutabs:=1]
+#      if (any(params.by.cas.spec$CAS%in%get_cheminfo(model='1compartment')))
+#        params.by.cas.spec[CAS %in% get_cheminfo(model='1compartment',species=Species),
+#        c("kelim", "Vdist", "Fgutabs", "kgutabs") := 
+#        httk::parameterize_1comp(chem.cas=CAS,
+#        default.to.human=TRUE,
+#        species=Species)[c("kelim","Vdist","Fgutabs","kgutabs")],
+#        by=c("CAS","Species")]
+# Wambaugh et al. (2018) medians:
+# apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
+      params.by.cas.spec[, kelim:=0.25]
+      params.by.cas.spec[, Vdist:=5.56]
+      params.by.cas.spec[, Fgutabs:=1.0]
+      params.by.cas.spec[, kgutabs:=2.19]
+      
+#      if (modelfun=="analytic") params.by.cas.spec[, setdiff(names(params.by.cas.spec),
+#                                                        c("CAS",
+#                                                          "kelim",
+#                                                          "Vdist",
+#                                                          "Fgutabs",
+#                                                          "kgutabs")):=NULL]
     } else if (model=='2compartment') {
     # Use this when parameterize_2comp is implemented in httk
     #   params.by.cas <- data.set[, httk::parameterize_2comp(chem.cas=CAS,
     #                                                  default.to.human=TRUE,
     #                                                  species="Rat"),
     #                             by=CAS]
-      tmp <- data.set[, httk::parameterize_1comp(chem.cas=CAS,
-                                                 default.to.human=TRUE,
-                                                 species="Rat"),
-                      by=CAS]
-      params.by.cas <- tmp[, .(CAS, Vdist,kelim, Rblood2plasma,
-                               MW, hematocrit, million.cells.per.gliver)]
+      if (any(params.by.cas.spec$CAS %in% get_cheminfo()))
+        params.by.cas.spec[CAS %in% get_cheminfo(),
+        c("kelim", "Vdist", "Fgutabs", "kgutabs") := 
+        httk::parameterize_1comp(chem.cas=CAS,
+        default.to.human=TRUE,
+        species=Species)[c("kelim","Vdist","Fgutabs","kgutabs")],
+        by=c("CAS","Species")]
+# Wambaugh et al. (2018) medians:
+# apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))        
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), kelim:=0.25]
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), Vdist:=5.56]
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), Fgutabs:=1.0]
+      params.by.cas.spec[!params.by.cas.spec$CAS%in%get_cheminfo(), kgutabs:=2.19]
+#      params.by.cas.spec <- tmp[, .(CAS, Vdist,kelim, Rblood2plasma,
+#                               MW, hematocrit, million.cells.per.gliver)]
       #Since we don't yet have 2comp predictions,
       #just choose some arbitrary numbers as starting points for the fit.
-      params.by.cas[, V1:=1]
-      params.by.cas[, Ralphatokelim:=1.2]
-      params.by.cas[, Fbetaofalpha:=0.8]
-  #    params.by.cas[, kelim:=max(-lm(log(Value)~Time,subset(chem.invivo.PK.data,Compound=="Carbendazim"))$coefficients[2],10^-5)]
-      params.by.cas[, Fgutabs:=0.99] #Assume 99% bioavailability for everything
-      params.by.cas[, kgutabs:=1]
+      params.by.cas.spec[, V1:=1]
+      params.by.cas.spec[, Ralphatokelim:=1.2]
+      params.by.cas.spec[, Fbetaofalpha:=0.8]
     
-      if (modelfun=="analytic") params.by.cas[, setdiff(names(params.by.cas),
-                                                        c("CAS",
-                                                          "kelim",
-                                                          "Ralphatokelim",
-                                                          "Fbetaofalpha",
-                                                          "V1",
-                                                          "Fgutabs",
-                                                          "kgutabs")):=NULL]
-                                                        
-     
+#      if (modelfun=="analytic") params.by.cas.spec[, setdiff(names(params.by.cas.spec),
+#                                                        c("CAS",
+#                                                          "kelim",
+#                                                          "Ralphatokelim",
+#                                                          "Fbetaofalpha",
+#                                                          "V1",
+#                                                          "Fgutabs",
+#                                                          "kgutabs")):=NULL]
     }
-    
-    
-    
-    data.set <- merge(data.set,
-                      params.by.cas,
-                      by='CAS')
-    paramnames <- names(params.by.cas)
-    paramnames <- paramnames[paramnames!='CAS']
-    
-    PK.fit.all <- data.set[,             
+    data.set <- merge(data.set,params.by.cas.spec,by=c("Species","Compound","CAS"))
+    paramnames <- names(params.by.cas.spec)
+    paramnames <- paramnames[!(paramnames%in%c("CAS","Species","Compound"))]
+    #Replace spaces in references with "."
+    data.set[, Reference:=gsub(Reference,
+                            pattern=' ',
+                            replacement='.')]
+
+    PK.fit.joint <- data.set[,             
                              analyze.pk.data(fitdata=.SD,
                                              this.cas=CAS,
                                              paramnames=paramnames,
                                              modelfun=modelfun,
                                              model=model),
-                             by=CAS]
-    
-    #For chemicals in both RTI and NHEERl data,
-    #try fitting RTI and NHEERL separately
-    
-    #data.set.RTI <- subset(data.set,Source=="RTI 2015")
-    #data.set.NHEERL <- subset(data.set,Source=="NHEERL 2015")
-    data.set[, overlap:=all(c('RTI 2015',
-                              'NHEERL 2015') %in%
-                              Source), by=CAS]
-    RTI.data <- subset(data.set,
-                       overlap==TRUE &
-                         Source=='RTI 2015')
-    NHEERL.data <- subset(data.set,
-                          overlap==TRUE &
-                            Source=='NHEERL 2015')
-    
-    PK.fit.RTI <- RTI.data[, analyze.pk.data(fitdata=.SD,
-                                             this.cas=CAS,
-                                             paramnames=paramnames,
-                                             modelfun=modelfun,
-                                             model=model),
-                           by=CAS]
-    PK.fit.NHEERL <- NHEERL.data[, analyze.pk.data(fitdata=.SD,
-                                                   this.cas=CAS,
-                                                   paramnames=paramnames,
-                                                   modelfun=modelfun,
-                                                   model=model),
-                                 by=CAS]
-    
-    PK.fit.bind <- rbind(PK.fit.all,
-                          PK.fit.RTI,
-                          PK.fit.NHEERL)
-    
+                             by=c("CAS","Species")]
+
+    multi.ref.cas <- data.set[,length(unique(Reference))>1,by=c("CAS","Species")]
+    multi.ref.cas <- subset(multi.ref.cas,V1==T)$CAS
+    if (length(multi.ref.cas)>0)
+    {
+      data.set.multi.ref <- subset(data.set,CAS %in% multi.ref.cas)
+      
+                              
+      PK.fit.separate <- data.set.multi.ref[,             
+                               analyze.pk.data(fitdata=.SD,
+                                               this.cas=CAS,
+                                               paramnames=paramnames,
+                                               modelfun=modelfun,
+                                               model=model,
+                                               this.reference=Reference),
+                               by=c("CAS","Species","Reference")]
+                               
+  
+      
+      PK.fit.bind <- rbind(PK.fit.joint,
+                            PK.fit.separate)
+    } else PK.fit.bind <- PK.fit.joint
+      
     #record which model was fit to data and whether it was full or analytical
     PK.fit.bind[, model:=model]
     PK.fit.bind[, model.type:=modelfun]
     
-    
+                  
     #Do post fit calculations:
     PK.fit.table <- PK.fit.bind
     if (model=="1compartment")
     {
-      
-      #Get HTTK-predicted total clearance for each CAS    L/h/kg BW
-      PK.fit.table[param.value.type=="Predicted",
-                   CLtot:=httk::calc_total_clearance(chem.cas=CAS,
-                                               species="Rat",
-                                               default.to.human=TRUE,
-                                               suppress.messages=TRUE),
-                   by=CAS]
-  
       #Get stats for fitted total clearance :    L/kg body weight/h
-      PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
-                                           "Fitted geometric mean",
-                                           "Fitted mode"),
-                   CLtot:=Vdist*kelim]
-  #    PK.fit.table[param.value.type %in% c("Fitted arithmetic std dev",
-  #                                         "Fitted geometric std dev"),
-  #                 CLtot:=sqrt(Vdist^2+kelim^2)]
+      PK.fit.table[,CLtot:=Vdist*kelim]
   
-      #Get HTTK-predicted Css for 1-compartment model
-      PK.fit.table[param.value.type=="Predicted",
-                   Css:=httk::calc_analytic_css(chem.cas=CAS,
-                                          species="Rat",
-                                          output.units='mg/L',
-                                          model='1compartment',
-                                          default.to.human=TRUE,
-                                          suppress.messages=TRUE),
-                   by=CAS]
+#      browser()
+#      PK.fit.table[,
+#                   AUC1mgkg:=kgutabs/Vdist/(kgutabs-kelim)*(
+#                     exp(-kgutabs*Tmax)/kgutabs  -exp(-kelim*Tmax)/kelim-
+#                     1/kgutabs + 1/kelim)]
+#      if (!is.na(Fgutabs)) PK.fit.table[,AUC1mgkg:=Fgutabs*AUC1mgkg]
+      
   
       #Get statistics for Css from fitted CLtot values
       #Get stats for fitted total clearance:
-      PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
-                                           "Fitted geometric mean",
-                                           "Fitted mode"),
-                   Css:=Fgutabs/(24*CLtot)] # 1 mg/kg/day / L/day/kg -> mg/L
-  
-      # PK.fit.table[, Css.arith.se := -Css.arith* #propagation of uncertainty
-      #            CLtot.arith.se/
-      #            CLtot.arith]
-      # PK.fit.table[, Css.geo.se := -Css.geo* #propagation of uncertainty
-      #            CLtot.geo.se/
-      #            CLtot.geo]
-  
+      PK.fit.table[,
+                   Css:=ifelse(is.na(Fgutabs),1,Fgutabs)/(24*CLtot)] # 1 mg/kg/day / L/day/kg -> mg/L
+    
       #Get statistics for halflife from fitted values
-      PK.fit.table[param.value.type %in% c("Predicted",
-                                           "Fitted arithmetic mean",
-                                           "Fitted geometric mean",
-                                           "Fitted mode"),
+      PK.fit.table[,
                    halflife:=log(2)/kelim]
   
   
-      PK.fit.table[param.value.type %in% c("Predicted",
-                                           "Fitted arithmetic mean",
-                                           "Fitted geometric mean",
-                                           "Fitted mode"),
+      PK.fit.table[,
                    tpeak.oral:=log(kgutabs/kelim)/(kgutabs-kelim)]
-     
+ 
+       PK.fit.table[,
+                   Cpeak.oral.1mgkg:=analytic_1comp_fun(
+                     params=list(
+                       Fgutabs = 1,
+                       kgutabs = kgutabs,
+                       kelim =kelim,
+                       Vdist = Vdist
+                       ),
+                     dose=1, 
+                     tpeak.oral, 
+                     iv.dose=F)[,"Ccompartment"]]
+    
     } else if(model=="2compartment")
     {
       PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
@@ -379,18 +410,13 @@ fit_all <- function(data.set,
       #the 1 in the denominator = time interval between doses = 1 day
       PK.fit.table[param.value.type!="Predicted",
                    Css:=(Fgutabs*1)/(CLtot*24)]
-      PK.fit.table[param.value.type=="Predicted",
-                   Css:=httk::calc_analytic_css(chem.cas=CAS,
-                                                species="Rat",
-                                                output.units='mg/L',
-                                                model='1compartment',
-                                                default.to.human=TRUE,
-                                                suppress.messages=TRUE),
-                   by=CAS]
+
     }
-  }
+    }
   
-  return(PK.fit.table)
+  PK.fit.table <- PK.fit.table[order(Compound,Species)]
+  
+  return(PK.fit.table[param.value.type%in%c("Predicted","Fitted geometric mean","Fitted geometric std dev")])
 }
 
 

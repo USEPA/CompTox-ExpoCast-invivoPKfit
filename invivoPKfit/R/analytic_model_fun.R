@@ -1,5 +1,3 @@
-#written by Caroline Ring
-#
 #'Evaluate analytic models
 #'
 #'@param params A named list of parameter values. Must match the parameters of \code{model}.
@@ -9,6 +7,8 @@
 #'@param iv.dose TRUE for IV dosing, FALSE for PO dosing.
 #'@param model Analytic model to evaluate. Currently only "1compartment" or
 #'  "2compartment" are implemented.
+#'            
+#' @author Caroline Ring
 #'
 #'@return A matrix with three columns:
 #'\describe{

@@ -1,6 +1,3 @@
-#written by Caroline Ring
-#modified by John Wambaugh
-#
 #'Analytical 1-compartment model
 #'
 #'@param time A vector of times in hours
@@ -16,6 +13,8 @@
 #'@param iv.dose TRUE for single IV bolus dose; FALSE for single oral dose
 #'
 #'@return A vector of plasma concentration values corresponding to \code{time}.
+#'
+#'@author Caroline Ring, John Wambaugh
 #'
 #'@export
 

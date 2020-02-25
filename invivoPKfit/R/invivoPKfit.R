@@ -1,5 +1,3 @@
-#written by Caroline Ring
-#
 #' invivoPKfit: A package to fit model parameters to in vivo data
 #'
 #' The invivoPKfit package takes in vivo concentration-time data from TNO, RTI,
@@ -11,7 +9,7 @@
 #' @section Main function:
 #' \code{\link{fit_all}} is the main or "outermost" function; start
 #'   there.
-#'
+#' @author Caroline Ring
 #' @docType package
 #' @name invivoPKfit
 NULL

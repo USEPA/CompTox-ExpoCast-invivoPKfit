@@ -1,6 +1,3 @@
-#written by Caroline Ring
-#modified by John Wambaugh
-#
 #'Compute model-predicted concentration values for a vector of time values
 #'
 #'@param design.times A vector of times from the design matrix
@@ -12,6 +9,8 @@
 #'  ODE model
 #'@param model "1compartment" or "2compartment"
 #'@param model.params A named vector of model parameter values.
+#'       
+#' author Caroline Ring, John Wambaugh
 #'
 #'@return A vector of the model-predicted plasma concentration values of the
 #'  same length as design.times, for each time in design.times
@@ -42,8 +41,9 @@ fitfun <- function(design.times,
 
     #if it fails with an error
     if (inherits(out, "try-error")){
-      print("Error in analytic_model_fun")
-      print(model.params)
+      cat("fitfun: Error in analytic_model_fun\n")
+      cat(paste(paste(apply(data.frame(Names=names(model.params),Values=model.params,stringsAsFactors=F),1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
+      browser()
 #      browser() #kick to debugger to find out what went wrong
       out[,"time"] <- these.times
       out[,"Ccompartment"] <- 10^-20 #just set concentration value to essentially zero
@@ -51,8 +51,8 @@ fitfun <- function(design.times,
 
     #if Cp is non-finite
     if (any(!is.finite(out[, 'Ccompartment']))){
-      print("Error, Cp is non-finite")
-      print(model.params)
+      cat("fitfun: Error, Cp is non-finite\n")
+      cat(paste(paste(apply(data.frame(Names=names(model.params),Values=model.params,stringsAsFactors=F),1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
 #      browser() #kick to debugger to find out what went wrong
       out[,"time"] <- these.times
       out[,"Ccompartment"] <- 10^-20 #just set concentration value to essentially zero

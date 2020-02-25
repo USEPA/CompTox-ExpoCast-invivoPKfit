@@ -28,4 +28,6 @@ A vector of plasma concentration values corresponding to \code{time}.
 \description{
 Analytical 1-compartment model
 }
-
+\author{
+Caroline Ring, John Wambaugh
+}

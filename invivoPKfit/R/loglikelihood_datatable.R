@@ -1,15 +1,14 @@
-#written by Caroline Ring
-#modified by John Wambaugh
-#
 #' The log-likelihood function used for fitting
 #'
 #' @param params A named list of parameter values
 #' @param DT Concentration-time data for a given chemical
-#'@param modelfun "analytic" to use the analytic model solution, "full" to use
+#' @param modelfun "analytic" to use the analytic model solution, "full" to use
 #'  the full ODE model
-#'@param model The model to fit, either "1compartment" or "2compartment" (other
+#' @param model The model to fit, either "1compartment" or "2compartment" (other
 #'  models not implemented for now)
 #'
+#@ Author Caroline Ring, John Wambaugh
+#
 #'  @return A log-likelihood value for the data given the parameter values in params
 
 log.likelihood<- function(params,
@@ -66,21 +65,20 @@ log.likelihood<- function(params,
                       model.params=model.params),
        by=.(Dose, Route)]
 
-  #Construct the log-likelihood as Gaussian noise
-  #assume residuals from each study are iid Gaussian
-
-    #Compute LL terms by each Reference
+    #Compute log-normal log-likelihood (LL):
+    # pred and sigma.ref are on the arithmetic scale, so convert to log-norma mu and var:
+    #cat(paste(sum(abs(DT[,pred-Value]),na.rm=T),"\n"))
+    DT[,mu:=log((pred+10^-12)/(1+sigma.ref^2/(pred+10^-12)^2)^(1/2))]
+    DT[,var:=log(1+sigma.ref^2/(pred+10^-12)^2)]
+    # Contibutions from terms above 2*LOQ:
     ll.term1 <- DT[!is.na(Value),
-                       sum(-((log(Value+10^-12)-log(pred+10^-12))^2/
-                             (2*sigma.ref)))]
-    ll.term2 <-  DT[!is.na(Value)            , -(length(Value)*
-          log(sqrt(sigma.ref*2*pi))),
-    by=Reference]
-    # Add in contributions from observations below 2*LOQ:
-    ll.term3 <- DT[is.na(Value),sum(pnorm(log(2*LOQ+10^-12),mean=log(pred+10^-12),sd=sigma.ref^(1/2),log.p=T))]
+                       sum(-((log(Value+10^-12)-mu)^2/2/var) 
+                           - log(Value*sqrt(2*var*pi)))]
+    # Add in cumulative distribution up to twice LOQ for observations below 2*LOQ:
+    ll.term2 <- DT[is.na(Value),sum(plnorm(2*LOQ+10^-12,mean=mu,sd=var^(1/2),log.p=T))]
 
     #And sum over references to get overall LL
-    ll <- ll.term1 + ll.term2[, sum(V1)] + ll.term3
+    ll <- ll.term1 + ll.term2
 
     #If ll isn't finite -- for example if a predicted concentration was negative --
     #just set it to -Inf to indicate that these parameters are infinitely unlikely

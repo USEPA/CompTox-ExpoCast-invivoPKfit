@@ -4,7 +4,14 @@
 \alias{analyze.pk.data}
 \title{Actually does the fitting}
 \usage{
-analyze.pk.data(fitdata, this.cas, paramnames, modelfun, model)
+analyze.pk.data(
+  fitdata,
+  this.cas,
+  paramnames,
+  modelfun,
+  model,
+  this.reference = NULL
+)
 }
 \arguments{
 \item{fitdata}{A data.table of concentration vs. time data for a given
@@ -28,4 +35,6 @@ A single row of fitted parameter values (arithmetic means, geometric
 \description{
 Fits model parameters to concentration vs. time data for a given chemical
 }
-
+\author{
+Caroline Ring, John Wambaugh
+}

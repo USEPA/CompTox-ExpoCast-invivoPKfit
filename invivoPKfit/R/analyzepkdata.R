@@ -1,6 +1,3 @@
-#written by Caroline Ring
-#modified by John Wambaugh
-#
 #'Actually does the fitting
 #'
 #'Fits model parameters to concentration vs. time data for a given chemical
@@ -14,6 +11,8 @@
 #'@param model The model to fit, either "1compartment" or "2compartment" (other
 #'  models not implemented for now)
 #'
+#' @author Caroline Ring, John Wambaugh
+#'
 #'@return A single row of fitted parameter values (arithmetic means, geometric
 #'  means, modes, arithmetic standard deviations, and geometric standard
 #'  deviations)
@@ -22,36 +21,42 @@ analyze.pk.data <- function(fitdata,
                             this.cas,
                             paramnames,
                             modelfun,
-                            model) 
+                            model,
+                            this.reference=NULL) 
 {
+  UPPERBOUNDARY <- 1e4
+  
   #take a copy of input data table so it behaves as though passed by value
   fitdata <- data.table::copy(fitdata)
 
-  print(this.cas)
+  cat(paste("Optimizing data for CAS-RN ",this.cas,"\n",sep=""))
+
+  #Set a plausible upper bound for sigma:
+  MAXSIGMA <- 3*median(fitdata$Value,na.rm=T)
 
   #Initialize output table with HTTK-predicted parameter values
   out.dt <- fitdata[1,paramnames, with=FALSE]
   out.dt[, param.value.type:='Predicted']
 
   these.params <- as.list(fitdata[1, paramnames, with=FALSE])
-  #Set oral fraction absorbed to 0.99 (as a starting point for optimizer)
-  #because 1 is on a boundary
-  these.params["Fgutabs"] <- 0.99
+
+  # If there is no reference column, add on in:
+  if (!is.null(this.reference))
+  {
+    fitdata[,Reference:=this.reference]
+  }
 
   #Add a different sigma value for each reference
-  fitdata[, Reference:=gsub(Reference,
-                            pattern=' ',
-                            replacement='.')]
   refs <- fitdata[,
                   unique(Reference)]
-  
   # Initialize the standard devications to 0.2
   these.params[sapply(refs,
                       function(x) paste('sigma2',
                                         x,
-                                        sep='.'))] <- rep(0.2,
-                                                          length(refs))
-
+                                        sep='.'))] <- rep(max(MAXSIGMA/100,
+                                                            0.1),
+                                                        length(refs))
+  
   #log-transform the model parameters
   these.params <- lapply(these.params,log)
 
@@ -80,6 +85,7 @@ analyze.pk.data <- function(fitdata,
   {
     elim.data <- subset(fitdata,Route=="iv"&!is.na(Value))
     elim.data$Value <- elim.data$Value/elim.data$Dose
+    elim.data <- subset(elim.data,Dose>0)
     opt.params["kelim"] <- log(max(-lm(log(Value) ~ Time,data=elim.data)$coefficients["Time"],0.0001))
     if (is.na(opt.params["kelim"])) opt.params["kelim"] <- log(1)
     Vd.data <- subset(elim.data,Time==min(Time))
@@ -100,7 +106,8 @@ analyze.pk.data <- function(fitdata,
   } else if ("po" %in% fitdata$Route) {
     elim.data <- subset(fitdata,Route=="po"&!is.na(Value))
     elim.data$Value <- elim.data$Value/elim.data$Dose
-    max.time <- as.numeric(elim.data[Value==max(Value),"Time"])
+    elim.data <- subset(elim.data,Dose>0)
+    max.time <- as.numeric(min(elim.data[Value == max(Value), "Time"]))
     elim.data <- subset(elim.data,Time>=max.time)
     opt.params["kelim"] <- log(max(-lm(log(Value) ~ Time,data=elim.data)$coefficients["Time"],0.0001))
     if (is.na(opt.params["kelim"])) opt.params["kelim"] <- log(1)
@@ -155,18 +162,24 @@ analyze.pk.data <- function(fitdata,
                                              "Fitted geometric std dev",
                                              "Fitted mode"))
     out.dt <- rbind(out.dt, tmp.out, fill=TRUE)
-    out.dt[, Reference:=paste(unique(fitdata$Reference),
-                              sep=", ",
-                              collapse=", ")]
-    #Keep the order the same for RTI/NHEERL:
-    out.dt[regexpr("RTI",Reference)!=-1&regexpr("NHEERL",Reference)!=-1,Reference:='RTI.2015, NHEERL.2015']
-    out.dt[, Source:=paste(unique(fitdata$Source, collapse=" "))]
-    out.dt[Reference=='RTI.2015, NHEERL.2015', Source:='Joint NHEERL/RTI']
+
+    if (is.null(this.reference))
+    {
+      out.dt[, Reference:=paste(sort(unique(fitdata$Reference)),
+                                sep=", ",
+                                collapse=", ")]
+      out.dt[, Data.Analyzed:=Reference]
+      out.dt[regexpr(",",Data.Analyzed)!=-1, Data.Analyzed:='Joint Analysis']
+    } else {
+      out.dt[, Data.Analyzed:=this.reference]
+      out.dt[,Reference:=this.reference]
+    }    
     out.dt[,LogLikelihood:=as.numeric(NA)]
     out.dt[,AIC:=as.numeric(NA)]
-    print(paste("For CAS", this.cas, "there were", length(opt.params),
-                "parameters and only",
-                nrow(fitdata), "data points"))
+    cat(paste("For CAS ", this.cas, " there were ", length(opt.params),
+                  " parameters and only ",
+                  nrow(fitdata), " data points. Optimization aborted.\n",sep=""))
+
     return(out.dt)
   }
 
@@ -174,15 +187,23 @@ analyze.pk.data <- function(fitdata,
   const.params <- these.params[!(names(these.params) %in%
                                    names(opt.params))]
 
+  #
+  #
+  #
+  # THIS IS WHERE OPTIMIZER UPPER BOUNDS ARE SET
+  #
+  #
+  #
+  
   #change from a named list of params to optimize to a named vector of params to
   #optimize
   upper <- unlist(opt.params)
 
   #specify upper bounds of params to optimize (on a log scale!!)
-  upper[] <- log(1000)
-  upper[regexpr("sigma",names(upper))!=-1]<-log(3) 
+  upper[] <- log(UPPERBOUNDARY)
+  upper[regexpr("sigma",names(upper))!=-1]<-log(MAXSIGMA) 
   if (model=='2compartment'){
-    upper["Ralphatokelim"] <- log(100)
+    upper["Ralphatokelim"] <- log(1000)
     upper["Fbetaofalpha"] <- log(0.75) #on a log scale!
    }
   if ("Fgutabs" %in% unlist(opt.params)){
@@ -191,8 +212,18 @@ analyze.pk.data <- function(fitdata,
   if ("kgutabs" %in% unlist(opt.params)){
     upper["kgutabs"] <- log(1000)
   }
-  opt.params[opt.params>upper] <- upper[opt.params>upper]*0.95
+  # Force initial values to be within bounds:
+  opt.params[opt.params>upper] <- upper[opt.params>upper]-0.1
+ 
+  #
+  #
+  #
+  # THIS IS WHERE OPTIMIZER LOWER BOUNDS ARE SET
+  #
+  #
+  #
   
+  # Default lower bound of 10^-8 except for parameters where this wouldn't make sense:
   lower <- rep(log(10^-8), length(upper))
   names(lower) <- names(upper)
   if (model=='1compartment'){
@@ -201,7 +232,15 @@ analyze.pk.data <- function(fitdata,
     lower["V1"] <- log(0.01)
     lower["Ralphatokelim"] <- 0
   }
-  opt.params[opt.params<lower] <- lower[opt.params<lower]*1.05
+  if ("Fgutabs" %in% names(lower))
+  {
+    lower["Fgutabs"] <- log(0.05)
+  }
+  # Curve fitting doesn't really work if we let the standard deviation of the measurements get too small:
+  lower[regexpr("sigma",names(lower))!=-1]<-log(0.00001)
+  # Force initial values to be within bounds:
+  opt.params[opt.params<lower] <- lower[opt.params<lower]+0.1
+  
   orig.params <- opt.params
 
   #factr: controls the convergence of the "L-BFGS-B" method. Convergence occurs when
@@ -224,8 +263,8 @@ analyze.pk.data <- function(fitdata,
     return(foo)
   }
 
-  print(as.data.frame(lapply(opt.params,exp)))
-
+  cat(paste("Initial values:    ",paste(apply(data.frame(Names=names(lapply(opt.params,exp)),Values=unlist(lapply(opt.params,exp)),stringsAsFactors=F),1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
+  
   tryCatch(all.data.fit <- optimx::optimx(par=unlist(opt.params),
                                           fn=objfun,
                                           lower=lower,
@@ -243,7 +282,7 @@ analyze.pk.data <- function(fitdata,
   names(ln.means) <- names(opt.params)
 
   if (any(ln.means>upper)) browser()
-  print(t(as.data.frame(sapply(ln.means,exp))))
+  cat(paste("Optimized values:  ",paste(apply(data.frame(Names=names(ln.means),Values=sapply(ln.means,exp),stringsAsFactors=F),1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
   #Get SDs from Hessian
   #Calculate Hessian using function from numDeriv
   numhess <- numDeriv::hessian(func=objfun,
@@ -252,31 +291,40 @@ analyze.pk.data <- function(fitdata,
   ln.sds <- tryCatch(diag(solve(numhess))^(1/2),
                      error = function(err){
                        #if hessian can't be inverted
-                       print("Hessian can't be inverted; using pseudovariance matrix")
+                       cat("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.\n")
                        return(diag(chol(MASS::ginv(numhess),
                                         pivot=TRUE))^(1/2)) #pseduovariance matrix
                        #see http://gking.harvard.edu/files/help.pdf
                      })
   names(ln.sds) <- names(ln.means)
 
-  while(any(is.nan(ln.sds)) & factr > 1){ #If any of the SDs are NaN
+  while(any(is.nan(ln.sds)) & factr>1) #If any of the SDs are NaN
+  {
+    cat("One or more paramters has NaN standard deviation, repeating optimization with smaller convergence tolerance.\n")
     #then redo optimization
-    #opt.params <- all.data.fit$par
-    opt.params <- ln.means
-    factr <- factr/10 #reducing factr by 10 (convergence tolerance)
+  #  if ("Fgutabs" %in% names(opt.params)) browser()
+    opt.params <- ln.means+runif(length(ln.means),-0.1,0.1)
+    opt.params[regexpr("sigma",names(opt.params))!=-1] <- opt.params[regexpr("sigma",names(opt.params))!=-1]+1
+    opt.params[opt.params<=lower] <- lower[opt.params<=lower]+0.1
+    opt.params[opt.params>=upper] <- upper[opt.params>=upper]-0.1
+    
+    cat(paste("Initial values:    ",paste(apply(data.frame(Names=names(opt.params),Values=unlist(lapply(opt.params,exp)),stringsAsFactors=F),1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
+    factr <- factr/10 #reducing factr by 10 (requiring closer convergence)
 
     #use general-purpose optimizer to optimize 1-compartment params to fit data
     #optimize by maximizing log-likelihood
     all.data.fit<-optimx::optimx(par=unlist(opt.params),
                                  fn=objfun,
-                                 lower=rep(-Inf, length(upper)),
+                                 lower=lower,
                                  upper=upper,
                                  method="L-BFGS-B",
                                  hessian = FALSE,
-                                 control=list(factr=factr)) #box constraints
+                                 control=list(factr=factr)) 
 
     ln.means <- as.vector(coef(all.data.fit))
     names(ln.means) <- names(opt.params)
+    cat(paste("Optimized values:  ",paste(apply(data.frame(Names=names(ln.means),Values=sapply(ln.means,exp),stringsAsFactors=F),1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
+
     #Get SDs from Hessian
     #Calculate Hessian using function from numDeriv
     numhess <- numDeriv::hessian(func=objfun,
@@ -285,7 +333,7 @@ analyze.pk.data <- function(fitdata,
     ln.sds <- tryCatch(diag(solve(numhess))^(1/2),
                        error = function(err){
                          #if hessian can't be inverted
-                         print("Hessian can't be inverted; using pseudovariance matrix")
+                         cat("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.\n")
                          return(diag(chol(MASS::ginv(numhess),
                                           pivot=TRUE))^(1/2)) #pseduovariance matrix
                          #see http://gking.harvard.edu/files/help.pdf
@@ -339,26 +387,24 @@ analyze.pk.data <- function(fitdata,
   out.dt <- rbind(out.dt, modes, fill=TRUE)
 
 
-  #Add the study reference for this row
-  out.dt[, Reference:=paste(unique(fitdata$Reference),
-                            sep=", ",
-                            collapse=", ")]
-  #Keep the order the same for RTI/NHEERL:
-  out.dt[regexpr("RTI",Reference)!=-1&regexpr("NHEERL",Reference)!=-1,Reference:='RTI.2015, NHEERL.2015']
-  
-  #put the source for this row
-  out.dt[, Source:=paste(unique(fitdata$Source, collapse=" "))]
-  out.dt[Reference=='RTI.2015, NHEERL.2015', Source:='Joint NHEERL/RTI']
-
+  if (is.null(this.reference))
+  {
+    out.dt[, Reference:=paste(sort(unique(fitdata$Reference)),
+                              sep=", ",
+                              collapse=", ")]
+    out.dt[, Data.Analyzed:=Reference]
+    out.dt[regexpr(",",Data.Analyzed)!=-1, Data.Analyzed:='Joint Analysis']
+  } else out.dt[, Data.Analyzed:=this.reference]
+    
   out.dt[, Compound:=fitdata$Compound[1]]
 
   # If any of the parameters were not optimized or if the the model does not fit well:
 #  if (any(ln.means==as.vector(opt.params[names(ln.means)])) | any(sigmas>1))
-  if (any(ln.means==as.vector(orig.params[names(ln.means)])) | any(sigmas>1))
+  if (any(ln.means==as.vector(orig.params[names(ln.means)])) | any(sigmas>MAXSIGMA))
   {
     out.dt[,LogLikelihood:=0]
     out.dt[,AIC:=Inf]
-    print("Some parameters were not optimized or sigma>1. Returning AIC=INF")
+    cat(paste("Some parameters were not optimized or sigma >",MAXSIGMA,". Returning AIC=INF.\n"))
   } else if (model=='1compartment')
   {
     # Check for bad one-compartment model fits:
@@ -366,7 +412,7 @@ analyze.pk.data <- function(fitdata,
     {
       out.dt[,LogLikelihood:=0]
       out.dt[,AIC:=Inf]
-      print("Vdist equal to upper bound on optimizer. Returning AIC=INF")
+      cat("Vdist equal to upper bound on optimizer. Returning AIC=INF.\n")
     } else {
       out.dt[,LogLikelihood:=-all.data.fit$value]
       out.dt[,AIC:=2*length(opt.params)+2*all.data.fit$value]
@@ -378,12 +424,17 @@ analyze.pk.data <- function(fitdata,
     {
       out.dt[,LogLikelihood:=0]
       out.dt[,AIC:=Inf]
-      print("Problem with Fbetaofalpha or V1 equaling optimizer bound. Returning AIC=INF")
+      cat("Problem with Fbetaofalpha or V1 equaling optimizer bound. Returning AIC=INF.\n")
     } else {
       out.dt[,LogLikelihood:=-all.data.fit$value]
       out.dt[,AIC:=2*length(opt.params)+2*all.data.fit$value]
     }
   }
   
+  if (!is.null(this.reference))
+  {
+    out.dt[,Reference:=NULL]
+  }
+
   return(out.dt)
 }

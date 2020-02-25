@@ -1,10 +1,10 @@
 ---
-title: "Wambaugh et al. (Submitted): Estimating TK Parameters from In Vivo Data"
+title: "Wambaugh et al. (2018): Estimating TK Parameters from In Vivo Data"
 author: "John Wambaugh and Caroline Ring"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Wambaugh et al. (Submitted): Estimating TK Parameters from In Vivo Data}
+  %\VignetteIndexEntry{Wambaugh et al. (2018): Estimating TK Parameters from In Vivo Data}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -38,7 +38,7 @@ junk <- plot_conctime(PK.fit.table=PK.fit.table.2comp,
                       data.set=pkdataset_nheerlcleaned,
                       model="2compartment")
 ```
-#Do the 1-compartment model fit
+# Do the 1-compartment model fit
 ```{r onecomp, eval=FALSE}
 system.time(PK.fit.table.1comp <- invivoPKfit::fit_all(data.set=pkdataset_nheerlcleaned, model="1compartment", modelfun="analytic"))
 
@@ -50,7 +50,7 @@ junk <- plot_conctime(PK.fit.table=PK.fit.table.1comp,
                       data.set=pkdataset_nheerlcleaned,
                       model="1compartment")
 ```
-#Output the dataset analyzed:
+# Output the dataset analyzed:
 ```{r dataoutput,eval=FALSE}
 write.csv(pkdataset_nheerlcleaned[order(pkdataset_nheerlcleaned$Compound),],"SupTable1.txt",row.names=F)
 write.csv(pkdataset_nheerlcleaned[order(pkdataset_nheerlcleaned$Compound),],file=paste("InVivoData-",Sys.Date(),".txt",sep=""),row.names=F)

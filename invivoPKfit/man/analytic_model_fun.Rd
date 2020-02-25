@@ -30,4 +30,6 @@ A matrix with three columns:
 \description{
 Evaluate analytic models
 }
-
+\author{
+Caroline Ring
+}
