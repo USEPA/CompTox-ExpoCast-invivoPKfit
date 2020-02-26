@@ -2,7 +2,7 @@
 #'
 #' Creates a PDF of the fits from \code{\link{fit_all}} and data together
 #'
-#' @param PK.fit.table Table of parameter estimates from \code(\link(fit_all))
+#' @param PK.fit.table Table of parameter estimates from \code{\link{fit_all}}
 #' @param data.set A data.table of concentration vs. time data for a given
 #'  chemical
 #' @param model Analytic model to evaluate. Currently only "1compartment" or
@@ -23,7 +23,7 @@
 #' @return None
 #'
 #' @import RColorBrewer
-#' @importfrom scales scientific_format
+#' @importFrom scales scientific_format
 #' @import ggplot2
 #'
 #' @export

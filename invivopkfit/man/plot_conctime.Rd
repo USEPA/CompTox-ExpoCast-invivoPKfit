@@ -20,7 +20,7 @@ plot_conctime(
 )
 }
 \arguments{
-\item{PK.fit.table}{Table of parameter estimates from \code(\link(fit_all))}
+\item{PK.fit.table}{Table of parameter estimates from \code{\link{fit_all}}}
 
 \item{data.set}{A data.table of concentration vs. time data for a given
 chemical}
