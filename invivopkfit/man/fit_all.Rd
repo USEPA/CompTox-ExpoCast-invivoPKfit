@@ -4,7 +4,7 @@
 \alias{fit_all}
 \title{Main fitting function}
 \usage{
-fit_all(data.set, model, modelfun = NA)
+fit_all(data.set, model, modelfun = NA, ratio.data.to.dose = 1)
 }
 \arguments{
 \item{data.set}{A table of concentration-time data. Preferably
@@ -14,9 +14,12 @@ fit_all(data.set, model, modelfun = NA)
 only "1compartment" and "2compartment" are implemented.}
 
 \item{modelfun}{Either "analytic" or "full" -- whether to fit using the
-analytic solution to the model, or the full ODE model. Presently,
-"analytic" is recommended (because the analytic solution is exact and much
-faster).}
+  analytic solution to the model, or the full ODE model. Presently,
+  "analytic" is recommended (because the analytic solution is exact and much
+  faster).
+#param ratio between the weights used to report the data and the weights used 
+  for the dose. For example, ug/L data and mg/kg/day dose would be 0.001
+  (defaults to 1)}
 }
 \value{
 A data.table of fitted parameter values for each chemical.

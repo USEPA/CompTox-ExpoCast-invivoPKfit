@@ -34,11 +34,12 @@ analytic_model_fun <- function(params,
                  '1compartment' = cp_1comp,
                  '2compartment' = cp_2comp)
 
-  Cp <- do.call(mfun,
+  Cp <- tryCatch(do.call(mfun,
                 list(time=times,
               params=params,
               dose=dose,
-              iv.dose=iv.dose))
+              iv.dose=iv.dose)),
+              error=rep(0,length=times))  
 
   #Cp will have units mg/L
 

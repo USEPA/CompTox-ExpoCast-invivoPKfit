@@ -4,8 +4,14 @@
 \alias{analyze.pk.data}
 \title{Actually does the fitting}
 \usage{
-analyze.pk.data(fitdata, this.cas, paramnames, modelfun, model,
-  this.reference = NULL)
+analyze.pk.data(
+  fitdata,
+  this.cas,
+  paramnames,
+  modelfun,
+  model,
+  this.reference = NULL
+)
 }
 \arguments{
 \item{fitdata}{A data.table of concentration vs. time data for a given

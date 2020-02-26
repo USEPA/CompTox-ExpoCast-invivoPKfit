@@ -13,7 +13,7 @@ Depends: httk
 Imports: data.table, PK, MASS, minqa, numDeriv, optimx, pracma, scales,
         ggplot2, RColorBrewer
 Suggests: knitr, gdata, stringr
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.2
 VignetteBuilder: knitr
 NeedsCompilation: no
 Packaged: 2018-07-27 14:45:05 UTC; jwambaug

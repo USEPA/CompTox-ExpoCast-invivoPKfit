@@ -3,7 +3,6 @@
 \docType{package}
 \name{invivoPKfit}
 \alias{invivoPKfit}
-\alias{invivoPKfit-package}
 \title{invivoPKfit: A package to fit model parameters to in vivo data}
 \description{
 The invivoPKfit package takes in vivo concentration-time data from TNO, RTI,
