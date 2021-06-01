@@ -1,24 +1,3 @@
-#'Actually does the fitting
-#'
-#'Fits model parameters to concentration vs. time data for a given chemical
-#'
-#'@param fitdata A data.table of concentration vs. time data for a given
-#'  chemical
-#'@param this.cas A CAS number for the chemical to be fitted
-#'@param paramnames A list of names of the model parameters to be fitted
-#'@param modelfun "analytic" to use the analytic model solution, "full" to use
-#'  the full ODE model
-#'@param model The model to fit, either "1compartment" or "2compartment" (other
-#'  models not implemented for now)
-#'
-#' @author Caroline Ring, John Wambaugh
-#'
-#'@return A single row of fitted parameter values (arithmetic means, geometric
-#'  means, modes, arithmetic standard deviations, and geometric standard
-#'  deviations)
-
-
-
 #' Actually does the fitting
 #' 
 #' Fits model parameters to concentration vs. time data for a given chemical

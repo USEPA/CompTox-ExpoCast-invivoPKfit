@@ -14,10 +14,12 @@
 \item{modelfun}{"analytic" to use the analytic model solution, "full" to use
 the full ODE model}
 
-\item{model}{The model to fit, either "1compartment" or "2compartment" (other
- models not implemented for now)
-
- @return A log-likelihood value for the data given the parameter values in params}
+\item{model}{The model to fit, either "1compartment" or "2compartment"
+(other models not implemented for now)}
+}
+\value{
+A log-likelihood value for the data given the parameter values in
+params
 }
 \description{
 The log-likelihood function used for fitting

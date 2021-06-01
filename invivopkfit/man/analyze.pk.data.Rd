@@ -24,13 +24,13 @@ chemical}
 \item{modelfun}{"analytic" to use the analytic model solution, "full" to use
 the full ODE model}
 
-\item{model}{The model to fit, either "1compartment" or "2compartment" (other
-models not implemented for now)}
+\item{model}{The model to fit, either "1compartment" or "2compartment"
+(other models not implemented for now)}
 }
 \value{
 A single row of fitted parameter values (arithmetic means, geometric
- means, modes, arithmetic standard deviations, and geometric standard
- deviations)
+means, modes, arithmetic standard deviations, and geometric standard
+deviations)
 }
 \description{
 Fits model parameters to concentration vs. time data for a given chemical

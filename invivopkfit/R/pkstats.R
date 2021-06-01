@@ -1,10 +1,4 @@
 #' Calculates Area Under the Curve (AUC) and Peak Concentration (Cmax)
-#'
-#' author John Wambaugh
-#
-
-
-#' Calculates Area Under the Curve (AUC) and Peak Concentration (Cmax)
 #' 
 #' author John Wambaugh
 #' 

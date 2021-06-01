@@ -18,30 +18,8 @@
 #' @return A data.table of fitted parameter values for each chemical.
 #'
 #' @author Caroline Ring, John Wambaugh
-#'
-#' @export
-
-
-
-#' Main fitting function
-#' 
-#' Fits parameters of a specified model to concentration-time data given in
-#' data.set
-#' 
-#' 
-#' @param data.set A table of concentration-time data. Preferably
-#' \code{pkdataset_nheerlcleaned} or \code{pkdataset_nheerlorig}.
-#' @param model Which general model should be fit for each chemical. Presently,
-#' only "1compartment" and "2compartment" are implemented.
-#' @param modelfun Either "analytic" or "full" -- whether to fit using the
-#' analytic solution to the model, or the full ODE model. Presently, "analytic"
-#' is recommended (because the analytic solution is exact and much faster).
-#' #param ratio between the weights used to report the data and the weights
-#' used for the dose. For example, ug/L data and mg/kg/day dose would be 0.001
-#' (defaults to 1)
-#' @return A data.table of fitted parameter values for each chemical.
-#' @author Caroline Ring, John Wambaugh
 #' @export fit_all
+#' @importFrom PK nca.batch
 fit_all <- function(data.set,
                     model,
                     modelfun=NA,
@@ -208,7 +186,7 @@ fit_all <- function(data.set,
             }
             else
             {
-              out <- try(nca.batch(data=this.route.subset,dose=dose.arg,method="z"))
+              out <- try(PK::nca.batch(data=this.route.subset,dose=dose.arg,method="z"))
             }
             if (class(out)!="try-error")
             {

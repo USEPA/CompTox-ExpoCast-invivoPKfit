@@ -8,13 +8,11 @@ analytic_1comp_fun(params, dose, times, time.units = "h", iv.dose)
 }
 \arguments{
 \item{params}{A named list of model parameter values. Must include:
-\describe{
-\item{kelim}{Elimination rate, 1/h}
-\item{Vdist}{Volume of distribution, L/kg body weight}}
-For oral administration (\code{iv.dose} FALSE), \code{params} must also include:
-\describe{
-\item{Fgutabs}{Oral bioavailability, unitless fraction}
-\item{kgutabs}{Oral absorption rate, 1/h}}}
+\describe{ \item{kelim}{Elimination rate, 1/h} \item{Vdist}{Volume of
+distribution, L/kg body weight}} For oral administration (\code{iv.dose}
+FALSE), \code{params} must also include: \describe{ \item{Fgutabs}{Oral
+bioavailability, unitless fraction} \item{kgutabs}{Oral absorption rate,
+1/h}}}
 
 \item{dose}{Dose in mg/kg}
 
@@ -25,7 +23,8 @@ For oral administration (\code{iv.dose} FALSE), \code{params} must also include:
 \item{iv.dose}{TRUE for single IV bolus dose; FALSE for single oral dose}
 }
 \value{
-A matrix of \code{time}, plasma concentration, and area under the curve (AUC).
+A matrix of \code{time}, plasma concentration, and area under the
+curve (AUC).
 }
 \description{
 Analytical 1-compartment function

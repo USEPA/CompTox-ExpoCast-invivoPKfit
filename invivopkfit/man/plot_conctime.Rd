@@ -30,14 +30,13 @@ chemical}
 
 \item{mean.type}{(Defaults to fitted geometric mean)}
 
-\item{fit.factors}{Add a trend-line using the fit for each combination of the
-factors listed in this character vector. (defaults to Compound, 
+\item{fit.factors}{Add a trend-line using the fit for each combination of
+the factors listed in this character vector. (defaults to Compound,
 Dose.nominal, Data.Analyzed, and Route)}
 
 \item{plot.split.factor}{For each compound, make a separate plot for each
- unique value of this factor (defaults to Route)
-#param shape.factor Indicate this factor by shape in the plots (defaulta to
- Data.Analyzed)}
+unique value of this factor (defaults to Route) #param shape.factor Indicate
+this factor by shape in the plots (defaulta to Data.Analyzed)}
 
 \item{color.factor}{Indicate this factor by color in the plots (defaults to
 Data.Analyzed')}
@@ -53,5 +52,5 @@ None
 Creates a PDF of the fits from \code{\link{fit_all}} and data together
 }
 \author{
-{Caroline Ring, John Wambaugh}
+Caroline Ring, John Wambaugh
 }

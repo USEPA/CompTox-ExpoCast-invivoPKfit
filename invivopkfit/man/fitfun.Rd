@@ -26,18 +26,18 @@ fitfun(
 
 \item{design.time.step}{The maximum number of time steps per hour.}
 
-\item{modelfun}{"analytic" to use analytic model solution, "full" to use full
-ODE model}
+\item{modelfun}{"analytic" to use analytic model solution, "full" to use
+full ODE model}
 
 \item{model}{"1compartment" or "2compartment"}
 
 \item{model.params}{A named vector of model parameter values.
-      
+
 author Caroline Ring, John Wambaugh}
 }
 \value{
 A vector of the model-predicted plasma concentration values of the
- same length as design.times, for each time in design.times
+same length as design.times, for each time in design.times
 }
 \description{
 Compute model-predicted concentration values for a vector of time values
