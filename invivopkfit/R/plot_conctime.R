@@ -1,34 +1,27 @@
 #' plot_conctime
-#'
+#' 
 #' Creates a PDF of the fits from \code{\link{fit_all}} and data together
-#'
+#' 
+#' 
 #' @param PK.fit.table Table of parameter estimates from \code{\link{fit_all}}
 #' @param data.set A data.table of concentration vs. time data for a given
-#'  chemical
+#' chemical
 #' @param model Analytic model to evaluate. Currently only "1compartment" or
-#'  "2compartment" are implemented.
+#' "2compartment" are implemented.
 #' @param mean.type (Defaults to fitted geometric mean)
-#' @param fit.factors Add a trend-line using the fit for each combination of the
-#'  factors listed in this character vector. (defaults to Compound, 
-#'  Dose.nominal, Data.Analyzed, and Route)
+#' @param fit.factors Add a trend-line using the fit for each combination of
+#' the factors listed in this character vector. (defaults to Compound,
+#' Dose.nominal, Data.Analyzed, and Route)
 #' @param plot.split.factor For each compound, make a separate plot for each
-#'  unique value of this factor (defaults to Route)
-#' #param shape.factor Indicate this factor by shape in the plots (defaulta to
-#'  Data.Analyzed)
+#' unique value of this factor (defaults to Route) #param shape.factor Indicate
+#' this factor by shape in the plots (defaulta to Data.Analyzed)
 #' @param color.factor Indicate this factor by color in the plots (defaults to
-#'  Data.Analyzed')
-#' @param Add a curve for the HTTK predictions, if available (default = FALSE)
+#' Data.Analyzed')
 #' @param omit.zero Drop zero dose values from plots (default = TRUE)
-#'
+#' @param Add a curve for the HTTK predictions, if available (default = FALSE)
 #' @return None
-#'
-#' @import RColorBrewer
-#' @importFrom scales scientific_format
-#' @import ggplot2
-#'
-#' @export
-#'
-#' @author{Caroline Ring, John Wambaugh}
+#' @author Caroline Ring, John Wambaugh
+#' @export plot_conctime
 plot_conctime <- function(PK.fit.table,
                           data.set,
                           model,

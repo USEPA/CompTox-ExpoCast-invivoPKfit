@@ -20,6 +20,29 @@
 #' @export
 
 
+
+
+#' Analytical 2-compartment model
+#' 
+#' Analytical 2-compartment model
+#' 
+#' 
+#' @param params A named list of parameter values including the following:
+#' \describe{ \item{k12}{Rate at which compound moves from central to
+#' peripheral compartment} \item{k21}{Rate at which compound moves from
+#' peripheral to central compartment} \item{kelim}{Elimination rate}
+#' \item{V1}{Apparent volume of central compartment} } For oral administration
+#' (\code{iv.dose} FALSE), \code{params} must also include: \describe{
+#' \item{Fgutabs}{Oral bioavailability} \item{kgutabs}{Rate of absorption from
+#' gut} }
+#' 
+#' author Caroline Ring, John Wambaugh
+#' @param time A vector of time values, in hours
+#' @param dose A dose in mg/kg
+#' @param iv.dose TRUE for single IV bolus dose, FALSE for single oral dose
+#' @return A vector of plasma concentration values corresponding to each value
+#' in \code{time}
+#' @export cp_2comp
 cp_2comp <- function(params, time, dose, iv.dose)
 {
   if (any(sapply(params,function(x) identical(x,numeric(0))))) return(NA)

@@ -16,6 +16,24 @@
 #'\item{Ccompartment}{Plasma concentrations}
 #'\item{AUC}{Area under the curve}}
 
+
+
+#' Evaluate analytic models
+#' 
+#' Evaluate analytic models
+#' 
+#' 
+#' @param params A named list of parameter values. Must match the parameters of
+#' \code{model}.
+#' @param dose A dose in units of mg/kg.
+#' @param times A vector of times in hours or days. Ideally should be sorted.
+#' @param time.units The units of \code{times}: "h" for hours, "d" for days.
+#' @param iv.dose TRUE for IV dosing, FALSE for PO dosing.
+#' @param model Analytic model to evaluate. Currently only "1compartment" or
+#' "2compartment" are implemented.
+#' @return A matrix with three columns: \describe{ \item{time}{Time in days}
+#' \item{Ccompartment}{Plasma concentrations} \item{AUC}{Area under the curve}}
+#' @author Caroline Ring
 analytic_model_fun <- function(params,
                                dose,
                                times,

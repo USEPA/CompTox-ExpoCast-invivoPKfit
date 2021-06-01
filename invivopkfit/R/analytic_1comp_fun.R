@@ -1,23 +1,22 @@
-#'Analytical 1-compartment function
-#'
-#'@param params A named list of model parameter values. Must include:
-#'\describe{
-#'\item{kelim}{Elimination rate, 1/h}
-#'\item{Vdist}{Volume of distribution, L/kg body weight}}
-#'For oral administration (\code{iv.dose} FALSE), \code{params} must also include:
-#'\describe{
-#'\item{Fgutabs}{Oral bioavailability, unitless fraction}
-#'\item{kgutabs}{Oral absorption rate, 1/h}}
-#'@param dose Dose in mg/kg
-#'@param times A vector of observation times in hours
-#'@param time.units Either (h)ours or (d)ays (defaults to hours)
-#'@param iv.dose TRUE for single IV bolus dose; FALSE for single oral dose
-#'
-#'@return A matrix of \code{time}, plasma concentration, and area under the curve (AUC).
-#'
-#'@author Caroline Ring
-#'
-#'@export
+#' Analytical 1-compartment function
+#' 
+#' Analytical 1-compartment function
+#' 
+#' 
+#' @param params A named list of model parameter values. Must include:
+#' \describe{ \item{kelim}{Elimination rate, 1/h} \item{Vdist}{Volume of
+#' distribution, L/kg body weight}} For oral administration (\code{iv.dose}
+#' FALSE), \code{params} must also include: \describe{ \item{Fgutabs}{Oral
+#' bioavailability, unitless fraction} \item{kgutabs}{Oral absorption rate,
+#' 1/h}}
+#' @param dose Dose in mg/kg
+#' @param times A vector of observation times in hours
+#' @param time.units Either (h)ours or (d)ays (defaults to hours)
+#' @param iv.dose TRUE for single IV bolus dose; FALSE for single oral dose
+#' @return A matrix of \code{time}, plasma concentration, and area under the
+#' curve (AUC).
+#' @author Caroline Ring
+#' @export analytic_1comp_fun
 analytic_1comp_fun <- function(params, dose, times, time.units="h", iv.dose){
   
   #params: list with Vdist, Fgutabs, kgutabs, kelim
