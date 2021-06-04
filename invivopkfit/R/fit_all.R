@@ -118,103 +118,107 @@ fit_all <- function(data.set,
     for (this.cas in sort(unique(data.set$CAS)))
     {
       this.subset <- subset(data.set,CAS==this.cas&!is.na(Value.Norm))
-             
-    # Need oral and iv to estimate bioavailability:
-      if ("po" %in% unique(this.subset$Route) & "iv" %in% unique(this.subset$Route))
+       
+      for (this.species in sort(unique(this.subset$Species)))
       {
-        this.iv.time.list <- list()
-        this.iv.conc.list <- list()  
-        this.iv.id.list <- list()  
-        this.oral.time.list <- list()
-        this.oral.conc.list <- list()  
-        this.oral.id.list <- list()  
-        this.row <- data.frame(Compound=this.subset$Compound[1],
-                      CAS=this.cas,
-                      Reference=NA,
-                      Source=NA,
-                      Mean.iv.Dose=mean(subset(this.subset,Route=="iv")$Dose),
-                      Mean.po.Dose=mean(subset(this.subset,Route=="po")$Dose),
-                      model.type="noncompartmental",
-                      param.value.type="Estimated",
-                      AUC.po=NA,
-                      Vd.po=NA,
-                      CL.po=NA,
-                      AUC.iv=NA,
-                      Vd.iv=NA,
-                      CL.iv=NA,
-                      Fbio=NA,
-                      stringsAsFactors=F)
-        this.row <- rbind(this.row,this.row)
-        rownames(this.row) <- NULL
-        this.row[2,"param.value.type"] <- "Estimated std dev"
-        for (this.route in unique(this.subset$Route))
+      # Need oral and iv to estimate bioavailability:
+        if ("po" %in% unique(this.subset$Route) & "iv" %in% unique(this.subset$Route))
         {
-          this.route.subset <- subset(this.subset,Route==this.route)
-          if (any(is.na(this.route.subset$Subject)))
+          this.iv.time.list <- list()
+          this.iv.conc.list <- list()  
+          this.iv.id.list <- list()  
+          this.oral.time.list <- list()
+          this.oral.conc.list <- list()  
+          this.oral.id.list <- list()  
+          this.row <- data.frame(Compound=this.subset$Compound[1],
+                        CAS=this.cas,
+                        Reference=NA,
+                        Source=NA,
+                        Species=this.species,
+                        Mean.iv.Dose=mean(subset(this.subset,Route=="iv")$Dose),
+                        Mean.po.Dose=mean(subset(this.subset,Route=="po")$Dose),
+                        model.type="noncompartmental",
+                        param.value.type="Estimated",
+                        AUC.po=NA,
+                        Vd.po=NA,
+                        CL.po=NA,
+                        AUC.iv=NA,
+                        Vd.iv=NA,
+                        CL.iv=NA,
+                        Fbio=NA,
+                        stringsAsFactors=F)
+          this.row <- rbind(this.row,this.row)
+          rownames(this.row) <- NULL
+          this.row[2,"param.value.type"] <- "Estimated std dev"
+          for (this.route in unique(this.subset$Route))
           {
-            for (this.reference in unique(this.route.subset$Reference))
+            this.route.subset <- subset(this.subset,Route==this.route)
+            if (any(is.na(this.route.subset$Subject)))
             {
-              for (this.dose in unique(this.route.subset$Dose))
+              for (this.reference in unique(this.route.subset$Reference))
               {
-                this.route.subset[is.na(this.route.subset$Subject)&this.route.subset$Dose==this.dose,"Subject"] <- paste(this.reference,this.route,this.dose,sep="-")
+                for (this.dose in unique(this.route.subset$Dose))
+                {
+                  this.route.subset[is.na(this.route.subset$Subject)&this.route.subset$Dose==this.dose,"Subject"] <- paste(this.reference,this.route,this.dose,sep="-")
+                }
               }
+            }
+            this.route.subset$id <- paste(this.row[1,"Reference"],this.route.subset$Subject,sep="-")
+            this.route.subset$conc <- this.route.subset$Value.Norm
+            this.route.subset$time <- this.route.subset$Time
+            for (this.id in unique(this.route.subset$id))
+            {
+              if (dim(subset(this.route.subset,id==this.id))[1]<3)
+              {
+                this.route.subset <- subset(this.route.subset,id!=this.id)
+              }
+            }
+            if (dim(this.route.subset)[1]>2)
+            {
+              if (this.route=="po")
+              {
+                dose.arg <- 0
+              }
+              else if (this.route=="iv") 
+              {
+                dose.arg <- 1
+              }
+              if (length(this.route.subset$time)==length(unique(this.route.subset$time)))
+              {
+                out <- try(nca.complete(data=this.route.subset,dose=dose.arg,method="z"))
+              }
+              else
+              {
+                out <- try(PK::nca.batch(data=this.route.subset,dose=dose.arg,method="z"))
+              }
+              if (class(out)!="try-error")
+              {
+                out <- out$CIs
+                if (!is.na(out[1,"est"]>0)) if (out[1,"est"]>0)
+                {
+                  this.row[1,paste("AUC",this.route,sep=".")] <-out[1,"est"]
+                  this.row[2,paste("AUC",this.route,sep=".")] <-out[1,"stderr"]
+                }
+                if (!is.na(out[6,"est"]>0)) if (out[6,"est"]>0)
+                {
+                  this.row[1,paste("CL",this.route,sep=".")] <-out[6,"est"]
+                  this.row[2,paste("CL",this.route,sep=".")] <-out[6,"stderr"]
+                }
+                if (!is.na(out[7,"est"]>0)) if (out[7,"est"]>0)
+                {
+                  this.row[1,paste("Vd",this.route,sep=".")] <-out[7,"est"]
+                  this.row[2,paste("Vd",this.route,sep=".")] <-out[7,"stderr"]
+                }
+              } else browser()
             }
           }
-          this.route.subset$id <- paste(this.row[1,"Reference"],this.route.subset$Subject,sep="-")
-          this.route.subset$conc <- this.route.subset$Value.Norm
-          this.route.subset$time <- this.route.subset$Time
-          for (this.id in unique(this.route.subset$id))
+          if (!is.na(this.row[1,"AUC.po"]) & !is.na(this.row[1,"AUC.iv"]))
           {
-            if (dim(subset(this.route.subset,id==this.id))[1]<3)
-            {
-              this.route.subset <- subset(this.route.subset,id!=this.id)
-            }
+            this.row[1,"Fbio"] <- this.row[1,"AUC.po"]/this.row[1,"AUC.iv"]
+            this.row[2,"Fbio"] <- this.row[1,"Fbio"]*((this.row[2,"AUC.po"]/this.row[1,"AUC.po"])^2+(this.row[2,"AUC.iv"]/this.row[1,"AUC.iv"])^2)^(1/2)
           }
-          if (dim(this.route.subset)[1]>2)
-          {
-            if (this.route=="po")
-            {
-              dose.arg <- 0
-            }
-            else if (this.route=="iv") 
-            {
-              dose.arg <- 1
-            }
-            if (length(this.route.subset$time)==length(unique(this.route.subset$time)))
-            {
-              out <- try(nca.complete(data=this.route.subset,dose=dose.arg,method="z"))
-            }
-            else
-            {
-              out <- try(PK::nca.batch(data=this.route.subset,dose=dose.arg,method="z"))
-            }
-            if (class(out)!="try-error")
-            {
-              out <- out$CIs
-              if (!is.na(out[1,"est"]>0)) if (out[1,"est"]>0)
-              {
-                this.row[1,paste("AUC",this.route,sep=".")] <-out[1,"est"]
-                this.row[2,paste("AUC",this.route,sep=".")] <-out[1,"stderr"]
-              }
-              if (!is.na(out[6,"est"]>0)) if (out[6,"est"]>0)
-              {
-                this.row[1,paste("CL",this.route,sep=".")] <-out[6,"est"]
-                this.row[2,paste("CL",this.route,sep=".")] <-out[6,"stderr"]
-              }
-              if (!is.na(out[7,"est"]>0)) if (out[7,"est"]>0)
-              {
-                this.row[1,paste("Vd",this.route,sep=".")] <-out[7,"est"]
-                this.row[2,paste("Vd",this.route,sep=".")] <-out[7,"stderr"]
-              }
-            } else browser()
-          }
+          PK.fit.table <- rbind(PK.fit.table,this.row)
         }
-        if (!is.na(this.row[1,"AUC.po"]) & !is.na(this.row[1,"AUC.iv"]))
-        {
-          this.row[1,"Fbio"] <- this.row[1,"AUC.po"]/this.row[1,"AUC.iv"]
-          this.row[2,"Fbio"] <- this.row[1,"Fbio"]*((this.row[2,"AUC.po"]/this.row[1,"AUC.po"])^2+(this.row[2,"AUC.iv"]/this.row[1,"AUC.iv"])^2)^(1/2)
-        }
-        PK.fit.table <- rbind(PK.fit.table,this.row)
       }
     }
     
