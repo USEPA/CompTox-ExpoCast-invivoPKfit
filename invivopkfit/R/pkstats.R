@@ -1,8 +1,11 @@
 #' Calculates Area Under the Curve (AUC) and Peak Concentration (Cmax)
-#' 
+#'
 #' author John Wambaugh
-#' 
-#' 
+#'
+#' @param in.table placeholder
+#' @param Fbio.table placeholder
+#' @param default.to.human placeholder
+#'
 #' @return A table of AUCs, Cmax's, and bioavailabilities
 #' @export pkstats
 pkstats <- function(in.table,Fbio.table=NULL,default.to.human=T)

@@ -6,6 +6,13 @@
 \usage{
 pkstats(in.table, Fbio.table = NULL, default.to.human = T)
 }
+\arguments{
+\item{in.table}{placeholder}
+
+\item{Fbio.table}{placeholder}
+
+\item{default.to.human}{placeholder}
+}
 \value{
 A table of AUCs, Cmax's, and bioavailabilities
 }

@@ -1,8 +1,8 @@
 #' Compute model-predicted concentration values for a vector of time values
-#' 
+#'
 #' Compute model-predicted concentration values for a vector of time values
-#' 
-#' 
+#'
+#'
 #' @param design.times A vector of times from the design matrix
 #' @param design.dose A dose from the design matrix
 #' @param design.iv TRUE if IV data, FALSE if PO data
@@ -12,7 +12,7 @@
 #' full ODE model
 #' @param model "1compartment" or "2compartment"
 #' @param model.params A named vector of model parameter values.
-#' 
+#'
 #' author Caroline Ring, John Wambaugh
 #' @return A vector of the model-predicted plasma concentration values of the
 #' same length as design.times, for each time in design.times

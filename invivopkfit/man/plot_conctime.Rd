@@ -38,10 +38,18 @@ Dose.nominal, Data.Analyzed, and Route)}
 unique value of this factor (defaults to Route) #param shape.factor Indicate
 this factor by shape in the plots (defaulta to Data.Analyzed)}
 
+\item{shape.factor}{placeholder}
+
 \item{color.factor}{Indicate this factor by color in the plots (defaults to
 Data.Analyzed')}
 
+\item{plot.httk.pred}{placeholder}
+
 \item{omit.zero}{Drop zero dose values from plots (default = TRUE)}
+
+\item{plot.loq}{placeholder}
+
+\item{fit.plot.points}{placeholder}
 
 \item{Add}{a curve for the HTTK predictions, if available (default = FALSE)}
 }

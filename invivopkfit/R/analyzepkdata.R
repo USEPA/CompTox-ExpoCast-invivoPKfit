@@ -1,8 +1,8 @@
 #' Actually does the fitting
-#' 
+#'
 #' Fits model parameters to concentration vs. time data for a given chemical
-#' 
-#' 
+#'
+#'
 #' @param fitdata A data.table of concentration vs. time data for a given
 #' chemical
 #' @param this.cas A CAS number for the chemical to be fitted
@@ -11,6 +11,7 @@
 #' the full ODE model
 #' @param model The model to fit, either "1compartment" or "2compartment"
 #' (other models not implemented for now)
+#' @param this.reference placeholder
 #' @return A single row of fitted parameter values (arithmetic means, geometric
 #' means, modes, arithmetic standard deviations, and geometric standard
 #' deviations)
@@ -20,10 +21,10 @@ analyze.pk.data <- function(fitdata,
                             paramnames,
                             modelfun,
                             model,
-                            this.reference=NULL) 
+                            this.reference=NULL)
 {
   UPPERBOUNDARY <- 1e4
-  
+
   #take a copy of input data table so it behaves as though passed by value
   fitdata <- data.table::copy(fitdata)
 
@@ -54,7 +55,7 @@ analyze.pk.data <- function(fitdata,
                                         sep='.'))] <- rep(max(MAXSIGMA/100,
                                                             0.1),
                                                         length(refs))
-  
+
   #log-transform the model parameters
   these.params <- lapply(these.params,log)
 
@@ -87,13 +88,13 @@ analyze.pk.data <- function(fitdata,
     opt.params["kelim"] <- log(max(-lm(log(Value) ~ Time,data=elim.data)$coefficients["Time"],0.0001))
     if (is.na(opt.params["kelim"])) opt.params["kelim"] <- log(1)
     Vd.data <- subset(elim.data,Time==min(Time))
-    if (model=='1compartment') 
+    if (model=='1compartment')
     {
       opt.params["Vdist"] <- log(1/mean(Vd.data$Value))
     } else {
       opt.params["V1"] <- log(1/mean(Vd.data$Value))
       if (length(unique(elim.data$Time))>3)
-      { 
+      {
         elim.data <- subset(elim.data,Time<=unique(Time)[3])
         alpha <- -lm(log(Value) ~ Time,data=elim.data)$coefficients["Time"]
         opt.params["Ralphatokelim"] <- log(max(alpha/exp(opt.params[["kelim"]]),2))
@@ -110,7 +111,7 @@ analyze.pk.data <- function(fitdata,
     opt.params["kelim"] <- log(max(-lm(log(Value) ~ Time,data=elim.data)$coefficients["Time"],0.0001))
     if (is.na(opt.params["kelim"])) opt.params["kelim"] <- log(1)
     Vd.data <- subset(elim.data,Time==min(Time))
-    if (model=='1compartment') 
+    if (model=='1compartment')
     {
       opt.params["Vdist"] <- log(1/mean(Vd.data$Value))
     } else {
@@ -119,7 +120,7 @@ analyze.pk.data <- function(fitdata,
       opt.params["Fbetaofalpha"] <- log(0.25)
     }
   }
-  
+
   if (is.na(opt.params[["kelim"]])) opt.params["kelim"]<-log(10^-5)
   opt.params["kelim"] <- max(opt.params[["kelim"]],log(10^-5))
 
@@ -131,20 +132,20 @@ analyze.pk.data <- function(fitdata,
                     these.params["kgutabs"])
     # Need oral and iv data to get at Fgutabs:
     if ("iv" %in% fitdata$Route)
-    { 
+    {
       opt.params <- c(opt.params,
                       these.params["Fgutabs"])
       iv.data <- subset(fitdata,Route=="iv"&!is.na(Value))
       iv.data <- subset(iv.data,Time==min(Time))
-      iv.data <- subset(iv.data,Dose==max(Dose))               
+      iv.data <- subset(iv.data,Dose==max(Dose))
       oral.data <- subset(fitdata,Route=="po"&!is.na(Value))
       oral.data <- subset(oral.data,Value==max(Value))[1,]
       opt.params["Fgutabs"] <- log(oral.data$Value/mean(iv.data$Value)*mean(iv.data$Dose)/mean(oral.data$Dose))
       if (is.na(opt.params[["Fgutabs"]]) | opt.params[["Fgutabs"]]>0) opt.params["Fgutabs"]<-log(0.5)
-    } 
+    }
   }
 
-  
+
   #Add the per-study standard deviation to the set of params to optimize
   opt.params <- c(opt.params,
                   these.params[regexpr("sigma2",
@@ -171,7 +172,7 @@ analyze.pk.data <- function(fitdata,
     } else {
       out.dt[, Data.Analyzed:=this.reference]
       out.dt[,Reference:=this.reference]
-    }    
+    }
     out.dt[,LogLikelihood:=as.numeric(NA)]
     out.dt[,AIC:=as.numeric(NA)]
     cat(paste("For CAS ", this.cas, " there were ", length(opt.params),
@@ -192,14 +193,14 @@ analyze.pk.data <- function(fitdata,
   #
   #
   #
-  
+
   #change from a named list of params to optimize to a named vector of params to
   #optimize
   upper <- unlist(opt.params)
 
   #specify upper bounds of params to optimize (on a log scale!!)
   upper[] <- log(UPPERBOUNDARY)
-  upper[regexpr("sigma",names(upper))!=-1]<-log(MAXSIGMA) 
+  upper[regexpr("sigma",names(upper))!=-1]<-log(MAXSIGMA)
   if (model=='2compartment'){
     upper["Ralphatokelim"] <- log(1000)
     upper["Fbetaofalpha"] <- log(0.75) #on a log scale!
@@ -212,7 +213,7 @@ analyze.pk.data <- function(fitdata,
   }
   # Force initial values to be within bounds:
   opt.params[opt.params>upper] <- upper[opt.params>upper]-0.1
- 
+
   #
   #
   #
@@ -220,7 +221,7 @@ analyze.pk.data <- function(fitdata,
   #
   #
   #
-  
+
   # Default lower bound of 10^-8 except for parameters where this wouldn't make sense:
   lower <- rep(log(10^-8), length(upper))
   names(lower) <- names(upper)
@@ -238,7 +239,7 @@ analyze.pk.data <- function(fitdata,
   lower[regexpr("sigma",names(lower))!=-1]<-log(0.00001)
   # Force initial values to be within bounds:
   opt.params[opt.params<lower] <- lower[opt.params<lower]+0.1
-  
+
   orig.params <- opt.params
 
   #factr: controls the convergence of the "L-BFGS-B" method. Convergence occurs when
@@ -262,7 +263,7 @@ analyze.pk.data <- function(fitdata,
   }
 
   cat(paste("Initial values:    ",paste(apply(data.frame(Names=names(lapply(opt.params,exp)),Values=unlist(lapply(opt.params,exp)),stringsAsFactors=F),1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
-  
+
   tryCatch(all.data.fit <- optimx::optimx(par=unlist(opt.params),
                                           fn=objfun,
                                           lower=lower,
@@ -305,7 +306,7 @@ analyze.pk.data <- function(fitdata,
     opt.params[regexpr("sigma",names(opt.params))!=-1] <- opt.params[regexpr("sigma",names(opt.params))!=-1]+1
     opt.params[opt.params<=lower] <- lower[opt.params<=lower]+0.1
     opt.params[opt.params>=upper] <- upper[opt.params>=upper]-0.1
-    
+
     cat(paste("Initial values:    ",paste(apply(data.frame(Names=names(opt.params),Values=unlist(lapply(opt.params,exp)),stringsAsFactors=F),1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
     factr <- factr/10 #reducing factr by 10 (requiring closer convergence)
 
@@ -317,7 +318,7 @@ analyze.pk.data <- function(fitdata,
                                  upper=upper,
                                  method="L-BFGS-B",
                                  hessian = FALSE,
-                                 control=list(factr=factr)) 
+                                 control=list(factr=factr))
 
     ln.means <- as.vector(coef(all.data.fit))
     names(ln.means) <- names(opt.params)
@@ -340,7 +341,7 @@ analyze.pk.data <- function(fitdata,
   }
 
   #Exclude sigma2 from results
-  sigmas <- ln.means[regexpr("sigma",names(ln.means))!=-1] 
+  sigmas <- ln.means[regexpr("sigma",names(ln.means))!=-1]
   ln.means <- ln.means[regexpr("sigma",names(ln.means))==-1]
   ln.sds <- ln.sds[regexpr("sigma",names(ln.sds))==-1]
 
@@ -393,14 +394,14 @@ analyze.pk.data <- function(fitdata,
     out.dt[, Data.Analyzed:=Reference]
     out.dt[regexpr(",",Data.Analyzed)!=-1, Data.Analyzed:='Joint Analysis']
   } else out.dt[, Data.Analyzed:=this.reference]
-    
+
   out.dt[, Compound:=fitdata$Compound[1]]
 
   # If any of the parameters were not optimized or if the the model does not fit well:
 #  if (any(ln.means==as.vector(opt.params[names(ln.means)])) | any(sigmas>1))
   if (any(ln.means==as.vector(orig.params[names(ln.means)])) | any(sigmas>MAXSIGMA))
   {
-    out.dt[,LogLikelihood:=0]
+    out.dt[,LogLikelihood:=0]  ### replace with NA to make error more apparent
     out.dt[,AIC:=Inf]
     cat(paste("Some parameters were not optimized or sigma >",MAXSIGMA,". Returning AIC=INF.\n"))
   } else if (model=='1compartment')
@@ -428,7 +429,7 @@ analyze.pk.data <- function(fitdata,
       out.dt[,AIC:=2*length(opt.params)+2*all.data.fit$value]
     }
   }
-  
+
   if (!is.null(this.reference))
   {
     out.dt[,Reference:=NULL]

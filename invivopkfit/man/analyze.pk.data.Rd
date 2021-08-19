@@ -26,6 +26,8 @@ the full ODE model}
 
 \item{model}{The model to fit, either "1compartment" or "2compartment"
 (other models not implemented for now)}
+
+\item{this.reference}{placeholder}
 }
 \value{
 A single row of fitted parameter values (arithmetic means, geometric

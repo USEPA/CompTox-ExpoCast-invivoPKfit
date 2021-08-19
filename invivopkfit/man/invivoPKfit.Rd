@@ -7,11 +7,11 @@
 \description{
 The invivoPKfit package takes in vivo concentration-time data from TNO, RTI,
 and NHEERL, and fits parameters of 1-compartment and 2-compartment models
-for each chemical. \code{\link{fit_all}} is the main or "outermost" function; 
+for each chemical. \code{\link{fit_all}} is the main or "outermost" function;
 start there.
 }
 \section{Main function}{
-
+ fit_all_mod
 }
 
 \author{

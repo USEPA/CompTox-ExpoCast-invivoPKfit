@@ -4,7 +4,40 @@
 \alias{fit_all}
 \title{Main fitting function}
 \usage{
-fit_all(data.set, model, modelfun = NA, ratio.data.to.dose = 1)
+fit_all(
+  data.set,
+  model,
+  modelfun = NA,
+  ratio.data.to.dose = 1,
+  compound.col = "Compound",
+  cas.col = "CAS",
+  reference.col = "Reference",
+  species.col = "Species",
+  species.default = NULL,
+  species.weight.col = "Species.Weight",
+  species.weight.units.col = "Species.Weight.Units",
+  species.weight.units.default = NULL,
+  dose.col = "Dose",
+  time.col = "Time",
+  time.units.col = "Time.Units",
+  time.units.default = NULL,
+  media.col = "Media",
+  media.units.col = "Media.Units",
+  media.units.default = NULL,
+  value.col = "Value",
+  units.col = "Units",
+  units.default = NULL,
+  route.col = "Route",
+  route.default = NULL,
+  source.col = "Source",
+  source.default = NULL,
+  loq.col = "LOQ",
+  loq.default = NULL,
+  subject.col = "Subject",
+  subject.default = NULL,
+  info.col = "info",
+  info.default = NULL
+)
 }
 \arguments{
 \item{data.set}{A table of concentration-time data. Preferably
@@ -14,12 +47,69 @@ fit_all(data.set, model, modelfun = NA, ratio.data.to.dose = 1)
 only "1compartment" and "2compartment" are implemented.}
 
 \item{modelfun}{Either "analytic" or "full" -- whether to fit using the
-  analytic solution to the model, or the full ODE model. Presently,
-  "analytic" is recommended (because the analytic solution is exact and much
-  faster).
-#param ratio between the weights used to report the data and the weights used 
-  for the dose. For example, ug/L data and mg/kg/day dose would be 0.001
-  (defaults to 1)}
+analytic solution to the model, or the full ODE model. Presently,
+"analytic" is recommended (because the analytic solution is exact and much
+faster).}
+
+\item{ratio.data.to.dose}{between the weights used to report the data and the weights used
+for the dose. For example, ug/L data and mg/kg/day dose would be 0.001
+(defaults to 1)}
+
+\item{compound.col}{placeholder}
+
+\item{cas.col}{placeholder}
+
+\item{reference.col}{placeholder}
+
+\item{species.col}{placeholder}
+
+\item{species.default}{placeholder}
+
+\item{species.weight.col}{placeholder}
+
+\item{species.weight.units.col}{placeholder}
+
+\item{species.weight.units.default}{placeholder}
+
+\item{dose.col}{placeholder}
+
+\item{time.col}{placeholder}
+
+\item{time.units.col}{placeholder}
+
+\item{time.units.default}{placeholder}
+
+\item{media.col}{placeholder}
+
+\item{media.units.col}{placeholder}
+
+\item{media.units.default}{placeholder}
+
+\item{value.col}{placeholder}
+
+\item{units.col}{placeholder}
+
+\item{units.default}{placeholder}
+
+\item{route.col}{placeholder}
+
+\item{route.default}{placeholder}
+
+\item{source.col}{placeholder}
+
+\item{source.default}{placeholder}
+
+\item{loq.col}{placeholder}
+
+\item{loq.default}{placeholder}
+
+\item{subject.col}{placeholder}
+
+\item{subject.default}{placeholder}
+
+\item{info.col}{placeholder}
+
+\item{info.default}{placeholder}
 }
 \value{
 A data.table of fitted parameter values for each chemical.

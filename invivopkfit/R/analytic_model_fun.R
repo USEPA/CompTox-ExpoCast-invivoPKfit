@@ -7,7 +7,7 @@
 #'@param iv.dose TRUE for IV dosing, FALSE for PO dosing.
 #'@param model Analytic model to evaluate. Currently only "1compartment" or
 #'  "2compartment" are implemented.
-#'            
+#'
 #' @author Caroline Ring
 #'
 #'@return A matrix with three columns:
@@ -38,7 +38,7 @@ analytic_model_fun <- function(params,
               params=params,
               dose=dose,
               iv.dose=iv.dose)),
-              error=rep(0,length=times))  
+              error=rep(0,length=times))
 
   #Cp will have units mg/L
 

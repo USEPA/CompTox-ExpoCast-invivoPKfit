@@ -9,10 +9,12 @@ Description: Takes in vivo toxicokinetic concentration-time data
     and fits parameters of 1-compartment and 2-compartment models for each chemical.
 License: GPL-3
 LazyData: TRUE
-Depends: httk
+Depends: 
+    httk,
+    R (>= 2.10)
 Imports: data.table, PK, MASS, minqa, numDeriv, optimx, pracma, scales,
-        ggplot2, RColorBrewer, rmarkdown
-Suggests: knitr, gdata, stringr
+        ggplot2, RColorBrewer, rmarkdown, dplyr, magrittr
+Suggests: knitr, stringr
 RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 NeedsCompilation: no
