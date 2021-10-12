@@ -95,9 +95,9 @@ analyze.pk.data <- function(fitdata,
       opt.params["V1"] <- log(1/mean(Vd.data$Value))
       if (length(unique(elim.data$Time))>3)
       {
-        elim.data <- subset(elim.data,Time<=unique(Time)[3])
+        elim.data <- subset(elim.data,Time<=sort(unique(Time))[3]) ### added sort
         alpha <- -lm(log(Value) ~ Time,data=elim.data)$coefficients["Time"]
-        opt.params["Ralphatokelim"] <- log(max(alpha/exp(opt.params[["kelim"]]),2))
+        opt.params["Ralphatokelim"] <- log(max(alpha/exp(opt.params[["kelim"]]),2)) ###here is where ralphatokelim becomes NA
       }
       else alpha <- log(2)
       opt.params["Fbetaofalpha"] <- log(0.25)
@@ -235,6 +235,7 @@ analyze.pk.data <- function(fitdata,
   {
     lower["Fgutabs"] <- log(0.05)
   }
+
   # Curve fitting doesn't really work if we let the standard deviation of the measurements get too small:
   lower[regexpr("sigma",names(lower))!=-1]<-log(0.00001)
   # Force initial values to be within bounds:
@@ -266,8 +267,8 @@ analyze.pk.data <- function(fitdata,
 
   tryCatch(all.data.fit <- optimx::optimx(par=unlist(opt.params),
                                           fn=objfun,
-                                          lower=lower,
-                                          upper=upper,
+                                          # lower=lower,
+                                          # upper=upper,
                                           method="L-BFGS-B", #box constraints
                                           hessian = FALSE,
                                           control=list(factr=factr)),
@@ -280,7 +281,7 @@ analyze.pk.data <- function(fitdata,
   ln.means <- as.vector(coef(all.data.fit))
   names(ln.means) <- names(opt.params)
 
-  if (any(ln.means>upper)) browser()
+  # if (any(ln.means>upper)) browser()
   cat(paste("Optimized values:  ",paste(apply(data.frame(Names=names(ln.means),Values=sapply(ln.means,exp),stringsAsFactors=F),1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
   #Get SDs from Hessian
   #Calculate Hessian using function from numDeriv
@@ -314,8 +315,8 @@ analyze.pk.data <- function(fitdata,
     #optimize by maximizing log-likelihood
     all.data.fit<-optimx::optimx(par=unlist(opt.params),
                                  fn=objfun,
-                                 lower=lower,
-                                 upper=upper,
+                                 # lower=lower,
+                                 # upper=upper,
                                  method="L-BFGS-B",
                                  hessian = FALSE,
                                  control=list(factr=factr))

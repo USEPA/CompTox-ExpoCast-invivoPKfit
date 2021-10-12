@@ -274,6 +274,9 @@ fit_all <- function(data.set,
   ### make all compound names completely lower-case
   data.set[,Compound:=tolower(Compound)]
 
+  ### do the same thing for species
+  data.set[, Species := tolower(Species)]
+
   # This way the weight units cancel (must still pay attention to denominator
   # of data to determine units for Vd):
 
@@ -335,6 +338,65 @@ fit_all <- function(data.set,
 
   ### recalcuate N.PREV after removal FALSE's
   N.PREV <- dim(data.set)[1]
+
+  #############################
+  #############################
+  #############################
+
+  ### function to take average of multiple timepoints
+  avg_value_fun <- function(data) {
+
+    ### convert to data.frame, but fix this later because converting back and forth is silly
+    data <- as.data.frame(data)
+
+    ### if there are replicate timepoints, take the average Value for each timepoint
+    if(length(unique(data$Time)) < length(data$Time)) {
+      data <- data %>%
+        group_by(Time) %>%
+        mutate(mean = mean(Value, na.rm = TRUE))
+
+      ### if all values are NA, output will return 'NaN's
+      ### coerces 'NaN's back to NA
+      data$mean[is.nan(data$mean)] <- NA
+
+      ### remove replicate timepoints
+      data <- data %>%
+        distinct(Time, .keep_all = TRUE)
+
+      ### delete Value column and reassign new mean column as Value column
+      data$Value <- NULL
+      names(data)[names(data) == "mean"] <- "Value"
+    }
+
+    data <- as.data.table(data)
+
+    data
+  }
+
+  data.list <- list()
+  for(this.compound in unique(data.set[, Compound])) {
+    this.compound.data <- data.set[Compound == this.compound]
+
+    ### list of columns by which to split data.set
+    col_list <- list(this.compound.data$Reference,
+                       this.compound.data$Dose,
+                       this.compound.data$Route,
+                       this.compound.data$Media)
+
+    ### split data.set into list of data.tables
+    split_list <- split(this.compound.data, col_list)
+
+    ### remove data.tables with 0 rows
+    # this.medium.list <- keep(this.medium.list, ~nrow(.) > 0)
+
+    split_list_avg <- lapply(split_list, avg_value_fun)
+    test <- do.call(rbind, split_list_avg)
+
+    data.list[[this.compound]] <- test
+  }
+
+  ### combine data.tables back into one large data.set
+  data.set <- do.call(rbind, data.list)
 
   ###########################################################################################################
   ###########################################################################################################
@@ -740,6 +802,31 @@ fit_all <- function(data.set,
   ###########################################################################################################
 
   PK.fit.table <- PK.fit.table[order(Compound,Species)]
+
+  ### figure out way without converting to and back from data.frame
+  ### coerce data.set to data.frame
+  data.set <- as.data.frame(data.set)
+
+  ### function to apply loq fix to a single data.frame
+  loq_fix <- function(data) {
+    if(all(is.na(data$LOQ))) {data$LOQ <- 0.45 * min(data$Value, na.rm = TRUE)}
+    return(data)
+  }
+
+  ### split data.set into list of data.frame objects
+  split_df <- split(data.set, list(data.set$Compound, data.set$Reference, data.set$Media), drop = TRUE)
+  # split_df <- split(data.set, data.set$Compound)
+
+  ### apply loq_fix to each data.set
+  split_df_loq <- lapply(split_df, loq_fix)
+
+  ### 'unsplit' data.sets
+  data.set <- do.call(rbind, split_df_loq)
+
+  rownames(data.set) <- c()
+
+  ### coerce data.set back to data.table
+  data.set <- as.data.table(data.set)
 
   out <- list(PK.fit.table, data.set)
   return(out)

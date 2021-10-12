@@ -59,7 +59,9 @@ log.likelihood<- function(params,
 
   ### if the subset of data has LOQ values of 'NA', make the LOQ values = 0.45 * the minimum Value
   DT[, LOQ := as.numeric(LOQ)]
-  DT[is.na(LOQ), LOQ := 0.45 * min(Value, na.rm = TRUE)]
+  DT[is.na(LOQ), LOQ := 0.45 * min(Value, na.rm = TRUE), by = .(Compound, Reference, Media)]
+     # , by = "Reference"]
+
 
   DT[, pred:=fitfun(design.times = Time.Days,
                     design.dose = unique(Dose),
