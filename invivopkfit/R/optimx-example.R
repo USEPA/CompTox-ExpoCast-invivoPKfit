@@ -50,6 +50,6 @@ optimx(initial.values,
 # values when we know the slope is > 0.5) we get a bad answer:
 optimx(initial.values,
   function(x) mysquareddiff(mydata, this.m=x["m"], this.b=x["b"]),
-  upper = c(100,400))
+  upper = c(0.5,.5))
 
 

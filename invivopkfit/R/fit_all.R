@@ -15,34 +15,34 @@
 #'   for the dose. For example, ug/L data and mg/kg/day dose would be 0.001
 #'   (defaults to 1)
 #'
-#' @param compound.col placeholder
-#' @param cas.col placeholder
-#' @param reference.col placeholder
-#' @param species.col placeholder
-#' @param species.default placeholder
-#' @param species.weight.col placeholder
-#' @param species.weight.units.col placeholder
-#' @param species.weight.units.default placeholder
-#' @param dose.col placeholder
-#' @param time.col placeholder
-#' @param time.units.col placeholder
-#' @param time.units.default placeholder
-#' @param media.col placeholder
-#' @param media.units.col placeholder
-#' @param media.units.default placeholder
-#' @param value.col placeholder
-#' @param units.col placeholder
-#' @param units.default placeholder
-#' @param route.col placeholder
-#' @param route.default placeholder
-#' @param source.col placeholder
-#' @param source.default placeholder
-#' @param loq.col placeholder
-#' @param loq.default placeholder
-#' @param subject.col placeholder
-#' @param subject.default placeholder
-#' @param info.col placeholder
-#' @param info.default placeholder
+#' @param compound.col Column in data.set to serve as compound column
+#' @param cas.col Column in data.set to serve as CAS column
+#' @param reference.col Column in data.set to serve as reference column
+#' @param species.col Column in data.set to serve as species column
+#' @param species.default Default value to fill newly created species column, should data.set lack a column equivalent to species
+#' @param species.weight.col Column in data.set to serve as species.weight column
+#' @param species.weight.units.col Column in data.set to serve as species.weight.units column
+#' @param species.weight.units.default Default value to fill newly created species.weight.units column, should data.set lack a column equivalent to species.weight.units
+#' @param dose.col Column in data.set to serve as dose column
+#' @param time.col Column in data.set to serve as time column
+#' @param time.units.col Column in data.set to serve as time.units column
+#' @param time.units.default Default value to fill newly created time.units column, should data.set lack a column equivalent to time.units
+#' @param media.col Column in data.set to serve as media column
+#' @param media.units.col Column in data.set to serve as media.units column
+#' @param media.units.default Default value to fill newly created media.units coloumn, should data.set lack a column equivalent to media.units
+#' @param value.col Column in data.set to serve as value column
+#' @param units.col Column in data.set to serve as units column
+#' @param units.default Default value to filly newly created units column, should data.set lack a column equivalent to units
+#' @param route.col Column in data.set to serve as route column
+#' @param route.default Default value to filly newly created route column, should data.set lack a column equivalent to route
+#' @param source.col Column in data.set to serve as source column
+#' @param source.default Default value to filly newly created source column, should data.set lack a column equivalent to source
+#' @param loq.col Column in data.set to serve as loq column
+#' @param loq.default Default value to filly newly created loq column, should data.set lack a column equivalent to loq
+#' @param subject.col Column in data.set to serve as subject column
+#' @param subject.default Default value to filly newly created subject column, should data.set lack a column equivalent to subject
+#' @param info.col Column in data.set to serve as info column
+#' @param info.default Default value to filly newly created info column, should data.set lack a column equivalent to info
 #'
 #' @return A data.table of fitted parameter values for each chemical.
 #'
@@ -379,9 +379,9 @@ fit_all <- function(data.set,
 
     ### list of columns by which to split data.set
     col_list <- list(this.compound.data$Reference,
-                       this.compound.data$Dose,
-                       this.compound.data$Route,
-                       this.compound.data$Media)
+                     this.compound.data$Dose,
+                     this.compound.data$Route,
+                     this.compound.data$Media)
 
     ### split data.set into list of data.tables
     split_list <- split(this.compound.data, col_list)
@@ -401,7 +401,7 @@ fit_all <- function(data.set,
   ###########################################################################################################
   ###########################################################################################################
   ###########################################################################################################
-
+  # browser()
   #Non-comapartmental fits:
   if (model=="noncompartment")
   {
@@ -455,8 +455,9 @@ fit_all <- function(data.set,
           {
             this.route.subset <- subset(this.subset,Route==this.route)
 
-            new.route.subset <- NULL
-
+            # new.route.subset <- NULL
+            # print(this.route.subset$Compound)
+            this.route.subset$Subject <- as.character(this.route.subset$Subject) ### added because Subject was logical and characters were not coerced correctly
             if (any(is.na(this.route.subset$Subject)))
             {
               for (this.reference in unique(this.route.subset$Reference))
@@ -464,26 +465,28 @@ fit_all <- function(data.set,
                 for (this.dose in unique(this.route.subset$Dose))
                 {
                   this.route.subset[is.na(this.route.subset$Subject)&this.route.subset$Dose==this.dose,"Subject"] <- paste(this.reference,this.route,this.dose,sep="-")
-                  this.dose.subset <- subset(this.route.subset, Dose == this.dose)
-
-                  ### make Value.Norm the average of all Value.Norm values
-                  ### nest replicate data (Value) and have each row be a unique Time and Value.Norm
-                  browser()
-                  this.dose.subset <- this.dose.subset %>%
-                    dplyr::group_by(Time) %>%
-                    dplyr::mutate(Value.Norm = mean(Value.Norm)) %>%
-                    dplyr::group_by_at(setdiff(names(this.route.subset), "Value")) %>%
-                    tidyr::nest()
-
-                  new.route.subset <- rbind(new.route.subset, this.dose.subset)
+                  # # this.dose.subset <- subset(this.route.subset, Dose == this.dose)
+                  #
+                  # ### make Value.Norm the average of all Value.Norm values
+                  # ### nest replicate data (Value) and have each row be a unique Time and Value.Norm
+                  # # browser()
+                  # this.dose.subset <- this.dose.subset %>%
+                  #   dplyr::group_by(Time) %>%
+                  #   dplyr::mutate(Value.Norm = mean(Value.Norm)) %>%
+                  #   dplyr::group_by_at(setdiff(names(this.route.subset), "Value")) %>%
+                  #   tidyr::nest()
+                  #
+                  # new.route.subset <- rbind(new.route.subset, this.dose.subset)
                 }
               }
             }
-            ### test this
-            this.route.subset <- new.route.subset
 
+            ### test this
+            # this.route.subset <- new.route.subset
+            print(this.route.subset$Compound)
             ### conc and time are required field for the PK package, which the non-compartmental model relies on
             this.route.subset$id <- paste(this.row[1,"Reference"],this.route.subset$Subject,sep="-")
+            # this.route.subset$id <- 1
             this.route.subset$conc <- this.route.subset$Value.Norm
             this.route.subset$time <- this.route.subset$Time
             for (this.id in unique(this.route.subset$id))
@@ -501,6 +504,31 @@ fit_all <- function(data.set,
             # if there are multiple series in a study, average concs at each time point BEFORE fit_all
             # i don't think the previous comment is correct; as the original data.set appears to have replicates
 
+            ### looks like an error is triggered if there are differing lengths of unique time values per unique id
+            ### to fix, took out unique time values whose length were less than max on a per id basis
+            ### removed rows where 'time' value is not in the group of max number of unique time values
+
+            if (nrow(this.route.subset) > 0) {
+              this.id.list <- list()
+
+              for (this.id in unique(this.route.subset[, id]))
+              {
+                this.id.data <- this.route.subset[id == this.id]
+
+                if (length(unique(this.id.data$time))>1) {
+                  this.id.data.group <- this.id.data %>%
+                    group_by(time) %>%
+                    tally()
+                  this.id.data <- full_join(this.id.data, this.id.data.group)
+                  this.id.data <- this.id.data[n == max(n)]
+                  this.id.data <- this.id.data[,n:=NULL]
+                }
+
+                this.id.list[[this.id]] <- this.id.data
+              }
+
+              this.route.subset <- do.call(rbind, this.id.list)
+            }
             # remove rows where 'time' value is not in the group of max number of unique time values
             # need to go back and see if original data.set has data that does not abide by this rule of having equal lengths of unique values
             # browser()
@@ -590,6 +618,7 @@ fit_all <- function(data.set,
     #get the rat parameters for the 1-compartment model for each chemical
     if (model=='1compartment')
     {
+      # browser()
       #      if (any(params.by.cas.spec$CAS%in%get_cheminfo(model='1compartment')))
       #        params.by.cas.spec[CAS %in% get_cheminfo(model='1compartment',species=Species),
       #        c("kelim", "Vdist", "Fgutabs", "kgutabs") :=
@@ -665,6 +694,39 @@ fit_all <- function(data.set,
                                pattern=' ',
                                replacement='.')]
 
+    # ########
+    # ## test test test
+    # ########
+    # ### function to find starting parameter values for a single data.frame/compound
+    # find_params <- function(data) {
+    #
+    #   ### normalize Value by Dose
+    #   data$Value <- data$Value/data$Dose
+    #
+    #   kelim_lm <- lm(formula = Value ~ Time, data = data)
+    #   data$kelim <- -coef(kelim_lm)[2]
+    #
+    #   cp0_pred <- predict(kelim_lm, newdata = data.frame(Time = c(0)))
+    #   data$Vdist <- 1/cp0_pred
+    #
+    #   ### revert back to original Value values
+    #   data$Value <- data$Value * data$Dose
+    #
+    #   return(data)
+    # }
+    #
+    # data.set <- as.data.frame(data.set)
+    # ### split data.set into list of data.frame objects
+    # split_df <- split(data.set, data.set$Compound, drop = TRUE)
+    #
+    # ### apply loq_fix to each data.set
+    # split_df_param <- lapply(split_df, find_params)
+    #
+    # ### 'unsplit' data.sets
+    # data.set <- do.call(rbind, split_df_param)
+    #
+    # rownames(data.set) <- c()
+    # data.set <- as.data.table(data.set)
     ### PK.fit.joint is a data.frame containing a row of parameter values per param.value.type per CAS
     PK.fit.joint <- data.set[,
                              analyze.pk.data(fitdata=.SD, ### what is .SD

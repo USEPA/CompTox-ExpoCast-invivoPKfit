@@ -31,7 +31,8 @@ analyze.pk.data <- function(fitdata,
   cat(paste("Optimizing data for CAS-RN ",this.cas,"\n",sep=""))
 
   #Set a plausible upper bound for sigma:
-  MAXSIGMA <- 3*median(fitdata$Value,na.rm=T)
+  TRYSIGMA <- 3*median(fitdata$Value,na.rm=T)
+  MAXSIGMA <- 100*median(fitdata$Value,na.rm=T)
 
   #Initialize output table with HTTK-predicted parameter values
   out.dt <- fitdata[1,paramnames, with=FALSE]
@@ -52,18 +53,19 @@ analyze.pk.data <- function(fitdata,
   these.params[sapply(refs,
                       function(x) paste('sigma2',
                                         x,
-                                        sep='.'))] <- rep(max(MAXSIGMA/100,
-                                                            0.1),
-                                                        length(refs))
+                                        sep='.'))] <- rep(max(TRYSIGMA/100, ### was MAXSIGMA
+                                                              0.1),
+                                                          length(refs))
 
   #log-transform the model parameters
   these.params <- lapply(these.params,log)
 
-  #Construct the log-likelihood for the data on the current chemical
-  out <- log.likelihood(params=these.params,
-                        DT=fitdata,
-                        modelfun=modelfun,
-                        model=model)
+  ### this doesn't seem to be necessary
+  # #Construct the log-likelihood for the data on the current chemical
+  # out <- log.likelihood(params=these.params,
+  #                       DT=fitdata,
+  #                       modelfun=modelfun,
+  #                       model=model)
 
   #get list of params to optimize
   if (model=='1compartment'){
@@ -78,7 +80,7 @@ analyze.pk.data <- function(fitdata,
                                    "Fbetaofalpha",
                                    "kelim")]
   }
-
+browser()
   # Guess a good value for Vd and kelim:
   if ("iv" %in% fitdata$Route)
   {
@@ -91,13 +93,22 @@ analyze.pk.data <- function(fitdata,
     if (model=='1compartment')
     {
       opt.params["Vdist"] <- log(1/mean(Vd.data$Value))
+
+      one_comp_form_iv <- formula(Value ~ (Dose/Vdist)*exp(-kelim * Time))
+
+      one_comp_fit_iv <- nls2::nls2(formula = one_comp_form_iv, data = elim.data,
+                                    start = list(kelim = opt.params["kelim"], Vdist = opt.params["Vdist"]))
+
+      opt.params["kelim"] <- coef(one_comp_fit_iv)["kelim"]
+      opt.params["Vdist"] <- coef(one_comp_fit_iv)["Vdist"]
+
     } else {
       opt.params["V1"] <- log(1/mean(Vd.data$Value))
       if (length(unique(elim.data$Time))>3)
       {
         elim.data <- subset(elim.data,Time<=sort(unique(Time))[3]) ### added sort
         alpha <- -lm(log(Value) ~ Time,data=elim.data)$coefficients["Time"]
-        opt.params["Ralphatokelim"] <- log(max(alpha/exp(opt.params[["kelim"]]),2)) ###here is where ralphatokelim becomes NA
+        opt.params["Ralphatokelim"] <- log(max(alpha/exp(opt.params[["kelim"]]),2))
       }
       else alpha <- log(2)
       opt.params["Fbetaofalpha"] <- log(0.25)
@@ -179,6 +190,7 @@ analyze.pk.data <- function(fitdata,
                   " parameters and only ",
                   nrow(fitdata), " data points. Optimization aborted.\n",sep=""))
 
+    # out.dt[, Compound:=fitdata$Compound[1]] ### added because compound wasn't found for those data that went through this if statement
     return(out.dt)
   }
 
@@ -200,7 +212,7 @@ analyze.pk.data <- function(fitdata,
 
   #specify upper bounds of params to optimize (on a log scale!!)
   upper[] <- log(UPPERBOUNDARY)
-  upper[regexpr("sigma",names(upper))!=-1]<-log(MAXSIGMA)
+  upper[regexpr("sigma",names(upper))!=-1]<-log(TRYSIGMA) ### was MAXSIGMA
   if (model=='2compartment'){
     upper["Ralphatokelim"] <- log(1000)
     upper["Fbetaofalpha"] <- log(0.75) #on a log scale!
@@ -300,7 +312,7 @@ analyze.pk.data <- function(fitdata,
 
   while(any(is.nan(ln.sds)) & factr>1) #If any of the SDs are NaN
   {
-    cat("One or more paramters has NaN standard deviation, repeating optimization with smaller convergence tolerance.\n")
+    cat("One or more parameters has NaN standard deviation, repeating optimization with smaller convergence tolerance.\n")
     #then redo optimization
   #  if ("Fgutabs" %in% names(opt.params)) browser()
     opt.params <- ln.means+runif(length(ln.means),-0.1,0.1)
@@ -340,6 +352,8 @@ analyze.pk.data <- function(fitdata,
                        })
     names(ln.sds) <- names(ln.means)
   }
+
+### if(factr > 1) { this is to avoid unnecessary computation, but have not figured out where to put loop yet.
 
   #Exclude sigma2 from results
   sigmas <- ln.means[regexpr("sigma",names(ln.means))!=-1]
@@ -400,17 +414,17 @@ analyze.pk.data <- function(fitdata,
 
   # If any of the parameters were not optimized or if the the model does not fit well:
 #  if (any(ln.means==as.vector(opt.params[names(ln.means)])) | any(sigmas>1))
-  if (any(ln.means==as.vector(orig.params[names(ln.means)])) | any(sigmas>MAXSIGMA))
+  if (any(ln.means==as.vector(orig.params[names(ln.means)])) | any(sigmas>MAXSIGMA) | factr == 1 | all(ln.sds) == 0) ### added factr and ln.sds
   {
     out.dt[,LogLikelihood:=0]  ### replace with NA to make error more apparent
     out.dt[,AIC:=Inf]
-    cat(paste("Some parameters were not optimized or sigma >",MAXSIGMA,". Returning AIC=INF.\n"))
+    cat(paste("Some parameters were not optimized,sigma >",MAXSIGMA," some parameters had NaN standard deviation under smallest convergence tolerance, or the standard deviation of each parameter could not be calculated. Returning AIC=INF.\n"))
   } else if (model=='1compartment')
   {
     # Check for bad one-compartment model fits:
     if (ln.means["Vdist"]==upper["Vdist"])
     {
-      out.dt[,LogLikelihood:=0]
+      out.dt[,LogLikelihood:=0] ### replace with NA to make error more apparent
       out.dt[,AIC:=Inf]
       cat("Vdist equal to upper bound on optimizer. Returning AIC=INF.\n")
     } else {
@@ -422,7 +436,7 @@ analyze.pk.data <- function(fitdata,
     # Check for bad two-compartment model fits:
     if (ln.means["Fbetaofalpha"]==upper["Fbetaofalpha"]|ln.means["Fbetaofalpha"]==lower["Fbetaofalpha"]|ln.means["V1"]==upper["V1"])
     {
-      out.dt[,LogLikelihood:=0]
+      out.dt[,LogLikelihood:=0] ### replace with NA to make error more apparent
       out.dt[,AIC:=Inf]
       cat("Problem with Fbetaofalpha or V1 equaling optimizer bound. Returning AIC=INF.\n")
     } else {
@@ -431,10 +445,13 @@ analyze.pk.data <- function(fitdata,
     }
   }
 
+# } else {warning("didn't converge")}
+
   if (!is.null(this.reference))
   {
     out.dt[,Reference:=NULL]
   }
 
   return(out.dt)
+
 }
