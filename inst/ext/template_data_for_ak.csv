@@ -1,0 +1,335 @@
+dsstox_casrn,analyte_name_original,dsstox_substance_id,fk_series_id,fk_study_id,fk_reference_document_id,fk_extraction_document_id,species,weight_kg,dose_level_normalized,administration_route_normalized,conc_medium_normalized,conc,time_hr
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,8.00E-05,-0.33333
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00215,1.91667
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00073,3.33333
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00149,5.25
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00211,7.83333
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00082,13.91667
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00051,20.33333
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00038,26.83333
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00025,31.5
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00018,34.41667
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00044,37.91667
+1071-83-6,glyphosate,DTXSID1024122,1,,1,1,human,70.5573,0.002789222,oral,urine,0.00045,44.41667
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,2.00E-05,-2
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00048,1.66667
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,5.00E-04,3.16667
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00081,4.75
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00251,6.16667
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00182,10.66667
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00035,12.58333
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00039,13.83333
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.0013,21.91667
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00051,25.41667
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00049,27.83333
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00025,29.5
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00028,37.91667
+1071-83-6,glyphosate,DTXSID1024122,2,,1,1,human,70.5573,0.002789222,oral,urine,0.00082,46.08333
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,5.00E-05,-0.66667
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00014,1.91667
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00043,3.58333
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00101,5.25
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00072,6.83333
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00034,8.16667
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00016,9.83333
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00104,14.41667
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00086,22.83333
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00028,29.33333
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00024,34.16667
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00015,37.33333
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,0.00013,43.5
+1071-83-6,glyphosate,DTXSID1024122,3,,1,1,human,70.5573,0.002789222,oral,urine,5.00E-05,46.5
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,4.00E-05,-1.31667
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00015,1.25
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00047,3.15
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00061,4.61667
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00052,6.01667
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00022,7.36667
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,1.00E-04,8.9
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00024,10.46667
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00024,12.05
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00049,16.38333
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00036,20.41667
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00016,23
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,9.00E-05,25.08333
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,9.00E-05,27.41667
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00011,29.08333
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,5.00E-05,31.08333
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,6.00E-05,34.13333
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00023,36.83333
+1071-83-6,glyphosate,DTXSID1024122,4,,1,1,human,70.5573,0.002789222,oral,urine,0.00037,44.76667
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,NA,-2.5
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,1.00E-05,-0.08333
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.00041,1.66667
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.001,3.16667
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.00281,4.91667
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,7.00E-04,6.5
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.00121,8.25
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.00234,9.91667
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.0056,11.5
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.00259,13.25
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.00112,21.83333
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,5.00E-04,27.75
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.00059,34
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.00041,38.41667
+1071-83-6,glyphosate,DTXSID1024122,5,,1,1,human,70.5573,0.002789222,oral,urine,0.00021,47
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,NA,-3.08333
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,9.00E-05,-0.16667
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,0.00256,1.98333
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,0.00156,3.91667
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,0.00168,6.28333
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,0.00205,7.41667
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,0.00147,12.03333
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,0.00063,19.38333
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,0.00062,25.3
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,0.00036,28.68333
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,0.00015,31.41667
+1071-83-6,glyphosate,DTXSID1024122,6,,1,1,human,70.5573,0.002789222,oral,urine,0.00032,36.91667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,NA,-3.5
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,2.00E-05,-0.5
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00158,1.66667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00052,3.66667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,3.00E-04,5.16667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00032,7.33333
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00045,9
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00025,10.66667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00015,12.41667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00021,13.66667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00043,20.5
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00066,22.66667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00073,24.41667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00016,26.08333
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,2.00E-04,28.5
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,0.00031,31.25
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,6.00E-05,33.16667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,1.00E-04,34.66667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,9.00E-05,36.5
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,7.00E-05,40.66667
+1071-83-6,glyphosate,DTXSID1024122,7,,1,1,human,70.5573,0.002789222,oral,urine,1.00E-04,44.25
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,NA,-1.91667
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,1.00E-05,-0.08333
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,0.00045,1.91667
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,0.00065,3.41667
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,0.00162,5.41667
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,0.00058,8.16667
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,0.00043,9.41667
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,0.00147,14.16667
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,0.00068,21.33333
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,0.00011,25.66667
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,8.00E-05,27.16667
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,0.00041,31.33333
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,NA,34.41667
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,2.00E-04,36.83333
+1071-83-6,glyphosate,DTXSID1024122,8,,1,1,human,70.5573,0.002789222,oral,urine,0.00031,45.41667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,NA,-1.58333
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,1.00E-05,-0.25
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,2.00E-05,0.91667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,0.00013,2.41667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,0.00064,4.41667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,0.00053,5.75
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,3.00E-04,8.25
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,NA,10.66667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,0.00076,13.25
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,0.00047,21.41667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,0.00025,25.25
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,8.00E-05,26.83333
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,0.00017,28.41667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,2.00E-04,30.16667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,0.00014,31.83333
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,NA,33.41667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,2.00E-05,35.16667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,0.00021,38.66667
+1071-83-6,glyphosate,DTXSID1024122,9,,1,1,human,70.5573,0.002789222,oral,urine,7.00E-05,45.91667
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,NA,-2.41667
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,1.00E-05,-0.16667
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,0.00092,4.33333
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,0.00061,6.33333
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,0.00038,8.33333
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,0.00118,11.83333
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,0.00036,12.83333
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,0.00061,23.08333
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,0.00039,27.83333
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,0.00014,30.33333
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,0.00016,32.33333
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,0.00014,37.33333
+1071-83-6,glyphosate,DTXSID1024122,10,,1,1,human,70.5573,0.002789222,oral,urine,8.00E-05,45.58333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,NA,-0.96667
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00016,0.33333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00019,2.95
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00045,5.33333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00031,7.33333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00014,8.83333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00022,10.33333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00021,11.83333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00053,13.58333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00046,23.33333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00096,27.08333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00015,28.58333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,6.00E-05,29.41667
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,1.00E-04,30.75
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00011,32.25
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,5.00E-05,33.66667
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,8.00E-05,35.33333
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,5.00E-05,36.71667
+1071-83-6,glyphosate,DTXSID1024122,11,,1,1,human,70.5573,0.002789222,oral,urine,0.00019,46.33333
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,NA,-2.75
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,1.00E-05,-0.5
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,0.00052,3.25
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,0.00163,8
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,0.00023,9
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,0.00038,11.75
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,0.00122,19.5
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,0.00034,25.25
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,5.00E-05,27.25
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,0.00025,31.25
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,0.00011,34.25
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,0.00049,45.75
+1071-83-6,glyphosate,DTXSID1024122,12,,1,1,human,70.5573,0.002789222,oral,urine,0.00033,50.58333
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,2,2,rat,NA,40,oral,urine,NA,-0.12983
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,2,2,rat,NA,40,oral,urine,NA,5.89418
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,2,2,rat,NA,40,oral,urine,NA,12.04858
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,2,2,rat,NA,40,oral,urine,NA,23.96622
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,2,2,rat,NA,40,oral,urine,NA,47.99972
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,2,2,rat,NA,200,oral,urine,NA,-0.13011
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,2,2,rat,NA,200,oral,urine,NA,5.82912
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,2,2,rat,NA,200,oral,urine,NA,11.98185
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,2,2,rat,NA,200,oral,urine,NA,23.89865
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,2,2,rat,NA,200,oral,urine,NA,47.86849
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,3,,2,2,rat,NA,1000,oral,urine,NA,-0.19433
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,3,,2,2,rat,NA,1000,oral,urine,NA,5.95225
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,3,,2,2,rat,NA,1000,oral,urine,NA,11.96901
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,3,,2,2,rat,NA,1000,oral,urine,NA,23.90926
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,3,,2,2,rat,NA,1000,oral,urine,NA,47.98967
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,4,,2,2,rat,NA,40,oral,urine,NA,0
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,4,,2,2,rat,NA,40,oral,urine,NA,6.08907
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,4,,2,2,rat,NA,40,oral,urine,NA,12.04858
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,4,,2,2,rat,NA,40,oral,urine,NA,24.16194
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,4,,2,2,rat,NA,40,oral,urine,NA,48.19433
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,2,2,rat,NA,200,oral,urine,NA,0.12955
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,2,2,rat,NA,200,oral,urine,NA,6.02429
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,2,2,rat,NA,200,oral,urine,NA,12.11336
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,2,2,rat,NA,200,oral,urine,NA,24.09717
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,2,2,rat,NA,200,oral,urine,NA,48.12955
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,6,,2,2,rat,NA,1000,oral,urine,NA,-0.06478
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,6,,2,2,rat,NA,1000,oral,urine,NA,6.02429
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,6,,2,2,rat,NA,1000,oral,urine,NA,12.11336
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,6,,2,2,rat,NA,1000,oral,urine,NA,24.22672
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,6,,2,2,rat,NA,1000,oral,urine,NA,48.12955
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,2,2,rat,NA,40,oral,blood,NA,0.18608
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,2,2,rat,NA,40,oral,blood,NA,6.37321
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,2,2,rat,NA,40,oral,blood,NA,24.19784
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,2,2,rat,NA,40,oral,blood,NA,47.9927
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,8,,2,2,rat,NA,200,oral,blood,NA,0.24693
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,8,,2,2,rat,NA,200,oral,blood,NA,6.3632
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,8,,2,2,rat,NA,200,oral,blood,NA,24.19135
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,8,,2,2,rat,NA,200,oral,blood,NA,48.11495
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,2,2,rat,NA,1000,oral,blood,NA,0.24802
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,2,2,rat,NA,1000,oral,blood,NA,6.29342
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,2,2,rat,NA,1000,oral,blood,NA,24.22408
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,2,2,rat,NA,1000,oral,blood,NA,48.109
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,16,,2,2,rat,NA,40,oral,plasma,NA,6
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,17,,2,2,rat,NA,200,oral,plasma,NA,NA
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,18,,2,2,rat,NA,1000,oral,plasma,NA,NA
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,16,,2,2,rat,NA,40,oral,plasma,NA,NA
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,17,,2,2,rat,NA,200,oral,plasma,NA,24
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,18,,2,2,rat,NA,1000,oral,plasma,NA,NA
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,16,,2,2,rat,NA,40,oral,plasma,NA,NA
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,17,,2,2,rat,NA,200,oral,plasma,NA,NA
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,18,,2,2,rat,NA,1000,oral,plasma,NA,48
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,3,3,rat,0.21,10,iv,plasma,3.6502,0.06888
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,3,3,rat,0.21,10,iv,plasma,0.76327,0.22381
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,3,3,rat,0.21,10,iv,plasma,0.3836,0.48392
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,3,3,rat,0.21,10,iv,plasma,0.28104,0.73199
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,3,3,rat,0.21,10,iv,plasma,0.25585,0.9835
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,3,3,rat,0.21,10,iv,plasma,0.23585,1.48255
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,3,3,rat,0.21,10,iv,plasma,0.18761,1.98565
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,3,3,rat,0.21,10,iv,plasma,0.15621,2.99139
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,3,3,rat,0.21,10,iv,plasma,0.13059,3.99713
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,3,3,rat,0.21,10,iv,plasma,0.07684,5.99365
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,3,3,rat,0.21,100,oral,plasma,0.19915,0.47739
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,3,3,rat,0.21,100,oral,plasma,0.77635,0.73412
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,3,3,rat,0.21,100,oral,plasma,1.21875,0.98473
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,3,3,rat,0.21,100,oral,plasma,1.13277,1.48757
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,3,3,rat,0.21,100,oral,plasma,0.35404,1.9846
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,2,,3,3,rat,0.21,100,oral,plasma,0.08176,2.99246
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,10.30431,0.37466
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,5.92401,0.74214
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,4.16982,0.89108
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,3.74781,1.97026
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,2.98611,3.91332
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,3.97665,5.99236
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,2.69442,8.00969
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,3.09174,9.87544
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,2.18986,14.83751
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,1.20726,24.5447
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,4,4,rat,325,100,iv,blood,0.79115,32.09413
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,4,4,rat,325,2000,oral,blood,3.80656,0.22469
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,4,4,rat,325,2000,oral,blood,5.47136,0.438
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,4,4,rat,325,2000,oral,blood,9.11697,0.86462
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,4,4,rat,325,2000,oral,blood,12.08926,1.71786
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,4,4,rat,325,2000,oral,blood,14.01496,3.70876
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,4,4,rat,325,2000,oral,blood,11.61161,5.69966
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,4,4,rat,325,2000,oral,blood,3.85805,7.69056
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,4,4,rat,325,2000,oral,blood,5.25519,12.17008
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,4,4,rat,325,2000,oral,blood,2.02421,23.75995
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,5,,4,4,rat,325,2000,oral,blood,1.67709,31.86576
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,4,4,rat,325,2000,oral,blood,2.73695,-0.11821
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,4,4,rat,325,2000,oral,blood,8.73766,0.75349
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,4,4,rat,325,2000,oral,blood,22.43848,1.53673
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,4,4,rat,325,2000,oral,blood,21.36984,3.72286
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,4,4,rat,325,2000,oral,blood,12.54726,5.62758
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,4,4,rat,325,2000,oral,blood,5.69168,7.66582
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,4,4,rat,325,2000,oral,blood,4.3232,12.27303
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,4,4,rat,325,2000,oral,blood,2.5337,23.66746
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,4,4,rat,325,2000,oral,blood,1.57214,31.78423
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,7,,4,4,rat,325,2000,oral,blood,0.62509,48.34194
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,5,5,rat,0.133,2.8,oral,plasma,8.67152,2.98709
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,5,5,rat,0.133,2.8,oral,plasma,6.48928,6.08609
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,5,5,rat,0.133,2.8,oral,plasma,3.04364,8.99596
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,,5,5,rat,0.133,2.8,oral,plasma,1.2634,14.05828
+000-00-0,DEHP derived radioactivity,DTXSID0000000,3,,5,5,rat,0.133,2.8,oral,urine,NA,3.96424
+000-00-0,DEHP derived radioactivity,DTXSID0000000,3,,5,5,rat,0.133,2.8,oral,urine,NA,9.99104
+000-00-0,DEHP derived radioactivity,DTXSID0000000,3,,5,5,rat,0.133,2.8,oral,urine,NA,19.10243
+000-00-0,DEHP derived radioactivity,DTXSID0000000,3,,5,5,rat,0.133,2.8,oral,urine,NA,28.7087
+000-00-0,DEHP derived radioactivity,DTXSID0000000,3,,5,5,rat,0.133,2.8,oral,urine,NA,39.85172
+000-00-0,DEHP derived radioactivity,DTXSID0000000,3,,5,5,rat,0.133,2.8,oral,urine,NA,59.89306
+000-00-0,DEHP derived radioactivity,DTXSID0000000,4,,5,5,rat,0.133,2.8,oral,urine,NA,3.86067
+000-00-0,DEHP derived radioactivity,DTXSID0000000,4,,5,5,rat,0.133,2.8,oral,urine,NA,7.92701
+000-00-0,DEHP derived radioactivity,DTXSID0000000,4,,5,5,rat,0.133,2.8,oral,urine,NA,11.79597
+000-00-0,DEHP derived radioactivity,DTXSID0000000,4,,5,5,rat,0.133,2.8,oral,urine,NA,19.11525
+000-00-0,DEHP derived radioactivity,DTXSID0000000,4,,5,5,rat,0.133,2.8,oral,urine,NA,28.82037
+000-00-0,DEHP derived radioactivity,DTXSID0000000,4,,5,5,rat,0.133,2.8,oral,urine,NA,39.96744
+000-00-0,DEHP derived radioactivity,DTXSID0000000,4,,5,5,rat,0.133,2.8,oral,urine,NA,59.74546
+000-00-0,DEHP derived radioactivity,DTXSID0000000,5,,5,5,rat,0.133,2.8,oral,urine,NA,3.98516
+000-00-0,DEHP derived radioactivity,DTXSID0000000,5,,5,5,rat,0.133,2.8,oral,urine,NA,9.96
+000-00-0,DEHP derived radioactivity,DTXSID0000000,5,,5,5,rat,0.133,2.8,oral,urine,NA,19.02413
+000-00-0,DEHP derived radioactivity,DTXSID0000000,5,,5,5,rat,0.133,2.8,oral,urine,NA,27.72964
+000-00-0,DEHP derived radioactivity,DTXSID0000000,5,,5,5,rat,0.133,2.8,oral,urine,NA,39.97584
+000-00-0,DEHP derived radioactivity,DTXSID0000000,6,,5,5,rat,0.133,2.8,oral,urine,NA,4.16616
+000-00-0,DEHP derived radioactivity,DTXSID0000000,6,,5,5,rat,0.133,2.8,oral,urine,NA,7.6271
+000-00-0,DEHP derived radioactivity,DTXSID0000000,6,,5,5,rat,0.133,2.8,oral,urine,NA,11.69596
+000-00-0,DEHP derived radioactivity,DTXSID0000000,6,,5,5,rat,0.133,2.8,oral,urine,NA,19.17667
+000-00-0,DEHP derived radioactivity,DTXSID0000000,6,,5,5,rat,0.133,2.8,oral,urine,NA,27.88218
+000-00-0,DEHP derived radioactivity,DTXSID0000000,6,,5,5,rat,0.133,2.8,oral,urine,NA,39.94959
+000-00-0,DEHP derived radioactivity,DTXSID0000000,6,,5,5,rat,0.133,2.8,oral,urine,NA,59.9685
+000-00-0,DEHP derived radioactivity,DTXSID0000000,7,,5,5,rat,0.133,2.8,oral,urine,NA,3.94924
+000-00-0,DEHP derived radioactivity,DTXSID0000000,7,,5,5,rat,0.133,2.8,oral,urine,NA,7.81062
+000-00-0,DEHP derived radioactivity,DTXSID0000000,7,,5,5,rat,0.133,2.8,oral,urine,NA,9.88478
+000-00-0,DEHP derived radioactivity,DTXSID0000000,7,,5,5,rat,0.133,2.8,oral,urine,NA,18.90879
+000-00-0,DEHP derived radioactivity,DTXSID0000000,7,,5,5,rat,0.133,2.8,oral,urine,NA,35.84477
+000-00-0,DEHP derived radioactivity,DTXSID0000000,7,,5,5,rat,0.133,2.8,oral,urine,NA,59.86996
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,0.02549,24.09833
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,10.90855,26.79202
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,0.02526,48.02561
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,26.19485,51.15056
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,0.0247,71.85106
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,14.40871,75.44329
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,0.0248,95.88015
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,18.28707,99.45264
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,0.02682,120.52014
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,16.84231,123.48908
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,0.02498,143.93833
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,14.3323,147.32732
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,0.10047,167.76341
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,11.1382,171.27085
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,9,,5,5,rat,0.133,2.8,oral,plasma,0.02516,191.99652

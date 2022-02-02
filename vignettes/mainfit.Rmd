@@ -1,0 +1,59 @@
+---
+title: "Wambaugh et al. (2018): Estimating TK Parameters from In Vivo Data"
+author: "John Wambaugh and Caroline Ring"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Wambaugh et al. (2018): Estimating TK Parameters from In Vivo Data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = '#>')
+```
+To use the code in this vignette, you'll first need to load a few packages (if you haven't already).
+```{r load_packages, eval = FALSE}
+library(invivoPKfit)
+```
+# Initialized the Random Number Generator:
+```{R initialize, eval = FALSE}
+TeachingDemos::char2seed("Caroline Ring")
+```
+# Do the noncompartment model fit
+```{r noncomp, eval=FALSE}
+system.time(PK.fit.table.noncomp <- invivoPKfit::fit_all(data.set=pkdataset_nheerlcleaned, model="noncompartment"))
+
+saveRDS(PK.fit.table.noncomp , paste("output/PK_fit_table_noncomp-",Sys.Date(),".rda",sep=""))
+```
+# Do the 2-compartment model fit
+```{r twocomp, eval=FALSE}
+system.time(PK.fit.table.2comp  <- invivoPKfit::fit_all(pkdataset_nheerlcleaned, model="2compartment", modelfun="analytic"))
+
+saveRDS(PK.fit.table.2comp, paste("output/PK_fit_table_2comp-",Sys.Date(),".rda",sep=""))
+```
+# Plot the 2-compartment concentration vs. time
+```{r twcomp_plot, eval=FALSE}
+junk <- plot_conctime(PK.fit.table=PK.fit.table.2comp,
+                      data.set=pkdataset_nheerlcleaned,
+                      model="2compartment")
+```
+# Do the 1-compartment model fit
+```{r onecomp, eval=FALSE}
+system.time(PK.fit.table.1comp <- invivoPKfit::fit_all(data.set=pkdataset_nheerlcleaned, model="1compartment", modelfun="analytic"))
+
+saveRDS(PK.fit.table.1comp, paste("output/PK_fit_table_1comp-",Sys.Date(),".rda",sep=""))
+```
+# Plot one compartment concentration vs. time
+```{r onecomp_plot,eval=FALSE}
+junk <- plot_conctime(PK.fit.table=PK.fit.table.1comp,
+                      data.set=pkdataset_nheerlcleaned,
+                      model="1compartment")
+```
+# Output the dataset analyzed:
+```{r dataoutput,eval=FALSE}
+write.csv(pkdataset_nheerlcleaned[order(pkdataset_nheerlcleaned$Compound),],"SupTable1.txt",row.names=F)
+write.csv(pkdataset_nheerlcleaned[order(pkdataset_nheerlcleaned$Compound),],file=paste("InVivoData-",Sys.Date(),".txt",sep=""),row.names=F)
+save(pkdataset_nheerlcleaned,file=paste("PKdata-",Sys.Date(),".RData",sep=""))
+```                                   
+

@@ -1,0 +1,93 @@
+dsstox_casrn,analyte_name_original,dsstox_substance_id,fk_series_id,fk_study_id,fk_extraction_document_id,species,weight_kg,dose_level_normalized,administration_route_normalized,conc_medium_normalized,conc,time_hr,fk_reference_document_id
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,1,1,4,rat,0.21,10,iv,plasma,3.6502,0.06888,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,1,1,4,rat,0.21,10,iv,plasma,0.76327,0.22381,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,1,1,4,rat,0.21,10,iv,plasma,0.3836,0.48392,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,1,1,4,rat,0.21,10,iv,plasma,0.28104,0.73199,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,1,1,4,rat,0.21,10,iv,plasma,0.25585,0.9835,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,1,1,4,rat,0.21,10,iv,plasma,0.23585,1.48255,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,1,1,4,rat,0.21,10,iv,plasma,0.18761,1.98565,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,1,1,4,rat,0.21,10,iv,plasma,0.15621,2.99139,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,1,1,4,rat,0.21,10,iv,plasma,0.13059,3.99713,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,1,1,4,rat,0.21,10,iv,plasma,0.07684,5.99365,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,2,2,4,rat,0.21,100,oral,plasma,0.19915,0.47739,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,2,2,4,rat,0.21,100,oral,plasma,0.77635,0.73412,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,2,2,4,rat,0.21,100,oral,plasma,1.21875,0.98473,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,2,2,4,rat,0.21,100,oral,plasma,1.13277,1.48757,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,2,2,4,rat,0.21,100,oral,plasma,0.35404,1.9846,4
+117-81-7,Di-(2-ethylhexyl) phthalate (DEHP),DTXSID5020607,2,2,4,rat,0.21,100,oral,plasma,0.08176,2.99246,4
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.64818,0.01644,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.64818,0.01644,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.77079,0.0329,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.77079,0.0329,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.81924,0.06684,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.81924,0.06684,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.93518,0.10125,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.93518,0.10125,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.99979,0.13276,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.99979,0.13276,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.61476,0.16973,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.61476,0.16973,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.22536,0.21602,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.22536,0.21602,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.10358,0.26469,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.10358,0.26469,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.09438,0.31564,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.09438,0.31564,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.07285,0.38264,8
+000-00-0,phenol,DTXSID0000000,1,1,8,rat,0.2855,1.5,iv,blood,0.07285,0.38264,8
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,151.75713,0.20008,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,151.75713,0.20008,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,46.70196,0.45481,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,46.70196,0.45481,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,15.24129,0.96088,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,15.24129,0.96088,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,5.2739,1.94467,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,5.2739,1.94467,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,1.5892,3.98517,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,1.5892,3.98517,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,0.64295,5.97456,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,0.64295,5.97456,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,0.51723,7.96208,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,0.51723,7.96208,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,0.45008,9.99968,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,0.45008,9.99968,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,0.34812,11.9873,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,0.34812,11.9873,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,0.30652,24.00978,9
+1071-83-6,glyphosate,DTXSID1024122,1,1,9,rat,0.205,100,iv,plasma,0.30652,24.00978,9
+1071-83-6,glyphosate,DTXSID1024122,2,2,9,rat,0.205,400,oral,plasma,0.65866,0.24009,9
+1071-83-6,glyphosate,DTXSID1024122,2,2,9,rat,0.205,400,oral,plasma,0.95636,0.49058,9
+1071-83-6,glyphosate,DTXSID1024122,2,2,9,rat,0.205,400,oral,plasma,1.41591,0.96737,9
+1071-83-6,glyphosate,DTXSID1024122,2,2,9,rat,0.205,400,oral,plasma,2.01475,1.9473,9
+1071-83-6,glyphosate,DTXSID1024122,2,2,9,rat,0.205,400,oral,plasma,7.64688,3.98088,9
+1071-83-6,glyphosate,DTXSID1024122,2,2,9,rat,0.205,400,oral,plasma,6.65433,5.96818,9
+1071-83-6,glyphosate,DTXSID1024122,2,2,9,rat,0.205,400,oral,plasma,2.7455,7.98267,9
+1071-83-6,glyphosate,DTXSID1024122,2,2,9,rat,0.205,400,oral,plasma,2.20861,9.99533,9
+1071-83-6,glyphosate,DTXSID1024122,2,2,9,rat,0.205,400,oral,plasma,1.40369,12.00864,9
+1071-83-6,glyphosate,DTXSID1024122,2,2,9,rat,0.205,400,oral,plasma,0.99582,24.03171,9
+111-11-1,butylparaben,DTXSID1111111,1,1,10,rat,NA,100,oral,plasma,NA,0.03319,10
+111-11-1,butylparaben,DTXSID1111111,1,1,10,rat,NA,100,oral,plasma,NA,0.48014,10
+111-11-1,butylparaben,DTXSID1111111,1,1,10,rat,NA,100,oral,plasma,NA,1.01645,10
+111-11-1,butylparaben,DTXSID1111111,1,1,10,rat,NA,100,oral,plasma,NA,1.98314,10
+111-11-1,butylparaben,DTXSID1111111,1,1,10,rat,NA,100,oral,plasma,NA,3.9814,10
+111-11-1,butylparaben,DTXSID1111111,1,1,10,rat,NA,100,oral,plasma,NA,8.00501,10
+111-11-1,butylparaben,DTXSID1111111,1,1,10,rat,NA,100,oral,plasma,NA,11.99787,10
+111-11-1,butylparaben,DTXSID1111111,1,1,10,rat,NA,100,oral,plasma,NA,21.97235,10
+111-11-1,butylparaben,DTXSID1111111,1,1,10,rat,NA,100,oral,plasma,NA,23.96681,10
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,0.02575,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,0.12876,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,0.23176,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,0.38627,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,0.54077,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,0.72103,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,0.97854,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,1.98283,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,2.96137,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,3.99142,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,4.96996,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,5.97425,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,6.97854,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,7.98283,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,8.98712,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,9.96567,11
+117-81-7,Di(2-ethylhexyl) Phthalate (DEHP),DTXSID5020607,1,1,11,human,70.5573,0.645,oral,blood,NA,23.9485,11

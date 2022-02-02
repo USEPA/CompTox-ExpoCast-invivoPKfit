@@ -1,0 +1,811 @@
+---
+title: "Figures"
+author: "Christopher Cook"
+date: "1/21/2022"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(results = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r, include = FALSE}
+library(tidyverse)
+library(data.table)
+devtools::load_all(".")
+```
+
+
+```{r}
+#############
+### histogram showing data spread for invivoPKfit cp values
+#############
+
+
+data.params.1 <- read.csv("inst/ext/PK.fit.table.1comp.12212021.csv")
+data.params.2 <- read.csv("inst/ext/PK.fit.table.2comp.12212021.csv")
+
+data.set.1 <- read.csv("inst/ext/processed.1comp.data.12212021.csv")
+data.set.2 <- read.csv("inst/ext/processed.2comp.data.12212021.csv")
+
+data.params.1 <- data.params.1 %>% filter(param.value.type == "Fitted geometric mean")
+data.params.1$X <- NULL
+data.params.1 <- data.params.1 %>% filter(Data.Analyzed != "Joint Analysis")
+
+data.params.2 <- data.params.2 %>% filter(param.value.type == "Fitted geometric mean")
+data.params.2$X <- NULL
+data.params.2 <- data.params.2 %>% filter(Data.Analyzed != "Joint Analysis")
+
+data.set.1$Reference <- as.character(data.set.1$Reference)
+data.set.1$kelim <- NULL
+data.set.1$Vdist <- NULL
+data.set.1$Fgutabs <- NULL
+data.set.1$kgutabs <- NULL
+
+data.set.2$Reference <- as.character(data.set.2$Reference)
+data.set.2$kelim <- NULL
+data.set.2$Vdist <- NULL
+data.set.2$Fgutabs <- NULL
+data.set.2$kgutabs <- NULL
+
+data.set.2$V1 <- NULL
+data.set.2$Ralphatokelim <- NULL
+data.set.2$Fbetaofalpha <- NULL
+
+full.data.1 <- left_join(data.set.1, data.params.1, by = c("Compound", "CAS", "Reference"))
+full.data.1 <- full.data.1 %>% filter(AIC != Inf)
+
+full.data.2 <- left_join(data.set.2, data.params.2, by = c("Compound", "CAS", "Reference"))
+full.data.2 <- full.data.2 %>% filter(AIC != Inf)
+
+### function that find cp
+test.1 <- function(full.data.1) {plyr::adply(full.data.1, 1, mutate, cp = cp_1comp(time = Time,
+                                                                                   params = full.data.1[1,],
+                                                                                   dose = Dose,
+                                                                                   iv.dose = iv))}
+
+test.2 <- function(full.data.2) {plyr::adply(full.data.2, 1, mutate, cp = cp_2comp(time = Time,
+                                                                                   params = full.data.2[1,],
+                                                                                   dose = Dose,
+                                                                                   iv.dose = iv))}
+
+### have to split data frame into ones with unique parameter values because cp_1comp takes constants
+split_df.1 <- split(full.data.1, list(full.data.1$Compound,
+                                      full.data.1$Reference,
+                                      full.data.1$CAS),
+                    drop = TRUE)
+
+test_df.1 <- lapply(split_df.1, test.1)
+
+maybe.1 <- do.call(rbind, test_df.1)
+
+### nomralize cp by Value
+maybe.1$cp_norm <- maybe.1$cp / maybe.1$Value
+maybe.1$type <- "1-Compartment"
+
+split_df.2 <- split(full.data.2, list(full.data.2$Compound,
+                                      full.data.2$Reference,
+                                      full.data.2$CAS),
+                    drop = TRUE)
+
+test_df.2 <- lapply(split_df.2, test.2)
+
+maybe.2 <- do.call(rbind, test_df.2)
+
+maybe.2$cp_norm <- maybe.2$cp / maybe.2$Value
+maybe.2$type <- "2-Compartment"
+
+
+# maybe.2 <- maybe.2 %>%
+#   filter(cp != 1e-20)
+
+
+maybe.1 <- maybe.1[, intersect(colnames(maybe.2), colnames(maybe.1))]
+maybe.2 <- maybe.2[, intersect(colnames(maybe.1), colnames(maybe.2))]
+
+maybe <- rbind(maybe.1, maybe.2)
+
+p <- ggplot(data = maybe,
+            mapping = aes(x = cp_norm)) +
+  geom_histogram() +
+  geom_vline(xintercept = c(0.5, 2),
+             color = "Red",
+             linetype = "dashed") +
+  # xlim(0, 1e42) +
+  # ylim(0, 400) +
+  # scale_y_log10()+
+  theme(title = element_text(size = 16),
+        axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14)) +
+  scale_x_log10(limits = c(0.01, 1000))+
+  theme_bw() +
+  labs(x = "Predicted/Observed",
+       y = "Number of Observations") +
+  facet_wrap(. ~ type)
+
+p
+```
+
+```{r}
+### histogram of data variability
+
+data <- as.data.table(read.csv("inst/ext/processed.1comp.data.12212021.csv"))
+# data <- as.data.table(read.csv("inst/ext/processed.2comp.data.12212021.csv"))
+
+# data <- data %>% filter(Route == "iv")
+
+### function  that finds mean conc of each replicate timepoint
+find_mean_conc <- function(data) {
+  
+  ### only use data with replicate timepoints
+  data <- data[ ave(1:nrow(data), data$Time, FUN=length) > 1 , ]
+  
+  if(nrow(data) == 0) {
+    return(NULL)
+  } else {
+    ### something that deletes replicate timepoints where all Values are NA
+    time_split <- split(data, data$Time)
+    
+    # time_split_list <- keep(time_split, ~all(!is.na(.$Value)))
+    
+    time_split_list <- purrr::discard(time_split, ~all(is.na(.$Value)))
+    # ~nrow(.) > 0)
+    
+    if(length(time_split_list) == 0) {
+      return(NULL)
+    } else {
+      
+      data <- do.call(rbind, time_split_list)
+      # data$conc <- as.numeric(data$conc)
+      data$Value[is.na(data$Value)] <- data$LOQ[is.na(data$Value)]
+      
+      ### take the average Value for each set of timepoints
+      data <- data %>%
+        group_by(Time) %>%
+        do(mutate(., mean_conc = mean(.$Value, na.rm = TRUE)))
+      
+      data <- data %>%
+        group_by(Time) %>%
+        do(mutate(., range_conc = max(.$Value) - min(.$Value)))
+      
+      ### create normalized conc values by dividing conc by mean_conc
+      data$conc_norm <- data$Value/data$mean_conc
+      
+      data <- data[order(data$Time),]
+      
+      return(data)
+    }
+  }
+}
+
+data.list <- list()
+for(this.compound in unique(data[, Compound])) {
+  this.compound.data <- data[Compound == this.compound]
+  # print(this.compound)
+  ### list of columns by which to split data.set
+  col_list <- list(this.compound.data$Reference,
+                   this.compound.data$Dose,
+                   this.compound.data$Route,
+                   this.compound.data$Media)
+  
+  ### split data.set into list of data.tables
+  split_list <- split(this.compound.data, col_list)
+  
+  ### remove data.tables with 0 rows
+  split_list <- keep(split_list, ~nrow(.) > 0)
+  
+  mean_conc <- lapply(split_list, find_mean_conc)
+  test <- do.call(rbind, mean_conc)
+  
+  data.list[[this.compound]] <- test
+}
+
+### combine data.tables back into one large data.set
+data.set <- do.call(rbind, data.list)
+
+plot_fxn <- function(i){
+  test_plot <- ggplot(data = i,
+                      mapping = aes(x = conc_norm)) +
+    # geom_histogram(aes(y = ..density..), binwidth = 0.25) +    geom_histogram(aes(y = ..density..), binwidth = 0.25) +
+    # geom_density() +
+    geom_histogram() +
+    geom_vline(xintercept = c(0.5, 2),
+               color = "Red",
+               linetype = "dashed") +
+    xlim(c(0, 4)) +
+    theme_bw() +
+    # theme(title = element_text(size = 16),
+    #       axis.text = element_text(size = 12),
+    #       axis.title = element_text(size = 14)) +
+    labs(x = "Normalized concentration",
+         y = "Number of observations")
+}
+
+my_hist <- plot_fxn(data.set)
+my_hist
+
+nrow(data.set[data.set$conc_norm > 2, ])
+nrow(data.set[data.set$conc_norm < 0.5, ])
+
+nrow(data.set[data.set$conc_norm >= 0.5 & data.set$conc_norm <= 2, ]) / nrow(data.set)
+
+nrow(data.set)
+
+```
+
+
+
+
+```{r}
+
+### Model Error vs Data Variability Density Plot
+
+
+rownames(maybe.1) <- c()
+rownames(maybe.2) <- c()
+
+data.set$Reference <- as.character(data.set$Reference)
+
+data.set$X <- NULL
+
+data.set$kelim <- NULL
+data.set$Vdist <- NULL
+data.set$Fgutabs <- NULL
+data.set$kgutabs <- NULL
+
+
+data.set$type <- "1-Compartment"
+test.1 <- left_join(data.set, maybe.1)
+
+
+### trying to find number of points in each plot panel for 1-compartment
+test.1.center <- test.1 %>% filter(conc_norm >= 0.5 & conc_norm <= 2)
+test.1.center <- test.1.center %>% filter(cp_norm >= 0.5 & cp_norm <= 2)
+ratio.1.center <- nrow(test.1.center)/nrow(test.1 %>% filter(!is.na(cp_norm)))
+
+test.1.green <- test.1 %>% filter(conc_norm < 0.5 | conc_norm > 2)
+test.1.green <- test.1.green %>% filter(cp_norm < 0.5 | cp_norm > 2)
+ratio.1.green <- nrow(test.1.green)/nrow(test.1 %>% filter(!is.na(cp_norm)))
+
+test.1.gray <- test.1 %>% filter(conc_norm < 0.5 | conc_norm > 2)
+test.1.gray <- test.1.gray %>% filter(cp_norm >= 0.5 & cp_norm <= 2)
+ratio.1.gray <- nrow(test.1.gray)/nrow(test.1 %>% filter(!is.na(cp_norm)))
+
+test.1.tan <- test.1 %>% filter(conc_norm >= 0.5 & conc_norm <= 2)
+test.1.tan <- test.1.tan %>% filter(cp_norm < 0.5 | cp_norm > 2)
+ratio.1.tan <- nrow(test.1.tan)/nrow(test.1 %>% filter(!is.na(cp_norm)))
+
+###########
+###########
+
+data.set$type <- "2-Compartment"
+test.2 <- left_join(data.set, maybe.2)
+
+### trying to find number of points in each plot panel for 2-compartment
+test.2.center <- test.2 %>% filter(conc_norm >= 0.5 & conc_norm <= 2)
+test.2.center <- test.2.center %>% filter(cp_norm >= 0.5 & cp_norm <= 2)
+ratio.2.center <- nrow(test.2.center)/nrow(test.2 %>% filter(!is.na(cp_norm)))
+
+test.2.green <- test.2 %>% filter(conc_norm < 0.5 | conc_norm > 2)
+test.2.green <- test.2.green %>% filter(cp_norm < 0.5 | cp_norm > 2)
+ratio.2.green <- nrow(test.2.green)/nrow(test.2 %>% filter(!is.na(cp_norm)))
+
+test.2.gray <- test.2 %>% filter(conc_norm < 0.5 | conc_norm > 2)
+test.2.gray <- test.2.gray %>% filter(cp_norm >= 0.5 & cp_norm <= 2)
+ratio.2.gray <- nrow(test.2.gray)/nrow(test.2 %>% filter(!is.na(cp_norm)))
+
+test.2.tan <- test.2 %>% filter(conc_norm >= 0.5 & conc_norm <= 2)
+test.2.tan <- test.2.tan %>% filter(cp_norm < 0.5 | cp_norm > 2)
+ratio.2.tan <- nrow(test.2.tan)/nrow(test.2 %>% filter(!is.na(cp_norm)))
+
+# test.2 <- test.2 %>% filter(cp_norm > 1e-12)
+
+test <- rbind(test.1, test.2)
+
+p <- ggplot(data = test,
+            mapping = aes(x = conc_norm, y = cp_norm)) +
+  annotate(geom = "rect", xmin = 0, xmax = 0.5, ymin = 2, ymax = Inf, alpha = 0.3, fill = "#86A397") +
+  annotate(geom = "rect", xmin = 0, xmax = 0.5, ymin = 0, ymax = 0.5, alpha = 0.3, fill = "#86A397") +
+  annotate(geom = "rect", xmin = 2, xmax = Inf, ymin = 0, ymax = 0.5, alpha = 0.3, fill = "#86A397") +
+  annotate(geom = "rect", xmin = 2, xmax = Inf, ymin = 2, ymax = Inf, alpha = 0.3, fill = "#86A397") +
+  annotate(geom = "rect", xmin = 0, xmax = 0.5, ymin = 0.5, ymax = 2, alpha = 0.3, fill = "#361D2E") +
+  annotate(geom = "rect", xmin = 2, xmax = Inf, ymin = 0.5, ymax = 2, alpha = 0.3, fill = "#361D2E") +
+  annotate(geom = "rect", xmin = 0.5, xmax = 2, ymin = 2, ymax = Inf, alpha = 0.3, fill = "#E1B07E") +
+  annotate(geom = "rect", xmin = 0.5, xmax = 2, ymin = 0, ymax = 0.5, alpha = 0.3, fill = "#E1B07E") +
+  theme_bw() +
+  theme(panel.spacing = unit(2, "lines")) +
+  # stat_density_2d() +
+  geom_bin2d(bins = 100) +
+  scale_fill_distiller(palette = "Blues") +
+  geom_vline(xintercept = c(0.5, 2),
+             linetype = "dashed") +
+  geom_hline(yintercept = c(0.5, 2),
+             linetype = "dashed") +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(x = "Data Variability",
+       y = "Model Error") +
+  facet_wrap(. ~type)
+
+p
+```
+
+```{r}
+
+### sigma distibution histogram
+
+data1 <- read.csv("inst/ext/PK.fit.table.1comp.12212021.csv") %>%
+  filter(param.value.type == "Fitted geometric mean" & AIC != Inf & Data.Analyzed != "Joint Analysis")
+
+data2 <- read.csv("inst/ext/PK.fit.table.2comp.12212021.csv") %>%
+  filter(param.value.type == "Fitted geometric mean" & AIC != Inf & Data.Analyzed != "Joint Analysis")
+
+data1 <- subset(data1, select = sigma_value)
+data1$model <- 1
+
+data2 <- subset(data2, select = sigma_value)
+data2$model <- 2
+
+data <- rbind(data1, data2)
+
+test_plot <- ggplot(data = data,
+                    mapping = aes(x = sigma_value)) +
+  # geom_histogram(binwidth = 0.25) +
+  geom_histogram() +
+  # geom_density() +
+  # scale_y_log10()+
+  scale_x_log10() +
+  theme_bw() +
+  labs(x = "Sigma",
+       y = "Number of observations") +
+  facet_wrap(.~ model)
+  # stat_function(fun = dlnorm, args = list(mean = mean(log(data$sigma_value)), sd = sd(log(data$sigma_value))))
+
+
+test_plot
+```
+
+```{r}
+
+### Orders of magnitude histogram
+
+data <- read.csv("inst/ext/processed.1comp.data.12212021.csv")
+
+data$X <- NULL
+
+split_df <- split(data, list(data$Compound,
+                             data$Reference,
+                             data$CAS,
+                             data$Dose,
+                             data$Species,
+                             data$Route,
+                             data$Media),
+                  drop = TRUE)
+
+find_mag <- function(data) {
+  
+  data$Value <- abs(data$Value)
+  
+  diff <- log10(max(data$Value, na.rm = TRUE)) - log10(min(data$Value, na.rm = TRUE))
+  
+  diff <- round(diff)
+  
+  return(diff)
+  
+}
+
+thing <- lapply(split_df, find_mag)
+
+
+thing <- pivot_longer(as.data.frame(thing), cols = everything())
+
+p <- ggplot(data = thing, mapping = aes(x = value)) +
+  geom_histogram(bins = 5, binwidth = 0.5) +
+  xlab("Orders of magnitude") + theme_bw()
+p
+```
+
+```{r}
+
+### number of observations vs sigma value
+
+one_comp_data <- read.csv("inst/ext/processed.1comp.data.12212021.csv") %>%
+  filter(if_all(Value, ~!is.na(.x)))
+
+onecomp <- read.csv("inst/ext/PK.fit.table.1comp.12212021.csv") %>%
+  filter(AIC != Inf)
+
+
+two_comp_data <- read.csv("inst/ext/processed.2comp.data.12212021.csv") %>%
+  filter(if_all(Value, ~!is.na(.x)))
+
+twocomp <- read.csv("inst/ext/PK.fit.table.2comp.12212021.csv") %>%
+  filter(AIC != Inf)
+
+one_comp_count <- one_comp_data %>% count(CAS, Compound, Reference, name = "Observations")
+
+two_comp_count <- two_comp_data %>% count(CAS, Compound, Reference, name = "Observations")
+
+
+#######
+#######
+
+onecomp_no_joint <- onecomp %>%
+  filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis" & AIC != Inf)
+
+one_comp_count$Reference <- as.character(one_comp_count$Reference)
+
+together_one <- left_join(one_comp_count, onecomp_no_joint, by = c("CAS", "Compound", "Reference"))
+
+together_one <- subset(together_one, select = c(CAS, Compound, Reference, Observations, sigma_id, sigma_value))
+
+together_one$model <- 1
+
+
+twocomp_no_joint <- twocomp %>%
+  filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis" & AIC != Inf)
+
+two_comp_count$Reference <- as.character(two_comp_count$Reference)
+
+together_two <- left_join(two_comp_count, twocomp_no_joint, by = c("CAS", "Compound", "Reference"))
+
+together_two <- subset(together_two, select = c(CAS, Compound, Reference, Observations, sigma_id, sigma_value))
+
+together_two$model <- 2
+
+together <- rbind(together_one, together_two)
+
+p <- ggplot(data = together, mapping = aes(x = Observations, y = sigma_value)) +
+  geom_point() +
+  scale_y_log10() +
+  labs(x = "Number of observations",
+       y = "Sigma") +
+  theme_bw() +
+  facet_wrap(.~ model)
+
+p
+```
+
+```{r}
+
+### model error vs sigma
+
+p <- ggplot(data = maybe, mapping = aes(x = sigma_value, y = cp_norm)) +
+  geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs( x = "Sigma",
+        y = "Predicted/Obseved") +
+  theme_bw() +
+  facet_wrap(.~ model)
+
+p
+
+```
+
+```{r}
+
+### sigma estimates, joint vs individual
+
+onecomp <- as.data.table(read.csv("inst/ext/PK.fit.table.1comp.12212021.csv") %>%
+  filter(param.value.type == "Fitted geometric mean"))
+
+twocomp <- as.data.table(read.csv("inst/ext/PK.fit.table.2comp.12212021.csv") %>%
+  filter(param.value.type == "Fitted geometric mean"))
+
+data_1 <- onecomp
+data_2 <- twocomp
+
+find_rep_sigma <- function(data) {
+  
+  ### only use data with replicate timepoints
+  data <- data[ ave(1:nrow(data), data$sigma_id, FUN=length) > 1 , ]
+  
+  if(nrow(data) == 0) {
+    return(NULL)
+  } else {
+    
+    return(data)
+  }
+}
+
+split_list_1 <- split(data_1, data_1$Compound)
+rep_sigma_1 <- lapply(split_list_1, find_rep_sigma)
+data_1 <- do.call(rbind, rep_sigma_1)
+data_1 <- subset(data_1, select = c(param.value.type, sigma_id, sigma_value, Data.Analyzed, Compound))
+data_1$Data.Analyzed[data_1$Data.Analyzed != "Joint Analysis"] <- "Ind Analysis"
+data_1 <- data_1 %>% pivot_wider(names_from = Data.Analyzed, values_from = sigma_value)
+data_1 <- data_1 %>% filter(sigma_id != "sigma2.14")
+data_1$`Joint Analysis` <- as.numeric(data_1$`Joint Analysis`)
+data_1$`Ind Analysis` <- as.numeric(data_1$`Ind Analysis`)
+data_1$model <- "1-Compartment"
+
+split_list_2 <- split(data_2, data_2$Compound)
+rep_sigma_2 <- lapply(split_list_2, find_rep_sigma)
+data_2 <- do.call(rbind, rep_sigma_2)
+data_2 <- subset(data_2, select = c(param.value.type, sigma_id, sigma_value, Data.Analyzed, Compound))
+data_2$Data.Analyzed[data_2$Data.Analyzed != "Joint Analysis"] <- "Ind Analysis"
+data_2 <- data_2 %>% pivot_wider(names_from = Data.Analyzed, values_from = sigma_value)
+data_2 <- data_2 %>% filter(sigma_id != "sigma2.14")
+data_2$`Joint Analysis` <- as.numeric(data_2$`Joint Analysis`)
+data_2$`Ind Analysis` <- as.numeric(data_2$`Ind Analysis`)
+data_2$model <- "2-Compartment"
+
+data <- rbind(data_1, data_2)
+
+p <- ggplot(data, aes(x = `Ind Analysis`, y = `Joint Analysis`)) +
+  geom_point() +
+  scale_y_log10() +
+  scale_x_log10() +
+  geom_abline(slope = 1) +
+  facet_wrap(. ~ model)
+p
+```
+
+
+```{r}
+data1 <- read.csv("inst/ext/processed.1comp.data.12212021.csv")
+
+data1$X <- NULL
+
+# data1 <- data1 %>% filter(Compound == "tamoxifen")
+
+split_df_1 <- split(data1, list(data1$Compound,
+                             data1$Reference,
+                             data1$CAS,
+                             data1$Dose,
+                             data1$Species,
+                             data1$Route,
+                             data1$Media),
+                  drop = TRUE)
+
+find_normalized_max <- function(data) {
+  
+  data$normalized_max <- max(data$Value, na.rm = TRUE)/data$LOQ
+  
+  return(data)
+  
+}
+
+thing <- lapply(split_df_1, find_normalized_max)
+
+thing <- do.call(rbind, thing)
+
+row.names(thing) <- c()
+
+thing <- thing %>%
+  distinct(Compound,
+           Reference,
+           CAS,
+           Dose,
+           Species,
+           Route,
+           Media,
+           normalized_max)
+
+# thing <- pivot_longer(as.data.frame(thing), cols = everything())
+
+p1 <- ggplot(data = thing, mapping = aes(x = normalized_max)) +
+  geom_histogram(bins = 15) +
+  scale_x_log10() +
+  xlab("Max Concentration / LOQ") + theme_bw() +
+  geom_vline(xintercept = 24.8482,
+             color = "red",
+             linetype = "dashed")
+p1
+
+###################################
+###################################
+
+find_normalized_mean <- function(data) {
+  
+  data$normalized_mean <- mean(data$Value, na.rm = TRUE)/data$LOQ
+  
+  return(data)
+  
+}
+
+thing <- lapply(split_df_1, find_normalized_mean)
+
+thing <- do.call(rbind, thing)
+
+p2 <- ggplot(data = thing, mapping = aes(x = normalized_mean)) +
+  geom_histogram(bins = 15) +
+  scale_x_log10() +
+  xlab("Mean Concentration / LOQ") + 
+  theme_bw() +
+  geom_vline(xintercept = 7.395552,
+             color = "red",
+             linetype = "dashed")
+p2
+
+
+###################################
+###################################
+
+data.params.1 <- read.csv("inst/ext/PK.fit.table.1comp.12212021.csv")
+# data.params.2 <- read.csv("inst/ext/PK.fit.table.2comp.12212021.csv")
+
+data.set.1 <- read.csv("inst/ext/processed.1comp.data.12212021.csv")
+# data.set.2 <- read.csv("inst/ext/processed.2comp.data.12212021.csv")
+
+data.params.1 <- data.params.1 %>% filter(param.value.type == "Fitted geometric mean")
+data.params.1$X <- NULL
+data.params.1 <- data.params.1 %>% filter(Data.Analyzed != "Joint Analysis")
+
+# data.params.2 <- data.params.2 %>% filter(param.value.type == "Fitted geometric mean")
+# data.params.2$X <- NULL
+# data.params.2 <- data.params.2 %>% filter(Data.Analyzed != "Joint Analysis")
+
+data.set.1$Reference <- as.character(data.set.1$Reference)
+data.set.1$kelim <- NULL
+data.set.1$Vdist <- NULL
+data.set.1$Fgutabs <- NULL
+data.set.1$kgutabs <- NULL
+
+# data.set.2$Reference <- as.character(data.set.2$Reference)
+# data.set.2$kelim <- NULL
+# data.set.2$Vdist <- NULL
+# data.set.2$Fgutabs <- NULL
+# data.set.2$kgutabs <- NULL
+# 
+# data.set.2$V1 <- NULL
+# data.set.2$Ralphatokelim <- NULL
+# data.set.2$Fbetaofalpha <- NULL
+
+full.data.1 <- left_join(data.set.1, data.params.1, by = c("Compound", "CAS", "Reference"))
+full.data.1 <- full.data.1 %>% filter(AIC != Inf)
+
+# full.data.2 <- left_join(data.set.2, data.params.2, by = c("Compound", "CAS", "Reference"))
+# full.data.2 <- full.data.2 %>% filter(AIC != Inf)
+
+
+split.full.data.1 <- split(full.data.1, list(full.data.1$Compound,
+                             full.data.1$Reference,
+                             full.data.1$CAS,
+                             full.data.1$Dose,
+                             full.data.1$Species.x,
+                             full.data.1$Route,
+                             full.data.1$Media),
+                  drop = TRUE)
+
+find_halflife_count <- function(data) {
+  
+  data_subset <- data %>% filter(!is.na(Value))
+  
+  max_time <- max(unique(data_subset$Time))
+  
+  data$halflife_count <- max_time/data$halflife
+  
+  return(data)
+  
+}
+
+thing <- lapply(split.full.data.1, find_halflife_count)
+
+thing <- do.call(rbind, thing)
+
+thing <- thing %>%
+  distinct(Compound,
+           Reference,
+           CAS,
+           Dose,
+           Species.x,
+           Route,
+           Media,
+           halflife_count)
+
+p3 <- ggplot(data = thing, mapping = aes(x = halflife_count)) +
+  geom_histogram() +
+  # scale_x_log10() +
+  xlab("halflife count") + 
+  theme_bw() +
+  geom_vline(xintercept = 330.7598,
+             color = "red",
+             linetype = "dashed")
+p3
+
+
+```
+
+
+```{r}
+
+### bunch of polymeric stuff that might be useless
+
+# data <- read.csv("inst/ext/processed.1comp.data.12212021.csv")
+# 
+# data$X <- NULL
+# 
+# split_df <- split(data, list(data$Compound,
+#                              data$Reference,
+#                              data$CAS,
+#                              data$Dose,
+#                              data$Species,
+#                              data$Route,
+#                              data$Media,
+#                              data$LOQ),
+#                   drop = TRUE)
+# 
+# # split_df <- purrr::discard(split_df, ~all(is.na(.$Value)))
+# 
+# # split_df <- purrr::discard(split_df, ~sum(is.na(.$Value)) < 3)
+# 
+# fit_poly <- function(data) {
+# 
+#   tryCatch({
+# 
+#     line <- lm(data = data, formula = Value ~ poly(Time))
+# 
+#     RSS <- c(crossprod(line$residuals))
+#     MSE <- RSS / length(line$residuals)
+#     RMSE <- sqrt(MSE)
+# 
+#     data$RMSE <- RMSE
+# 
+#     return(data)
+#   },
+#   error = function(cond) {
+#     message("poly fit failed.")
+#     return(NULL)
+#   })
+# 
+# }
+# 
+# work <- lapply(split_df, fit_poly)
+# 
+# yay <- do.call(rbind, work)
+# 
+# yay$Reference <- as.character(yay$Reference)
+# full <- left_join(yay, maybe, by = c(c("Species" = "Species.x"),
+#                                      "Compound",
+#                                      "CAS",
+#                                      "Reference",
+#                                      "Dose",
+#                                      "Route",
+#                                      "Media",
+#                                      "Source"))
+# 
+# full <- full %>%
+#   filter(!is.na(type))
+# just_rmse <- distinct(full, Compound, RMSE)
+# #
+# p1 <- ggplot(data = just_rmse, mapping = aes(x = RMSE)) +
+#   geom_histogram(bins = 50) +
+#   scale_x_log10() +
+#   theme_bw() +
+#   labs(title = "RMSE of polynomial models fit through series data")
+# 
+# p1
+# 
+# p2 <- ggplot(full, aes(x = RMSE, y = sigma_value)) +
+#   geom_point() +
+#   geom_abline() +
+#   scale_y_log10() +
+#   scale_x_log10() +
+#   theme_bw() +
+#   facet_wrap(.~ type)
+# 
+# 
+# p2
+# 
+# 
+# p3 <- ggplot(data = full, mapping = aes(x = RMSE, y = cp_norm)) +
+#   # geom_point() +
+#   geom_bin2d() +
+#   scale_x_log10() +
+#   scale_y_log10() +
+#   labs(x = "RMSE",
+#        y = "Predicted/Obseved") +
+#   theme_bw() +
+#   facet_wrap(.~ model)
+# 
+# p3
+
+```
+
+
+## Discussion
