@@ -1,0 +1,4 @@
+"","Compound","Reference","Species.Weight","Species.Weight.Units","Dose","Time","Time.Units","Media","Media.Units","Value","Units","Route","Source","LOQ","Subject","info","Series.ID","iv","Time.Days","Max.Time.Days","Time.Steps.PerHour","N.Obs.Ref","Usable","kelim","Vdist","Fgutabs","kgutabs","V1","Ralphatokelim","Fbetaofalpha"
+"1","phenacetin","14",74,"kg",3.378378,0.16666,"hr","blood","normalized",0.815973424722357,NA,"iv","NULL",NA,NA,NA,90,TRUE,0.00694416666666667,0.166666666666667,6.00024000960038,64,TRUE,0.4148,1.388,0.91,2.18,1,1.2,0.8
+"2","phenacetin","14",74,"kg",3.378378,0.33333,"hr","blood","normalized",0.5293467259535,NA,"iv","NULL",NA,NA,NA,90,TRUE,0.01388875,0.166666666666667,6.00024000960038,64,TRUE,0.4148,1.388,0.91,2.18,1,1.2,0.8
+"3","phenacetin","14",74,"kg",3.378378,0.66666,"hr","blood","normalized",0.344840038622084,NA,"iv","NULL",NA,NA,NA,90,TRUE,0.0277775,0.166666666666667,6.00024000960038,64,TRUE,0.4148,1.388,0.91,2.18,1,1.2,0.8
