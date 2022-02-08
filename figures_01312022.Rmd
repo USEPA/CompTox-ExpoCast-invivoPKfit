@@ -2,7 +2,9 @@
 title: "<i>invivoPKfit</i> and <i>CvTdb</i> figures"
 author: "Christopher Cook"
 date: "1/31/2022"
-output: html_document
+output:
+  html_document: default
+  word_document: default
 ---
 
 ```{r setup, include = FALSE}
@@ -12,13 +14,10 @@ knitr::opts_chunk$set(results = TRUE)
 knitr::opts_chunk$set(message = FALSE)
 ```
 
-```{r}
-rm(list = ls())
-```
-
 ```{r, include = FALSE}
 library(tidyverse)
 library(data.table)
+library(readxl)
 devtools::load_all(".")
 ```
 
@@ -44,7 +43,7 @@ data$fk_reference_document_id[data$fk_reference_document_id == "NULL"] <- data$f
 
 ### do 1-Compartment fit
 system.time(PK.fit.table.1comp <- fit_all(
-
+  
   data.set = data,
   model = "1compartment",
   modelfun = "analytic",
@@ -71,9 +70,9 @@ system.time(PK.fit.table.1comp <- fit_all(
 
 ### do 2-Compartment fit
 system.time(PK.fit.table.2comp <- fit_all(
-
+  
   data.set = data,
-  model = "1compartment",
+  model = "2compartment",
   modelfun = "analytic",
   compound.col = "analyte_name_original",
   cas.col = "dsstox_casrn",
@@ -103,18 +102,6 @@ write.csv(PK.fit.table.2comp[[1]] <- "inst/ext/PK.fit.table.1comp.DATE.csv")
 write.csv(PK.fit.table.2comp[[2]] <- "inst/ext/processed.1comp.data.DATE.csv")
 ```
 
-```{r, make_rdata, eval = FALSE}
-
-### save data
-save(pk_output_1comp_12212021, file = "figures_rdata/pk_output_1comp_12212021.Rdata")
-save(pk_output_2comp_12212021, file = "figures_rdata/pk_output_2comp_12212021.Rdata")
-save(raw_1comp_12212021, file = "figures_rdata/raw_1comp_12212021.Rdata")
-save(raw_2comp_12212021, file = "figures_rdata/raw_2comp_12212021.Rdata")
-
-### save cp data
-save(cp_df, file = "figures_rdata/cp_df.Rdata")
-```
-
 ```{r, read_data}
 
 ### read in PK output files
@@ -125,6 +112,24 @@ pk_output_2comp_12212021 <- read.csv("inst/ext/PK.fit.table.2comp.12212021.csv")
 raw_1comp_12212021 <- read.csv("inst/ext/processed.1comp.data.12212021.csv")
 raw_2comp_12212021 <- read.csv("inst/ext/processed.2comp.data.12212021.csv")
 
+pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
+```
+
+```{r, make_rdata, eval = FALSE}
+
+### save data
+save(pk_output_1comp_12212021, file = "figures_rdata/pk_output_1comp_12212021.Rdata")
+save(pk_output_2comp_12212021, file = "figures_rdata/pk_output_2comp_12212021.Rdata")
+save(raw_1comp_12212021, file = "figures_rdata/raw_1comp_12212021.Rdata")
+save(raw_2comp_12212021, file = "figures_rdata/raw_2comp_12212021.Rdata")
+save(pk_lombardo, file = "figures_rdata/pk_lombardo_02072022.Rdata")
+
+### save cp data
+save(cp_df, file = "figures_rdata/cp_df.Rdata")
+```
+
+```{r, load_data}
+
 ### load all of this wonderful data
 load("figures_rdata/pk_output_1comp_12212021.Rdata")
 load("figures_rdata/pk_output_2comp_12212021.Rdata")
@@ -132,6 +137,7 @@ load("figures_rdata/raw_1comp_12212021.Rdata")
 load("figures_rdata/raw_2comp_12212021.Rdata")
 load("figures_rdata/cp_df_12212021.Rdata")
 load("figures_rdata/cvt_variability_df_12212021.Rdata")
+load("figures_rdata/pk_lombardo_02072022.Rdata")
 ```
 
 ```{r, make_invivoPKfit_plots, eval = FALSE}
@@ -148,7 +154,7 @@ junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_2comp_12212021),
 
 ```
 
-```{r make_cp_rdata, eval = FALSE}
+```{r, make_cp_rdata, eval = FALSE}
 ################################
 ### histogram showing data spread of invivoPKfit cp values
 ################################
@@ -172,7 +178,7 @@ raw_data1 <- dplyr::select(raw_1comp_12212021, -c("kelim",
 ###################
 ###################
 
-raw_data11$Reference <- as.character(raw_data1$Reference)
+raw_data1$Reference <- as.character(raw_data1$Reference)
 
 full_data_1 <- left_join(raw_data1, pk_data1, by = c("Compound", "CAS", "Reference"))
 full_data_1 <- full_data_1 %>% filter(AIC != Inf)
@@ -289,6 +295,7 @@ p <- ggplot(data = data,
 
 p
 ```
+
 
 ```{r, make_cvt_variability_rdata, eval = FALSE}
 
@@ -440,7 +447,7 @@ ratio_1_center <- nrow(full_data_1_center) / nrow(full_data_1 %>% filter(!is.na(
 
 full_data_1_green <- full_data_1 %>% filter(conc_norm < 0.5 | conc_norm > 2)
 full_data_1_green <- full_data_1_green %>% filter(cp_norm < 0.5 | cp_norm > 2)
-ratio_1_green <- nrow(full_data_1_green) / nrow(full_data_1_green %>% filter(!is.na(cp_norm)))
+ratio_1_green <- nrow(full_data_1_green) / nrow(full_data_1 %>% filter(!is.na(cp_norm)))
 
 full_data_1_gray <- full_data_1 %>% filter(conc_norm < 0.5 | conc_norm > 2)
 full_data_1_gray <- full_data_1_gray %>% filter(cp_norm >= 0.5 & cp_norm <= 2)
@@ -460,7 +467,7 @@ ratio_2_center <- nrow(full_data_2_center) / nrow(full_data_2 %>% filter(!is.na(
 
 full_data_2_green <- full_data_2 %>% filter(conc_norm < 0.5 | conc_norm > 2)
 full_data_2_green <- full_data_2 %>% filter(cp_norm < 0.5 | cp_norm > 2)
-ratio_2_green <- nrow(full_data_2_green) / nrow(full_data_2_green %>% filter(!is.na(cp_norm)))
+ratio_2_green <- nrow(full_data_2_green) / nrow(full_data_2 %>% filter(!is.na(cp_norm)))
 
 full_data_2_gray <- full_data_2 %>% filter(conc_norm < 0.5 | conc_norm > 2)
 full_data_2_gray <- full_data_2_gray %>% filter(cp_norm >= 0.5 & cp_norm <= 2)
@@ -474,6 +481,116 @@ ratio_2_tan <- nrow(full_data_2_tan) / nrow(full_data_2 %>% filter(!is.na(cp_nor
 ###########
 ###########
 
+# rect_df1 <- data.frame(xmin = c(0, 0, 2, 2, 0, 2, 0.5, 0.5),
+#                       xmax = c(0.5, 0.5, Inf, Inf, 0.5, Inf, 2, 2),
+#                       ymin = c(2, 0, 0, 2, 0.5, 0.5, 2, 0),
+#                       ymax = c(Inf, 0.5, 0.5, Inf, 2, 2, Inf, 0.5),
+#                       panel_key = c(paste("Poor Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_1_green, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " "),
+#                                     paste("Poor Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_1_green, digits = 1), "%", ")", sep = ""),
+#                                           sep = " "),
+#                                     paste("Poor Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_1_green, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " "),
+#                                     paste("Poor Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_1_green, digits = 1), "%", ")", sep = ""),
+#                                           sep = " "),
+#                                     paste("Good Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_1_tan, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " "),
+#                                     paste("Good Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_1_tan, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " "),
+#                                    paste("Poor Fit, Typical Data", 
+#                                           paste("(", round(100 * ratio_1_gray, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " "),
+#                                    paste("Poor Fit, Typical Data", 
+#                                           paste("(", round(100 * ratio_1_gray, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " ")))
+# 
+# rect_df2 <- data.frame(xmin = c(0, 0, 2, 2, 0, 2, 0.5, 0.5),
+#                       xmax = c(0.5, 0.5, Inf, Inf, 0.5, Inf, 2, 2),
+#                       ymin = c(2, 0, 0, 2, 0.5, 0.5, 2, 0),
+#                       ymax = c(Inf, 0.5, 0.5, Inf, 2, 2, Inf, 0.5),
+#                       panel_key = c(paste("Poor Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_2_green, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " "),
+#                                     paste("Poor Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_2_green, digits = 1), "%", ")", sep = ""),
+#                                           sep = " "),
+#                                     paste("Poor Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_2_green, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " "),
+#                                     paste("Poor Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_2_green, digits = 1), "%", ")", sep = ""),
+#                                           sep = " "),
+#                                     paste("Good Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_2_tan, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " "),
+#                                     paste("Good Fit, Outlier Data", 
+#                                           paste("(", round(100 * ratio_2_tan, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " "),
+#                                    paste("Poor Fit, Typical Data", 
+#                                           paste("(", round(100 * ratio_2_gray, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " "),
+#                                    paste("Poor Fit, Typical Data", 
+#                                           paste("(", round(100 * ratio_2_gray, digits = 1), "%", ")", sep = ""), 
+#                                           sep = " ")))
+# 
+# 
+# rect_p1 <- ggplot() +
+#   geom_rect(data = rect_df1, aes(xmin = xmin,
+#                                 ymin = ymin,
+#                                 xmax = xmax,
+#                                 ymax = ymax,
+#                                 fill = panel_key),
+#             alpha = 0.3, inherit.aes = FALSE) +
+#   scale_fill_manual(name = "Panel Key",
+#                     values = c("#361D2E",
+#                                "#86A397",
+#                                "#E1B07E")) +
+#   theme_bw() +
+#   theme(panel.spacing = unit(2, "lines")) +
+#   geom_vline(xintercept = c(0.5, 2),
+#              linetype = "dashed") +
+#   geom_hline(yintercept = c(0.5, 2),
+#              linetype = "dashed") +
+#   scale_x_log10() +
+#   scale_y_log10() +
+#   labs(x = "Data Variability",
+#        y = "Model Error") +
+#   guides(fill = guide_legend(override.aes = list(size = 0.1)))
+# 
+# rect_p2 <- ggplot() +
+#   geom_rect(data = rect_df2, aes(xmin = xmin,
+#                                 ymin = ymin,
+#                                 xmax = xmax,
+#                                 ymax = ymax,
+#                                 fill = panel_key),
+#             alpha = 0.3, inherit.aes = FALSE) +
+#   scale_fill_manual(name = "Panel Key",
+#                     values = c("#361D2E",
+#                                "#86A397",
+#                                "#E1B07E")) +
+#   theme_bw() +
+#   theme(panel.spacing = unit(2, "lines")) +
+#   geom_vline(xintercept = c(0.5, 2),
+#              linetype = "dashed") +
+#   geom_hline(yintercept = c(0.5, 2),
+#              linetype = "dashed") +
+#   scale_x_log10() +
+#   scale_y_log10() +
+#   labs(x = "Data Variability",
+#        y = "Model Error") +
+#   guides(fill = guide_legend(override.aes = list(size = 0.1)))
+# 
+# ###################
+# fill_legend1 <- get_legend(rect_p1)
+# fill_legend2 <- get_legend(rect_p2)
+# ##################
+
 p <- ggplot(data = full_data,
             mapping = aes(x = conc_norm, y = cp_norm)) +
   annotate(geom = "rect", xmin = 0, xmax = 0.5, ymin = 2, ymax = Inf, alpha = 0.3, fill = "#86A397") +
@@ -486,7 +603,6 @@ p <- ggplot(data = full_data,
   annotate(geom = "rect", xmin = 0.5, xmax = 2, ymin = 0, ymax = 0.5, alpha = 0.3, fill = "#E1B07E") +
   theme_bw() +
   theme(panel.spacing = unit(2, "lines")) +
-  # stat_density_2d() +
   geom_bin2d(bins = 100) +
   scale_fill_distiller(palette = "Blues") +
   geom_vline(xintercept = c(0.5, 2),
@@ -500,6 +616,14 @@ p <- ggplot(data = full_data,
   facet_wrap(. ~ type)
 
 p
+
+# ##################
+# 
+# data_p_final <- data_p +
+#   # inset_element(fill_legend1, 0.1, 1, 0.5, 1) +
+#   inset_element(fill_legend2, 0.6, 0.5, 0.7, 0.2, clip = TRUE)
+#  
+# data_p_final
 ```
 
 ```{r, make_sigma_distribution_histogram}
@@ -646,7 +770,7 @@ p <- ggplot(data, aes(x = `Ind Analysis`, y = `Joint Analysis`)) +
 p
 ```
 
-```{r}
+```{r, make_halflife_count_histogram}
 
 ###########
 ### one compartment
@@ -811,6 +935,361 @@ p <- ggplot(data = full_data_hl, mapping = aes(x = halflife_count)) +
   facet_wrap(. ~ model)
 p
 ```
+
+```{r, make_max_loq_histogram}
+
+###############
+###############
+
+raw_data1 <- raw_1comp_12212021
+
+###############
+###############
+
+find_normalized_max <- function(data) {
+  
+  data$normalized_max <- max(data$Value, na.rm = TRUE)/data$LOQ
+  
+  return(data)
+  
+}
+
+split_df_1 <- split(raw_data1, list(raw_data1$Compound,
+                                    raw_data1$Reference,
+                                    raw_data1$CAS,
+                                    raw_data1$Dose,
+                                    raw_data1$Species,
+                                    raw_data1$Route,
+                                    raw_data1$Media),
+                    drop = TRUE)
+
+raw_data1_normalized_max <- lapply(split_df_1, find_normalized_max)
+
+raw_data1_normalized_max <- do.call(rbind, raw_data1_normalized_max)
+
+raw_data1_normalized_max <- raw_data1_normalized_max %>%
+  distinct(Compound,
+           Reference,
+           CAS,
+           Dose,
+           Species,
+           Route,
+           Media,
+           normalized_max)
+
+p <- ggplot(data = raw_data1_normalized_max, mapping = aes(x = normalized_max)) +
+  geom_histogram(bins = 15) +
+  scale_x_log10() +
+  xlab("Max Concentration / LOQ") + 
+  theme_bw()
+# geom_vline(xintercept = 24.8482,
+#            color = "red",
+#            linetype = "dashed")
+p
+```
+
+```{r, make_mean_loq_histogram}
+
+###############
+###############
+
+raw_data1 <- raw_1comp_12212021
+
+###############
+###############
+
+find_normalized_mean <- function(data) {
+  
+  data$normalized_mean <- mean(data$Value, na.rm = TRUE)/data$LOQ
+  
+  return(data)
+  
+}
+
+split_df_1 <- split(raw_data1, list(raw_data1$Compound,
+                                    raw_data1$Reference,
+                                    raw_data1$CAS,
+                                    raw_data1$Dose,
+                                    raw_data1$Species,
+                                    raw_data1$Route,
+                                    raw_data1$Media),
+                    drop = TRUE)
+
+raw_data1_normalized_mean <- lapply(split_df_1, find_normalized_mean)
+
+raw_data1_normalized_mean <- do.call(rbind, raw_data1_normalized_mean)
+
+raw_data1_normalized_mean <- raw_data1_normalized_mean %>%
+  distinct(Compound,
+           Reference,
+           CAS,
+           Dose,
+           Species,
+           Route,
+           Media,
+           normalized_mean)
+
+p <- ggplot(data = raw_data1_normalized_mean, mapping = aes(x = normalized_mean)) +
+  geom_histogram(bins = 15) +
+  scale_x_log10() +
+  xlab("Mean Concentration / LOQ") + 
+  theme_bw()
+# geom_vline(xintercept = 24.8482,
+#            color = "red",
+#            linetype = "dashed")
+p
+```
+
+```{r, make_model_params_table}
+
+### this code almost entirely is imported from John's bake-off RMarkdown file
+### what this produces is a table of compounds that were fit by at least one of the models
+### AICs for both models are reported, and subsequent parameter values correspond to the model with the lower AIC
+
+###################
+###################
+
+pk_data1 <- pk_output_1comp_12212021 
+
+pk_data2 <- pk_output_2comp_12212021
+
+###################
+###################
+
+pk_data1$sigma_id <- NULL
+pk_data1$sigma_value <- NULL
+pk_data2$sigma_id <- NULL
+pk_data2$sigma_value <- NULL
+
+pk_data1 <- distinct(pk_data1)
+pk_data2 <- distinct(pk_data2)
+
+fits1comp <- subset(pk_data1, is.finite(AIC) & AIC < 10^4)
+fits2comp <- subset(pk_data2, is.finite(AIC) & AIC < 10^4)
+
+#How many chemicals have 1 or 2 compartment fits:
+length(unique(c(fits1comp$CAS,fits2comp$CAS)))
+
+fittable <- NULL
+for (this.cas in unique(c(fits1comp$CAS,fits2comp$CAS)))
+{
+  if (this.cas %in% fits1comp$CAS) this.compound <- fits1comp[
+    fits1comp$CAS==this.cas,"Compound"][1]
+  else this.compound <- fits2comp[
+    fits2comp$CAS==this.cas,"Compound"][1]
+  
+  this.data.1comp <- subset(fits1comp,CAS==this.cas)
+  this.data.2comp <- subset(fits2comp,CAS==this.cas)
+  
+  for (this.species in unique(tolower(c(
+    this.data.1comp$Species,
+    this.data.2comp$Species))))
+  {
+    Vdist.1comp <- NA
+    kelim.1comp <- NA
+    Vdist.2comp <- NA
+    kelim.2comp <- NA
+    
+    this.data.1comp.species <- subset(this.data.1comp,tolower(Species)==this.species)
+    this.data.2comp.species <- subset(this.data.2comp,tolower(Species)==this.species)
+    
+    this.row <- data.frame(
+      Compound=this.compound,
+      CAS=this.cas,
+      Species=this.species,
+      Reference=NA,
+      AIC.1comp=NA,
+      AIC.2comp=NA,
+      Model=NA,
+      Vdist=NA,
+      kelim=NA)
+    
+    if (this.cas %in% fits1comp$CAS)
+    {
+      this.data.1comp.species <- subset(this.data.1comp.species,
+                                        param.value.type=="Fitted geometric mean")
+      
+      # If more than one source, require that the joint analysis worked:
+      if (dim(this.data.1comp.species)[1]>1)
+      {
+        this.data.1comp.species<- subset(this.data.1comp.species, 
+                                         Data.Analyzed=="Joint Analysis")
+      }
+      if (dim(this.data.1comp.species)[1]>0) 
+      {
+        this.row$AIC.1comp <- this.data.1comp.species$AIC
+        Vdist.1comp <- this.data.1comp.species$Vdist
+        kelim.1comp <- this.data.1comp.species$kelim
+        this.row$Reference <- this.data.1comp.species$Reference
+      }
+    }
+    
+    if (this.cas %in% fits2comp$CAS)
+    {
+      this.data.2comp.species <- subset(this.data.2comp.species,
+                                        param.value.type=="Fitted geometric mean")
+      
+      # If more than one source, require that the joint analysis worked:
+      if (dim(this.data.2comp.species)[1]>1)
+      {
+        this.data.2comp.species <- subset(this.data.2comp.species, 
+                                          Data.Analyzed=="Joint Analysis")
+      }
+      if (dim(this.data.2comp.species)[1]>0) 
+      {
+        this.row$AIC.2comp <- this.data.2comp.species$AIC
+        Vdist.2comp <- this.data.2comp.species$Vss
+        kelim.2comp <- this.data.2comp.species$kelim
+        this.row$Reference <- this.data.2comp.species$Reference
+      }
+    }
+    
+    if (!is.na(this.row$AIC.1comp))
+    {
+      if (!is.na(this.row$AIC.2comp))
+      {
+        if (this.row$AIC.1comp < this.row$AIC.2comp)
+        {
+          this.row$Model <- "1Comp"
+        } else this.row$Model <- "2Comp"
+      } else this.row$Model <- "1Comp"
+    } else if (!is.na(this.row$AIC.2comp))
+    {
+      this.row$Model <- "2Comp"
+    }
+    
+    if (!is.na(this.row$Model))
+      if (this.row$Model == "1Comp")
+      {
+        this.row$Vdist <- Vdist.1comp
+        this.row$kelim <- kelim.1comp
+      } else 
+      {
+        this.row$Vdist <- Vdist.2comp
+        this.row$kelim <- kelim.2comp
+      }      
+    
+    fittable <- rbind(fittable,this.row)
+  }
+}
+fittable$halflife <- log(2)/fittable$kelim
+
+#Lets only keep chemicals where we can fit a PK model:
+fittable <- subset(fittable, !is.na(Model))
+
+for (this.col in c("AIC.1comp","AIC.2comp","Vdist","kelim","halflife"))
+  fittable[,this.col] <- signif(as.numeric(fittable[,this.col]),4)
+
+# We have parameters estimated for 86 chemicals:
+dim(fittable)[1]
+
+# write.csv(fittable, file = "inst/ext/model_params_table.csv", row.names = FALSE)
+
+```
+
+```{r, make_no_fit_table}
+
+##################
+##################
+
+pk_data1 <- as.data.table(pk_output_1comp_12212021)
+pk_data2 <- as.data.table(pk_output_2comp_12212021)
+
+##################
+##################
+
+pk_data1 <- pk_data1 %>%
+  filter(param.value.type == "Fitted geometric mean") %>%
+  dplyr::select(c("Compound", "CAS", "Reference", "AIC")) %>%
+  mutate(model = "1-Compartment")
+
+pk_data2 <- pk_data2 %>%
+  filter(param.value.type == "Fitted geometric mean") %>%
+  dplyr::select(c("Compound", "CAS", "Reference", "AIC")) %>%
+  mutate(model = "2-Compartment")
+
+pk_all <- rbind(pk_data1, pk_data2)
+
+### loop that says if a compound has any references that do not have AIC of Inf, it was a fit compound
+  this.compound.list <- list()
+  for (this.compound in unique(pk_all[, Compound])) {
+    
+    this.compound.data <- pk_all[Compound == this.compound]
+    
+    if(any(this.compound.data$AIC != Inf)) {
+      this.compound.data$status <- "good fit"
+    } else {
+      this.compound.data$status <- "bad fit"
+    }
+    
+    this.compound.list[[this.compound]] <- this.compound.data
+    
+  }
+  
+  pk_all <- do.call(rbind, this.compound.list)
+  
+  pk_all <- pk_all %>%
+    filter(status == "bad fit") %>% ### only want bad fit
+    mutate(status = NULL) %>% ### get rid of status column
+    group_by(Compound) %>%  
+    filter(n() == 2) %>% ### group_by compound and only keep compounds with two observations, aka neither model worked
+    mutate(model = NULL) %>% ### get ride of model column
+    distinct() ### discard repeated compound names
+  
+# write.csv(pk_all, file = "inst/ext/no_fit_table_01212022.csv", row.names = FALSE)
+```
+
+```{r}
+
+##################
+##################
+
+pk_data1 <- pk_output_1comp_12212021
+
+pk_lombardo <- pk_lombardo
+
+##################
+##################
+
+pk_data1 <- pk_data1 %>%
+  filter(param.value.type == "Fitted geometric mean", Species == "human")
+
+pk_all <- left_join(pk_data1, pk_lombardo, by = c("CAS" = "CAS #"))
+
+pk_all <- pk_all %>%
+  filter(!is.na(`human VDss (L/kg)`), 
+         !is.na(`human CL (mL/min/kg)`))
+
+### volume of distribution comparison
+p1 <- ggplot(pk_all, aes(x = Vdist, y = `human VDss (L/kg)`)) +
+  geom_point() +
+  scale_x_log10() +
+  geom_abline(slope = 1, intercept = 0)
+
+p1
+
+### half-life comparision
+p2 <- ggplot(pk_all, aes(x = halflife, y = `terminal  t1/2 (h)`)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0)
+
+p2
+
+### clearance comparison
+
+### convert to same units
+pk_all$`human CL (L/hr/kg)` <- pk_all$`human CL (mL/min/kg)` * 60 / 1000
+
+p3 <- ggplot(data = pk_all, mapping = aes(x = CLtot, y = `human CL (L/hr/kg)`)) +
+  geom_point() +
+  scale_x_log10() +
+  geom_abline(slope = 1, intercept = 0)
+
+p3
+
+
+```
+
 
 
 
