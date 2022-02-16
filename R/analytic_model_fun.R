@@ -31,7 +31,8 @@ analytic_model_fun <- function(params,
   #Assign model function to be evaluated
   mfun <- switch(model,
                  '1compartment' = cp_1comp,
-                 '2compartment' = cp_2comp)
+                 '2compartment' = cp_2comp,
+                 'flat' = cp_flat)
 
   Cp <- tryCatch(do.call(mfun,
                          list(time=times,

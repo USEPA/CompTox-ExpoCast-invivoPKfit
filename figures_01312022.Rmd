@@ -95,22 +95,24 @@ system.time(PK.fit.table.2comp <- fit_all(
   ratio.data.to.dose = 0.001
 ))
 
-write.csv(PK.fit.table.1comp[[1]] <- "inst/ext/PK.fit.table.1comp.DATE.csv")
-write.csv(PK.fit.table.1comp[[2]] <- "inst/ext/processed.1comp.data.DATE.csv")
+write.csv(PK.fit.table.1comp[[1]], "inst/ext/PK.fit.table.1comp.DATE.csv", row.names = FALSE)
+write.csv(PK.fit.table.1comp[[2]], "inst/ext/processed.1comp.data.DATE.csv", row.names = FALSE)
 
-write.csv(PK.fit.table.2comp[[1]] <- "inst/ext/PK.fit.table.1comp.DATE.csv")
-write.csv(PK.fit.table.2comp[[2]] <- "inst/ext/processed.1comp.data.DATE.csv")
+write.csv(PK.fit.table.2comp[[1]], "inst/ext/PK.fit.table.2comp.02102022.csv", row.names = FALSE)
+write.csv(PK.fit.table.2comp[[2]], "inst/ext/processed.2comp.data.02102022.csv", row.names = FALSE)
 ```
 
 ```{r, read_data}
 
 ### read in PK output files
 pk_output_1comp_12212021 <- read.csv("inst/ext/PK.fit.table.1comp.12212021.csv")
-pk_output_2comp_12212021 <- read.csv("inst/ext/PK.fit.table.2comp.12212021.csv")
+pk_output_2comp_02102022 <- read.csv("inst/ext/PK.fit.table.2comp.02102022.csv")
+pk_output_flat_02102022 <- read.csv("inst/ext/PK.fit.table.flat.02102022.csv")
 
 ### read in processed raw data files
 raw_1comp_12212021 <- read.csv("inst/ext/processed.1comp.data.12212021.csv")
-raw_2comp_12212021 <- read.csv("inst/ext/processed.2comp.data.12212021.csv")
+raw_2comp_02102022 <- read.csv("inst/ext/processed.2comp.data.02102022.csv")
+raw_flat_02102022 <- read.csv("inst/ext/processed.flat.data.02102022.csv")
 
 pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 ```
@@ -119,13 +121,15 @@ pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 
 ### save data
 save(pk_output_1comp_12212021, file = "figures_rdata/pk_output_1comp_12212021.Rdata")
-save(pk_output_2comp_12212021, file = "figures_rdata/pk_output_2comp_12212021.Rdata")
+save(pk_output_2comp_02102022, file = "figures_rdata/pk_output_2comp_12212021.Rdata")
+save(pk_output_flat_02102022, file = "figures_rdata/pk_output_flat_02102022.Rdata")
 save(raw_1comp_12212021, file = "figures_rdata/raw_1comp_12212021.Rdata")
-save(raw_2comp_12212021, file = "figures_rdata/raw_2comp_12212021.Rdata")
+save(raw_2comp_02102022, file = "figures_rdata/raw_2comp_12212021.Rdata")
+save(raw_flat_02102022, file = "figures_rdata/raw_flat_02102022.Rdata")
 save(pk_lombardo, file = "figures_rdata/pk_lombardo_02072022.Rdata")
 
 ### save cp data
-save(cp_df, file = "figures_rdata/cp_df.Rdata")
+# save(cp_df, file = "figures_rdata/cp_df.Rdata")
 ```
 
 ```{r, load_data}
@@ -215,10 +219,10 @@ cp_df_1$type <- "1-Compartment"
 #######################
 
 ### subset to only actual model outputs and discard "Joint Analysis" rows
-pk_data2 <- pk_output_2comp_12212021 %>%
+pk_data2 <- pk_output_2comp_02102022 %>%
   filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis")
 
-raw_data2 <- dplyr::select(raw_2comp_12212021, -c("kelim", 
+raw_data2 <- dplyr::select(raw_2comp_02102022, -c("kelim", 
                                                   "Vdist", 
                                                   "Fgutabs", 
                                                   "kgutabs",
@@ -259,6 +263,14 @@ cp_df_2 <- cp_df_2[, intersect(colnames(cp_df_1), colnames(cp_df_2))]
 
 cp_df <- rbind(cp_df_1, cp_df_2)
 
+cp_df$cp_pred_error <- (cp_df$cp - cp_df$Value) / cp_df$Value
+
+cp_df <- cp_df %>% group_by(Species.x, 
+                            Compound,
+                            CAS,
+                            type) %>%
+  mutate(cp_pred_error_range = max(cp_pred_error, na.rm = TRUE) - min(cp_pred_error, na.rm = TRUE))
+
 cp_df_12212021 <- cp_df
 
 save(cp_df_12212021, file = "figures_rdata/cp_df_12212021.Rdata")
@@ -296,6 +308,56 @@ p <- ggplot(data = data,
 p
 ```
 
+```{r, make_cp_error_histogram}
+
+##################
+##################
+
+data <- cp_df_12212021
+
+##################
+##################
+
+data <- data %>%
+  filter(cp != 1e-20)
+
+data <- data %>%
+  distinct(Species.x, Compound, CAS, cp_pred_error_range)
+
+p <- ggplot(data = data,
+            mapping = aes(x = cp_pred_error_range)) +
+  geom_histogram() +
+  scale_x_log10() +
+  facet_wrap(. ~type)
+
+p
+```
+
+```{r, make_cp_error_versus_dose}
+
+##################
+##################
+
+data <- cp_df_12212021
+
+##################
+##################
+
+data <- data %>%
+  filter(type == "1-Compartment")
+
+data <- data %>%
+  group_by(Compound, CAS, Dose) %>%
+  mutate(average = mean(cp_pred_error))
+  
+p <- ggplot(data = data, mapping = aes(x = Dose, y = average)) +
+  geom_point() +
+  scale_x_log10() +
+  scale_y_log10()
+
+p
+
+```
 
 ```{r, make_cvt_variability_rdata, eval = FALSE}
 
@@ -634,7 +696,7 @@ p
 data1 <- pk_output_1comp_12212021 %>%
   filter(param.value.type == "Fitted geometric mean" & AIC != Inf & Data.Analyzed != "Joint Analysis")
 
-data2 <- pk_output_2comp_12212021 %>%
+data2 <- pk_output_2comp_02102022 %>%
   filter(param.value.type == "Fitted geometric mean" & AIC != Inf & Data.Analyzed != "Joint Analysis")
 
 ##################
@@ -658,7 +720,8 @@ p <- ggplot(data = data,
   theme_bw() +
   labs(x = "Sigma",
        y = "Number of observations") +
-  facet_wrap(.~ model)
+  facet_wrap(.~ model) +
+  geom_vline(xintercept = 2.22e-06)
 # stat_function(fun = dlnorm, args = list(mean = mean(log(data$sigma_value)), sd = sd(log(data$sigma_value))))
 
 p
@@ -718,7 +781,7 @@ p
 data1 <- as.data.table(pk_output_1comp_12212021 %>%
                          filter(param.value.type == "Fitted geometric mean"))
 
-data2 <- as.data.table(pk_output_2comp_12212021 %>%
+data2 <- as.data.table(pk_output_2comp_02102022 %>%
                          filter(param.value.type == "Fitted geometric mean"))
 
 ##################
@@ -850,9 +913,9 @@ full_data_1_hl$model <- "1-Compartment"
 ##################
 ##################
 
-raw_data2 <- raw_2comp_12212021
+raw_data2 <- raw_2comp_02102022
 
-pk_data2 <- pk_output_2comp_12212021 %>% 
+pk_data2 <- pk_output_2comp_02102022 %>% 
   filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis")
 
 ##################
@@ -1051,7 +1114,7 @@ p
 
 pk_data1 <- pk_output_1comp_12212021 
 
-pk_data2 <- pk_output_2comp_12212021
+pk_data2 <- pk_output_2comp_02102022
 
 ###################
 ###################
@@ -1193,7 +1256,7 @@ dim(fittable)[1]
 ##################
 
 pk_data1 <- as.data.table(pk_output_1comp_12212021)
-pk_data2 <- as.data.table(pk_output_2comp_12212021)
+pk_data2 <- as.data.table(pk_output_2comp_02102022)
 
 ##################
 ##################
@@ -1211,35 +1274,109 @@ pk_data2 <- pk_data2 %>%
 pk_all <- rbind(pk_data1, pk_data2)
 
 ### loop that says if a compound has any references that do not have AIC of Inf, it was a fit compound
-  this.compound.list <- list()
-  for (this.compound in unique(pk_all[, Compound])) {
-    
-    this.compound.data <- pk_all[Compound == this.compound]
-    
-    if(any(this.compound.data$AIC != Inf)) {
-      this.compound.data$status <- "good fit"
-    } else {
-      this.compound.data$status <- "bad fit"
-    }
-    
-    this.compound.list[[this.compound]] <- this.compound.data
-    
+this.compound.list <- list()
+for (this.compound in unique(pk_all[, Compound])) {
+  
+  this.compound.data <- pk_all[Compound == this.compound]
+  
+  if(any(this.compound.data$AIC != Inf)) {
+    this.compound.data$status <- "good fit"
+  } else {
+    this.compound.data$status <- "bad fit"
   }
   
-  pk_all <- do.call(rbind, this.compound.list)
+  this.compound.list[[this.compound]] <- this.compound.data
   
-  pk_all <- pk_all %>%
-    filter(status == "bad fit") %>% ### only want bad fit
-    mutate(status = NULL) %>% ### get rid of status column
-    group_by(Compound) %>%  
-    filter(n() == 2) %>% ### group_by compound and only keep compounds with two observations, aka neither model worked
-    mutate(model = NULL) %>% ### get ride of model column
-    distinct() ### discard repeated compound names
-  
+}
+
+pk_all <- do.call(rbind, this.compound.list)
+
+pk_all <- pk_all %>%
+  filter(status == "bad fit") %>% ### only want bad fit
+  mutate(status = NULL) %>% ### get rid of status column
+  group_by(Compound) %>%  
+  filter(n() == 2) %>% ### group_by compound and only keep compounds with two observations, aka neither model worked
+  mutate(model = NULL) %>% ### get rid of model column
+  distinct() ### discard repeated compound names
+
 # write.csv(pk_all, file = "inst/ext/no_fit_table_01212022.csv", row.names = FALSE)
 ```
 
-```{r}
+```{r, compare_AIC}
+
+##################
+##################
+
+pk_data1 <- pk_output_1comp_12212021
+
+pk_data2 <- pk_output_2comp_02102022
+
+pk_data_flat <- pk_output_flat_02102022 %>%
+  filter(param.value.type == "Predicted" | param.value.type == "Fitted geometric mean" | param.value.type == "Fitted geometric std dev")
+
+##################
+##################
+
+### make both data.frames have the same column names so they are rbind-able
+pk_data1 <- pk_data1[, intersect(intersect(colnames(pk_data2), colnames(pk_data_flat)), colnames(pk_data1))]
+pk_data2 <- pk_data2[, intersect(intersect(colnames(pk_data1), colnames(pk_data_flat)), colnames(pk_data2))]
+pk_data_flat <- pk_data_flat[, intersect(intersect(colnames(pk_data1), colnames(pk_data2)), colnames(pk_data_flat))]
+
+pk_data1 <- pk_data1 %>%
+  rename(LogLikelihood_1 = LogLikelihood,
+         AIC_1 = AIC,
+         sigma_value_1 = sigma_value) %>%
+  mutate(model = NULL) %>%
+  mutate(model.type = NULL)
+
+pk_data2 <- pk_data2 %>%
+  rename(LogLikelihood_2 = LogLikelihood,
+         AIC_2 = AIC,
+         sigma_value_2 = sigma_value) %>%
+  mutate(model = NULL) %>%
+  mutate(model.type = NULL)
+
+pk_data_flat <- pk_data_flat %>%
+  rename(LogLikelihood_flat = LogLikelihood,
+         AIC_flat = AIC,
+         sigma_value_flat = sigma_value) %>%
+  mutate(model = NULL) %>%
+  mutate(model.type = NULL)
+
+pk_all <- left_join(pk_data1, pk_data2, by = c("CAS",
+                                              "Species",
+                                              "param.value.type",
+                                              "sigma_id",
+                                              "Reference",
+                                              "Data.Analyzed",
+                                              "Compound"))
+
+pk_all <- left_join(pk_all, pk_data_flat, by = c("CAS",
+                                              "Species",
+                                              "param.value.type",
+                                              "sigma_id",
+                                              "Reference",
+                                              "Data.Analyzed",
+                                              "Compound"))
+
+pk_all <- subset(pk_all, select = c(CAS, Species, Compound, Reference, AIC_1, AIC_2, AIC_flat))
+  
+pk_all <- distinct(pk_all)
+
+pk_all$AIC_1[pk_all$AIC_1 == Inf] <- NA
+pk_all$AIC_2[pk_all$AIC_2 == Inf] <- NA
+pk_all$AIC_flat[pk_all$AIC_flat == Inf] <- NA
+
+pk_all <- pk_all %>%
+  mutate(flat_lowest = ifelse(AIC_flat < AIC_1 & AIC_flat < AIC_2, 1, 0)) %>%
+  mutate(flat_better_than_1 = ifelse(AIC_flat < AIC_1 & AIC_flat > AIC_2, 1, 0)) %>%
+  mutate(flat_better_than_2 = ifelse(AIC_flat > AIC_1 & AIC_flat < AIC_2, 1, 0))
+
+pk_just_bad <- pk_all %>%
+  filter(flat_lowest == 1 | flat_better_than_1 == 1 | flat_better_than_2)
+```
+
+```{r, lombardo_comparisons}
 
 ##################
 ##################

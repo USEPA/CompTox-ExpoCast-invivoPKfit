@@ -316,6 +316,9 @@ fit_all <- function(data.set,
       #                                                          "V1",
       #                                                          "Fgutabs",
       #                                                          "kgutabs")):=NULL]
+    } else if (model == "flat") {
+
+      params.by.cas.spec[, A := 1]
     }
 
     #############################
@@ -467,6 +470,10 @@ fit_all <- function(data.set,
       PK.fit.table[param.value.type != "Predicted",
                    Css := (Fgutabs * 1) / (CLtot * 24)]
 
+      PK.fit.table <- PK.fit.table[param.value.type %in% c("Predicted",
+                                                           "Fitted geometric mean",
+                                                           "Fitted geometric std dev")]
+    } else if (model == 'flat') {
       PK.fit.table <- PK.fit.table[param.value.type %in% c("Predicted",
                                                            "Fitted geometric mean",
                                                            "Fitted geometric std dev")]

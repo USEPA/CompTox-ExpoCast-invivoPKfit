@@ -13,9 +13,9 @@
 #' @return A log-likelihood value for the data given the parameter values in
 #' params
 log_likelihood <- function(params,
-                          DT,
-                          modelfun,
-                          model) {
+                           DT,
+                           modelfun,
+                           model) {
   # Bound the rates:
   #  MAX.RATE <- 1000
 
@@ -27,8 +27,12 @@ log_likelihood <- function(params,
 
   if (any(unlist(lapply(params, is.na)))) return(-Inf)
 
-  #If oral fraction absorbed is >100% for some reason, set it to 100%
-  if (params[["Fgutabs"]] > 1) return(-Inf)
+  model <- model
+
+  if (model != "flat") {
+    #If oral fraction absorbed is >100% for some reason, set it to 100%
+    if (params[["Fgutabs"]] > 1) return(-Inf)
+  }
 
   # #If a two-compartment model, then                alpha and beta must be real:
   # if ("k12" %in% names(params))
@@ -47,8 +51,8 @@ log_likelihood <- function(params,
                                                text=names(params)) == -1]]
 
   DT[, sigma.ref := params[paste("sigma2",
-                               Reference,
-                               sep = ".")],
+                                 Reference,
+                                 sep = ".")],
      by = Reference]
 
   atol <- 1e-13 #set a tolerance
@@ -62,13 +66,13 @@ log_likelihood <- function(params,
   # , by = "Reference"]
 
   DT[, pred := fitfun(design.times = Time.Days,
-                    design.dose = unique(Dose),
-                    design.iv = unique(iv),
-                    design.times.max = unique(Max.Time.Days),
-                    design.time.step = unique(Time.Steps.PerHour),
-                    modelfun = modelfun,
-                    model = model,
-                    model.params = model.params),
+                      design.dose = unique(Dose),
+                      design.iv = unique(iv),
+                      design.times.max = unique(Max.Time.Days),
+                      design.time.step = unique(Time.Steps.PerHour),
+                      modelfun = modelfun,
+                      model = model,
+                      model.params = model.params),
      by = .(Dose, Route)]
 
   #Compute log-normal log-likelihood (LL):

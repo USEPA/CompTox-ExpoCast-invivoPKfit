@@ -76,7 +76,13 @@ analyze_pk_data <- function(fitdata,
                                    "Ralphatokelim",
                                    "Fbetaofalpha",
                                    "kelim")]
-  }
+
+  } else if (model == 'flat') {
+      opt.params <- these.params[names(these.params) %in% "A"]
+      opt.params["A"] <- mean(fitdata$Value, na.rm = TRUE)
+    }
+
+  if (model != 'flat') {
 
   # Guess a good value for Vd and kelim:
   if ("iv" %in% fitdata$Route)
@@ -131,7 +137,7 @@ analyze_pk_data <- function(fitdata,
       #     return(NA)
       #   })
 
-    } else {
+    } else if (model == '2compartment') {
 
       opt.params["V1"] <- log(1 / mean(Vd.data$Value))
       if (length(unique(elim.data$Time)) > 3) {
@@ -255,7 +261,7 @@ analyze_pk_data <- function(fitdata,
 
       opt.params <- c(opt.params,
                       these.params["Fgutabs"])
-      iv.data <- subset(fitdata,Route == "iv" & !is.na(Value))
+      iv.data <- subset(fitdata, Route == "iv" & !is.na(Value))
       iv.data <- subset(iv.data, Time == min(Time))
       iv.data <- subset(iv.data, Dose == max(Dose))
       oral.data <- subset(fitdata,Route == "po" & !is.na(Value))
@@ -299,6 +305,7 @@ analyze_pk_data <- function(fitdata,
       # }
     }
   }
+}
 
 
   #Add the per-study standard deviation to the set of params to optimize
@@ -371,6 +378,7 @@ analyze_pk_data <- function(fitdata,
   if ("kgutabs" %in% unlist(opt.params)) {
     upper["kgutabs"] <- log(1000)
   }
+
   # Force initial values to be within bounds:
   opt.params[opt.params>upper] <- upper[opt.params>upper] - 0.1
 
@@ -452,6 +460,7 @@ analyze_pk_data <- function(fitdata,
                                          collapse = ", "),"\n", sep = ""))
   #Get SDs from Hessian
   #Calculate Hessian using function from numDeriv
+  # browser()
   numhess <- numDeriv::hessian(func = objfun,
                                x = ln.means,
                                method = 'Richardson')
@@ -585,7 +594,7 @@ analyze_pk_data <- function(fitdata,
 
     out.dt[, LogLikelihood := 0]  ### replace with NA to make error more apparent
     out.dt[, AIC := Inf]
-    cat(paste("Some parameters were not optimized,sigma >", MAXSIGMA, " some parameters had NaN standard deviation under smallest convergence tolerance, or the standard deviation of each parameter could not be calculated. Returning AIC=INF.\n"))
+    cat(paste("Some parameters were not optimized, sigma >", MAXSIGMA, " some parameters had NaN standard deviation under smallest convergence tolerance, or the standard deviation of each parameter could not be calculated. Returning AIC=INF.\n"))
   } else if (model == '1compartment') {
     # Check for bad one-compartment model fits:
     if (ln.means["Vdist"] == upper["Vdist"]) {
@@ -607,6 +616,9 @@ analyze_pk_data <- function(fitdata,
       out.dt[, LogLikelihood := -all.data.fit$value]
       out.dt[, AIC := 2 * length(opt.params) + 2 * all.data.fit$value]
     }
+  } else if (model == 'flat') {
+    out.dt[, LogLikelihood := -all.data.fit$value]
+    out.dt[, AIC := 2 * length(opt.params) + 2 * all.data.fit$value]
   }
 
   # } else {warning("didn't converge")}

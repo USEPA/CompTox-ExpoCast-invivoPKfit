@@ -61,6 +61,9 @@ cp_2comp <- function(params, time, dose, iv.dose)
   cp <-  A * exp(-alpha * time) + B * exp(-beta * time) + C * exp(-params$kgutabs * time)
   }
 
-  cp[cp < 10^-20] <- 10^-20
+  # cp[cp < 10^-20] <- 10^-20
+  cp[cp<0] <- 0
+  cp[!is.finite(cp)] <- 0
+
   return(cp)
 }

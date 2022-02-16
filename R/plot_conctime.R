@@ -88,7 +88,7 @@ plot_conctime <- function(PK.fit.table,
   #evaluates 1-compartment model using the params provided as arguments,
   #at the vector of times provided as the "time" argument,
   #with the dose and route provided as arguments
-  evalfun <- function(model, time, dose, route, reference, media, loq, params.in) ###added reference, media, and loq
+  evalfun <- function(model, time, dose, route, reference, media, loq, sigma, params.in) ###added reference, media, and loq
   {
     params.in <- lapply(params.in, unique)
 
@@ -106,6 +106,7 @@ plot_conctime <- function(PK.fit.table,
     out[, Media := media] ### added
     out[, Reference := reference] ### added
     out[, LOQ := loq] ### added
+    out[, sigma_value := sigma]
 
     return(out)
   }
@@ -208,13 +209,14 @@ plot_conctime <- function(PK.fit.table,
     #get best-fit lines from in vivo fit parameter values
     if (model=="1compartment")
     {
-      bestfit.invivo<-merge.table[, evalfun(model = "1compartment",
+      bestfit.invivo <- merge.table[, evalfun(model = "1compartment",
                                             time = plot.times,
                                             dose = Dose.nominal,
                                             route = Route,
                                             media = Media, ### added
                                             reference = Reference, ### added
                                             loq = LOQ, ### added
+                                            sigma = sigma_value, ### added
                                             params.in = list(Vdist = Vdist,
                                                              kelim = kelim,
                                                              kgutabs = kgutabs,
@@ -228,6 +230,7 @@ plot_conctime <- function(PK.fit.table,
                                               media = Media, ### added
                                               reference = Reference, ### added
                                               loq = LOQ, ### added
+                                              sigma = sigma_value, ### added
                                               params.in = list(Fbetaofalpha = Fbetaofalpha,
                                                                Ralphatokelim = Ralphatokelim,
                                                                kelim = kelim,
@@ -235,7 +238,21 @@ plot_conctime <- function(PK.fit.table,
                                                                kgutabs = kgutabs,
                                                                Fgutabs = Fgutabs)),
                                     by = seq_len(nrow(merge.table))]
+    } else if (model == "flat") {
+    bestfit.invivo <- merge.table[, evalfun(model = model,
+                                            time = plot.times,
+                                            dose = Dose.nominal,
+                                            route = Route,
+                                            media = Media, ### added
+                                            reference = Reference, ### added
+                                            loq = LOQ, ### added
+                                            sigma = sigma_value, ### added
+                                            params.in = list(A = A)),
+                                  by = seq_len(nrow(merge.table))]
     } else stop()
+
+    # bestfit.invivo[, error := Ccompartment * exp(sigma_value)]
+
     bestfit.invivo[, Dose.nominal.units.type := paste(
       paste("Dose:", Dose.nominal, "mg/kg"),
       paste("Route:", Route),
@@ -286,6 +303,9 @@ plot_conctime <- function(PK.fit.table,
         geom_line(data = bestfit.invivo,aes(x = time,
                                             y = Ccompartment,
                                             color = color.factor)) +
+        # geom_line(data = bestfit.invivo,aes(x = time,
+        #                                     y = error,
+        #                                     color = "red")) +
         geom_point(data = this.compound.data,
                    aes(x = Time, y = Value,
                        color = color.factor,
