@@ -85,7 +85,7 @@ library(data.table)
 devtools::load_all(".")
 ```
 
-```{r, load_data}
+```{r, load_data, include=FALSE}
 
 ### load all of this wonderful data
 load("figures_rdata/pk_output_1comp_12212021.Rdata")
@@ -165,7 +165,7 @@ p
 
 # 3 Introducing *invivoPKfit* 
 
-## **3a What is *invivoPKfit*?**
+## **3a) What is *invivoPKfit*?**
 
 * R package that fits 1- and 2- compartment models to CvT data and extrapolates TK parameter values (e.g., half-life, elimination rate, and volume of distribution)
 
@@ -173,7 +173,7 @@ p
 knitr::include_graphics("poster/pk_workflow.png")
 ```
 
-## **3b TK Model Descriptions**
+## **3b) TK Model Descriptions**
 |    **<span style="text-decoration:underline">1-Compartment Model</span>**  
 
 ```{r, fig.cap = "1-Compartment Model. Adapted from Wambaugh et al. (2018).", fig.align = "center",  out.width = "60%"}
@@ -204,7 +204,7 @@ C_{oral}(dose,\ t)\ =\ A\ *\ e^{-\alpha\ *\ t}\ +\ B\ *\ e^{-\beta\ *\ t}\ +\ C\
 $$
 * Parameters include $V1$ (volume of primary compartment), $k_{elim}$, $k_{12}$ (distribution rate to deep compartment), $k_{21}$ distribution rate from deep compartment), $k_{abs}$ (oral only), $F_{bio}$ (oral only).
 
-## **3c Statistical Model Description**
+## **3c) Statistical Model Description**
 
 * *invivoPKfit* calculates the probability of $C_{obs}$ given a PK model $M(p,\ t)$ and a statistical model $S(\sigma)$, where $P\ =\ L(C_{obs},\ M,\ S)$, and assumes that $C_{obs}$ are log-normally distributed around the concentrations predicted by $M(p,\ t)$ (Cox and Hinkley, 1979).
 
@@ -227,7 +227,7 @@ p9
 
 # 4 ** *invivoPKfit* Analyses**
 
-## **4a Predicted Concentrations**
+## **4a) Predicted Concentrations**
 
 * 58.4% of 12134 concentrations predicted by the 1-compartment model fit within a factor of two of the observed concentrations.
 
@@ -264,7 +264,7 @@ p <- ggplot(data = data,
 p
 ```
 
-## **4b *invivoPKfit* Performance *versus* Data Variability**
+## **4b) *invivoPKfit* Performance *versus* Data Variability**
 
 * Can start to gauge how data variability influences the performance of a model
 
