@@ -152,8 +152,8 @@ junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_1comp_12212021),
                       model = "1compartment")
 
 ### 2 compartment
-junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_2comp_12212021),
-                      data.set = as.data.table(raw_2comp_12212021),
+junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_2comp_02102022),
+                      data.set = as.data.table(raw_2comp_02102022),
                       model = "2compartment")
 
 ```

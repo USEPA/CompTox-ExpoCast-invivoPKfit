@@ -103,7 +103,7 @@ load("figures_rdata/pk_lombardo_02072022.Rdata")
 
 * The Concentration *versus* Time Database  (CvTdb) is a database of standardized CvT data (time-course data of chemical compound concentrations measured *in vivo*) from hundreds of diverse publications, and serves as a platform for assessing PK/TK models on a large set of data. (Sayre, Grulke, and Wambaugh, 2020).
 
-```{r, out.width="60%", fig.align="center", fig.cap="Typical plot from which CvT data is extracted. From Sowa and Steibert (1985)."}
+```{r, exp_plot, out.width="65%", fig.align="center", fig.cap="Typical plot from which CvT data is extracted. From Sowa and Steibert (1985)."}
 knitr::include_graphics("poster/tk_curve.png")
 ```
 
@@ -115,22 +115,6 @@ knitr::include_graphics("poster/tk_curve.png")
 
 * If YOU have CvT data, please consider collaborating with us! Visit [https://github.com/USEPA/CompTox-PK-CvTdb](https://github.com/USEPA/CompTox-PK-CvTdb) or email Wambaugh.John@epa.gov
 
-
-## **1c) In-House Curation Workflow**
-1) Identify publications with CvT data using PubMed queries  
-
-2) Manually extract CvT data using [WebPlotDigitizer](https://automeris.io/WebPlotDigitizer/)
-
-3) Curate CvT data and metadata using EPA's *.xlsx* template  
-
-4) Screen template using *CvTdbQA*, an R Shiny application that checks template for format and reconstructs plots based on reported CvT data
-
-5) Manually check template for format and data correctness
-
-6) Normalize metadata units using an R script workflow, while also retaining original values 
-
-7) Push template to CvTdb
-
 # 2 Toxicokinetic Trends Across Chemicals
 
 * We can explore trends across chemicals and references using the CvTdb. 
@@ -141,7 +125,7 @@ data have frequently been considered adequate" (WHO, 2010).
 
 * In Figure 2, 84.9% of replicate timepoint data in the CvTdb is within a factor of two of their respective mean. The "factor of two" rule may not be appropriate if the data is spread beyond a factor of two.
 
-```{r, make_cvt_variability_histogram}
+```{r, make_cvt_variability_histogram, out.width = "75%", fig.align = "center", fig.cap = "The CvTdb data was grouped into unique combinations of compound/reference/route/dose/timepoint. Groups without replicate timepoints were removed. If all replicate timepoints corresponded to non-detect concentration values, those data were removed. If some, but not all replicate timepoints corresponded to non-detect concentration values, those values were set to equal 0.45 of the minimum value. Each concentration was normalized by the mean concentration of each group."}
 
 #################
 #################
@@ -169,14 +153,14 @@ p
 
 * R package that fits 1- and 2- compartment models to CvT data and extrapolates TK parameter values (e.g., half-life, elimination rate, and volume of distribution)
 
-```{r, out.width="30%", fig.align="center", fig.cap="Typical plot from which CvT data is extracted. From Sowa and Steibert (1985)."}
+```{r, workflow, out.width="30%", fig.align="center", fig.cap="Typical plot from which CvT data is extracted. From Sowa and Steibert (1985)."}
 knitr::include_graphics("poster/pk_workflow.png")
 ```
 
 ## **3b) TK Model Descriptions**
 |    **<span style="text-decoration:underline">1-Compartment Model</span>**  
 
-```{r, fig.cap = "1-Compartment Model. Adapted from Wambaugh et al. (2018).", fig.align = "center",  out.width = "60%"}
+```{r, 1_comp, fig.cap = "1-Compartment Model. Adapted from Wambaugh et al. (2018).", fig.align = "center",  out.width = "75%"}
 knitr::include_graphics("poster/1_comp.png")
 ```
 
@@ -192,7 +176,7 @@ $$
 
 |    **<span style="text-decoration:underline">2-Compartment Model</span>**
 
-```{r, fig.cap = "2-Compartment Model. Adapted from Wambaugh et al. (2018).", fig.align = "center", out.width = "60%"}
+```{r, 2_comp, fig.cap = "2-Compartment Model. Adapted from Wambaugh et al. (2018).", fig.align = "center", out.width = "75%"}
 knitr::include_graphics("poster/2_comp.png")
 ```
 
@@ -216,7 +200,7 @@ $$
 ln\ L(x,\ \mu,\ \sigma)\ =\ \Sigma_{i=1,n}ln\frac{1}{C_{obs,i}\sigma \sqrt{2\pi}}e^{-\frac{1}{2}\left( \frac{ln\ C_{obs,i}\ -\ M(p,t_i)}{\sigma} \right)^2}
 $$
 
-```{r, warning = FALSE, fig.align = "center", out.width = "60%", fig.cap = "Log-Normal Distribution"}
+```{r, log, warning = FALSE, fig.align = "center", out.width = "60%", fig.cap = "Log-Normal Distribution"}
 load(file = "poster/lognormal.Rdata")
 p9
 ```
@@ -224,6 +208,12 @@ p9
 * The R package, [*optimx*](https://cran.r-project.org/web/packages/optimx/index.html) (Nash and Varadhan, 2011; Nash, 2014) optimizes the log-likelihood equation and estimates $p$ and $\sigma$
 
 * We used the Hessian of the likelihood function to estimate standard deviations of the log parameter (Dovi, 1991)
+
+|    **<span style="text-decoration:underline">Interstudy Variability</span>**
+
+```{r, interstudy, fig.align = "center", out.width = "100%", fig.cap = "Log-Normal Distribution"}
+knitr::include_graphics("poster/interstudy.png")
+```
 
 # 4 ** *invivoPKfit* Analyses**
 
@@ -233,7 +223,7 @@ p9
 
 * 64.8% of 9684 concentrations predicted by the 2-compartment model fit within a factor of two of the observed concentrations.
 
-```{r, make_cp_histogram}
+```{r, make_cp_histogram, fig.align = "center", out.width = "75%", fig.cap = "Concentrations were predicted by applying estimated model parameters to the timepoints present in the data. Predicted concentrations were normalized by observed concentrations. This plot does not include 'Joint Analysis' models. The red dashed lines mark the 'factor of two' bounds."}
 
 ##################
 ##################
