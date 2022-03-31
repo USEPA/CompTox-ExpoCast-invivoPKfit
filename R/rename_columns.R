@@ -1,196 +1,190 @@
-#' Helper function to rename columns and coerce data to usable format
-#'
-#' @param data.set A table of concentration-time data.
-#'
-#' @param compound.col Column in data.set to serve as compound column
-#' @param cas.col Column in data.set to serve as CAS column
-#' @param reference.col Column in data.set to serve as reference column
-#' @param species.col Column in data.set to serve as species column
-#' @param species.default Default value to fill newly created species column, should data.set lack a column equivalent to species
-#' @param species.weight.col Column in data.set to serve as species.weight column
-#' @param species.weight.units.col Column in data.set to serve as species.weight.units column
-#' @param species.weight.units.default Default value to fill newly created species.weight.units column, should data.set lack a column equivalent to species.weight.units
-#' @param dose.col Column in data.set to serve as dose column
-#' @param time.col Column in data.set to serve as time column
-#' @param time.units.col Column in data.set to serve as time.units column
-#' @param time.units.default Default value to fill newly created time.units column, should data.set lack a column equivalent to time.units
-#' @param media.col Column in data.set to serve as media column
-#' @param media.units.col Column in data.set to serve as media.units column
-#' @param media.units.default Default value to fill newly created media.units coloumn, should data.set lack a column equivalent to media.units
-#' @param value.col Column in data.set to serve as value column
-#' @param units.col Column in data.set to serve as units column
-#' @param units.default Default value to fill newly created units column, should data.set lack a column equivalent to units
-#' @param route.col Column in data.set to serve as route column
-#' @param route.default Default value to fill newly created route column, should data.set lack a column equivalent to route
-#' @param source.col Column in data.set to serve as source column
-#' @param source.default Default value to fill newly created source column, should data.set lack a column equivalent to source
-#' @param loq.col Column in data.set to serve as loq column
-#' @param loq.default Default value to fill newly created loq column, should data.set lack a column equivalent to loq
-#' @param subject.col Column in data.set to serve as subject column
-#' @param subject.default Default value to fill newly created subject column, should data.set lack a column equivalent to subject
-#' @param info.col Column in data.set to serve as info column
-#' @param info.default Default value to fill newly created info column, should data.set lack a column equivalent to info
-#'
-#' @return A data.frame with corrected column names
-#'
-#' @author Christopher Cook, John Wambaugh
-#' @importFrom magrittr "%>%"
 
-rename_columns <- function(data.set,
-                           compound.col,
-                           cas.col,
-                           reference.col,
+rename_columns <- function(data,
 
-                           species.col,
-                           species.default,
+                           compound_col = compound_col,
+                           compound_default = compound_default,
 
-                           species.weight.col,
-                           species.weight.units.col,
-                           species.weight.units.default,
+                           cas_col = cas_col,
+                           cas_default = cas_default,
 
-                           dose.col,
+                           dtxsid_col = dtxsid_col,
+                           dtxsid_default = dtxsid_default,
 
-                           time.col,
-                           time.units.col,
-                           time.units.default,
+                           reference_col = reference_col,
+                           reference_default = reference_default,
 
-                           media.col,
-                           media.units.col,
-                           media.units.default,
+                           species_col = species_col,
+                           species_default = species_default,
 
-                           value.col,
+                           species_weight_col = species_weight_col,
+                           species_weight_default = species_weight_default,
+                           species_weight_units_col = species_weight_units_col,
+                           species_weight_units_default = species_weight_units_default,
 
-                           units.col,
-                           units.default,
+                           dose_col = dose_col,
+                           dose_default = dose_default,
 
-                           route.col,
-                           route.default,
+                           time_col = time_col,
+                           time_default = time_default,
+                           time_units_col = time_units_col,
+                           time_units_default = time_units_default,
 
-                           source.col,
-                           source.default,
+                           media_col = media_col,
+                           media_default = media_default,
+                           media_units_col = media_units_col,
+                           media_units_default = media_units_default,
 
-                           loq.col,
-                           loq.default,
+                           conc_col = conc_col,
+                           conc_default = conc_default,
+                           conc_units_col = conc_units_col,
+                           conc_units_default = conc_units_default,
 
-                           subject.col,
-                           subject.default,
+                           route_col = route_col,
+                           route_default = route_default,
 
-                           info.col,
-                           info.default) {
+                           loq_col = loq_col,
+                           loq_default = loq_default,
+
+                           loq_units_col = loq_units_col,
+                           loq_units_default = loq_units_default) {
 
   ### if default argument filled, create column and use default as value
-  if(!is.null(species.default)) {
-    data.set[, species.col] <- species.default
+
+  ### compound
+  if(!is.null(compound_default)) {
+    data[, compound_col] <- compound_default
   }
 
-  if(!is.null(species.weight.units.default)) {
-    data.set[, species.weight.units.col] <- species.weight.units.default
+  ### cas
+  if(!is.null(cas_default)) {
+    data[, cas_col] <- cas_default
   }
 
-  if(!is.null(time.units.default)) {
-    data.set[, time.units.col] <- time.units.default
+  ### reference
+  if(!is.null(reference_default)) {
+    data[, reference_col] <- reference_default
   }
 
-  if(!is.null(media.units.default)) {
-    data.set[, media.units.col] <- media.units.default
+  ### species
+  if(!is.null(species_default)) {
+    data[, species_col] <- species_default
   }
 
-  if(!is.null(units.default)) {
-    data.set[, units.col] <- units.default
+  ### species_weight_units
+  if(!is.null(species_weight_units_default)) {
+    data[, species_weight_units_col] <- species_weight_units_default
   }
 
-  if(!is.null(route.default)) {
-    data.set[, route.col] <- route.default
+  ### time
+  if(!is.null(time_default)) {
+    data[, time_col] <- time_default
   }
 
-  if(!is.null(loq.default)) {
-    data.set[, loq.col] <- loq.default
+  ### time_units
+  if(!is.null(time_units_default)) {
+    data[, time_units_col] <- time_units_default
   }
 
-  if(!is.null(subject.default)) {
-    data.set[, subject.col] <- subject.default
+  ### media
+  if(!is.null(media_units_default)) {
+    data[, media_units_col] <- media_units_default
   }
 
-  if(!is.null(info.default)) {
-    data.set[, info.col] <- info.default
+  ### media
+  if(!is.null(media_default)) {
+    data[, media_col] <- media_default
+  }
+
+  ### conc_units
+  if(!is.null(conc_default)) {
+    data[, conc_col] <- conc_default
+  }
+
+  ### conc_units
+  if(!is.null(conc_units_default)) {
+    data[, conc_units_col] <- conc_units_default
+  }
+
+  ### route
+  if(!is.null(route_default)) {
+    data[, route_col] <- route_default
+  }
+
+  ### loq
+  if(!is.null(loq_default)) {
+    data[, loq_col] <- loq_default
+  }
+
+  ### loq_units
+  if(!is.null(loq_units_default)) {
+    data[, loq_units_col] <- loq_units_default
   }
 
   ### create vector of column names
-  cols <- c(
-    compound.col,
-    cas.col,
-    reference.col,
-    species.col,
-    species.weight.col,
-    species.weight.units.col,
-    dose.col,
-    time.col,
-    time.units.col,
-    media.col,
-    media.units.col,
-    value.col,
-    units.col,
-    route.col,
-    source.col,
-    loq.col,
-    subject.col,
-    info.col
-  )
+  cols <- c(compound_col,
+            cas_col,
+            reference_col,
+            species_col,
+            species_weight_col,
+            species_weight_units_col,
+            dose_col,
+            time_col,
+            time_units_col,
+            media_col,
+            media_units_col,
+            conc_col,
+            conc_units_col,
+            route_col,
+            loq_col,
+            loq_units_col)
 
   ### stop if any columns missing from data.set
-  if (!(all(cols %in% colnames(data.set))))
-  {
+  if (!(all(cols %in% colnames(data)))) {
     stop(paste("Missing columns named:",
-               paste(cols[!(cols%in%colnames(data.set))],collapse=", ")))
+               paste(cols[!(cols %in% colnames(data))], collapse = ", ")))
   }
 
   ### Set column order of data.table to cols vector
-  data.set <- data.table::setcolorder(data.set, cols)
+  data <- data.table::setcolorder(data, cols)
 
   # Standardize the column names:
-  compound.col <- "Compound"
-  cas.col <- "CAS"
-  reference.col <- "Reference"
-  species.col <- "Species"
-  species.weight.col <- "Species.Weight"
-  species.weight.units.col <- "Species.Weight.Units"
-  dose.col <- "Dose"
-  time.col <- "Time"
-  time.units.col <- "Time.Units"
-  media.col <- "Media"
-  media.units.col <- "Media.Units"
-  value.col <- "Value"
-  units.col <- "Units"
-  route.col <- "Route"
-  source.col <- "Source"
-  loq.col <- "LOQ"
-  subject.col <- "Subject"
-  info.col <- "info"
+  compound_col <- "compound"
+  cas_col <- "cas"
+  reference_col <- "reference"
+  species_col <- "species"
+  species_weight_col <- "species_weight"
+  species_weight_units_col <- "species_weight_units"
+  dose_col <- "dose"
+  time_col <- "time"
+  time_units_col <- "time_units"
+  media_col <- "media"
+  media_units_col <- "media_units"
+  conc_col <- "conc"
+  conc_units_col <- "conc_units"
+  route_col <- "route"
+  loq_col <- "loq"
+  loq_units_col <- "loq_units"
 
   ### rename colnames to standardized colnames
-  colnames(data.set) <- c(
-    compound.col,
-    cas.col,
-    reference.col,
-    species.col,
-    species.weight.col,
-    species.weight.units.col,
-    dose.col,
-    time.col,
-    time.units.col,
-    media.col,
-    media.units.col,
-    value.col,
-    units.col,
-    route.col,
-    source.col,
-    loq.col,
-    subject.col,
-    info.col
-  )
+  colnames(data) <- c(compound_col,
+                      cas_col,
+                      reference_col,
+                      species_col,
+                      species_weight_col,
+                      species_weight_units_col,
+                      dose_col,
+                      time_col,
+                      time_units_col,
+                      media_col,
+                      media_units_col,
+                      conc_col,
+                      conc_units_col,
+                      route_col,
+                      loq_col,
+                      loq_units_col)
 
-### delete extra/NA columns
-  data.set <- data.set[!is.na(names(data.set))]
+  ### delete extra/NA columns
+  data <- data[!is.na(names(data))]
 
-  return(data.set)
+  return(data)
 }

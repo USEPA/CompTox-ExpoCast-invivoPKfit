@@ -138,11 +138,11 @@ plot_conctime <- function(PK.fit.table,
 
         this.medium.data <- this.reference.data[Media == this.medium]
 
-        this.medium.data[, "Value"][is.na(this.medium.data[, "Value"])] <- 2 * this.medium.data[, mean(LOQ)]
+        this.medium.data[, "Value"][is.na(this.medium.data[, "Value"])] <- 0.5 * this.medium.data[, mean(LOQ)]
 
         ### do this without converting to and back from a data.frame
         this.medium.data <- as.data.frame(this.medium.data)
-        this.medium.data$L.O.Q. <- ifelse(this.medium.data$Value <= mean(2 * this.medium.data$LOQ), "Below", "Above")
+        this.medium.data$L.O.Q. <- ifelse(this.medium.data$Value <= mean(this.medium.data$LOQ), "Below", "Above")
         this.medium.data <- as.data.table(this.medium.data)
         this.medium.data <- this.medium.data[, LOQ. := as.factor(L.O.Q.)]
 
