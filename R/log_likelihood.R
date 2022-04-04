@@ -49,7 +49,7 @@ log_likelihood <- function(params,
   #(that is, all the actual model parameters)
   model.params <- params[names(params)[regexpr(pattern = "sigma2",
                                                text=names(params)) == -1]]
-
+browser()
   DT[, sigma.ref := params[paste("sigma2",
                                  Reference,
                                  sep = ".")],
