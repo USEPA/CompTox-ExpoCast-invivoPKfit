@@ -889,8 +889,8 @@ p <- ggplot(data = data,
   theme_bw() +
   labs(x = "Sigma",
        y = "Number of observations") +
-  facet_wrap(.~ model) +
-  geom_vline(xintercept = 0.001476315)
+  facet_wrap(.~ model)
+  # geom_vline(xintercept = 0.001476315)
 # stat_function(fun = dlnorm, args = list(mean = mean(log(data$sigma_value)), sd = sd(log(data$sigma_value))))
 
 p
