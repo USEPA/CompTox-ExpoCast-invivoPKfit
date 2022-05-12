@@ -27,10 +27,19 @@ analyze_pk_data <- function(fitdata,
   #take a copy of input data table so it behaves as though passed by value
   fitdata <- data.table::copy(fitdata)
 
+  # If there is no reference column, add on in:
+  if (!is.null(this.reference)) {
+    fitdata[, Reference := this.reference]
+  }
+
+  ### if the subset of data has LOQ values of 'NA', make the LOQ values = 0.45 * the minimum Value
+  fitdata[, LOQ := as.numeric(LOQ)]
+  fitdata[is.na(LOQ), LOQ := 0.45 * min(Value, na.rm = TRUE), by = .(Compound, Reference, Media)]
+
   cat(paste("Optimizing data for CAS-RN ", this.cas, "\n", sep =""))
 
   #Set a plausible upper bound for sigma:
-  TRYSIGMA <- 3 * stats::median(fitdata$Value, na.rm = T)
+  TRYSIGMA <- stats::median(fitdata$Value, na.rm = T)
   MAXSIGMA <- 100 * stats::median(fitdata$Value, na.rm = T)
 
   #Initialize output table with HTTK-predicted parameter values
@@ -38,11 +47,6 @@ analyze_pk_data <- function(fitdata,
   out.dt[, param.value.type := 'Predicted']
 
   these.params <- as.list(fitdata[1, paramnames, with = FALSE])
-
-  # If there is no reference column, add on in:
-  if (!is.null(this.reference)) {
-    fitdata[, Reference := this.reference]
-  }
 
   #Add a different sigma value for each reference
   refs <- fitdata[,
@@ -79,7 +83,7 @@ analyze_pk_data <- function(fitdata,
 
   } else if (model == 'flat') {
       opt.params <- these.params[names(these.params) %in% "A"]
-      opt.params["A"] <- mean(fitdata$Value, na.rm = TRUE)
+      opt.params["A"] <- log(mean(fitdata$Value, na.rm = TRUE))
     }
 
   if (model != 'flat') {
@@ -143,6 +147,7 @@ analyze_pk_data <- function(fitdata,
       if (length(unique(elim.data$Time)) > 3) {
 
         elim.data.test <- elim.data
+
         elim.data <- subset(elim.data,Time <= sort(unique(Time))[3]) ### added sort
         alpha <- -stats::lm(log(Value) ~ Time, data = elim.data)$coefficients["Time"]
         opt.params["Ralphatokelim"] <- log(max(alpha / exp(opt.params[["kelim"]]), 2))
@@ -195,6 +200,7 @@ analyze_pk_data <- function(fitdata,
       opt.params["Fbetaofalpha"] <- log(0.25)
     }
   } else if ("po" %in% fitdata$Route) {
+    # browser()
     elim.data <- subset(fitdata, Route == "po" & !is.na(Value))
     elim.data$Value <- elim.data$Value/elim.data$Dose
     elim.data <- subset(elim.data,Dose > 0)
@@ -223,7 +229,7 @@ analyze_pk_data <- function(fitdata,
   if ("po" %in% fitdata$Route) {
     opt.params <- c(opt.params,
                     these.params["kgutabs"])
-    # browser()
+
     # if (model == "1compartment") {
     #   # tryCatch(
     #   #   {
@@ -323,7 +329,6 @@ analyze_pk_data <- function(fitdata,
                                                "Fitted geometric std dev",
                                                "Fitted mode"))
     out.dt <- rbind(out.dt, tmp.out, fill = TRUE)
-
     out.dt[, sigma := as.character(NA)]
     out.dt[, value := as.double(NA)]
 
@@ -338,9 +343,11 @@ analyze_pk_data <- function(fitdata,
       # out.dt[,Reference:=this.reference]
       out.dt[, Data.Analyzed := this.reference]
     }
+
     out.dt[, Compound := fitdata$Compound[1]]
     out.dt[, LogLikelihood := as.numeric(NA)]
     out.dt[, AIC := as.double(NA)]
+
     cat(paste("For CAS ", this.cas, " there were ", length(opt.params),
               " parameters and only ",
               nrow(fitdata), " data points. Optimization aborted.\n", sep = ""))
@@ -361,6 +368,7 @@ analyze_pk_data <- function(fitdata,
   #
   #
 
+  # if (unique(fitdata$Compound) == "1,4-dioxane") browser()
   #change from a named list of params to optimize to a named vector of params to
   #optimize
   upper <- unlist(opt.params)
@@ -368,7 +376,10 @@ analyze_pk_data <- function(fitdata,
   #specify upper bounds of params to optimize (on a log scale!!)
   upper[] <- log(UPPERBOUNDARY)
   upper[regexpr("sigma",names(upper)) != -1] <- log(TRYSIGMA) ### was MAXSIGMA
-  if (model == '2compartment') {
+  if (model == "1compartment") {
+    upper["Vdist"] <- log(max(fitdata$Dose) / min(fitdata$LOQ))
+  } else if (model == '2compartment') {
+    upper["V1"] <- log(max(fitdata$Dose) / min(fitdata$LOQ))
     upper["Ralphatokelim"] <- log(1000)
     upper["Fbetaofalpha"] <- log(0.75) #on a log scale!
   }
@@ -378,7 +389,7 @@ analyze_pk_data <- function(fitdata,
   if ("kgutabs" %in% unlist(opt.params)) {
     upper["kgutabs"] <- log(1000)
   }
-
+# upper <- upper["Vdist"]
   # Force initial values to be within bounds:
   opt.params[opt.params>upper] <- upper[opt.params>upper] - 0.1
 
@@ -435,11 +446,11 @@ analyze_pk_data <- function(fitdata,
                                                           stringsAsFactors = F),
                                                1, function(x) paste(x, collapse=": ")),
                                          collapse = ", "), "\n", sep = ""))
-
+# browser()
   tryCatch(all.data.fit <- optimx::optimx(par = unlist(opt.params),
                                           fn = objfun,
                                           # lower=lower,
-                                          # upper=upper,
+                                          upper=upper,
                                           method = "L-BFGS-B", #box constraints
                                           hessian = FALSE,
                                           control = list(factr = factr)),
@@ -496,7 +507,7 @@ analyze_pk_data <- function(fitdata,
     all.data.fit <- optimx::optimx(par = unlist(opt.params),
                                  fn = objfun,
                                  # lower=lower,
-                                 # upper=upper,
+                                 upper=upper,
                                  method = "L-BFGS-B",
                                  hessian = FALSE,
                                  control = list(factr = factr))
@@ -626,7 +637,7 @@ analyze_pk_data <- function(fitdata,
   if (!is.null(this.reference)) {
     out.dt[, Reference := NULL]
   }
-  # browser()
+
   return(out.dt)
 
 }

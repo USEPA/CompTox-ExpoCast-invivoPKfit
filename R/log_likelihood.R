@@ -49,7 +49,7 @@ log_likelihood <- function(params,
   #(that is, all the actual model parameters)
   model.params <- params[names(params)[regexpr(pattern = "sigma2",
                                                text=names(params)) == -1]]
-browser()
+
   DT[, sigma.ref := params[paste("sigma2",
                                  Reference,
                                  sep = ".")],
@@ -59,11 +59,11 @@ browser()
 
   #get predicted plasma concentration vs. time for the current parameter
   #values, by dose and route
-
-  ### if the subset of data has LOQ values of 'NA', make the LOQ values = 0.45 * the minimum Value
-  DT[, LOQ := as.numeric(LOQ)]
-  DT[is.na(LOQ), LOQ := 0.45 * min(Value, na.rm = TRUE), by = .(Compound, Reference, Media)]
-  # , by = "Reference"]
+# if (nrow(DT) > 7) browser()
+  # ### if the subset of data has LOQ values of 'NA', make the LOQ values = 0.45 * the minimum Value
+  # DT[, LOQ := as.numeric(LOQ)]
+  # DT[is.na(LOQ), LOQ := 0.45 * min(Value, na.rm = TRUE), by = .(Compound, Reference, Media)]
+  # # , by = "Reference"]
 
   DT[, pred := fitfun(design.times = Time.Days,
                       design.dose = unique(Dose),

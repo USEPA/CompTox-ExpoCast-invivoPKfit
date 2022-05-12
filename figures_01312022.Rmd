@@ -23,11 +23,24 @@ devtools::load_all(".")
 
 ```{r, run_invivoPKfit, eval = FALSE}
 
+### this block runs the model fits
+# and does some pre-processing to clean up the data
+
 #################
 #################
 
-data <- read.csv("inst/ext/cvt_query_for_john_27may2021_v2.csv")
-data <- read.csv("inst/ext/cvtdb_invivopkfit_02242022.csv")
+# data <- read.csv("inst/ext/cvt_query_for_john_27may2021_v2.csv")
+# data <- read.csv("inst/ext/cvtdb_invivopkfit_02242022.csv")
+# data <- read.csv("inst/ext/cvtdb_invivopkfit_04142022.csv")
+data <- read.csv("inst/ext/cvtdb_invivopkfit_04262022.csv")
+
+### these compounds had no CAS in the cvtdb
+# double check and they should not have been added
+# so I removed them
+
+data <- data %>%
+  filter(analyte_name_original != "Methemoglobin") %>%
+  filter(analyte_name_original != "N-desmethyltamoxifen")
 
 #################
 #################
@@ -38,13 +51,19 @@ data$analyte_name_original[data$analyte_name_original == "benzo[a]pyrene"] <- "b
 data$analyte_name_original[data$analyte_name_original == "2,4-D"] <- "2,4-Dichlorophenoxyacetic acid"
 data$analyte_name_original[data$analyte_name_original == "Diclofenac"] <- "Hexobarbital"
 data$analyte_name_original[data$analyte_name_original == "Pentadecafluorooctanoic acid"] <- "Perfluorooctanoic acid"
+data$analyte_name_original[data$analyte_name_original == "3−hydroxybenzo[a]pyrene"] <- "3−hydroxybenzo(a)pyrene"
 
 ### make fk_reference_document equal fk_extraction document if fk_reference_document is NULL
 data$fk_reference_document_id[data$fk_reference_document_id == "NULL"] <- data$fk_extraction_document_id[data$fk_reference_document_id == "NULL"]
 
+### this is basically my debug line,
+# where I can focus on one problematic compound 
+# and see what's going wrong
+# data <- data %>% filter(dsstox_casrn == "68291-97-4" | dsstox_casrn == "82626-48-0")
+# data <- data %>% filter(dsstox_casrn == "123-91-1")
+
 ### do 1-Compartment fit
 system.time(PK.fit.table.1comp <- fit_all(
-  
   data.set = data,
   model = "1compartment",
   modelfun = "analytic",
@@ -65,13 +84,11 @@ system.time(PK.fit.table.1comp <- fit_all(
   source.col = "document_id",
   loq.default = NA,
   subject.default = NA,
-  info.default = NA,
-  ratio.data.to.dose = 0.001
+  info.default = NA
 ))
 
 ### do 2-Compartment fit
 system.time(PK.fit.table.2comp <- fit_all(
-  
   data.set = data,
   model = "2compartment",
   modelfun = "analytic",
@@ -89,44 +106,100 @@ system.time(PK.fit.table.2comp <- fit_all(
   value.col = "conc",
   units.default = NA,
   route.col = "administration_route_normalized",
-  source.col = "fk_extraction_document_id",
+  source.col = "document_id",
   loq.default = NA,
   subject.default = NA,
-  info.default = NA,
-  ratio.data.to.dose = 0.001
+  info.default = NA
 ))
 
-# write.csv(PK.fit.table.1comp[[1]], "inst/ext/PK.fit.table.1comp.DATE.csv", row.names = FALSE)
-# write.csv(PK.fit.table.1comp[[2]], "inst/ext/processed.1comp.data.DATE.csv", row.names = FALSE)
-# 
-# write.csv(PK.fit.table.2comp[[1]], "inst/ext/PK.fit.table.2comp.02102022.csv", row.names = FALSE)
-# write.csv(PK.fit.table.2comp[[2]], "inst/ext/processed.2comp.data.02102022.csv", row.names = FALSE)
+### do flat fit
+system.time(PK.fit.table.flat <- fit_all(
+  data.set = data,
+  model = "flat",
+  modelfun = "analytic",
+  compound.col = "analyte_name_original",
+  cas.col = "dsstox_casrn",
+  reference.col = "fk_reference_document_id",
+  species.col = "species",
+  species.weight.col = "weight_kg",
+  species.weight.units.default = "kg",
+  dose.col = "dose_level_normalized",
+  time.col = "time_hr",
+  time.units.default = "hr",
+  media.col = "conc_medium_normalized",
+  media.units.default = "normalized",
+  value.col = "conc",
+  units.default = NA,
+  route.col = "administration_route_normalized",
+  source.col = "document_id",
+  loq.default = NA,
+  subject.default = NA,
+  info.default = NA
+))
+
+### uncomment below to export to CSV files
+# change the date!!
+
+write.csv(PK.fit.table.1comp[[1]], "inst/ext/PK.fit.table.1comp.05092022.csv", row.names = FALSE)
+write.csv(PK.fit.table.1comp[[2]], "inst/ext/processed.1comp.data.05092022.csv", row.names = FALSE)
+
+write.csv(PK.fit.table.2comp[[1]], "inst/ext/PK.fit.table.2comp.05092022.csv", row.names = FALSE)
+write.csv(PK.fit.table.2comp[[2]], "inst/ext/processed.2comp.data.05092022.csv", row.names = FALSE)
+
+write.csv(PK.fit.table.flat[[1]], "inst/ext/PK.fit.table.flat.05092022.csv", row.names = FALSE)
+write.csv(PK.fit.table.flat[[2]], "inst/ext/processed.flat.data.05092022.csv", row.names = FALSE)
 ```
 
 ```{r, read_data}
 
-### read in PK output files
-pk_output_1comp_12212021 <- read.csv("inst/ext/PK.fit.table.1comp.12212021.csv")
-pk_output_2comp_02102022 <- read.csv("inst/ext/PK.fit.table.2comp.02102022.csv")
-pk_output_flat_02102022 <- read.csv("inst/ext/PK.fit.table.flat.02102022.csv")
+### this block reads the exported model fit csv files from run_invivoPKfit
 
-pk_output_1comp_03012022 <- read.csv("inst/ext/PK.fit.table.1comp.03012022.csv")
-pk_output_2comp_03012022<- read.csv("inst/ext/PK.fit.table.2comp.03012022.csv")
-pk_output_flat_03012022 <- read.csv("inst/ext/PK.fit.table.flat.03012022.csv")
+### read in PK output files
+# pk_output_1comp_12212021 <- read.csv("inst/ext/PK.fit.table.1comp.12212021.csv")
+# pk_output_2comp_02102022 <- read.csv("inst/ext/PK.fit.table.2comp.02102022.csv")
+# pk_output_flat_02102022 <- read.csv("inst/ext/PK.fit.table.flat.02102022.csv")
+
+# pk_output_1comp_03012022 <- read.csv("inst/ext/PK.fit.table.1comp.03012022.csv")
+# pk_output_2comp_03012022<- read.csv("inst/ext/PK.fit.table.2comp.03012022.csv")
+# pk_output_flat_03012022 <- read.csv("inst/ext/PK.fit.table.flat.03012022.csv")
+
+pk_output_1comp_04282022 <- read.csv("inst/ext/PK.fit.table.1comp.04282022.csv")
+pk_output_2comp_04282022<- read.csv("inst/ext/PK.fit.table.2comp.04282022.csv")
+pk_output_flat_04282022 <- read.csv("inst/ext/PK.fit.table.flat.04282022.csv")
+
+pk_output_2comp_05092022 <- read.csv("inst/ext/PK.fit.table.2comp.05092022.csv")
+pk_output_flat_05092022 <- read.csv("inst/ext/PK.fit.table.flat.05092022.csv")
+pk_output_1comp_05092022 <- read.csv("inst/ext/PK.fit.table.1comp.05092022.csv")
 
 ### read in processed raw data files
-raw_1comp_12212021 <- read.csv("inst/ext/processed.1comp.data.12212021.csv")
-raw_2comp_02102022 <- read.csv("inst/ext/processed.2comp.data.02102022.csv")
-raw_flat_02102022 <- read.csv("inst/ext/processed.flat.data.02102022.csv")
+# raw_1comp_12212021 <- read.csv("inst/ext/processed.1comp.data.12212021.csv")
+# raw_2comp_02102022 <- read.csv("inst/ext/processed.2comp.data.02102022.csv")
+# raw_flat_02102022 <- read.csv("inst/ext/processed.flat.data.02102022.csv")
 
-raw_1comp_03012022 <- read.csv("inst/ext/processed.1comp.data.03012022.csv")
-raw_2comp_03012022 <- read.csv("inst/ext/processed.2comp.data.03012022.csv")
-raw_flat_03012022 <- read.csv("inst/ext/processed.flat.data.03012022.csv")
+# raw_1comp_03012022 <- read.csv("inst/ext/processed.1comp.data.03012022.csv")
+# raw_2comp_03012022 <- read.csv("inst/ext/processed.2comp.data.03012022.csv")
+# raw_flat_03012022 <- read.csv("inst/ext/processed.flat.data.03012022.csv")
+
+# raw_1comp_04142022 <- read.csv("inst/ext/processed.1comp.data.04142022.csv")
+# raw_2comp_04142022 <- read.csv("inst/ext/processed.2comp.data.04142022.csv")
+# raw_flat_04142022 <- read.csv("inst/ext/processed.flat.data.04142022.csv")
+
+raw_1comp_04282022 <- read.csv("inst/ext/processed.1comp.data.04282022.csv")
+raw_2comp_04282022 <- read.csv("inst/ext/processed.2comp.data.04282022.csv")
+raw_flat_04282022 <- read.csv("inst/ext/processed.flat.data.04282022.csv")
+
+raw_1comp_05092022 <- read.csv("inst/ext/processed.1comp.data.05092022.csv")
+raw_2comp_05092022 <- read.csv("inst/ext/processed.2comp.data.05092022.csv")
+raw_flat_05092022 <- read.csv("inst/ext/processed.flat.data.05092022.csv")
+
 
 pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 ```
 
 ```{r, make_rdata, eval = FALSE}
+
+### this block takes the csv files in read_data
+# and saves them as Rdata files
 
 ### save data
 # save(pk_output_1comp_12212021, file = "figures_rdata/pk_output_1comp_12212021.Rdata")
@@ -136,69 +209,125 @@ pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 # save(raw_2comp_02102022, file = "figures_rdata/raw_2comp_12212021.Rdata")
 # save(raw_flat_02102022, file = "figures_rdata/raw_flat_02102022.Rdata")
 
-save(pk_output_1comp_03012022, file = "figures_rdata/pk_output_1comp_03012022.Rdata")
-save(pk_output_2comp_03012022, file = "figures_rdata/pk_output_2comp_03012022.Rdata")
-save(pk_output_flat_03012022, file = "figures_rdata/pk_output_flat_03012022.Rdata")
-save(raw_1comp_03012022, file = "figures_rdata/raw_1comp_03012022.Rdata")
-save(raw_2comp_03012022, file = "figures_rdata/raw_2comp_03012022.Rdata")
-save(raw_flat_03012022, file = "figures_rdata/raw_flat_03012022.Rdata")
+# save(pk_output_1comp_03012022, file = "figures_rdata/pk_output_1comp_03012022.Rdata")
+# save(pk_output_2comp_03012022, file = "figures_rdata/pk_output_2comp_03012022.Rdata")
+# save(pk_output_flat_03012022, file = "figures_rdata/pk_output_flat_03012022.Rdata")
+# save(raw_1comp_03012022, file = "figures_rdata/raw_1comp_03012022.Rdata")
+# save(raw_2comp_03012022, file = "figures_rdata/raw_2comp_03012022.Rdata")
+# save(raw_flat_03012022, file = "figures_rdata/raw_flat_03012022.Rdata")
+
+# save(pk_output_1comp_04142022, file = "figures_rdata/pk_output_1comp_04142022.Rdata")
+# save(pk_output_2comp_04142022, file = "figures_rdata/pk_output_2comp_04142022.Rdata")
+# save(pk_output_flat_04142022, file = "figures_rdata/pk_output_flat_04142022.Rdata")
+# save(raw_1comp_04142022, file = "figures_rdata/raw_1comp_04142022.Rdata")
+# save(raw_2comp_04142022, file = "figures_rdata/raw_2comp_04142022.Rdata")
+# save(raw_flat_04142022, file = "figures_rdata/raw_flat_04142022.Rdata")
+
+save(pk_output_1comp_05092022, file = "figures_rdata/pk_output_1comp_05092022.Rdata")
+save(pk_output_2comp_05092022, file = "figures_rdata/pk_output_2comp_05092022.Rdata")
+save(pk_output_flat_05092022, file = "figures_rdata/pk_output_flat_05092022.Rdata")
+save(raw_1comp_05092022, file = "figures_rdata/raw_1comp_05092022.Rdata")
+save(raw_2comp_05092022, file = "figures_rdata/raw_2comp_05092022.Rdata")
+save(raw_flat_05092022, file = "figures_rdata/raw_flat_05092022.Rdata")
 
 save(pk_lombardo, file = "figures_rdata/pk_lombardo_02072022.Rdata")
-
-### save cp data
-# save(cp_df, file = "figures_rdata/cp_df.Rdata")
 ```
 
 ```{r, load_data}
 
+### this block loads the Rdata files,
+# as well as some other files written in below code blocks
+# this saves time from having to run those below code blocks every time
+# these additional files include 'cp_df' and 'cvt_variability'
+
 ### load all of this wonderful data
-load("figures_rdata/pk_output_1comp_12212021.Rdata")
-load("figures_rdata/pk_output_2comp_12212021.Rdata")
-load("figures_rdata/raw_1comp_12212021.Rdata")
-load("figures_rdata/raw_2comp_12212021.Rdata")
-load("figures_rdata/cp_df_12212021.Rdata")
-load("figures_rdata/cvt_variability_df_12212021.Rdata")
+# load("figures_rdata/pk_output_1comp_12212021.Rdata")
+# load("figures_rdata/pk_output_2comp_12212021.Rdata")
+# load("figures_rdata/raw_1comp_12212021.Rdata")
+# load("figures_rdata/raw_2comp_12212021.Rdata")
+# load("figures_rdata/cp_df_12212021.Rdata")
+# load("figures_rdata/cvt_variability_df_12212021.Rdata")
 
-load("figures_rdata/pk_output_1comp_03012022.Rdata")
-load("figures_rdata/pk_output_2comp_03012022.Rdata")
-load("figures_rdata/pk_output_flat_03012022.Rdata")
-load("figures_rdata/raw_1comp_03012022.Rdata")
-load("figures_rdata/raw_2comp_03012022.Rdata")
-load("figures_rdata/raw_flat_03012022.Rdata")
-load("figures_rdata/cp_df_03012022.Rdata")
-load("figures_rdata/cvt_variability_df_03012022.Rdata")
+# load("figures_rdata/pk_output_1comp_03012022.Rdata")
+# load("figures_rdata/pk_output_2comp_03012022.Rdata")
+# load("figures_rdata/pk_output_flat_03012022.Rdata")
+# load("figures_rdata/raw_1comp_03012022.Rdata")
+# load("figures_rdata/raw_2comp_03012022.Rdata")
+# load("figures_rdata/raw_flat_03012022.Rdata")
+# load("figures_rdata/cp_df_03012022.Rdata")
+# load("figures_rdata/cvt_variability_df_03012022.Rdata")
 
-load("figures_rdata/cp_df_03302022.Rdata")
+# load("figures_rdata/pk_output_1comp_04142022.Rdata")
+# load("figures_rdata/pk_output_2comp_04142022.Rdata")
+# load("figures_rdata/pk_output_flat_04142022.Rdata")
+# load("figures_rdata/raw_1comp_04142022.Rdata")
+# load("figures_rdata/raw_2comp_04142022.Rdata")
+# load("figures_rdata/raw_flat_04142022.Rdata")
+# load("figures_rdata/cp_df_04142022.Rdata")
+# load("figures_rdata/cvt_variability_df_04142022.Rdata")
+# 
+# load("figures_rdata/cp_df_03302022.Rdata")
+
+# load("figures_rdata/pk_output_1comp_04282022.Rdata")
+# load("figures_rdata/pk_output_2comp_04282022.Rdata")
+# load("figures_rdata/pk_output_flat_04282022.Rdata")
+# load("figures_rdata/raw_1comp_04282022.Rdata")
+# load("figures_rdata/raw_2comp_04282022.Rdata")
+# load("figures_rdata/raw_flat_04282022.Rdata")
+# load("figures_rdata/cp_df_04282022.Rdata")
+# load("figures_rdata/cvt_variability_df_04282022.Rdata")
+# 
+# load("figures_rdata/cp_df_04282022.Rdata")
+
+load("figures_rdata/pk_output_1comp_05092022.Rdata")
+load("figures_rdata/pk_output_2comp_05092022.Rdata")
+load("figures_rdata/pk_output_flat_05092022.Rdata")
+load("figures_rdata/raw_1comp_05092022.Rdata")
+load("figures_rdata/raw_2comp_05092022.Rdata")
+load("figures_rdata/raw_flat_05092022.Rdata")
+load("figures_rdata/cp_df_05092022.Rdata")
+load("figures_rdata/cvt_variability_df_05092022.Rdata")
+
+load("figures_rdata/cp_df_05092022.Rdata")
 
 load("figures_rdata/pk_lombardo_02072022.Rdata")
 ```
 
 ```{r, make_invivoPKfit_plots, eval = FALSE}
 
+### this block produces the pdf files of the model fits
+# plotted on top of the original data
+
 ### 1 compartment
 
-pk_output_1comp_03012022 <- pk_output_1comp_03012022 %>%
-  filter(Compound == "tamoxifen") %>%
-  filter(Data.Analyzed != "Joint Analysis")
+# pk_output_1comp_03012022 <- pk_output_1comp_03012022 %>%
+#   filter(Compound == "tamoxifen") %>%
+#   filter(Data.Analyzed != "Joint Analysis")
 
-raw_1comp_03012022 <- raw_1comp_03012022 %>%
-  filter(Compound == "tamoxifen")
+# raw_1comp_03012022 <- raw_1comp_03012022 %>%
+#   filter(Compound == "tamoxifen")
 
-junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_1comp_12212021),
-                      data.set = as.data.table(raw_1comp_12212021),
+junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_1comp_05092022),
+                      data.set = as.data.table(raw_1comp_05092022),
                       model = "1compartment")
 
 ### 2 compartment
-junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_2comp_03012022),
-                      data.set = as.data.table(raw_2comp_03012022),
+junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_2comp_05092022),
+                      data.set = as.data.table(raw_2comp_05092022),
                       model = "2compartment")
+
+junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_flat_05092022),
+                      data.set = as.data.table(raw_flat_05092022),
+                      model = "flat")
 
 ```
 
 ```{r, make_cp_rdata, eval = FALSE}
-################################
-### histogram showing data spread of invivoPKfit cp values
-################################
+
+### this block creates a data.frame of predicted concentrations
+# using the estimated parameters and the observed conc-time points
+
+######################
 
 ###########
 ### this is 1-compartment data
@@ -208,13 +337,15 @@ junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_2comp_03012022),
 ###################
 
 ### subset to only actual model outputs and discard "Joint Analysis" rows
-pk_data1 <- pk_output_1comp_03012022 %>%
-  filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis")
+pk_data1 <- pk_output_1comp_05092022 %>%
+  filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis") %>% 
+  filter(Species != "hamster")
 
-raw_data1 <- dplyr::select(raw_1comp_03012022, -c("kelim", 
+raw_data1 <- dplyr::select(raw_1comp_05092022, -c("kelim", 
                                                   "Vdist", 
                                                   "Fgutabs", 
-                                                  "kgutabs"))
+                                                  "kgutabs")) %>% 
+  filter(Species != "hamster")
 
 ###################
 ###################
@@ -228,7 +359,7 @@ full_data_1 <- full_data_1 %>% filter(AIC != Inf)
 
 ### function that finds cp
 find_cp_1 <- function(full_data_1) {plyr::adply(full_data_1, 1, mutate, cp = cp_1comp(time = Time,
-                                                                                      params = full_data_1[1,],
+                                                                                      params = full_data_1[1, ],
                                                                                       dose = Dose,
                                                                                       iv.dose = iv))}
 
@@ -237,7 +368,8 @@ find_cp_1 <- function(full_data_1) {plyr::adply(full_data_1, 1, mutate, cp = cp_
 ### have to split data frame into ones with unique parameter values because cp_1comp takes constants
 split_df_1 <- split(full_data_1, list(full_data_1$Compound,
                                       full_data_1$Reference,
-                                      full_data_1$CAS),
+                                      full_data_1$CAS,
+                                      full_data_1$Species.x),
                     drop = TRUE)
 
 cp_df_1 <- lapply(split_df_1, find_cp_1)
@@ -256,10 +388,10 @@ cp_df_1$type <- "1-Compartment"
 #######################
 
 ### subset to only actual model outputs and discard "Joint Analysis" rows
-pk_data2 <- pk_output_2comp_03012022 %>%
+pk_data2 <- pk_output_2comp_05092022 %>%
   filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis")
 
-raw_data2 <- dplyr::select(raw_2comp_03012022, -c("kelim", 
+raw_data2 <- dplyr::select(raw_2comp_05092022, -c("kelim", 
                                                   "Vdist", 
                                                   "Fgutabs", 
                                                   "kgutabs",
@@ -276,12 +408,13 @@ full_data_2 <- left_join(raw_data2, pk_data2, by = c("Compound", "CAS", "Referen
 full_data_2 <- full_data_2 %>% filter(AIC != Inf)
 split_df_2 <- split(full_data_2, list(full_data_2$Compound,
                                       full_data_2$Reference,
-                                      full_data_2$CAS),
+                                      full_data_2$CAS,
+                                      full_data_2$Species.x),
                     drop = TRUE)
 
 ### function that finds cp
 find_cp_2 <- function(full_data_2) {plyr::adply(full_data_2, 1, mutate, cp = cp_2comp(time = Time,
-                                                                                      params = full_data_2[1,],
+                                                                                      params = full_data_2[1, ],
                                                                                       dose = Dose,
                                                                                       iv.dose = iv))}
 cp_df_2 <- lapply(split_df_2, find_cp_2)
@@ -298,10 +431,12 @@ cp_df_2$type <- "2-Compartment"
 ### this is flat data
 ###########
 
-pk_data_flat <- pk_output_flat_03012022 %>%
-  filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis")
+pk_data_flat <- pk_output_flat_05092022 %>%
+  filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis") %>% 
+  filter(Species != "hamster")
 
-raw_data_flat <- dplyr::select(raw_flat_03012022, -c("A"))
+raw_data_flat <- dplyr::select(raw_flat_05092022, -c("A")) %>% 
+  filter(Species != "hamster")
 
 raw_data_flat$Reference <- as.character(raw_data_flat$Reference)
 
@@ -309,12 +444,13 @@ full_data_flat <- left_join(raw_data_flat, pk_data_flat, by = c("Compound", "CAS
 full_data_flat <- full_data_flat %>% filter(AIC != Inf)
 split_df_flat <- split(full_data_flat, list(full_data_flat$Compound,
                                             full_data_flat$Reference,
-                                            full_data_flat$CAS),
+                                            full_data_flat$CAS,
+                                            full_data_flat$Species.x),
                        drop = TRUE)
 
 ### function that finds cp
 find_cp_flat <- function(full_data_flat) {plyr::adply(full_data_flat, 1, mutate, cp = cp_flat(time = Time,
-                                                                                              params = full_data_flat[1,],
+                                                                                              params = full_data_flat[1, ],
                                                                                               dose = Dose,
                                                                                               iv.dose = iv))}
 cp_df_flat <- lapply(split_df_flat, find_cp_flat)
@@ -338,34 +474,133 @@ cp_df_flat <- cp_df_flat[, intersect(colnames(cp_df), colnames(cp_df))]
 
 cp_df <- rbind(cp_df, cp_df_flat)
 
-cp_df$cp_pred_error <- (cp_df$cp - cp_df$Value) / cp_df$Value
+# cp_df$cp_pred_error <- (cp_df$cp - cp_df$Value) / cp_df$Value
+# 
+# cp_df <- cp_df %>% group_by(Species.x, 
+#                             Compound,
+#                             CAS,
+#                             type) %>%
+#   mutate(cp_pred_error_range = max(cp_pred_error, na.rm = TRUE) - min(cp_pred_error, na.rm = TRUE))
 
-cp_df <- cp_df %>% group_by(Species.x, 
-                            Compound,
-                            CAS,
-                            type) %>%
-  mutate(cp_pred_error_range = max(cp_pred_error, na.rm = TRUE) - min(cp_pred_error, na.rm = TRUE))
+cp_df_05092022 <- cp_df
 
-cp_df_03302022 <- cp_df
-
-save(cp_df_03302022, file = "figures_rdata/cp_df_03302022.Rdata")
+### here is where you save the Rdata file
+save(cp_df_05092022, file = "figures_rdata/cp_df_05092022.Rdata")
 ```
 
 
 ```{r, make_cp_histogram}
 
+### this block makes a histogram of the data output
+# from make_cp_rdata
+# there's a separate facet for each model type
+# only data that were best fitted by that model
+# are shown in that facet
+
 ##################
 ##################
 
-# data <- cp_df_12212021
-data <- cp_df_03012022
+pk_data <- cp_df_05092022
+
+# cvt_data <- cvt_variability_df_04282022
 
 ##################
 ##################
 
-p <- ggplot(data = data,
+row.names(pk_data) <- c()
+full_data <- pk_data
+
+# cvt_data <- dplyr::select(cvt_data, -c("kelim",
+#                                        "Vdist",
+#                                        "Fgutabs",
+#                                        "kgutabs"))
+# 
+# ### split pk_data by model so you can properly join with raw data
+# model_split <- split(pk_data, pk_data$model)
+# 
+# cvt_data$Reference <- as.character(cvt_data$Reference)
+# 
+# cvt_data$type <- "1-Compartment"
+# full_data_1 <- left_join(cvt_data, model_split$`1compartment`)
+# 
+# cvt_data$type <- "2-Compartment"
+# full_data_2 <- left_join(cvt_data, model_split$`2compartment`)
+# 
+# cvt_data$type <- "Flat"
+# full_data_flat <- left_join(cvt_data, model_split$`flat`)
+# 
+# ### put data back together
+# full_data <- rbind(full_data_1, full_data_2, full_data_flat)
+# 
+# full_data <- full_data %>%
+#   filter(cp != 0)
+
+full_data$AIC <- round(full_data$AIC, digits = 4)
+
+### only take necessary columns to keep things clean
+full_data <- full_data %>%
+  distinct(Compound, Reference, Species.x, model, AIC, cp_norm)
+
+### this pivots the data so we have AICs and cp_norms
+# for each model row-wise
+full_data <- full_data %>%
+  group_by(Species.x, Compound, Reference, model) %>%
+  mutate(row = row_number()) %>%
+  pivot_wider(names_from = model,
+              values_from = c(AIC, cp_norm)) %>%
+  dplyr::select(-row)
+
+full_data <- as.data.table(full_data)
+
+### make model column equal a specific model based on AIC values
+full_data <- full_data %>% mutate(model = case_when(AIC_1compartment < AIC_2compartment &
+                                                      AIC_1compartment < AIC_flat ~ "1-Compartment",
+                                                    AIC_2compartment < AIC_1compartment &
+                                                      AIC_2compartment < AIC_flat ~ "2-Compartment",
+                                                    AIC_flat < AIC_1compartment &
+                                                      AIC_flat < AIC_2compartment ~ "Null",
+                                                    
+                                                    !is.na(AIC_1compartment) & is.na(AIC_2compartment) &
+                                                      is.na(AIC_flat) ~ "1-Compartment",
+                                                    !is.na(AIC_2compartment) & is.na(AIC_1compartment) &
+                                                      is.na(AIC_flat) ~ "2-Compartment",
+                                                    !is.na(AIC_flat) & is.na(AIC_1compartment) &
+                                                      is.na(AIC_2compartment) ~ "Null",
+                                                    
+                                                    is.na(AIC_1compartment) &
+                                                      AIC_flat < AIC_2compartment ~ "Null",
+                                                    is.na(AIC_1compartment) &
+                                                      AIC_2compartment < AIC_flat ~ "2-Compartment",
+                                                    is.na(AIC_2compartment) &
+                                                      AIC_flat < AIC_1compartment ~ "Null",
+                                                    is.na(AIC_2compartment) &
+                                                      AIC_1compartment < AIC_flat ~ "1-Compartment",
+                                                    is.na(AIC_flat) &
+                                                      AIC_1compartment < AIC_2compartment ~"1-Compartment",
+                                                    is.na(AIC_flat) &
+                                                      AIC_2compartment <AIC_1compartment ~"2-Compartment"))
+
+### make cp_norm equal to the cp_norm that corresponds to the best fitting model
+full_data <- full_data %>%
+  mutate(cp_norm = case_when(model == "1-Compartment" ~ cp_norm_1compartment,
+                             model == "2-Compartment" ~ cp_norm_2compartment,
+                             model == "Null" ~ cp_norm_flat))
+
+full_data[, model := paste("Model:", model)]
+
+### this creates a new column that says how many unique sets of Compound, Reference,
+# and Species correspond to each model
+full_data[, chem_ref_spec_count := uniqueN(.SD), .SDcols = c("Compound", 
+                                                             "Reference",
+                                                             "Species.x"), 
+          by = "model"]
+
+full_data[, chem_ref_spec_count := paste("Chemical-Reference-Species:", chem_ref_spec_count)]
+
+### make plot, facet by model and chem_ref_spec_count
+p <- ggplot(data = full_data,
             mapping = aes(x = cp_norm)) +
-  geom_histogram(bins = 30) +
+  geom_histogram(binwidth = 0.325) +
   geom_vline(xintercept = c(0.5, 2),
              color = "Red",
              linetype = "dashed") +
@@ -375,22 +610,28 @@ p <- ggplot(data = data,
   theme(title = element_text(size = 16),
         axis.text = element_text(size = 12),
         axis.title = element_text(size = 14)) +
-  scale_x_log10(limits = c(0.01, 1000)) +
+  # scale_x_log10() +
+  scale_x_log10(limits = c(1e-3, 1e3), labels = scientific) +
+  scale_y_continuous(labels = scientific) +
   theme_bw() +
   labs(x = "Predicted/Observed",
        y = "Number of Observations") +
-  facet_wrap(. ~ type)
+  facet_wrap(. ~ model + chem_ref_spec_count) 
 
 p
 ```
 
 ```{r, make_cp_error_histogram}
 
+### I think this is little outdated but whatever I'm gonna keep it here
+# Think is was just plotting Cpred - Cobs
+
 ##################
 ##################
 
 # data <- cp_df_12212021
-data <- cp_df_03012022
+# data <- cp_df_03012022
+data <- cp_df_04282022
 
 ##################
 ##################
@@ -412,10 +653,13 @@ p
 
 ```{r, make_cp_error_versus_dose}
 
+### I think this is little outdated but whatever I'm gonna keep it here
+
+
 ##################
 ##################
 
-data <- cp_df_03012022
+data <- cp_df_04282022
 
 ##################
 ##################
@@ -438,10 +682,18 @@ p
 
 ```{r, make_cvt_variability_rdata, eval = FALSE}
 
+### this block creates a data.frame that shows the 
+# spread of CvT data via across replicate timepoints 
+# for a single experiment
+# if the data isn't within 2-fold of itself
+# is it reasonable to say that a model should fit within 2-fold?
+
 ##################
 ##################
 
-data <- as.data.table(raw_1comp_03012022)
+### all the raw data for each model SHOULD be the same
+# so only need to use one
+data <- as.data.table(raw_1comp_05092022)
 
 ##################
 ##################
@@ -489,6 +741,8 @@ find_mean_conc <- function(data) {
   }
 }
 
+### this for loop applies the function 
+# at data subsets of compound, data, dose, route, media
 data.list <- list()
 for(this.compound in unique(data[, Compound])) {
   this.compound.data <- data[Compound == this.compound]
@@ -514,17 +768,22 @@ for(this.compound in unique(data[, Compound])) {
 }
 
 ### combine data.tables back into one large data.set
-cvt_variability_df_03012022 <- do.call(rbind, data.list)
+cvt_variability_df_05092022 <- do.call(rbind, data.list)
 
-save(cvt_variability_df_03012022, file = "figures_rdata/cvt_variability_df_03012022.Rdata")
+### SAVE the data
+save(cvt_variability_df_05092022, file = "figures_rdata/cvt_variability_df_05092022.Rdata")
 ```
 
 ```{r, make_cvt_variability_histogram}
 
+### this block makes the histogram
+# of cvt variability using the data.frame
+# made from make_cvt_variability_rdata
+
 #################
 #################
 
-data <- cvt_variability_df_03012022
+data <- cvt_variability_df_05092022
 # data <- cvt_variability_df_12212021
 
 #################
@@ -544,19 +803,30 @@ p
 
 ```{r, make_density_plot}
 
+### this block makes a density plot with cvt variabity
+# and normalized predicted concentrations
+# it's basically a combination of the other two histograms
+# expect here we limit cp observations those that have replicate timepoint
+# data, so it matches the cvt variability data, thus making it 
+# comparable
+
 ##################
 ##################
 
 # pk_data <- cp_df_03012022
-pk_data <- cp_df_03302022
+pk_data <- cp_df_05092022
 
-cvt_data <- cvt_variability_df_03012022
+cvt_data <- cvt_variability_df_05092022
 
 ##################
 ##################
 
+### i hate row names
 row.names(pk_data) <- c()
 
+### making these null so I don't have to deal
+# with duplicate .x and .y's
+# only need the ones from pk_data
 cvt_data <- dplyr::select(cvt_data, -c("kelim", 
                                        "Vdist", 
                                        "Fgutabs", 
@@ -565,6 +835,8 @@ cvt_data <- dplyr::select(cvt_data, -c("kelim",
 ### split pk_data by model so you can properly join with raw data
 model_split <- split(pk_data, pk_data$model)
 
+### References were of different classes for some reason
+# so had to change
 cvt_data$Reference <- as.character(cvt_data$Reference)
 
 cvt_data$type <- "1-Compartment"
@@ -579,51 +851,77 @@ full_data_flat <- left_join(cvt_data, model_split$`flat`)
 ### put data back together
 full_data <- rbind(full_data_1, full_data_2, full_data_flat)
 
+### not sure why there were 0s,
+# but they were screwing things up
 full_data <- full_data %>%
   filter(cp != 0)
 
 full_data$AIC <- round(full_data$AIC, digits = 4)
 
 full_data <- full_data %>%
-  distinct(Compound, Reference, model, conc_norm, AIC, cp_norm)
+  distinct(Compound, Reference, model, Species.x, conc_norm, AIC, cp_norm)
 
 ### 
+### 
 full_data <- full_data %>%
+  group_by(Species.x, Compound, Reference, model) %>%
+  mutate(row = row_number()) %>%
   pivot_wider(names_from = model,
               values_from = c(AIC, cp_norm)) %>%
-  unchop(everything()) 
+  dplyr::select(-row)
 
 full_data <- full_data %>% mutate(model = case_when(AIC_1compartment < AIC_2compartment & 
-                                                      AIC_1compartment < AIC_flat ~ "1compartment",
+                                                      AIC_1compartment < AIC_flat ~ "1-Compartment",
                                                     AIC_2compartment < AIC_1compartment &
-                                                      AIC_2compartment < AIC_flat ~ "2compartment",
+                                                      AIC_2compartment < AIC_flat ~ "2-Compartment",
                                                     AIC_flat < AIC_1compartment &
-                                                      AIC_flat < AIC_2compartment ~ "flat",
+                                                      AIC_flat < AIC_2compartment ~ "Null",
                                                     
                                                     !is.na(AIC_1compartment) & is.na(AIC_2compartment) &
-                                                      is.na(AIC_flat) ~ "1compartment",
+                                                      is.na(AIC_flat) ~ "1-Compartment",
                                                     !is.na(AIC_2compartment) & is.na(AIC_1compartment) & 
-                                                      is.na(AIC_flat) ~ "2compartment",
+                                                      is.na(AIC_flat) ~ "2-Compartment",
                                                     !is.na(AIC_flat) & is.na(AIC_1compartment) & 
-                                                      is.na(AIC_2compartment) ~ "flat",
+                                                      is.na(AIC_2compartment) ~ "Null",
                                                     
                                                     is.na(AIC_1compartment) &
-                                                      AIC_flat < AIC_2compartment ~ "flat",
+                                                      AIC_flat < AIC_2compartment ~ "Null",
                                                     is.na(AIC_1compartment) &
-                                                      AIC_2compartment < AIC_flat ~ "2compartment",
+                                                      AIC_2compartment < AIC_flat ~ "2-Compartment",
                                                     is.na(AIC_2compartment) &
-                                                      AIC_flat < AIC_1compartment ~ "flat",
+                                                      AIC_flat < AIC_1compartment ~ "Null",
                                                     is.na(AIC_2compartment) &
-                                                      AIC_1compartment < AIC_flat ~ "1compartment",
+                                                      AIC_1compartment < AIC_flat ~ "1-Compartment",
                                                     is.na(AIC_flat) &
-                                                      AIC_1compartment < AIC_2compartment ~"1compartment",
+                                                      AIC_1compartment < AIC_2compartment ~"1-Compartment",
                                                     is.na(AIC_flat) &
-                                                      AIC_2compartment <AIC_1compartment ~"2compartment"))
+                                                      AIC_2compartment <AIC_1compartment ~"2-Compartment"))
 
 full_data <- full_data %>%
-  mutate(cp_norm = case_when(model == "1compartment" ~ cp_norm_1compartment,
-                             model == "2compartment" ~ cp_norm_2compartment,
-                             model == "flat" ~ cp_norm_flat))
+  mutate(cp_norm = case_when(model == "1-Compartment" ~ cp_norm_1compartment,
+                             model == "2-Compartment" ~ cp_norm_2compartment,
+                             model == "Null" ~ cp_norm_flat))
+
+### remove super outlier data from triclosan, for visualization purposes
+full_data <- full_data %>%
+  filter(cp_norm > 1e-10 & cp_norm < 1e8) # also high one for the heck of it
+
+length(unique(full_data$Compound[full_data$model == "1-Compartment"]))
+length(unique(full_data$Compound[full_data$model == "2-Compartment"]))
+length(unique(full_data$Compound[full_data$model == "Null"]))
+
+null_vec <- as.vector(unique(full_data$Compound[full_data$model == "Null"]))
+
+full_data <- as.data.table(full_data)
+
+full_data[, model := paste("Model:", model)]
+
+full_data[, chem_ref_spec_count := uniqueN(.SD), .SDcols = c("Compound", 
+                                                             "Reference",
+                                                             "Species.x"), 
+          by = "model"]
+
+full_data[, chem_ref_spec_count := paste("Chemical-Reference-Species:", chem_ref_spec_count)]
 
 # full_data <- full_data %>%
 #   mutate(cp_norm = case_when(model == "1comparment" ~ cp_norm_1compartment,
@@ -644,7 +942,7 @@ full_data <- full_data %>%
 
 split_full_data <- split(full_data, full_data$model)
 
-full_data_1 <- split_full_data$`1compartment`
+full_data_1 <- split_full_data$`Model: 1-Compartment`
 
 ### Find number of points in each plot panel for 1-compartment
 full_data_1_center <- full_data_1 %>% filter(conc_norm >= 0.5 & conc_norm <= 2)
@@ -666,7 +964,7 @@ ratio_1_tan <- nrow(full_data_1_tan) / nrow(full_data_1 %>% filter(!is.na(cp_nor
 ###########
 ###########
 
-full_data_2 <- split_full_data$`2compartment`
+full_data_2 <- split_full_data$`Model: 2-Compartment`
 
 ### Find number of points in each plot panel for 2-compartment
 full_data_2_center <- full_data_2 %>% filter(conc_norm >= 0.5 & conc_norm <= 2)
@@ -688,7 +986,7 @@ ratio_2_tan <- nrow(full_data_2_tan) / nrow(full_data_2 %>% filter(!is.na(cp_nor
 ###########
 ###########
 
-full_data_flat <- split_full_data$`flat`
+full_data_flat <- split_full_data$`Model: Null`
 
 ### Find number of points in each plot panel for 2-compartment
 full_data_flat_center <- full_data_flat %>% filter(conc_norm >= 0.5 & conc_norm <= 2)
@@ -840,11 +1138,12 @@ p <- ggplot(data = full_data,
              linetype = "dashed") +
   geom_hline(yintercept = c(0.5, 2),
              linetype = "dashed") +
-  scale_x_log10() +
+  scale_x_log10(n.breaks = 4, labels = scientific) +
   scale_y_log10() +
   labs(x = "Data Variability",
        y = "Model Performance") +
-  facet_wrap(. ~ model)
+  facet_wrap(. ~ model + chem_ref_spec_count) +
+  theme(strip.text.x = element_text(size = 7))
 
 p
 
@@ -859,30 +1158,144 @@ p
 
 ```{r, make_sigma_distribution_histogram}
 
-##################
-##################
+# pk_data <- cp_df_03012022
+pk_data <- cp_df_04282022
 
-data1 <- pk_output_1comp_03012022 %>%
-  filter(param.value.type == "Fitted geometric mean" & AIC != Inf & Data.Analyzed != "Joint Analysis")
-
-data2 <- pk_output_2comp_03012022 %>%
-  filter(param.value.type == "Fitted geometric mean" & AIC != Inf & Data.Analyzed != "Joint Analysis")
+cvt_data <- cvt_variability_df_04282022
 
 ##################
 ##################
 
-### assign new column, with either "1-Compartment" or "2-Compartment"
-data1 <- subset(data1, select = sigma_value)
-data1$model <- "1-Compartment"
+row.names(pk_data) <- c()
 
-data2 <- subset(data2, select = sigma_value)
-data2$model <- "2-Compartment"
+cvt_data <- dplyr::select(cvt_data, -c("kelim", 
+                                       "Vdist", 
+                                       "Fgutabs", 
+                                       "kgutabs"))
 
-data <- rbind(data1, data2)
+### split pk_data by model so you can properly join with raw data
+model_split <- split(pk_data, pk_data$model)
 
-p <- ggplot(data = data,
-            mapping = aes(x = sigma_value)) +
-  geom_histogram(bins = 15) +
+cvt_data$Reference <- as.character(cvt_data$Reference)
+
+cvt_data$type <- "1-Compartment"
+full_data_1 <- left_join(cvt_data, model_split$`1compartment`)
+
+cvt_data$type <- "2-Compartment"
+full_data_2 <- left_join(cvt_data, model_split$`2compartment`)
+
+cvt_data$type <- "Flat"
+full_data_flat <- left_join(cvt_data, model_split$`flat`)
+
+### put data back together
+full_data <- rbind(full_data_1, full_data_2, full_data_flat)
+
+full_data <- full_data %>%
+  filter(cp != 0)
+
+# full_data$AIC <- round(full_data$AIC, digits = 4)
+
+full_data <- full_data %>%
+  pivot_wider(names_from = model,
+              values_from = c(AIC, sigma_value)) %>%
+  unchop(everything()) 
+
+full_data <- full_data %>% mutate(model = case_when(AIC_1compartment < AIC_2compartment & 
+                                                      AIC_1compartment < AIC_flat ~ "1-Compartment",
+                                                    AIC_2compartment < AIC_1compartment &
+                                                      AIC_2compartment < AIC_flat ~ "2-Compartment",
+                                                    AIC_flat < AIC_1compartment &
+                                                      AIC_flat < AIC_2compartment ~ "Null",
+                                                    
+                                                    !is.na(AIC_1compartment) & is.na(AIC_2compartment) &
+                                                      is.na(AIC_flat) ~ "1-Compartment",
+                                                    !is.na(AIC_2compartment) & is.na(AIC_1compartment) & 
+                                                      is.na(AIC_flat) ~ "2-Compartment",
+                                                    !is.na(AIC_flat) & is.na(AIC_1compartment) & 
+                                                      is.na(AIC_2compartment) ~ "Null",
+                                                    
+                                                    is.na(AIC_1compartment) &
+                                                      AIC_flat < AIC_2compartment ~ "Null",
+                                                    is.na(AIC_1compartment) &
+                                                      AIC_2compartment < AIC_flat ~ "2-Compartment",
+                                                    is.na(AIC_2compartment) &
+                                                      AIC_flat < AIC_1compartment ~ "Null",
+                                                    is.na(AIC_2compartment) &
+                                                      AIC_1compartment < AIC_flat ~ "1-Compartment",
+                                                    is.na(AIC_flat) &
+                                                      AIC_1compartment < AIC_2compartment ~"1-Compartment",
+                                                    is.na(AIC_flat) &
+                                                      AIC_2compartment <AIC_1compartment ~"2-Compartment"))
+
+full_data <- full_data %>%
+  mutate(AIC = case_when(model == "1-Compartment" ~ AIC_1compartment,
+                         model == "2-Compartment" ~ AIC_2compartment,
+                         model == "Null" ~ AIC_flat))
+
+full_data <- full_data %>%
+  mutate(sigma_value = case_when(model == "1-Compartment" ~ sigma_value_1compartment,
+                                 model == "2-Compartment" ~ sigma_value_2compartment,
+                                 model == "Null" ~ sigma_value_flat))
+
+full_data <- full_data %>%
+  distinct(Compound, 
+           Reference, 
+           Route, 
+           Species,
+           Media,
+           model, 
+           sigma_id,
+           sigma_value,
+           Value,
+           AIC)
+
+full_data <- as.data.table(full_data)
+
+full_data[, sigma_norm := sigma_value / nrow(.SD), by = .(Compound, 
+                                                          Reference,
+                                                          model,
+                                                          sigma_id,
+                                                          sigma_value)]
+
+full_data <- as.data.frame(full_data)
+
+full_data <- full_data %>% distinct(Compound,
+                                    Reference,
+                                    model,
+                                    AIC,
+                                    sigma_id,
+                                    sigma_value,
+                                    sigma_norm)
+
+full_data <- full_data %>%
+  group_by(Compound, Reference, sigma_id) %>%
+  slice_min(AIC)
+
+
+# ##################
+# ##################
+# 
+# data1 <- pk_output_1comp_03012022 %>%
+#   filter(param.value.type == "Fitted geometric mean" & AIC != Inf & Data.Analyzed != "Joint Analysis")
+# 
+# data2 <- pk_output_2comp_03012022 %>%
+#   filter(param.value.type == "Fitted geometric mean" & AIC != Inf & Data.Analyzed != "Joint Analysis")
+# 
+# ##################
+# ##################
+# 
+# ### assign new column, with either "1-Compartment" or "2-Compartment"
+# data1 <- subset(data1, select = sigma_value)
+# data1$model <- "1-Compartment"
+# 
+# data2 <- subset(data2, select = sigma_value)
+# data2$model <- "2-Compartment"
+# 
+# data <- rbind(data1, data2)
+
+p <- ggplot(data = full_data,
+            mapping = aes(x = sigma_norm)) +
+  geom_histogram(bins = 12) +
   # geom_density() +
   # scale_y_log10()+
   scale_x_log10() +
@@ -890,7 +1303,7 @@ p <- ggplot(data = data,
   labs(x = "Sigma",
        y = "Number of observations") +
   facet_wrap(.~ model)
-  # geom_vline(xintercept = 0.001476315)
+# geom_vline(xintercept = 0.001476315)
 # stat_function(fun = dlnorm, args = list(mean = mean(log(data$sigma_value)), sd = sd(log(data$sigma_value))))
 
 p
@@ -901,7 +1314,7 @@ p
 ##################
 ##################
 
-data <- raw_1comp_03012022
+data <- raw_1comp_04282022
 
 ##################
 ##################
@@ -947,10 +1360,10 @@ p
 ##################
 ##################
 
-data1 <- as.data.table(pk_output_1comp_03012022 %>%
+data1 <- as.data.table(pk_output_1comp_04282022 %>%
                          filter(param.value.type == "Fitted geometric mean"))
 
-data2 <- as.data.table(pk_output_2comp_03012022 %>%
+data2 <- as.data.table(pk_output_2comp_04282022 %>%
                          filter(param.value.type == "Fitted geometric mean"))
 
 ##################
@@ -1011,12 +1424,12 @@ p
 ##################
 ##################
 
-raw_data1 <- raw_1comp_03012022
+raw_data1 <- raw_1comp_04282022
 
 ##################
 ##################
 
-pk_data1 <- pk_output_1comp_03012022 %>% 
+pk_data1 <- pk_output_1comp_04282022 %>% 
   filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis")
 
 pk_data1$X <- NULL
@@ -1082,9 +1495,9 @@ full_data_1_hl$model <- "1-Compartment"
 ##################
 ##################
 
-raw_data2 <- raw_2comp_03012022
+raw_data2 <- raw_2comp_04282022
 
-pk_data2 <- pk_output_2comp_03012022 %>% 
+pk_data2 <- pk_output_2comp_04282022 %>% 
   filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis")
 
 ##################
@@ -1173,7 +1586,7 @@ p
 ###############
 ###############
 
-raw_data1 <- raw_1comp_03012022
+raw_data1 <- raw_1comp_04282022
 
 ###############
 ###############
@@ -1225,7 +1638,7 @@ p
 ###############
 ###############
 
-raw_data1 <- raw_1comp_03012022
+raw_data1 <- raw_1comp_04282022
 
 ###############
 ###############
@@ -1281,11 +1694,11 @@ p
 ###################
 ###################
 
-pk_data1 <- pk_output_1comp_03012022 
-pk_data1 <- pk_output_1comp_12212021 
+pk_data1 <- pk_output_1comp_04282022 
+# pk_data1 <- pk_output_1comp_12212021 
 
-pk_data2 <- pk_output_2comp_03012022
-pk_data2 <- pk_output_2comp_12212021 
+pk_data2 <- pk_output_2comp_04282022 
+# pk_data2 <- pk_output_2comp_12212021 
 
 ###################
 ###################
@@ -1305,8 +1718,11 @@ fits2comp <- subset(pk_data2, is.finite(AIC) & AIC < 10^4)
 length(unique(c(fits1comp$CAS,fits2comp$CAS)))
 
 fittable <- NULL
+# test <- function(fits1comp, fits2comp) {
 for (this.cas in unique(c(fits1comp$CAS,fits2comp$CAS)))
-{
+{ 
+  # print(this.cas)
+  # if (this.cas == "123-91-1") browser()
   if (this.cas %in% fits1comp$CAS) this.compound <- fits1comp[
     fits1comp$CAS==this.cas,"Compound"][1]
   else this.compound <- fits2comp[
@@ -1351,6 +1767,10 @@ for (this.cas in unique(c(fits1comp$CAS,fits2comp$CAS)))
       }
       if (dim(this.data.1comp.species)[1]>0) 
       {
+        if (nrow(this.data.1comp.species) > 1) {
+          this.data.1comp.species <- this.data.1comp.species[1, ]
+        }
+        
         this.row$AIC.1comp <- this.data.1comp.species$AIC
         Vdist.1comp <- this.data.1comp.species$Vdist
         kelim.1comp <- this.data.1comp.species$kelim
@@ -1371,6 +1791,9 @@ for (this.cas in unique(c(fits1comp$CAS,fits2comp$CAS)))
       }
       if (dim(this.data.2comp.species)[1]>0) 
       {
+        if(nrow(this.data.2comp.species) > 1 ) {
+          this.data.2comp.species <- this.data.2comp.species[1, ]
+        }
         this.row$AIC.2comp <- this.data.2comp.species$AIC
         Vdist.2comp <- this.data.2comp.species$Vss
         kelim.2comp <- this.data.2comp.species$kelim
@@ -1406,6 +1829,9 @@ for (this.cas in unique(c(fits1comp$CAS,fits2comp$CAS)))
     fittable <- rbind(fittable,this.row)
   }
 }
+
+# debug(test)
+# test(fits1comp, fits2comp)
 fittable$halflife <- log(2)/fittable$kelim
 
 #Lets only keep chemicals where we can fit a PK model:
@@ -1417,7 +1843,26 @@ for (this.col in c("AIC.1comp","AIC.2comp","Vdist","kelim","halflife"))
 # We have parameters estimated for 86 chemicals:
 dim(fittable)[1]
 
-write.csv(fittable, file = "inst/ext/model_params_table_03012022.csv", row.names = FALSE)
+### compounds fit better by flat model should be removed
+# if present in fittable
+### some are only fit by the flat model,
+# but some are fit just fit better by the flat model
+
+# these are
+# hexachlorobenzene -- nevermind, for the joint 1comp does best
+# phenolphthalein glucuronide
+# tamoxifen
+# 2,3,7,8-tetrachlorodibenzo-p-dioxin
+# imidacloprid", # well this one is only fit by the flat,
+# so isn't present anyway
+
+### when I take these out, 48 1 compartment best fits, 59 2 compartment, 107 total
+
+### I also manually checked all Joint Analysis compounds 
+# to make sure no joint flat models performed better
+# none did
+
+# write.csv(fittable, file = "inst/ext/model_params_table_04182022.csv", row.names = FALSE)
 
 ```
 
@@ -1426,8 +1871,8 @@ write.csv(fittable, file = "inst/ext/model_params_table_03012022.csv", row.names
 ##################
 ##################
 
-pk_data1 <- as.data.table(pk_output_1comp_03012022)
-pk_data2 <- as.data.table(pk_output_2comp_03012022)
+pk_data1 <- as.data.table(pk_output_1comp_04282022)
+pk_data2 <- as.data.table(pk_output_2comp_04282022)
 
 ##################
 ##################
@@ -1478,11 +1923,11 @@ pk_all <- pk_all %>%
 ##################
 ##################
 
-pk_data1 <- pk_output_1comp_03012022
+pk_data1 <- pk_output_1comp_04282022
 
-pk_data2 <- pk_output_2comp_03012022
+pk_data2 <- pk_output_2comp_04282022
 
-pk_data_flat <- pk_output_flat_03012022 %>%
+pk_data_flat <- pk_output_flat_04282022 %>%
   filter(param.value.type == "Predicted" | param.value.type == "Fitted geometric mean" | param.value.type == "Fitted geometric std dev")
 
 ##################
@@ -1544,7 +1989,7 @@ pk_all <- pk_all %>%
   mutate(flat_better_than_2 = ifelse(AIC_flat > AIC_1 & AIC_flat < AIC_2, 1, 0))
 
 pk_just_bad <- pk_all %>%
-  filter(flat_lowest == 1 | flat_better_than_1 == 1 | flat_better_than_2)
+  filter(flat_lowest == 1 | flat_better_than_1 == 1 | flat_better_than_2 == 1)
 ```
 
 ```{r, lombardo_comparisons}
@@ -1552,7 +1997,11 @@ pk_just_bad <- pk_all %>%
 ##################
 ##################
 
-pk_data1 <- pk_output_1comp_03012022
+pk_data1 <- pk_output_1comp_05092022
+# pk_data1 <- pk_output_1comp_04282022
+
+
+# pk_data1$Vdist <- log(pk_data1$Vdist)
 
 pk_lombardo <- pk_lombardo
 
@@ -1560,7 +2009,9 @@ pk_lombardo <- pk_lombardo
 ##################
 
 pk_data1 <- pk_data1 %>%
-  filter(param.value.type == "Fitted geometric mean", Species == "human")
+  filter(param.value.type == "Fitted geometric mean")
+         # , CAS != "50-49-7", CAS != "106266-06-2")
+# , Species == "human")
 
 pk_all <- left_join(pk_data1, pk_lombardo, by = c("CAS" = "CAS #"))
 
@@ -1568,10 +2019,20 @@ pk_all <- pk_all %>%
   filter(!is.na(`human VDss (L/kg)`), 
          !is.na(`human CL (mL/min/kg)`))
 
+pk_all$`human CL (L/hr/kg)` <- pk_all$`human CL (mL/min/kg)` * 60 / 1000
+
+pk_all$Vdist_norm <- abs(pk_all$Vdist / pk_all$`human VDss (L/kg)`)
+pk_all$CLtot_norm <- abs(pk_all$CLtot / pk_all$`human CL (L/hr/kg)`)
+pk_all$halflife_norm <- abs(pk_all$halflife / pk_all$`terminal  t1/2 (h)`)
+
+pk_all$mae <- rowMeans(pk_all[, c("Vdist_norm", "CLtot_norm", "halflife_norm")])
+
+
 ### volume of distribution comparison
 p1 <- ggplot(pk_all, aes(x = Vdist, y = `human VDss (L/kg)`)) +
   geom_point() +
   scale_x_log10() +
+  scale_y_log10() +
   geom_abline(slope = 1, intercept = 0)
 
 p1
@@ -1579,6 +2040,8 @@ p1
 ### half-life comparision
 p2 <- ggplot(pk_all, aes(x = halflife, y = `terminal  t1/2 (h)`)) +
   geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
   geom_abline(slope = 1, intercept = 0)
 
 p2
@@ -1586,11 +2049,11 @@ p2
 ### clearance comparison
 
 ### convert to same units
-pk_all$`human CL (L/hr/kg)` <- pk_all$`human CL (mL/min/kg)` * 60 / 1000
 
 p3 <- ggplot(data = pk_all, mapping = aes(x = CLtot, y = `human CL (L/hr/kg)`)) +
   geom_point() +
   scale_x_log10() +
+  scale_y_log10() +
   geom_abline(slope = 1, intercept = 0)
 
 p3
@@ -1598,7 +2061,214 @@ p3
 
 ```
 
-
+<!-- # ```{r, make_model_params_table, eval = FALSE} -->
+<!-- #  -->
+<!-- # ### this code almost entirely is imported from John's bake-off RMarkdown file -->
+<!-- # ### what this produces is a table of compounds that were fit by at least one of the models -->
+<!-- # ### AICs for both models are reported, and subsequent parameter values correspond to the model with the lower AIC -->
+<!-- #  -->
+<!-- # ################### -->
+<!-- # ################### -->
+<!-- #  -->
+<!-- # pk_data1 <- pk_output_1comp_04142022  -->
+<!-- # # pk_data1 <- pk_output_1comp_12212021  -->
+<!-- #  -->
+<!-- # pk_data2 <- pk_output_2comp_04142022  -->
+<!-- # # pk_data2 <- pk_output_2comp_12212021  -->
+<!-- #  -->
+<!-- # pk_data_flat <- pk_output_flat_04142022 -->
+<!-- #  -->
+<!-- # ################### -->
+<!-- # ################### -->
+<!-- #  -->
+<!-- # pk_data1$sigma_id <- NULL -->
+<!-- # pk_data1$sigma_value <- NULL -->
+<!-- # pk_data2$sigma_id <- NULL -->
+<!-- # pk_data2$sigma_value <- NULL -->
+<!-- # pk_data_flat$sigma_id <- NULL -->
+<!-- # pk_data_flat$sigma_value <- NULL -->
+<!-- #  -->
+<!-- # pk_data1 <- distinct(pk_data1) -->
+<!-- # pk_data2 <- distinct(pk_data2) -->
+<!-- # pk_data_flat <- distinct(pk_data_flat) -->
+<!-- #  -->
+<!-- # fits1comp <- subset(pk_data1, is.finite(AIC) & AIC < 10^4) -->
+<!-- # fits2comp <- subset(pk_data2, is.finite(AIC) & AIC < 10^4) -->
+<!-- # fitsflat <- subset(pk_data_flat, is.finite(AIC) & AIC < 10^4) -->
+<!-- #  -->
+<!-- # #How many chemicals have 1 or 2 compartment fits: -->
+<!-- # length(unique(c(fits1comp$CAS,fits2comp$CAS,fitsflat$CAS))) -->
+<!-- #  -->
+<!-- # fittable <- NULL -->
+<!-- # # test <- function(fits1comp, fits2comp, fitsflat) { -->
+<!-- #   for (this.cas in unique(c(fits1comp$CAS,fits2comp$CAS, fitsflat$CAS))) -->
+<!-- #   { print(this.cas) -->
+<!-- #     # if (this.cas == "96-47-9") browser() -->
+<!-- #     if (this.cas %in% fits1comp$CAS) this.compound <- fits1comp[ -->
+<!-- #       fits1comp$CAS==this.cas,"Compound"][1] -->
+<!-- #     else if (this.cas %in% fits2comp$CAS) this.compound <- fits2comp[ -->
+<!-- #       fits2comp$CAS==this.cas,"Compound"][1] -->
+<!-- #     else if (this.cas %in% fitsflat$CAS) this.compound <- fitsflat[ -->
+<!-- #       fitsflat$CAS==this.cas,"Compound"][1] -->
+<!-- #      -->
+<!-- #     this.data.1comp <- subset(fits1comp,CAS==this.cas) -->
+<!-- #     this.data.2comp <- subset(fits2comp,CAS==this.cas) -->
+<!-- #     this.data.flat <- subset(fitsflat,CAS==this.cas) -->
+<!-- #      -->
+<!-- #     for (this.species in unique(tolower(c( -->
+<!-- #       this.data.1comp$Species, -->
+<!-- #       this.data.2comp$Species, -->
+<!-- #       this.data.flat$Species)))) -->
+<!-- #     { -->
+<!-- #       Vdist.1comp <- NA -->
+<!-- #       kelim.1comp <- NA -->
+<!-- #       Vdist.2comp <- NA -->
+<!-- #       kelim.2comp <- NA -->
+<!-- #       A.flat <- NA -->
+<!-- #        -->
+<!-- #       this.data.1comp.species <- subset(this.data.1comp,tolower(Species)==this.species) -->
+<!-- #       this.data.2comp.species <- subset(this.data.2comp,tolower(Species)==this.species) -->
+<!-- #       this.data.flat.species <- subset(this.data.flat, tolower(Species)==this.species) -->
+<!-- #        -->
+<!-- #       this.row <- data.frame( -->
+<!-- #         Compound=this.compound, -->
+<!-- #         CAS=this.cas, -->
+<!-- #         Species=this.species, -->
+<!-- #         Reference=NA, -->
+<!-- #         AIC.1comp=NA, -->
+<!-- #         AIC.2comp=NA, -->
+<!-- #         Model=NA, -->
+<!-- #         Vdist=NA, -->
+<!-- #         kelim=NA) -->
+<!-- #        -->
+<!-- #       if (this.cas %in% fits1comp$CAS) -->
+<!-- #       { -->
+<!-- #         this.data.1comp.species <- subset(this.data.1comp.species, -->
+<!-- #                                           param.value.type=="Fitted geometric mean") -->
+<!-- #          -->
+<!-- #         # If more than one source, require that the joint analysis worked: -->
+<!-- #         if (dim(this.data.1comp.species)[1]>1) -->
+<!-- #         { -->
+<!-- #           this.data.1comp.species<- subset(this.data.1comp.species,  -->
+<!-- #                                            Data.Analyzed=="Joint Analysis") -->
+<!-- #         } -->
+<!-- #         if (dim(this.data.1comp.species)[1]>0)  -->
+<!-- #         { -->
+<!-- #           if (nrow(this.data.1comp.species) > 1) { -->
+<!-- #             this.data.1comp.species <- this.data.1comp.species[1, ] -->
+<!-- #           } -->
+<!-- #            -->
+<!-- #           this.row$AIC.1comp <- this.data.1comp.species$AIC -->
+<!-- #           Vdist.1comp <- this.data.1comp.species$Vdist -->
+<!-- #           kelim.1comp <- this.data.1comp.species$kelim -->
+<!-- #           this.row$Reference <- this.data.1comp.species$Reference -->
+<!-- #         } -->
+<!-- #       } -->
+<!-- #        -->
+<!-- #       if (this.cas %in% fits2comp$CAS) -->
+<!-- #       { -->
+<!-- #         this.data.2comp.species <- subset(this.data.2comp.species, -->
+<!-- #                                           param.value.type=="Fitted geometric mean") -->
+<!-- #          -->
+<!-- #         # If more than one source, require that the joint analysis worked: -->
+<!-- #         if (dim(this.data.2comp.species)[1]>1) -->
+<!-- #         { -->
+<!-- #           this.data.2comp.species <- subset(this.data.2comp.species,  -->
+<!-- #                                             Data.Analyzed=="Joint Analysis") -->
+<!-- #         } -->
+<!-- #         if (dim(this.data.2comp.species)[1]>0)  -->
+<!-- #         { -->
+<!-- #           if(nrow(this.data.2comp.species) > 1 ) { -->
+<!-- #             this.data.2comp.species <- this.data.2comp.species[1, ] -->
+<!-- #           } -->
+<!-- #           this.row$AIC.2comp <- this.data.2comp.species$AIC -->
+<!-- #           Vdist.2comp <- this.data.2comp.species$Vss -->
+<!-- #           kelim.2comp <- this.data.2comp.species$kelim -->
+<!-- #           this.row$Reference <- this.data.2comp.species$Reference -->
+<!-- #         } -->
+<!-- #       } -->
+<!-- #        -->
+<!-- #       if (this.cas %in% fitsflat$CAS) -->
+<!-- #       { -->
+<!-- #         this.data.flat.species <- subset(this.data.flat.species, -->
+<!-- #                                          param.value.type=="Fitted geometric mean") -->
+<!-- #          -->
+<!-- #         # If more than one source, require that the joint analysis worked: -->
+<!-- #         if (dim(this.data.flat.species)[1]>1) -->
+<!-- #         { -->
+<!-- #           this.data.flat.species <- subset(this.data.flat.species,  -->
+<!-- #                                            Data.Analyzed=="Joint Analysis") -->
+<!-- #         } -->
+<!-- #         if (dim(this.data.flat.species)[1]>0)  -->
+<!-- #         { -->
+<!-- #           if(nrow(this.data.flat.species) > 1 ) { -->
+<!-- #             this.data.flat.species <- this.data.flat.species[1, ] -->
+<!-- #           } -->
+<!-- #           this.row$AIC.flat <- this.data.flat.species$AIC -->
+<!-- #           A.flat <- this.data.flat.species$A -->
+<!-- #           this.row$Reference <- this.data.flat.species$Reference -->
+<!-- #         } -->
+<!-- #       } -->
+<!-- #       ######################## -->
+<!-- #       ######################### -->
+<!-- #        -->
+<!-- #       if(!"AIC.flat" %in% names(this.row)) this.row <- this.row %>%  -->
+<!-- #         add_column(AIC.flat = NA) -->
+<!-- #        -->
+<!-- #       if(!"AIC.1comp" %in% names(this.row)) this.row <- this.row %>%  -->
+<!-- #         add_column(AIC.1comp = NA) -->
+<!-- #        -->
+<!-- #       if(!"AIC.2comp" %in% names(this.row)) this.row <- this.row %>%  -->
+<!-- #         add_column(AIC.2comp = NA) -->
+<!-- #        -->
+<!-- #       this.row <- this.row %>% mutate(Model = case_when(AIC.1comp < AIC.2comp &  -->
+<!-- #                                                           AIC.1comp < AIC.flat ~ "1Comp", -->
+<!-- #                                                         AIC.2comp < AIC.1comp & -->
+<!-- #                                                           AIC.2comp < AIC.flat ~ "2Comp", -->
+<!-- #                                                         AIC.flat < AIC.1comp & -->
+<!-- #                                                           AIC.flat < AIC.2comp ~ "Null", -->
+<!-- #                                                          -->
+<!-- #                                                         !is.na(AIC.1comp) & is.na(AIC.2comp) & -->
+<!-- #                                                           is.na(AIC.flat) ~ "1Comp", -->
+<!-- #                                                         !is.na(AIC.2comp) & is.na(AIC.1comp) &  -->
+<!-- #                                                           is.na(AIC.flat) ~ "2Comp", -->
+<!-- #                                                         !is.na(AIC.flat) & is.na(AIC.1comp) &  -->
+<!-- #                                                           is.na(AIC.2comp) ~ "Null", -->
+<!-- #                                                          -->
+<!-- #                                                         is.na(AIC.1comp) & -->
+<!-- #                                                           AIC.flat < AIC.2comp ~ "Null", -->
+<!-- #                                                         is.na(AIC.1comp) & -->
+<!-- #                                                           AIC.2comp < AIC.flat ~ "2Comp", -->
+<!-- #                                                         is.na(AIC.2comp) & -->
+<!-- #                                                           AIC.flat < AIC.1comp ~ "Null", -->
+<!-- #                                                         is.na(AIC.2comp) & -->
+<!-- #                                                           AIC.1comp < AIC.flat ~ "1Comp", -->
+<!-- #                                                         is.na(AIC.flat) & -->
+<!-- #                                                           AIC.1comp < AIC.2comp ~"1Comp", -->
+<!-- #                                                         is.na(AIC.flat) & -->
+<!-- #                                                           AIC.2comp <AIC.1comp ~"2Comp")) -->
+<!-- #        -->
+<!-- #        -->
+<!-- #       fittable <- rbind(fittable,this.row) -->
+<!-- #     } -->
+<!-- #   } -->
+<!-- # # } -->
+<!-- # # debug(test) -->
+<!-- # # test(fits1comp, fits2comp, fitsflat) -->
+<!-- # fittable$halflife <- log(2)/fittable$kelim -->
+<!-- #  -->
+<!-- # #Lets only keep chemicals where we can fit a PK model: -->
+<!-- # fittable <- subset(fittable, !is.na(Model)) -->
+<!-- #  -->
+<!-- # # for (this.col in c("AIC.1comp","AIC.2comp","Vdist","kelim","halflife")) -->
+<!-- # #   fittable[,this.c=-] <- signif(as.numeric(fittable[,this.col]),4) -->
+<!-- #  -->
+<!-- # # We have parameters estimated for 86 chemicals: -->
+<!-- # dim(fittable)[1] -->
+<!-- #  -->
+<!-- # # write.csv(fittable, file = "inst/ext/model_params_table_04182022.csv", row.names = FALSE) -->
+<!-- #  -->
+<!-- # ``` -->
 
 
 

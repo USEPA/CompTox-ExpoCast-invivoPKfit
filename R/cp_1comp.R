@@ -29,7 +29,7 @@ cp_1comp <- function(time, params, dose, iv.dose){
 
   #Take a copy of the input data table so it behaves as though passed by value
   # DT <- copy(DT)
-
+# browser()
   if (any(sapply(params,function(x) identical(x,numeric(0))))) return(0)
 
   if (is.null(params$Fgutabs)|is.na(params$Fgutabs))
@@ -47,7 +47,8 @@ cp_1comp <- function(time, params, dose, iv.dose){
     cp <- dose*exp(-params$kelim * time)/params$Vdist
 
     }else{
-
+      params$Vdist <- log(params$Vdist)
+      # browser()
     cp <- (params$Fgutabs * dose *
      params$kgutabs*(exp(-params$kelim * time) - exp(-params$kgutabs* time)))/
     (params$Vdist*(params$kgutabs - params$kelim))
