@@ -51,7 +51,7 @@ analyze_pk_data <- function(fitdata,
   #Add a different sigma value for each reference
   refs <- fitdata[,
                   unique(Reference)]
-  # Initialize the standard devications to 0.2
+  # Initialize the standard deviations to 0.2
   these.params[sapply(refs,
                       function(x) paste('sigma2',
                                         x,

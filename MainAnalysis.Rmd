@@ -21,9 +21,9 @@ library(readxl)
 devtools::load_all(".")
 ```
 
-```{r, run_invivoPKfit, eval = TRUE}
+```{r, load_cvt, eval = TRUE}
 
-THIS.DATE <- "102422"
+
 
 ### this block runs the model fits
 # and does some pre-processing to clean up the data
@@ -34,13 +34,13 @@ THIS.DATE <- "102422"
 # data <- read.csv("inst/ext/cvt_query_for_john_27may2021_v2.csv")
 # data <- read.csv("inst/ext/cvtdb_invivopkfit_02242022.csv")
 # data <- read.csv("inst/ext/cvtdb_invivopkfit_04142022.csv")
-data <- read.csv("inst/ext/cvtdb_invivopkfit_04262022.csv")
+cvt.data <- read.csv("inst/ext/cvtdb_invivopkfit_04262022.csv")
 
 ### these compounds had no CAS in the cvtdb
 # double check and they should not have been added
 # so I removed them
 
-data <- data %>%
+cvt.data <- cvt.data %>%
   filter(analyte_name_original != "Methemoglobin") %>%
   filter(analyte_name_original != "N-desmethyltamoxifen")
 
@@ -48,25 +48,60 @@ data <- data %>%
 #################
 
 ### fix compound names
-data$analyte_name_original[data$analyte_name_original == "Methyleugonal "] <- "Methyleugonal"
-data$analyte_name_original[data$analyte_name_original == "benzo[a]pyrene"] <- "benzo(a)pyrene"
-data$analyte_name_original[data$analyte_name_original == "2,4-D"] <- "2,4-Dichlorophenoxyacetic acid"
-data$analyte_name_original[data$analyte_name_original == "Diclofenac"] <- "Hexobarbital"
-data$analyte_name_original[data$analyte_name_original == "Pentadecafluorooctanoic acid"] <- "Perfluorooctanoic acid"
-data$analyte_name_original[data$analyte_name_original == "3−hydroxybenzo[a]pyrene"] <- "3−hydroxybenzo(a)pyrene"
+cvt.data$analyte_name_original[cvt.data$analyte_name_original == "Methyleugonal "] <- "Methyleugonal"
+cvt.data$analyte_name_original[cvt.data$analyte_name_original == "benzo[a]pyrene"] <- "benzo(a)pyrene"
+cvt.data$analyte_name_original[cvt.data$analyte_name_original == "2,4-D"] <- "2,4-Dichlorophenoxyacetic acid"
+cvt.data$analyte_name_original[cvt.data$analyte_name_original == "Diclofenac"] <- "Hexobarbital"
+cvt.data$analyte_name_original[cvt.data$analyte_name_original == "Pentadecafluorooctanoic acid"] <- "Perfluorooctanoic acid"
+cvt.data$analyte_name_original[cvt.data$analyte_name_original == "3−hydroxybenzo[a]pyrene"] <- "3−hydroxybenzo(a)pyrene"
 
 ### make fk_reference_document equal fk_extraction document if fk_reference_document is NULL
-data$fk_reference_document_id[data$fk_reference_document_id == "NULL"] <- data$fk_extraction_document_id[data$fk_reference_document_id == "NULL"]
+cvt.data$fk_reference_document_id[cvt.data$fk_reference_document_id == "NULL"] <- 
+  cvt.data$fk_extraction_document_id[cvt.data$fk_reference_document_id == "NULL"]
 
 ### this is basically my debug line,
 # where I can focus on one problematic compound 
 # and see what's going wrong
 # data <- data %>% filter(dsstox_casrn == "68291-97-4" | dsstox_casrn == "82626-48-0")
 # data <- data %>% filter(dsstox_casrn == "123-91-1")
+```
 
+Calculate a limit of quantification (90% of lowest observation)
+```{r, calc_loq, eval = TRUE}
+source.col <- "fk_study_id"
+cas.col <- "dsstox_casrn"
+media.col <- "conc_medium_normalized"
+value.col <- "conc"
+for (this.study in unique(cvt.data[,source.col]))
+{
+  this.subset1 <- subset(cvt.data,cvt.data[,source.col]==this.study)
+  for (this.chem in unique(this.subset1[,cas.col]))
+  {
+    this.subset2 <- subset(this.subset1,this.subset1[,cas.col]==this.chem)
+    for (this.media in unique(this.subset2[,media.col]))
+    {
+      this.subset3 <- subset(this.subset2,this.subset2[media.col]==this.media & 
+        !is.na(this.subset2[,value.col]))
+      this.subset3 <- subset(this.subset3,this.subset3[,value.col]>0)
+      this.loq <- suppressWarnings(min(this.subset3[,value.col], na.rm=TRUE))
+      this.loq <- this.loq*0.9
+      cvt.data[
+        cvt.data[,source.col]==this.study & 
+        cvt.data[,cas.col]==this.chem & 
+        cvt.data[,media.col]==this.media,"calc_loq"] <- this.loq
+    }
+  }
+}
+cvt.data <- subset(cvt.data,!is.infinite(calc_loq))
+
+```
+
+
+```{r, run_invivoPKfit_1comp, eval = TRUE}
+THIS.DATE <- "102422"
 ### do 1-Compartment fit
 system.time(PK.fit.table.1comp <- fit_all(
-  data.set = data,
+  data.set = cvt.data,
   model = "1compartment",
   modelfun = "analytic",
   compound.col = "analyte_name_original",
@@ -88,10 +123,17 @@ system.time(PK.fit.table.1comp <- fit_all(
   subject.default = NA,
   info.default = NA
 ))
+```
 
+```{r, plot_1comp, eval=TRUE}
+plot_conctime(PK.fit.table.1comp[[1]],cvt.data,"1compartment")
+head(subset(PK.fit.table.1comp[[1]],Vdist>10000&!is.infinite(AIC)&param.value.type=="Fitted geometric mean"))
+```
+
+```{r, run_invivoPKfit_2comp, eval = TRUE}
 ### do 2-Compartment fit
 system.time(PK.fit.table.2comp <- fit_all(
-  data.set = data,
+  data.set = cvt.data,
   model = "2compartment",
   modelfun = "analytic",
   compound.col = "analyte_name_original",
@@ -113,10 +155,12 @@ system.time(PK.fit.table.2comp <- fit_all(
   subject.default = NA,
   info.default = NA
 ))
+```
 
+```{r, run_invivoPKfit_flat, eval = TRUE}
 ### do flat fit
 system.time(PK.fit.table.flat <- fit_all(
-  data.set = data,
+  data.set = cvt.data,
   model = "flat",
   modelfun = "analytic",
   compound.col = "analyte_name_original",

@@ -40,7 +40,16 @@ plot_conctime <- function(PK.fit.table,
                           omit.zero = T,
                           plot.loq = T,
                           fit.plot.points = 200,
-                          data.dose.col = "dose_level_normalized")
+                          data.dose.col = "dose_level_normalized",
+                          data.compound.col = "preferred_name",
+                          data.cas.col = "dsstox_casrn",
+                          data.source.col = "fk_study_id",
+                          data.route.col = "administration_route_normalized",
+                          data.reference.col = "fk_reference_document_id",
+                          data.media.col = "conc_medium_normalized",
+                          data.loq.col = "calc_loq",
+                          data.value.col = "conc",
+                          data.time.col = "time_hr")
 {
   scientific_10 <- function(x) {
     out <- gsub("1e", "10^", scales::scientific_format()(x))
@@ -50,7 +59,24 @@ plot_conctime <- function(PK.fit.table,
   }
 
   data.set <- copy(data.set)
-  if (omit.zero) data.set <- data.set[data.set[,data.dose.col] > 0, ]
+  data.set$Dose <- data.set[, data.dose.col]
+  data.set$Compound <- data.set[, data.compound.col]
+  data.set$CAS <- data.set[, data.cas.col]
+  data.set$Source <- data.set[, data.source.col]
+  data.set$Route <- data.set[, data.route.col]
+  data.set$Reference <- data.set[, data.reference.col]
+  data.set$Media <- data.set[, data.media.col]
+  data.set$LOQ <- data.set[, data.loq.col]
+  data.set$Value <- data.set[, data.value.col]
+  data.set$Time <- data.set[, data.time.col]
+
+  data.set <- as.data.table(data.set)
+  if (omit.zero)
+  {
+    data.set <- data.set[Dose > 0, ]
+  }
+
+  data.set[Value == 0, Value := LOQ]
 
   if (plot.httk.pred) {
     PK.fit.table <- copy(PK.fit.table[param.value.type %in% c("Predicted",
@@ -127,6 +153,7 @@ plot_conctime <- function(PK.fit.table,
   for (this.compound in unique(data.set[, Compound])) { #plot each compound separately
 
     this.compound.data <- data.set[Compound == this.compound]
+
 
     this.reference.list <- list()
     for (this.reference in unique(this.compound.data[, Reference])) {
@@ -260,7 +287,8 @@ plot_conctime <- function(PK.fit.table,
       paste("Reference:", Reference),
       paste("Media:", Media),
       paste("LOQ:", LOQ), sep = "\n")]
-    bestfit.invivo[Ccompartment < 0,Ccompartment := 0]
+    bestfit.invivo[Ccompartment <= 0, Ccompartment :=
+      min(bestfit.invivo$Ccompartment[bestfit.invivo$Ccompartment>0])/10]
 
     # Determine y-axis range:
     min.conc <- 10 ^ floor(log10(min(unique(as.numeric(this.compound.data$Value)),
@@ -301,9 +329,7 @@ plot_conctime <- function(PK.fit.table,
       p <- ggplot2::ggplot(data = this.compound.data) +
         ggtitle(paste(this.compound," (",model,")",sep = ""))+
         facet_wrap(vars(Dose.nominal.units.type)) + ### added ref, media, loq
-        geom_line(data = bestfit.invivo,aes(x = time,
-                                            y = Ccompartment,
-                                            color = color.factor)) +
+
         # geom_line(data = bestfit.invivo,aes(x = time,
         #                                     y = error,
         #                                     color = "red")) +
@@ -321,7 +347,10 @@ plot_conctime <- function(PK.fit.table,
         theme(aspect.ratio = 1) +
         guides(fill = guide_legend(override.aes = list(color = NA)),
                color = FALSE)
-
+      if (dim(bestfit.invivo)[1]>0) p <- p +
+          geom_line(data = bestfit.invivo,aes(x = time,
+            y = Ccompartment,
+            color = color.factor))
     }
     # if (any(is.finite(this.graph.fits$AIC)))
     # {
@@ -374,7 +403,7 @@ plot_conctime <- function(PK.fit.table,
       #            y=2*mean(data.set[Compound==this.compound,"LOQ"]),
       #            label="Limit of Quantitiation")
     }
-
+ #   if(this.compound == "bensulide") {browser()}
     print(p)
   }
 
