@@ -39,7 +39,8 @@ plot_conctime <- function(PK.fit.table,
                           plot.httk.pred = F,
                           omit.zero = T,
                           plot.loq = T,
-                          fit.plot.points = 200)
+                          fit.plot.points = 200,
+                          data.dose.col = "dose_level_normalized")
 {
   scientific_10 <- function(x) {
     out <- gsub("1e", "10^", scales::scientific_format()(x))
@@ -49,7 +50,7 @@ plot_conctime <- function(PK.fit.table,
   }
 
   data.set <- copy(data.set)
-  if (omit.zero) data.set <- data.set[Dose > 0, ]
+  if (omit.zero) data.set <- data.set[data.set[,data.dose.col] > 0, ]
 
   if (plot.httk.pred) {
     PK.fit.table <- copy(PK.fit.table[param.value.type %in% c("Predicted",

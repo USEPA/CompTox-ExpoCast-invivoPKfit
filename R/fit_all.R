@@ -282,6 +282,11 @@ fit_all <- function(data.set,
       #                                                  default.to.human=TRUE,
       #                                                  species="Rat"),
       #                             by=CAS]
+      guess.species <- Species
+      if (!(tolower(guess.species %in% colnames(httk::physiology.data))))
+      {
+        guess.species <- "Human"
+      }
       if (any(params.by.cas.spec$CAS %in% get_cheminfo()))
         params.by.cas.spec[CAS %in% get_cheminfo(), ### where did get_cheminfo come from? httk?
                            c("kelim",
@@ -289,7 +294,7 @@ fit_all <- function(data.set,
                              "Fgutabs",
                              "kgutabs") := httk::parameterize_1comp(chem.cas = CAS,
                                                                     default.to.human = TRUE,
-                                                                    species = Species)[c("kelim",
+                                                                    species = guess.species)[c("kelim",
                                                                                          "Vdist",
                                                                                          "Fgutabs",
                                                                                          "kgutabs")],
