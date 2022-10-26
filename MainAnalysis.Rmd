@@ -328,10 +328,10 @@ cp_df_1$type <- "1-Compartment"
 #######################
 
 ### subset to only actual model outputs and discard "Joint Analysis" rows
-pk_data2 <- pk_output_2comp_05092022 %>%
+pk_data2 <- pk_output_2comp %>%
   filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis")
 
-raw_data2 <- dplyr::select(raw_2comp_05092022, -c("kelim", 
+raw_data2 <- dplyr::select(raw_2comp, -c("kelim", 
                                                   "Vdist", 
                                                   "Fgutabs", 
                                                   "kgutabs",
@@ -371,11 +371,11 @@ cp_df_2$type <- "2-Compartment"
 ### this is flat data
 ###########
 
-pk_data_flat <- pk_output_flat_05092022 %>%
+pk_data_flat <- pk_output_flat %>%
   filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis") %>% 
   filter(Species != "hamster")
 
-raw_data_flat <- dplyr::select(raw_flat_05092022, -c("A")) %>% 
+raw_data_flat <- dplyr::select(raw_flat, -c("A")) %>% 
   filter(Species != "hamster")
 
 raw_data_flat$Reference <- as.character(raw_data_flat$Reference)
@@ -414,19 +414,112 @@ cp_df_flat <- cp_df_flat[, intersect(colnames(cp_df), colnames(cp_df))]
 
 cp_df <- rbind(cp_df, cp_df_flat)
 
-# cp_df$cp_pred_error <- (cp_df$cp - cp_df$Value) / cp_df$Value
-# 
-# cp_df <- cp_df %>% group_by(Species.x, 
-#                             Compound,
-#                             CAS,
-#                             type) %>%
-#   mutate(cp_pred_error_range = max(cp_pred_error, na.rm = TRUE) - min(cp_pred_error, na.rm = TRUE))
+cp_df$cp_pred_error <- (cp_df$cp - cp_df$Value) / cp_df$Value
+
+cp_df <- cp_df %>% group_by(Species.x, 
+                           Compound,
+                           CAS,
+                           type) %>%
+ mutate(cp_pred_error_range = max(cp_pred_error, na.rm = TRUE) - min(cp_pred_error, na.rm = TRUE))
 
 ### here is where you save the Rdata file
-save(cp_df, file = paste(figures_rdata/cp_df_",THIS.DATE,".RData",sep=""))
+save(cp_df, file = paste("figures_rdata/cp_df_",THIS.DATE,".RData",sep=""))
 ```
 
 
+```{r, make_cvt_variability_rdata, eval = FALSE}
+
+### this block creates a data.frame that shows the 
+# spread of CvT data via across replicate timepoints 
+# for a single experiment
+# if the data isn't within 2-fold of itself
+# is it reasonable to say that a model should fit within 2-fold?
+
+##################
+##################
+
+### all the raw data for each model SHOULD be the same
+# so only need to use one
+data <- as.data.table(raw_1comp)
+
+##################
+##################
+
+### function that finds mean conc of each replicate timepoint
+find_mean_conc <- function(data) {
+  
+  ### only use data with replicate timepoints
+  data <- data[ ave(1:nrow(data), data$Time, FUN = length) > 1 , ]
+  
+  if(nrow(data) == 0) {
+    return(NULL)
+  } else {
+    
+    time_split <- split(data, data$Time)
+    
+    ### discard replicate timepoints where all concentrations are NA
+    time_split_list <- purrr::discard(time_split, ~all(is.na(.$Value)))
+    
+    if(length(time_split_list) == 0) {
+      return(NULL)
+    } else {
+      
+      data <- do.call(rbind, time_split_list)
+      
+      ### where some replicate concentration data are NA, set them equal to the LOQ
+      data$Value[is.na(data$Value)] <- data$LOQ[is.na(data$Value)]
+      
+      ### take the average Value for each set of timepoints
+      data <- data %>%
+        group_by(Time) %>%
+        do(mutate(., mean_conc = mean(.$Value, na.rm = TRUE)))
+      
+      data <- data %>%
+        group_by(Time) %>%
+        do(mutate(., range_conc = max(.$Value) - min(.$Value)))
+      
+      ### create normalized conc values by dividing conc by mean_conc
+      data$conc_norm <- data$Value/data$mean_conc
+      
+      data <- data[order(data$Time), ]
+      
+      return(data)
+    }
+  }
+}
+
+### this for loop applies the function 
+# at data subsets of compound, data, dose, route, media
+data.list <- list()
+for(this.compound in unique(data[, Compound])) {
+  this.compound.data <- data[Compound == this.compound]
+  
+  ### list of columns by which to split data.set
+  col_list <- list(this.compound.data$Reference,
+                   this.compound.data$Dose,
+                   this.compound.data$Route,
+                   this.compound.data$Media)
+  
+  ### split data.set into list of data.tables
+  split_list <- split(this.compound.data, col_list)
+  
+  ### remove data.tables with 0 rows
+  split_list <- keep(split_list, ~nrow(.) > 0)
+  
+  ### use find_mean_conc fn
+  mean_conc <- lapply(split_list, find_mean_conc)
+  
+  test <- do.call(rbind, mean_conc)
+  
+  data.list[[this.compound]] <- test
+}
+
+### combine data.tables back into one large data.set
+cvt_variability_df <- do.call(rbind, data.list)
+
+### SAVE the data
+save(cvt_variability_df, file = paste("figures_rdata/cvt_variability_df_",THIS.DATE,".RData",sep=""))
+```
 
 ```{r, load_data}
 
@@ -461,7 +554,7 @@ load("figures_rdata/pk_lombardo_02072022.Rdata")
 ##################
 ##################
 
-pk_data <- cp_df_05092022
+pk_data <- cp_df
 
 # cvt_data <- cvt_variability_df_04282022
 
@@ -592,7 +685,7 @@ p
 
 # data <- cp_df_12212021
 # data <- cp_df_03012022
-data <- cp_df_04282022
+data <- cp_df
 
 ##################
 ##################
@@ -620,7 +713,7 @@ p
 ##################
 ##################
 
-data <- cp_df_04282022
+data <- cp_df
 
 ##################
 ##################
@@ -641,99 +734,6 @@ p
 
 ```
 
-```{r, make_cvt_variability_rdata, eval = FALSE}
-
-### this block creates a data.frame that shows the 
-# spread of CvT data via across replicate timepoints 
-# for a single experiment
-# if the data isn't within 2-fold of itself
-# is it reasonable to say that a model should fit within 2-fold?
-
-##################
-##################
-
-### all the raw data for each model SHOULD be the same
-# so only need to use one
-data <- as.data.table(raw_1comp_05092022)
-
-##################
-##################
-
-### function that finds mean conc of each replicate timepoint
-find_mean_conc <- function(data) {
-  
-  ### only use data with replicate timepoints
-  data <- data[ ave(1:nrow(data), data$Time, FUN = length) > 1 , ]
-  
-  if(nrow(data) == 0) {
-    return(NULL)
-  } else {
-    
-    time_split <- split(data, data$Time)
-    
-    ### discard replicate timepoints where all concentrations are NA
-    time_split_list <- purrr::discard(time_split, ~all(is.na(.$Value)))
-    
-    if(length(time_split_list) == 0) {
-      return(NULL)
-    } else {
-      
-      data <- do.call(rbind, time_split_list)
-      
-      ### where some replicate concentration data are NA, set them equal to the LOQ
-      data$Value[is.na(data$Value)] <- data$LOQ[is.na(data$Value)]
-      
-      ### take the average Value for each set of timepoints
-      data <- data %>%
-        group_by(Time) %>%
-        do(mutate(., mean_conc = mean(.$Value, na.rm = TRUE)))
-      
-      data <- data %>%
-        group_by(Time) %>%
-        do(mutate(., range_conc = max(.$Value) - min(.$Value)))
-      
-      ### create normalized conc values by dividing conc by mean_conc
-      data$conc_norm <- data$Value/data$mean_conc
-      
-      data <- data[order(data$Time), ]
-      
-      return(data)
-    }
-  }
-}
-
-### this for loop applies the function 
-# at data subsets of compound, data, dose, route, media
-data.list <- list()
-for(this.compound in unique(data[, Compound])) {
-  this.compound.data <- data[Compound == this.compound]
-  
-  ### list of columns by which to split data.set
-  col_list <- list(this.compound.data$Reference,
-                   this.compound.data$Dose,
-                   this.compound.data$Route,
-                   this.compound.data$Media)
-  
-  ### split data.set into list of data.tables
-  split_list <- split(this.compound.data, col_list)
-  
-  ### remove data.tables with 0 rows
-  split_list <- keep(split_list, ~nrow(.) > 0)
-  
-  ### use find_mean_conc fn
-  mean_conc <- lapply(split_list, find_mean_conc)
-  
-  test <- do.call(rbind, mean_conc)
-  
-  data.list[[this.compound]] <- test
-}
-
-### combine data.tables back into one large data.set
-cvt_variability_df_05092022 <- do.call(rbind, data.list)
-
-### SAVE the data
-save(cvt_variability_df_05092022, file = "figures_rdata/cvt_variability_df_05092022.Rdata")
-```
 
 ```{r, make_cvt_variability_histogram}
 
@@ -744,7 +744,7 @@ save(cvt_variability_df_05092022, file = "figures_rdata/cvt_variability_df_05092
 #################
 #################
 
-data <- cvt_variability_df_05092022
+data <- cvt_variability_df
 # data <- cvt_variability_df_12212021
 
 #################
@@ -775,9 +775,9 @@ p
 ##################
 
 # pk_data <- cp_df_03012022
-pk_data <- cp_df_05092022
+pk_data <- cp_df
 
-cvt_data <- cvt_variability_df_05092022
+cvt_data <- cvt_variability_df
 
 ##################
 ##################
@@ -1120,9 +1120,9 @@ p
 ```{r, make_sigma_distribution_histogram}
 
 # pk_data <- cp_df_03012022
-pk_data <- cp_df_04282022
+pk_data <- cp_df
 
-cvt_data <- cvt_variability_df_04282022
+cvt_data <- cvt_variability_df
 
 ##################
 ##################
@@ -1275,7 +1275,7 @@ p
 ##################
 ##################
 
-data <- raw_1comp_04282022
+data <- raw_1comp
 
 ##################
 ##################
@@ -1321,10 +1321,10 @@ p
 ##################
 ##################
 
-data1 <- as.data.table(pk_output_1comp_04282022 %>%
+data1 <- as.data.table(pk_output_1comp %>%
                          filter(param.value.type == "Fitted geometric mean"))
 
-data2 <- as.data.table(pk_output_2comp_04282022 %>%
+data2 <- as.data.table(pk_output_2comp %>%
                          filter(param.value.type == "Fitted geometric mean"))
 
 ##################
@@ -1350,8 +1350,8 @@ data1 <- subset(data1, select = c(param.value.type, sigma_id, sigma_value, Data.
 data1$Data.Analyzed[data1$Data.Analyzed != "Joint Analysis"] <- "Ind Analysis"
 data1 <- data1 %>% pivot_wider(names_from = Data.Analyzed, values_from = sigma_value)
 data1 <- data1 %>% filter(sigma_id != "sigma2.14")
-data1$`Joint Analysis` <- as.numeric(data1$`Joint Analysis`)
-data1$`Ind Analysis` <- as.numeric(data1$`Ind Analysis`)
+data1$`Joint Analysis` <- lapply(data1$`Joint Analysis`,as.numeric)
+data1$`Ind Analysis` <- lapply(data1$`Ind Analysis`,as.numeric)
 data1$model <- "1-Compartment"
 
 split_list_2 <- split(data2, data2$Compound)
@@ -1361,11 +1361,11 @@ data2 <- subset(data2, select = c(param.value.type, sigma_id, sigma_value, Data.
 data2$Data.Analyzed[data2$Data.Analyzed != "Joint Analysis"] <- "Ind Analysis"
 data2 <- data2 %>% pivot_wider(names_from = Data.Analyzed, values_from = sigma_value)
 data2 <- data2 %>% filter(sigma_id != "sigma2.14")
-data2$`Joint Analysis` <- as.numeric(data2$`Joint Analysis`)
-data2$`Ind Analysis` <- as.numeric(data2$`Ind Analysis`)
+data2$`Joint Analysis` <- lapply(data2$`Joint Analysis`,as.numeric)
+data2$`Ind Analysis` <- lapply(data2$`Ind Analysis`,as.numeric)
 data2$model <- "2-Compartment"
 
-data <- rbind(data1, data2)
+data <- as.data.table(rbind(data1, data2))
 
 p <- ggplot(data, aes(x = `Ind Analysis`, y = `Joint Analysis`)) +
   geom_point() +
@@ -1385,12 +1385,12 @@ p
 ##################
 ##################
 
-raw_data1 <- raw_1comp_04282022
+raw_data1 <- raw_1comp
 
 ##################
 ##################
 
-pk_data1 <- pk_output_1comp_04282022 %>% 
+pk_data1 <- pk_output_1comp %>% 
   filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis")
 
 pk_data1$X <- NULL
@@ -1398,8 +1398,7 @@ pk_data1$X <- NULL
 
 raw_data1$Reference <- as.character(raw_data1$Reference)
 
-raw_data1 <- dplyr::select(raw_data1, -c("X",
-                                         "kelim",
+raw_data1 <- dplyr::select(raw_data1, -c("kelim",
                                          "Vdist",
                                          "Fgutabs",
                                          "kgutabs"))
@@ -1456,9 +1455,9 @@ full_data_1_hl$model <- "1-Compartment"
 ##################
 ##################
 
-raw_data2 <- raw_2comp_04282022
+raw_data2 <- raw_2comp
 
-pk_data2 <- pk_output_2comp_04282022 %>% 
+pk_data2 <- pk_output_2comp %>% 
   filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis")
 
 ##################
@@ -1547,7 +1546,7 @@ p
 ###############
 ###############
 
-raw_data1 <- raw_1comp_04282022
+raw_data1 <- raw_1comp
 
 ###############
 ###############
@@ -1599,7 +1598,7 @@ p
 ###############
 ###############
 
-raw_data1 <- raw_1comp_04282022
+raw_data1 <- raw_1comp
 
 ###############
 ###############
@@ -1655,10 +1654,10 @@ p
 ###################
 ###################
 
-pk_data1 <- pk_output_1comp_04282022 
+pk_data1 <- pk_output_1comp
 # pk_data1 <- pk_output_1comp_12212021 
 
-pk_data2 <- pk_output_2comp_04282022 
+pk_data2 <- pk_output_2comp
 # pk_data2 <- pk_output_2comp_12212021 
 
 ###################
@@ -1832,8 +1831,8 @@ dim(fittable)[1]
 ##################
 ##################
 
-pk_data1 <- as.data.table(pk_output_1comp_04282022)
-pk_data2 <- as.data.table(pk_output_2comp_04282022)
+pk_data1 <- as.data.table(pk_output_1comp)
+pk_data2 <- as.data.table(pk_output_2comp)
 
 ##################
 ##################
@@ -1855,6 +1854,7 @@ this.compound.list <- list()
 for (this.compound in unique(pk_all[, Compound])) {
   
   this.compound.data <- pk_all[Compound == this.compound]
+  this.compound.data$AIC[is.na(this.compound.data$AIC)] <- Inf
   
   if(any(this.compound.data$AIC != Inf)) {
     this.compound.data$status <- "good fit"
@@ -1884,11 +1884,11 @@ pk_all <- pk_all %>%
 ##################
 ##################
 
-pk_data1 <- pk_output_1comp_04282022
+pk_data1 <- pk_output_1comp
 
-pk_data2 <- pk_output_2comp_04282022
+pk_data2 <- pk_output_2comp
 
-pk_data_flat <- pk_output_flat_04282022 %>%
+pk_data_flat <- pk_output_flat %>%
   filter(param.value.type == "Predicted" | param.value.type == "Fitted geometric mean" | param.value.type == "Fitted geometric std dev")
 
 ##################
@@ -1958,7 +1958,7 @@ pk_just_bad <- pk_all %>%
 ##################
 ##################
 
-pk_data1 <- pk_output_1comp_05092022
+pk_data1 <- pk_output_1comp
 # pk_data1 <- pk_output_1comp_04282022
 
 
