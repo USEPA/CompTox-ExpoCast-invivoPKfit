@@ -18,7 +18,7 @@ knitr::opts_chunk$set(message = FALSE)
 library(tidyverse)
 library(data.table)
 library(readxl)
-devtools::load_all(".")
+devtools::load_all("invivopkfit")
 ```
 
 ```{r, load_cvt, eval = TRUE}
@@ -125,7 +125,7 @@ system.time(PK.fit.table.1comp <- fit_all(
 ))
 ```
 
-```{r, plot_1comp, eval=TRUE}
+```{r, plot_1comp, eval=FALSE}
 plot_conctime(PK.fit.table.1comp[[1]],cvt.data,"1compartment")
 head(subset(PK.fit.table.1comp[[1]],Vdist>10000&!is.infinite(AIC)&param.value.type=="Fitted geometric mean"))
 ```
@@ -156,6 +156,11 @@ system.time(PK.fit.table.2comp <- fit_all(
   info.default = NA
 ))
 ```
+```{r, plot_2comp, eval=FALSE}
+plot_conctime(PK.fit.table.2comp[[1]],cvt.data,"2compartment")
+head(subset(PK.fit.table.2comp[[1]],Vdist>10000&!is.infinite(AIC)&param.value.type=="Fitted geometric mean"))
+```
+
 
 ```{r, run_invivoPKfit_flat, eval = TRUE}
 ### do flat fit
@@ -182,10 +187,9 @@ system.time(PK.fit.table.flat <- fit_all(
   subject.default = NA,
   info.default = NA
 ))
+```
 
-### uncomment below to export to CSV files
-# change the date!!
-
+```{r, write_invivoPKfits_to_file, eval = TRUE}
 write.csv(PK.fit.table.1comp[[1]], paste("inst/ext/PK.fit.table.1comp.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 write.csv(PK.fit.table.1comp[[2]], paste("inst/ext/processed.1comp.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 
@@ -200,43 +204,13 @@ write.csv(PK.fit.table.flat[[2]], paste("inst/ext/processed.flat.data.",THIS.DAT
 
 ### this block reads the exported model fit csv files from run_invivoPKfit
 
-### read in PK output files
-# pk_output_1comp_12212021 <- read.csv("inst/ext/PK.fit.table.1comp.12212021.csv")
-# pk_output_2comp_02102022 <- read.csv("inst/ext/PK.fit.table.2comp.02102022.csv")
-# pk_output_flat_02102022 <- read.csv("inst/ext/PK.fit.table.flat.02102022.csv")
+pk_output_2comp <- read.csv(paste("inst/ext/PK.fit.table.2comp.",THIS.DATE,".csv",sep=""))
+pk_output_flat <- read.csv(paste("inst/ext/PK.fit.table.flat.",THIS.DATE,".csv",sep=""))
+pk_output_1comp <- read.csv(paste("inst/ext/PK.fit.table.1comp.",THIS.DATE,".csv",sep=""))
 
-# pk_output_1comp_03012022 <- read.csv("inst/ext/PK.fit.table.1comp.03012022.csv")
-# pk_output_2comp_03012022<- read.csv("inst/ext/PK.fit.table.2comp.03012022.csv")
-# pk_output_flat_03012022 <- read.csv("inst/ext/PK.fit.table.flat.03012022.csv")
-
-pk_output_1comp_04282022 <- read.csv("inst/ext/PK.fit.table.1comp.04282022.csv")
-pk_output_2comp_04282022<- read.csv("inst/ext/PK.fit.table.2comp.04282022.csv")
-pk_output_flat_04282022 <- read.csv("inst/ext/PK.fit.table.flat.04282022.csv")
-
-pk_output_2comp_05092022 <- read.csv("inst/ext/PK.fit.table.2comp.05092022.csv")
-pk_output_flat_05092022 <- read.csv("inst/ext/PK.fit.table.flat.05092022.csv")
-pk_output_1comp_05092022 <- read.csv("inst/ext/PK.fit.table.1comp.05092022.csv")
-
-### read in processed raw data files
-# raw_1comp_12212021 <- read.csv("inst/ext/processed.1comp.data.12212021.csv")
-# raw_2comp_02102022 <- read.csv("inst/ext/processed.2comp.data.02102022.csv")
-# raw_flat_02102022 <- read.csv("inst/ext/processed.flat.data.02102022.csv")
-
-# raw_1comp_03012022 <- read.csv("inst/ext/processed.1comp.data.03012022.csv")
-# raw_2comp_03012022 <- read.csv("inst/ext/processed.2comp.data.03012022.csv")
-# raw_flat_03012022 <- read.csv("inst/ext/processed.flat.data.03012022.csv")
-
-# raw_1comp_04142022 <- read.csv("inst/ext/processed.1comp.data.04142022.csv")
-# raw_2comp_04142022 <- read.csv("inst/ext/processed.2comp.data.04142022.csv")
-# raw_flat_04142022 <- read.csv("inst/ext/processed.flat.data.04142022.csv")
-
-raw_1comp_04282022 <- read.csv("inst/ext/processed.1comp.data.04282022.csv")
-raw_2comp_04282022 <- read.csv("inst/ext/processed.2comp.data.04282022.csv")
-raw_flat_04282022 <- read.csv("inst/ext/processed.flat.data.04282022.csv")
-
-raw_1comp_05092022 <- read.csv("inst/ext/processed.1comp.data.05092022.csv")
-raw_2comp_05092022 <- read.csv("inst/ext/processed.2comp.data.05092022.csv")
-raw_flat_05092022 <- read.csv("inst/ext/processed.flat.data.05092022.csv")
+raw_1comp <- read.csv(paste("inst/ext/processed.1comp.data.",THIS.DATE,".csv",sep=""))
+raw_2comp <- read.csv(paste("inst/ext/processed.2comp.data.",THIS.DATE,".csv",sep=""))
+raw_flat <- read.csv(paste("inst/ext/processed.flat.data.",THIS.DATE,".csv",sep=""))
 
 
 pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
@@ -248,98 +222,18 @@ pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 # and saves them as Rdata files
 
 ### save data
-# save(pk_output_1comp_12212021, file = "figures_rdata/pk_output_1comp_12212021.Rdata")
-# save(pk_output_2comp_02102022, file = "figures_rdata/pk_output_2comp_12212021.Rdata")
-# save(pk_output_flat_02102022, file = "figures_rdata/pk_output_flat_02102022.Rdata")
-# save(raw_1comp_12212021, file = "figures_rdata/raw_1comp_12212021.Rdata")
-# save(raw_2comp_02102022, file = "figures_rdata/raw_2comp_12212021.Rdata")
-# save(raw_flat_02102022, file = "figures_rdata/raw_flat_02102022.Rdata")
+paste("inst/ext/PK.fit.table.1comp.",THIS.DATE,".RData",sep="")
+save(pk_output_1comp, file = paste("figures_rdata/pk_output_1comp_",THIS.DATE,".RData",sep=""))
+save(pk_output_2comp, file = paste("figures_rdata/pk_output_2comp_",THIS.DATE,".RData",sep=""))
+save(pk_output_flat, file = paste("figures_rdata/pk_output_flat_",THIS.DATE,".RData",sep=""))
+save(raw_1comp, file = paste("figures_rdata/raw_1comp_",THIS.DATE,".RData",sep=""))
+save(raw_2comp, file = paste("figures_rdata/raw_2comp_",THIS.DATE,".RData",sep=""))
+save(raw_flat, file = paste("figures_rdata/raw_flat_",THIS.DATE,".RData",sep=""))
 
-# save(pk_output_1comp_03012022, file = "figures_rdata/pk_output_1comp_03012022.Rdata")
-# save(pk_output_2comp_03012022, file = "figures_rdata/pk_output_2comp_03012022.Rdata")
-# save(pk_output_flat_03012022, file = "figures_rdata/pk_output_flat_03012022.Rdata")
-# save(raw_1comp_03012022, file = "figures_rdata/raw_1comp_03012022.Rdata")
-# save(raw_2comp_03012022, file = "figures_rdata/raw_2comp_03012022.Rdata")
-# save(raw_flat_03012022, file = "figures_rdata/raw_flat_03012022.Rdata")
-
-# save(pk_output_1comp_04142022, file = "figures_rdata/pk_output_1comp_04142022.Rdata")
-# save(pk_output_2comp_04142022, file = "figures_rdata/pk_output_2comp_04142022.Rdata")
-# save(pk_output_flat_04142022, file = "figures_rdata/pk_output_flat_04142022.Rdata")
-# save(raw_1comp_04142022, file = "figures_rdata/raw_1comp_04142022.Rdata")
-# save(raw_2comp_04142022, file = "figures_rdata/raw_2comp_04142022.Rdata")
-# save(raw_flat_04142022, file = "figures_rdata/raw_flat_04142022.Rdata")
-
-save(pk_output_1comp_05092022, file = "figures_rdata/pk_output_1comp_05092022.Rdata")
-save(pk_output_2comp_05092022, file = "figures_rdata/pk_output_2comp_05092022.Rdata")
-save(pk_output_flat_05092022, file = "figures_rdata/pk_output_flat_05092022.Rdata")
-save(raw_1comp_05092022, file = "figures_rdata/raw_1comp_05092022.Rdata")
-save(raw_2comp_05092022, file = "figures_rdata/raw_2comp_05092022.Rdata")
-save(raw_flat_05092022, file = "figures_rdata/raw_flat_05092022.Rdata")
-
-save(pk_lombardo, file = "figures_rdata/pk_lombardo_02072022.Rdata")
+save(pk_lombardo, file = paste("figures_rdata/pk_lombardo",THIS.DATE,".RData",sep=""))
 ```
 
-```{r, load_data}
-
-### this block loads the Rdata files,
-# as well as some other files written in below code blocks
-# this saves time from having to run those below code blocks every time
-# these additional files include 'cp_df' and 'cvt_variability'
-
-### load all of this wonderful data
-# load("figures_rdata/pk_output_1comp_12212021.Rdata")
-# load("figures_rdata/pk_output_2comp_12212021.Rdata")
-# load("figures_rdata/raw_1comp_12212021.Rdata")
-# load("figures_rdata/raw_2comp_12212021.Rdata")
-# load("figures_rdata/cp_df_12212021.Rdata")
-# load("figures_rdata/cvt_variability_df_12212021.Rdata")
-
-# load("figures_rdata/pk_output_1comp_03012022.Rdata")
-# load("figures_rdata/pk_output_2comp_03012022.Rdata")
-# load("figures_rdata/pk_output_flat_03012022.Rdata")
-# load("figures_rdata/raw_1comp_03012022.Rdata")
-# load("figures_rdata/raw_2comp_03012022.Rdata")
-# load("figures_rdata/raw_flat_03012022.Rdata")
-# load("figures_rdata/cp_df_03012022.Rdata")
-# load("figures_rdata/cvt_variability_df_03012022.Rdata")
-
-# load("figures_rdata/pk_output_1comp_04142022.Rdata")
-# load("figures_rdata/pk_output_2comp_04142022.Rdata")
-# load("figures_rdata/pk_output_flat_04142022.Rdata")
-# load("figures_rdata/raw_1comp_04142022.Rdata")
-# load("figures_rdata/raw_2comp_04142022.Rdata")
-# load("figures_rdata/raw_flat_04142022.Rdata")
-# load("figures_rdata/cp_df_04142022.Rdata")
-# load("figures_rdata/cvt_variability_df_04142022.Rdata")
-# 
-# load("figures_rdata/cp_df_03302022.Rdata")
-
-# load("figures_rdata/pk_output_1comp_04282022.Rdata")
-# load("figures_rdata/pk_output_2comp_04282022.Rdata")
-# load("figures_rdata/pk_output_flat_04282022.Rdata")
-# load("figures_rdata/raw_1comp_04282022.Rdata")
-# load("figures_rdata/raw_2comp_04282022.Rdata")
-# load("figures_rdata/raw_flat_04282022.Rdata")
-# load("figures_rdata/cp_df_04282022.Rdata")
-# load("figures_rdata/cvt_variability_df_04282022.Rdata")
-# 
-# load("figures_rdata/cp_df_04282022.Rdata")
-
-load("figures_rdata/pk_output_1comp_05092022.Rdata")
-load("figures_rdata/pk_output_2comp_05092022.Rdata")
-load("figures_rdata/pk_output_flat_05092022.Rdata")
-load("figures_rdata/raw_1comp_05092022.Rdata")
-load("figures_rdata/raw_2comp_05092022.Rdata")
-load("figures_rdata/raw_flat_05092022.Rdata")
-load("figures_rdata/cp_df_05092022.Rdata")
-load("figures_rdata/cvt_variability_df_05092022.Rdata")
-
-load("figures_rdata/cp_df_05092022.Rdata")
-
-load("figures_rdata/pk_lombardo_02072022.Rdata")
-```
-
-```{r, make_invivoPKfit_plots, eval = FALSE}
+```{r, make_invivoPKfit_plots, eval = TRUE}
 
 ### this block produces the pdf files of the model fits
 # plotted on top of the original data
@@ -383,11 +277,11 @@ junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_flat_05092022),
 ###################
 
 ### subset to only actual model outputs and discard "Joint Analysis" rows
-pk_data1 <- pk_output_1comp_05092022 %>%
+pk_data1 <- pk_output_1comp %>%
   filter(param.value.type == "Fitted geometric mean" & Data.Analyzed != "Joint Analysis") %>% 
   filter(Species != "hamster")
 
-raw_data1 <- dplyr::select(raw_1comp_05092022, -c("kelim", 
+raw_data1 <- dplyr::select(raw_1comp, -c("kelim", 
                                                   "Vdist", 
                                                   "Fgutabs", 
                                                   "kgutabs")) %>% 
@@ -528,12 +422,33 @@ cp_df <- rbind(cp_df, cp_df_flat)
 #                             type) %>%
 #   mutate(cp_pred_error_range = max(cp_pred_error, na.rm = TRUE) - min(cp_pred_error, na.rm = TRUE))
 
-cp_df_05092022 <- cp_df
-
 ### here is where you save the Rdata file
-save(cp_df_05092022, file = "figures_rdata/cp_df_05092022.Rdata")
+save(cp_df, file = paste(figures_rdata/cp_df_",THIS.DATE,".RData",sep=""))
 ```
 
+
+
+```{r, load_data}
+
+### this block loads the Rdata files,
+# as well as some other files written in below code blocks
+# this saves time from having to run those below code blocks every time
+# these additional files include 'cp_df' and 'cvt_variability'
+
+### load all of this wonderful data
+load(paste("figures_rdata/pk_output_1comp_",THIS.DATE,".RData",sep=""))
+load(paste("figures_rdata/pk_output_2comp_",THIS.DATE,".RData",sep=""))
+load(paste("figures_rdata/pk_output_flat_",THIS.DATE,".RData",sep=""))
+load(paste("figures_rdata/raw_1comp_",THIS.DATE,".RData",sep=""))
+load(paste("figures_rdata/raw_2comp_",THIS.DATE,".RData",sep=""))
+load(paste("figures_rdata/raw_flat_",THIS.DATE,".RData",sep=""))
+load(paste("figures_rdata/cp_df_",THIS.DATE,".RData",sep=""))
+load(paste("figures_rdata/cvt_variability_df_",THIS.DATE,".RData",sep=""))
+
+load(paste("figures_rdata/cp_df_",THIS.DATE,".RData",sep=""))
+
+load("figures_rdata/pk_lombardo_02072022.Rdata")
+```
 
 ```{r, make_cp_histogram}
 

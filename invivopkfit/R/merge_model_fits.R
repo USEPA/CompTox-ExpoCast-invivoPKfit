@@ -17,11 +17,11 @@
 #' @author John Wambaugh
 #'
 #' @export merge_model_fits 
-function <- merge_model_fits(fit.list,,
+merge_model_fits <- function(fit.list,
         dtxsid.col="",
         compound.col="",
         cas.col="",
-        species.col=""
+        species.col="",
         param.value.type.col="",
         data.analyzed.col="Data.Analyzed",
         param.value.type="Fitted geometric mean")
@@ -129,14 +129,14 @@ function <- merge_model_fits(fit.list,,
   # Now pick the best AIC
   AIC.cols <- regexpr("AIC",colnames(main.table))
   for (this.col in AIC.cols)
-  main.table[is.na(this.col),=this.col] <- Inf
+    main.table[is.na(this.col), this.col] <- Inf
 
-  for (this.chemical in sort(unique(main.table$DTXSID))
+  for (this.chemical in sort(unique(main.table$DTXSID)))
   {
     this.subset <- subset(main.table, DTXSID==this.chemical)
     for (this.species in sort(unique(this.subset$Species)))
     {
-      this.species.subset <- subset(this.subset), Species==this.species)
+      this.species.subset <- subset(this.subset, Species==this.species)
       # Which row of main.table do we want?
       this.index <- which(main.table$DTXSID == this.chemical &
                           main.table$Species == this.species)
