@@ -5,7 +5,7 @@
 #'
 #' @param fitdata A data.table of concentration vs. time data for a given
 #' chemical
-#' @param this.cas A CAS number for the chemical to be fitted
+#' @param this.dtxsid A DSSTox Substance Identifier for the chemical to be fitted
 #' @param paramnames A list of names of the model parameters to be fitted
 #' @param modelfun "analytic" to use the analytic model solution, "full" to use
 #' the full ODE model
@@ -17,7 +17,7 @@
 #' deviations)
 #' @author Caroline Ring, John Wambaugh
 analyze_pk_data <- function(fitdata,
-                            this.cas,
+                            this.dtxsid,
                             paramnames,
                             modelfun,
                             model,
@@ -36,7 +36,7 @@ analyze_pk_data <- function(fitdata,
   fitdata[, LOQ := as.numeric(LOQ)]
   fitdata[is.na(LOQ), LOQ := 0.45 * min(Value, na.rm = TRUE), by = .(Compound, Reference, Media)]
 
-  cat(paste("Optimizing data for CAS-RN ", this.cas, "\n", sep =""))
+  cat(paste("Optimizing data for chemical ", this.dtxsid, "\n", sep =""))
 
   #Set a plausible upper bound for sigma:
   TRYSIGMA <- stats::median(fitdata$Value, na.rm = T)
@@ -348,7 +348,7 @@ analyze_pk_data <- function(fitdata,
     out.dt[, LogLikelihood := as.numeric(NA)]
     out.dt[, AIC := as.double(NA)]
 
-    cat(paste("For CAS ", this.cas, " there were ", length(opt.params),
+    cat(paste("For chemical ", this.dtxsid, " there were ", length(opt.params),
               " parameters and only ",
               nrow(fitdata), " data points. Optimization aborted.\n", sep = ""))
     # browser()

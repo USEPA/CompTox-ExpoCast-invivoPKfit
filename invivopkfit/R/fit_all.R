@@ -57,7 +57,9 @@ fit_all <- function(data.set,
                     ratio.data.to.dose = 1,
 
                     compound.col = "Compound",
+                    dtxsid.col = "DTXSID",
                     cas.col = "CAS",
+
                     reference.col = "Reference",
 
                     species.col = "Species",
@@ -99,6 +101,7 @@ fit_all <- function(data.set,
 
   data.set <- rename_columns(data.set,
                              compound.col,
+                             dtxsid.col,
                              cas.col,
                              reference.col,
                              species.col,
@@ -135,7 +138,7 @@ fit_all <- function(data.set,
 
   ### display messages describing loaded data
   cat(paste(N.PREV, "concentration vs. time observations loaded.\n"))
-  cat(paste(length(unique(data.set$CAS)), "unique chemicals,",
+  cat(paste(length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
             length(unique(data.set$Reference)), "unique references.\n"))
 
@@ -159,7 +162,7 @@ fit_all <- function(data.set,
   cat(paste("Restricting to intravenous and oral routes eliminates",
             N.PREV - dim(data.set)[1], "observations.\n"))
   cat(paste(dim(data.set)[1], "observations of",
-            length(unique(data.set$CAS)), "unique chemicals,",
+            length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
             length(unique(data.set$Reference)), "unique references remain.\n"))
 
@@ -195,7 +198,7 @@ fit_all <- function(data.set,
   cat(paste("Requiring time to have a value != NA eliminates",
             N.PREV - dim(data.set)[1], "observations.\n"))
   cat(paste(dim(data.set)[1], "observations of",
-            length(unique(data.set$CAS)), "unique chemicals,",
+            length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
             length(unique(data.set$Reference)), "unique references remain.\n"))
   N.PREV <- dim(data.set)[1]
@@ -203,17 +206,17 @@ fit_all <- function(data.set,
   data.set[, c('Max.Time.Days',
                'Time.Steps.PerHour') := list(max(Time.Days),
                                              1 / min(diff(c(0, sort(unique(Time)))))),
-           by = .(CAS, Dose, Route)]
+           by = .(DTXSID, Dose, Route)]
 
   # How many >LOQ observations do we have per chemical/species/reference?
-  data.set[, N.Obs.Ref := dim(subset(.SD, !is.na(Value)))[1], by = .(Reference, CAS, Species)]
+  data.set[, N.Obs.Ref := dim(subset(.SD, !is.na(Value)))[1], by = .(Reference, DTXSID, Species)]
   # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma'):
-  data.set[, Usable := N.Obs.Ref > 3, by = .(CAS, Reference, Species, Route)]
+  data.set[, Usable := N.Obs.Ref > 3, by = .(DTXSID, Reference, Species, Route)]
   data.set <- data.set[Usable == TRUE]
   cat(paste("Restricting to references with more than three observations above LOQ eliminates",
             N.PREV - dim(data.set)[1], "observations.\n"))
   cat(paste(dim(data.set)[1], "observations of",
-            length(unique(data.set$CAS)), "unique chemicals,",
+            length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
             length(unique(data.set$Reference)), "unique references remain.\n"))
   N.PREV <- dim(data.set)[1]
@@ -221,14 +224,14 @@ fit_all <- function(data.set,
   data.set[,
            Usable := ifelse(Time >= .SD[Value == max(Value, na.rm = T), Time] |
                               !is.na(Value), T, F),
-           by=.(Route,Reference,CAS,Species)]
+           by=.(Route,Reference,DTXSID,Species)]
 
   ### subset data to where Usable == TRUE
   data.set <- data.set[Usable == TRUE]
   cat(paste("Eliminating observations for doses that are below LOQ before the peak conc. is reached eliminates",
             N.PREV - dim(data.set)[1], "observations.\n"))
   cat(paste(dim(data.set)[1], "observations of",
-            length(unique(data.set$CAS)), "unique chemicals,",
+            length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
             length(unique(data.set$Reference)), "unique references remain.\n"))
 
@@ -249,7 +252,7 @@ fit_all <- function(data.set,
     ### Okay, I'm pretty sure I'm correct, as params.by.cas.spec is called by 1-comp
 
     ### if model is noncomp, create data.frame of unique pairings of CAS, Species, and Compound
-    params.by.cas.spec <- data.set[,unique(.SD[,.(Compound)]),by=.(CAS,Species)]
+    params.by.cas.spec <- data.set[,unique(.SD[,.(Compound)]),by=.(DTXSID,CAS,Species)]
 
     #get the rat parameters for the 1-compartment model for each chemical
     if (model == '1compartment') {
@@ -282,12 +285,12 @@ fit_all <- function(data.set,
       #                                                  default.to.human=TRUE,
       #                                                  species="Rat"),
       #                             by=CAS]
-      if (any(params.by.cas.spec$CAS %in% get_cheminfo()))
-        params.by.cas.spec[CAS %in% get_cheminfo(), ### where did get_cheminfo come from? httk?
+      if (any(params.by.cas.spec$DTXSID %in% httk::get_cheminfo(info="dtxsid")))
+        params.by.cas.spec[DTXSID %in% httk::get_cheminfo(info="dtxsid"), ### where did get_cheminfo come from? httk?
                            c("kelim",
                              "Vdist",
                              "Fgutabs",
-                             "kgutabs") := httk::parameterize_1comp(chem.cas = CAS,
+                             "kgutabs") := httk::parameterize_1comp(dtxsid = DTXSID,
                                                                     default.to.human = TRUE,
                                                                     species = ifelse(tolower(Species) %in% colnames(httk::physiology.data),
                                                                                      Species,
@@ -295,13 +298,17 @@ fit_all <- function(data.set,
                                                                                          "Vdist",
                                                                                          "Fgutabs",
                                                                                          "kgutabs")],
-                           by = c("CAS", "Species")]
+                           by = c("DTXSID", "Species")]
       # Wambaugh et al. (2018) medians:
       # apply(chem.invivo.PK.aggregate.data,2,function(x) median(as.numeric(x),na.rm=T))
-      params.by.cas.spec[!params.by.cas.spec$CAS %in% httk::get_cheminfo(), kelim := 0.25]
-      params.by.cas.spec[!params.by.cas.spec$CAS %in% httk::get_cheminfo(), Vdist := 5.56]
-      params.by.cas.spec[!params.by.cas.spec$CAS %in% httk::get_cheminfo(), Fgutabs := 1.0]
-      params.by.cas.spec[!params.by.cas.spec$CAS %in% httk::get_cheminfo(), kgutabs := 2.19]
+      params.by.cas.spec[!params.by.cas.spec$DTXSID %in%
+                         httk::get_cheminfo(info="dtxsid"), kelim := 0.25]
+      params.by.cas.spec[!params.by.cas.spec$DTXSID %in%
+                         httk::get_cheminfo(info="dtxsid"), Vdist := 5.56]
+      params.by.cas.spec[!params.by.cas.spec$DTXSID %in%
+                         httk::get_cheminfo(info="dtxsid"), Fgutabs := 1.0]
+      params.by.cas.spec[!params.by.cas.spec$DTXSID %in%
+                         httk::get_cheminfo(info="dtxsid"), kgutabs := 2.19]
       #      params.by.cas.spec <- tmp[, .(CAS, Vdist,kelim, Rblood2plasma,
       #                               MW, hematocrit, million.cells.per.gliver)]
       #Since we don't yet have 2comp predictions,
@@ -328,11 +335,17 @@ fit_all <- function(data.set,
     #############################
 
     ### merge data.set and params.by.cas.spec to add parameter columns
-    data.set <- merge(data.set, params.by.cas.spec, by = c("Species", "Compound", "CAS"))
+    data.set <- merge(data.set, params.by.cas.spec, by = c("Compound",
+                                                           "DTXSID",
+                                                           "CAS",
+                                                           "Species"))
     ### create vector of parameter names using column names of params.by.cas.spec
     paramnames <- names(params.by.cas.spec)
     ### remove names that were only used for merging, i.e. CAS, Species, and Compound
-    paramnames <- paramnames[!(paramnames %in% c("CAS","Species","Compound"))]
+    paramnames <- paramnames[!(paramnames %in% c("DTXSID",
+                                                 "CAS",
+                                                 "Species",
+                                                 "Compound"))]
 
     #Replace spaces in references with "."
     data.set[, Reference := gsub(Reference,
@@ -342,26 +355,26 @@ fit_all <- function(data.set,
     ### PK.fit.joint is a data.frame containing a row of parameter values per param.value.type per CAS
     PK.fit.joint <- data.set[,
                              analyze_pk_data(fitdata = .SD, ### what is .SD
-                                             this.cas = CAS,
+                                             this.dtxsid = DTXSID,
                                              paramnames = paramnames,
                                              modelfun = modelfun,
                                              model = model),
-                             by = c("CAS", "Species")]
+                             by = c("DTXSID", "Species")]
 
     ### that correspond to multiple references
-    multi.ref.cas <- data.set[, length(unique(Reference)) > 1, by = c("CAS", "Species")]
-    multi.ref.cas <- subset(multi.ref.cas, V1 == T)$CAS
+    multi.ref.cas <- data.set[, length(unique(Reference)) > 1, by = c("DTXSID", "Species")]
+    multi.ref.cas <- subset(multi.ref.cas, V1 == T)$DTXSID
     if (length(multi.ref.cas) > 0) {
-      data.set.multi.ref <- subset(data.set, CAS %in% multi.ref.cas)
+      data.set.multi.ref <- subset(data.set, DTXSID %in% multi.ref.cas)
 
       PK.fit.separate <- data.set.multi.ref[,
                                             analyze_pk_data(fitdata = .SD,
-                                                            this.cas = CAS,
+                                                            this.dtxsid = DTXSID,
                                                             paramnames = paramnames,
                                                             modelfun = modelfun,
                                                             model = model,
                                                             this.reference = Reference),
-                                            by = c("CAS", "Species", "Reference")]
+                                            by = c("DTXSID", "Species", "Reference")]
 
       #       PK.fit.separate.geomean <- PK.fit.separate %>% filter(param.value.type == "Fitted geometric mean")
       #       PK.fit.joint.geomean <- PK.fit.joint %>% filter(param.value.type == "Fitted geometric mean")

@@ -18,8 +18,8 @@
 #'
 #' @export merge_model_fits 
 merge_model_fits <- function(fit.list,
-        dtxsid.col="",
         compound.col="",
+        dtxsid.col="",
         cas.col="",
         species.col="",
         param.value.type.col="",

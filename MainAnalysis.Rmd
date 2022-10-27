@@ -34,7 +34,7 @@ devtools::load_all("invivopkfit")
 # data <- read.csv("inst/ext/cvt_query_for_john_27may2021_v2.csv")
 # data <- read.csv("inst/ext/cvtdb_invivopkfit_02242022.csv")
 # data <- read.csv("inst/ext/cvtdb_invivopkfit_04142022.csv")
-cvt.data <- read.csv("inst/ext/cvtdb_invivopkfit_04262022.csv")
+cvt.data <- read.csv("inst/ext/cvtdb_invivopkfit_04262022-2.csv")
 
 ### these compounds had no CAS in the cvtdb
 # double check and they should not have been added
@@ -96,15 +96,18 @@ cvt.data <- subset(cvt.data,!is.infinite(calc_loq))
 
 ```
 
-
-```{r, run_invivoPKfit_1comp, eval = TRUE}
+```{r, set_file_timestamp, eval = TRUE}
 THIS.DATE <- "102422"
+```
+
+```{r, run_invivoPKfit_1comp, eval = FALSE}
 ### do 1-Compartment fit
 system.time(PK.fit.table.1comp <- fit_all(
   data.set = cvt.data,
   model = "1compartment",
   modelfun = "analytic",
   compound.col = "analyte_name_original",
+  dtxsid.col = "dsstox_substance_id",
   cas.col = "dsstox_casrn",
   reference.col = "fk_reference_document_id",
   species.col = "species",
@@ -123,11 +126,6 @@ system.time(PK.fit.table.1comp <- fit_all(
   subject.default = NA,
   info.default = NA
 ))
-```
-
-```{r, plot_1comp, eval=FALSE}
-plot_conctime(PK.fit.table.1comp[[1]],cvt.data,"1compartment")
-head(subset(PK.fit.table.1comp[[1]],Vdist>10000&!is.infinite(AIC)&param.value.type=="Fitted geometric mean"))
 ```
 
 ```{r, run_invivoPKfit_2comp, eval = TRUE}
@@ -214,6 +212,13 @@ raw_flat <- read.csv(paste("inst/ext/processed.flat.data.",THIS.DATE,".csv",sep=
 
 
 pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
+```
+
+```{r, merge_pkfits, eval=FALSE}
+all.fit.table <- merge_model_fits(list("1compartment"=pk_output_1comp,
+                                       "2compartment="=pk_output_2comp,
+                                       "flat"=pk_output_flat))
+
 ```
 
 ```{r, make_rdata, eval = FALSE}

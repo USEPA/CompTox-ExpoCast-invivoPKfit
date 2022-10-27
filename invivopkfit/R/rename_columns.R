@@ -1,6 +1,7 @@
 
 rename_columns <- function(data.set,
                            compound.col,
+                           dtxsid.col,
                            cas.col,
                            reference.col,
 
@@ -81,6 +82,7 @@ rename_columns <- function(data.set,
   ### create vector of column names
   cols <- c(
     compound.col,
+    dtxsid.col,
     cas.col,
     reference.col,
     species.col,
@@ -112,6 +114,7 @@ rename_columns <- function(data.set,
 
   # Standardize the column names:
   compound.col <- "Compound"
+  dtxsid.col <- "DTXSID"
   cas.col <- "CAS"
   reference.col <- "Reference"
   species.col <- "Species"
@@ -133,6 +136,7 @@ rename_columns <- function(data.set,
   ### rename colnames to standardized colnames
   colnames(data.set) <- c(
     compound.col,
+    dtxsid.col,
     cas.col,
     reference.col,
     species.col,
