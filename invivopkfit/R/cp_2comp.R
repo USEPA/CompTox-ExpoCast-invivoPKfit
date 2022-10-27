@@ -1,5 +1,7 @@
 #' Analytical 2-compartment model
 #'
+#' what are units?
+#'
 #' @param params A named list of parameter values including the following:
 #' \describe{ \item{k12}{Rate at which compound moves from central to
 #' peripheral compartment} \item{k21}{Rate at which compound moves from
