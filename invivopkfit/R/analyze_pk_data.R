@@ -21,7 +21,8 @@ analyze_pk_data <- function(fitdata,
                             paramnames,
                             modelfun,
                             model,
-                            this.reference = NULL) {
+                            this.reference = NULL,
+                            suppress.messages = FALSE) {
   UPPERBOUNDARY <- 1e4
 
   #take a copy of input data table so it behaves as though passed by value
@@ -36,7 +37,7 @@ analyze_pk_data <- function(fitdata,
   fitdata[, LOQ := as.numeric(LOQ)]
   fitdata[is.na(LOQ), LOQ := 0.45 * min(Value, na.rm = TRUE), by = .(Compound, Reference, Media)]
 
-  cat(paste("Optimizing data for chemical ", this.dtxsid, "\n", sep =""))
+  if (!suppress.messages) cat(paste("Optimizing data for chemical ", this.dtxsid, "\n", sep =""))
 
   #Set a plausible upper bound for sigma:
   TRYSIGMA <- stats::median(fitdata$Value, na.rm = T)
@@ -441,7 +442,7 @@ analyze_pk_data <- function(fitdata,
     return(foo)
   }
 
-  cat(paste("Initial values:    ", paste(apply(data.frame(Names = names(lapply(opt.params, exp)),
+  if (!suppress.messages) cat(paste("Initial values:    ", paste(apply(data.frame(Names = names(lapply(opt.params, exp)),
                                                           Values = unlist(lapply(opt.params, exp)),
                                                           stringsAsFactors = F),
                                                1, function(x) paste(x, collapse=": ")),
@@ -464,7 +465,7 @@ analyze_pk_data <- function(fitdata,
   names(ln.means) <- names(opt.params)
 
   # if (any(ln.means>upper)) browser()
-  cat(paste("Optimized values:  ", paste(apply(data.frame(Names = names(ln.means),
+  if (!suppress.messages) cat(paste("Optimized values:  ", paste(apply(data.frame(Names = names(ln.means),
                                                           Values = sapply(ln.means,exp),
                                                           stringsAsFactors = F),
                                                1, function(x) paste(x, collapse = ": ")),
@@ -487,7 +488,7 @@ analyze_pk_data <- function(fitdata,
 
   while(any(is.nan(ln.sds)) & factr > 1) {#If any of the SDs are NaN
 
-    cat("One or more parameters has NaN standard deviation, repeating optimization with smaller convergence tolerance.\n")
+    if (!suppress.messages) cat("One or more parameters has NaN standard deviation, repeating optimization with smaller convergence tolerance.\n")
     #then redo optimization
     #  if ("Fgutabs" %in% names(opt.params)) browser()
     opt.params <- ln.means + stats::runif(length(ln.means), -0.1, 0.1)
@@ -495,7 +496,7 @@ analyze_pk_data <- function(fitdata,
     opt.params[opt.params <= lower] <- lower[opt.params <= lower] + 0.1
     opt.params[opt.params >= upper] <- upper[opt.params >= upper] - 0.1
 
-    cat(paste("Initial values:    ", paste(apply(data.frame(Names = names(opt.params),
+    if (!suppress.messages) cat(paste("Initial values:    ", paste(apply(data.frame(Names = names(opt.params),
                                                            Values = unlist(lapply(opt.params,exp)),
                                                            stringsAsFactors = F),
                                                 1, function(x) paste(x, collapse = ": ")),
@@ -514,7 +515,7 @@ analyze_pk_data <- function(fitdata,
 
     ln.means <- as.vector(stats::coef(all.data.fit))
     names(ln.means) <- names(opt.params)
-    cat(paste("Optimized values:  ",paste(apply(data.frame(Names = names(ln.means),
+    if (!suppress.messages) cat(paste("Optimized values:  ",paste(apply(data.frame(Names = names(ln.means),
                                                            Values = sapply(ln.means, exp),
                                                            stringsAsFactors=F),
                                                 1, function(x) paste(x, collapse=": ")),
@@ -597,7 +598,14 @@ analyze_pk_data <- function(fitdata,
     out.dt[regexpr(",", Data.Analyzed) != -1, Data.Analyzed := 'Joint Analysis']
   } else out.dt[, Data.Analyzed := this.reference]
 
+  #
+  #
+  # ADD OTHER COMPOUND IDENTIFIERS
+  #
+  #
+
   out.dt[, Compound := fitdata$Compound[1]]
+  out.dt[, CAS := fitdata$CAS[1]]
 
   # If any of the parameters were not optimized or if the the model does not fit well:
   #  if (any(ln.means==as.vector(opt.params[names(ln.means)])) | any(sigmas>1))

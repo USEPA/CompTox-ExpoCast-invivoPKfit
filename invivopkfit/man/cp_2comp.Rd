@@ -29,5 +29,5 @@ A vector of plasma concentration values corresponding to each value
 in \code{time}
 }
 \description{
-Analytical 2-compartment model
+what are units?
 }

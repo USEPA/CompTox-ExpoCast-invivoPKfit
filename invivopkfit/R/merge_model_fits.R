@@ -2,21 +2,35 @@
 #'
 #' This takes multiple tables of pharmcokinetic parameters (one table per model)
 #' genetated by \code{\link{fit_all}}
-#' and merges them into a table containing one row per chemical-species 
+#' and merges them into a table containing one row per chemical-species
 #' combination. Each row contains all the model
-#' parameters estimated for that model, and a set of optimal parameters as 
-#' identified from the AIC. This function assigns each chemical a column 
+#' parameters estimated for that model, and a set of optimal parameters as
+#' identified from the AIC. This function assigns each chemical a column
 #' "Model" containing the name of he winning (lowest AIC) model and, from that
 #' winning model, reports "Vdist", "kelim", "thalf", "kgutabs", "Fbioavail".
 #'
 #' @param fit_list a named list of PK parameter tables from \code{\link{fit_all}}
 #' -- the names should be the names of the models
 #'
+#' @param compound.col Column indicating chemicalname
+#'
+#' @param dtxsid.col Column indicating DSSTox Structure ID
+#'
+#' @param cas.col Column indicating Chemical Abstracts Service Registry Number
+#'
+#' @param species.col Column indicating species
+#'
+#' @param param.value.type.col Column indicating type of estimate
+#'
+#' @param param.value.type Type of estimate to be included
+#'
+#' @param data.analyzed.col Column indicating which datasets were used
+#'
 #' @return A data.frame with one row per chemical-species combination
 #'
 #' @author John Wambaugh
 #'
-#' @export merge_model_fits 
+#' @export merge_model_fits
 merge_model_fits <- function(fit.list,
         compound.col="",
         dtxsid.col="",
@@ -42,12 +56,12 @@ merge_model_fits <- function(fit.list,
   {
     this.table <- fit.list[[this.table.name]]
     this.table$Css <- 1/this.table$CLtot
-    
+
     # select for the correct parameter type
     if (param.value.type.col %in% colnames(this.table))
       this.table <- subset(this.table, this.table[,param.value.type.col] ==
                            param.value.type)
-    
+
     # Check for pathological fits, set AIC to Inf:
     if ("kelim" %in% colnames(this.table))
     {
@@ -63,7 +77,7 @@ merge_model_fits <- function(fit.list,
       badfits <- this.table$Vdist
       badfits[is.na(badfits)] <- 100000
       badfits <- badfits>10000
-      this.table[badfits,"AIC"] <- Inf  
+      this.table[badfits,"AIC"] <- Inf
     }
     if ("k12" %in% colnames(this.table))
     {
@@ -72,25 +86,25 @@ merge_model_fits <- function(fit.list,
       badfits[is.na(badfits)] <- -0.1
       badfits <- badfits<0
       this.table[badfits,"AIC"] <- Inf
-    }    
-   
-    for (this.dtxsid in this.table[,dtxsid.col]) 
-    { 
+    }
+
+    for (this.dtxsid in this.table[,dtxsid.col])
+    {
       this.subset <- subset(this.table, this.table[,dtxsid.col] == this.dtxsid)
       this.compound <- this.subset[1,compound.col]
       this.cas <- this.subset[1,cas.col]
-      
+
       for (this.species in unique(this.subset[,species.col]))
       {
         this.species.subset < subset(this.table,this.subset[,species.col] ==
                                      this.species)
-        
+
         # If more than one source, require that the joint analysis worked:
         if (dim(this.species.subset)[1]>1)
         {
           if ("Joint Analysis" %in% this.species.subset[,data.analyzed.col])
           {
-            this.species.subset <- subset(this.species.subset, 
+            this.species.subset <- subset(this.species.subset,
               this.species.subset[,data.analyzed.col]=="Joint Analysis")
           } else {
             this.species.subset <- apply(this.species.subset, 2, mean)
@@ -99,7 +113,7 @@ merge_model_fits <- function(fit.list,
               collapse=", ")
           }
         }
-                                      
+
         # See if this chemical is already in the main fittable:
         if (this.dtxsid %in% main.table$DTXSID)
         {
@@ -108,11 +122,11 @@ merge_model_fits <- function(fit.list,
         # See if this chemical-spcies combo is already in the main fittable:
         if (this.species %in% main.table[this.index,Species])
         {
-          this.index <- this.index & main.table$Species==this.species 
+          this.index <- this.index & main.table$Species==this.species
         } else this.index <- dim(main.table)[1]+1
-      
+
         model.postfix <- substr(this.model,1,5)
-    
+
         model.params <- colnames(this.table)
         model.params <- model.params[!(model.params%in% c(
                                                           "DTXSID",
@@ -125,7 +139,7 @@ merge_model_fits <- function(fit.list,
       } # Close species loop
     } # Close chemical loop
   } # Close model loop
-  
+
   # Now pick the best AIC
   AIC.cols <- regexpr("AIC",colnames(main.table))
   for (this.col in AIC.cols)
@@ -140,7 +154,7 @@ merge_model_fits <- function(fit.list,
       # Which row of main.table do we want?
       this.index <- which(main.table$DTXSID == this.chemical &
                           main.table$Species == this.species)
-       
+
       AICs <- this.species.subset[,AIC.cols]
       if (all(AICs==Inf))
       {
@@ -152,12 +166,12 @@ merge_model_fits <- function(fit.list,
         min.AIC <- min(AICs)
         model.postfix <- colnames(AICS)[AICs==min.AIC]
         model.postfix <- stsplit(".", model.postfix)[[1]][2]
-        
-        main.table[this.index, "Model"] <- paste("AIC",model.postfix) 
+
+        main.table[this.index, "Model"] <- paste("AIC",model.postfix)
         main.table[this.index, "AIC.Best"] <- min.AIC
         for (this.param in c("Vdist", "kelim", "kgutabs", "Fgutabs"))
           if (paste(this.param, model.postfix) %in% colnames(main.table))
-            main.table[this.index, this.param] <- paste(this.param, model.postfix) 
+            main.table[this.index, this.param] <- paste(this.param, model.postfix)
       }
     }
   }
@@ -168,9 +182,9 @@ merge_model_fits <- function(fit.list,
   # Set reasonable sig figs:
   for (this.col in c(
     "AIC.flat", "AIC.1comp", "AIC.2comp", "AIC.best", "Vdist", "kelim", "kgutabs",
-    "Fgutabs", "kgutabs.1comp","kgutabs.2comp",    
+    "Fgutabs", "kgutabs.1comp","kgutabs.2comp",
     "Vdist.1comp", "kelim.1comp", "Fgutabs.1comp", "Vdist.2comp", "V1.2comp",
-    "k12.2comp", "k21.2comp", "kelim.2comp", "Fgutabs.2comp", 
+    "k12.2comp", "k21.2comp", "kelim.2comp", "Fgutabs.2comp",
     "Ralphatokelim.2comp","Fbetaofalpha.2comp","alpha.2comp","beta.2comp",
     "halflife"))
     main.table[,this.col] <- signif(main.table[,this.col], 3)

@@ -6,18 +6,19 @@
 \usage{
 analyze_pk_data(
   fitdata,
-  this.cas,
+  this.dtxsid,
   paramnames,
   modelfun,
   model,
-  this.reference = NULL
+  this.reference = NULL,
+  suppress.messages = FALSE
 )
 }
 \arguments{
 \item{fitdata}{A data.table of concentration vs. time data for a given
 chemical}
 
-\item{this.cas}{A CAS number for the chemical to be fitted}
+\item{this.dtxsid}{A DSSTox Substance Identifier for the chemical to be fitted}
 
 \item{paramnames}{A list of names of the model parameters to be fitted}
 

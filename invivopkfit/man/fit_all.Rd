@@ -10,6 +10,7 @@ fit_all(
   modelfun = NA,
   ratio.data.to.dose = 1,
   compound.col = "Compound",
+  dtxsid.col = "DTXSID",
   cas.col = "CAS",
   reference.col = "Reference",
   species.col = "Species",
@@ -36,7 +37,8 @@ fit_all(
   subject.col = "Subject",
   subject.default = NULL,
   info.col = "info",
-  info.default = NULL
+  info.default = NULL,
+  suppress.messages = FALSE
 )
 }
 \arguments{

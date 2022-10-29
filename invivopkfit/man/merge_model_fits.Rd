@@ -6,8 +6,8 @@
 \usage{
 merge_model_fits(
   fit.list,
-  dtxsid.col = "",
   compound.col = "",
+  dtxsid.col = "",
   cas.col = "",
   species.col = "",
   param.value.type.col = "",
@@ -16,6 +16,20 @@ merge_model_fits(
 )
 }
 \arguments{
+\item{compound.col}{Column indicating chemicalname}
+
+\item{dtxsid.col}{Column indicating DSSTox Structure ID}
+
+\item{cas.col}{Column indicating Chemical Abstracts Service Registry Number}
+
+\item{species.col}{Column indicating species}
+
+\item{param.value.type.col}{Column indicating type of estimate}
+
+\item{data.analyzed.col}{Column indicating which datasets were used}
+
+\item{param.value.type}{Type of estimate to be included}
+
 \item{fit_list}{a named list of PK parameter tables from \code{\link{fit_all}}
 -- the names should be the names of the models}
 }
@@ -25,10 +39,10 @@ A data.frame with one row per chemical-species combination
 \description{
 This takes multiple tables of pharmcokinetic parameters (one table per model)
 genetated by \code{\link{fit_all}}
-and merges them into a table containing one row per chemical-species 
+and merges them into a table containing one row per chemical-species
 combination. Each row contains all the model
-parameters estimated for that model, and a set of optimal parameters as 
-identified from the AIC. This function assigns each chemical a column 
+parameters estimated for that model, and a set of optimal parameters as
+identified from the AIC. This function assigns each chemical a column
 "Model" containing the name of he winning (lowest AIC) model and, from that
 winning model, reports "Vdist", "kelim", "thalf", "kgutabs", "Fbioavail".
 }

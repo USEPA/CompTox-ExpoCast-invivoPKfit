@@ -97,7 +97,8 @@ fit_all <- function(data.set,
                     subject.default = NULL,
 
                     info.col = "info",
-                    info.default = NULL) {
+                    info.default = NULL,
+                    suppress.messages = FALSE) {
 
   data.set <- rename_columns(data.set,
                              compound.col,
@@ -292,6 +293,7 @@ fit_all <- function(data.set,
                              "Fgutabs",
                              "kgutabs") := httk::parameterize_1comp(dtxsid = DTXSID,
                                                                     default.to.human = TRUE,
+                                                                    suppress.messages = TRUE,
                                                                     species = ifelse(tolower(Species) %in% colnames(httk::physiology.data),
                                                                                      Species,
                                                                                      "Human"))[c("kelim",
@@ -358,7 +360,8 @@ fit_all <- function(data.set,
                                              this.dtxsid = DTXSID,
                                              paramnames = paramnames,
                                              modelfun = modelfun,
-                                             model = model),
+                                             model = model,
+                                             suppress.messages=suppress.messages),
                              by = c("DTXSID", "Species")]
 
     ### that correspond to multiple references
@@ -373,7 +376,8 @@ fit_all <- function(data.set,
                                                             paramnames = paramnames,
                                                             modelfun = modelfun,
                                                             model = model,
-                                                            this.reference = Reference),
+                                                            this.reference = Reference,
+                                                            suppress.messages = suppress.messages),
                                             by = c("DTXSID", "Species", "Reference")]
 
       #       PK.fit.separate.geomean <- PK.fit.separate %>% filter(param.value.type == "Fitted geometric mean")
