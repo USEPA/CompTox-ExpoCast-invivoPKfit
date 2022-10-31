@@ -45,6 +45,17 @@ analyze_pk_data <- function(fitdata,
 
   #Initialize output table with HTTK-predicted parameter values
   out.dt <- fitdata[1, paramnames, with = FALSE]
+
+  #
+  #
+  # ADD OTHER COMPOUND IDENTIFIERS
+  #
+  #
+
+  out.dt[, Compound := fitdata$Compound[1]]
+  out.dt[, CAS := fitdata$CAS[1]]
+
+  # Describe initial parameter values
   out.dt[, param.value.type := 'Predicted']
 
   these.params <- as.list(fitdata[1, paramnames, with = FALSE])
@@ -345,7 +356,6 @@ analyze_pk_data <- function(fitdata,
       out.dt[, Data.Analyzed := this.reference]
     }
 
-    out.dt[, Compound := fitdata$Compound[1]]
     out.dt[, LogLikelihood := as.numeric(NA)]
     out.dt[, AIC := as.double(NA)]
 
@@ -353,7 +363,6 @@ analyze_pk_data <- function(fitdata,
               " parameters and only ",
               nrow(fitdata), " data points. Optimization aborted.\n", sep = ""))
     # browser()
-    # out.dt[, Compound:=fitdata$Compound[1]] ### added because compound wasn't found for those data that went through this if statement
     return(out.dt)
   }
 
@@ -597,15 +606,6 @@ analyze_pk_data <- function(fitdata,
     out.dt[, Data.Analyzed := Reference]
     out.dt[regexpr(",", Data.Analyzed) != -1, Data.Analyzed := 'Joint Analysis']
   } else out.dt[, Data.Analyzed := this.reference]
-
-  #
-  #
-  # ADD OTHER COMPOUND IDENTIFIERS
-  #
-  #
-
-  out.dt[, Compound := fitdata$Compound[1]]
-  out.dt[, CAS := fitdata$CAS[1]]
 
   # If any of the parameters were not optimized or if the the model does not fit well:
   #  if (any(ln.means==as.vector(opt.params[names(ln.means)])) | any(sigmas>1))

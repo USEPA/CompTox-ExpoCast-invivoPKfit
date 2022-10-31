@@ -356,7 +356,16 @@ fit_all <- function(data.set,
 
     ### PK.fit.joint is a data.frame containing a row of parameter values per param.value.type per CAS
     PK.fit.joint <- data.set[,
-                             analyze_pk_data(fitdata = .SD, ### what is .SD
+    ### Throughout the code we make use of the data.table feature ".SD".
+    ### .SD stands for "subset of the data". In a call to a data.table object A:
+    ### A[i,j,k]
+    ### i indicates the rows that are impacted (fuzzy on this)
+    ### j indicates a column that is changed or a whole subset of the rows in i
+    ###    as indicated by k
+    ###
+    ### For a complete explanation go to:
+    ### https://cran.r-project.org/web/packages/data.table/vignettes/datatable-sd-usage.html
+                             analyze_pk_data(fitdata = .SD,
                                              this.dtxsid = DTXSID,
                                              paramnames = paramnames,
                                              modelfun = modelfun,

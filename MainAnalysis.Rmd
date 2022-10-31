@@ -75,7 +75,7 @@ cvt.data <- estimate_loq(cvt.data)
 THIS.DATE <- "102422"
 ```
 
-```{r, run_invivoPKfit_1comp, eval = TRUE}
+```{r, run_invivoPKfit_1comp, eval = FALSE}
 ### do 1-Compartment fit
 system.time(PK.fit.table.1comp <- fit_all(
   data.set = cvt.data,
@@ -97,14 +97,14 @@ system.time(PK.fit.table.1comp <- fit_all(
   units.default = NA,
   route.col = "administration_route_normalized",
   source.col = "document_id",
-  loq.default = NA,
+  loq.col ="calc_loq",
   subject.default = NA,
   info.default = NA,
   suppress.messages = TRUE
 ))
 ```
 
-```{r, run_invivoPKfit_2comp, eval = TRUE}
+```{r, run_invivoPKfit_2comp, eval = FALSE}
 ### do 2-Compartment fit
 system.time(PK.fit.table.2comp <- fit_all(
   data.set = cvt.data,
@@ -132,8 +132,8 @@ system.time(PK.fit.table.2comp <- fit_all(
   suppress.messages=TRUE
 ))
 ```
-```{r, plot_2comp, eval=FALSE}
-plot_conctime(PK.fit.table.2comp[[1]],cvt.data,"2compartment")
+```{r, plot_2comp, eval=TRUE}
+plot_conctime(PK.fit.table.2comp[[1]],cvt.data,model="2compartment")
 head(subset(PK.fit.table.2comp[[1]],Vdist>10000&!is.infinite(AIC)&param.value.type=="Fitted geometric mean"))
 ```
 
@@ -160,7 +160,7 @@ system.time(PK.fit.table.flat <- fit_all(
   units.default = NA,
   route.col = "administration_route_normalized",
   source.col = "document_id",
-  loq.default = NA,
+  loq.col ="calc_loq",
   subject.default = NA,
   info.default = NA,
   suppress.messages=TRUE
@@ -232,17 +232,17 @@ save(pk_lombardo, file = paste("figures_rdata/pk_lombardo",THIS.DATE,".RData",se
 # raw_1comp_03012022 <- raw_1comp_03012022 %>%
 #   filter(Compound == "tamoxifen")
 
-junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_1comp_05092022),
-                      data.set = as.data.table(raw_1comp_05092022),
+junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_1comp),
+                      data.set = as.data.table(raw_1comp),
                       model = "1compartment")
 
 ### 2 compartment
-junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_2comp_05092022),
-                      data.set = as.data.table(raw_2comp_05092022),
+junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_2comp),
+                      data.set = as.data.table(raw_2comp),
                       model = "2compartment")
 
-junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_flat_05092022),
-                      data.set = as.data.table(raw_flat_05092022),
+junk <- plot_conctime(PK.fit.table = as.data.table(pk_output_flat),
+                      data.set = as.data.table(raw_flat),
                       model = "flat")
 
 ```

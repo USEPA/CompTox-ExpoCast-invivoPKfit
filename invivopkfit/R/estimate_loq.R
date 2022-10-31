@@ -36,7 +36,8 @@ estimate_loq <- function(cvt.data,
                          chem.col = "dsstox_casrn",
                          media.col = "conc_medium_normalized",
                          value.col = "conc",
-                         calc.loq.col = "calc_loq")
+                         calc.loq.col = "calc_loq",
+                         loq.factor = 0.45)
 {
 
   for (this.study in unique(cvt.data[,source.col]))
@@ -51,7 +52,7 @@ estimate_loq <- function(cvt.data,
                                  !is.na(this.subset2[,value.col]))
         this.subset3 <- subset(this.subset3,this.subset3[,value.col]>0)
         this.loq <- suppressWarnings(min(this.subset3[,value.col], na.rm=TRUE))
-        this.loq <- this.loq*0.9
+        this.loq <- this.loq*loq.factor
         cvt.data[
           cvt.data[,source.col]==this.study &
             cvt.data[,chem.col]==this.chem &
