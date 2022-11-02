@@ -132,13 +132,8 @@ system.time(PK.fit.table.2comp <- fit_all(
   suppress.messages=TRUE
 ))
 ```
-```{r, plot_2comp, eval=TRUE}
-plot_conctime(PK.fit.table.2comp[[1]],cvt.data,model="2compartment")
-head(subset(PK.fit.table.2comp[[1]],Vdist>10000&!is.infinite(AIC)&param.value.type=="Fitted geometric mean"))
-```
 
-
-```{r, run_invivoPKfit_flat, eval = TRUE}
+```{r, run_invivoPKfit_flat, eval = FALSE}
 ### do flat fit
 system.time(PK.fit.table.flat <- fit_all(
   data.set = cvt.data,
@@ -167,7 +162,7 @@ system.time(PK.fit.table.flat <- fit_all(
 ))
 ```
 
-```{r, write_invivoPKfits_to_file, eval = TRUE}
+```{r, write_invivoPKfits_to_file, eval = FALSE}
 write.csv(PK.fit.table.1comp[[1]], paste("inst/ext/PK.fit.table.1comp.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 write.csv(PK.fit.table.1comp[[2]], paste("inst/ext/processed.1comp.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 
@@ -197,7 +192,9 @@ pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 ```{r, merge_pkfits, eval=FALSE}
 all.fit.table <- merge_model_fits(list("1compartment"=pk_output_1comp,
                                        "2compartment="=pk_output_2comp,
-                                       "flat"=pk_output_flat))
+                                       "flat"=pk_output_flat),
+                                        dtxsid.col = "DTXSID",
+                                  species.col = "Species")
 
 ```
 

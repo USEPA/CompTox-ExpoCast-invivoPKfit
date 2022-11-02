@@ -32,11 +32,11 @@
 #'
 #' @export merge_model_fits
 merge_model_fits <- function(fit.list,
-        compound.col="",
-        dtxsid.col="",
-        cas.col="",
-        species.col="",
-        param.value.type.col="",
+        compound.col="Compound",
+        dtxsid.col="DTXSID",
+        cas.col="CAS",
+        species.col="Species",
+        param.value.type.col="param.value.type",
         data.analyzed.col="Data.Analyzed",
         param.value.type="Fitted geometric mean")
 {
@@ -59,8 +59,14 @@ merge_model_fits <- function(fit.list,
 
     # select for the correct parameter type
     if (param.value.type.col %in% colnames(this.table))
-      this.table <- subset(this.table, this.table[,param.value.type.col] ==
-                           param.value.type)
+    {
+      this.table <- this.table[this.table[,param.value.type.col] ==
+                           param.value.type,]
+    } else stop(paste(param.value.type,
+                      "not found in column",
+                      param.value.type.col,
+                      "for table",
+                      this.table.name))
 
     # Check for pathological fits, set AIC to Inf:
     if ("kelim" %in% colnames(this.table))
@@ -96,12 +102,13 @@ merge_model_fits <- function(fit.list,
 
       for (this.species in unique(this.subset[,species.col]))
       {
-        this.species.subset < subset(this.table,this.subset[,species.col] ==
+        this.species.subset <- subset(this.subset, this.subset[,species.col] ==
                                      this.species)
 
         # If more than one source, require that the joint analysis worked:
         if (dim(this.species.subset)[1]>1)
         {
+          browser()
           if ("Joint Analysis" %in% this.species.subset[,data.analyzed.col])
           {
             this.species.subset <- subset(this.species.subset,
@@ -119,20 +126,20 @@ merge_model_fits <- function(fit.list,
         {
           this.index <- which(main.table$DTXSID == this.dtxsid)
         } else this.index <- dim(main.table)[1]+1
-        # See if this chemical-spcies combo is already in the main fittable:
-        if (this.species %in% main.table[this.index,Species])
+        # See if this chemical-species combo is already in the main fittable:
+        if (this.species %in% main.table[this.index,species.col])
         {
           this.index <- this.index & main.table$Species==this.species
         } else this.index <- dim(main.table)[1]+1
 
-        model.postfix <- substr(this.model,1,5)
+        model.postfix <- substr(this.table.name,1,5)
 
         model.params <- colnames(this.table)
         model.params <- model.params[!(model.params%in% c(
                                                           "DTXSID",
                                                           "Compound",
                                                           "CAS"))]
-        # Copu parameters into main table:
+        # Copy parameters into main table:
         for (this.param in model.params)
           main.table[this.index, paste(this.param, model.postfix)] <-
             this.species.subset[,this.param]

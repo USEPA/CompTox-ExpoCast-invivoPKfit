@@ -52,8 +52,9 @@ analyze_pk_data <- function(fitdata,
   #
   #
 
-  out.dt[, Compound := fitdata$Compound[1]]
-  out.dt[, CAS := fitdata$CAS[1]]
+  out.dt[, Compound := fitdata[1,"Compound"]]
+  out.dt[, CAS := fitdata[1,"CAS"]]
+  if (this.dtxsid == "DTXSID4020533") browser()
 
   # Describe initial parameter values
   out.dt[, param.value.type := 'Predicted']
