@@ -373,21 +373,29 @@ fit_all <- function(data.set,
                                              suppress.messages=suppress.messages),
                              by = c("DTXSID", "Species")]
 
-    ### that correspond to multiple references
-    multi.ref.cas <- data.set[, length(unique(Reference)) > 1, by = c("DTXSID", "Species")]
-    multi.ref.cas <- subset(multi.ref.cas, V1 == T)$DTXSID
+    #browser()
+    ### Rerun subsetting per reference just for chemical/species comvbinations
+    ### that have multiple references:
+    multi.ref.cas <- data.set[, MultipleReferences :=
+                                length(unique(Reference)) > 1,
+                              by = c("DTXSID", "Species")]
+    multi.ref.cas <- unique(subset(multi.ref.cas,
+                                   MultipleReferences == TRUE)$DTXSID)
     if (length(multi.ref.cas) > 0) {
-      data.set.multi.ref <- subset(data.set, DTXSID %in% multi.ref.cas)
+      data.set.multi.ref <- subset(data.set, MultipleReferences == TRUE)
 
       PK.fit.separate <- data.set.multi.ref[,
-                                            analyze_pk_data(fitdata = .SD,
-                                                            this.dtxsid = DTXSID,
-                                                            paramnames = paramnames,
-                                                            modelfun = modelfun,
-                                                            model = model,
-                                                            this.reference = Reference,
-                                                            suppress.messages = suppress.messages),
-                                            by = c("DTXSID", "Species", "Reference")]
+                                 analyze_pk_data(fitdata = .SD,
+                                                 this.dtxsid = DTXSID,
+                                                 paramnames = paramnames,
+                                                 modelfun = modelfun,
+                                                 model = model,
+                                                 this.reference = Reference,
+                                                 suppress.messages = suppress.messages),
+                                                 by = c(
+                                                   "DTXSID",
+                                                   "Species",
+                                                   "Reference")]
 
       #       PK.fit.separate.geomean <- PK.fit.separate %>% filter(param.value.type == "Fitted geometric mean")
       #       PK.fit.joint.geomean <- PK.fit.joint %>% filter(param.value.type == "Fitted geometric mean")

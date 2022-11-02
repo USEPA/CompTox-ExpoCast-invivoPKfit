@@ -56,7 +56,7 @@ analyze_pk_data <- function(fitdata,
   out.dt[, CAS := fitdata[1,"CAS"]]
   out.dt[, Media := fitdata[1,"Media"]]
 
-  #if (this.dtxsid == "DTXSID4020533") browser()
+  #if (this.dtxsid == "DTXSID0020442") browser()
 
   # Describe initial parameter values
   out.dt[, param.value.type := 'Predicted']
@@ -541,7 +541,7 @@ analyze_pk_data <- function(fitdata,
     ln.sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                        error = function(err){
                          #if hessian can't be inverted
-                         cat("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.\n")
+                         if (!suppress.messages) cat("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.\n")
                          return(diag(chol(MASS::ginv(numhess),
                                           pivot = TRUE)) ^ (1/2)) #pseduovariance matrix
                          #see http://gking.harvard.edu/files/help.pdf
@@ -628,7 +628,7 @@ analyze_pk_data <- function(fitdata,
     if (ln.means["Vdist"] == upper["Vdist"]) {
       out.dt[ ,LogLikelihood := 0] ### replace with NA to make error more apparent
       out.dt[ ,AIC := Inf]
-      cat("Vdist equal to upper bound on optimizer. Returning AIC=INF.\n")
+      if (!suppress.messages) cat("Vdist equal to upper bound on optimizer. Returning AIC=INF.\n")
     } else {
       out.dt[ ,LogLikelihood := -all.data.fit$value]
       out.dt[ ,AIC := 2 * length(opt.params) + 2 * all.data.fit$value]
@@ -662,6 +662,7 @@ analyze_pk_data <- function(fitdata,
   out.dt[is.na(CAS), CAS := fitdata[1,"CAS"]]
   out.dt[is.na(Media), Media := fitdata[1,"Media"]]
 
+  #browser()
   return(out.dt)
 
 }

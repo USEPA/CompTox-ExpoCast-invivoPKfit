@@ -78,7 +78,7 @@ THIS.DATE <- "102422"
 ```{r, run_invivoPKfit_1comp, eval = FALSE}
 ### do 1-Compartment fit
 system.time(PK.fit.table.1comp <- fit_all(
-  data.set = cvt.data,
+  data.set = subset(cvt.data,dsstox_substance_id=="DTXSID0020442"),
   model = "1compartment",
   modelfun = "analytic",
   compound.col = "analyte_name_original",

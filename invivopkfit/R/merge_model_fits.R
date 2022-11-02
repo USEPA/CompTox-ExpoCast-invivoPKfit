@@ -121,7 +121,7 @@ merge_model_fits <- function(fit.list,
             {
               this.species.subset <- subset(this.species.subset,
                                       this.species.subset[,data.analyzed.col] ==
-                                      "Joint Analysis")
+                                      "Joint Analysis")[1,] # Take first sigma
             } else {
               this.species.subset <- apply(this.species.subset, 2, mean)
               this.species.subset[,data.analyzed.col] <-
