@@ -111,36 +111,7 @@ system.time(PK.fit.table.2comp <- fit_all(
   model = "2compartment",
   modelfun = "analytic",
   compound.col = "analyte_name_original",
-    dtxsid.col = "dsstox_substance_id",
-  cas.col = "dsstox_casrn",
-  reference.col = "fk_reference_document_id",
-  species.col = "species",
-  species.weight.col = "weight_kg",
-  species.weight.units.default = "kg",
-  dose.col = "dose_level_normalized",
-  time.col = "time_hr",
-  time.units.default = "hr",
-  media.col = "conc_medium_normalized",
-  media.units.default = "normalized",
-  value.col = "conc",
-  units.default = NA,
-  route.col = "administration_route_normalized",
-  source.col = "document_id",
-  loq.default = NA,
-  subject.default = NA,
-  info.default = NA,
-  suppress.messages=TRUE
-))
-```
-
-```{r, run_invivoPKfit_flat, eval = FALSE}
-### do flat fit
-system.time(PK.fit.table.flat <- fit_all(
-  data.set = cvt.data,
-  model = "flat",
-  modelfun = "analytic",
-  compound.col = "analyte_name_original",
-    dtxsid.col = "dsstox_substance_id",
+  dtxsid.col = "dsstox_substance_id",
   cas.col = "dsstox_casrn",
   reference.col = "fk_reference_document_id",
   species.col = "species",
@@ -158,7 +129,36 @@ system.time(PK.fit.table.flat <- fit_all(
   loq.col ="calc_loq",
   subject.default = NA,
   info.default = NA,
-  suppress.messages=TRUE
+  suppress.messages = TRUE
+))
+```
+
+```{r, run_invivoPKfit_flat, eval = FALSE}
+### do flat fit
+system.time(PK.fit.table.flat <- fit_all(
+  data.set = cvt.data,
+  model = "flat",
+  modelfun = "analytic",
+  compound.col = "analyte_name_original",
+  dtxsid.col = "dsstox_substance_id",
+  cas.col = "dsstox_casrn",
+  reference.col = "fk_reference_document_id",
+  species.col = "species",
+  species.weight.col = "weight_kg",
+  species.weight.units.default = "kg",
+  dose.col = "dose_level_normalized",
+  time.col = "time_hr",
+  time.units.default = "hr",
+  media.col = "conc_medium_normalized",
+  media.units.default = "normalized",
+  value.col = "conc",
+  units.default = NA,
+  route.col = "administration_route_normalized",
+  source.col = "document_id",
+  loq.col ="calc_loq",
+  subject.default = NA,
+  info.default = NA,
+  suppress.messages = TRUE
 ))
 ```
 

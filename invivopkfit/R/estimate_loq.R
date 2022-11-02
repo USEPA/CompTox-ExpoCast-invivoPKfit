@@ -32,7 +32,7 @@
 #'
 #' @export estimate_loq
 estimate_loq <- function(cvt.data,
-                         source.col = "fk_study_id",
+                         source.col = "document_id",
                          chem.col = "dsstox_casrn",
                          media.col = "conc_medium_normalized",
                          value.col = "conc",

@@ -54,7 +54,9 @@ analyze_pk_data <- function(fitdata,
 
   out.dt[, Compound := fitdata[1,"Compound"]]
   out.dt[, CAS := fitdata[1,"CAS"]]
-  if (this.dtxsid == "DTXSID4020533") browser()
+  out.dt[, Media := fitdata[1,"Media"]]
+
+  #if (this.dtxsid == "DTXSID4020533") browser()
 
   # Describe initial parameter values
   out.dt[, param.value.type := 'Predicted']
@@ -489,7 +491,7 @@ analyze_pk_data <- function(fitdata,
   ln.sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                      error = function(err){
                        #if hessian can't be inverted
-                       cat("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.\n")
+                       if (!suppress.messages) cat("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.\n")
                        return(diag(chol(MASS::ginv(numhess),
                                         pivot = TRUE)) ^ (1/2)) #pseduovariance matrix
                        #see http://gking.harvard.edu/files/help.pdf
@@ -610,11 +612,17 @@ analyze_pk_data <- function(fitdata,
 
   # If any of the parameters were not optimized or if the the model does not fit well:
   #  if (any(ln.means==as.vector(opt.params[names(ln.means)])) | any(sigmas>1))
-  if (any(ln.means == as.vector(orig.params[names(ln.means)])) | any(sigmas > MAXSIGMA) | factr == 1 | all(ln.sds) == 0) { ### added factr and ln.sds
+  if (any(ln.means == as.vector(orig.params[names(ln.means)])) |
+      any(sigmas > MAXSIGMA) |
+      factr == 1 |
+      all(ln.sds) == 0) { ### added factr and ln.sds
 
     out.dt[, LogLikelihood := 0]  ### replace with NA to make error more apparent
     out.dt[, AIC := Inf]
-    cat(paste("Some parameters were not optimized, sigma >", MAXSIGMA, " some parameters had NaN standard deviation under smallest convergence tolerance, or the standard deviation of each parameter could not be calculated. Returning AIC=INF.\n"))
+    if (!suppress.messages) cat(
+      paste("Some parameters were not optimized, sigma >",
+            MAXSIGMA,
+            " some parameters had NaN standard deviation under smallest convergence tolerance, or the standard deviation of each parameter could not be calculated. Returning AIC=INF.\n"))
   } else if (model == '1compartment') {
     # Check for bad one-compartment model fits:
     if (ln.means["Vdist"] == upper["Vdist"]) {
@@ -627,7 +635,9 @@ analyze_pk_data <- function(fitdata,
     }
   } else if (model == '2compartment') {
     # Check for bad two-compartment model fits:
-    if (ln.means["Fbetaofalpha"] == upper["Fbetaofalpha"] | ln.means["Fbetaofalpha"] == lower["Fbetaofalpha"] | ln.means["V1"] == upper["V1"])
+    if (ln.means["Fbetaofalpha"] == upper["Fbetaofalpha"] |
+        ln.means["Fbetaofalpha"] == lower["Fbetaofalpha"] |
+        ln.means["V1"] == upper["V1"])
     {
       out.dt[ ,LogLikelihood := 0] ### replace with NA to make error more apparent
       out.dt[ ,AIC := Inf]
@@ -646,6 +656,11 @@ analyze_pk_data <- function(fitdata,
   if (!is.null(this.reference)) {
     out.dt[, Reference := NULL]
   }
+
+  # Fill in missing Compound, CAS, media:
+  out.dt[is.na(Compound), Compound := fitdata[1,"Compound"]]
+  out.dt[is.na(CAS), CAS := fitdata[1,"CAS"]]
+  out.dt[is.na(Media), Media := fitdata[1,"Media"]]
 
   return(out.dt)
 

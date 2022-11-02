@@ -36,6 +36,7 @@ merge_model_fits <- function(fit.list,
         dtxsid.col="DTXSID",
         cas.col="CAS",
         species.col="Species",
+        media.col="Media",
         param.value.type.col="param.value.type",
         data.analyzed.col="Data.Analyzed",
         param.value.type="Fitted geometric mean")
@@ -45,6 +46,7 @@ merge_model_fits <- function(fit.list,
         Compound=NA,
         CAS=NA,
         Species=NA,
+        Media=NA,
         Reference=NA,
         AIC.best=NA,
         Model=NA,
@@ -94,56 +96,67 @@ merge_model_fits <- function(fit.list,
       this.table[badfits,"AIC"] <- Inf
     }
 
-    for (this.dtxsid in this.table[,dtxsid.col])
+    for (this.dtxsid in sort(unique(this.table[,dtxsid.col])))
     {
       this.subset <- subset(this.table, this.table[,dtxsid.col] == this.dtxsid)
       this.compound <- this.subset[1,compound.col]
       this.cas <- this.subset[1,cas.col]
 
-      for (this.species in unique(this.subset[,species.col]))
+      for (this.medium in sort(unique(this.subset[,media.col])))
       {
-        this.species.subset <- subset(this.subset, this.subset[,species.col] ==
-                                     this.species)
+        this.medium.subset <- subset(this.subset, this.subset[, media.col] ==
+                                                  this.medium)
 
-        # If more than one source, require that the joint analysis worked:
-        if (dim(this.species.subset)[1]>1)
+        for (this.species in sort(unique(this.medium.subset[,species.col])))
         {
-          browser()
-          if ("Joint Analysis" %in% this.species.subset[,data.analyzed.col])
+          this.species.subset <- subset(this.medium.subset,
+                                        this.medium.subset[,species.col] ==
+                                        this.species)
+
+          # If more than one source, require that the joint analysis worked:
+          if (dim(this.species.subset)[1]>1)
           {
-            this.species.subset <- subset(this.species.subset,
-              this.species.subset[,data.analyzed.col]=="Joint Analysis")
-          } else {
-            this.species.subset <- apply(this.species.subset, 2, mean)
-            this.species.subset[,data.analyzed.col] <- paste("Mean: ",
-              this.species.subset[,data.analyzed.col],
-              collapse=", ")
+            browser()
+            if ("Joint Analysis" %in% this.species.subset[,data.analyzed.col])
+            {
+              this.species.subset <- subset(this.species.subset,
+                                      this.species.subset[,data.analyzed.col] ==
+                                      "Joint Analysis")
+            } else {
+              this.species.subset <- apply(this.species.subset, 2, mean)
+              this.species.subset[,data.analyzed.col] <-
+                paste("Mean: ",
+                  this.species.subset[,data.analyzed.col],
+                  collapse=", ")
+            }
           }
-        }
 
-        # See if this chemical is already in the main fittable:
-        if (this.dtxsid %in% main.table$DTXSID)
-        {
-          this.index <- which(main.table$DTXSID == this.dtxsid)
-        } else this.index <- dim(main.table)[1]+1
-        # See if this chemical-species combo is already in the main fittable:
-        if (this.species %in% main.table[this.index,species.col])
-        {
-          this.index <- this.index & main.table$Species==this.species
-        } else this.index <- dim(main.table)[1]+1
+          # See if this chemical is already in the main fittable:
+          if (this.dtxsid %in% main.table$DTXSID)
+          {
+            this.index <- which(main.table$DTXSID == this.dtxsid)
+          } else this.index <- dim(main.table)[1]+1
+          # See if this chemical-species combo is already in the main fittable:
+          if (this.species %in% main.table[this.index,species.col])
+          {
+            this.index <- this.index & main.table$Species==this.species
+          } else this.index <- dim(main.table)[1]+1
 
-        model.postfix <- substr(this.table.name,1,5)
+          model.postfix <- substr(this.table.name,1,5)
 
-        model.params <- colnames(this.table)
-        model.params <- model.params[!(model.params%in% c(
-                                                          "DTXSID",
-                                                          "Compound",
-                                                          "CAS"))]
-        # Copy parameters into main table:
-        for (this.param in model.params)
-          main.table[this.index, paste(this.param, model.postfix)] <-
+          model.params <- colnames(this.table)
+          model.params <- model.params[!(model.params%in% c(
+            "DTXSID",
+            "Compound",
+            "CAS",
+            "Media"))]
+          # Copy parameters into main table:
+          for (this.param in model.params)
+            main.table[this.index, paste(this.param, model.postfix)] <-
             this.species.subset[,this.param]
-      } # Close species loop
+
+        } # Close species loop
+      } # Close medium looop
     } # Close chemical loop
   } # Close model loop
 
