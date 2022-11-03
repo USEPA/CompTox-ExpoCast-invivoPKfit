@@ -376,10 +376,9 @@ fit_all <- function(data.set,
     #browser()
     ### Rerun subsetting per reference just for chemical/species comvbinations
     ### that have multiple references:
-    multi.ref.cas <- data.set[, MultipleReferences :=
-                                length(unique(Reference)) > 1,
-                              by = c("DTXSID", "Species")]
-    multi.ref.cas <- unique(subset(multi.ref.cas,
+    data.set[, MultipleReferences := length(unique(Reference)) > 1,
+             by = c("DTXSID", "Species")]
+    multi.ref.cas <- unique(subset(data.set,
                                    MultipleReferences == TRUE)$DTXSID)
     if (length(multi.ref.cas) > 0) {
       data.set.multi.ref <- subset(data.set, MultipleReferences == TRUE)

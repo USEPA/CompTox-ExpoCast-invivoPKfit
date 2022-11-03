@@ -19,6 +19,8 @@ library(tidyverse)
 library(data.table)
 library(readxl)
 devtools::load_all("invivopkfit")
+# Clear memory:
+rm(list=ls())
 ```
 
 ```{r, load_cvt, eval = TRUE}
@@ -78,7 +80,7 @@ THIS.DATE <- "102422"
 ```{r, run_invivoPKfit_1comp, eval = FALSE}
 ### do 1-Compartment fit
 system.time(PK.fit.table.1comp <- fit_all(
-  data.set = subset(cvt.data,dsstox_substance_id=="DTXSID0020442"),
+  data.set = cvt.data,
   model = "1compartment",
   modelfun = "analytic",
   compound.col = "analyte_name_original",
@@ -185,17 +187,17 @@ raw_1comp <- read.csv(paste("inst/ext/processed.1comp.data.",THIS.DATE,".csv",se
 raw_2comp <- read.csv(paste("inst/ext/processed.2comp.data.",THIS.DATE,".csv",sep=""))
 raw_flat <- read.csv(paste("inst/ext/processed.flat.data.",THIS.DATE,".csv",sep=""))
 
+pk_output_2comp$Vdist <- pk_output_2comp$V1*(pk_output_2comp$k12+pk_output_2comp$k21)/pk_output_2comp$k21
 
 pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 ```
 
 ```{r, merge_pkfits, eval=FALSE}
 all.fit.table <- merge_model_fits(list("1compartment"=pk_output_1comp,
-                                       "2compartment="=pk_output_2comp,
+                                       "2compartment"=pk_output_2comp,
                                        "flat"=pk_output_flat),
                                         dtxsid.col = "DTXSID",
                                   species.col = "Species")
-
 ```
 
 ```{r, make_rdata, eval = FALSE}
@@ -211,7 +213,7 @@ save(pk_output_flat, file = paste("figures_rdata/pk_output_flat_",THIS.DATE,".RD
 save(raw_1comp, file = paste("figures_rdata/raw_1comp_",THIS.DATE,".RData",sep=""))
 save(raw_2comp, file = paste("figures_rdata/raw_2comp_",THIS.DATE,".RData",sep=""))
 save(raw_flat, file = paste("figures_rdata/raw_flat_",THIS.DATE,".RData",sep=""))
-
+save(all.fit.table, file = paste("figures_rdata/all_fit_table_",THIS.DATE,".RData",sep=""))
 save(pk_lombardo, file = paste("figures_rdata/pk_lombardo",THIS.DATE,".RData",sep=""))
 ```
 
@@ -1956,14 +1958,14 @@ pk_data1 <- pk_data1 %>%
          # , CAS != "50-49-7", CAS != "106266-06-2")
 # , Species == "human")
 
-pk_all <- left_join(pk_data1, pk_lombardo, by = c("CAS" = "CAS #"))
+pk_all <- left_join(all.fit.table, pk_lombardo, by = c("CAS" = "CAS #"))
 
 pk_all <- pk_all %>%
   filter(!is.na(`human VDss (L/kg)`), 
          !is.na(`human CL (mL/min/kg)`))
 
 pk_all$`human CL (L/hr/kg)` <- pk_all$`human CL (mL/min/kg)` * 60 / 1000
-
+pk_all$CLtot <- pk_all$Vdist*pk_all$kelim
 pk_all$Vdist_norm <- abs(pk_all$Vdist / pk_all$`human VDss (L/kg)`)
 pk_all$CLtot_norm <- abs(pk_all$CLtot / pk_all$`human CL (L/hr/kg)`)
 pk_all$halflife_norm <- abs(pk_all$halflife / pk_all$`terminal  t1/2 (h)`)

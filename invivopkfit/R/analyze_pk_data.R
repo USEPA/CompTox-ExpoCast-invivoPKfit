@@ -641,7 +641,7 @@ analyze_pk_data <- function(fitdata,
     {
       out.dt[ ,LogLikelihood := 0] ### replace with NA to make error more apparent
       out.dt[ ,AIC := Inf]
-      cat("Problem with Fbetaofalpha or V1 equaling optimizer bound. Returning AIC=INF.\n")
+      if (!suppress.messages) cat("Problem with Fbetaofalpha or V1 equaling optimizer bound. Returning AIC=INF.\n")
     } else {
       out.dt[, LogLikelihood := -all.data.fit$value]
       out.dt[, AIC := 2 * length(opt.params) + 2 * all.data.fit$value]
@@ -649,6 +649,7 @@ analyze_pk_data <- function(fitdata,
   } else if (model == 'flat') {
     out.dt[, LogLikelihood := -all.data.fit$value]
     out.dt[, AIC := 2 * length(opt.params) + 2 * all.data.fit$value]
+    out.dt[, Vdist := V1*(k12+k21)/k2]
   }
 
   # } else {warning("didn't converge")}
