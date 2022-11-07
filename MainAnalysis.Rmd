@@ -198,6 +198,7 @@ all.fit.table <- merge_model_fits(list("1compartment"=pk_output_1comp,
                                        "flat"=pk_output_flat),
                                         dtxsid.col = "DTXSID",
                                   species.col = "Species")
+write.csv(all.fit.table, paste("inst/ext/all.fit.table.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 ```
 
 ```{r, make_rdata, eval = FALSE}
