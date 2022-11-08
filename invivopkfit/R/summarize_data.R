@@ -1,7 +1,10 @@
-#' Main fitting function
+#' Function to summarize the CvT data on a per study basis
 #'
-#' Fits parameters of a specified model to concentration-time data given in
-#' data.set
+#' For CvTdb we identify a "study" a a single combination of chemical / species
+#' / route / dose -- one reference likely contains several studies. Each study
+#' can be summarized with a single peak concentration and "area under the curve"
+#' (or "AUC") if we average replicate observations. These properties are not
+#' the results of curve fits, but can be found non-parametrically.
 #'
 #' @param data.set A table of concentration-time data. Preferably
 #'   \code{pkdataset_nheerlcleaned} or \code{pkdataset_nheerlorig}.
@@ -46,15 +49,12 @@
 #'
 #' @return A data.table of fitted parameter values for each chemical.
 #'
-#' @author Caroline Ring, John Wambaugh
-#' @export fit_all
+#' @author John Wambaugh
+#' @export summarize_data
 #' @importFrom PK nca.batch
 #' @importFrom magrittr "%>%"
 
-fit_all <- function(data.set,
-                    model,
-                    modelfun = NA,
-                    ratio.data.to.dose = 1,
+summmarize_data <- function(data.set,
 
                     compound.col = "Compound",
                     dtxsid.col = "DTXSID",
@@ -98,8 +98,7 @@ fit_all <- function(data.set,
 
                     info.col = "info",
                     info.default = NULL,
-                    suppress.messages = FALSE,
-                    sig.figs=4) {
+                    suppress.messages = FALSE) {
 
   data.set <- rename_columns(data.set,
                              compound.col,
@@ -168,7 +167,7 @@ fit_all <- function(data.set,
             length(unique(data.set$Species)), "unique species, and",
             length(unique(data.set$Reference)), "unique references remain.\n"))
 
-  ### recalcuate N.PREV after removal of rows corresponding to other routes
+  ### recalculate N.PREV after removal of rows corresponding to other routes
   N.PREV <- dim(data.set)[1]
 
   # Harmonize the compound names:
@@ -425,7 +424,7 @@ fit_all <- function(data.set,
     PK.fit.table <- PK.fit.bind
     if (model == "1compartment") {
       #Get stats for fitted total clearance :    L/kg body weight/h
-      PK.fit.table[, CLtot := signif(Vdist * kelim, sig.figs)]
+      PK.fit.table[, CLtot := Vdist * kelim]
 
       #      browser()
       #      PK.fit.table[,
@@ -443,25 +442,25 @@ fit_all <- function(data.set,
 
       #Get statistics for halflife from fitted values
       PK.fit.table[,
-                   halflife := signif(log(2) / kelim, sig.figs)]
+                   halflife := log(2) / kelim]
 
 
       PK.fit.table[,
-                   tpeak.oral := signif(log(kgutabs / kelim) / (kgutabs - kelim), sig.figs)]
+                   tpeak.oral := log(kgutabs / kelim) / (kgutabs - kelim)]
 
       ### why does Fgutabs have to be 1 right here
       ### this just copies the Ccompartment column
       ### not sure how values correspond to specific param.value.types
       ### again, it's just a time, conc, and auc matrix
       PK.fit.table[,
-                   Cpeak.oral.1mgkg := signif(analytic_1comp_fun(
+                   Cpeak.oral.1mgkg := analytic_1comp_fun(
                      params=list(Fgutabs = 1,
                                  kgutabs = kgutabs,
                                  kelim = kelim,
                                  Vdist = Vdist),
                      dose = 1,
                      tpeak.oral,
-                     iv.dose = F)[, "Ccompartment"], sig.figs)]
+                     iv.dose = F)[, "Ccompartment"]]
 
       ### subset only certain param.value.types, not sure why
       PK.fit.table <- PK.fit.table[param.value.type %in% c("Predicted",
@@ -473,17 +472,15 @@ fit_all <- function(data.set,
                                            "Fitted geometric mean",
                                            "Fitted mode"),
                    c("beta",
-                     "alpha") := lapply(list(Fbetaofalpha*Ralphatokelim*kelim,
-                                      Ralphatokelim*(kelim+10^-6)),
-                                      function(x) signif(x, sig.figs))]
+                     "alpha") := list(Fbetaofalpha*Ralphatokelim*kelim,
+                                      Ralphatokelim*(kelim+10^-6))]
 
       PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
                                            "Fitted geometric mean",
                                            "Fitted mode"),
                    c("k21",
-                     "k12") := lapply(list(alpha * beta / kelim,
-                                    alpha + beta - kelim - alpha * beta / kelim),
-                                    function(x) signif(x, sig.figs))]
+                     "k12") := list(alpha * beta / kelim,
+                                    alpha + beta - kelim - alpha * beta / kelim)]
 
       PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
                                            "Fitted geometric mean",
@@ -491,11 +488,10 @@ fit_all <- function(data.set,
                    c("halflife",
                      "Vss",
                      "CLtot",
-                     "Varea.or.Vbeta") := lapply(list(log(2) / beta,
+                     "Varea.or.Vbeta") := list(log(2) / beta,
                                                V1 * (k21 + k12) / k21,
                                                V1 * (k21 + k12) / k21 * beta,
-                                               V1 * kelim / beta),
-                                               function(x) signif(x, sig.figs))]
+                                               V1 * kelim / beta)]
       #Get Css = average plasma concentration for 1 mg/kg/day every 1 days
       #this is the same as the average for an equivalent constant oral infusion --
       #(1/24) mg/kg/hour every hour,
@@ -506,7 +502,8 @@ fit_all <- function(data.set,
       #you'll just get an overall average time course.
       #the 1 in the numerator = dose = 1 mg/kg/day
       #the 1 in the denominator = time interval between doses = 1 day
-      PK.fit.table[, Css := ifelse(is.na(Fgutabs), 1, Fgutabs) / (24 * CLtot)]
+      PK.fit.table[param.value.type != "Predicted",
+                   Css := (Fgutabs * 1) / (CLtot * 24)]
 
       PK.fit.table <- PK.fit.table[param.value.type %in% c("Predicted",
                                                            "Fitted geometric mean",

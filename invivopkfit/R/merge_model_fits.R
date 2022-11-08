@@ -39,7 +39,15 @@ merge_model_fits <- function(fit.list,
         media.col="Media",
         param.value.type.col="param.value.type",
         data.analyzed.col="Data.Analyzed",
-        param.value.type="Fitted geometric mean")
+        param.value.type="Fitted geometric mean",
+        sig.figs=3,
+        summary.params = c("Vdist",
+                           "kelim",
+                           "kgutabs",
+                           "Fgutabs",
+                           "CLtot",
+                           "Css",
+                           "halflife"))
 {
   main.table <- data.frame(
         DTXSID=NA,
@@ -54,13 +62,12 @@ merge_model_fits <- function(fit.list,
         kelim=NA,
         kgutabs=NA,
         Fgutabs=NA,
-        halflife=NA)
+        halflife=NA,
+        CLtot=NA,
+        Css=NA)
   for (this.table.name in sort(unique(names(fit.list))))
   {
     this.table <- fit.list[[this.table.name]]
-
-  #  if (!("CLtot" %in% colnames(this.table))) this.table$CLtot <- NA
-  # this.table$Css <- 1/this.table$CLtot
 
     # select for the correct parameter type
     if (param.value.type.col %in% colnames(this.table))
@@ -223,6 +230,36 @@ merge_model_fits <- function(fit.list,
     } # Close chemical loop
   } # Close model loop
 
+  # Set reasonable significant figures for random model-specific parameters:
+  for (model.name in names(fit.list))
+  {
+    model.postfix <- substr(model.name,1,5)
+    for (this.param in unique(c(summary.params,
+                         "AIC", "LogLikelihood","V1","Ralphatokelim",
+                         "Fbetaofalpha","beta","alpha","k21","k12","A")))
+    {
+      param.name <- paste(this.param, model.postfix,sep=".")
+    #  cat(param.name)
+      if (param.name %in% colnames(main.table))
+      {
+        main.table[, param.name] <-
+          signif(main.table[,param.name], sig.figs)
+      }
+    }
+  }
+
+  # Find a column with the references (should be the same for each row):
+  ref.col <- colnames(main.table)[regexpr("Data.Analyzed",
+                                          colnames(main.table))!=-1][1]
+  main.table[,"Reference"] <-
+    main.table[,ref.col]
+
+  # Drop unneeded columns:
+  for (this.param in c("tpeak.oral.1comp","Cpeak.oral.1mgkg","Vss",
+                       "Varea.or.Vbeta","Data.Analyzed"))
+  {
+    main.table <- main.table[,regexpr(this.param, colnames(main.table))==-1]
+  }
 
   # Now pick the best AIC
   AIC.cols <- colnames(main.table)[regexpr("AIC",colnames(main.table))!=-1]
@@ -258,30 +295,23 @@ merge_model_fits <- function(fit.list,
           model.postfix <- colnames(AICs)[AICs==min.AIC]
           model.postfix <- strsplit(model.postfix,"\\.")[[1]][2]
 
-          main.table[this.index, "Model"] <- paste("AIC",model.postfix,sep=".")
+          main.table[this.index, "Model"] <- model.postfix
           main.table[this.index, "AIC.best"] <- min.AIC
-          for (this.param in c("Vdist", "kelim", "kgutabs", "Fgutabs"))
-            if (paste(this.param, model.postfix,sep=".") %in% colnames(main.table))
+          for (this.param in summary.params)
+            if (paste(this.param, model.postfix,sep=".") %in%
+                colnames(main.table))
+            {
+              # Set reasonable sig figs:
+              main.table[this.index, paste(this.param, model.postfix,sep=".")] <-
+                signif(main.table[this.index,
+                  paste(this.param, model.postfix, sep=".")], sig.figs)
               main.table[this.index, this.param] <-
                 main.table[this.index, paste(this.param, model.postfix,sep=".")]
+            }
         }
       } # Close species loop
     } # Close media loop
   } # Close chemical loop
-
-  # Calculate half-life:
-  main.table[!is.na(main.table[, "kelim"]), "halflife"] <- log(2)/
-    main.table[!is.na(main.table[, "kelim"]), "kelim"]
-
-  # Set reasonable sig figs:
-  for (this.col in c(
-    "AIC.flat", "AIC.1comp", "AIC.2comp", "AIC.best", "Vdist", "kelim", "kgutabs",
-    "Fgutabs", "kgutabs.1comp","kgutabs.2comp",
-    "Vdist.1comp", "kelim.1comp", "Fgutabs.1comp", "Vdist.2comp", "V1.2comp",
-    "k12.2comp", "k21.2comp", "kelim.2comp", "Fgutabs.2comp",
-    "Ralphatokelim.2comp","Fbetaofalpha.2comp","alpha.2comp","beta.2comp",
-    "halflife"))
-    main.table[,this.col] <- signif(main.table[,this.col], 3)
 
   return(main.table)
 }

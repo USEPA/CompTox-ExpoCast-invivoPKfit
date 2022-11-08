@@ -22,7 +22,8 @@ analyze_pk_data <- function(fitdata,
                             modelfun,
                             model,
                             this.reference = NULL,
-                            suppress.messages = FALSE) {
+                            suppress.messages = FALSE,
+                            sig.figs = 5) {
   UPPERBOUNDARY <- 1e4
 
   #take a copy of input data table so it behaves as though passed by value
@@ -663,6 +664,10 @@ analyze_pk_data <- function(fitdata,
   out.dt[is.na(CAS), CAS := fitdata[1,"CAS"]]
   out.dt[is.na(Media), Media := fitdata[1,"Media"]]
 
+  # Set precision:
+  out.dt[, unique(c(paramnames,"AIC","LogLikelihood","Vdist","sigma_value")) :=
+           signif(.SD, sig.figs),
+           .SDcols = unique(c(paramnames,"AIC","LogLikelihood","Vdist","sigma_value"))]
   #browser()
   return(out.dt)
 

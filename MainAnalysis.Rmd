@@ -195,9 +195,7 @@ pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 ```{r, merge_pkfits, eval=FALSE}
 all.fit.table <- merge_model_fits(list("1compartment"=pk_output_1comp,
                                        "2compartment"=pk_output_2comp,
-                                       "flat"=pk_output_flat),
-                                        dtxsid.col = "DTXSID",
-                                  species.col = "Species")
+                                       "flat"=pk_output_flat))
 write.csv(all.fit.table, paste("inst/ext/all.fit.table.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 ```
 
