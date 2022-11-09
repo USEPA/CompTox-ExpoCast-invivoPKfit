@@ -42,6 +42,15 @@ analyze_pk_data <- function(fitdata,
   TRYSIGMA <- stats::median(fitdata$Value, na.rm = T)
   MAXSIGMA <- 100 * stats::median(fitdata$Value, na.rm = T)
 
+  #Catch cases where the sd of the data is much larger than the median.
+  if (sd(fitdata$Value,na.rm=T) > MAXSIGMA) {
+    cat(paste("Warning: Original data has much higher standard deviation, ",
+              sd(fitdata$Value,na.rm=T), ", than usual upper bound, ",
+              MAXSIGMA,". Using larger Max Sigma upper bound.", "\n",sep=""))
+    big.sd=TRUE
+    MAXSIGMA <- 2*sd(fitdata$Value,na.rm=T)
+  } else {big.sd=FALSE}
+
   #Initialize output table with HTTK-predicted parameter values
   out.dt <- fitdata[1, paramnames, with = FALSE]
   out.dt[, param.value.type := 'Predicted']
@@ -383,10 +392,10 @@ analyze_pk_data <- function(fitdata,
     upper["Ralphatokelim"] <- log(1000)
     upper["Fbetaofalpha"] <- log(0.75) #on a log scale!
   }
-  if ("Fgutabs" %in% unlist(opt.params)) {
+  if ("Fgutabs" %in% names(upper)) {
     upper["Fgutabs"] <- log(1) #on a log scale!
   }
-  if ("kgutabs" %in% unlist(opt.params)) {
+  if ("kgutabs" %in% names(upper)) {
     upper["kgutabs"] <- log(1000)
   }
 # upper <- upper["Vdist"]
@@ -637,6 +646,9 @@ analyze_pk_data <- function(fitdata,
   if (!is.null(this.reference)) {
     out.dt[, Reference := NULL]
   }
+
+  #Attach flag for big sd issues.
+  out.dt[,big.sd:=big.sd]
 
   return(out.dt)
 

@@ -39,7 +39,7 @@ analytic_model_fun <- function(params,
                               params=params,
                               dose=dose,
                               iv.dose=iv.dose)),
-                 error=rep(0,length=times))
+                 error=rep(0,length=length(times)))
 
   #Cp will have units mg/L
 

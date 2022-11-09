@@ -206,7 +206,7 @@ fit_all <- function(data.set,
            by = .(CAS, Dose, Route)]
 
   # How many >LOQ observations do we have per chemical/species/reference?
-  data.set[, N.Obs.Ref := dim(subset(.SD, !is.na(Value)))[1], by = .(Reference, CAS, Species)]
+  data.set[, N.Obs.Ref := dim(subset(data.set, !is.na(Value)))[1], by = .(Reference, CAS, Species)]
   # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma'):
   data.set[, Usable := N.Obs.Ref > 3, by = .(CAS, Reference, Species, Route)]
   data.set <- data.set[Usable == TRUE]

@@ -36,10 +36,8 @@ cp_1comp <- function(time, params, dose, iv.dose){
   {
     params$Fgutabs<-1
   }
-  if (is.null(params$kgutabs)|is.na(params$kgutabs))
-  {
-    params$kgutabs<-1
-  }
+  params$kgutabs<-ifelse(is.null(params$kgutabs)|is.na(params$kgutabs),
+                         1,params$kgutabs)
   if (params$Fgutabs>1) params$Fgutabs<-1
 
   if (iv.dose){
