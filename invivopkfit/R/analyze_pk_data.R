@@ -650,7 +650,7 @@ analyze_pk_data <- function(fitdata,
   } else if (model == 'flat') {
     out.dt[, LogLikelihood := -all.data.fit$value]
     out.dt[, AIC := 2 * length(opt.params) + 2 * all.data.fit$value]
-    out.dt[, Vdist := V1*(k12+k21)/k2]
+    out.dt[, Vdist := NA]
   }
 
   # } else {warning("didn't converge")}

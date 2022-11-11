@@ -74,7 +74,7 @@ cvt.data <- estimate_loq(cvt.data)
 ```
 
 ```{r, set_file_timestamp, eval = TRUE}
-THIS.DATE <- "102422"
+THIS.DATE <- "111022"
 ```
 
 ```{r, run_invivoPKfit_1comp, eval = FALSE}
@@ -104,6 +104,8 @@ system.time(PK.fit.table.1comp <- fit_all(
   info.default = NA,
   suppress.messages = TRUE
 ))
+write.csv(PK.fit.table.1comp[[1]], paste("inst/ext/PK.fit.table.1comp.",THIS.DATE,".csv",sep=""), row.names = FALSE)
+write.csv(PK.fit.table.1comp[[2]], paste("inst/ext/processed.1comp.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 ```
 
 ```{r, run_invivoPKfit_2comp, eval = FALSE}
@@ -125,7 +127,7 @@ system.time(PK.fit.table.2comp <- fit_all(
   media.col = "conc_medium_normalized",
   media.units.default = "normalized",
   value.col = "conc",
-  units.default = NA,
+    units.default = NA,
   route.col = "administration_route_normalized",
   source.col = "document_id",
   loq.col ="calc_loq",
@@ -133,6 +135,8 @@ system.time(PK.fit.table.2comp <- fit_all(
   info.default = NA,
   suppress.messages = TRUE
 ))
+write.csv(PK.fit.table.2comp[[1]], paste("inst/ext/PK.fit.table.2comp.",THIS.DATE,".csv",sep=""), row.names = FALSE)
+write.csv(PK.fit.table.2comp[[2]], paste("inst/ext/processed.2comp.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 ```
 
 ```{r, run_invivoPKfit_flat, eval = FALSE}
@@ -162,14 +166,6 @@ system.time(PK.fit.table.flat <- fit_all(
   info.default = NA,
   suppress.messages = TRUE
 ))
-```
-
-```{r, write_invivoPKfits_to_file, eval = FALSE}
-write.csv(PK.fit.table.1comp[[1]], paste("inst/ext/PK.fit.table.1comp.",THIS.DATE,".csv",sep=""), row.names = FALSE)
-write.csv(PK.fit.table.1comp[[2]], paste("inst/ext/processed.1comp.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
-
-write.csv(PK.fit.table.2comp[[1]], paste("inst/ext/PK.fit.table.2comp.",THIS.DATE,".csv",sep=""), row.names = FALSE)
-write.csv(PK.fit.table.2comp[[2]], paste("inst/ext/processed.2comp.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 
 write.csv(PK.fit.table.flat[[1]], paste("inst/ext/PK.fit.table.flat.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 write.csv(PK.fit.table.flat[[2]], paste("inst/ext/processed.flat.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
