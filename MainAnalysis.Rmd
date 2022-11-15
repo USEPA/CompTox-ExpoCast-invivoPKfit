@@ -1,7 +1,7 @@
 ---
 title: "<i>invivoPKfit</i> and <i>CvTdb</i> figures"
-author: "Christopher Cook"
-date: "1/31/2022"
+author: "Christopher Cook, John Wambaugh, Caroline Ring"
+date: "11/15/2022"
 output:
   html_document: default
   word_document: default
@@ -23,44 +23,38 @@ devtools::load_all("invivopkfit")
 rm(list=ls())
 ```
 
+Read in CvTdb data.
+
 ```{r, load_cvt, eval = TRUE}
-
-
-
-### this block runs the model fits
-# and does some pre-processing to clean up the data
-
-#################
-#################
-
-# data <- read.csv("inst/ext/cvt_query_for_john_27may2021_v2.csv")
-# data <- read.csv("inst/ext/cvtdb_invivopkfit_02242022.csv")
-# data <- read.csv("inst/ext/cvtdb_invivopkfit_04142022.csv")
 cvt.data <- read.csv("inst/ext/cvtdb_invivopkfit_04262022-2.csv")
+```
 
-### these compounds had no CAS in the cvtdb
-# double check and they should not have been added
-# so I removed them
+A couple of compounds had no CAS in CvTdb. Upon double checking, they should not have been added. So remove them. (CLR 2022-11-15: it doesn't look like there are any of these)
 
+```{r, cvt_remove_nocas}
 cvt.data <- cvt.data %>%
   filter(analyte_name_original != "Methemoglobin") %>%
   filter(analyte_name_original != "N-desmethyltamoxifen")
+```
 
-#################
-#################
-
-### fix compound names
+Fix a few compound names.
+```{r, cvt_fix_cpd_names}
 cvt.data$analyte_name_original[cvt.data$analyte_name_original == "Methyleugonal "] <- "Methyleugonal"
 cvt.data$analyte_name_original[cvt.data$analyte_name_original == "benzo[a]pyrene"] <- "benzo(a)pyrene"
 cvt.data$analyte_name_original[cvt.data$analyte_name_original == "2,4-D"] <- "2,4-Dichlorophenoxyacetic acid"
 cvt.data$analyte_name_original[cvt.data$analyte_name_original == "Diclofenac"] <- "Hexobarbital"
 cvt.data$analyte_name_original[cvt.data$analyte_name_original == "Pentadecafluorooctanoic acid"] <- "Perfluorooctanoic acid"
 cvt.data$analyte_name_original[cvt.data$analyte_name_original == "3−hydroxybenzo[a]pyrene"] <- "3−hydroxybenzo(a)pyrene"
+```
 
-### make fk_reference_document equal fk_extraction document if fk_reference_document is NULL
+if fk_reference_document is NULL, make fk_reference_document equal fk_extraction document. (CLR 2022-11-15: it doesn't look like there are any of these)
+
+```{r}
 cvt.data$fk_reference_document_id[cvt.data$fk_reference_document_id == "NULL"] <- 
   cvt.data$fk_extraction_document_id[cvt.data$fk_reference_document_id == "NULL"]
+```
 
+```{r}
 ### this is basically my debug line,
 # where I can focus on one problematic compound 
 # and see what's going wrong
@@ -73,9 +67,13 @@ Calculate a limit of quantification (90% of lowest observation)
 cvt.data <- estimate_loq(cvt.data)
 ```
 
+Set a timestamp: today's date. (I am changing this to YYYYMMDD format -- better sorting by filename. -- CLR)
+
 ```{r, set_file_timestamp, eval = TRUE}
-THIS.DATE <- "111022"
+THIS.DATE <- "20221115"
 ```
+
+Run a one-compartment fit on the data, and write out the results.
 
 ```{r, run_invivoPKfit_1comp, eval = FALSE}
 ### do 1-Compartment fit
@@ -104,7 +102,10 @@ system.time(PK.fit.table.1comp <- fit_all(
   info.default = NA,
   suppress.messages = TRUE
 ))
+
+
 write.csv(PK.fit.table.1comp[[1]], paste("inst/ext/PK.fit.table.1comp.",THIS.DATE,".csv",sep=""), row.names = FALSE)
+
 write.csv(PK.fit.table.1comp[[2]], paste("inst/ext/processed.1comp.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 ```
 

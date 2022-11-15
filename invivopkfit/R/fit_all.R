@@ -202,72 +202,7 @@ fit_all <- function(data.set,
     PK.fit.table <- do_noncomp_fit(data.set)
 
   } else {
-    ### if model is not noncomp, create data.frame of unique pairings of CAS, Species, and Compound
-    params.by.cas.spec <- data.set[,
-                                   unique(.SD[,.(Compound)]),
-                                   by=.(DTXSID,CAS,Species)]
-    if (model == '1compartment') {
-      ### starting point for optimizer
-      params.by.cas.spec[, kelim := 0.25]
-      params.by.cas.spec[, Vdist := 5.56]
-      params.by.cas.spec[, Fgutabs := 1.0]
-      params.by.cas.spec[, kgutabs := 2.19]
 
-    } else if (model == '2compartment') {
-      if (any(params.by.cas.spec$DTXSID %in% httk::get_cheminfo(info="dtxsid"))){
-        #if we have PK params in httk, use those as starting points.
-        params.by.cas.spec[DTXSID %in% httk::get_cheminfo(info="dtxsid"),
-                           c("kelim",
-                             "Vdist",
-                             "Fgutabs",
-                             "kgutabs") := httk::parameterize_1comp(dtxsid = DTXSID,
-                                                                    default.to.human = TRUE,
-                                                                    suppress.messages = TRUE,
-                                                                    species = ifelse(tolower(Species) %in% colnames(httk::physiology.data),
-                                                                                     Species,
-                                                                                     "Human"))[c("kelim",
-                                                                                         "Vdist",
-                                                                                         "Fgutabs",
-                                                                                         "kgutabs")],
-                           by = c("DTXSID", "Species")]
-      }
-     #if we don't have PK params in httk, set default starting points.
-      params.by.cas.spec[!params.by.cas.spec$DTXSID %in%
-                         httk::get_cheminfo(info="dtxsid"), kelim := 0.25]
-      params.by.cas.spec[!params.by.cas.spec$DTXSID %in%
-                         httk::get_cheminfo(info="dtxsid"), Vdist := 5.56]
-      params.by.cas.spec[!params.by.cas.spec$DTXSID %in%
-                         httk::get_cheminfo(info="dtxsid"), Fgutabs := 1.0]
-      params.by.cas.spec[!params.by.cas.spec$DTXSID %in%
-                         httk::get_cheminfo(info="dtxsid"), kgutabs := 2.19]
-
-      #Since we don't yet have 2comp predictions,
-      #just choose some arbitrary numbers as starting points for the fit.
-      params.by.cas.spec[, V1 := 1]
-      params.by.cas.spec[, Ralphatokelim := 1.2]
-      params.by.cas.spec[, Fbetaofalpha := 0.8]
-
-    } else if (model == "flat") {
-
-      params.by.cas.spec[, A := 1]
-    }
-
-    #############################
-    #############################
-    #############################
-
-    ### merge data.set and params.by.cas.spec to add parameter columns
-    data.set <- merge(data.set, params.by.cas.spec, by = c("Compound",
-                                                           "DTXSID",
-                                                           "CAS",
-                                                           "Species"))
-    ### create vector of parameter names using column names of params.by.cas.spec
-    paramnames <- names(params.by.cas.spec)
-    ### remove names that were only used for merging, i.e. CAS, Species, and Compound
-    paramnames <- paramnames[!(paramnames %in% c("DTXSID",
-                                                 "CAS",
-                                                 "Species",
-                                                 "Compound"))]
 
     #Replace spaces in references with "."
     data.set[, Reference := gsub(Reference,
@@ -275,26 +210,20 @@ fit_all <- function(data.set,
                                  replacement = '.')]
 
     ### PK.fit.joint is a data.frame containing a row of parameter values per param.value.type per CAS
+    #Analyze by chemical & species first.
+
     PK.fit.joint <- data.set[,
-    ### Throughout the code we make use of the data.table feature ".SD".
-    ### .SD stands for "subset of the data". In a call to a data.table object A:
-    ### A[i,j, by = k]
-    ### i indicates the rows that are impacted (fuzzy on this) (that's correct -- CLR)
-    ### j indicates a column that is changed
-    ### k indicates
-    ###
-    ### For a complete explanation go to:
-    ### https://cran.r-project.org/web/packages/data.table/vignettes/datatable-sd-usage.html
-                             analyze_pk_data(fitdata = .SD,
+
+                             analyze_subset(fitdata = .SD,
                                              this.dtxsid = DTXSID,
-                                             paramnames = paramnames,
                                              modelfun = modelfun,
                                              model = model,
                                              suppress.messages=suppress.messages),
                              by = c("DTXSID", "Species")]
 
-    #browser()
-    ### Rerun subsetting per reference just for chemical/species comvbinations
+
+    ### Analyze by chemical, species & reference,
+    ## just for chemical/species comvbinations
     ### that have multiple references:
     data.set[, MultipleReferences := length(unique(Reference)) > 1,
              by = c("DTXSID", "Species")]
@@ -346,7 +275,6 @@ fit_all <- function(data.set,
       #Get stats for fitted total clearance :    L/kg body weight/h
       PK.fit.table[, CLtot := signif(Vdist * kelim, sig.figs)]
 
-      #      browser()
       #      PK.fit.table[,
       #                   AUC1mgkg:=kgutabs/Vdist/(kgutabs-kelim)*(
       #                     exp(-kgutabs*Tmax)/kgutabs  -exp(-kelim*Tmax)/kelim-

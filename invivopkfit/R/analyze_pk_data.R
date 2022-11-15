@@ -1,6 +1,6 @@
-#' Actually does the fitting
+#' Fits a model to a set of data
 #'
-#' Fits model parameters to concentration vs. time data for a given chemical
+#' Fits one set of model parameters to one set of concentration vs. time data
 #'
 #'
 #' @param fitdata A data.table of concentration vs. time data for a given
@@ -47,17 +47,9 @@ analyze_pk_data <- function(fitdata,
   #Initialize output table with HTTK-predicted parameter values
   out.dt <- fitdata[1, paramnames, with = FALSE]
 
-  #
-  #
-  # ADD OTHER COMPOUND IDENTIFIERS
-  #
-  #
-
   out.dt[, Compound := fitdata[1,"Compound"]]
   out.dt[, CAS := fitdata[1,"CAS"]]
   out.dt[, Media := fitdata[1,"Media"]]
-
-  #if (this.dtxsid == "DTXSID0020442") browser()
 
   # Describe initial parameter values
   out.dt[, param.value.type := 'Predicted']
@@ -77,12 +69,7 @@ analyze_pk_data <- function(fitdata,
   #log-transform the model parameters
   these.params <- lapply(these.params, log)
 
-  ### this doesn't seem to be necessary
-  # #Construct the log-likelihood for the data on the current chemical
-  # out <- log.likelihood(params=these.params,
-  #                       DT=fitdata,
-  #                       modelfun=modelfun,
-  #                       model=model)
+
 
   #get list of params to optimize
   if (model == '1compartment') {
@@ -117,46 +104,6 @@ analyze_pk_data <- function(fitdata,
     {
       opt.params["Vdist"] <- log(1 / mean(Vd.data$Value))
 
-      # foo <- function(elim.data, opt.params) {
-      #
-      #   Value <- cp_1comp(time = elim.data$Time,
-      #                     params = list(kelim = opt.params$kelim,
-      #                                   Vdist = opt.params$Vdist,
-      #                                   Fgutabs = opt.params$Fgutabs,
-      #                                   kgutabs = opt.params$kgutabs),
-      #                     dose = elim.data$Dose,
-      #                     iv.dose = elim.data$iv)
-      #
-      # }
-      #
-      # optimx(par = unlist(opt.params), fn = foo(opt.params = opt.params, elim.data = elim.data))
-
-      # tryCatch({
-      #
-      # one_comp_form <- formula(log(Value) ~ log(cp_1comp(time = Time,
-      #                                                       params = list(kelim = kelim,
-      #                                                                     Vdist = Vdist,
-      #                                                                     Fgutabs = 1,
-      #                                                                     kgutabs = 2.18),
-      #                                                       dose = Dose,
-      #                                                       iv.dose = iv[[1]])))
-      #
-      #     ### one comp iv fit
-      #     ### use calculations for kelim and Vdist as starting values
-      # one_comp_fit <- nls2::nls2(formula = one_comp_form, data = elim.data,
-      #                               start = list(kelim = exp(opt.params$kelim),
-      #                                            Vdist = exp(opt.params$Vdist)))
-      #
-      #     ### edit opt.params values to nls2 model output
-      # opt.params["kelim"] <- log(coef(one_comp_fit)["kelim"])
-      # opt.params["Vdist"] <- log(coef(one_comp_fit)["Vdist"])
-      #
-      #   },
-      #   error = function(cond) {
-      #     message("nls2 pre-optimization failed for iv data. Using less refined parameter estimates as starting values in optimizer.")
-      #     return(NA)
-      #   })
-
     } else if (model == '2compartment') {
 
       opt.params["V1"] <- log(1 / mean(Vd.data$Value))
@@ -167,56 +114,12 @@ analyze_pk_data <- function(fitdata,
         elim.data <- subset(elim.data,Time <= sort(unique(Time))[3]) ### added sort
         alpha <- -stats::lm(log(Value) ~ Time, data = elim.data)$coefficients["Time"]
         opt.params["Ralphatokelim"] <- log(max(alpha / exp(opt.params[["kelim"]]), 2))
-
-        # tryCatch({
-        #
-        # two_comp_form <- formula(log(Value) ~ log(cp_2comp(time = Time,
-        #                                                       params = list(kelim = kelim,
-        #                                                                     V1 = V1,
-        #                                                                     Fgutabs = 1,
-        #                                                                     kgutabs = 2.18,
-        #                                                                     Fbetaofalpha = Fbetaofalpha,
-        #                                                                     Ralphatokelim = Ralphatokelim),
-        #                                                       dose = Dose,
-        #                                                       iv.dose = iv[[1]])))
-        #
-        # ### two comp iv fit
-        # ### use calculations for kelim and Vdist as starting values
-        # ### opt.params is log scale
-        # two_comp_fit <- nls2::nls2(formula = two_comp_form, data = elim.data.test,
-        #                               start = list(kelim = exp(opt.params$kelim),
-        #                                            V1 = exp(opt.params$V1),
-        #                                            Fbetaofalpha = exp(opt.params$Fbetaofalpha),
-        #                                            Ralphatokelim = exp(opt.params$Ralphatokelim)),
-        #                               algorithm = "port",
-        #                               lower = c(0, 0, 0, 1))
-        #
-        #
-        #
-        #
-        # ### edit opt.params values to nls2 model output
-        # opt.params["kelim"] <- log(coef(two_comp_fit)["kelim"])
-        # opt.params["V1"] <- log(coef(two_comp_fit)["V1"])
-        # opt.params["Fbetaofalpha"] <- log(coef(two_comp_fit)["Fbetaofalpha"])
-        # opt.params["Ralphatokelim"] <- log(coef(two_comp_fit)["Ralphatokelim"])
-        #     }
-        # ,
-        #
-        #     error = function(cond) {
-        #       message("nls2 pre-optimization failed for iv data. Using less refined parameter estimates as starting values in optimizer.")
-        #       return(NA)
-        #     },
-        #
-        # finally = {
-        #   message("yippee")
-        # })
-
       }
       else alpha <- log(2)
       opt.params["Fbetaofalpha"] <- log(0.25)
     }
   } else if ("po" %in% fitdata$Route) {
-    # browser()
+
     elim.data <- subset(fitdata, Route == "po" & !is.na(Value))
     elim.data$Value <- elim.data$Value/elim.data$Dose
     elim.data <- subset(elim.data,Dose > 0)
@@ -246,37 +149,6 @@ analyze_pk_data <- function(fitdata,
     opt.params <- c(opt.params,
                     these.params["kgutabs"])
 
-    # if (model == "1compartment") {
-    #   # tryCatch(
-    #   #   {
-    #   one_comp_form <- formula(log(Value) ~ log(cp_1comp(time = Time,
-    #                                                         params = list(kelim = kelim,
-    #                                                                       Vdist = Vdist,
-    #                                                                       Fgutabs = Fgutabs,
-    #                                                                       kgutabs = kgutabs),
-    #                                                         dose = Dose,
-    #                                                         iv.dose = iv)))
-    #
-    #   ### one comp po fit
-    #   ### use calculations for kelim and Vdist as starting values
-    #   one_comp_fit_po <- nls2::nls2(formula = one_comp_form_po, data = elim.data,
-    #                                 start = list(kelim = exp(opt.params$kelim),
-    #                                              Vdist = exp(opt.params$Vdist),
-    #                                              # Fgutabs = 1,
-    #                                              kgutabs = exp(opt.params$kgutabs)
-    #       ))
-    #
-    #   ### edit opt.params values to nls2 model output
-    #   opt.params["kelim"] <- log(coef(one_comp_fit)["kelim"])
-    #   opt.params["Vdist"] <- log(coef(one_comp_fit)["Vdist"])
-    #   opt.params["kgutabs"] <- log(coef(one_comp_fit)["kgutabs"])
-    #
-    #   # },
-    #   # error = function(cond) {
-    #   #   message("nls2 pre-optimization failed for iv data. Using less refined parameter estimates as starting values in optimizer.")
-    #   #   return(NA)
-    #   # })
-    # }
 
     # Need oral and iv data to get at Fgutabs:
     if ("iv" %in% fitdata$Route) {
@@ -291,40 +163,6 @@ analyze_pk_data <- function(fitdata,
       opt.params["Fgutabs"] <- log(oral.data$Value / mean(iv.data$Value) * mean(iv.data$Dose) / mean(oral.data$Dose))
       if (is.na(opt.params[["Fgutabs"]]) | opt.params[["Fgutabs"]] > 0) opt.params["Fgutabs"] <- log(0.5)
 
-      # browser()
-      # if (model == "1compartment") {
-      #   # tryCatch(
-      #   #   {
-      #   test.fitdata <- subset(fitdata, !is.na(Value))
-      #   one_comp_form_po <- formula(log(Value) ~ log(cp_1comp(time = Time,
-      #                                                         params = list(kelim = kelim,
-      #                                                                       Vdist = Vdist,
-      #                                                                       Fgutabs = Fgutabs,
-      #                                                                       kgutabs = kgutabs),
-      #                                                         dose = Dose,
-      #                                                         iv.dose = FALSE)))
-      #
-      #   ### one comp po fit
-      #   ### use calculations for kelim and Vdist as starting values
-      #   one_comp_fit_po <- nls2::nls2(formula = one_comp_form_po, data = test.fitdata,
-      #                                 start = list(kelim = exp(opt.params$kelim),
-      #                                              Vdist = exp(opt.params$Vdist),
-      #                                              Fgutabs = exp(opt.params$Fgutabs),
-      #                                              kgutabs = exp(opt.params$kgutabs)
-      #                                 ))
-      #
-      #   ### edit opt.params values to nls2 model output
-      #   opt.params["kelim"] <- log(coef(one_comp_fit_po)["kelim"])
-      #   opt.params["Vdist"] <- log(coef(one_comp_fit_po)["Vdist"])
-      #   opt.params["Fgutabs"] <- log(coef(one_comp_fit_po)["Fgutabs"])
-      #   opt.params["kgutabs"] <- log(coef(one_comp_fit_po)["kgutabs"])
-      #
-      #   # },
-      #   # error = function(cond) {
-      #   #   message("nls2 pre-optimization failed for iv data. Using less refined parameter estimates as starting values in optimizer.")
-      #   #   return(NA)
-      #   # })
-      # }
     }
   }
 }
@@ -382,7 +220,6 @@ analyze_pk_data <- function(fitdata,
   #
   #
 
-  # if (unique(fitdata$Compound) == "1,4-dioxane") browser()
   #change from a named list of params to optimize to a named vector of params to
   #optimize
   upper <- unlist(opt.params)
@@ -460,7 +297,7 @@ analyze_pk_data <- function(fitdata,
                                                           stringsAsFactors = F),
                                                1, function(x) paste(x, collapse=": ")),
                                          collapse = ", "), "\n", sep = ""))
-# browser()
+
   tryCatch(all.data.fit <- optimx::optimx(par = unlist(opt.params),
                                           fn = objfun,
                                           # lower=lower,
@@ -473,11 +310,9 @@ analyze_pk_data <- function(fitdata,
            })
 
   #Get MLE params
-  #ln.means <- all.data.fit$par
   ln.means <- as.vector(stats::coef(all.data.fit))
   names(ln.means) <- names(opt.params)
 
-  # if (any(ln.means>upper)) browser()
   if (!suppress.messages) cat(paste("Optimized values:  ", paste(apply(data.frame(Names = names(ln.means),
                                                           Values = sapply(ln.means,exp),
                                                           stringsAsFactors = F),
@@ -485,7 +320,6 @@ analyze_pk_data <- function(fitdata,
                                          collapse = ", "),"\n", sep = ""))
   #Get SDs from Hessian
   #Calculate Hessian using function from numDeriv
-  # browser()
   numhess <- numDeriv::hessian(func = objfun,
                                x = ln.means,
                                method = 'Richardson')
