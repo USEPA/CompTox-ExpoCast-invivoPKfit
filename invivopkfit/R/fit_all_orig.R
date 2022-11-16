@@ -204,6 +204,11 @@ fit_all <- function(data.set,
   } else {
 
 
+    #Replace spaces in references with "."
+    data.set[, Reference := gsub(Reference,
+                                 pattern = ' ',
+                                 replacement = '.')]
+
     ### PK.fit.joint is a data.frame containing a row of parameter values per param.value.type per CAS
     #Analyze by chemical & species first.
 
@@ -239,6 +244,17 @@ fit_all <- function(data.set,
                                                    "DTXSID",
                                                    "Species",
                                                    "Reference")]
+
+      #       PK.fit.separate.geomean <- PK.fit.separate %>% filter(param.value.type == "Fitted geometric mean")
+      #       PK.fit.joint.geomean <- PK.fit.joint %>% filter(param.value.type == "Fitted geometric mean")
+      #
+      #       sigmas.joint <- PK.fit.joint.geomean[, grep("sigma", names(PK.fit.joint.geomean)), with = FALSE]
+      #       sigmas.sep <- PK.fit.separate.geomean[, grep("sigma", names(PK.fit.separate.geomean)), with = FALSE]
+      #
+      #       sigmas.vec <- c(as.vector(sigmas.joint), as.vector(sigmas.sep))
+      #
+      #       PK.fit.joint <- PK.fit.joint[, -grep("sigma", names(PK.fit.joint)), with = FALSE]
+      #       PK.fit.separate <- PK.fit.separate[, -grep("sigma", names(PK.fit.separate)), with = FALSE]
 
       PK.fit.bind <- rbind(PK.fit.joint,
                            PK.fit.separate, fill = TRUE)
