@@ -6,6 +6,7 @@ get_upper_bounds <- function(fitdata,
                              suppress.messages = FALSE,
                              sig.figs = 5,
                              UPPERBOUNDARY = 1e4){
+
   #specify upper bounds of params to optimize (on a log scale!!)
   upper[] <- log(UPPERBOUNDARY)
   TRYSIGMA <- stats::median(fitdata$Value, na.rm = TRUE)
