@@ -4,12 +4,12 @@
 \alias{log_likelihood}
 \title{The log-likelihood function used for fitting}
 \usage{
-log_likelihood(params, DT, modelfun, model)
+log_likelihood(params, DF, modelfun, model)
 }
 \arguments{
-\item{params}{A named list of parameter values}
+\item{params}{A named list of log-scaled parameter values}
 
-\item{DT}{Concentration-time data for a given chemical}
+\item{DF}{A `data.frame` of Concentration-time data for a given chemical}
 
 \item{modelfun}{"analytic" to use the analytic model solution, "full" to use
 the full ODE model}

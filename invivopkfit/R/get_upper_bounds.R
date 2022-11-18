@@ -12,9 +12,9 @@
 #' @param model The name of the model whose parameters are to be estimated.
 #' @param fitdata A data.frame: the concentration-time-dose data to be used for
 #'   fitting.
-#' @return A data.frame: `parDF` with additional variables `upper_value`
+#' @return A data.frame: `parDF` with additional variables `upper_bound`
 #'   (numeric, containing the upper bound for each parameter) and
-#'   `upper_value_msg` (character, containing a brief message explaining how the
+#'   `upper_bound_msg` (character, containing a brief message explaining how the
 #'   upper-bound value was calculated).
 #' @author Caroline Ring, John Wambaugh, Mitchell Teague
 get_upper_bounds <- function(fitdata,
@@ -22,19 +22,20 @@ get_upper_bounds <- function(fitdata,
                              par_DF = NULL,
                              digits = 3,
                              scientific = -2,
-                             UPPERBOUNDARY = 1e4){
+                             suppress.messages = FALSE){
 
   if(is.null(par_DF)){
   par_DF <- get_opt_params(model = model,
                            fitdata = fitdata,
-                           param_names = par_DF$param_name)
+                           param_names = par_DF$param_name,
+                           suppress.messages = suppress.messages)
   }
   rownames(par_DF) <- par_DF$param_name
 
 
   #Set a plausible upper bound for sigmas:
-  #by default, this is the median of the concentrations.
-  MAXSIGMA <- stats::median(fitdata$Value, na.rm = TRUE)
+  #by default, this is 100 times the median of the concentrations.
+  MAXSIGMA <- 100*stats::median(fitdata$Value, na.rm = TRUE)
   #for comparison, check the sd of the concentrations.
   sigma_test <- sd(fitdata$Value, na.rm = TRUE)
 
@@ -42,75 +43,76 @@ get_upper_bounds <- function(fitdata,
   if (sigma_test > MAXSIGMA) {
     sigma_msg <- paste("BIGSD: Conc. std. dev., ",
                  format(sigma_test, digits = digits, scientific = scientific),
-                 "is much higher than than usual upper bound = conc. median = ",
+                 "is much higher than than usual upper bound = 100 * conc. median = ",
                  format(MAXSIGMA, digits = digits, scientific = scientific),
                  ". Using upper bound = 2 * SD = ",
                  format(2*sigma_test, digits = digits, scientific = scientific),
                  ".", sep="")
-    warning(msg)
+    if(!suppress.messages){
+    message(sigma_msg)
+    }
     big.sd <- TRUE
     MAXSIGMA <- 2*sigma_test
   } else {
     big.sd <- FALSE
-    sigma_msg <- paste0("Upper bound = conc. median = ",
+    sigma_msg <- paste0("Upper bound = 100 * conc. median = ",
     format(MAXSIGMA, digits = digits, scientific = scientific))
     }
 
 #Assign sigma upper bounds and upper-bound messages
   par_DF[grepl(x = par_DF$param_name,
                pattern = "sigma"),
-         "upper_value"] <- MAXSIGMA
+         "upper_bound"] <- MAXSIGMA
   par_DF[grepl(x = par_DF$param_name,
                pattern = "sigma"),
-         "upper_value_msg"] <- sigma_msg
+         "upper_bound_msg"] <- sigma_msg
 
   #kelim
   par_DF[grepl(x = par_DF$param_name,
                pattern = "kelim"),
-         c("upper_value",
-           "upper_value_msg")] <- list(1e4,
+         c("upper_bound",
+           "upper_bound_msg")] <- list(1e4,
                                        "Default")
 
   #Vdist or V1
   par_DF[grepl(x = par_DF$param_name,
                pattern = "Vdist|V1"),
-         c("upper_value",
-           "upper_value_msg")] <- list(max(fitdata$Dose) / min(fitdata$LOQ),
+         c("upper_bound",
+           "upper_bound_msg")] <- list(max(fitdata$Dose) / min(fitdata$LOQ),
                                        "Max dose/min LOQ")
 
   #Ralphatokelim
   par_DF[grepl(x = par_DF$param_name,
                pattern = "Ralphatokelim"),
-         c("upper_value",
-           "upper_value_msg")] <- list(1000,
+         c("upper_bound",
+           "upper_bound_msg")] <- list(1000,
                                        "Default")
 
   #Fbetaofoalpha
   par_DF[grepl(x = par_DF$param_name,
                pattern = "Fbetaofalpha"),
-         c("upper_value",
-           "upper_value_msg")] <- list(0.75,
+         c("upper_bound",
+           "upper_bound_msg")] <- list(0.75,
                                        "Default")
 
   #Fgutabs
-
   par_DF[grepl(x = par_DF$param_name,
                pattern = "Fgutabs"),
-         c("upper_value",
-           "upper_value_msg")] <- list(1000,
+         c("upper_bound",
+           "upper_bound_msg")] <- list(1,
                                        "Default")
 
   #kgutabs
   par_DF[grepl(x = par_DF$param_name,
                pattern = "kgutabs"),
-         c("upper_value",
-           "upper_value_msg")] <- list(1,
+         c("upper_bound",
+           "upper_bound_msg")] <- list(1000,
                                        "Default")
 
   #For anything not to be optimized, set its bounds to NA
-  par_DF[!(optimize_param %in% TRUE),
-         c("upper_value",
-           "upper_value_msg")] <- list(NA_real_,
+  par_DF[!(par_DF$optimize_param %in% TRUE),
+         c("upper_bound",
+           "upper_bound_msg")] <- list(NA_real_,
                                        "optimize_param is not TRUE")
 
   return(par_DF)

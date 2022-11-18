@@ -37,7 +37,8 @@
 get_opt_params <- function(model,
                            fitdata,
                            param_names = NULL,
-                           sigma_ref = TRUE){
+                           sigma_ref = TRUE,
+                           suppress.messages = FALSE){
 
   model_param_names <- get_model_paramnames(model = model)
   if(is.null(param_names)){
@@ -67,7 +68,7 @@ get_opt_params <- function(model,
     opt_params["kgutabs"] <- FALSE
   }
 
-  if("Fgutabs" %In% param_names &
+  if("Fgutabs" %in% param_names &
      !(all(c("po", "iv") %in% fitdata$Route))){
     #if we don't have both IV and oral data,
     #can't fit Fgutabs

@@ -2,7 +2,7 @@
 % Please edit documentation in R/analyze_pk_data.R
 \name{analyze_pk_data}
 \alias{analyze_pk_data}
-\title{Actually does the fitting}
+\title{Fits a model to a set of data}
 \usage{
 analyze_pk_data(
   fitdata,
@@ -11,7 +11,8 @@ analyze_pk_data(
   modelfun,
   model,
   this.reference = NULL,
-  suppress.messages = FALSE
+  suppress.messages = FALSE,
+  sig.figs = 5
 )
 }
 \arguments{
@@ -36,7 +37,7 @@ means, modes, arithmetic standard deviations, and geometric standard
 deviations)
 }
 \description{
-Fits model parameters to concentration vs. time data for a given chemical
+Fits one set of model parameters to one set of concentration vs. time data
 }
 \author{
 Caroline Ring, John Wambaugh

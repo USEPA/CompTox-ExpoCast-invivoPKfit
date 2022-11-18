@@ -17,101 +17,6 @@
 #' data point. Each reference is assumed to have its own residual error standard
 #' deviation.} }
 #'
-#' # Specifications for `fun_start`
-#'
-#' ## Arguments
-#'
-#' `fun_start` must accept the same named arguments as \code{get_starts},
-#' i.e. the parameters \code{fitdata}, \code{model}. It may
-#' accept additional arguments, to be specified in a named list in
-#' \code{fun_start_args}.
-#'
-#' ## Return value
-#'
-#' `fun_start` must return a \code{data.frame} of model parameters with the
-#' following variables: \describe{ \item{\code{param.name}}{Character: the names
-#' of the PK model parameters. Must include all of the parameter names expected
-#' by the model function defined by \code{model}, as well as
-#' all of the reference-specific error standard deviations, named as
-#' \code{paste("sigma", unique(fitdata$Reference), sep = ".)}}.
-#' \item{\code{param.value}}{Numeric: A starting value for each of the PK model
-#' parameters.} \item{\code{param.value.source}{Character: A message describing
-#' briefly how the starting value was calculated for each parameter. This may be
-#' blank or NA if you do not wish to supply any message, but the variable must
-#' be present.}} }
-#'
-#' ## Example
-#'
-#' If you want to accept the default starting values for most parameters, but
-#' you want to change the starting values for the reference-specific error SDs
-#' so that they are all fixed at some constant value (e.g., 1), you could define
-#' your own function as follows:
-#'
-#' ```{r, eval = FALSE}
-#' my_starts <- function(fitdata,
-#'                        model,
-#'                        sigma_start_const = 1){
-#'    #Get default starting values for all params
-#'    starts_df <- get_starts(fitdata, model)
-#'    #Overwrite defaults for reference-specific error SDs
-#'    starts_df[grepl(x = starts_df$param.name,
-#'                    pattern = "sigma"),
-#'                    c("param.value",
-#'                    "param.value.source")] <- list(sigma_start_const,
-#'                    "Set to constant")
-#'    return(starts_df)
-#' }
-#' ```
-#'
-#' Then when calling `analyze_subset`, you would specify `fun_start = my_starts`
-#' and `fun_start_args = list(sigma_start_const=1)`.
-#'
-#' # Specifications for `fun_lower`
-#'
-#' ## Arguments
-#'
-#' `fun_lower` must accept the same named arguments as
-#' \code{get_lower_bounds}, i.e. the parameters `par_DF`, `fitdata`, `model`. It
-#' may accept additional arguments, to be specified in a named list in
-#' \code{fun_lower_args}.
-#'
-#' ## Return value
-#'
-#' `fun_lower` must return a \code{data.frame} of model parameters with the
-#' following variables: \describe{ \item{\code{param.name}}{Character: the names
-#' of the PK model parameters. Must include all of the parameter names expected
-#' by the model function defined by \code{model}, as well as
-#' all of the reference-specific error standard deviations, named as
-#' \code{paste("sigma", unique(fitdata$Reference), sep = ".)}}.
-#' \item{\code{param.lower}}{Numeric: A lower bound for each of the PK model
-#' parameters.} \item{\code{param.lower.source}{Character: A message describing
-#' briefly how the lower-bound value was calculated for each parameter. This may
-#' be blank or NA if you do not wish to supply any message, but the variable
-#' must be present.}} }
-#'
-#' # Specifications for `fun_upper`
-#'
-#' ## Arguments
-#'
-#' `fun_upper` must accept the same named arguments as
-#' \code{get_upper_bounds}, i.e. the parameters \code{fitdata}, \code{model}. It
-#' may accept additional arguments, to be specified in a named list in
-#' \code{fun_upper_args}.
-#'
-#' ## Return value
-#'
-#' `fun_upper` must return a \code{data.frame} of model parameters with the
-#' following variables: \describe{ \item{\code{param.name}}{Character: the names
-#' of the PK model parameters. Must include all of the parameter names expected
-#' by the model function defined by \code{model}, as well as
-#' all of the reference-specific error standard deviations, named as
-#' \code{paste("sigma", unique(fitdata$Reference), sep = ".)}}.
-#' \item{\code{param.upper}}{Numeric: An upper bound for each of the PK model
-#' parameters.} \item{\code{param.upper.source}{Character: A message describing
-#' briefly how the upper-bound value was calculated for each parameter. This may
-#' be blank or NA if you do not wish to supply any message, but the variable
-#' must be present.}} }
-#'
 #' @param fitdata A \code{data.frame} containing the set of concentration vs.
 #'   time data to be fitted. See Details for expected variables. See also
 #'   \code{\link{preprocess_data}}.
@@ -121,21 +26,6 @@
 #'   analytic solution to the model, or the full ODE model. Presently,
 #'   "analytic" is recommended (because the analytic solution is exact and much
 #'   faster).
-#' @param fun_start Function to calculate starting values for each parameter to
-#'   be fitted. Default \code{get_starts}. See Details for expected arguments
-#'   and return value for this function.
-#' @param fun_lower Function to calculate lower bounds for each parameter to be
-#'   fitted. Default \code{get_lower_bounds}. See Details for expected arguments
-#'   and return value for this function.
-#' @param fun_upper Function to calculate upper bounds for each parameter to be
-#'   fitted. Default \code{get_upper_bounds}. See Details for expected arguments
-#'   and return value for this function.
-#' @param fun_start_args A named list of additional arguments to
-#'   `fun_start`, if any. Default NULL.
-#' @param fun_lower_args A named list of additional arguments to
-#'   `fun_lower`, if any. Default NULL.
-#' @param fun_upper_args A named list of additional arguments to
-#'   `fun_upper`, if any. Default NULL.
 
 analyze_subset <- function(fitdata,
                            model,
@@ -147,51 +37,82 @@ analyze_subset <- function(fitdata,
                            fun_start_args = NULL,
                            fun_lower_args = NULL,
                            fun_upper_args = NULL,
-                           this.reference = NULL,
                            suppress.messages = FALSE,
-                           sig.figs = 5){
+                           sig.figs = 5,
+                           factr = 1e7){
+
+  #convert back to data.frame
+  fitdata <- as.data.frame(fitdata)
 
   this.dtxsid <- unique(fitdata$DTXSID)
   if(length(this.dtxsid) > 1) stop("analyze_subset(): More than one DTXSID in data")
 
-  this.species <- unique(fitdata$species)
+  this.species <- unique(fitdata$Species)
   if(length(this.species) > 1) stop("analyze_subset(): More than one species in data")
+
+  if(!suppress.messages){
+    message(paste0("Beginning analysis for:",
+                  "Chemical = ",
+                   this.dtxsid,
+                   "\n",
+                   "Species = ",
+                   this.species,
+                   "\n",
+                   "Number of references = ",
+                   length(unique(fitdata$Reference)),
+                   "\n",
+                   "NUmber of observations = ",
+                   nrow(fitdata)
+    )
+    )
+  }
+
+
+  #If more than one reference, set flag to calculate separate sigma for each reference
+  nref <- length(unique(fitdata$Reference))
+  if(nref>1){
+    sigma_ref <- TRUE
+  }else{
+    sigma_ref <- FALSE
+  }
 
   #get parameter names and
   #determine whether to optimize each of these parameters or not
- par_DF <- get_opt_params(model = model,
-                              fitdata = fitdata,
-                          sigma_ref = sigma_ref)
+ par_DF <- do.call(get_opt_params,
+                   list("model" = model,
+                              "fitdata" = fitdata,
+                          "sigma_ref" = sigma_ref,
+                        "suppress.messages" = suppress.messages))
 #get lower bounds
- par_DF <- do.call(fun_lower,
-                   c(list("par_DF" = par_DF,
+ par_DF <- do.call(get_lower_bounds,
+                   list("par_DF" = par_DF,
                           "model" = model,
-                          "fitdata" = fitdata),
-                     fun_lower_args))
+                          "fitdata" = fitdata,
+                          "suppress.messages" = suppress.messages))
+
 
  #get upper bounds
- par_DF <- do.call(fun_upper,
-                   c(list("par_DF" = par_DF,
-                          "model" = model,
-                          "fitdata" = fitdata),
-                     fun_upper_args))
+ par_DF <- do.call(get_upper_bounds,
+                   list("par_DF" = par_DF,
+                       "model" = model,
+                       "fitdata" = fitdata,
+                       "suppress.messages" = suppress.messages))
 
  #get starting values
- par_DF <- do.call(fun_start,
-                   c(list("par_DF" = par_DF,
-                          "model" = model,
-                          "fitdata" = fitdata),
-                     fun_start_args))
+ par_DF <- do.call(get_starts,
+                   list("par_DF" = par_DF,
+                       "model" = model,
+                       "fitdata" = fitdata,
+                       "suppress.messages" = suppress.messages))
 
   #Types of fitted param values to return
   fitted_types <- c("Fitted arithmetic mean",
                     "Fitted arithmetic std dev",
                     "Fitted geometric mean",
                     "Fitted geometric std dev",
-                    "Fitted mode")
-
-  #
-
+                    "Fitted mode",
+                    "Fitted log-scale mean",
+                    "Fitted log-scale std dev")
 
   #If the number of parameters is >= the number of data points,
   #then throw back everything NA with a message,
@@ -202,13 +123,16 @@ analyze_subset <- function(fitdata,
    out_DF <- par_DF
    out_DF[, fitted_types] <- NA_real_
 
-    if (is.null(this.reference)) {
+   #check whether there is more than one reference or not
+   nref <- length(unique(fitdata$Reference))
+
+    if (nref>1) {
       out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
                                 collapse =", ")
-      out_DF$Data.Analyzed <- Reference
-      out_DF[regexpr(",", out_DF$Data.Analyzed) != -1, "Data.Analyzed"] <-  'Joint Analysis'
+      out_DF$Data.Analyzed <- "Joint Analysis"
     } else {
-      out_DF$Data.Analyzed <- this.reference
+      out_DF$Reference <- unique(fitdata$Reference)
+      out_DF$Data.Analyzed <- unique(fitdata$Reference)
     }
 
     #fill in the loglike and AIC with NA s since no fit was done
@@ -220,8 +144,9 @@ analyze_subset <- function(fitdata,
                  " parameters and only ",
                  nrow(fitdata), " data points. Optimization aborted.", sep = "")
     out_DF$message <- msg
-
+    if(!suppress.messages){
     message(msg)
+    }
     return(out_DF)
   } #end  if (sum(par_DF$opt.par) >= nrow(fitdata))
 
@@ -233,29 +158,33 @@ analyze_subset <- function(fitdata,
   #params to be optimized
   opt_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
                        "start_value"])
-  names(opt_params) <- par_DF$param_name
+  names(opt_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+                              "param_name"]
 
   #params to be held constant
   const_params <- log(par_DF[!(par_DF$optimize_param %in% TRUE),
                         "start_value"])
-  names(const_params) <- par_DF$param_name
+  names(const_params) <- par_DF[!(par_DF$optimize_param %in% TRUE),
+                                "param_name"]
 
   #param lower bounds (only on params to be optimized)
   lower_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
-                       "lower_value"])
-  names(lower_params) <- par_DF$param_name
+                       "lower_bound"])
+  names(lower_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+                                "param_name"]
 
   #param upper bounds (only on params to be optimized)
   upper_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
-                         "upper_value"])
-  names(upper_params) <- par_DF$param_name
+                         "upper_bound"])
+  names(upper_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+                                "param_name"]
 
 
 #objective function
-  objfun <- function(x) {
-    foo <- -log_likelihood(params = c(x,
-                                      const_params),
-                           DT = fitdata,
+  objfun <- function(params) {
+    foo <- -log_likelihood(params = as.list(c(params,
+                                      const_params)),
+                           DF = fitdata,
                            modelfun = modelfun,
                            model = model)
     #method L-BFGS-B requires finite values be returned,
@@ -266,23 +195,56 @@ analyze_subset <- function(fitdata,
     return(foo)
   }
 
-
-
   all_data_fit <- tryCatch({
-    tmp <- optimx::optimx(par = log(opt_params),
+    tmp <- optimx::optimx(par = opt_params,
                                           fn = objfun,
                                           #lower = lower_params,
                                           upper = upper_params,
                                           method = "L-BFGS-B", #box constraints
                                           hessian = FALSE,
                                           control = list(factr = factr))
-    #collect any messages from optimx
-    tmp$message <- attr(tmp, "details")$message
+    #tmp is a 1-row data.frame with one variable for each fitted param,
+    #plus variables with info on fitting (number of evals, convergence code, etc.)
+    #collect any messages from optimx -- in attribute "details" (another data.frame)
+    tmp$message <- attr(tmp, "details")[, "message"]
+    tmp
   },
            error = function(err){
-             data.frame(message = err$message)
-
+             #just get the error message
+             err$message
            })
+
+  #If fit failed, then return everything as NA and record the message
+  if(!is.data.frame(all_data_fit)){
+  out_DF <- par_DF
+  out_DF[, fitted_types] <- NA_real_
+
+  nref <- length(unique(fitdata$Reference))
+
+  if (nref>1) {
+    out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+                              collapse =", ")
+    out_DF$Data.Analyzed <- "Joint Analysis"
+  } else {
+    out_DF$Reference <- unique(fitdata$Reference)
+    out_DF$Data.Analyzed <- unique(fitdata$Reference)
+  }
+
+  #fill in the loglike and AIC with NA s since no fit was done
+  out_DF$LogLikelihood <-  NA_real_
+  out_DF$AIC <-  NA_real_
+
+  #include a message about why no fit was done
+  msg <- paste("Optimization failed. Error message:",
+               all_data_fit)
+  out_DF$message <- msg
+
+  if(!suppress.messages){
+    message(msg)
+  }
+  return(out_DF)
+  }
+
 
 #post-processing of fit results
 
@@ -290,11 +252,15 @@ analyze_subset <- function(fitdata,
   ln_means <- as.vector(stats::coef(all_data_fit))
   names(ln_means) <- names(opt_params)
 
-  if (!suppress.messages) message(paste("Optimized values:  ", paste(apply(data.frame(Names = names(ln_means),
-                                                                                  Values = sapply(ln_means,exp),
-                                                                                  stringsAsFactors = FALSE),
-                                                                       1, function(x) paste(x, collapse = ": ")),
-                                                                 collapse = ", "),"\n", sep = ""))
+  if (!suppress.messages){
+    message(paste("Optimized values:  ",
+                  paste(apply(data.frame(Names = names(ln_means),
+                                         Values = sapply(ln_means,exp),
+                                         stringsAsFactors = FALSE),
+                              1, function(x) paste(x, collapse = ": ")),
+                        collapse = ", "),"\n", sep = ""))
+
+  }
 
   #Get SDs from Hessian
   #Calculate Hessian using function from numDeriv
@@ -318,14 +284,14 @@ analyze_subset <- function(fitdata,
 
     if (!suppress.messages) message("One or more parameters has NaN standard deviation, repeating optimization with smaller convergence tolerance.\n")
     #then redo optimization
-    #bump up log-scale sigmas by 1
-    #(equivalent to multiplying sigma by 10)
-    opt_params[regexpr("sigma", names(opt_params)) != -1] <- opt_params[regexpr("sigma", names(opt_params))!=-1]+1
+    #bump up starting values for log-scale sigmas by 1
+    opt_params[grepl(x = names(opt_params),
+                     pattern = "sigma")] <- opt_params[grepl(x = names(opt_params),
+                                                              pattern = "sigma")]+1
     #if anything snapped to the bounds,
     #tighten log-scale bounds by 0.1
-    #(equivalent to tightening by a factor of 10)
-    opt_params[opt_params <= lower] <- lower[opt_params <= lower] + 0.1
-    opt_params[opt_params >= upper] <- upper[opt_params >= upper] - 0.1
+    opt_params[opt_params <= lower_params] <- lower_params[opt_params <= lower_params] + 0.1
+    opt_params[opt_params >= upper_params] <- upper_params[opt_params >= upper_params] - 0.1
 
     if (!suppress.messages) cat(paste("Initial values:    ", paste(apply(data.frame(Names = names(opt_params),
                                                                                     Values = unlist(lapply(opt_params,exp)),
@@ -339,7 +305,7 @@ analyze_subset <- function(fitdata,
     all_data_fit <- optimx::optimx(par = opt_params,
                                    fn = objfun,
                                    # lower=lower,
-                                   upper=upper,
+                                   upper=upper_params,
                                    method = "L-BFGS-B",
                                    hessian = FALSE,
                                    control = list(factr = factr))
@@ -396,10 +362,10 @@ analyze_subset <- function(fitdata,
                    arith_sd,
                    geo_means,
                    geo_sd,
-                   modes)
+                   modes,
+                   ln_means,
+                   ln_sds)
   names(fit_DF) <-  fitted_types
-  fit_DF[["Fitted log-scale mean"]] <- ln_means
-  fit_DF[["Fitted log-scale std dev"]] <- ln_sds
   fit_DF$param_name <- names(ln_means)
 
   #Merge it with the original data frame of parameters
@@ -407,11 +373,24 @@ analyze_subset <- function(fitdata,
                   fit_DF,
                   by = "param_name",
                   all = TRUE)
+
+  nref <- length(unique(fitdata$Reference))
+
+  if (nref>1) {
+    out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+                              collapse =", ")
+    out_DF$Data.Analyzed <- "Joint Analysis"
+  } else {
+    out_DF$Reference <- unique(fitdata$Reference)
+    out_DF$Data.Analyzed <- unique(fitdata$Reference)
+  }
+
   #Add log-likelihood and AIC values
   out_DF$LogLikelihood <- -all_data_fit$value
   out_DF$AIC <- 2 * length(opt_params) + 2 * all_data_fit$value
 
   #Check for red flags
+  out_DF$flag <- NA_character_
   #if anything has not moved from its starting value:
   out_DF[out_DF$optimize_param %in% TRUE &
            out_DF$`Fitted log-scale mean` == log(out_DF$start_value),
@@ -429,8 +408,8 @@ analyze_subset <- function(fitdata,
 
   #if any parameters are exactly at their bounds
   out_DF[out_DF$optimize_param %in% TRUE &
-           (out_DF$`Fitted log-scale mean` == log(out_DF$upper_value) |
-           out_DF$`Fitted log-scale mean` == log(out_DF$lower_value)),
+           (out_DF$`Fitted log-scale mean` == log(out_DF$upper_bound) |
+           out_DF$`Fitted log-scale mean` == log(out_DF$lower_bound)),
          "flag"] <- "Fitted log-scale mean is equal to lower or upper bound"
 
 

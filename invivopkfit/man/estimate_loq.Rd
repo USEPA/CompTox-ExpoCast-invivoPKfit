@@ -6,43 +6,61 @@
 \usage{
 estimate_loq(
   cvt.data,
-  source.col = "fk_study_id",
+  source.col = "document_id",
   chem.col = "dsstox_casrn",
   media.col = "conc_medium_normalized",
   value.col = "conc",
-  calc.loq.col = "calc_loq"
+  calc.loq.col = "calc_loq",
+  loq.factor = 0.45
 )
 }
 \arguments{
-\item{cvt.data}{A table of concentration vs. time data with at least the
-following columns:}
+\item{cvt.data}{A \code{data.frame} of concentration vs. time data with at
+least the following columns:}
 
-\item{source.col}{The column indicating different research studies (and
-there for different mass spectrometry methods)}
+\item{source.col}{The name of the column indicating different research study
+source documents (and therefore different mass spectrometry methods).
+Default "document_id".}
 
-\item{chem.col}{The column indicating chemical identity}
+\item{chem.col}{The name of the column indicating chemical identity. Default
+"dsstox_casrn".}
 
-\item{media.col}{The column indicating sample medium}
+\item{media.col}{The name of the column indicating sample medium. Default
+"conc_medium_normalized".}
 
-\item{value.col}{The column indicating concentration}
+\item{value.col}{The name of the column indicating concentration. Default
+"conc". Nondetects should be reported as 0 or NA in this column.}
 
-\item{calc.loq.col}{The column to be added to the table holding the estimated
-LOQ's}
+\item{calc.loq.col}{The name of the column to be added to the table holding
+the estimated LOQ's. Default "calc_loq".}
+
+\item{loq.factor}{A factor by which to multiply the lowest detected value to
+estimate an LOQ. Default 0.45.}
 }
 \value{
-A table with column "calc_loq" added
+A \code{data.frame} that is the same as \code{cvt.data}, but with the
+  column specifed in \code{calc_loq} added, and any rows for
+  source/chemical/medium combinations with no detected concentrations removed
 }
 \description{
-Sometimes in mass spectrometry a compound is detected, but the signal is
-too low and falls outside the range that can be interpreted quantitatively
-(that is, as a concentration). These detects can still be used to refine
-parameter estimates by preferring curve fits that predict concentrations
-below the known "limit of quantitation" (LOQ) -- the lowest detectable quantifiable
+Sometimes in mass spectrometry a compound is detected, but the signal is too
+low and falls outside the range that can be interpreted quantitatively (that
+is, as a concentration). These detects can still be used to refine parameter
+estimates by preferring curve fits that predict concentrations below the
+known "limit of quantitation" (LOQ) -- the lowest detectable quantifiable
 concentration. LOQ's are not always available from data reported in the
 literature, so this function estimates a LOQ such that all the reported
-values are above the LOQ. The LOQ is assumed to vary from study to study,
-as each study would have different mass spectrometry equipment and methods.
-LOQ also is assumed to vary by media, as preparation of samples may be different.
+values are above the LOQ.
+The LOQ is assumed to vary from study to study, as each study would have
+different mass spectrometry equipment and methods. LOQ also is assumed to
+vary by media, as preparation of samples may be different. For each unique
+combination of study, chemical, and medium, the LOQ is estimated by
+multiplying the lowest detected concentration (the minimum non-NA reported
+concentration greater than zero) by a constant factor (\code{loq.factor}). If
+there are no detected concentrations for a given combination of study,
+chemical, and medium (i.e., all reported concentrations are NA or 0), then
+that study/chemical/medium combination will be removed from the returned
+data.frame.
 }
 \author{
 John Wambaugh

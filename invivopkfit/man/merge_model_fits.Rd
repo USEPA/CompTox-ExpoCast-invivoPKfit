@@ -6,13 +6,16 @@
 \usage{
 merge_model_fits(
   fit.list,
-  compound.col = "",
-  dtxsid.col = "",
-  cas.col = "",
-  species.col = "",
-  param.value.type.col = "",
+  compound.col = "Compound",
+  dtxsid.col = "DTXSID",
+  cas.col = "CAS",
+  species.col = "Species",
+  media.col = "Media",
+  param.value.type.col = "param.value.type",
   data.analyzed.col = "Data.Analyzed",
-  param.value.type = "Fitted geometric mean"
+  param.value.type = "Fitted geometric mean",
+  sig.figs = 3,
+  summary.params = c("Vdist", "kelim", "kgutabs", "Fgutabs", "CLtot", "Css", "halflife")
 )
 }
 \arguments{

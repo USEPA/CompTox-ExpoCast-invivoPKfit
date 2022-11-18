@@ -18,18 +18,7 @@
 #'
 #' @export cp_1comp
 cp_1comp <- function(time, params, dose, iv.dose){
-  #time in hours
-  #dose in mg/kg
-  #params: a subset of those returned by httk::parameterize_1comp
-  #a named list
-  #Fgutabs = oral fraction absorbed, unitless
-  #kelim = elimination rate, 1/h
-  #kgutabs = oral absorption rate, 1/h
-  #Vdist = volume of distribution, L/kg body weight
 
-  #Take a copy of the input data table so it behaves as though passed by value
-  # DT <- copy(DT)
-# browser()
   if (any(sapply(params,function(x) identical(x,numeric(0))))) return(0)
 
   if (is.null(params$Fgutabs)|is.na(params$Fgutabs))
@@ -47,11 +36,12 @@ cp_1comp <- function(time, params, dose, iv.dose){
     cp <- dose*exp(-params$kelim * time)/params$Vdist
 
     }else{
-      params$Vdist <- log(params$Vdist)
-      # browser()
-    cp <- (params$Fgutabs * dose *
-     params$kgutabs*(exp(-params$kelim * time) - exp(-params$kgutabs* time)))/
-    (params$Vdist*(params$kgutabs - params$kelim))
+      #params$Vdist <- log(params$Vdist) ##????? Why was this here and uncommented?
+      const <- (params$Fgutabs * dose * params$kgutabs)/
+        ((params$Vdist*(params$kgutabs - params$kelim)))
+
+    cp <- const * (exp(-params$kelim * time) - exp(-params$kgutabs* time))
+
     #Note: this fails if kgutabs == kelim,
     #which usually happens if both are at the upper bound
   }

@@ -52,32 +52,36 @@ get_starts <- function(par_DF = NULL,
                                          2,
                                          0.25),
                          start_value_msg = "Default"
-                       )
+                       ),
+                       suppress.messages = FALSE
                        ){
 if(is.null(par_DF)){
     par_DF <- get_opt_params(model = model,
                              fitdata = fitdata,
-                             param_names = par_DF$param_name)
+                             param_names = par_DF$param_name,
+                             suppress.messages = suppress.messages)
 }
 
   #get lower bounds if not already there
-  if(!("lower_value" %in% names(par_DF))){
+  if(!("lower_bound" %in% names(par_DF))){
     par_DF <- get_lower_bounds(par_DF = par_DF,
                                model = model,
-                               fitdata = fitdata)
+                               fitdata = fitdata,
+                               suppress.messages = suppress.messages)
   }
 
   #get upper bounds if not already there
-  if(!("upper_value" %in% names(par_DF))){
+  if(!("upper_bound" %in% names(par_DF))){
     par_DF <- get_upper_bounds(par_DF = par_DF,
                                model = model,
-                               fitdata = fitdata)
+                               fitdata = fitdata,
+                               suppress.messages = suppress.messages)
   }
 
   this.dtxsid <- unique(fitdata$DTXSID)
   if(length(this.dtxsid) > 1) stop("get_starts(): More than one DTXSID in data")
 
-  this.species <- unique(fitdata$species)
+  this.species <- unique(fitdata$Species)
   if(length(this.species) > 1) stop("get_starts(): More than one species in data")
 
 
@@ -102,7 +106,8 @@ if(is.null(par_DF)){
     #if httk 1-comp model params exist, replace the defaults with these
     #and mark the source accordingly
     if(this.dtxsid %in% httk::get_cheminfo(info="dtxsid",
-                                           model = "1compartment")){
+                                           model = "1compartment",
+                                           suppress.messages = TRUE)){
       #use this_species if httk has data for it, otherwise use human
       httk_species <- ifelse(tolower(this.species) %in%
                                colnames(httk::physiology.data),
@@ -124,12 +129,12 @@ if(is.null(par_DF)){
                                  names(httk_params))
       #do the replacement
       par_DF[match(replace_names,
-                       par_DF$param.name,
+                       par_DF$param_name,
                        nomatch = 0),
                  "start_value"] <- unlist(httk_params[replace_names])
       #and record the source of the new values (the httk function call)
       par_DF[match(replace_names,
-                       par_DF$param.name,
+                       par_DF$param_name,
                        nomatch = 0),
                  "start_value_msg"] <- paste0("httk::parameterize_1comp(",
                                                  "DTXSID = ", this.dtxsid, ", ",
@@ -156,8 +161,8 @@ if(is.null(par_DF)){
           mean(iv.data$Dose) / mean(oral.data$Dose)
         #if the estimated value is valid, then use it and record the source
         if (is.finite(Fgutabs_tmp) &
-            Fgutabs > 0 &
-            Fgutabs < 1){
+            Fgutabs_tmp > 0 &
+            Fgutabs_tmp < 1){
           par_DF["Fgutabs",
                      "start_value"] <- Fgutabs_tmp
           par_DF["Fgutabs",
@@ -195,16 +200,16 @@ if(is.null(par_DF)){
     #if kelim_tmp is not NA, then use it.
     if(is.finite(kelim_tmp)){
       if(kelim_tmp > 0.0001){
-      par_DF[par_DF$param.name %in% "kelim",
+      par_DF[par_DF$param_name %in% "kelim",
                  "start_value"] <- kelim_tmp
-      par_DF[par_DF$param.name %in% "kelim",
+      par_DF[par_DF$param_name %in% "kelim",
                  "start_value_msg"] <- paste0("Estimated from linear regression on ",
                                                  unique(elim_data$Route),
                                                  " data")
       }else{
-        par_DF[par_DF$param.name %in% "kelim",
+        par_DF[par_DF$param_name %in% "kelim",
                    "start_value"] <- 0.0001
-        par_DF[par_DF$param.name %in% "kelim",
+        par_DF[par_DF$param_name %in% "kelim",
                    "start_value_msg"] <- paste0("Linear regression on ",
                                                 unique(elim_data$Route),
                                                    " data produced NA or < 0.0001; ",
@@ -285,19 +290,19 @@ if(is.null(par_DF)){
         }
         Ralphatokelim_tmp <- alpha / par_DF[par_DF$param_name %in% "kelim",
                                             "start_value"]
-        if(Ralphatokelim_tmp >= par_DF[par_DF$param_name %in% "Ralphatokelim", "lower_value"] &
-           Ralphatokelim_tmp <= par_DF[par_DF$param_name %in% "Ralphatokelim", "upper_value"]){
+        if(Ralphatokelim_tmp >= par_DF[par_DF$param_name %in% "Ralphatokelim", "lower_bound"] &
+           Ralphatokelim_tmp <= par_DF[par_DF$param_name %in% "Ralphatokelim", "upper_bound"]){
           par_DF[par_DF$param_name %in% "Ralphatokelim",
                  "start_value"] <- Ralphatokelim_tmp
-          par_DF[par_DF$param.name %in% "Ralphatokelim",
+          par_DF[par_DF$param_name %in% "Ralphatokelim",
                  "start_value_msg"] <- paste0("alpha/kelim; ",
                                               alpha_source)
         } #else retain default value of 2
 
         Fbetaofalpha_tmp <- beta/alpha
 
-        if(Fbetaofalpha_tmp >= par_DF[par_DF$param_name %in% "Fbetaofalpha", "lower_value"] &
-           Fbetaofalpha_tmp <= par_DF[par_DF$param_name %in% "Fbetaofalpha", "upper_value"]){
+        if(Fbetaofalpha_tmp >= par_DF[par_DF$param_name %in% "Fbetaofalpha", "lower_bound"] &
+           Fbetaofalpha_tmp <= par_DF[par_DF$param_name %in% "Fbetaofalpha", "upper_bound"]){
           par_DF[par_DF$param_name %in% "Fbetaofalpha", "start_value"] <- Fbetaofalpha_tmp
           par_DF[par_DF$param_name %in% "Fbetaofalpha", "start_value_msg"] <- paste0("beta/alpha: ",
                                                                                      beta_source,
@@ -306,17 +311,13 @@ if(is.null(par_DF)){
 
       }
 
-      # Initialize the standard deviations to 1/100 the median concentration or 0.1, whichever is greater
+      # Initialize the standard deviations to the median concentration
   TRYSIGMA <- stats::median(fitdata$Value, na.rm = TRUE)
   par_DF[grepl(x = par_DF$param_name,
                pattern = "sigma"),
          c("start_value",
-           "start_value_msg")] <- list(max(TRYSIGMA / 100, 0.1),
-                                       paste0("max(median conc/100, 0.1)"))
-
-  #rowbind together all the parameters
-  par_DF <- rbind(par_DF,
-                      sigma_ref_DF)
+           "start_value_msg")] <- list(TRYSIGMA,
+                                       paste0("median conc"))
 
 
   return(par_DF)

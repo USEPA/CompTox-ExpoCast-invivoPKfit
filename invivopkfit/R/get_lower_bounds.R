@@ -12,60 +12,62 @@
 #' @param model The name of the model whose parameters are to be estimated.
 #' @param fitdata A data.frame: the concentration-time-dose data to be used for
 #'   fitting.
-#' @return A data.frame: `parDF` with additional variables `lower_value`
+#' @return A data.frame: `parDF` with additional variables `lower_bound`
 #'   (numeric, containing the lower bound for each parameter) and
-#'   `lower_value_msg` (character, containing a brief message explaining how the
+#'   `lower_bound_msg` (character, containing a brief message explaining how the
 #'   lower-bound value was calculated).
 #' @author Caroline Ring, John Wambaugh, Mitchell Teague
 #'
 get_lower_bounds <- function(par_DF = NULL,
                              model,
-                             fitdata){
+                             fitdata,
+                             suppress.messages = FALSE){
   if(is.null(par_DF)){
     par_DF <- get_opt_params(model = model,
                              fitdata = fitdata,
-                             param_names = par_DF$param_name)
+                             param_names = par_DF$param_name,
+                             suppress.messages = suppress.messages)
   }
   rownames(par_DF) <- par_DF$param_name
 
   #defaults
-  par_DF[, c("lower_value",
-             "lower_value_msg")] <- list(1e-8, "Default")
+  par_DF[, c("lower_bound",
+             "lower_bound_msg")] <- list(1e-8, "Default")
 
   #Override default for params where it doesn't make sense
 
   #Vdist/V1
-  par_DF[grepl(x = par_DF$param_names,
+  par_DF[grepl(x = par_DF$param_name,
                pattern = "Vdist|V1"),
-         c("lower_value",
-           "lower_value_msg")] <- list(0.01,
+         c("lower_bound",
+           "lower_bound_msg")] <- list(0.01,
                                        "Default")
 
   #Ralphatokelim
-  par_DF[grepl(x = par_DF$param_names,
+  par_DF[grepl(x = par_DF$param_name,
                pattern = "Ralphatokelim"),
-         c("lower_value",
-           "lower_value_msg")] <- list(0.0,
+         c("lower_bound",
+           "lower_bound_msg")] <- list(0.0,
                                        "Default")
 
   #Fgutabs
-  par_DF[grepl(x = par_DF$param_names,
+  par_DF[grepl(x = par_DF$param_name,
                pattern = "Fgutabs"),
-         c("lower_value",
-           "lower_value_msg")] <- list(0.05,
+         c("lower_bound",
+           "lower_bound_msg")] <- list(0.05,
                                        "Default")
 
   #sigma
-  par_DF[grepl(x = par_DF$param_names,
+  par_DF[grepl(x = par_DF$param_name,
                pattern = "sigma"),
-         c("lower_value",
-           "lower_value_msg")] <- list(1e-5,
+         c("lower_bound",
+           "lower_bound_msg")] <- list(1e-5,
                                        "Default")
 
   #For anything not to be optimized, set its bounds to NA
-  par_DF[!(optimize_param %in% TRUE),
-         c("lower_value",
-           "lower_value_msg")] <- list(NA_real_,
+  par_DF[!(par_DF$optimize_param %in% TRUE),
+         c("lower_bound",
+           "lower_bound_msg")] <- list(NA_real_,
                                        "optimize_param is not TRUE")
 
   return(par_DF)

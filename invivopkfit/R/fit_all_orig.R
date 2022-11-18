@@ -81,7 +81,7 @@
 #' @importFrom PK nca.batch
 #' @importFrom magrittr "%>%"
 
-fit_all <- function(data.set,
+fit_all_orig <- function(data.set,
                     model,
                     modelfun = NA,
                     ratio.data.to.dose = 1,
