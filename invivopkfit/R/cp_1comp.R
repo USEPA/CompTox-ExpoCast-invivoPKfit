@@ -1,5 +1,7 @@
 #'Analytical 1-compartment model
 #'
+#' Calculates plasma concentrations according to the analytical solution for the  1-compartment model.
+#'
 #'@param time A vector of times in hours
 #'@param params A named list of model parameter values. Must include:
 #'\describe{

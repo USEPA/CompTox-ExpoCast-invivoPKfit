@@ -1,7 +1,8 @@
-#' Analytical 2-compartment model
+#' Analytical AUC for the 2-compartment model
 #'
-#' Calculates plasma concentration according to the analytical solution for the
-#' 2-compartment model.
+#' Calculate area under the plasma concentration vs. time curve for the
+#' 1-compartment model, using an analytical equation (the integral of the
+#' 1-compartment model equation with respect to time).
 #'
 #' @param params A named list of parameter values including the following:
 #'   \describe{ \item{k12}{Rate at which compound moves from central to
@@ -16,11 +17,9 @@
 #' @param time A vector of time values, in hours
 #' @param dose A dose in mg/kg
 #' @param iv.dose TRUE for single IV bolus dose, FALSE for single oral dose
-#' @return A vector of plasma concentration values corresponding to each value
-#'   in \code{time}
-#' @export cp_2comp
-cp_2comp <- function(params, time, dose, iv.dose)
-{
+#'@return A vector of plasma AUC values, evaluated at each time point in `time`.
+#' @export auc_2comp
+auc_2comp <- function(params, time, dose, iv.dose){
 
   if (any(sapply(params,function(x) identical(x,numeric(0))))) return(NA)
 
@@ -53,20 +52,21 @@ cp_2comp <- function(params, time, dose, iv.dose)
   alphabeta.prod <- alpha * beta
 
   if (iv.dose){ #for IV dosing
-  A <- (dose * (alpha - k21)) / (params$V1 * (alpha - beta))
-  B <- (dose * (k21 - beta))/(params$V1 * (alpha - beta))
+    A <- (dose * (alpha - k21)) / (params$V1 * (alpha - beta))
+    B <- (dose * (k21 - beta))/(params$V1 * (alpha - beta))
+    auc <- A/alpha * (1 - exp(-time*alpha)) +
+      B/beta * (1 - exp(-time*beta))
+  }else{
+    A <- (params$Fgutabs * dose * (alpha - k21)) / (params$V1 * (alpha - beta))
+    B <- (params$Fgutabs * dose * (k21 - beta)) / (params$V1 * (alpha - beta))
 
-  cp <- A * exp(-alpha * time) + B * exp(-beta * time)
-  }else{ #for oral dosing
-  A <- (params$Fgutabs * dose * (alpha - k21)) / (params$V1 * (alpha - beta))
-  B <- (params$Fgutabs * dose * (k21 - beta)) / (params$V1 * (alpha - beta))
-  C <- -(A + B)
-  cp <-  A * exp(-alpha * time) + B * exp(-beta * time) + C * exp(-params$kgutabs * time)
+    auc <- A/alpha * (1 - exp(-time*alpha)) +
+      B/beta * (1 - exp(-time*beta)) +
+      (-A - B)/ka * (1 - exp(-time*ka))
   }
 
-  # cp[cp < 10^-20] <- 10^-20
-  cp[cp<0] <- 0
-  cp[!is.finite(cp)] <- 0
+  auc[auc<0] <- 0
+  auc[!is.finite(auc)] <- 0
 
-  return(cp)
+  return(auc)
 }

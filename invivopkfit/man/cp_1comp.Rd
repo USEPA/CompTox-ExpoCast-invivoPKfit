@@ -26,7 +26,7 @@ For oral administration (\code{iv.dose} FALSE), \code{params} must also include:
 A vector of plasma concentration values corresponding to \code{time}.
 }
 \description{
-Analytical 1-compartment model
+Calculates plasma concentrations according to the analytical solution for the  1-compartment model.
 }
 \author{
 Caroline Ring, John Wambaugh

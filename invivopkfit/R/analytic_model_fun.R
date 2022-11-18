@@ -43,8 +43,23 @@ analytic_model_fun <- function(params,
 
   #Cp will have units mg/L
 
+  #AUC -- now using analytical equations for AUC,
+  #integral of cp_1comp or cp_2comp wrt time
+  aucfun <- switch(model,
+                 '1compartment' = auc_1comp,
+                 '2compartment' = auc_2comp,
+                 'flat' = auc_flat)
+
+  AUC <- tryCatch(do.call(aucfun,
+                         list(time=times,
+                              params=params,
+                              dose=dose,
+                              iv.dose=iv.dose)),
+                 error=rep(0,length=length(times)))
+
+
   #Cumulative trapezoidal rule
-  AUC <- c(0,cumsum(diff(times)*(Cp[-1]+Cp[-length(Cp)])))
+  # AUC <- c(0,cumsum(diff(times)*(Cp[-1]+Cp[-length(Cp)])))
 
   out.mat <- matrix(rep(0, length(times)*3),
                     nrow=length(times),

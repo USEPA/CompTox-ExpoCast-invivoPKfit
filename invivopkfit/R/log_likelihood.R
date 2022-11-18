@@ -62,9 +62,12 @@ log_likelihood <- function(params,
                          pattern = "sigma")])
   nref <- length(sigmas)
   if(nref > 1){
+    #get the Reference ID for each sigma, based on its name
+    #sigma names are of pattern "sigma_ref_[Reference ID]", without the brackets
   refs_sigmas <- gsub(x = names(sigmas),
                       pattern = "sigma_ref_",
                       replacement = "")
+  #match the Reference ID and assign each sigma to its corresponding reference
   DF[, sigma.ref:=sigmas[match(Reference,
                              refs_sigmas,
                              nomatch = 0)]
