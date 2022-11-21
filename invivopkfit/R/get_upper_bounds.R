@@ -28,7 +28,9 @@ get_upper_bounds <- function(fitdata,
                              par_DF = NULL,
                              model,
                              pool_sigma = FALSE,
-                             suppress.messages = FALSE){
+                             suppress.messages = FALSE,
+                             digits = 5,
+                             scientific = -3){
 
   if(is.null(par_DF)){
   par_DF <- get_opt_params(model = model,

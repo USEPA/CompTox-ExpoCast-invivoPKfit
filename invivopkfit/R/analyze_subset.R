@@ -118,7 +118,6 @@ analyze_subset <- function(fitdata,
                            modelfun,
                            pool_sigma = FALSE,
                            LOQ_factor = 2,
-                           get_opt_params_args = NULL,
                            get_starts_args = NULL,
                            get_lower_args = NULL,
                            get_upper_args = NULL,
@@ -166,28 +165,32 @@ analyze_subset <- function(fitdata,
                         "suppress.messages" = suppress.messages))
 #get lower bounds
  par_DF <- do.call(get_lower_bounds,
-                   list("par_DF" = par_DF,
+                   c(list("par_DF" = par_DF,
                           "model" = model,
                           "fitdata" = fitdata,
                         "pool_sigma" = pool_sigma,
-                          "suppress.messages" = suppress.messages))
+                          "suppress.messages" = suppress.messages),
+                     get_lower_args))
 
 
  #get upper bounds
  par_DF <- do.call(get_upper_bounds,
-                   list("par_DF" = par_DF,
+                   c(list("par_DF" = par_DF,
                        "model" = model,
                        "fitdata" = fitdata,
                        "pool_sigma" = pool_sigma,
-                       "suppress.messages" = suppress.messages))
+                       "suppress.messages" = suppress.messages),
+                     get_upper_args)
+ )
 
  #get starting values
  par_DF <- do.call(get_starts,
-                   list("par_DF" = par_DF,
+                   c(list("par_DF" = par_DF,
                        "model" = model,
                        "fitdata" = fitdata,
                        "pool_sigma" = pool_sigma,
-                       "suppress.messages" = suppress.messages))
+                       "suppress.messages" = suppress.messages),
+                     get_starts_args))
 
   #Types of fitted param values to return
   fitted_types <- c("Fitted arithmetic mean",
@@ -357,6 +360,14 @@ analyze_subset <- function(fitdata,
                                model = model,
                                LOQ_factor = LOQ_factor,
                                force_finite = optimx_args$method == "L-BFGS-B")
+
+  numhess2 <- hess_log_likelihood(opt_params = ln_means,
+                                  const_params = NULL,
+                                  DF = fitdata,
+                                  modelfun = modelfun,
+                                  model = model,
+                                  LOQ_factor = LOQ_factor,
+                                  force_finite = optimx_args$method == "L-BFGS-B")
   #try inverting Hessian to get SDs
   ln_sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                      error = function(err){
@@ -436,7 +447,7 @@ analyze_subset <- function(fitdata,
                                  LOQ_factor = LOQ_factor,
                                  force_finite = optimx_args$method == "L-BFGS-B")
 
-    numhess <- hess_log_likelihood(opt_params = ln_means,
+    numhess2 <- hess_log_likelihood(opt_params = ln_means,
                                    const_params = NULL,
                                    DF = fitdata,
                                    modelfun = modelfun,
