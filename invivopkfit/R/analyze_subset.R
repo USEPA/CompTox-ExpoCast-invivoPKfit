@@ -288,7 +288,6 @@ analyze_subset <- function(fitdata,
                                  force_finite = TRUE)
                             )
                    )
-    tmp <- optimx::optimx()
     #tmp is a 1-row data.frame with one variable for each fitted param,
     #plus variables with info on fitting (number of evals, convergence code, etc.)
     #collect any messages from optimx -- in attribute "details" (another data.frame)
@@ -366,7 +365,7 @@ analyze_subset <- function(fitdata,
 
   #If any of the SDs are NaN,
   #repeat optimization with smaller convergence tolerance
-  while(any(is.nan(ln_sds)) & factr > 1) {
+  while(any(is.nan(ln_sds)) & optimx_args$control$factr > 1) {
 
     if (!suppress.messages) message("One or more parameters has NaN standard deviation, repeating optimization with smaller convergence tolerance.\n")
     #then redo optimization
@@ -384,36 +383,54 @@ analyze_subset <- function(fitdata,
                                                                                     stringsAsFactors = F),
                                                                          1, function(x) paste(x, collapse = ": ")),
                                                                    collapse = ", "), "\n", sep = ""))
-    factr <- factr / 10 #reducing factr by 10 (requiring closer convergence)
+    optimx_args$control$factr <- optimx_args$control$factr / 10 #reducing factr by 10 (requiring closer convergence)
 
     #use general-purpose optimizer to optimize 1-compartment params to fit data
     #optimize by maximizing log-likelihood
-    all_data_fit <- optimx::optimx(par = opt_params,
-                                   fn = objfun,
-                                   # lower=lower,
-                                   upper=upper_params,
-                                   method = "L-BFGS-B",
-                                   hessian = FALSE,
-                                   control = list(factr = factr,
-                                                  maximize = TRUE))
+    all_data_fit <-  do.call(optimx::optimx,
+                                      args = c(
+                                        #
+                                        list(par = opt_params,
+                                             fn = log_likelihood,
+                                             gr = grad_log_likelihood,
+                                             #lower = lower_params,
+                                             upper = upper_params),
+                                        #fn, gr, method, and control
+                                        optimx_args,
+                                        #... additional args to log_likelihood and grad_log_likelihood
+                                        list(
+                                          const_params = const_params,
+                                          DF = fitdata,
+                                          modelfun = modelfun,
+                                          model = model,
+                                          LOQ_factor = LOQ_factor,
+                                          force_finite = TRUE)
+                                      )
+    )
 
     ln_means <- as.vector(stats::coef(all_data_fit))
     names(ln_means) <- names(opt_params)
-    if (!suppress.messages) message(paste("Optimized values:  ",paste(apply(data.frame(Names = names(ln_means),
-                                                                                   Values = sapply(ln_means, exp),
-                                                                                   stringsAsFactors=F),
-                                                                        1, function(x) paste(x, collapse=": ")),
-                                                                  collapse = ", "), "\n", sep = ""))
+    if (!suppress.messages){
+      message(paste("Optimized values:  ",
+                    paste(apply(data.frame(Names = names(ln_means),
+                                           Values = sapply(ln_means, exp),
+                                           stringsAsFactors=F),
+                                1, function(x) paste(x, collapse=": ")),
+                          collapse = ", "),
+                    "\n", sep = ""))
+    }
 
     #Get SDs from Hessian
     #Calculate Hessian using function from numDeriv
-    numhess <- numDeriv::hessian(func = objfun,
+    numhess <- numDeriv::hessian(func = log_likelihood,
                                  x = ln_means,
                                  method = 'Richardson')
     ln_sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                        error = function(err){
                          #if hessian can't be inverted
-                         if (!suppress.messages) cat("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.\n")
+                         if (!suppress.messages){
+                           message("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.")
+                         }
                          return(diag(chol(MASS::ginv(numhess),
                                           pivot = TRUE)) ^ (1/2)) #pseduovariance matrix
                          #see http://gking.harvard.edu/files/help.pdf
