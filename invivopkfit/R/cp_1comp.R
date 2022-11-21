@@ -38,7 +38,6 @@ cp_1comp <- function(time, params, dose, iv.dose){
     cp <- dose*exp(-params$kelim * time)/params$Vdist
 
     }else{
-      #params$Vdist <- log(params$Vdist) ##????? Why was this here and uncommented?
       const <- (params$Fgutabs * dose * params$kgutabs)/
         ((params$Vdist*(params$kgutabs - params$kelim)))
 

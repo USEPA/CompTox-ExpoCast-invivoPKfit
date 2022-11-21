@@ -1,7 +1,4 @@
-#' Log-likelihood
-#'
-#' The log-likelihood function (probability of data given model parameters).
-#'
+#' Analytical gradient for log-likelihood function.
 #'
 #' @param opt_params A named vector of log-scaled parameter values. When this
 #'   function is the objective function for a numerical optimizer, these are the
@@ -23,17 +20,14 @@
 #'   'L-BFGS-B'.) Default FALSE, allowing the function to return -Inf for
 #'   infinitely-unlikely parameter combinations. When `force_finite == TRUE`,
 #'   the function will replace -Inf with -999999.
-#'
-#' @return A log-likelihood value for the data given the parameter values in
-#'   params
-log_likelihood <- function(opt_params,
-                           const_params = NULL,
-                           DF,
-                           modelfun,
-                           model,
-                           LOQ_factor = 2,
-                           force_finite = FALSE) {
-
+#' @return The gradient of the log-likelihood function.
+grad_log_likelihood <- function(opt_params,
+                                const_params = NULL,
+                                DF,
+                                modelfun,
+                                model,
+                                LOQ_factor = 2,
+                                force_finite = FALSE){
   #combine parameters to be optimized and held constant,
   #and convert into a list, since that is what model functions expect
   params <- as.list(c(opt_params, const_params))
@@ -63,67 +57,69 @@ log_likelihood <- function(opt_params,
   DF <- as.data.table(DF)
 
   DF[, pred := fitfun(design.times = Time.Days,
-                 design.dose = unique(Dose),
-                 design.iv = unique(iv),
-                 design.times.max = unique(Max.Time.Days),
-                 design.time.step = unique(Time.Steps.PerHour),
-                 modelfun = modelfun,
-                 model = model,
-                 model.params = model.params),
-             by = .(Dose, Route)]
+                      design.dose = unique(Dose),
+                      design.iv = unique(iv),
+                      design.times.max = unique(Max.Time.Days),
+                      design.time.step = unique(Time.Steps.PerHour),
+                      modelfun = modelfun,
+                      model = model,
+                      model.params = model.params),
+     by = .(Dose, Route)]
 
   #Match sigmas to references:
   #get vector of sigmas, named as "sigma_ref_ReferenceID" or just "sigma"
   sigmas <- unlist(params[grepl(x=names(params),
-                         pattern = "sigma")])
+                                pattern = "sigma")])
   nref <- length(sigmas)
   if(nref > 1){
     #get the Reference ID for each sigma, based on its name
-  refs_sigmas <- gsub(x = names(sigmas),
-                      pattern = "sigma_ref_",
-                      replacement = "")
-  #match the Reference ID and assign each sigma to its corresponding reference
-  DF[, sigma.ref:=sigmas[match(Reference,
-                             refs_sigmas,
-                             nomatch = 0)]
-     ]
+    refs_sigmas <- gsub(x = names(sigmas),
+                        pattern = "sigma_ref_",
+                        replacement = "")
+    #match the Reference ID and assign each sigma to its corresponding reference
+    DF[, sigma.ref:=sigmas[match(Reference,
+                                 refs_sigmas,
+                                 nomatch = 0)]
+    ]
   }else{ #if only one reference, the parameter is just called "sigma"
     DF[, sigma.ref := sigmas]
   }
 
-  #if pred is exactly 0, add 1e-12
-  #to avoid blowing up log transformation
-  DF[pred==0, pred:= 1e-12]
 
-  #Compute log-normal log-likelihood (LL):
-  #For detects: PDF
+  #Compute log-normal log-likelihood gradient (LLG)
+
+  #Pre-computation:
+  #log-scale concentration
+  DF[!is.na(Value), y := log(Value)] #detects
+  DF[is.na(Value), y:=log(LOQ * LOQ_factor)] #nondetects
+  #log-scale predicted mean
+  #add 1e-12 in case predicted mean is 0
+  DF[pred==0, pred := pred + 1e-12]
+  DF[, mu:=log(pred)]
+  #standardize log-scale Value by log-scale mean & sigma.ref
+  DF[, z:=(y - mu)/sigma.ref]
+
+  #For detects: gradient of PDF
+  #wrt mu:
   DF[!is.na(Value),
-                 loglike := dnorm(x = log(Value),
-                       mean = log(pred),
-                       sd = sigma.ref,
-                       log = TRUE)]
-  #For non-detets: CDF
+     llg_mu := z/sigma.ref]
+  #wrt sigma:
+  DF[!is.na(Value),
+     llg_sigma := (z^2 - 1)/sigma.ref]
+
+  #For non-detects: gradient of CDF
+  #wrt mu:
   DF[is.na(Value),
-                 loglike := pnorm(q = log(LOQ * LOQ_factor),
-                       mean = log(pred),
-                       sd = sigma.ref,
-                       log.p = TRUE)]
+     llg_mu := -dnorm(z)/pnorm(z)]
+  #wrt sigma:
+  DF[is.na(Value),
+     llg_sigma := -dnorm(z)*z/pnorm(z)]
 
-  #And sum over references to get overall LL
-  ll <- DF[, sum(loglike)]
-  #do *not* remove NAs, because they mean this parameter combination is impossible!
+  #Joint log-likelihood is sum of individual LLs....
+  #Joint gradient is the same
+  llg_mu <- DF[, sum(llg_mu)]
+  llg_sigma <- DF[, sum(llg_sigma)]
 
-  #If ll isn't finite -- for example if a predicted concentration was negative --
-  #just set it to -Inf to indicate that these parameters are infinitely unlikely
-  if (!is.finite(ll)) ll <- -Inf
-
-  #If user has selected to force return of a finite value,
-  #e.g. as required by optimix with method 'L-BFGS-B',
-  #then when log-likelihood is infinitely unlikely,
-  #return a large negative number instead
-  if(force_finite %in% TRUE){
-  if (!is.finite(ll)) ll <- -999999
-  }
-
-  return(ll)
+  #return joint gradient as a vector
+  return(c(llg_mu, llg_sigma))
 }

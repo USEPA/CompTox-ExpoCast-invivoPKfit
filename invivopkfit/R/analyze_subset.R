@@ -3,6 +3,60 @@
 #' Fit a specified PK model to one set of concentration vs. time data and return
 #' a set of fitted parameter values.
 #'
+#' Typically this function is not called directly by the user, but is called
+#' from [fit_all], the main fitting function.
+#'
+#' This function estimates one set of parameters for a specified PK model, based
+#' on a set of concentration vs. time data in `fitdata`. `fitdata` is typically
+#' data for one chemical and one species, but it may include data from more than
+#' one study and more than one dosing route.
+#'
+#' The parameters to be estimated are those defined in
+#' [get_opt_params()] for the model specified in `model` and `modelfun`:
+#'
+#'  - for `model = 'flat'`, the parameter estimated is `A`
+#'  - for `model = '1compartment'`, the parameters estimated are `Vdist`,
+#'  `kelim`, and possibly `kgutabs` and `Fgutabs` (see below).
+#'  - for `model = '2compartment'`, the parameters estimated are `V1`,
+#'  `Ralphatobeta`, `Fbetaofalpha`, and possibly `kgutabs` and `Fgutabs`.
+#'
+#'  For 1-compartment and 2-compartment models, `kgutabs` will be estimated from
+#'  the data only if `fitdata` includes oral dosing data; otherwise it will be
+#'  set to NA.
+#'
+#'  `Fgutabs` will be estimated from the data only if `fitdata` includes both
+#'  oral and IV data. If `fitdata` includes oral data but not IV data, `Fgutabs`
+#'  will be held constant at 1 while other parameters are estimated. If
+#'  `fitdata` does not include oral data, `Fgutabs` will be set to NA.
+#'
+#' In addition to the model parameters, the log-scale standard deviation of the
+#' residual errors will be estimated. If `fitdata` includes more than one unique
+#' reference value (`length(unique(fitdata$Reference))>1`) and `pool_sigma ==
+#' FALSE`, then a separate log-scale error SD will be estimated for each unique
+#' reference. These log-scale error SDs will be named following the pattern
+#' `sigma_ref_ReferenceID`, where `ReferenceID` is one unique value of
+#' `fitdata$Reference`, coerced to character if necessary. This reflects an
+#' assumption that all concentration vs. time studies in `fitdata` obey the same
+#' underlying PK model, but each study may have a different amount of random
+#' measurement error (analogous to meta-regression with fixed effects).
+#'
+#'  Parameters are estimated using [optimx::optimx()] using the 'L-BFGS-B'
+#'  algorithm by default, to enforce lower and upper bounds on parameters.
+#'  Parameter starting values are set in [get_starts()]. Parameter lower bounds
+#'  are set in [get_lower_bounds()]. Parameter upper bounds are set in
+#'  [get_upper_bounds()].
+#'
+#'  The objective function to be maximized is the log-likelihood, defined in
+#'  [log_likelihood()]. It models the residuals as log-normal. The
+#'  objective-function gradient is defined analytically in
+#'  [grad_log_likelihood()].
+#'
+#'  Parameters are optimized on the log scale, to reduce scaling issues. This
+#'  means that parameter starting values and lower/upper bounds are
+#'  log-transformed before being passed to [optimx::optimx()], so if any
+#'  starting values or bounds are zero or negative, they will be non-finite when
+#'  log-transformed, and [optimx::optimx()] will fail with an error.
+#'
 #' # Expected variables in \code{fitdata}
 #'
 #' \describe{\item{\code{Time}}{Time for each data point}
@@ -19,24 +73,60 @@
 #'
 #' @param fitdata A \code{data.frame} containing the set of concentration vs.
 #'   time data to be fitted. See Details for expected variables. See also
-#'   \code{\link{preprocess_data}}.
+#'   `preprocess_data()`.
 #' @param model Which general model should be fit for each chemical. Presently,
-#'   only "1compartment" and "2compartment" are implemented.
+#'   only "flat", "1compartment", and "2compartment" are implemented.
 #' @param modelfun Either "analytic" or "full" -- whether to fit using the
 #'   analytic solution to the model, or the full ODE model. Presently,
 #'   "analytic" is recommended (because the analytic solution is exact and much
-#'   faster).
+#'   faster). For `modelfun = 'full'`, only `model = '1compartment'` is
+#'   supported.
+#' @param pool_sigma Logical: Whether to pool all data (estimate only one error
+#'   standard deviation) or not (estimate separate error standard deviations for
+#'   each reference). Default FALSE to estimate separate error SDs for each
+#'   reference. (If `fitdata` only includes one reference, `pool_sigma` will have
+#'   no effect, because only one error SD would be estimated in the first place.)
+#' @param LOQ_factor `fitdata$LOQ` will be multiplied by `LOQ_factor` to get the
+#'   effective LOQ. Default `LOQ_factor` is 2.
+#' @param get_starts_args Any additional arguments to [get_starts()] (other than
+#'   `model` and `fitdata`, which are always passed). Default NULL to accept the
+#'   default arguments for [get_starts()].
+#' @param get_lower_args Any additional arguments to [get_lower_bounds()] (other
+#'   than `model` and `fitdata`, which are always passed). Default NULL to
+#'   accept the default arguments for [get_lower_bounds()].
+#' @param get_upper_args Any additional arguments to [get_upper_bounds()] (other
+#'   than `model` and `fitdata`, which are always passed). Default NULL to
+#'   accept the default arguments for [get_upper_bounds()].
+#' @param optimx_args A named list of additional arguments to
+#'   [optimx::optimx()], other than `par`, `fn`, `gr`, `lower`, and `upper`. Default is:
+#'
+#'    ```
+#'     list(
+#'           "method" = "L-BFGS-B",
+#'           "control" = list("factr" = 1e7,
+#'                            "maximize" = TRUE)
+#'          )
+#'    ```
+#'  Note that `method` should allow lower and upper bounds (box constraints),
+#'  since these will be supplied. For example, `method` could be "bobyqa" (see
+#'  [minqa::bobyqa()]).
+#'
+#'
 
 analyze_subset <- function(fitdata,
                            model,
                            modelfun,
-                           sigma_ref = TRUE,
-                           fun_start = get_starts,
-                           fun_lower = get_lower_bounds,
-                           fun_upper = get_upper_bounds,
-                           fun_start_args = NULL,
-                           fun_lower_args = NULL,
-                           fun_upper_args = NULL,
+                           pool_sigma = FALSE,
+                           LOQ_factor = 2,
+                           get_opt_params_args = NULL,
+                           get_starts_args = NULL,
+                           get_lower_args = NULL,
+                           get_upper_args = NULL,
+                           optimx_args = list(
+                             "method" = "L-BFGS-B",
+                             "control" = list("factr" = 1e7,
+                                              "maximize" = TRUE)
+                           ),
                            suppress.messages = FALSE,
                            sig.figs = 5,
                            factr = 1e7){
@@ -61,19 +151,10 @@ analyze_subset <- function(fitdata,
                    "Number of references = ",
                    length(unique(fitdata$Reference)),
                    "\n",
-                   "NUmber of observations = ",
+                   "Number of observations = ",
                    nrow(fitdata)
     )
     )
-  }
-
-
-  #If more than one reference, set flag to calculate separate sigma for each reference
-  nref <- length(unique(fitdata$Reference))
-  if(nref>1){
-    sigma_ref <- TRUE
-  }else{
-    sigma_ref <- FALSE
   }
 
   #get parameter names and
@@ -81,13 +162,14 @@ analyze_subset <- function(fitdata,
  par_DF <- do.call(get_opt_params,
                    list("model" = model,
                               "fitdata" = fitdata,
-                          "sigma_ref" = sigma_ref,
+                          "pool_sigma" = pool_sigma,
                         "suppress.messages" = suppress.messages))
 #get lower bounds
  par_DF <- do.call(get_lower_bounds,
                    list("par_DF" = par_DF,
                           "model" = model,
                           "fitdata" = fitdata,
+                        "pool_sigma" = pool_sigma,
                           "suppress.messages" = suppress.messages))
 
 
@@ -96,6 +178,7 @@ analyze_subset <- function(fitdata,
                    list("par_DF" = par_DF,
                        "model" = model,
                        "fitdata" = fitdata,
+                       "pool_sigma" = pool_sigma,
                        "suppress.messages" = suppress.messages))
 
  #get starting values
@@ -103,6 +186,7 @@ analyze_subset <- function(fitdata,
                    list("par_DF" = par_DF,
                        "model" = model,
                        "fitdata" = fitdata,
+                       "pool_sigma" = pool_sigma,
                        "suppress.messages" = suppress.messages))
 
   #Types of fitted param values to return
@@ -154,6 +238,8 @@ analyze_subset <- function(fitdata,
 
   #From par_DF, get vectors of:
   #(note all of these are log transformed!!)
+  #(parameters are optimized on the log scale,
+  #to try and reduce scaling issues)
 
   #params to be optimized
   opt_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
@@ -180,29 +266,29 @@ analyze_subset <- function(fitdata,
                                 "param_name"]
 
 
-#objective function
-  objfun <- function(params) {
-    foo <- -log_likelihood(params = as.list(c(params,
-                                      const_params)),
-                           DF = fitdata,
-                           modelfun = modelfun,
-                           model = model)
-    #method L-BFGS-B requires finite values be returned,
-    #so if log-likelihood is NA or -Inf,
-    #just return a large negative log.likelihood
-    #(= a large positive -log.likelihood)
-    if (!is.finite(foo)) foo <- 99999
-    return(foo)
-  }
 
   all_data_fit <- tryCatch({
-    tmp <- optimx::optimx(par = opt_params,
-                                          fn = objfun,
-                                          #lower = lower_params,
-                                          upper = upper_params,
-                                          method = "L-BFGS-B", #box constraints
-                                          hessian = FALSE,
-                                          control = list(factr = factr))
+    tmp <- do.call(optimx::optimx,
+                   args = c(
+                     #
+                     list(par = opt_params,
+                                 fn = log_likelihood,
+                          gr = grad_log_likelihood,
+                                 #lower = lower_params,
+                                 upper = upper_params),
+                            #fn, gr, method, and control
+                            optimx_args,
+                            #... additional args to log_likelihood and grad_log_likelihood
+                            list(
+                                 const_params = const_params,
+                                 DF = fitdata,
+                                 modelfun = modelfun,
+                                 model = model,
+                                 LOQ_factor = LOQ_factor,
+                                 force_finite = TRUE)
+                            )
+                   )
+    tmp <- optimx::optimx()
     #tmp is a 1-row data.frame with one variable for each fitted param,
     #plus variables with info on fitting (number of evals, convergence code, etc.)
     #collect any messages from optimx -- in attribute "details" (another data.frame)
@@ -308,7 +394,8 @@ analyze_subset <- function(fitdata,
                                    upper=upper_params,
                                    method = "L-BFGS-B",
                                    hessian = FALSE,
-                                   control = list(factr = factr))
+                                   control = list(factr = factr,
+                                                  maximize = TRUE))
 
     ln_means <- as.vector(stats::coef(all_data_fit))
     names(ln_means) <- names(opt_params)
@@ -390,28 +477,45 @@ analyze_subset <- function(fitdata,
   out_DF$AIC <- 2 * length(opt_params) + 2 * all_data_fit$value
 
   #Check for red flags
-  out_DF$flag <- NA_character_
+  #Initialize flag to blank string...
+  out_DF$flag <- ""
+
   #if anything has not moved from its starting value:
   out_DF[out_DF$optimize_param %in% TRUE &
-           out_DF$`Fitted log-scale mean` == log(out_DF$start_value),
-         "flag"] <- "Fitted log-scale mean equal to log(start value)"
+           out_DF$`Fitted log-scale mean` %in% log(out_DF$start_value),
+         "flag"] <- paste0(out_DF[out_DF$optimize_param %in% TRUE &
+                                    out_DF$`Fitted log-scale mean` %in%
+                                    log(out_DF$start_value),
+                                  "flag"],
+                           "Fitted log-scale mean equal to log(start value). ")
 
   #if log-scale std dev is 0 for any parameters
   out_DF[out_DF$optimize_param %in% TRUE &
-           out_DF$`Fitted log-scale std dev`==0,
-         "flag"] <- "Fitted log-scale std dev = 0"
+           out_DF$`Fitted log-scale std dev`%in% 0,
+         "flag"] <- paste0(out_DF[out_DF$optimize_param %in% TRUE &
+                                    out_DF$`Fitted log-scale std dev`%in% 0,
+                                  "flag"],
+                           "Fitted log-scale std dev = 0. ")
 
   #if log-scale std dev is NaN for any parameters
   out_DF[out_DF$optimize_param %in% TRUE &
            !is.finite(out_DF$`Fitted log-scale std dev`),
-         "flag"] <- "Fitted log-scale std dev is not finite"
+         "flag"] <- paste0(out_DF[out_DF$optimize_param %in% TRUE &
+                                    !is.finite(out_DF$`Fitted log-scale std dev`),
+                                  "flag"],
+                           "Fitted log-scale std dev is not finite. ")
 
   #if any parameters are exactly at their bounds
   out_DF[out_DF$optimize_param %in% TRUE &
-           (out_DF$`Fitted log-scale mean` == log(out_DF$upper_bound) |
-           out_DF$`Fitted log-scale mean` == log(out_DF$lower_bound)),
-         "flag"] <- "Fitted log-scale mean is equal to lower or upper bound"
-
+           (out_DF$`Fitted log-scale mean` %in% log(out_DF$upper_bound) |
+           out_DF$`Fitted log-scale mean` %in% log(out_DF$lower_bound)),
+         "flag"] <- paste0(out_DF[out_DF$optimize_param %in% TRUE &
+                                    (out_DF$`Fitted log-scale mean` %in%
+                                       log(out_DF$upper_bound) |
+                                       out_DF$`Fitted log-scale mean` %in%
+                                       log(out_DF$lower_bound)),
+                                  "flag"],
+                           "Fitted log-scale mean is equal to lower or upper bound.")
 
 return(out_DF)
 

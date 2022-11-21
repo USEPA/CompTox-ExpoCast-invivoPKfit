@@ -28,16 +28,31 @@
 #' @param param_names Optional: A character vector of parameter names needed by
 #'   the model. Default NULL to automatically determine these from `model` by
 #'   calling [get_model_paramnames].
+#' @param pool_sigma Logical: Whether to pool all data (estimate only one error
+#'   standard deviation) or not (estimate separate error standard deviations for
+#'   each reference). Default FALSE to estimate separate error SDs for each
+#'   reference. (If `fitdata` only includes one reference, `pool_sigma` will have
+#'   no effect.)
 #'
-#' @return A named logical vector whose names are `param_names`, indicating
-#'   whether to fit each model parameter (TRUE) or hold it constant (FALSE).
+#' @return A `data.frame` with the following variables:
+#' - `param_name` Character: the name of each model parameter.
+#' - `optimize_param` Logical: Whether the parameter is to be
+#' optimized/estimated from the data (TRUE), or not (FALSE). For example, if
+#' `model` is '1compartment' and `fitdata` does not contain both oral and IV
+#' data, then the parameter "Fgutabs" cannot be estimated from the data, so
+#' `optimize_param` for "Fgutabs" will be FALSE.
+#' - `use_param` Logical: Whether the parameter gets used in the model at all
+#' (TRUE) or not (FALSE). For example, if `model` is '1compartment' and
+#' `fitdata` contains no oral data at all, then for parameter "Fgutabs",
+#' `use_param` will be FALSE, because the 1-compartment model function for
+#' IV-only data will not actually use the value for "Fgutabs".
 #'
 #'
 
 get_opt_params <- function(model,
                            fitdata,
                            param_names = NULL,
-                           sigma_ref = TRUE,
+                           pool_sigma = FALSE,
                            suppress.messages = FALSE){
 
   model_param_names <- get_model_paramnames(model = model)
@@ -62,10 +77,14 @@ get_opt_params <- function(model,
   opt_params <- rep(TRUE, length(param_names))
   names(opt_params) <- param_names
 
+  use_params <- rep(TRUE, length(param_names))
+  names(use_params) <- param_names
+
   if("kgutabs" %in% param_names &
      !("po" %in% fitdata$Route)){
     #if no oral data, can't fit kgutabs
     opt_params["kgutabs"] <- FALSE
+    use_params["kgutabs"] <- FALSE
   }
 
   if("Fgutabs" %in% param_names &
@@ -73,23 +92,35 @@ get_opt_params <- function(model,
     #if we don't have both IV and oral data,
     #can't fit Fgutabs
     opt_params["Fgutabs"] <- FALSE
+    if("po" %in% fitdata$Route){
+      use_params["Fgutabs"] <- TRUE
+    }else{
+      use_params["Fgutabs"] <- FALSE
+    }
   }
 
   par_DF <- data.frame(param_name = names(opt_params),
-                       optimize_param = opt_params)
+                       optimize_param = opt_params,
+                       use_param = use_params)
 
-  #add hyperparameters: individual reference error SDs if sigma_ref = TRUE
-  if(sigma_ref %in% TRUE){
- refs <- unique(fitdata$Reference)
- # Mark these as parameters to be optimized
+  #add hyperparameters: individual reference error SDs
+  refs <- unique(fitdata$Reference)
+
+  #if more than one reference and user has not specified to pool data:
+  if(pool_sigma %in% FALSE &
+     length(refs) > 1){
+    # Add individual reference error SDs, named as sigma_ref_[Reference ID]
+    # Mark these as parameters to be optimized
  sigma_ref_DF <- data.frame(param_name = paste("sigma",
                                                "ref",
                                                refs,
                                                sep = "_"),
-                            optimize_param = TRUE)
-  }else{ #just add a general "sigma" parameter, not one for each individual reference
+                            optimize_param = TRUE,
+                            use_param = TRUE)
+  }else{ #just add a single pooled "sigma" parameter
     sigma_ref_DF <- data.frame(param_name = "sigma",
-                               optimize_param = TRUE)
+                               optimize_param = TRUE,
+                               use_param = TRUE)
   }
 
   par_DF <- rbind(par_DF, sigma_ref_DF)

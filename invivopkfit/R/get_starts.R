@@ -34,6 +34,7 @@
 get_starts <- function(par_DF = NULL,
                        model,
                        fitdata,
+                       pool_sigma = FALSE,
                        starts_default = data.frame(
                          param_name = c("A",
                                         "kelim",
@@ -55,9 +56,12 @@ get_starts <- function(par_DF = NULL,
                        ),
                        suppress.messages = FALSE
                        ){
+
+  #if params not already specified, get them for this model
 if(is.null(par_DF)){
     par_DF <- get_opt_params(model = model,
                              fitdata = fitdata,
+                             pool_sigma = pool_sigma,
                              param_names = par_DF$param_name,
                              suppress.messages = suppress.messages)
 }
@@ -66,6 +70,7 @@ if(is.null(par_DF)){
   if(!("lower_bound" %in% names(par_DF))){
     par_DF <- get_lower_bounds(par_DF = par_DF,
                                model = model,
+                               pool_sigma = pool_sigma,
                                fitdata = fitdata,
                                suppress.messages = suppress.messages)
   }
@@ -74,6 +79,7 @@ if(is.null(par_DF)){
   if(!("upper_bound" %in% names(par_DF))){
     par_DF <- get_upper_bounds(par_DF = par_DF,
                                model = model,
+                               pool_sigma = pool_sigma,
                                fitdata = fitdata,
                                suppress.messages = suppress.messages)
   }
@@ -83,8 +89,6 @@ if(is.null(par_DF)){
 
   this.species <- unique(fitdata$Species)
   if(length(this.species) > 1) stop("get_starts(): More than one species in data")
-
-
 
     #Use the default starting values to begin with
     par_DF <- merge(par_DF,
@@ -148,7 +152,8 @@ if(is.null(par_DF)){
     #Try estimating parameters from data
 
     #Fgutabs
-      if(par_DF["Fgutabs", "optimize_param"] %in% TRUE){
+      if(par_DF["Fgutabs", "optimize_param"] %in% TRUE &
+         par_DF["Fgutabs", "use_param"] %in% TRUE){
     # Need both oral and iv data to get at Fgutabs
       if('po' %in% fitdata$Route &
          'iv' %in% fitdata$Route){
@@ -318,6 +323,12 @@ if(is.null(par_DF)){
          c("start_value",
            "start_value_msg")] <- list(TRYSIGMA,
                                        paste0("median conc"))
+
+  #For anything with use_param == FALSE, set the starting value to NA
+  par_DF[!(par_DF$use_param %in% TRUE),
+         c("start_value",
+           "start_value_msg")] <- c(NA_real_,
+                                    "use_param is not TRUE")
 
 
   return(par_DF)
