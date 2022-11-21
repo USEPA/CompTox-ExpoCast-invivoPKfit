@@ -285,9 +285,8 @@ analyze_subset <- function(fitdata,
                                  modelfun = modelfun,
                                  model = model,
                                  LOQ_factor = LOQ_factor,
-                                 force_finite = TRUE)
+                                 force_finite = optimx_args$method == "L-BFGS-B"))
                             )
-                   )
     #tmp is a 1-row data.frame with one variable for each fitted param,
     #plus variables with info on fitting (number of evals, convergence code, etc.)
     #collect any messages from optimx -- in attribute "details" (another data.frame)
@@ -349,9 +348,15 @@ analyze_subset <- function(fitdata,
 
   #Get SDs from Hessian
   #Calculate Hessian using function from numDeriv
-  numhess <- numDeriv::hessian(func = objfun,
+  numhess <- numDeriv::hessian(func = log_likelihood,
                                x = ln_means,
-                               method = 'Richardson')
+                               method = 'Richardson',
+                               const_params = NULL,
+                               DF = fitdata,
+                               modelfun = modelfun,
+                               model = model,
+                               LOQ_factor = LOQ_factor,
+                               force_finite = optimx_args$method == "L-BFGS-B")
   #try inverting Hessian to get SDs
   ln_sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                      error = function(err){
@@ -404,8 +409,7 @@ analyze_subset <- function(fitdata,
                                           modelfun = modelfun,
                                           model = model,
                                           LOQ_factor = LOQ_factor,
-                                          force_finite = TRUE)
-                                      )
+                                          force_finite = optimx_args$method == "L-BFGS-B"))
     )
 
     ln_means <- as.vector(stats::coef(all_data_fit))
@@ -424,7 +428,22 @@ analyze_subset <- function(fitdata,
     #Calculate Hessian using function from numDeriv
     numhess <- numDeriv::hessian(func = log_likelihood,
                                  x = ln_means,
-                                 method = 'Richardson')
+                                 method = 'Richardson',
+                                 const_params = NULL,
+                                 DF = fitdata,
+                                 modelfun = modelfun,
+                                 model = model,
+                                 LOQ_factor = LOQ_factor,
+                                 force_finite = optimx_args$method == "L-BFGS-B")
+
+    numhess <- hess_log_likelihood(opt_params = ln_means,
+                                   const_params = NULL,
+                                   DF = fitdata,
+                                   modelfun = modelfun,
+                                   model = model,
+                                   LOQ_factor = LOQ_factor,
+                                   force_finite = optimx_args$method == "L-BFGS-B")
+
     ln_sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                        error = function(err){
                          #if hessian can't be inverted

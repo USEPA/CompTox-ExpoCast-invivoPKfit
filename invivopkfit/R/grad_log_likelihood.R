@@ -99,7 +99,7 @@ grad_log_likelihood <- function(opt_params,
   #standardize log-scale Value by log-scale mean & sigma.ref
   DF[, z:=(y - mu)/sigma.ref]
 
-  #For detects: gradient of PDF
+  #For detects: gradient of log PDF
   #wrt mu:
   DF[!is.na(Value),
      llg_mu := z/sigma.ref]
@@ -107,7 +107,7 @@ grad_log_likelihood <- function(opt_params,
   DF[!is.na(Value),
      llg_sigma := (z^2 - 1)/sigma.ref]
 
-  #For non-detects: gradient of CDF
+  #For non-detects: gradient of log CDF
   #wrt mu:
   DF[is.na(Value),
      llg_mu := -dnorm(z)/pnorm(z)]
