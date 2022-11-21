@@ -75,6 +75,15 @@
 #'   created and filled with this value.  Default NULL.
 #' @param LOQ_factor Numeric. Observations with concentrations less than
 #'   `LOQ_factor * LOQ` will be removed. Default 2.
+#' @param get_starts_args Any additional arguments to [get_starts()] (other than
+#'   `model` and `fitdata`, which are always passed). Default NULL to accept the
+#'   default arguments for [get_starts()].
+#' @param get_lower_args Any additional arguments to [get_lower_bounds()] (other
+#'   than `model` and `fitdata`, which are always passed). Default NULL to
+#'   accept the default arguments for [get_lower_bounds()].
+#' @param get_upper_args Any additional arguments to [get_upper_bounds()] (other
+#'   than `model` and `fitdata`, which are always passed). Default NULL to
+#'   accept the default arguments for [get_upper_bounds()].
 #' @param suppress.messages Logical: Whether to suppress verbose messages.
 #'   Default FALSE, to be verbose.
 #'
@@ -134,6 +143,15 @@ fit_all <- function(data.set,
                     info.default = NULL,
 
                     LOQ_factor = 2,
+
+                    get_starts_args = NULL,
+                    get_lower_args = NULL,
+                    get_upper_args = NULL,
+                    optimx_args = list(
+                      "method" = "L-BFGS-B",
+                      "control" = list("factr" = 1e7,
+                                       "maximize" = TRUE)
+                    ),
 
                     suppress.messages = FALSE,
                     sig.figs=4) {
@@ -220,6 +238,12 @@ if(!suppress.messages){
                                             #values in "by"
                                              modelfun = modelfun,
                                              model = model,
+                                            pool_sigma = FALSE,
+                                            LOQ_factor = LOQ_factor,
+                                            get_starts_args = get_starts_args,
+                                            get_lower_args = get_lower_args,
+                                            get_upper_args = get_upper_args,
+                                            optimx_args = optimx_args,
                                              suppress.messages=suppress.messages),
                              .SDcols = names(data.set),
                              #.SDcols argument: By default, .SD includes all
@@ -233,7 +257,8 @@ if(!suppress.messages){
                              ]
 
     ### If chemical/species combination has multiple references:
-    ### then analyze each reference individually
+    ### then analyze each reference individually,
+    ###and also do a pooled analysis without individual reference sigmas
     data.set[, MultipleReferences := length(unique(Reference)) > 1,
              by = c("DTXSID", "Species")]
     multi.ref.cas <- unique(subset(data.set,
@@ -245,16 +270,41 @@ if(!suppress.messages){
                                  analyze_subset(fitdata = .SD,
                                                  modelfun = modelfun,
                                                  model = model,
-                                                 suppress.messages = suppress.messages),
+                                                pool_sigma = FALSE,
+                                                LOQ_factor = LOQ_factor,
+                                                get_starts_args = get_starts_args,
+                                                get_lower_args = get_lower_args,
+                                                get_upper_args = get_upper_args,
+                                                optimx_args = optimx_args,
+                                                suppress.messages = suppress.messages),
                                  .SDcols = names(data.set.multi.ref),
                                                  by = c(
                                                    "DTXSID",
                                                    "Species",
                                                    "Reference")]
 
-      PK.fit.bind <- rbind(PK.fit.joint,
-                           PK.fit.separate,
-                           fill = TRUE)
+      PK.fit.pooled <- data.set.multi.ref[,
+                                          analyze_subset(fitdata = .SD,
+                                                         modelfun = modelfun,
+                                                         model = model,
+                                                         pool_sigma = TRUE,
+                                                         LOQ_factor = LOQ_factor,
+                                                         get_starts_args = get_starts_args,
+                                                         get_lower_args = get_lower_args,
+                                                         get_upper_args = get_upper_args,
+                                                         optimx_args = optimx_args,
+                                                         suppress.messages = suppress.messages),
+                                          .SDcols = names(data.set.multi.ref),
+                                          by = c(
+                                            "DTXSID",
+                                            "Species")]
+
+      PK.fit.bind <- rbindlist(list("Joint" = PK.fit.joint,
+                           "Separate" = PK.fit.separate,
+                           "Pooled" = PK.fit.pooled),
+                           use.names = TRUE,
+                           fill = TRUE,
+                           idcol = )
     } else PK.fit.bind <- PK.fit.joint
 
     #record which model was fit to data and whether it was full or analytical
