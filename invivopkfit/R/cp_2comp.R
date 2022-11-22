@@ -4,13 +4,30 @@
 #' 2-compartment model.
 #'
 #' @param params A named list of parameter values including the following:
-#'   \describe{ \item{k12}{Rate at which compound moves from central to
-#'   peripheral compartment} \item{k21}{Rate at which compound moves from
-#'   peripheral to central compartment} \item{kelim}{Elimination rate}
-#'   \item{V1}{Apparent volume of central compartment} } For oral administration
-#'   (\code{iv.dose} FALSE), \code{params} must also include: \describe{
-#'   \item{Fgutabs}{Oral bioavailability} \item{kgutabs}{Rate of absorption from
-#'   gut} }
+#'   \describe{
+#'   \item{k12}{Rate at which compound moves from central to peripheral
+#'   compartment, 1/h.}
+#'   \item{k21}{Rate at which compound moves from peripheral to central
+#'   compartment, 1/h.}
+#'   \item{kelim}{Elimination rate, 1/h.}
+#'   \item{V1}{Apparent volume of central compartment, L. Or see below for
+#'   "Fgutabs_V1"}
+#'   }
+#'
+#'   For oral administration (\code{iv.dose} FALSE), \code{params} must also
+#'   include:
+#'   \describe{
+#'   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
+#'   "Fgutabs_V1"}
+#'   \item{kgutabs}{Rate of absorption from gut, 1/h.}
+#'   }
+#'
+#'   For oral administration, in lieu of "V1" and "Fgutabs", you may instead
+#'   provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an
+#'   alternate parameterization for situations where "Fgutabs" and "V1" are not
+#'   identifiable separately (i.e. when oral data are available, but IV data are
+#'   not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
+#'   used.
 #'
 #' @author Caroline Ring, John Wambaugh
 #' @param time A vector of time values, in hours
@@ -22,51 +39,55 @@
 cp_2comp <- function(params, time, dose, iv.dose)
 {
 
-  if (any(sapply(params,function(x) identical(x,numeric(0))))) return(NA)
-
-  if (is.null(params$Fgutabs) | is.na(params$Fgutabs))
-  {
-    params$Fgutabs <- 1
+  if(all(c("Fgutabs", "V1") %in% names(params))){
+    params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
   }
-  if (is.null(params$kgutabs) | is.na(params$kgutabs))
-  {
-    params$kgutabs <- 1
+
+  #Check for needed params
+  if (iv.dose){
+   missing_params <- setdiff(c("kelim",
+                               "V1",
+                               "k12",
+                               "k21"),
+                             names(params))
+   if(length(missing_params)>0){
+     stop(paste("cp_2comp(): Error: For 2-compartment IV model,",
+          "missing parameters:",
+          paste(missing_params, collapse = ", ")))
+   }
+  }else{
+    #check needed params for oral dose
+    missing_params <- setdiff(c("kelim",
+                                "k21",
+                                "k12",
+                                "Fgutabs_V1",
+                                "kgutabs"),
+                              names(params))
+    if(length(missing_params)>0){
+      stop(paste("cp_2comp(): Error: For 2-compartment oral model,",
+                 "missing parameters:",
+                 paste(missing_params, collapse = ", ")))
+    }
   }
-  if (is.null(params$Fbetaofalpha)) params$Fbetaofalpha <- 1
-  if (is.null(params$Ralphatokelim)) params$Ralphatokelim <- 1
 
-  if (is.na(params$Fbetaofalpha)) params$Fbetaofalpha <- 1
-  if (is.na(params$Ralphatokelim)) params$Ralphatokelim <- 1
+  alpha_beta_sum <- params$kelim + params$k12 + params$k21
+  alpha_beta_prod <- params$kelim * params$k21
 
-  if (params$Fgutabs > 1) params$Fgutabs <- 1
-  if (params$Fbetaofalpha > 1) params$Fbetaofalpha <- 1
-  if (params$Ralphatokelim < 1) params$Ralphatokelim <- 1
+  alpha <- (alpha_beta_sum + sqrt(alpha_beta_sum^2 - 4*alpha_beta_prod)) / 2
+  beta <- (alpha_beta_sum - sqrt(alpha_beta_sum^2 - 4*alpha_beta_prod)) / 2
 
-  alpha <- params$Ralphatokelim * (params$kelim + 10^-6)
-  beta <- params$Fbetaofalpha * alpha
-
-  # try to keep k21 and k12 positive:
-  k21 <- max(min(alpha * beta / params$kelim, alpha + beta - params$kelim), 0)
-  k12 <- alpha + beta - params$kelim - k21
-
-  alphabeta.sum <- alpha + beta
-  alphabeta.prod <- alpha * beta
 
   if (iv.dose){ #for IV dosing
-  A <- (dose * (alpha - k21)) / (params$V1 * (alpha - beta))
-  B <- (dose * (k21 - beta))/(params$V1 * (alpha - beta))
+  A <- (dose * (alpha - params$k21)) / (params$V1 * (alpha - beta))
+  B <- (dose * (params$k21 - beta))/(params$V1 * (alpha - beta))
 
   cp <- A * exp(-alpha * time) + B * exp(-beta * time)
   }else{ #for oral dosing
-  A <- (params$Fgutabs * dose * (alpha - k21)) / (params$V1 * (alpha - beta))
-  B <- (params$Fgutabs * dose * (k21 - beta)) / (params$V1 * (alpha - beta))
+  A <- (params$Fgutabs_V1 * dose * (alpha - params$k21)) / ( (alpha - beta))
+  B <- (params$Fgutabs_V1 * dose * (params$k21 - beta)) / ((alpha - beta))
   C <- -(A + B)
   cp <-  A * exp(-alpha * time) + B * exp(-beta * time) + C * exp(-params$kgutabs * time)
   }
-
-  # cp[cp < 10^-20] <- 10^-20
-  cp[cp<0] <- 0
-  cp[!is.finite(cp)] <- 0
 
   return(cp)
 }

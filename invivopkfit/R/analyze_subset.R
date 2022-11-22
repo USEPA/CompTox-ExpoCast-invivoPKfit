@@ -16,18 +16,19 @@
 #'
 #'  - for `model = 'flat'`, the parameter estimated is `A`
 #'  - for `model = '1compartment'`, the parameters estimated are `Vdist`,
-#'  `kelim`, and possibly `kgutabs` and `Fgutabs` (see below).
-#'  - for `model = '2compartment'`, the parameters estimated are `V1`,
-#'  `Ralphatobeta`, `Fbetaofalpha`, and possibly `kgutabs` and `Fgutabs`.
+#'  `kelim`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist` (see below).
+#'  - for `model = '2compartment'`, the parameters estimated are `V1`, `kelim`,
+#'  `k12`, `k21`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist`.
 #'
 #'  For 1-compartment and 2-compartment models, `kgutabs` will be estimated from
 #'  the data only if `fitdata` includes oral dosing data; otherwise it will be
 #'  set to NA.
 #'
 #'  `Fgutabs` will be estimated from the data only if `fitdata` includes both
-#'  oral and IV data. If `fitdata` includes oral data but not IV data, `Fgutabs`
-#'  will be held constant at 1 while other parameters are estimated. If
-#'  `fitdata` does not include oral data, `Fgutabs` will be set to NA.
+#'  oral and IV data. If `fitdata` includes oral data but not IV data, then
+#'  `Fgutabs_Vdist` (1-compartment) or `Fgutabs_V1` (2-compartment) will be
+#'  estimated instead of `Fgutabs` and `Vdist` or `V1` (because only the ratio
+#'  of `Fgutabs` and `Vdist` is identifiable in that case).
 #'
 #' In addition to the model parameters, the log-scale standard deviation of the
 #' residual errors will be estimated. If `fitdata` includes more than one unique

@@ -57,10 +57,6 @@ analytic_model_fun <- function(params,
                               iv.dose=iv.dose)),
                  error=rep(0,length=length(times)))
 
-
-  #Cumulative trapezoidal rule
-  # AUC <- c(0,cumsum(diff(times)*(Cp[-1]+Cp[-length(Cp)])))
-
   out.mat <- matrix(rep(0, length(times)*3),
                     nrow=length(times),
                     dimnames=list(NULL, c('time',

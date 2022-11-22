@@ -82,7 +82,8 @@ get_opt_params <- function(model,
 
   if("kgutabs" %in% param_names &
      !("po" %in% fitdata$Route)){
-    #if no oral data, can't fit kgutabs
+    #if no oral data, can't fit kgutabs,
+    #and it won't be used.
     opt_params["kgutabs"] <- FALSE
     use_params["kgutabs"] <- FALSE
   }
@@ -90,12 +91,36 @@ get_opt_params <- function(model,
   if("Fgutabs" %in% param_names &
      !(all(c("po", "iv") %in% fitdata$Route))){
     #if we don't have both IV and oral data,
-    #can't fit Fgutabs
+    #then Fgutabs is not identifiable, and neither is Vdist or V1.
+    #The best we can do is Fgutabs/Vd (or Fgutabs/V1).
     opt_params["Fgutabs"] <- FALSE
+    use_params["Fgutabs"] <- FALSE
+    if("Vdist" %in% param_names){
+      opt_params["Vdist"] <- FALSE
+      use_params["Vdist"] <- FALSE
+    }else if("V1" %in% param_names){
+      opt_params["V1"] <- FALSE
+      use_params["V1"] <- FALSE
+    }
     if("po" %in% fitdata$Route){
-      use_params["Fgutabs"] <- TRUE
+      #if we have oral data, just not IV,
+      #then fit Fgutabs/V: Fgutabs_Vdist or Fgutabs_V1
+      if("Fgutabs_Vdist" %in% param_names){
+        opt_params["Fgutabs_Vdist"] <- TRUE
+        use_params["Fgutabs_Vdist"] <- TRUE
+      }else if("Fgutabs_V1" %in% param_names){
+        opt_params["Fgutabs_V1"] <- TRUE
+        use_params["Fgutabs_V1"] <- TRUE
+      }
     }else{
-      use_params["Fgutabs"] <- FALSE
+      #if we don't have oral data at all, then don't try to fit Fgutabs/V, either.
+      if("Fgutabs_Vdist" %in% param_names){
+        opt_params["Fgutabs_Vdist"] <- FALSE
+        use_params["Fgutabs_Vdist"] <- FALSE
+      }else if("Fgutabs_V1" %in% param_names){
+        opt_params["Fgutabs_V1"] <- FALSE
+        use_params["Fgutabs_V1"] <- FALSE
+      }
     }
   }
 

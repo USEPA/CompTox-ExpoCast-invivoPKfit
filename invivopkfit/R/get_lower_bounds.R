@@ -29,7 +29,34 @@ get_lower_bounds <- function(fitdata,
                              par_DF = NULL,
                              model,
                              pool_sigma = FALSE,
-                             suppress.messages = FALSE){
+                             lower_default = data.frame(
+                               param_name = c("A",
+                                              "kelim",
+                                              "Vdist",
+                                              "kgutabs",
+                                              "Fgutabs",
+                                              "V1",
+                                              "k12",
+                                              "k21",
+                                              "Fgutabs_Vdist",
+                                              "Fgutabs_V1",
+                                              "sigma"),
+                               lower_bound = c(1e-8, #A
+                                               1e-8, #kelim
+                                               0.01, #Vdist
+                                               1e-8, #kgutabs
+                                               0.05, #Fgutabs
+                                               0.01, #V1
+                                               1e-8, #k12
+                                               1e-8, #k21
+                                               1e-8, #Fgutabs_Vdist
+                                               1e-8, #Fgutabs_V1
+                                               1e-8 #sigma
+                                               ),
+                               lower_bound_msg = "Default"
+                             ),
+                             suppress.messages = FALSE,
+                             ){
   if(is.null(par_DF)){
     par_DF <- get_opt_params(model = model,
                              fitdata = fitdata,
@@ -39,41 +66,29 @@ get_lower_bounds <- function(fitdata,
   }
   rownames(par_DF) <- par_DF$param_name
 
-  #defaults
-  par_DF[, c("lower_bound",
-             "lower_bound_msg")] <- list(1e-8, "Default")
+  #Use the default lower bounds
+  #this gets everything except sigma, which will not be in the model params
+  par_DF <- merge(par_DF,
+                  lower_default,
+                  by = "param_name",
+                  all.x = TRUE,
+                  all.y = FALSE)
 
-  #Override default for params where it doesn't make sense
-
-  #Vdist/V1
-  par_DF[grepl(x = par_DF$param_name,
-               pattern = "Vdist|V1"),
-         c("lower_bound",
-           "lower_bound_msg")] <- list(0.01,
-                                       "Default")
-
-  #Ralphatokelim
-  par_DF[grepl(x = par_DF$param_name,
-               pattern = "Ralphatokelim"),
-         c("lower_bound",
-           "lower_bound_msg")] <- list(0.0,
-                                       "Default")
-
-  #Fgutabs
-  par_DF[grepl(x = par_DF$param_name,
-               pattern = "Fgutabs"),
-         c("lower_bound",
-           "lower_bound_msg")] <- list(0.05,
-                                       "Default")
 
   #sigma
   par_DF[grepl(x = par_DF$param_name,
                pattern = "sigma"),
          c("lower_bound",
-           "lower_bound_msg")] <- list(1e-5,
-                                       "Default")
+           "lower_bound_msg")] <- lower_default[
+             lower_default$param_name %in% "sigma",
+             c("lower_bound",
+               "lower_bound_msg")
+           ]
+#set rownames to param names
+  rownames(par_DF) <- par_DF$param_name
 
   #For anything not to be optimized, set its bounds to NA
+  #because the bounds will not be used
   par_DF[!(par_DF$optimize_param %in% TRUE),
          c("lower_bound",
            "lower_bound_msg")] <- list(NA_real_,
