@@ -79,8 +79,8 @@ get_starts <- function(par_DF = NULL,
                                          1, #V1
                                          0.2, #k12
                                          0.5, #k21
-                                         1/2.19, #Fgutabs_Vdist
-                                         1/2.19, #Fgutabs_V1
+                                         0.5/2.19, #Fgutabs_Vdist
+                                         0.51/2.19, #Fgutabs_V1
                                          100), #sigma
                          start_value_msg = "Default"
                        ),
@@ -197,8 +197,8 @@ if(is.null(par_DF)){
           mean(iv.data$Dose) / mean(oral.data$Dose)
         #if the estimated value is valid, then use it and record the source
         if (is.finite(Fgutabs_tmp) &
-            Fgutabs_tmp > 0 &
-            Fgutabs_tmp < 1){
+            Fgutabs_tmp > par_DF["Fgutabs", "lower_bound"] &
+            Fgutabs_tmp < par_DF["Fgutabs", "upper_bound"]){
           par_DF["Fgutabs",
                      "start_value"] <- Fgutabs_tmp
           par_DF["Fgutabs",
@@ -219,22 +219,29 @@ if(is.null(par_DF)){
       } #end if('po' %in% fitdata$Route & 'iv' %in% fitdata$Route) / else
       } #end if(par_DF["Fgutabs", "optimize_parambo"] %in% TRUE)
 
-      #make elim data
-      elim_data <- make_elim_data(fitdata = fitdata)
 
       #kelim
       if(par_DF["kelim", "optimize_param"] %in% TRUE){
-    #kelim can be fit from IV data if available
+        #make elim data
+        elim_data <- make_elim_data(fitdata = fitdata)
+
+        #take only the later times
+        time_split <- median(elim_data$Time)
+        elim_late <- subset(elim_data,
+                            Time >= time_split)
 
     #linear regression of log conc/dose vs. time
     elim_lm <- stats::lm(log(ValueDose) ~ Time,
                          data=elim_data)
+
     elim_coeff <- coef(elim_lm)
+
     #take negative slope
     kelim_tmp <- -elim_coeff[2]
+
     #if kelim_tmp is not NA, then use it.
     if(is.finite(kelim_tmp)){
-      if(kelim_tmp > 0.0001){
+      if(kelim_tmp > par_DF["kelim", "lower_bound"]){
       par_DF[par_DF$param_name %in% "kelim",
                  "start_value"] <- kelim_tmp
       par_DF[par_DF$param_name %in% "kelim",
@@ -243,15 +250,17 @@ if(is.null(par_DF)){
                                                  " data")
       }else{
         par_DF[par_DF$param_name %in% "kelim",
-                   "start_value"] <- 0.0001
+                   "start_value"] <- par_DF["kelim", "lower_bound"]
         par_DF[par_DF$param_name %in% "kelim",
                    "start_value_msg"] <- paste0("Linear regression on ",
                                                 unique(elim_data$Route),
-                                                   " data produced NA or < 0.0001; ",
-                                                   "setting to 0.0001")
+                                                   " data produced NA or < ",
+                                                "lower bound",
+                                                   "; setting to lower bound")
       }
     }
       }
+
 
       #### vdist or V1
   if(any(par_DF[c("Vdist","V1"),
@@ -386,14 +395,14 @@ if(is.null(par_DF)){
           par_DF[ "kelim",
                   c("start_value",
                     "start_value_msg")] <- list(kelim, tmp_msg)
-        }
+        }#else retain default value
 
         if(k12 >= par_DF["k12", "lower_bound"] &
            k12 <= par_DF["k12", "upper_bound"]){
           par_DF[ "k12",
                   c("start_value",
                     "start_value_msg")] <- list(k12, tmp_msg)
-        }
+        }#else retain default value
       }
 
       if(sigma_start_from_data %in% TRUE){

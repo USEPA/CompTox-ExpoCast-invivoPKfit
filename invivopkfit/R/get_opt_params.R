@@ -89,37 +89,42 @@ get_opt_params <- function(model,
   }
 
   if("Fgutabs" %in% param_names &
-     !(all(c("po", "iv") %in% fitdata$Route))){
-    #if we don't have both IV and oral data,
-    #then Fgutabs is not identifiable, and neither is Vdist or V1.
-    #The best we can do is Fgutabs/Vd (or Fgutabs/V1).
+     !("po" %in% fitdata$Route)){
+    #if no oral data, can't fit Fgutabs,
+    #and it won't be used.
     opt_params["Fgutabs"] <- FALSE
     use_params["Fgutabs"] <- FALSE
-    if("Vdist" %in% param_names){
-      opt_params["Vdist"] <- FALSE
-      use_params["Vdist"] <- FALSE
-    }else if("V1" %in% param_names){
-      opt_params["V1"] <- FALSE
-      use_params["V1"] <- FALSE
-    }
-    if("po" %in% fitdata$Route){
-      #if we have oral data, just not IV,
-      #then fit Fgutabs/V: Fgutabs_Vdist or Fgutabs_V1
+  }
+
+  if("Fgutabs" %in% param_names &
+     ("po" %in% fitdata$Route)){
+    #if there *is* oral data
+    #if oral data...
+    if("iv" %in% fitdata$Route){
+      #if both oral and IV data,
+      #then fit Fgutabs and Vdist separately,
+      #so turn off Fgutabs_Vdist
       if("Fgutabs_Vdist" %in% param_names){
-        opt_params["Fgutabs_Vdist"] <- TRUE
-        use_params["Fgutabs_Vdist"] <- TRUE
-      }else if("Fgutabs_V1" %in% param_names){
-        opt_params["Fgutabs_V1"] <- TRUE
-        use_params["Fgutabs_V1"] <- TRUE
+      opt_params["Fgutabs_Vdist"] <- FALSE
+      use_params["Fgutabs_Vdist"] <- FALSE
       }
-    }else{
-      #if we don't have oral data at all, then don't try to fit Fgutabs/V, either.
-      if("Fgutabs_Vdist" %in% param_names){
-        opt_params["Fgutabs_Vdist"] <- FALSE
-        use_params["Fgutabs_Vdist"] <- FALSE
-      }else if("Fgutabs_V1" %in% param_names){
+      if("Fgutabs_V1" %in% param_names){
         opt_params["Fgutabs_V1"] <- FALSE
         use_params["Fgutabs_V1"] <- FALSE
+      }
+    }else{
+      #if oral but no IV data,
+      #then turn off Fgutabs and Vdist,
+      #and just fit Fgutabs_Vdist
+      opt_params["Fgutabs"] <- FALSE
+      use_params["Fgutabs"] <- FALSE
+      if("Vdist" %in% param_names){
+        opt_params["Vdist"] <- FALSE
+        use_params["Vdist"] <- FALSE
+      }
+      if("V1" %in% param_names){
+        opt_params["V1"] <- FALSE
+        use_params["V1"] <- FALSE
       }
     }
   }

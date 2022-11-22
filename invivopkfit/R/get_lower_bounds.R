@@ -43,10 +43,10 @@ get_lower_bounds <- function(fitdata,
                                               "sigma"),
                                lower_bound = c(1e-8, #A
                                                1e-8, #kelim
-                                               0.01, #Vdist
+                                               1e-8, #Vdist
                                                1e-8, #kgutabs
-                                               0.05, #Fgutabs
-                                               0.01, #V1
+                                               1e-8, #Fgutabs
+                                               1e-8, #V1
                                                1e-8, #k12
                                                1e-8, #k21
                                                1e-8, #Fgutabs_Vdist
@@ -55,7 +55,7 @@ get_lower_bounds <- function(fitdata,
                                                ),
                                lower_bound_msg = "Default"
                              ),
-                             suppress.messages = FALSE,
+                             suppress.messages = FALSE
                              ){
   if(is.null(par_DF)){
     par_DF <- get_opt_params(model = model,

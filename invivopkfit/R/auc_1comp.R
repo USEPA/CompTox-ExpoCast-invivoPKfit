@@ -36,17 +36,6 @@ auc_1comp <- function(time,
                       params,
                       dose,
                       iv.dose){
-  if (any(sapply(params,function(x) identical(x,numeric(0))))) return(0)
-
-  if (is.null(params$Fgutabs)|is.na(params$Fgutabs))
-  {
-    params$Fgutabs<-1
-  }
-  if (is.null(params$kgutabs)|is.na(params$kgutabs))
-  {
-    params$kgutabs<-1
-  }
-  if (params$Fgutabs>1) params$Fgutabs<-1
 
   Vd <- params$Vdist
   ke <- params$kelim
@@ -54,18 +43,51 @@ auc_1comp <- function(time,
   ka <- params$kgutabs
 
   if (iv.dose){
-    auc <- dose/(Vd*ke) * (1 - exp(-time*ke))
+    #for iv administration
+    #check for needed params
+    if(!all(c("kelim", "Vdist") %in% names(params))){
+      stop(paste0("cp_1comp(): Error: For 1-compartment IV model, ",
+                  "missing parameter(s): ",
+                  paste(setdiff(c("kelim", "Vdist"), names(params)),
+                        collapse = ", "),
+      )
+      )
+    }
+
+    auc <- dose/(params$Vdist*params$kelim) * (1 - exp(-time*params$kelim))
   }else{
-    auc <- dose*Fa*ka/(Vd*(ka-ke)) *
-      ((1/ke - 1/ka) +
-      (-exp(-time*ke)/ke +
-         exp(-time*ka)/ka
-       ))
+    #for oral administration
+
+    if(all(c("Fgutabs", "Vdist") %in% names(params))){
+      params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
+    }
+
+    #check for needed params
+    if(!all(c("kelim", "kgutabs", "Fgutabs_Vdist") %in% names(params))){
+      stop(paste0("cp_1comp(): Error: For 1-compartment oral model, ",
+                  "missing parameter(s): ",
+                  paste(setdiff(c("kelim", "kgutabs", "Fgutabs_Vdist"),
+                                names(params)
+                  ),
+                  collapse = ", ")
+      )
+      )
+    }
+
+    if(!(params$kelim == params$kgutabs)){
+      auc <- dose*params$Fgutabs_Vdist*params$kgutabs/
+        (params$kgutabs-params$kelim) *
+        ((1/params$kelim - 1/params$kgutabs) +
+           (-exp(-time*params$kelim)/params$kelim +
+              exp(-time*params$kgutabs)/params$kgutabs
+           ))
+    }else{
+      auc <- dose*params$Fgutabs_Vdist/params$kelim +
+        (-dose*params$Fgutabs_Vdist*time*params$kelim -
+           dose*params$Fgutabs_Vdist)*
+        exp(-time*params$kelim)/params$kelim
+    }
   }
-
-
-  auc[auc<0] <- 0
-  auc[!is.finite(auc)] <- 0
 
   return(auc)
 }

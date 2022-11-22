@@ -21,52 +21,58 @@
 #' @export auc_2comp
 auc_2comp <- function(params, time, dose, iv.dose){
 
-  if (any(sapply(params,function(x) identical(x,numeric(0))))) return(NA)
-
-  if (is.null(params$Fgutabs) | is.na(params$Fgutabs))
-  {
-    params$Fgutabs <- 1
+  if(all(c("Fgutabs", "V1") %in% names(params))){
+    params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
   }
-  if (is.null(params$kgutabs) | is.na(params$kgutabs))
-  {
-    params$kgutabs <- 1
+
+  #Check for needed params
+  if (iv.dose){
+    missing_params <- setdiff(c("kelim",
+                                "V1",
+                                "k12",
+                                "k21"),
+                              names(params))
+    if(length(missing_params)>0){
+      stop(paste("cp_2comp(): Error: For 2-compartment IV model,",
+                 "missing parameters:",
+                 paste(missing_params, collapse = ", ")))
+    }
+  }else{
+    #check needed params for oral dose
+    missing_params <- setdiff(c("kelim",
+                                "k21",
+                                "k12",
+                                "Fgutabs_V1",
+                                "kgutabs"),
+                              names(params))
+    if(length(missing_params)>0){
+      stop(paste("cp_2comp(): Error: For 2-compartment oral model,",
+                 "missing parameters:",
+                 paste(missing_params, collapse = ", ")))
+    }
   }
-  if (is.null(params$Fbetaofalpha)) params$Fbetaofalpha <- 1
-  if (is.null(params$Ralphatokelim)) params$Ralphatokelim <- 1
 
-  if (is.na(params$Fbetaofalpha)) params$Fbetaofalpha <- 1
-  if (is.na(params$Ralphatokelim)) params$Ralphatokelim <- 1
+  alpha_beta_sum <- params$kelim + params$k12 + params$k21
+  alpha_beta_prod <- params$kelim * params$k21
 
-  if (params$Fgutabs > 1) params$Fgutabs <- 1
-  if (params$Fbetaofalpha > 1) params$Fbetaofalpha <- 1
-  if (params$Ralphatokelim < 1) params$Ralphatokelim <- 1
+  alpha <- (alpha_beta_sum + sqrt(alpha_beta_sum^2 - 4*alpha_beta_prod)) / 2
+  beta <- (alpha_beta_sum - sqrt(alpha_beta_sum^2 - 4*alpha_beta_prod)) / 2
 
-  alpha <- params$Ralphatokelim * (params$kelim + 10^-6)
-  beta <- params$Fbetaofalpha * alpha
-
-  # try to keep k21 and k12 positive:
-  k21 <- max(min(alpha * beta / params$kelim, alpha + beta - params$kelim), 0)
-  k12 <- alpha + beta - params$kelim - k21
-
-  alphabeta.sum <- alpha + beta
-  alphabeta.prod <- alpha * beta
 
   if (iv.dose){ #for IV dosing
-    A <- (dose * (alpha - k21)) / (params$V1 * (alpha - beta))
-    B <- (dose * (k21 - beta))/(params$V1 * (alpha - beta))
+    A <- (dose * (alpha - params$k21)) / (params$V1 * (alpha - beta))
+    B <- (dose * (params$k21 - beta))/(params$V1 * (alpha - beta))
+
     auc <- A/alpha * (1 - exp(-time*alpha)) +
       B/beta * (1 - exp(-time*beta))
   }else{
-    A <- (params$Fgutabs * dose * (alpha - k21)) / (params$V1 * (alpha - beta))
-    B <- (params$Fgutabs * dose * (k21 - beta)) / (params$V1 * (alpha - beta))
+    A <- (params$Fgutabs_V1 * dose * (alpha - params$k21)) / ( (alpha - beta))
+    B <- (params$Fgutabs_V1 * dose * (params$k21 - beta)) / ((alpha - beta))
 
     auc <- A/alpha * (1 - exp(-time*alpha)) +
       B/beta * (1 - exp(-time*beta)) +
       (-A - B)/ka * (1 - exp(-time*ka))
   }
-
-  auc[auc<0] <- 0
-  auc[!is.finite(auc)] <- 0
 
   return(auc)
 }

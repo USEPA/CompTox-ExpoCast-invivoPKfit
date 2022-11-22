@@ -437,7 +437,7 @@ if(!suppress.messages){
                "Tpeak") := NULL]
 
   if(!suppress.messages){
-  cat(paste(dim(data.set)[1], "observations of",
+  message(paste(dim(data.set)[1], "observations of",
             length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
             length(unique(data.set$Reference)), "unique references remain."))

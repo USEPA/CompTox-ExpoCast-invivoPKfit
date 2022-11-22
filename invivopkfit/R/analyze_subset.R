@@ -195,11 +195,8 @@ analyze_subset <- function(fitdata,
 
  #Initialize out_DF
  #There will be one row for each parameter
- out_DF <- par_DF
- #Record the unique routes in this dataset
- #Route info provides context for why some parameters were/were not estimated
- out_DF$Routes <- paste(sort(unique(fitdata$Route)),
-                        collapse = ", ")
+out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
+
 
   #Types of fitted param values to return
   fitted_types <- c("Fitted arithmetic mean",
@@ -214,8 +211,6 @@ analyze_subset <- function(fitdata,
   #then throw back everything NA with a message,
   #because there is no point wasting time trying to fit them.
   if (sum(par_DF$optimize_param) >= nrow(fitdata)){
-    #bind together long-form parameter data.frames with a new column "param.value.type"
-    #include all of the fitted param.value.types that *would* be provided if we did a fit:
 
    out_DF[, fitted_types] <- NA_real_
 
@@ -246,6 +241,12 @@ analyze_subset <- function(fitdata,
                  " parameters and only ",
                  nrow(fitdata), " data points. Optimization aborted.", sep = "")
     out_DF$message <- msg
+    out_DF$flag <- ""
+    #Record the unique routes in this dataset
+    #Route info provides context for why some parameters were/were not estimated
+    out_DF$Routes <- paste(sort(unique(fitdata$Route)),
+                           collapse = ", ")
+
     if(!suppress.messages){
     message(msg)
     }
@@ -266,10 +267,10 @@ analyze_subset <- function(fitdata,
                               "param_name"]
 
   #params to be held constant
-  const_params <- log(par_DF[!(par_DF$optimize_param %in% TRUE),
-                        "start_value"])
-  names(const_params) <- par_DF[!(par_DF$optimize_param %in% TRUE),
-                                "param_name"]
+  # const_params <- log(par_DF[!(par_DF$optimize_param %in% TRUE),
+  #                       "start_value"])
+  # names(const_params) <- par_DF[!(par_DF$optimize_param %in% TRUE),
+  #                               "param_name"]
 
   #param lower bounds (only on params to be optimized)
   lower_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
@@ -291,10 +292,16 @@ analyze_subset <- function(fitdata,
                    "method = ", optimx_args$method, "\n",
                    "Convergence tolerance factr = ",
                    optimx_args$control$factr, "\n",
-    "Starting values: ", opt_params, "\n",
-    "Lower bounds", lower_params, "\n",
-    "Upper bounds", upper_params), "\n",
-    "...")
+    "..."))
+
+    message(paste("Initial values:    ",
+                  paste(apply(data.frame(Names = names(opt_params),
+                                         Values = unlist(lapply(opt_params,
+                                                                exp)),
+                                         stringsAsFactors = F),
+                              1, function(x) paste(x, collapse = ": ")),
+                        collapse = ", "),
+                  sep = ""))
   }
 
   all_data_fit <- tryCatch({
@@ -309,7 +316,7 @@ analyze_subset <- function(fitdata,
                             optimx_args,
                             #... additional args to log_likelihood
                             list(
-                                 const_params = const_params,
+                                 # const_params = const_params,
                                  DF = fitdata,
                                  modelfun = modelfun,
                                  model = model,
@@ -360,6 +367,11 @@ analyze_subset <- function(fitdata,
                all_data_fit)
   out_DF$message <- msg
 
+  out_DF$flag <- ""
+  #Record the unique routes in this dataset
+  #Route info provides context for why some parameters were/were not estimated
+  out_DF$Routes <- paste(sort(unique(fitdata$Route)),
+                         collapse = ", ")
   if(!suppress.messages){
     message(msg)
   }
@@ -385,18 +397,18 @@ analyze_subset <- function(fitdata,
 
   #Get SDs from Hessian
   #Calculate Hessian using function from numDeriv
-  numhess <- numDeriv::hessian(func = log_likelihood,
-                               x = ln_means,
-                               method = 'Richardson',
-                               const_params = const_params,
-                               DF = fitdata,
-                               modelfun = modelfun,
-                               model = model,
-                               LOQ_factor = LOQ_factor,
-                               force_finite = all(
-                                 optimx_args$method %in% "L-BFGS-B"
-                                 )
-                               )
+  numhess <- numDeriv::hessian(func = function(x){
+    -1 * log_likelihood(x,
+                        DF = fitdata,
+                        modelfun = modelfun,
+                        model = model,
+                        LOQ_factor = LOQ_factor,
+                        force_finite = all(
+                          optimx_args$method %in% "L-BFGS-B"
+                        ) )
+  },
+  x = ln_means,
+  method = 'Richardson')
 
   #try inverting Hessian to get SDs
   ln_sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
@@ -407,8 +419,9 @@ analyze_subset <- function(fitdata,
                          "using pseudovariance matrix ",
                          "to estimate parameter uncertainty."))
                        }
-                       return(diag(chol(MASS::ginv(numhess),
-                                        pivot = TRUE)) ^ (1/2)) #pseudovariance matrix
+                       suppressWarnings(tmp <- diag(chol(MASS::ginv(numhess),
+                                        pivot = TRUE)) ^ (1/2))
+                       return(tmp) #pseudovariance matrix
                        #see http://gking.harvard.edu/files/help.pdf
                      })
   names(ln_sds) <- names(ln_means)
@@ -417,30 +430,53 @@ analyze_subset <- function(fitdata,
   #repeat optimization with smaller convergence tolerance
   while(any(is.nan(ln_sds)) & optimx_args$control$factr > 1) {
 
-    if (!suppress.messages){
-      message(paste0("One or more parameters has NaN standard deviation. ",
-      "Repeating optimization with smaller convergence tolerance ",
-      "(new factr = ",
-      optimx_args$control$factr,
-      ")"))
-    }
+
     #then redo optimization
-    #bump up starting values for log-scale sigmas by 1
-    opt_params[grepl(x = names(opt_params),
-                     pattern = "sigma")] <- opt_params[grepl(x = names(opt_params),
-                                                              pattern = "sigma")]+1
+
+    #perturb starting values by up to 20% in either direction,
+    #so long as they are within the bounds
+    opt_params_new <- runif(n = length(opt_params),
+                        min = pmax(log(exp(opt_params) * 0.8),
+                                   log(exp(lower_params) * 1.1)),
+                        max = pmin(log(exp(opt_params) * 1.2),
+                                   log(exp(upper_params) * 0.9)))
+    names(opt_params_new) <- names(opt_params)
+    opt_params <- opt_params_new
+
+    # #bump up starting values for log-scale sigmas by 1
+    # opt_params[grepl(x = names(opt_params),
+    #                  pattern = "sigma")] <- opt_params[grepl(x = names(opt_params),
+    #                                                           pattern = "sigma")]+1
     #if anything snapped to the bounds,
     #tighten log-scale bounds by 0.1
-    opt_params[opt_params <= lower_params] <- lower_params[opt_params <= lower_params] + 0.1
-    opt_params[opt_params >= upper_params] <- upper_params[opt_params >= upper_params] - 0.1
+    # opt_params[opt_params <= lower_params] <- lower_params[opt_params <= lower_params] + 0.1
+    # opt_params[opt_params >= upper_params] <- upper_params[opt_params >= upper_params] - 0.1
 
-    if (!suppress.messages) cat(paste("Initial values:    ", paste(apply(data.frame(Names = names(opt_params),
-                                                                                    Values = unlist(lapply(opt_params,exp)),
-                                                                                    stringsAsFactors = F),
-                                                                         1, function(x) paste(x, collapse = ": ")),
-                                                                   collapse = ", "), "\n", sep = ""))
+
     optimx_args$control$factr <- optimx_args$control$factr / 10 #reducing factr by 10 (requiring closer convergence)
 
+    if (!suppress.messages){
+      message(paste0("One or more parameters has NaN standard deviation. ",
+                     "Repeating optimization with smaller convergence tolerance ",
+                     "and tighter bounds."
+                     ))
+      message(paste0("Estimating parameters ",
+                     paste(names(opt_params), collapse = ", "),
+                     "\n",
+                     "Using optimx::optimx(), ",
+                     "method = ", optimx_args$method, "\n",
+                     "Convergence tolerance factr = ",
+                     optimx_args$control$factr, "\n",
+                     "..."))
+        message(paste("New initial values:    ",
+                      paste(apply(data.frame(Names = names(opt_params),
+                                             Values = unlist(lapply(opt_params,
+                                                                    exp)),
+                                             stringsAsFactors = F),
+                                  1, function(x) paste(x, collapse = ": ")),
+                            collapse = ", "),
+                      sep = ""))
+    }
     #use general-purpose optimizer to optimize 1-compartment params to fit data
     #optimize by maximizing log-likelihood
     all_data_fit <-  do.call(optimx::optimx,
@@ -454,7 +490,7 @@ analyze_subset <- function(fitdata,
                                         optimx_args,
                                         #... additional args to log_likelihood and grad_log_likelihood
                                         list(
-                                          const_params = const_params,
+                                          # const_params = const_params,
                                           DF = fitdata,
                                           modelfun = modelfun,
                                           model = model,
@@ -479,17 +515,19 @@ analyze_subset <- function(fitdata,
 
     #Get SDs from Hessian
     #Calculate Hessian using function from numDeriv
-    numhess <- numDeriv::hessian(func = log_likelihood,
-                                 x = ln_means,
-                                 method = 'Richardson',
-                                 const_params = const_params,
-                                 DF = fitdata,
-                                 modelfun = modelfun,
-                                 model = model,
-                                 LOQ_factor = LOQ_factor,
-                                 force_finite = all(
-                                   optimx_args$method %in% "L-BFGS-B")
-                                 )
+    #but use NEGATIVE log likelihood
+    numhess <- numDeriv::hessian(func = function(x){
+      -1 * log_likelihood(opt_params = x,
+                          DF = fitdata,
+                          modelfun = modelfun,
+                          model = model,
+                          LOQ_factor = LOQ_factor,
+                          force_finite = all(
+                            optimx_args$method %in% "L-BFGS-B"
+                          ) )
+    },
+    x = ln_means,
+    method = 'Richardson')
 
     ln_sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                        error = function(err){
@@ -497,8 +535,9 @@ analyze_subset <- function(fitdata,
                          if (!suppress.messages){
                            message("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.")
                          }
-                         return(diag(chol(MASS::ginv(numhess),
-                                          pivot = TRUE)) ^ (1/2)) #pseduovariance matrix
+                         suppressWarnings(tmp <- diag(chol(MASS::ginv(numhess),
+                                          pivot = TRUE)) ^ (1/2))
+                         return(tmp) #pseduovariance matrix
                          #see http://gking.harvard.edu/files/help.pdf
                        })
     names(ln_sds) <- names(ln_means)
@@ -539,20 +578,28 @@ analyze_subset <- function(fitdata,
   fit_DF$param_name <- names(ln_means)
 
   #Merge it with the original data frame of parameters
+  #keep only the ones that were actually fit
   out_DF <- merge(par_DF,
                   fit_DF,
                   by = "param_name",
-                  all = TRUE)
+                  all.y = TRUE,
+                  all.x = FALSE)
 
   nref <- length(unique(fitdata$Reference))
 
   if (nref>1) {
-    out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
-                              collapse =", ")
-    out_DF$Data.Analyzed <- "Joint Analysis"
+    if(pool_sigma %in% FALSE){
+      out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+                                collapse =", ")
+      out_DF$Data.Analyzed <- "Joint Analysis"
+    }else{
+      out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+                                collapse =", ")
+      out_DF$Data.Analyzed <- "Pooled Analysis"
+    }
   } else {
     out_DF$Reference <- unique(fitdata$Reference)
-    out_DF$Data.Analyzed <- unique(fitdata$Reference)
+    out_DF$Data.Analyzed <- "Single-Reference Analysis"
   }
 
   #Add log-likelihood and AIC values
@@ -600,6 +647,11 @@ analyze_subset <- function(fitdata,
                                   "flag"],
                            "Fitted log-scale mean is equal to lower or upper bound.")
 
+  #Record the unique routes in this dataset
+  #Route info provides context for why some parameters were/were not estimated
+  out_DF$Routes <- paste(sort(unique(fitdata$Route)),
+                         collapse = ", ")
+  out_DF$message <- "Optimization successful."
 return(out_DF)
 
 

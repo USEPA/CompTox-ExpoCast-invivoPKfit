@@ -71,12 +71,15 @@ cvt.data <- estimate_loq(cvt.data)
 Set a timestamp: today's date. (I am changing this to YYYYMMDD format -- better sorting by filename. -- CLR)
 
 ```{r, set_file_timestamp, eval = TRUE}
-THIS.DATE <- "20221115"
+THIS.DATE <- "2022_11_21"
 ```
 
 Run a one-compartment fit on the data, and write out the results.
 
 ```{r, run_invivoPKfit_1comp, eval = FALSE}
+
+devtools::load_all("invivopkfit")
+
 ### do 1-Compartment fit
 system.time(PK.fit.table.1comp <- fit_all(
   data.set = cvt.data,
@@ -101,13 +104,12 @@ system.time(PK.fit.table.1comp <- fit_all(
   loq.col ="calc_loq",
   subject.default = NA,
   info.default = NA,
-  suppress.messages = TRUE
+  suppress.messages = FALSE
 ))
 
 
-write.csv(PK.fit.table.1comp[[1]], paste("inst/ext/PK.fit.table.1comp.",THIS.DATE,".csv",sep=""), row.names = FALSE)
+write.csv(PK.fit.table.1comp, paste("inst/ext/PK_fit_table_1comp_",THIS.DATE,".csv",sep=""), row.names = FALSE)
 
-write.csv(PK.fit.table.1comp[[2]], paste("inst/ext/processed.1comp.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
 ```
 
 ```{r, run_invivoPKfit_2comp, eval = FALSE}
@@ -137,8 +139,8 @@ system.time(PK.fit.table.2comp <- fit_all(
   info.default = NA,
   suppress.messages = TRUE
 ))
-write.csv(PK.fit.table.2comp[[1]], paste("inst/ext/PK.fit.table.2comp.",THIS.DATE,".csv",sep=""), row.names = FALSE)
-write.csv(PK.fit.table.2comp[[2]], paste("inst/ext/processed.2comp.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
+write.csv(PK.fit.table.2comp, paste("inst/ext/PK_fit_table_2comp.",THIS.DATE,".csv",sep=""), row.names = FALSE)
+
 ```
 
 ```{r, run_invivoPKfit_flat, eval = FALSE}

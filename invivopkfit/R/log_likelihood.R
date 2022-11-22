@@ -41,14 +41,9 @@ log_likelihood <- function(opt_params,
   #Back-transform the log-transformed parameters onto the natural scale
   params <- lapply(params, exp)
 
-  if(any(is.na(params))) return(-Inf)
+  # if(any(is.na(params))) return(-Inf)
 
   model <- model
-
-  if (model != "flat") {
-    #If oral fraction absorbed is >100% for some reason, return -inf
-    if (params[["Fgutabs"]] > 1) return(-Inf)
-  }
 
   #Extract parameters whose names do not match 'sigma'
   #(that is, all the actual model parameters)
