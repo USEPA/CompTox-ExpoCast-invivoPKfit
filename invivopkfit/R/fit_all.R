@@ -150,7 +150,7 @@ fit_all <- function(data.set,
                     optimx_args = list(
                       "method" = "L-BFGS-B",
                       "control" = list("factr" = 1e7,
-                                       "maximize" = TRUE)
+                                       "fnscale" = -1)
                     ),
 
                     suppress.messages = FALSE,
@@ -226,7 +226,7 @@ fit_all <- function(data.set,
 
     #Analyze by chemical & species first.
 if(!suppress.messages){
-  message("Analyzing data by chemical and species...")
+  message("Analyzing data by chemical and species, with each reference having its own error SD...")
 }
 
     PK.fit.joint <- data.set[,
@@ -264,8 +264,11 @@ if(!suppress.messages){
     multi.ref.cas <- unique(subset(data.set,
                                    MultipleReferences == TRUE)$DTXSID)
     if (length(multi.ref.cas) > 0) {
+      if(!suppress.messages){
+        message("Analyzing data by chemical, species, and reference...")
+      }
       data.set.multi.ref <- subset(data.set, MultipleReferences == TRUE)
-
+      data.set.multi.ref[, Reference_orig := Reference]
       PK.fit.separate <- data.set.multi.ref[,
                                  analyze_subset(fitdata = .SD,
                                                  modelfun = modelfun,
@@ -281,30 +284,33 @@ if(!suppress.messages){
                                                  by = c(
                                                    "DTXSID",
                                                    "Species",
-                                                   "Reference")]
-
-      PK.fit.pooled <- data.set.multi.ref[,
-                                          analyze_subset(fitdata = .SD,
-                                                         modelfun = modelfun,
-                                                         model = model,
-                                                         pool_sigma = TRUE,
-                                                         LOQ_factor = LOQ_factor,
-                                                         get_starts_args = get_starts_args,
-                                                         get_lower_args = get_lower_args,
-                                                         get_upper_args = get_upper_args,
-                                                         optimx_args = optimx_args,
-                                                         suppress.messages = suppress.messages),
-                                          .SDcols = names(data.set.multi.ref),
-                                          by = c(
-                                            "DTXSID",
-                                            "Species")]
+                                                   "Reference_orig")]
+      # if(!suppress.messages){
+      #   message("Analyzing data by chemical and species, pooling all references...")
+      # }
+      # PK.fit.pooled <- data.set.multi.ref[,
+      #                                     analyze_subset(fitdata = .SD,
+      #                                                    modelfun = modelfun,
+      #                                                    model = model,
+      #                                                    pool_sigma = TRUE,
+      #                                                    LOQ_factor = LOQ_factor,
+      #                                                    get_starts_args = get_starts_args,
+      #                                                    get_lower_args = get_lower_args,
+      #                                                    get_upper_args = get_upper_args,
+      #                                                    optimx_args = optimx_args,
+      #                                                    suppress.messages = suppress.messages),
+      #                                     .SDcols = names(data.set.multi.ref),
+      #                                     by = c(
+      #                                       "DTXSID",
+      #                                       "Species")]
 
       PK.fit.bind <- rbindlist(list("Joint" = PK.fit.joint,
                            "Separate" = PK.fit.separate,
-                           "Pooled" = PK.fit.pooled),
+                           # "Pooled" = PK.fit.pooled
+      ),
                            use.names = TRUE,
                            fill = TRUE,
-                           idcol = )
+                           idcol = "Analysis_Type")
     } else PK.fit.bind <- PK.fit.joint
 
     #record which model was fit to data and whether it was full or analytical

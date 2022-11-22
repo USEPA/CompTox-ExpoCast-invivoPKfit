@@ -98,7 +98,7 @@
 #'   than `model` and `fitdata`, which are always passed). Default NULL to
 #'   accept the default arguments for [get_upper_bounds()].
 #' @param optimx_args A named list of additional arguments to
-#'   [optimx::optimx()], other than `par`, `fn`, `gr`, `lower`, and `upper`. Default is:
+#'   [optimx::optimx()], other than `par`, `fn`, `lower`, and `upper`. Default is:
 #'
 #'    ```
 #'     list(
@@ -107,9 +107,9 @@
 #'                            "maximize" = TRUE)
 #'          )
 #'    ```
-#'  Note that `method` should allow lower and upper bounds (box constraints),
-#'  since these will be supplied. For example, `method` could be "bobyqa" (see
-#'  [minqa::bobyqa()]).
+#'  See documentation for [optimx::optimx()] for arguments and details. Note
+#'  lower and upper bounds (box constraints) will be supplied; if you want them
+#'  to be respected, please choose a method that allows box constraints.
 #'
 #'
 
@@ -192,6 +192,14 @@ analyze_subset <- function(fitdata,
                        "suppress.messages" = suppress.messages),
                      get_starts_args))
 
+ #Initialize out_DF
+ #There will be one row for each parameter
+ out_DF <- par_DF
+ #Record the unique routes in this dataset
+ #Route info provides context for why some parameters were/were not estimated
+ out_DF$Routes <- paste(sort(unique(fitdata$Route)),
+                        collapse = ", ")
+
   #Types of fitted param values to return
   fitted_types <- c("Fitted arithmetic mean",
                     "Fitted arithmetic std dev",
@@ -207,19 +215,25 @@ analyze_subset <- function(fitdata,
   if (sum(par_DF$optimize_param) >= nrow(fitdata)){
     #bind together long-form parameter data.frames with a new column "param.value.type"
     #include all of the fitted param.value.types that *would* be provided if we did a fit:
-   out_DF <- par_DF
+
    out_DF[, fitted_types] <- NA_real_
 
    #check whether there is more than one reference or not
    nref <- length(unique(fitdata$Reference))
 
     if (nref>1) {
+      if(pool_sigma %in% FALSE){
       out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
                                 collapse =", ")
       out_DF$Data.Analyzed <- "Joint Analysis"
-    } else {
+      }else{
+        out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+                                  collapse =", ")
+        out_DF$Data.Analyzed <- "Pooled Analysis"
+      }
+    }else {
       out_DF$Reference <- unique(fitdata$Reference)
-      out_DF$Data.Analyzed <- unique(fitdata$Reference)
+      out_DF$Data.Analyzed <- "Single-Reference Analysis"
     }
 
     #fill in the loglike and AIC with NA s since no fit was done
@@ -268,7 +282,19 @@ analyze_subset <- function(fitdata,
   names(upper_params) <- par_DF[par_DF$optimize_param %in% TRUE,
                                 "param_name"]
 
-
+  if (!suppress.messages){
+    message(paste0("Estimating parameters ",
+                   paste(names(opt_params), collapse = ", "),
+                   "\n",
+    "Using optimx::optimx(), ",
+                   "method = ", optimx_args$method, "\n",
+                   "Convergence tolerance factr = ",
+                   optimx_args$control$factr, "\n",
+    "Starting values: ", opt_params, "\n",
+    "Lower bounds", lower_params, "\n",
+    "Upper bounds", upper_params), "\n",
+    "...")
+  }
 
   all_data_fit <- tryCatch({
     tmp <- do.call(optimx::optimx,
@@ -276,19 +302,21 @@ analyze_subset <- function(fitdata,
                      #
                      list(par = opt_params,
                                  fn = log_likelihood,
-                          gr = grad_log_likelihood,
-                                 #lower = lower_params,
+                                 lower = lower_params,
                                  upper = upper_params),
-                            #fn, gr, method, and control
+                            #method, and control
                             optimx_args,
-                            #... additional args to log_likelihood and grad_log_likelihood
+                            #... additional args to log_likelihood
                             list(
                                  const_params = const_params,
                                  DF = fitdata,
                                  modelfun = modelfun,
                                  model = model,
                                  LOQ_factor = LOQ_factor,
-                                 force_finite = optimx_args$method == "L-BFGS-B"))
+                                 force_finite = all(
+                                   optimx_args$method %in% "L-BFGS-B")
+                                 )
+                     )
                             )
     #tmp is a 1-row data.frame with one variable for each fitted param,
     #plus variables with info on fitting (number of evals, convergence code, etc.)
@@ -303,18 +331,23 @@ analyze_subset <- function(fitdata,
 
   #If fit failed, then return everything as NA and record the message
   if(!is.data.frame(all_data_fit)){
-  out_DF <- par_DF
   out_DF[, fitted_types] <- NA_real_
 
   nref <- length(unique(fitdata$Reference))
 
   if (nref>1) {
+    if(pool_sigma %in% FALSE){
     out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
                               collapse =", ")
     out_DF$Data.Analyzed <- "Joint Analysis"
+    }else{
+      out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+                                collapse =", ")
+      out_DF$Data.Analyzed <- "Pooled Analysis"
+    }
   } else {
     out_DF$Reference <- unique(fitdata$Reference)
-    out_DF$Data.Analyzed <- unique(fitdata$Reference)
+    out_DF$Data.Analyzed <- "Single-Reference Analysis"
   }
 
   #fill in the loglike and AIC with NA s since no fit was done
@@ -354,27 +387,27 @@ analyze_subset <- function(fitdata,
   numhess <- numDeriv::hessian(func = log_likelihood,
                                x = ln_means,
                                method = 'Richardson',
-                               const_params = NULL,
+                               const_params = const_params,
                                DF = fitdata,
                                modelfun = modelfun,
                                model = model,
                                LOQ_factor = LOQ_factor,
-                               force_finite = optimx_args$method == "L-BFGS-B")
+                               force_finite = all(
+                                 optimx_args$method %in% "L-BFGS-B"
+                                 )
+                               )
 
-  numhess2 <- hess_log_likelihood(opt_params = ln_means,
-                                  const_params = NULL,
-                                  DF = fitdata,
-                                  modelfun = modelfun,
-                                  model = model,
-                                  LOQ_factor = LOQ_factor,
-                                  force_finite = optimx_args$method == "L-BFGS-B")
   #try inverting Hessian to get SDs
   ln_sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                      error = function(err){
                        #if hessian can't be inverted
-                       if (!suppress.messages) message("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.\n")
+                       if (!suppress.messages) {
+                         message(paste0("Hessian can't be inverted, ",
+                         "using pseudovariance matrix ",
+                         "to estimate parameter uncertainty."))
+                       }
                        return(diag(chol(MASS::ginv(numhess),
-                                        pivot = TRUE)) ^ (1/2)) #pseduovariance matrix
+                                        pivot = TRUE)) ^ (1/2)) #pseudovariance matrix
                        #see http://gking.harvard.edu/files/help.pdf
                      })
   names(ln_sds) <- names(ln_means)
@@ -383,7 +416,13 @@ analyze_subset <- function(fitdata,
   #repeat optimization with smaller convergence tolerance
   while(any(is.nan(ln_sds)) & optimx_args$control$factr > 1) {
 
-    if (!suppress.messages) message("One or more parameters has NaN standard deviation, repeating optimization with smaller convergence tolerance.\n")
+    if (!suppress.messages){
+      message(paste0("One or more parameters has NaN standard deviation. ",
+      "Repeating optimization with smaller convergence tolerance ",
+      "(new factr = ",
+      optimx_args$control$factr,
+      ")"))
+    }
     #then redo optimization
     #bump up starting values for log-scale sigmas by 1
     opt_params[grepl(x = names(opt_params),
@@ -408,8 +447,7 @@ analyze_subset <- function(fitdata,
                                         #
                                         list(par = opt_params,
                                              fn = log_likelihood,
-                                             gr = grad_log_likelihood,
-                                             #lower = lower_params,
+                                             lower = lower_params,
                                              upper = upper_params),
                                         #fn, gr, method, and control
                                         optimx_args,
@@ -420,7 +458,10 @@ analyze_subset <- function(fitdata,
                                           modelfun = modelfun,
                                           model = model,
                                           LOQ_factor = LOQ_factor,
-                                          force_finite = optimx_args$method == "L-BFGS-B"))
+                                          force_finite = all(
+                                            optimx_args$method %in% "L-BFGS-B")
+                                          )
+                                        )
     )
 
     ln_means <- as.vector(stats::coef(all_data_fit))
@@ -440,20 +481,14 @@ analyze_subset <- function(fitdata,
     numhess <- numDeriv::hessian(func = log_likelihood,
                                  x = ln_means,
                                  method = 'Richardson',
-                                 const_params = NULL,
+                                 const_params = const_params,
                                  DF = fitdata,
                                  modelfun = modelfun,
                                  model = model,
                                  LOQ_factor = LOQ_factor,
-                                 force_finite = optimx_args$method == "L-BFGS-B")
-
-    numhess2 <- hess_log_likelihood(opt_params = ln_means,
-                                   const_params = NULL,
-                                   DF = fitdata,
-                                   modelfun = modelfun,
-                                   model = model,
-                                   LOQ_factor = LOQ_factor,
-                                   force_finite = optimx_args$method == "L-BFGS-B")
+                                 force_finite = all(
+                                   optimx_args$method %in% "L-BFGS-B")
+                                 )
 
     ln_sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                        error = function(err){

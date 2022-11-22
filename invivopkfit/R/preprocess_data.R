@@ -191,6 +191,9 @@ preprocess_data <- function(data.set,
 
                             LOQ_factor = 2,
                             suppress.messages = FALSE){
+  if(!suppress.messages){
+    message("Renaming data columns...")
+  }
   #rename columns to
   data.set <- rename_columns(data.set,
                              compound.col,
@@ -231,7 +234,7 @@ preprocess_data <- function(data.set,
   message(paste(N.PREV, "concentration vs. time observations loaded.\n"))
   message(paste(length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
-            length(unique(data.set$Reference)), "unique references.\n"))
+            length(unique(data.set$Reference)), "unique references."))
   }
 
   ### Coerce all 'Value' values to be numeric and say so
@@ -314,11 +317,11 @@ preprocess_data <- function(data.set,
   data.set <- data.set[Route %in% c("po", "iv")]
   if(!suppress.messages){
   message(paste("Restricting to intravenous and oral routes eliminates",
-            N.PREV - dim(data.set)[1], "observations.\n"))
+            N.PREV - dim(data.set)[1], "observations."))
   message(paste(dim(data.set)[1], "observations of",
             length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
-            length(unique(data.set$Reference)), "unique references remain.\n"))
+            length(unique(data.set$Reference)), "unique references remain."))
   }
 
   ### recalcuate N.PREV after removal of rows corresponding to other routes
@@ -373,7 +376,7 @@ preprocess_data <- function(data.set,
   message(paste(dim(data.set)[1], "observations of",
             length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
-            length(unique(data.set$Reference)), "unique references remain.\n"))
+            length(unique(data.set$Reference)), "unique references remain."))
   }
 
   N.PREV <- dim(data.set)[1]
@@ -394,7 +397,7 @@ preprocess_data <- function(data.set,
   # How many >LOQ observations do we have per chemical/species/reference?
   data.set[, N.Obs.Ref := sum(!is.na(Value)),
            by = .(Reference, DTXSID, Species)]
-  # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma'):
+  # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma):
   data.set[, Usable := N.Obs.Ref > 3,
            by = .(DTXSID, Reference, Species, Route)]
   if(!suppress.messages){
@@ -423,7 +426,7 @@ if(!suppress.messages){
     message(paste("Eliminating observations for doses that are",
     "below LOQ before the peak conc. is reached eliminates",
               data.set[, sum(!(Usable %in% TRUE))],
-    "observations.\n"))
+    "observations."))
   }
 
   ### subset data to where Usable == TRUE
@@ -437,7 +440,11 @@ if(!suppress.messages){
   cat(paste(dim(data.set)[1], "observations of",
             length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
-            length(unique(data.set$Reference)), "unique references remain.\n"))
+            length(unique(data.set$Reference)), "unique references remain."))
+  }
+
+  if(!suppress.messages){
+    "Data preprocessing complete."
   }
 
   return(data.set)
