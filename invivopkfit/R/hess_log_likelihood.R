@@ -1,5 +1,4 @@
-hess_log_likelihood <- function(){
-  function(opt_params,
+hess_log_likelihood <- function(opt_params,
            const_params = NULL,
            DF,
            modelfun,

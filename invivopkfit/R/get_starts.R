@@ -327,7 +327,7 @@ if(is.null(par_DF)){
   #For anything with use_param == FALSE, set the starting value to NA
   par_DF[!(par_DF$use_param %in% TRUE),
          c("start_value",
-           "start_value_msg")] <- c(NA_real_,
+           "start_value_msg")] <- list(NA_real_,
                                     "use_param is not TRUE")
 
 

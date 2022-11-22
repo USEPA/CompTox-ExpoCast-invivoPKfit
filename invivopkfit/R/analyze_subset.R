@@ -124,7 +124,7 @@ analyze_subset <- function(fitdata,
                            optimx_args = list(
                              "method" = "L-BFGS-B",
                              "control" = list("factr" = 1e7,
-                                              "maximize" = TRUE)
+                                              "fnscale" = -1)
                            ),
                            suppress.messages = FALSE,
                            sig.figs = 5,

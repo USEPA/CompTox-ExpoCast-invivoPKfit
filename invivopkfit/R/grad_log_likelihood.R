@@ -99,27 +99,162 @@ grad_log_likelihood <- function(opt_params,
   #standardize log-scale Value by log-scale mean & sigma.ref
   DF[, z:=(y - mu)/sigma.ref]
 
-  #For detects: gradient of log PDF
-  #wrt mu:
+
+  #1-compartment model only....so far
+  Fgutabs <- params$Fgutabs
+  kgutabs <- params$kgutabs
+  kelim <- params$kelim
+  Vdist <- params$Vdist
+  ##STILL need to add derivs wrt sigma_ref!!!
+
+  #For detects
+  #oral data
+  #Detects, oral data, kelim
+  DF[!is.na(Value) &
+       Route %in% "po",
+     grad_kelim := z*(Time*(kelim - kgutabs)*
+                        exp(Time*(kelim + kgutabs)) +
+                        (-exp(Time*kelim) +
+                           exp(Time*kgutabs))*
+                        exp(Time*kelim))*
+       exp(-Time*kelim)/
+       (sigma.ref*(kelim - kgutabs)*(exp(Time*kelim) - exp(Time*kgutabs)))
+]
+  #Detects, oral data, Vdist
+  DF[!is.na(Value) &
+       Route %in% "po",
+     grad_Vdist := -z/(Vdist*sigma.ref)]
+  #Detects, oral data, Fgutabs
+  DF[!is.na(Value) &
+       Route %in% "po",
+     grad_Fgutabs := z/(Fgutabs*sigma.ref)]
+  #Detects, oral data, kgutabs
+  DF[!is.na(Value) &
+       Route %in% "po",
+     grad_kgutabs := z*(-Time*kelim*kgutabs*exp(Time*kelim) +
+                          Time*kgutabs^2*exp(Time*kelim) +
+                          kelim*exp(Time*kelim) -
+                          kelim*exp(Time*kgutabs))/
+       (kgutabs*sigma.ref*(kelim*exp(Time*kelim) -
+                             kelim*exp(Time*kgutabs) -
+                             kgutabs*exp(Time*kelim) +
+                             kgutabs*exp(Time*kgutabs)))
+     ]
+
+
+
+  #Detects, iv data, kelim:
+DF[!is.na(Value) & Route %in% "iv",
+   grad_kelim := -Time*z/sigma.ref]
+
+#Detects, IV data, Vdist:
+DF[!is.na(Value) & Route %in% "iv",
+   grad_Vdist:= -z/(Vdist*sigma.ref)]
+
+#Detects, IV data, Fgutabs
+DF[!is.na(Value) & Route %in% "iv",
+   grad_Fgutabs:= 0]
+
+#Detects, IV data, kgutabs
+DF[!is.na(Value) & Route %in% "iv",
+   grad_kgutabs:= 0]
+
+
+#Nondetects, PO data, kelim
+DF[is.na(Value) & Route %in% "po",
+   grad_kelim := -dnorm(z)*(Time*(kelim - kgutabs)*
+                         exp(Time*(kelim + kgutabs)) -
+                         (exp(Time*kelim) - exp(Time*kgutabs))*
+                         exp(Time*kelim))*exp(-Time*kelim)/
+     (pnorm(z)*(kelim - kgutabs)*(exp(Time*kelim) - exp(Time*kgutabs)))]
+
+#Nondetects, PO data, Vdist
+DF[is.na(Value) & Route %in% "po",
+   grad_Vdist := dnorm(z)/(pnorm(z)*Vdist)]
+
+#Nondetects, PO data, Fgutabs:
+DF[is.na(Value) & Route %in% "po",
+   grad_Fgutabs := -dnorm(z)/(Fgutabs*pnorm(z))]
+
+#Nondetcts, PO data, kgutabs:
+DF[is.na(Value) & Route %in% "po",
+   grad_kgutabs := dnorm(z)*(Time*kelim*kgutabs*exp(Time*kelim) -
+                          Time*kgutabs^2*exp(Time*kelim) -
+                          kelim*exp(Time*kelim) +
+                          kelim*exp(Time*kgutabs))/
+     (pnorm(z)*kgutabs*(kelim*exp(Time*kelim) -
+                     kelim*exp(Time*kgutabs) -
+                     kgutabs*exp(Time*kelim) +
+                     kgutabs*exp(Time*kgutabs)))]
+
+#Nondetects, IV data, kelim
+DF[is.na(Value) & Route %in% "iv",
+   grad_kelim := Time*dnorm(z)/pnorm(z)]
+
+#Nondetects, IV data, Vdist:
+DF[is.na(Value) & Route %in% "iv",
+   grad_Vdist := dnorm(z)/(pnorm(z)*Vdist)]
+
+#Nondetcts, IV data, Fgutabs
+DF[is.na(Value) & Route %in% "iv",
+   grad_Fgutabs := 0]
+
+#Nondetcts, IV data, kgutabs
+DF[is.na(Value) & Route %in% "iv",
+   grad_kgutabs := 0]
+
+### Sigma.ref ###
+
+sigma_cols <- paste0("grad_",
+                     grep(x = names(opt_params),
+                          pattern = "sigma",
+                          value = TRUE))
+
+if(length(sigma_cols)==1){
+  #if there is only one sigma,
   DF[!is.na(Value),
-     llg_mu := z/sigma.ref]
-  #wrt sigma:
-  DF[!is.na(Value),
-     llg_sigma := (z^2 - 1)/sigma.ref]
+     (sigma_cols) := (z^2 - 1)/sigma.ref]
 
-  #For non-detects: gradient of log CDF
-  #wrt mu:
   DF[is.na(Value),
-     llg_mu := -dnorm(z)/pnorm(z)]
-  #wrt sigma:
-  DF[is.na(Value),
-     llg_sigma := -dnorm(z)*z/pnorm(z)]
+     (sigma_cols) := -dnorm(z)*z/pnorm(z)]
+}else if(length(sigma_cols)>1){
+  refs <- DF[, unique(Reference)]
+  #assign for each reference
+  for(this_ref in refs){
+    this_sigma_col <- paste0("grad_sigma_ref_",
+                             this_ref)
+    other_sigma_cols <- setdiff(sigma_cols,
+                                this_sigma_col)
+    DF[Reference %in% this_ref &
+         !is.na(Value),
+       (this_sigma_col) := (z^2 - 1)/sigma.ref]
 
-  #Joint log-likelihood is sum of individual LLs....
-  #Joint gradient is the same
-  llg_mu <- DF[, sum(llg_mu)]
-  llg_sigma <- DF[, sum(llg_sigma)]
+    DF[Reference %in% this_ref &
+         is.na(Value),
+       (this_sigma_col) := -dnorm(z)*z/pnorm(z)]
 
-  #return joint gradient as a vector
-  return(c(llg_mu, llg_sigma))
+    #set the other sigma cols to zero
+    DF[Reference %in% this_ref,
+       (other_sigma_cols) := 0]
+  }
+}
+
+
+ll <- DF[, sapply(.SD, sum),
+         .SDcols= c("grad_kelim",
+                    "grad_Vdist",
+                    "grad_Fgutabs",
+                    "grad_kgutabs",
+                    grep(x = names(DF),
+                         pattern = "grad_sigma",
+                         value = TRUE))]
+
+names(ll) <- gsub(x = names(ll),
+                  pattern = "grad_",
+                  replacement = "")
+
+
+  #return gradient as a vector
+  #in the same order as opt_params
+  return(ll[names(opt_params)])
 }
