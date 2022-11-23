@@ -29,29 +29,25 @@ fitfun <- function(design.times,
   if (modelfun == 'analytic'){
     #get sorted list of time points
     these.times <- sort(unique(design.times))
-    try (out <- analytic_model_fun(params = model.params,
+
+    out <- tryCatch (analytic_model_fun(params = model.params,
                                    times = these.times,
                                    time.units = 'd',
                                    dose=design.dose,
                                    iv.dose=design.iv,
-                                   model=model))
-    #Ways that this can fail:
-    #It could fail with an error
-    #Cp could be negative
-    #Cp could be non-finite
-
-    #if it fails with an error
-    if (inherits(out, "try-error")){
-      cat("fitfun: Error in analytic_model_fun\n")
-      cat(paste(paste(apply(data.frame(Names=names(model.params),
-                                       Values=model.params,
-                                       stringsAsFactors=FALSE),
-                            1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
-      browser()
-      #      browser() #kick to debugger to find out what went wrong
-      out[,"time"] <- these.times
-      out[,"Ccompartment"] <- 10^-20 #just set concentration value to essentially zero
-    }
+                                   model=model),
+                     error = function(err){
+                       cat("fitfun: Error in analytic_model_fun\n")
+                       cat(err$message)
+                       cat(paste(paste(apply(data.frame(Names=names(model.params),
+                                                        Values=model.params,
+                                                        stringsAsFactors=FALSE),
+                                             1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
+                       out_tmp <- cbind("time" = these.times,
+                                        "Ccompartment" = rep(1e-20, length(these.times)),
+                                        "AUC" = rep(1e-20, length(these.times)))
+                       out_tmp
+                     })
 
     #if Cp is non-finite
     if (any(!is.finite(out[, 'Ccompartment']))){
@@ -60,7 +56,6 @@ fitfun <- function(design.times,
                                        Values=model.params,
                                        stringsAsFactors=FALSE),
                             1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
-      #      browser() #kick to debugger to find out what went wrong
       out[,"time"] <- these.times
       out[,"Ccompartment"] <- 10^-20 #just set concentration value to essentially zero
 
@@ -70,7 +65,7 @@ fitfun <- function(design.times,
     #get sorted list of time points
     these.times <- sort(unique(c(0,
                                  design.times)))
-    try(out <- httk::solve_1comp(parameters=model.params,
+    out <- tryCatch(httk::solve_1comp(parameters=model.params,
                            times=these.times,
                            dose=design.dose,
                            days=design.times.max,
@@ -78,35 +73,46 @@ fitfun <- function(design.times,
                            output.units='mg/L',
                            initial.value=0,
                            iv.dose=design.iv,
-                           suppress.messages=TRUE))
-
-    if (inherits(out, "try-error")) #if solving 1-compartment model fails
-    {
-      out[,"time"] <- these.times
-      out[,"Ccompartment"] <- 10^-20 #just set concentration value to essentially zero
-      browser() #kick to debugger to find out what went wrong
-    }
+                           suppress.messages=TRUE),
+                    error = function(err){
+                      cat("fitfun: Error in httk::solve_1comp()\n")
+                      cat(err$message)
+                      cat(paste(paste(apply(data.frame(Names=names(model.params),
+                                                       Values=model.params,
+                                                       stringsAsFactors=FALSE),
+                                            1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
+                      out_tmp <- cbind("time" = these.times,
+                                       "Ccompartment" = rep(1e-20, length(these.times)),
+                                       "AUC" = rep(1e-20, length(these.times)))
+                      out_tmp
+                    })
 
     #If concentration is negative, try again with lower tolerance
     while(any(out[,"Ccompartment"]<0) & atol > 1e-20)
     {
       atol <- atol/50
-      try(out <- httk::solve_1comp(parameters=model.params,
-                             times=these.times,
-                             dose=design.dose,
-                             days=design.times.max,
-                             tsteps = round(1/design.time.step),
-                             output.units='mg/L',
-                             initial.value=0,
-                             iv.dose=design.iv,
-                             suppress.messages=TRUE,
-                             atol=atol))
-      if (inherits(out, "try-error"))
-      {
-        out[,"time"] <- these.times
-        out[,"Ccompartment"] <- 10^-20
-        browser()
-      }
+      out <- tryCatch(httk::solve_1comp(parameters=model.params,
+                                        times=these.times,
+                                        dose=design.dose,
+                                        days=design.times.max,
+                                        tsteps = round(1/design.time.step),
+                                        output.units='mg/L',
+                                        initial.value=0,
+                                        iv.dose=design.iv,
+                                        suppress.messages=TRUE,
+                                        atol = atol),
+                      error = function(err){
+                        cat("fitfun: Error in httk::solve_1comp()\n")
+                        cat(err$message)
+                        cat(paste(paste(apply(data.frame(Names=names(model.params),
+                                                         Values=model.params,
+                                                         stringsAsFactors=FALSE),
+                                              1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
+                        out_tmp <- cbind("time" = these.times,
+                                         "Ccompartment" = rep(1e-20, length(these.times)),
+                                         "AUC" = rep(1e-20, length(these.times)))
+                        out_tmp
+                      })
     }
   }
 
@@ -114,14 +120,9 @@ fitfun <- function(design.times,
   #Result is "out": a matrix with three columns:
   #time, Ccompartment, and AUC
   #return a vector of the model-predicted Ccompartment values
-  #of the same length as design.times, for each time in design.times
+  #indexed by design.times
 
-  #I think the easiest way to do that is to convert it into a data.table,
-  #key by time column,
-  #and then index by these.times
-  out.dt <- as.data.table(out)
-  setkey(out.dt, time)
-  pred <- out.dt[J(design.times), Ccompartment]
-
+  times_order <- match(design.times, out[, "time"])
+  pred <- out[times_order, "Ccompartment"]
   return(pred)
 } #endfitfun
