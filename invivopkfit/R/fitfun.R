@@ -37,7 +37,6 @@ fitfun <- function(design.times,
                                    iv.dose=design.iv,
                                    model=model),
                      error = function(err){
-                       browser()
                        cat("fitfun: Error in analytic_model_fun\n")
                        cat(paste0(err$message, "\n"))
                        cat(paste(paste(apply(data.frame(Names=names(model.params),
