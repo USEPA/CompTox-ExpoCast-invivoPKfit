@@ -22,7 +22,7 @@
 auc_2comp <- function(params, time, dose, iv.dose){
 
   if(all(c("Fgutabs", "V1") %in% names(params))){
-    params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
+    params$Fgutabs_V1 <- params$Fgutabs/params$V1
   }
 
   #Check for needed params
