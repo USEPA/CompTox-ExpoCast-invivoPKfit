@@ -54,18 +54,6 @@ fitfun <- function(design.times,
                        out_tmp
                      })
 
-    #if Cp is non-finite
-    if (any(!is.finite(out[, 'Ccompartment']))){
-      cat("fitfun: Error, Cp is non-finite\n")
-      cat(paste(paste(apply(data.frame(Names=names(model.params),
-                                       Values=model.params,
-                                       stringsAsFactors=FALSE),
-                            1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
-      out[,"time"] <- these.times
-      out[,"Ccompartment"] <- NA_real_
-
-    }
-
   } else if (modelfun == 'full'){
     #get sorted list of time points
     these.times <- sort(unique(c(0,
