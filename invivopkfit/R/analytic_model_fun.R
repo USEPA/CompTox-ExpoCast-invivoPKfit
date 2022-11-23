@@ -39,7 +39,7 @@ analytic_model_fun <- function(params,
                               params=params,
                               dose=dose,
                               iv.dose=iv.dose)),
-                 error=rep(0,length=length(times)))
+                 error=rep(NA_real_,length=length(times)))
 
   #Cp will have units mg/L
 
@@ -55,7 +55,7 @@ analytic_model_fun <- function(params,
                               params=params,
                               dose=dose,
                               iv.dose=iv.dose)),
-                 error=rep(0,length=length(times)))
+                 error=rep(NA_real_,length=length(times)))
 
   out.mat <- matrix(rep(0, length(times)*3),
                     nrow=length(times),

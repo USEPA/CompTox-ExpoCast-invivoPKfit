@@ -30,22 +30,27 @@ fitfun <- function(design.times,
     #get sorted list of time points
     these.times <- sort(unique(design.times))
 
-    out <- tryCatch (analytic_model_fun(params = model.params,
+    out <- tryCatch(analytic_model_fun(params = model.params,
                                    times = these.times,
                                    time.units = 'd',
                                    dose=design.dose,
                                    iv.dose=design.iv,
                                    model=model),
                      error = function(err){
+                       browser()
                        cat("fitfun: Error in analytic_model_fun\n")
-                       cat(err$message)
+                       cat(paste0(err$message, "\n"))
                        cat(paste(paste(apply(data.frame(Names=names(model.params),
                                                         Values=model.params,
                                                         stringsAsFactors=FALSE),
-                                             1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
+                                             1,
+                                             function(x) paste(x,collapse=": ")),
+                                       collapse=", "),
+                                 "\n",
+                                 sep=""))
                        out_tmp <- cbind("time" = these.times,
-                                        "Ccompartment" = rep(1e-20, length(these.times)),
-                                        "AUC" = rep(1e-20, length(these.times)))
+                                        "Ccompartment" = rep(NA_real_, length(these.times)),
+                                        "AUC" = rep(NA_real_, length(these.times)))
                        out_tmp
                      })
 
@@ -57,7 +62,7 @@ fitfun <- function(design.times,
                                        stringsAsFactors=FALSE),
                             1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
       out[,"time"] <- these.times
-      out[,"Ccompartment"] <- 10^-20 #just set concentration value to essentially zero
+      out[,"Ccompartment"] <- NA_real_
 
     }
 
@@ -76,7 +81,7 @@ fitfun <- function(design.times,
                            suppress.messages=TRUE),
                     error = function(err){
                       cat("fitfun: Error in httk::solve_1comp()\n")
-                      cat(err$message)
+                      cat(paste0(err$message, "\n"))
                       cat(paste(paste(apply(data.frame(Names=names(model.params),
                                                        Values=model.params,
                                                        stringsAsFactors=FALSE),
@@ -103,14 +108,14 @@ fitfun <- function(design.times,
                                         atol = atol),
                       error = function(err){
                         cat("fitfun: Error in httk::solve_1comp()\n")
-                        cat(err$message)
+                        cat(paste0(err$message, "\n"))
                         cat(paste(paste(apply(data.frame(Names=names(model.params),
                                                          Values=model.params,
                                                          stringsAsFactors=FALSE),
                                               1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
                         out_tmp <- cbind("time" = these.times,
-                                         "Ccompartment" = rep(1e-20, length(these.times)),
-                                         "AUC" = rep(1e-20, length(these.times)))
+                                         "Ccompartment" = rep(NA_real_, length(these.times)),
+                                         "AUC" = rep(NA_real_, length(these.times)))
                         out_tmp
                       })
     }
