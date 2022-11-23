@@ -42,13 +42,13 @@ get_lower_bounds <- function(fitdata,
                                               "Fgutabs_V1",
                                               "sigma"),
                                lower_bound = c(1e-8, #A
-                                               1e-8, #kelim
+                                               1e-4, #kelim
                                                1e-8, #Vdist
-                                               1e-8, #kgutabs
+                                               1e-4, #kgutabs
                                                1e-8, #Fgutabs
                                                1e-8, #V1
-                                               1e-8, #k12
-                                               1e-8, #k21
+                                               1e-4, #k12
+                                               1e-4, #k21
                                                1e-8, #Fgutabs_Vdist
                                                1e-8, #Fgutabs_V1
                                                1e-8 #sigma
