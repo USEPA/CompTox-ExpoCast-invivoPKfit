@@ -2,11 +2,24 @@
 % Please edit documentation in R/get_lower_bounds.R
 \name{get_lower_bounds}
 \alias{get_lower_bounds}
-\title{Get lower bounds for fitting model parameters}
+\title{Get lower bounds for estimating model parameters}
 \usage{
-get_lower_bounds(par_DF = NULL, model, fitdata, suppress.messages = FALSE)
+get_lower_bounds(
+  fitdata,
+  par_DF = NULL,
+  model,
+  pool_sigma = FALSE,
+  lower_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
+    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), lower_bound = c(1e-08,
+    1e-04, 1e-08, 1e-04, 1e-08, 1e-08, 1e-04, 1e-04, 1e-08, 1e-08, 1e-08),
+    lower_bound_msg = "Default"),
+  suppress.messages = FALSE
+)
 }
 \arguments{
+\item{fitdata}{A data.frame: the concentration-time-dose data to be used for
+fitting.}
+
 \item{par_DF}{Optional: A data.frame as produced by [get_opt_params], with a
 character variable [param_name] containing parameter names, and a logical
 variable [optimize_param] containing TRUE if parameter is to be fitted, and
@@ -14,10 +27,15 @@ FALSE if parameter is to be held constant. Any other variables will be
 ignored. Default NULL, in which case it will be determined by calling
 [get_opt_params].}
 
-\item{model}{The name of the model whose parameters are to be estimated.}
+\item{model}{The name of the model whose parameters are to be estimated.
+Currently only "flat", "1compartment", or "2compartment" is supported.
+Ignored if `par_DF` is provided.}
 
-\item{fitdata}{A data.frame: the concentration-time-dose data to be used for
-fitting.}
+\item{pool_sigma}{Logical: Whether to pool all data (estimate only one error
+standard deviation) or not (estimate separate error standard deviations for
+each reference). Default FALSE to estimate separate error SDs for each
+reference. (If `fitdata` only includes one reference, `pool_sigma` will
+have no effect.) Ignored if `par_DF` is provided.}
 }
 \value{
 A data.frame: `parDF` with additional variables `lower_bound`
@@ -27,7 +45,7 @@ A data.frame: `parDF` with additional variables `lower_bound`
 }
 \description{
 For a set of model parameters, get the lower bounds for the optimizer (if
-parameter is to be fitted).
+parameter is to be estimated).
 }
 \author{
 Caroline Ring, John Wambaugh, Mitchell Teague

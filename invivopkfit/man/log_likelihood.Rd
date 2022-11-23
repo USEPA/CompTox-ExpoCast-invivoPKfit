@@ -2,25 +2,49 @@
 % Please edit documentation in R/log_likelihood.R
 \name{log_likelihood}
 \alias{log_likelihood}
-\title{The log-likelihood function used for fitting}
+\title{Log-likelihood}
 \usage{
-log_likelihood(params, DF, modelfun, model)
+log_likelihood(
+  opt_params,
+  const_params = NULL,
+  DF,
+  modelfun,
+  model,
+  LOQ_factor = 2,
+  force_finite = FALSE
+)
 }
 \arguments{
-\item{params}{A named list of log-scaled parameter values}
+\item{opt_params}{A named vector of log-scaled parameter values. When this
+function is the objective function for a numerical optimizer, these are the
+parameters to be optimized.}
 
-\item{DF}{A `data.frame` of Concentration-time data for a given chemical}
+\item{const_params}{A named vector of additional log-scaled parameter values.
+When this function is the objective function for a numerical optimizer,
+these are additional model parameters whose value is to be held constant
+while the other parameters are optimized. Default NULL (meaning that all
+model parameters are supplied in `opt_params`). (If you are calling this
+function directly, you probably want to leave `const_param = NULL` and
+just supply all model parameters in `opt_params`.)}
+
+\item{DF}{A `data.frame` of concentration-time data}
 
 \item{modelfun}{"analytic" to use the analytic model solution, "full" to use
 the full ODE model}
 
-\item{model}{The model to fit, either "1compartment" or "2compartment"
-(other models not implemented for now)}
+\item{model}{The model to fit. Currently, only "flat", "1compartment" or
+"2compartment" models are implemented.}
+
+\item{force_finite}{Logical: Whether to force the function to return a finite
+log-likelihood (e.g., as required by [optimx::optimx()] with method
+'L-BFGS-B'.) Default FALSE, allowing the function to return -Inf for
+infinitely-unlikely parameter combinations. When `force_finite == TRUE`,
+the function will replace -Inf with -999999.}
 }
 \value{
 A log-likelihood value for the data given the parameter values in
-params
+  params
 }
 \description{
-The log-likelihood function used for fitting
+The log-likelihood function (probability of data given model parameters).
 }

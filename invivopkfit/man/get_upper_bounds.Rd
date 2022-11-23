@@ -2,22 +2,28 @@
 % Please edit documentation in R/get_upper_bounds.R
 \name{get_upper_bounds}
 \alias{get_upper_bounds}
-\title{Get upper bounds for fitting model parameters}
+\title{Get upper bounds for estimating model parameters}
 \usage{
 get_upper_bounds(
   fitdata,
-  model,
   par_DF = NULL,
-  digits = 3,
-  scientific = -2,
-  suppress.messages = FALSE
+  model,
+  pool_sigma = FALSE,
+  upper_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
+    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), upper_bound = c(1e+08,
+    10000, 1e+08, 10000, 1, 1e+08, 10000, 10000, 1e+08, 1e+08, 1e+08), upper_bound_msg =
+    "Default"),
+  sigma_upper_from_data = TRUE,
+  Vdist_upper_from_data = TRUE,
+  Vdist_factor = 2,
+  suppress.messages = FALSE,
+  digits = 5,
+  scientific = -3
 )
 }
 \arguments{
 \item{fitdata}{A data.frame: the concentration-time-dose data to be used for
 fitting.}
-
-\item{model}{The name of the model whose parameters are to be estimated.}
 
 \item{par_DF}{Optional: A data.frame as produced by [get_opt_params], with a
 character variable [param_name] containing parameter names, and a logical
@@ -25,6 +31,41 @@ variable [optimize_param] containing TRUE if parameter is to be fitted, and
 FALSE if parameter is to be held constant. Any other variables will be
 ignored. Default NULL, in which case it will be determined by calling
 [get_opt_params].}
+
+\item{model}{The name of the model whose parameters are to be estimated.
+Currently only "flat", "1compartment", or "2compartment" is supported.
+Ignored if `par_DF` is provided.}
+
+\item{pool_sigma}{Logical: Whether to pool all data (estimate only one error
+standard deviation) or not (estimate separate error standard deviations for
+each reference). Default FALSE to estimate separate error SDs for each
+reference. (If `fitdata` only includes one reference, `pool_sigma` will
+have no effect.) Ignored if `par_DF` is provided.}
+
+\item{upper_default}{A `data.frame` with two variables: `param_name`, giving
+the names of all parameters for all models, plus an additional parameter
+"sigma" (representing the upper bound applied to all residual standard
+deviations); `upper_bound`, giving the default upper-bound values for each
+parameter; and `upper_bound_msg`, giving a message about the default upper
+bound values.}
+
+\item{sigma_upper_from_data}{Logical: if TRUE, override the value for "sigma"
+in `upper_default` and instead use either 100 times the median
+concentration, or 2 times the overall standard deviation of concentrations,
+whichever is greater. If FALSE, use the upper bound for "sigma" in
+`upper_default.` Default value is TRUE.}
+
+\item{Vdist_upper_from_data}{Logical: if TRUE, override the value for "Vdist"
+or "V1" in `upper_default`, and instead use `Vdist_factor` times the
+maximum dose in the data, divided by the minimum concentration or LOQ in
+the data. If FALSE, use the upper bound for "Vdist" or "V1" in
+`upper_default`. Default value is TRUE.}
+
+\item{Vdist_factor}{Numeric: If `Vdist_upper_from_data` is TRUE, then
+`Vdist_factor` scales the ratio between the maximum dose and minimum
+concentration to arrive at a theoretical upper bound for the volume of
+distribution ("vdist" or "V1"). Default value is 1. If
+`Vdist_upper_from_data` is FALSE, then `Vdist_factor` has no effect.}
 }
 \value{
 A data.frame: `parDF` with additional variables `upper_bound`
@@ -34,7 +75,7 @@ A data.frame: `parDF` with additional variables `upper_bound`
 }
 \description{
 For a set of model parameters, get the upper bounds for the optimizer (if
-parameter is to be fitted).
+parameter is to be estimated).
 }
 \author{
 Caroline Ring, John Wambaugh, Mitchell Teague

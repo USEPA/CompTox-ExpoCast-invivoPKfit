@@ -39,6 +39,10 @@ fit_all(
   info.col = "info",
   info.default = NULL,
   LOQ_factor = 2,
+  get_starts_args = NULL,
+  get_lower_args = NULL,
+  get_upper_args = NULL,
+  optimx_args = list(method = "L-BFGS-B", control = list(factr = 1e+07, fnscale = -1)),
   suppress.messages = FALSE,
   sig.figs = 4
 )
@@ -148,6 +152,18 @@ created and filled with this value.  Default NULL.}
 
 \item{LOQ_factor}{Numeric. Observations with concentrations less than
 `LOQ_factor * LOQ` will be removed. Default 2.}
+
+\item{get_starts_args}{Any additional arguments to [get_starts()] (other than
+`model` and `fitdata`, which are always passed). Default NULL to accept the
+default arguments for [get_starts()].}
+
+\item{get_lower_args}{Any additional arguments to [get_lower_bounds()] (other
+than `model` and `fitdata`, which are always passed). Default NULL to
+accept the default arguments for [get_lower_bounds()].}
+
+\item{get_upper_args}{Any additional arguments to [get_upper_bounds()] (other
+than `model` and `fitdata`, which are always passed). Default NULL to
+accept the default arguments for [get_upper_bounds()].}
 
 \item{suppress.messages}{Logical: Whether to suppress verbose messages.
 Default FALSE, to be verbose.}

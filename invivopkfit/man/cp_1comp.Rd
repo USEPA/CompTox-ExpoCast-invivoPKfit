@@ -4,29 +4,34 @@
 \alias{cp_1comp}
 \title{Analytical 1-compartment model}
 \usage{
-cp_1comp(time, params, dose, iv.dose)
+cp_1comp(params, time, dose, iv.dose)
 }
 \arguments{
-\item{time}{A vector of times in hours}
+\item{params}{A named list of model parameter values. For either IV or oral
+dosing, this must include `kelim` (elimination rate, 1/h). For IV dosing, it
+must also include `Vdist`. For oral dosing, it must include `kgutabs` (oral
+absorption rate, 1/h), and either `Fgutabs` and `Vdist` (respectively,
+unitless fraction of oral dose that is absorbed, and volume of
+distribution), or `Fgutabs_Vdist` (the ratio of Fgutabs to Vdist).
+`Fgutabs_Vdist` is an alternate parameterization useful for parameter
+estimation when only oral data are available with no IV data, in which case
+only the ratio of `Fgutabs` to `Vdist` is identifiable. if `Fgutabs` and
+`Vdist` are provided along with `Fgutabs_Vdist`, then `Fgutabs_Vdist` will
+not be used.}
 
-\item{params}{A named list of model parameter values. Must include:
-\describe{
-\item{kelim}{Elimination rate, 1/h}
-\item{Vdist}{Volume of distribution, L/kg body weight}}
-For oral administration (\code{iv.dose} FALSE), \code{params} must also include:
-\describe{
-\item{Fgutabs}{Oral bioavailability, unitless fraction}
-\item{kgutabs}{Oral absorption rate, 1/h}}}
+\item{time}{A vector of times in hours.}
 
 \item{dose}{Dose in mg/kg}
 
-\item{iv.dose}{TRUE for single IV bolus dose; FALSE for single oral dose}
+\item{iv.dose}{Logical: TRUE for single IV bolus dose; FALSE for single oral
+dose}
 }
 \value{
-A vector of plasma concentration values corresponding to \code{time}.
+A vector of plasma concentration values corresponding to `time`.
 }
 \description{
-Calculates plasma concentrations according to the analytical solution for the  1-compartment model.
+Calculates plasma concentrations according to the analytical solution for the
+1-compartment model.
 }
 \author{
 Caroline Ring, John Wambaugh

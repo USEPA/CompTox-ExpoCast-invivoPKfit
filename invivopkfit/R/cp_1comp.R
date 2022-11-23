@@ -1,36 +1,29 @@
 #'Analytical 1-compartment model
 #'
-#' Calculates plasma concentrations according to the analytical solution for the  1-compartment model.
+#'Calculates plasma concentrations according to the analytical solution for the
+#'1-compartment model.
 #'
-#'@param params A named list of model parameter values.
-#'
-#'Must include:
-#'\describe{
-#'\item{kelim}{Elimination rate, 1/h}
-#'\item{Vdist}{Volume of distribution, L/kg body weight. Or see below for "Fgutabs_Vdist".}}
-#'
-#'For oral administration (\code{iv.dose} FALSE), \code{params} must also include:
-#'\describe{
-#'\item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for "Fgutabs_Vdist".}
-#'\item{kgutabs}{Oral absorption rate, 1/h}
-#'}
-#'
-#'For oral administration, in lieu of providing "Fgutabs" and "Vdist", you may
-#'instead provide "Fgutabs_Vdist", the ratio of Fgutabs to Vdist (kg body
-#'weight/L). This is an alternate parameterization for cases when Fgutabs and
-#'Vdist are not separately identifiable, i.e. when only oral data are available
-#'with no IV data. if "Fgutabs" and "Vdist" are provided, then "Fgutabs_Vdist"
-#'will not be used.
-#'}
+#'@param params A named list of model parameter values. For either IV or oral
+#'  dosing, this must include `kelim` (elimination rate, 1/h). For IV dosing, it
+#'  must also include `Vdist`. For oral dosing, it must include `kgutabs` (oral
+#'  absorption rate, 1/h), and either `Fgutabs` and `Vdist` (respectively,
+#'  unitless fraction of oral dose that is absorbed, and volume of
+#'  distribution), or `Fgutabs_Vdist` (the ratio of Fgutabs to Vdist).
+#'  `Fgutabs_Vdist` is an alternate parameterization useful for parameter
+#'  estimation when only oral data are available with no IV data, in which case
+#'  only the ratio of `Fgutabs` to `Vdist` is identifiable. if `Fgutabs` and
+#'  `Vdist` are provided along with `Fgutabs_Vdist`, then `Fgutabs_Vdist` will
+#'  not be used.
 #'@param time A vector of times in hours.
 #'@param dose Dose in mg/kg
-#'@param iv.dose Logical: TRUE for single IV bolus dose; FALSE for single oral dose
+#'@param iv.dose Logical: TRUE for single IV bolus dose; FALSE for single oral
+#'  dose
 #'
 #'@return A vector of plasma concentration values corresponding to `time`.
 #'
 #'@author Caroline Ring, John Wambaugh
 #'
-#' @export cp_1comp
+#'@export cp_1comp
 cp_1comp <- function(params, time, dose, iv.dose){
 
 

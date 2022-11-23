@@ -8,9 +8,11 @@ get_starts(
   par_DF = NULL,
   model,
   fitdata,
+  pool_sigma = FALSE,
   starts_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
-    "V1", "Ralphatokelim", "Fbetaofalpha"), start_value = c(1, 0.25, 5.56, 2.19, 1, 1, 2,
-    0.25), start_value_msg = "Default"),
+    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), start_value = c(1, 0.25,
+    5.56, 2.19, 0.5, 1, 0.2, 0.5, 0.5/2.19, 0.51/2.19, 100), start_value_msg = "Default"),
+  sigma_start_from_data = TRUE,
   suppress.messages = FALSE
 )
 }
@@ -30,6 +32,13 @@ fitting.}
 \item{starts_default}{A data.frame with variables `param_name` and
 `start_value`, defining all possible default parameter starting values
 across all models. See Details.}
+
+\item{sigma_start_from_data}{Logical: TRUE means to override the starting
+value for "sigma" in `starts_default` and estimate a starting value as the
+median concentration in the data. FALSE means to keep the starting value
+for "sigma" in `starts_default`. Default TRUE.}
+
+\item{suppress.messages}{Logical: Whether to suppress printing of messages.}
 }
 \value{
 The data.frame `par_DF` with added variables `start_value`,
@@ -49,6 +58,25 @@ Then, the function checks to see if the package [httk] includes the necessary
 TK data to parameterize a 1-compartment model for the chemical (determined by
 `unique(fitdata$DTXSID)`. If so, then it assigns [httk]'s estimates for the
 relevant model parameters.
+
+Finally, the function attempts to roughly estimate parameter starting values
+from the data.
+
+The default `starts_default` `data.frame` is shown below in table form:
+
+| param_name     | start_value | start_value_msg |
+| ---------------| ----------- | --------------- |
+| A              | 1           | Default         |
+| kelim          | 0.25        | Default         |
+| Vdist          | 2.19        | Default         |
+| kgutabs        | 0.25        | Default         |
+| Fgutabs        | 0.5         | Default         |
+| V1             | 1           | Default         |
+| k12            | 0.2         | Default         |
+| k21            | 0.5        | Default         |
+| Fgutabs_Vdist  | 0.5/2.19    | Default         |
+| Fgutabs_Vdist  | 0.5/2.19    | Default         |
+| sigma          | 100         | Default         |
 }
 \author{
 Caroline Ring, John Wambaugh, Mitchell Teague

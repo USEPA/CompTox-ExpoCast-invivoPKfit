@@ -8,13 +8,12 @@ analyze_subset(
   fitdata,
   model,
   modelfun,
-  sigma_ref = TRUE,
-  fun_start = get_starts,
-  fun_lower = get_lower_bounds,
-  fun_upper = get_upper_bounds,
-  fun_start_args = NULL,
-  fun_lower_args = NULL,
-  fun_upper_args = NULL,
+  pool_sigma = FALSE,
+  LOQ_factor = 2,
+  get_starts_args = NULL,
+  get_lower_args = NULL,
+  get_upper_args = NULL,
+  optimx_args = list(method = "L-BFGS-B", control = list(factr = 1e+07, fnscale = -1)),
   suppress.messages = FALSE,
   sig.figs = 5,
   factr = 1e+07
@@ -23,21 +22,112 @@ analyze_subset(
 \arguments{
 \item{fitdata}{A \code{data.frame} containing the set of concentration vs.
 time data to be fitted. See Details for expected variables. See also
-\code{\link{preprocess_data}}.}
+`preprocess_data()`.}
 
 \item{model}{Which general model should be fit for each chemical. Presently,
-only "1compartment" and "2compartment" are implemented.}
+only "flat", "1compartment", and "2compartment" are implemented.}
 
 \item{modelfun}{Either "analytic" or "full" -- whether to fit using the
 analytic solution to the model, or the full ODE model. Presently,
 "analytic" is recommended (because the analytic solution is exact and much
-faster).}
+faster). For `modelfun = 'full'`, only `model = '1compartment'` is
+supported.}
+
+\item{pool_sigma}{Logical: Whether to pool all data (estimate only one error
+standard deviation) or not (estimate separate error standard deviations for
+each reference). Default FALSE to estimate separate error SDs for each
+reference. (If `fitdata` only includes one reference, `pool_sigma` will have
+no effect, because only one error SD would be estimated in the first place.)}
+
+\item{LOQ_factor}{`fitdata$LOQ` will be multiplied by `LOQ_factor` to get the
+effective LOQ. Default `LOQ_factor` is 2.}
+
+\item{get_starts_args}{Any additional arguments to [get_starts()] (other than
+`model` and `fitdata`, which are always passed). Default NULL to accept the
+default arguments for [get_starts()].}
+
+\item{get_lower_args}{Any additional arguments to [get_lower_bounds()] (other
+than `model` and `fitdata`, which are always passed). Default NULL to
+accept the default arguments for [get_lower_bounds()].}
+
+\item{get_upper_args}{Any additional arguments to [get_upper_bounds()] (other
+than `model` and `fitdata`, which are always passed). Default NULL to
+accept the default arguments for [get_upper_bounds()].}
+
+\item{optimx_args}{A named list of additional arguments to
+  [optimx::optimx()], other than `par`, `fn`, `lower`, and `upper`. Default is:
+
+   ```
+    list(
+          "method" = "L-BFGS-B",
+          "control" = list("factr" = 1e7,
+                           "maximize" = TRUE)
+         )
+   ```
+ See documentation for [optimx::optimx()] for arguments and details. Note
+ lower and upper bounds (box constraints) will be supplied; if you want them
+ to be respected, please choose a method that allows box constraints.}
 }
 \description{
 Fit a specified PK model to one set of concentration vs. time data and return
 a set of fitted parameter values.
 }
 \details{
+Typically this function is not called directly by the user, but is called
+from [fit_all], the main fitting function.
+
+This function estimates one set of parameters for a specified PK model, based
+on a set of concentration vs. time data in `fitdata`. `fitdata` is typically
+data for one chemical and one species, but it may include data from more than
+one study and more than one dosing route.
+
+The parameters to be estimated are those defined in
+[get_opt_params()] for the model specified in `model` and `modelfun`:
+
+ - for `model = 'flat'`, the parameter estimated is `A`
+ - for `model = '1compartment'`, the parameters estimated are `Vdist`,
+ `kelim`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist` (see below).
+ - for `model = '2compartment'`, the parameters estimated are `V1`, `kelim`,
+ `k12`, `k21`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist`.
+
+ For 1-compartment and 2-compartment models, `kgutabs` will be estimated from
+ the data only if `fitdata` includes oral dosing data; otherwise it will be
+ set to NA.
+
+ `Fgutabs` will be estimated from the data only if `fitdata` includes both
+ oral and IV data. If `fitdata` includes oral data but not IV data, then
+ `Fgutabs_Vdist` (1-compartment) or `Fgutabs_V1` (2-compartment) will be
+ estimated instead of `Fgutabs` and `Vdist` or `V1` (because only the ratio
+ of `Fgutabs` and `Vdist` is identifiable in that case).
+
+In addition to the model parameters, the log-scale standard deviation of the
+residual errors will be estimated. If `fitdata` includes more than one unique
+reference value (`length(unique(fitdata$Reference))>1`) and `pool_sigma ==
+FALSE`, then a separate log-scale error SD will be estimated for each unique
+reference. These log-scale error SDs will be named following the pattern
+`sigma_ref_ReferenceID`, where `ReferenceID` is one unique value of
+`fitdata$Reference`, coerced to character if necessary. This reflects an
+assumption that all concentration vs. time studies in `fitdata` obey the same
+underlying PK model, but each study may have a different amount of random
+measurement error (analogous to meta-regression with fixed effects).
+
+ Parameters are estimated using [optimx::optimx()] using the 'L-BFGS-B'
+ algorithm by default, to enforce lower and upper bounds on parameters.
+ Parameter starting values are set in [get_starts()]. Parameter lower bounds
+ are set in [get_lower_bounds()]. Parameter upper bounds are set in
+ [get_upper_bounds()].
+
+ The objective function to be maximized is the log-likelihood, defined in
+ [log_likelihood()]. It models the residuals as log-normal. The
+ objective-function gradient is defined analytically in
+ [grad_log_likelihood()].
+
+ Parameters are optimized on the log scale, to reduce scaling issues. This
+ means that parameter starting values and lower/upper bounds are
+ log-transformed before being passed to [optimx::optimx()], so if any
+ starting values or bounds are zero or negative, they will be non-finite when
+ log-transformed, and [optimx::optimx()] will fail with an error.
+
 # Expected variables in \code{fitdata}
 
 \describe{\item{\code{Time}}{Time for each data point}

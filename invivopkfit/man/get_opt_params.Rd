@@ -8,7 +8,7 @@ get_opt_params(
   model,
   fitdata,
   param_names = NULL,
-  sigma_ref = TRUE,
+  pool_sigma = FALSE,
   suppress.messages = FALSE
 )
 }
@@ -23,10 +23,26 @@ dosing).}
 \item{param_names}{Optional: A character vector of parameter names needed by
 the model. Default NULL to automatically determine these from `model` by
 calling [get_model_paramnames].}
+
+\item{pool_sigma}{Logical: Whether to pool all data (estimate only one error
+standard deviation) or not (estimate separate error standard deviations for
+each reference). Default FALSE to estimate separate error SDs for each
+reference. (If `fitdata` only includes one reference, `pool_sigma` will have
+no effect.)}
 }
 \value{
-A named logical vector whose names are `param_names`, indicating
-  whether to fit each model parameter (TRUE) or hold it constant (FALSE).
+A `data.frame` with the following variables:
+- `param_name` Character: the name of each model parameter.
+- `optimize_param` Logical: Whether the parameter is to be
+optimized/estimated from the data (TRUE), or not (FALSE). For example, if
+`model` is '1compartment' and `fitdata` does not contain both oral and IV
+data, then the parameter "Fgutabs" cannot be estimated from the data, so
+`optimize_param` for "Fgutabs" will be FALSE.
+- `use_param` Logical: Whether the parameter gets used in the model at all
+(TRUE) or not (FALSE). For example, if `model` is '1compartment' and
+`fitdata` contains no oral data at all, then for parameter "Fgutabs",
+`use_param` will be FALSE, because the 1-compartment model function for
+IV-only data will not actually use the value for "Fgutabs".
 }
 \description{
 Determine whether to fit (optimize) each model parameter from the data or

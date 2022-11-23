@@ -7,7 +7,11 @@
 get_model_paramnames(model)
 }
 \arguments{
-\item{model}{The name of the model}
+\item{model}{The name of the model. Currently only "flat", "1compartment",
+and "2compartment" are implemented.}
+}
+\value{
+A character vector of parameter names for the specified model.
 }
 \description{
 Get parameter names required by a specified model
