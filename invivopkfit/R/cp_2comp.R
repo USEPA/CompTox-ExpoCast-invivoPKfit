@@ -40,7 +40,7 @@ cp_2comp <- function(params, time, dose, iv.dose)
 {
 
   if(all(c("Fgutabs", "V1") %in% names(params))){
-    params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
+    params$Fgutabs_V1 <- params$Fgutabs/params$V1
   }
 
   #Check for needed params
@@ -70,6 +70,9 @@ cp_2comp <- function(params, time, dose, iv.dose)
     }
   }
 
+  #see https://www.boomer.org/c/p4/c19/c1902.php
+  #for these equations
+
   alpha_beta_sum <- params$kelim + params$k12 + params$k21
   alpha_beta_prod <- params$kelim * params$k21
 
@@ -79,14 +82,18 @@ cp_2comp <- function(params, time, dose, iv.dose)
 
   if (iv.dose){ #for IV dosing
   A <- (dose * (alpha - params$k21)) / (params$V1 * (alpha - beta))
-  B <- (dose * (params$k21 - beta))/(params$V1 * (alpha - beta))
+  B <- (dose * (params$k21 - beta)) / (params$V1 * (alpha - beta))
 
   cp <- A * exp(-alpha * time) + B * exp(-beta * time)
   }else{ #for oral dosing
+
   A <- (params$Fgutabs_V1 * dose * (alpha - params$k21)) / ( (alpha - beta))
+
   B <- (params$Fgutabs_V1 * dose * (params$k21 - beta)) / ((alpha - beta))
-  C <- -(A + B)
-  cp <-  A * exp(-alpha * time) + B * exp(-beta * time) + C * exp(-params$kgutabs * time)
+
+  cp <-  A * exp(-alpha * time) +
+    B * exp(-beta * time) +
+    -(A + B) * exp(-params$kgutabs * time)
   }
 
   return(cp)

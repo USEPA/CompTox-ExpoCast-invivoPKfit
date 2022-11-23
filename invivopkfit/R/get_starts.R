@@ -316,7 +316,7 @@ if(is.null(par_DF)){
       }
 
 
-      #k21, kel, k12
+      #k21, kelim, k12
       if(all(par_DF[c("kelim",
                   "k12",
                   "k21"),
@@ -381,7 +381,7 @@ if(is.null(par_DF)){
         }
         k21 <-( A*beta + B*alpha)/ABsum
         kelim <- (alpha*beta)/k21
-        k12 <- alpha + beta - k21 - kel
+        k12 <- alpha + beta - k21 - kelim
 
         if(k21 >= par_DF["k21", "lower_bound"] &
            k21 <= par_DF["k21", "upper_bound"]){
