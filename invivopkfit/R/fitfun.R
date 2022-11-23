@@ -74,8 +74,8 @@ fitfun <- function(design.times,
                                                        stringsAsFactors=FALSE),
                                             1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
                       out_tmp <- cbind("time" = these.times,
-                                       "Ccompartment" = rep(1e-20, length(these.times)),
-                                       "AUC" = rep(1e-20, length(these.times)))
+                                       "Ccompartment" = rep(NA_real_, length(these.times)),
+                                       "AUC" = rep(NA_real_, length(these.times)))
                       out_tmp
                     })
 

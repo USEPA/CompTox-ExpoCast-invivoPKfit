@@ -87,21 +87,24 @@ log_likelihood <- function(opt_params,
   }
 
   #add 1e-12 to pred
-  #to avoid blowing up log transformation unnecessarily
+  #to avoid blowing up log transformation unnecessarily if it's zero
   #(because concentration could realistically be zero, though not negative)
   DF[, pred:= pred + 1e-12]
+
+  #log-transform predicted values -- suppress warnings about 'NaNs produced'
+  suppressWarnings(DF[, logpred := log(pred)])
 
   #Compute log-normal log-likelihood (LL):
   #For detects: PDF
   DF[!is.na(Value),
                  loglike := dnorm(x = log(Value),
-                       mean = log(pred),
+                       mean = logpred,
                        sd = sigma.ref,
                        log = TRUE)]
   #For non-detets: CDF
   DF[is.na(Value),
                  loglike := pnorm(q = log(LOQ * LOQ_factor),
-                       mean = log(pred),
+                       mean = logpred,
                        sd = sigma.ref,
                        log.p = TRUE)]
 
