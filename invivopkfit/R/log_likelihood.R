@@ -86,9 +86,10 @@ log_likelihood <- function(opt_params,
     DF[, sigma.ref := sigmas]
   }
 
-  #if pred is exactly 0, add 1e-12
-  #to avoid blowing up log transformation
-  DF[pred==0, pred:= 1e-12]
+  #add 1e-12 to pred
+  #to avoid blowing up log transformation unnecessarily
+  #(because concentration could realistically be zero, though not negative)
+  DF[, pred:= pred + 1e-12]
 
   #Compute log-normal log-likelihood (LL):
   #For detects: PDF
