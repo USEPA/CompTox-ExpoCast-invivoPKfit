@@ -67,12 +67,16 @@ auc_2comp <- function(params, time, dose, iv.dose){
       B/beta * (1 - exp(-time*beta))
 
   }else{ #for oral dosing
-    A <- (params$Fgutabs_V1 * dose * (alpha - params$k21)) / ( (alpha - beta))
-    B <- (params$Fgutabs_V1 * dose * (params$k21 - beta)) / ((alpha - beta))
+    A <- (params$kgutabs * params$Fgutabs_V1 * dose * (alpha - params$k21)) /
+      ( (params$kgutabs - alpha) * (alpha - beta))
 
-    auc <- A/alpha * (1 - exp(-time*alpha)) +
-      B/beta * (1 - exp(-time*beta)) +
-      (-A - B)/params$kgutabs * (1 - exp(-time*params$kgutabs))
+    B <- (params$kgutabs * params$Fgutabs_V1 * dose * (params$k21 - beta)) /
+      ( (params$kgutabs - beta) * (alpha - beta))
+
+    auc <- A/alpha - A*exp(-time*alpha)/alpha +
+      B/beta - B*exp(-time*beta)/beta +
+      (-A - B)/params$kgutabs -
+      (-A - B)*exp(-time*params$kgutabs)/params$kgutabs
   }
 
   return(auc)
