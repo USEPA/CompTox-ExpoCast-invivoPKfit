@@ -45,7 +45,14 @@
 #' (TRUE) or not (FALSE). For example, if `model` is '1compartment' and
 #' `fitdata` contains no oral data at all, then for parameter "Fgutabs",
 #' `use_param` will be FALSE, because the 1-compartment model function for
-#' IV-only data will not actually use the value for "Fgutabs".
+#' IV-only data will not use the value for "Fgutabs".
+#'
+#'  By default, `use_param` and `opt_param` will be the same -- for each
+#'  parameter, both `TRUE` or both `FALSE`. However, both variables are retained
+#'  to allow for the possibility of holding one or more parameters constant and
+#'  optimizing the rest (which would be accomplished by setting
+#' `optimize_param  = FALSE` but keeping `use_param = TRUE` for the parameters
+#' to be held constant).
 #'
 #'
 

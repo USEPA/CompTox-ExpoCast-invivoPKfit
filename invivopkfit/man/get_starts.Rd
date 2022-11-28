@@ -12,31 +12,55 @@ get_starts(
   starts_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
     "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), start_value = c(1, 0.25,
     5.56, 2.19, 0.5, 1, 0.2, 0.5, 0.5/2.19, 0.51/2.19, 100), start_value_msg = "Default"),
-  sigma_start_from_data = TRUE,
+  start_from_httk = "all",
+  start_from_data = "all",
   suppress.messages = FALSE
 )
 }
 \arguments{
 \item{par_DF}{Optional: A data.frame as produced by [get_opt_params], with a
 character variable [param_name] containing parameter names, and a logical
-variable [optimize_param] containing TRUE if parameter is to be fitted, and
-FALSE if parameter is to be held constant. Any other variables will be
-ignored. Default NULL, in which case it will be determined by calling
-[get_opt_params].}
+variable [use_param] containing TRUE if parameter is to be fitted, and
+FALSE if parameter is not to be fitted. Optionally, may also contain
+numeric variables `lower_bound` and `upper_bound`, as produced by
+[get_lower_bounds] and [get_upper_bounds], respectively. Default NULL, in
+which case `par_DF` will be determined by calling [get_opt_params]. If
+`par_DF` does not contain `lower_bound` and `upper_bound`, these will be
+added by calling [get_lower_bounds] and [get_upper_bounds].}
 
 \item{model}{The name of the model whose parameters are to be estimated.}
 
-\item{fitdata}{A data.frame: the concentration-time-dose data to be used for
-fitting.}
+\item{fitdata}{A `data.frame` or something that can be coerced to a
+`data.frame`: the concentration-time-dose data to be used for fitting. Must
+have harmonized variable names as produced by [rename_columns].}
 
-\item{starts_default}{A data.frame with variables `param_name` and
-`start_value`, defining all possible default parameter starting values
-across all models. See Details.}
+\item{starts_default}{A `data.frame` with variables `param_name` and
+`start_value`, defining default parameter starting values. For default
+value, see Details. Must include at least all variables relevant to the
+specified model with the dosing routes available in `fitdata` -- i.e.,
+those that would have `use_param == TRUE` in the `data.frame` returned by
+[get_opt_params()] with the specified `model` and `fitdata`.}
 
-\item{sigma_start_from_data}{Logical: TRUE means to override the starting
-value for "sigma" in `starts_default` and estimate a starting value as the
-median concentration in the data. FALSE means to keep the starting value
-for "sigma" in `starts_default`. Default TRUE.}
+\item{start_from_httk}{Character vector: The names of one or more parameters
+whose starting values are to be determined using the function
+[httk::parameterize_1compartment]. Default value is `"all"`, which means
+that starting values for all parameters that *can* be estimated from
+[httk::parameterize_1compartment], *will* be estimated from
+[httk::parameterize_1compartment], so long as the `httk`-derived parameter
+values are within the lower and upper bounds defined by `par_DF$lower` and
+`par_DF$upper`. To suppress estimation of starting parameter values from
+`httk` data and just use the starting values in `starts_default`, set
+`start_from_httk` to NULL, NA, or a zero-length character vector.}
+
+\item{start_from_data}{Character vector: The names of one or more parameters
+whose starting values are to be estimated from the data. Default value is
+`"all"`, which means that starting values for all parameters will be
+estimated from the data, so long as the `httk`-derived parameter
+values are within the lower and upper bounds defined by `par_DF$lower` and
+`par_DF$upper`. To suppress estimation of starting values from data, set
+`start_from_data` to NULL, NA, or a zero-length character vector. If both
+`start_from_httk` and `start_from_data` are `TRUE`, then data-derived
+starting values will override `httk` starting values.}
 
 \item{suppress.messages}{Logical: Whether to suppress printing of messages.}
 }
@@ -51,18 +75,15 @@ parameter is to be fitted) or the value at which to hold the parameter
 constant (if parameter is not to be fitted).
 }
 \details{
+Starting values are estimated in the following way.
+
+# Default starting values
+
 Model parameters are first assigned default starting values according to
 `starts_default`.
 
-Then, the function checks to see if the package [httk] includes the necessary
-TK data to parameterize a 1-compartment model for the chemical (determined by
-`unique(fitdata$DTXSID)`. If so, then it assigns [httk]'s estimates for the
-relevant model parameters.
 
-Finally, the function attempts to roughly estimate parameter starting values
-from the data.
-
-The default `starts_default` `data.frame` is shown below in table form:
+The default `starts_default` `data.frame` is shown below in table format:
 
 | param_name     | start_value | start_value_msg |
 | ---------------| ----------- | --------------- |
@@ -73,10 +94,155 @@ The default `starts_default` `data.frame` is shown below in table form:
 | Fgutabs        | 0.5         | Default         |
 | V1             | 1           | Default         |
 | k12            | 0.2         | Default         |
-| k21            | 0.5        | Default         |
+| k21            | 0.5         | Default         |
 | Fgutabs_Vdist  | 0.5/2.19    | Default         |
-| Fgutabs_Vdist  | 0.5/2.19    | Default         |
+| Fgutabs_V1     | 0.5/2.19    | Default         |
 | sigma          | 100         | Default         |
+
+
+# `httk` 1-compartment model parameterization starting values
+
+Then, for any parameters named in `start_from_httk`, the function checks,
+using [httk::get_cheminfo()], to see if the package [httk] includes the
+necessary TK data to parameterize a 1-compartment model for the chemical
+(determined by `unique(fitdata$DTXSID)`). If so, then it uses
+[httk::parameterize_1comp()] to get [httk]'s parameter estimates, and uses
+them as the starting values for any parameters named in `start_from_httk`.
+Parameters that can be estimated using [httk::parameterize_1comp()] include
+`Vdist`, `kelim`, `kgutabs`, and `Fgutabs`. If `model == '2compartment'`,
+then the `httk` estimate of `Vdist` will be used as the starting value of
+`V1`.
+
+# Data-derived starting values
+
+Finally, for any parameters named in `start_from_data`, the function attempts
+to roughly estimate parameter starting values from the data, with methods
+depending on the model selected in `model` and the dosing routes contained in
+the data in `fitdata`.
+
+## Flat model
+
+A starting value for `A` is estimated as the median concentration in `fitdata`.
+
+## 1-compartment model
+
+`fitdata` is divided into two parts: IV dosing data and PO (oral) dosing
+data. (If only one of the two routes is available, then only the available
+data is used.) Control data are removed (all observations where `Dose == 0`).
+Concentrations are normalized by Dose, then log-transformed.
+
+### IV dosing data available
+
+`Vdist` and `kelim` are estimated using linear regression on
+`log(Value/Dose)` vs. `Time` from the IV data. `kelim` is the negative slope
+of this linear regression; `Vdist` is the intercept, exponentiated to bring
+it back to the natural scale.
+
+### PO dosing data available
+
+`kelim`, `kgutabs`, and `Fgutabs_Vidst` (the ratio of `Fgutabs` to `Vdist`)
+are estimated using the method of residuals on `log(Value/Dose)` vs. `Time`
+from the PO data.
+
+Specifically, the PO data are divided into two parts: "early" and "late"
+phases, naively using the median value of Time as the dividing line.
+
+First, a linear regression is performed on the "late" data. The negative
+slope of the "late" linear regression gives an estimate for `kelim`. The
+intercept of the "late" regression is exponentiated and recorded as `A`.
+
+Then, the "early" data are predicted using the "late" linear
+regression, and the residuals are calculated. A second linear regression is
+performed on the "early" residuals. The negative slope of this second linear
+regression provides an estimate for `kgutabs`. Then, the intercept of the
+late regression, `A`, can be used with the estimates for `kelim` and
+`kgutabs` to calculate an estimate for `Fgutabs_Vdist`:
+
+-  `Fgutabs_Vdist <- A * (kgutab - kelim) / kgutabs`
+
+#### Both PO and IV dosing data available
+
+The final starting value for `kelim` is taken as the average of the IV-based
+estimate and the PO-based estimate (with any NAs removed).
+
+The estimates for `Vdist` (from the IV data) and `Fgutabs_Vdist` (from the PO
+data) are multiplied to produce an estimate for `Fgutabs`.
+
+## 2-compartment model
+
+`fitdata` is divided into two parts: IV dosing data and PO (oral) dosing
+data. (If only one of the two routes is available, then only the available
+data is used.) Control data are removed (all observations where `Dose == 0`).
+Concentrations are normalized by Dose, then log-transformed.
+
+### IV dosing data available
+
+`V1`, `kelim`, `k12` and `k21` are estimated using the method of residuals on
+`log(Value/Dose)` vs. `Time` from the PO data. Specifically, the data are
+divided into "early" and "late" parts at the median value of Time.
+
+First, a
+linear regression is performed on the "late" data. The negative slope of the
+"late" linear regression is recorded as `beta`, and the exponentiated
+intercept as `B`.
+
+Then the "early" data are predicted using the "late" linear
+regression, and the residuals are calculated. A second linear regression is
+performed on the "early" residuals. The negative slope of this second linear
+regression is recorded as `alpha`, and the exponentiated intercept as `A`.
+Then, the parameter starting values are calculated as follows (see
+https://www.boomer.org/c/p4/c19/c1902.php):
+
+-`k21 <- (A * beta + B*alpha)/(A + B)`
+-`kelim <- (alpha * beta)/k21`
+-`k12 <- alpha + beta - k21 - kel`
+-`V1 <- (alpha - k21)/(A * (alpha - beta))`
+
+### PO dosing data available
+
+`kelim`, `k12`, `k21` `kgutabs`, and `Fgutabs_V1` (the ratio of `Fgutabs` to
+`V1`) are estimated using the method of residuals on `log(Value/Dose)` vs.
+`Time` from the PO data. Specifically, the data are divided into three parts:
+"absorption" phase, "early" phase, and "late" phase, naively using the 25th
+percentile of Time as the boundary between "absorption" and "early" phases,
+and the 75th percentile of Time as the boundary between "early" and "late"
+phases.
+
+First, a linear regression is performed on the "late" data. The negative
+slope of the "late" linear regression is recorded as `beta`, and the
+exponentiated intercept as `B`.
+
+Then the "early"-phase data are predicted using the "late" linear regression,
+and the residuals are calculated. A second linear regression is performed on
+the "early" residuals. The negative slope of this "early"-residuals linear
+regression is recorded as `alpha`, and the exponentiated intercept as `A`.
+
+Using `alpha`, `A`, `beta`, and `B`, estimates for `k21`, `kelim`, and `k12` can be made:
+
+- `k21 <- (A * beta + B*alpha) / (A + B)`
+- `kelim <- (alpha * beta) / k21`
+- `k12 <- alpha + beta - k21 - kel`
+
+Finally, the "absorption" phase data are predicted using the "late" linear
+regression, and the residuals are calculated. Then, the "absorption"-phase
+residuals are predicted using the "early"-residuals linear regression, and
+the residuals of the residuals are calculated. A third linear regression is
+performed on these "absorption" phase residuals-of-residuals. The negative
+slope of this third regression provides an estimate for `kgutabs`.
+
+Using the estimates for `k21` and `kgutabs`, along with `A`, `alpha`, and
+`beta`, an estimate can be made for `Fgutabs_V1`.
+
+ - `Fgutabs_V1 <- A * ( (kgutabs - alpha) * (beta - alpha))/( kgutabs * (k21 - alpha) )`
+
+#### Both PO and IV dosing data available
+
+The final starting values for `k21`, `kelim`, and `k12` are taken as the
+average of the IV-based estimates and the PO-based estimates (with any NAs
+removed).
+
+The estimates for `V1` (from the IV data) and `Fgutabs_V1` (from the PO data)
+are multiplied to produce an estimate for `Fgutabs`.
 }
 \author{
 Caroline Ring, John Wambaugh, Mitchell Teague

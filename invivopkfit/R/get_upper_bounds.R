@@ -3,6 +3,22 @@
 #' For a set of model parameters, get the upper bounds for the optimizer (if
 #' parameter is to be estimated).
 #'
+#' The default `upper_default` `data.frame` is shown below in table format:
+#'
+#' | param_name     | upper_bound | upper_bound_msg |
+#' | ---------------| ----------- | --------------- |
+#' | A              | 1e8           | Default         |
+#' | kelim          | 1e4        | Default         |
+#' | Vdist          | 1e8        | Default         |
+#' | kgutabs        | 1e4        | Default         |
+#' | Fgutabs        | 1         | Default         |
+#' | V1             | 1e8           | Default         |
+#' | k12            | 1e4         | Default         |
+#' | k21            | 1e4         | Default         |
+#' | Fgutabs_Vdist  | 1e8    | Default         |
+#' | Fgutabs_V1     | 1e8    | Default         |
+#' | sigma          | 1e8         | Default         |
+#'
 #' @param fitdata A data.frame: the concentration-time-dose data to be used for
 #'   fitting.
 #' @param par_DF Optional: A data.frame as produced by [get_opt_params], with a
@@ -19,12 +35,11 @@
 #'   each reference). Default FALSE to estimate separate error SDs for each
 #'   reference. (If `fitdata` only includes one reference, `pool_sigma` will
 #'   have no effect.) Ignored if `par_DF` is provided.
-#' @param upper_default A `data.frame` with two variables: `param_name`, giving
-#'   the names of all parameters for all models, plus an additional parameter
-#'   "sigma" (representing the upper bound applied to all residual standard
-#'   deviations); `upper_bound`, giving the default upper-bound values for each
-#'   parameter; and `upper_bound_msg`, giving a message about the default upper
-#'   bound values.
+#' @param upper_default A `data.frame` with three variables: `param_name`,
+#'   giving the names of parameters; `upper_bound`, giving the default
+#'   upper-bound values for each parameter; and `upper_bound_msg`, giving a
+#'   message about the default upper bound values. See Details for default
+#'   value.
 #' @param sigma_upper_from_data Logical: if TRUE, override the value for "sigma"
 #'   in `upper_default` and instead use either 100 times the median
 #'   concentration, or 2 times the overall standard deviation of concentrations,

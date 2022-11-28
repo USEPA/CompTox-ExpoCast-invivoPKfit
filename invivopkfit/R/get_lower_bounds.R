@@ -3,6 +3,22 @@
 #' For a set of model parameters, get the lower bounds for the optimizer (if
 #' parameter is to be estimated).
 #'
+#' The default `lower_default` `data.frame` is shown below in table format:
+#'
+#' | param_name     | lower_bound | lower_bound_msg |
+#' | ---------------| ----------- | --------------- |
+#' | A              | 1e-8           | Default         |
+#' | kelim          | 1e-4        | Default         |
+#' | Vdist          | 1e-8        | Default         |
+#' | kgutabs        | 1e-4        | Default         |
+#' | Fgutabs        | 1e-8         | Default         |
+#' | V1             | 1e-8           | Default         |
+#' | k12            | 1e-4         | Default         |
+#' | k21            | 1e-4         | Default         |
+#' | Fgutabs_Vdist  | 1e-8    | Default         |
+#' | Fgutabs_V1     | 1e-8    | Default         |
+#' | sigma          | 1e-8         | Default         |
+#'
 #' @param fitdata A data.frame: the concentration-time-dose data to be used for
 #'   fitting.
 #' @param par_DF Optional: A data.frame as produced by [get_opt_params], with a
@@ -19,6 +35,10 @@
 #'   each reference). Default FALSE to estimate separate error SDs for each
 #'   reference. (If `fitdata` only includes one reference, `pool_sigma` will
 #'   have no effect.) Ignored if `par_DF` is provided.
+#' @param lower_default  A `data.frame` with three variables: `param_name`, giving
+#'   the names of parameters; `lower_bound`, giving the default lower-bound values for each
+#'   parameter; and `lower_bound_msg`, giving a message about the default lower
+#'   bound values. See Details for default value.
 #' @return A data.frame: `parDF` with additional variables `lower_bound`
 #'   (numeric, containing the lower bound for each parameter) and
 #'   `lower_bound_msg` (character, containing a brief message explaining how the
