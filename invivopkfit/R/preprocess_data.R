@@ -5,11 +5,10 @@
 #' # Preprocessing steps
 #'
 #' This function does the following things in the following order, and is
-#' verbose about it unless told otherwise (by setting `suppress.messages =
-#' FALSE`):
+#' verbose about it unless told otherwise (by setting `suppress.messages = FALSE`):
 #'
 #' - Renames columns to the standard names that invivoPKfit uses internally, and
-#' adds any missing columns. See [rename_columns].
+#' adds any missing columns. See [rename_columns()].
 #' - Converts concentrations to numeric, if they are not already.
 #' - Converts doses to numeric, if they are not already.
 #' - Converts times to numeric, if they are not already.

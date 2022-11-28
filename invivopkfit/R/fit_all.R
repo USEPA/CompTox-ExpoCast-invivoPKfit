@@ -1,7 +1,6 @@
 #' Main fitting function
 #'
-#' Fits parameters of a specified model to concentration-time data given in
-#' data.set
+#' Fits parameters of a specified model to concentration-time data.
 #'
 #' @param data.set A \code{data.frame} of concentration-time data. Preferably
 #'   \code{pkdataset_nheerlcleaned} or \code{pkdataset_nheerlorig}.

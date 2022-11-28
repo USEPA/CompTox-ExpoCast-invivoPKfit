@@ -25,12 +25,12 @@ get_upper_bounds(
 \item{fitdata}{A data.frame: the concentration-time-dose data to be used for
 fitting.}
 
-\item{par_DF}{Optional: A data.frame as produced by [get_opt_params], with a
-character variable [param_name] containing parameter names, and a logical
-variable [optimize_param] containing TRUE if parameter is to be fitted, and
+\item{par_DF}{Optional: A data.frame as produced by [get_opt_params()], with a
+character variable `param_name` containing parameter names, and a logical
+variable `optimize_param` containing TRUE if parameter is to be fitted, and
 FALSE if parameter is to be held constant. Any other variables will be
 ignored. Default NULL, in which case it will be determined by calling
-[get_opt_params].}
+[get_opt_params()].}
 
 \item{model}{The name of the model whose parameters are to be estimated.
 Currently only "flat", "1compartment", or "2compartment" is supported.

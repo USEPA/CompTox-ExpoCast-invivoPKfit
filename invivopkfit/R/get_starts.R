@@ -175,19 +175,19 @@
 #'
 #'
 #'
-#' @param par_DF Optional: A data.frame as produced by [get_opt_params], with a
-#'   character variable [param_name] containing parameter names, and a logical
-#'   variable [use_param] containing TRUE if parameter is to be fitted, and
-#'   FALSE if parameter is not to be fitted. Optionally, may also contain
+#' @param par_DF Optional: A data.frame as produced by [get_opt_params()], with
+#'   a character variable `param_name` containing parameter names, and a logical
+#'   variable `use_param` containing `TRUE` if parameter is to be fitted, and
+#'   `FALSE` if parameter is not to be fitted. Optionally, may also contain
 #'   numeric variables `lower_bound` and `upper_bound`, as produced by
-#'   [get_lower_bounds] and [get_upper_bounds], respectively. Default NULL, in
-#'   which case `par_DF` will be determined by calling [get_opt_params]. If
-#'   `par_DF` does not contain `lower_bound` and `upper_bound`, these will be
-#'   added by calling [get_lower_bounds] and [get_upper_bounds].
+#'   [get_lower_bounds()] and [get_upper_bounds()], respectively. Default NULL,
+#'   in which case `par_DF` will be determined by calling [get_opt_params()]. If
+#'   `par_DF` does not contain variables `lower_bound` and `upper_bound`, these
+#'   will be added by calling [get_lower_bounds()] and [get_upper_bounds()].
 #' @param model The name of the model whose parameters are to be estimated.
 #' @param fitdata A `data.frame` or something that can be coerced to a
 #'   `data.frame`: the concentration-time-dose data to be used for fitting. Must
-#'   have harmonized variable names as produced by [rename_columns].
+#'   have harmonized variable names as produced by [rename_columns()].
 #' @param starts_default A `data.frame` with variables `param_name` and
 #'   `start_value`, defining default parameter starting values. For default
 #'   value, see Details. Must include at least all variables relevant to the

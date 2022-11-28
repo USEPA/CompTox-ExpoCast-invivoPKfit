@@ -1,3 +1,92 @@
+#' Produce data with harmonized variable names.
+#'
+#' Renames data to use harmonized variable names.
+#'
+#' Variables will be renamed according to the following table:
+#'
+#' | Old name | New name | Definition |
+#' | -------- | -------- | ----------------------|
+#' | `compound.col` | "Compound" | Compound name |
+#' | `cas.col` | "CAS" | CASRN |
+#' | `reference.col` | "Reference" | Reference identifier |
+#' | `species.col` | "Species" | Species name |
+#' | `species.weight.col` | "Species.Weight" | Species-specific body weight |
+#' | `species.weight.units.col` | "Species.Weight.Units" | Units of species-specific body weight |
+#' | `dose.col` | "Dose" | Administered dose |
+#' | `time.col` | "Time" | Time of each observation |
+#' | `time.units.col` | "Time.Units" | Units of times |
+#' |`media.col` | "Media" | Medium in which concentration was observed (e.g. "plasma" or "blood")
+#' | `media.units.col` | "Media.Units" | Units of media (e.g. "harmonized") |
+#' | `value.col` | "Value" | Observed concentrations |
+#' | `units.col` | "Units" | Units of observed concentrations |
+#' | `route.col` | "Route" | Route of dose administration (e.g. "iv" or "po") |
+#' | `source.col` | "Source" | Source identifier (may be the same as reference identifier) |
+#' | `loq.col` | "LOQ" | Limit of quantification for each observed concentration |
+#' | `subject.col` | "Subject" | Subject identifier, if available (e.g. individual animal ID) |
+#' | `info.col` | "Info" | Any other information for each observation |
+#'
+#' @param data.set A \code{data.frame} of concentration-time data.
+#' @param compound.col Column name in \code{data.set} that identifies chemical
+#'   compound. Default "Compound".
+#' @param cas.col Column name in \code{data.set} to identify CASRN.
+#'   Default"CAS".
+#' @param reference.col Column name in \code{data.set} to identify reference.
+#'   Default "Reference".
+#' @param species.col Column name in \code{data.set} to identify species.
+#'   Default "Species".
+#' @param species.default If no species column exists in \code{data.set}, one
+#'   will be created and filled with this value.  Default NULL.
+#' @param species.weight.col Column name in \code{data.set} to identify species
+#'   weight. Default "Species.Weight".
+#' @param species.weight.units.col Column name in \code{data.set} to identify
+#'   species weigh units. Default"Species.Weight.Units".
+#' @param species.weight.units.default If no species weight units column exists
+#'   in \code{data.set}, one will be created and filled with this value. Default
+#'   NULL.
+#' @param dose.col Column name in \code{data.set} to identify dose. Default
+#'   "Dose".
+#' @param time.col Column name in \code{data.set} to identify time. Default
+#'   "Time".
+#' @param time.units.col Column name in \code{data.set} to identify time units.
+#'   Default "Time.Units."
+#' @param time.units.default If no time units column exists in \code{data.set},
+#'   one will be created and filled with this value.  Default NULL.
+#' @param media.col Column name in \code{data.set} to identify media. Default
+#'   "Media".
+#' @param media.units.col Column name in \code{data.set} to identify media
+#'   units. Default "Media.Units".
+#' @param media.units.default If no media units column exists in
+#'   \code{data.set}, one will be created and filled with this value.  Default
+#'   NULL.
+#' @param value.col Column name in \code{data.set} to identify value. Default
+#'   "Value".
+#' @param units.col Column name in \code{data.set} to identify units. Default
+#'   "Units".
+#' @param units.default If no units column exists in \code{data.set}, one will
+#'   be created and filled with this value.  Default NULL.
+#' @param route.col Column name in \code{data.set} to identify route of
+#'   administration. Default "Route".
+#' @param route.default If no route column exists in \code{data.set}, one will
+#'   be created and filled with this value.  Default NULL.
+#' @param source.col Column name in \code{data.set} to identify source. Default
+#'   "Source."
+#' @param source.default If no source column exists in \code{data.set}, one will
+#'   be created and filled with this value.  Default NULL.
+#' @param loq.col Column name in \code{data.set} to identify LOQ. Default "LOQ".
+#' @param loq.default If no LOQ column exists in \code{data.set}, one will be
+#'   created and filled with this value.  Default NULL.
+#' @param subject.col Column name in \code{data.set} to identify subject.
+#'   Default "Subject."
+#' @param subject.default If no subject column exists in \code{data.set}, one
+#'   will be created and filled with this value.  Default NULL.
+#' @param info.col Column name in \code{data.set} to serve as info column.
+#'   Default "Info".
+#' @param info.default If no info column exists in \code{data.set}, one will be
+#'   created and filled with this value.  Default NULL.
+#'
+#' @return A `data.frame` which is `data.set` with variables renamed to
+#'   harmonized names.
+#' @author John Wambaugh, Chris Cook
 
 rename_columns <- function(data.set,
                            compound.col,
@@ -41,6 +130,8 @@ rename_columns <- function(data.set,
 
                            info.col,
                            info.default) {
+
+  data.set <- as.data.frame(data.set)
 
   ### if default argument filled, create column and use default as value
   if(!is.null(species.default)) {
@@ -110,7 +201,8 @@ rename_columns <- function(data.set,
   }
 
   ### Set column order of data.table to cols vector
-  data.set <- data.table::setcolorder(data.set, cols)
+  data.set <- data.set[, cols]
+  #data.set <- data.table::setcolorder(data.set, cols)
 
   # Standardize the column names:
   compound.col <- "Compound"
