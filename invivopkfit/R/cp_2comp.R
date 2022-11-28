@@ -87,9 +87,11 @@ cp_2comp <- function(params, time, dose, iv.dose)
   cp <- A * exp(-alpha * time) + B * exp(-beta * time)
   }else{ #for oral dosing
 
-  A <- (params$Fgutabs_V1 * dose * (alpha - params$k21)) / ( (alpha - beta))
+  A <- (params$kgutabs * params$Fgutabs_V1 * dose * (alpha - params$k21)) /
+    ( (params$kgutabs - alpha) * (alpha - beta))
 
-  B <- (params$Fgutabs_V1 * dose * (params$k21 - beta)) / ((alpha - beta))
+  B <- (params$kgutabs * params$Fgutabs_V1 * dose * (params$k21 - beta)) /
+    ( (params$kgutabs - beta) * (alpha - beta))
 
   cp <-  A * exp(-alpha * time) +
     B * exp(-beta * time) +
