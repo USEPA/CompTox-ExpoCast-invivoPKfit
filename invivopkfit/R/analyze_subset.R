@@ -237,9 +237,12 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
     out_DF$AIC <-  NA_real_
 
     #include a message about why no fit was done
-    msg <- paste("For chemical ", this.dtxsid, " there were ", length(opt_params),
+    msg <- paste("For chemical ", this.dtxsid, " there were ",
+                par_DF[, sum(optimize_param)],
                  " parameters and only ",
-                 nrow(fitdata), " data points. Optimization aborted.", sep = "")
+                 nrow(fitdata),
+                " data points. Optimization aborted.",
+                sep = "")
     out_DF$message <- msg
     out_DF$flag <- ""
     #Record the unique routes in this dataset
@@ -265,12 +268,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                        "start_value"])
   names(opt_params) <- par_DF[par_DF$optimize_param %in% TRUE,
                               "param_name"]
-
-  #params to be held constant
-  # const_params <- log(par_DF[!(par_DF$optimize_param %in% TRUE),
-  #                       "start_value"])
-  # names(const_params) <- par_DF[!(par_DF$optimize_param %in% TRUE),
-  #                               "param_name"]
 
   #param lower bounds (only on params to be optimized)
   lower_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
@@ -433,24 +430,26 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
     #then redo optimization
 
-    #perturb starting values by up to 20% in either direction,
-    #so long as they are within the bounds
-    opt_params_new <- runif(n = length(opt_params),
-                        min = pmax(log(exp(opt_params) * 0.8),
-                                   log(exp(lower_params) * 1.1)),
-                        max = pmin(log(exp(opt_params) * 1.2),
-                                   log(exp(upper_params) * 0.9)))
-    names(opt_params_new) <- names(opt_params)
-    opt_params <- opt_params_new
+    #perturb starting values by up to 50% in either direction,
+    #so long as they are within 5% of the bounds
 
-    # #bump up starting values for log-scale sigmas by 1
-    # opt_params[grepl(x = names(opt_params),
-    #                  pattern = "sigma")] <- opt_params[grepl(x = names(opt_params),
-    #                                                           pattern = "sigma")]+1
-    #if anything snapped to the bounds,
-    #tighten log-scale bounds by 0.1
-    # opt_params[opt_params <= lower_params] <- lower_params[opt_params <= lower_params] + 0.1
-    # opt_params[opt_params >= upper_params] <- upper_params[opt_params >= upper_params] - 0.1
+    opt_params_new <- runif(n = length(opt_params),
+                        min = pmax(exp(opt_params) * 0.5,
+                                   exp(lower_params) * 1.05),
+                        max = pmin(exp(opt_params) * 1.5,
+                                   exp(upper_params) * 0.95))
+    names(opt_params_new) <- names(opt_params)
+
+    #update the starting points in par_DF so they will be recorded
+    par_DF[match(names(opt_params),
+                 par_DF$param_name),
+           "start_value"] <- exp(opt_params)
+
+    #params to be optimized
+    opt_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
+                             "start_value"])
+    names(opt_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+                                "param_name"]
 
 
     optimx_args$control$factr <- optimx_args$control$factr / 10 #reducing factr by 10 (requiring closer convergence)
@@ -458,7 +457,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
     if (!suppress.messages){
       message(paste0("One or more parameters has NaN standard deviation. ",
                      "Repeating optimization with smaller convergence tolerance ",
-                     "and tighter bounds."
+                     "and perturbed starting values."
                      ))
       message(paste0("Estimating parameters ",
                      paste(names(opt_params), collapse = ", "),
@@ -477,8 +476,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                             collapse = ", "),
                       sep = ""))
     }
-    #use general-purpose optimizer to optimize 1-compartment params to fit data
-    #optimize by maximizing log-likelihood
+
     all_data_fit <-  do.call(optimx::optimx,
                                       args = c(
                                         #
@@ -486,17 +484,17 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                                              fn = log_likelihood,
                                              lower = lower_params,
                                              upper = upper_params),
-                                        #fn, gr, method, and control
+                                        #method and control
                                         optimx_args,
                                         #... additional args to log_likelihood and grad_log_likelihood
                                         list(
-                                          # const_params = const_params,
                                           DF = fitdata,
                                           modelfun = modelfun,
                                           model = model,
                                           LOQ_factor = LOQ_factor,
                                           force_finite = all(
-                                            optimx_args$method %in% "L-BFGS-B")
+                                            optimx_args$method %in% "L-BFGS-B"
+                                            )
                                           )
                                         )
     )
