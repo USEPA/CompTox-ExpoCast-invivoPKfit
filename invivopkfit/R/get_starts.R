@@ -74,7 +74,7 @@
 #' from the PO data.
 #'
 #' Specifically, the PO data are divided into two parts: "early" and "late"
-#' phases, naively using the median value of Time as the dividing line.
+#' phases, using the time of peak concentration as the dividing line.
 #'
 #' First, a linear regression is performed on the "late" data. The negative
 #' slope of the "late" linear regression gives an estimate for `kelim`. The
@@ -108,7 +108,8 @@
 #'
 #' `V1`, `kelim`, `k12` and `k21` are estimated using the method of residuals on
 #' `log(Value/Dose)` vs. `Time` from the PO data. Specifically, the data are
-#' divided into "early" and "late" parts at the median value of Time.
+#' divided into "early" and "late" parts, with the dividing line being the
+#' "elbow point" of the data (using [akmedoids::elbow_point()]).
 #'
 #' First, a
 #' linear regression is performed on the "late" data. The negative slope of the
@@ -127,15 +128,18 @@
 #' -`k12 <- alpha + beta - k21 - kel`
 #' -`V1 <- (alpha - k21)/(A * (alpha - beta))`
 #'
+#' In case there are not enough data available in each phase to perform regression,
+#'
 #' ### PO dosing data available
 #'
 #' `kelim`, `k12`, `k21` `kgutabs`, and `Fgutabs_V1` (the ratio of `Fgutabs` to
 #' `V1`) are estimated using the method of residuals on `log(Value/Dose)` vs.
 #' `Time` from the PO data. Specifically, the data are divided into three parts:
-#' "absorption" phase, "early" phase, and "late" phase, naively using the 25th
-#' percentile of Time as the boundary between "absorption" and "early" phases,
-#' and the 75th percentile of Time as the boundary between "early" and "late"
-#' phases.
+#' "absorption" phase, "early" phase, and "late" phase. The time of peak
+#' concentration is taken as the end of the "absorption" phase data. Then, for
+#' all data after the time of peak concentration, the "elbow" point is found
+#' (using [akmedoids::elbow_point()]) and used as the dividing line between
+#' early and late-phase data.
 #'
 #' First, a linear regression is performed on the "late" data. The negative
 #' slope of the "late" linear regression is recorded as `beta`, and the
@@ -163,6 +167,9 @@
 #' `beta`, an estimate can be made for `Fgutabs_V1`.
 #'
 #'  - `Fgutabs_V1 <- A * ( (kgutabs - alpha) * (beta - alpha))/( kgutabs * (k21 - alpha) )`
+#'
+#'  In case there is not enough data available in each phase to perform
+#'  regression, the default or `httk`-derived starting values are used.
 #'
 #' #### Both PO and IV dosing data available
 #'
@@ -368,10 +375,6 @@ if(is.null(par_DF)){
 
     #Try roughly estimating parameters from data
 
-
-
-
-
     #if model is flat, take A to be the average concentration
     if(model %in% "flat"){
       A <- mean(fitdata$Value, na.rm = TRUE)
@@ -383,8 +386,12 @@ if(is.null(par_DF)){
     }
 
     #Split into IV and oral data
-    tmpdat <- subset(fitdata, !is.na(Value) &
+    tmpdat <- subset(fitdata,
                        Dose > 0)
+
+    #substitute NA values with LOQ/2
+    tmpdat[is.na(tmpdat$Value), "Value"] <- tmpdat[is.na(tmpdat$Value),
+                                                   "LOQ"]/2
 
     iv_data <- tmpdat[tmpdat$Route %in% "iv", ] #will be empty if no IV data
     po_data <- tmpdat[tmpdat$Route %in% "po", ] #will be empty if no PO data
@@ -396,13 +403,20 @@ if(is.null(par_DF)){
     iv_data$ValueDose <- iv_data$Value / iv_data$Dose
     po_data$ValueDose <- po_data$Value / po_data$Dose
 
+    #log transform
+    iv_data$logValueDose <- log(iv_data$ValueDose)
+    po_data$logValueDose <- log(po_data$ValueDose)
+
     if(model %in% "1compartment"){
       if(has_iv %in% TRUE){
         #get Vdist, kelim from a linear regression of log (Value/Dose) vs. Time
-        Vdist_iv <- exp(coef(lm(log(ValueDose) ~ Time,
-                                data = iv_data))[1])
-        kelim_iv <- -coef(lm(log(ValueDose) ~ Time,
-                             data = iv_data))[2]
+        lm_iv <- lm(logValueDose ~ Time,
+                    data = iv_data)
+        # Vdist_iv <- exp(coef(lm_iv)[1])
+        kelim_iv <- -coef(lm_iv)[2]
+        #get Vdist as median Value/Dose at min time
+        Vdist_iv <- median(iv_data[iv_data$Time == min(iv_data$Time),
+                                 "ValueDose"])
 
         #update par_DF, checking if estimates are within bounds
         par_DF <- assign_start(param_name = "Vdist",
@@ -420,19 +434,44 @@ if(is.null(par_DF)){
 
       if(has_po %in% TRUE){
         #method of residuals:
-        #split data into early and late parts
+        #split data into early and late parts,
+        #using the time of peak concentration as the dividing line
+
+        #to get time of peak concentration:
+        #get average log conc/dose by time point
+        Cavg <- tapply(po_data$logValueDose,
+                       po_data$Time,
+                       FUN = function(x) mean(x, na.rm = TRUE))
+        #get corresponding time points for the averages
+        Cavg_times <- as.numeric(as.factor(po_data$Time))
+
+        Cpeak <- max(Cavg, na.rm = TRUE) #peak average conc
+        tpeak <- Cavg_times[Cavg == Cpeak] #time of peak conc
         po_early <- subset(po_data,
-                           Time <= median(Time))
+                           Time <= tpeak)
         po_late <- subset(po_data,
-                          Time > median(Time))
+                          Time >= tpeak)
+
+        #check whether we have enough early & late data to do regression
+        #if not, then drop back to using what's already been assigned
+        if(nrow(po_early) >= 2 &
+           nrow(po_late) >= 2){
+
         #linear regression of late data
-        lm_late <- lm(log(ValueDose) ~ Time, data = po_late)
+        lm_late <- lm(logValueDose ~ Time, data = po_late)
+        #This regression should predict Cpeak or higher at tpeak --
+        #if it does not, then re-do it just using Cpeak and C at tmax
+        if(predict(lm_late, newdata = data.frame(Time = tpeak)) < Cpeak){
+          lm_late <- lm(logValueDose ~ Time,
+                        data = rbind(subset(po_late, Time == max(Time)),
+                                     subset(po_data, Value == Cpeak)))
+        }
         #kelim is negative slope of late data
-        kelim_po <--coef(lm_late)[2]
+        kelim_po <- -coef(lm_late)[2]
         A_Dose_po <- exp(coef(lm_late)[1]) #intercept -- use later to get Fgutabs/Vdist
         #log-scale residuals
-        po_early$logresid <- log(po_early$ValueDose) -
-          predict(lm_late, newdata = po_early)
+        po_early$logresid <- predict(lm_late, newdata = po_early) -
+          log(po_early$ValueDose)
         #regress log residuals on Time again
         lm_resid <- lm(logresid ~ Time,
                        data = po_early)
@@ -489,6 +528,7 @@ if(is.null(par_DF)){
                                  msg = "Method of residuals on PO data")
 
         } #end if(has_iv %in% TRUE)/else
+        } #end if(nrow(po_early)>=2 & nrow(po_late) >= 2)
       } #end if(has_po %in% TRUE)
     } #end if(model %in% "1compartment")
 
@@ -500,18 +540,28 @@ if(is.null(par_DF)){
         #get alpha, beta, A, and B from method of residuals
         #see https://www.boomer.org/c/p4/c19/c1903.php
         #split IV data into early and late parts
+        #by doing linear regression on an expanding window of points, working backwards from max time
+        #find the dividing line between early and late as the "elbow" point
+        elbow_time <- tryCatch(akmedoids::elbow_point(iv_data$Time,
+                                             iv_data$logValueDose)$x,
+                               error = function(err){
+                                 #if akmedoids::elbow_point() does not work
+                                 median(iv_data$Time)
+                               })
         iv_early <- subset(iv_data,
-                           Time <= median(Time))
+                           Time <= elbow_time)
         iv_late <- subset(iv_data,
-                          Time > median(Time))
+                          Time > elbow_time)
+
+        if(nrow(iv_early) >= 2 &
+           nrow(iv_late)>= 2){
         #linear regression of late data gives beta, B/Dose
-        lm_late <- lm(log(ValueDose) ~ Time, data = iv_late)
+        lm_late <- lm(logValueDose ~ Time, data = iv_late)
         beta_iv <- -coef(lm_late)[2]
         B_Dose_iv <- exp(coef(lm_late)[1])
 
         #log-scale residuals
-        iv_early$logresid <- log(iv_early$ValueDose) -
-          predict(lm_late, newdata = iv_early)
+        iv_early$logresid <-  iv_early$logValueDose - predict(lm_late, newdata = iv_early)
         #regress log residuals on Time again
         lm_resid <- lm(logresid ~ Time,
                        data = iv_early)
@@ -550,36 +600,74 @@ if(is.null(par_DF)){
                                par_DF = par_DF,
                                start_from = start_from_data,
                                msg = "Method of residuals on IV data")
+        }else{ #if not enough data to regress, can at least estimate V1 as 1/ValueDose at time 0
+          V1_iv <- 1/mean(iv_data[iv_data$Time == min(iv_data$Time),
+                                  "ValueDose"],
+                          na.rm = TRUE)
+          par_DF <- assign_start(param_name = "V1",
+                                 param_value = V1_iv,
+                                 par_DF = par_DF,
+                                 start_from = start_from_data,
+                                 msg = "1/(avg Value/Dose at min time)")
+          k21_iv <- numeric(0)
+          k12_iv <- numeric(0)
+          kel_iv <- numeric(0)
+
+        } #end if(nrow(iv_early) >= 2 & nrow(iv_late)>= 2)/else{}
       } #end  if(has_iv %in% TRUE)
 
       if(has_po %in% TRUE){
         #run method of residuals twice to get kgutabs, alpha, beta, A, and B
         #this time, split the data into three parts:
         #absorption phase, early phase, and late phase.
-        #Naively, just split time into tertiles.
-        po_abs <- subset(po_data, Time < quantile(Time, 0.25))
-        po_early <- subset(po_data, Time >= quantile(Time, 0.25) &
-                             Time <quantile(Time, 0.75))
-        po_late <- subset(po_data, Time >= quantile(Time, 0.75))
+        #absorption phase ends when peak concentration is achieved:
+        #to get time of peak concentration:
+        #get average log conc/dose by time point
+        Cavg <- tapply(po_data$logValueDose,
+                       po_data$Time,
+                       FUN = function(x) mean(x, na.rm = TRUE))
+        #get corresponding time points for the averages
+        Cavg_times <- as.numeric(names(Cavg))
 
+        Cpeak <- max(Cavg, na.rm = TRUE) #peak average conc
+        tpeak <- Cavg_times[Cavg == Cpeak] #time of peak conc
+
+        po_abs <- subset(po_data, Time <= tpeak)
+
+        po_nonabs <- subset(po_data, Time > tpeak)
+
+        #find the dividing line between early and late as the "elbow" point
+        elbow_time <- tryCatch(akmedoids::elbow_point(po_nonabs$Time,
+                                           po_nonabs$logValueDose)$x,
+                               error = function(err){
+                                 #if akmedoids::elbow_point() does not work
+                                 median(po_nonabs$Time)
+                               })
+
+        po_early <- subset(po_nonabs, Time < elbow_time)
+        po_late <- subset(po_nonabs, Time >= elbow_time)
+
+        if(nrow(po_early) >= 2 &
+           nrow(po_late) >= 2 &
+           nrow(po_abs) >= 2){
         #linear regression of late data gives beta, B/Dose
-        lm_late <- lm(log(ValueDose) ~ Time, data = po_late)
+        lm_late <- lm(logValueDose ~ Time, data = po_late)
         beta_po <- -coef(lm_late)[2]
         B_Dose_po <- exp(coef(lm_late)[1])
 
         #residuals for early data
-        po_early$logresid <- log(po_early$ValueDose) -
-          predict(lm_late, newdata = po_early)
+        po_early$logresid <- predict(lm_late, newdata = po_early) -
+          log(po_early$ValueDose)
         #linear regression of residuals gives alpha, A/Dose
-        lm_early_resid <- lm(logresid ~ Time,
+        lm_resid_early <- lm(logresid ~ Time,
                        data = po_early)
         alpha_po <- -coef(lm_resid_early)[2]
         A_Dose_po <- exp(coef(lm_resid_early)[1])
 
         #residuals for absorption phase
-        po_abs$logresid <- log(po_abs$ValueDose) -
+        po_abs$logresid <- -(log(po_abs$ValueDose) -
           predict(lm_late, newdata = po_abs) -
-          predict(lm_resid_early, newdata = po_abs)
+          predict(lm_resid_early, newdata = po_abs))
         #linear regression of residuals gives kgutabs
         lm_resid_abs <- lm(logresid ~ Time,
                        data = po_abs)
@@ -587,7 +675,7 @@ if(is.null(par_DF)){
 
         #get k21, k12, kel from A, B, alpha, beta
         #source: https://www.boomer.org/c/p4/c19/c1903.php
-        k21_po <- (A_Dose_po * beta_po + B_Dose_po*alpha_po) / (A_dose_po + B_Dose_po)
+        k21_po <- (A_Dose_po * beta_po + B_Dose_po*alpha_po) / (A_Dose_po + B_Dose_po)
         kel_po <- (alpha_po * beta_po) / k21_po
         k12_po <- alpha_po + beta_po - k21_po - kel_po
 
@@ -628,6 +716,7 @@ if(is.null(par_DF)){
           par_DF <- assign_start(param_name = "kelim",
                                  param_value = kel_avg,
                                  par_DF = par_DF,
+                                 start_from = start_from_data,
                                  msg = "Avg of method of residuals on PO and IV data")
           k12_avg <- mean(c(k12_iv,
                             k12_po),
@@ -635,6 +724,7 @@ if(is.null(par_DF)){
           par_DF <- assign_start(param_name = "k12",
                                  param_value = k12_avg,
                                  par_DF = par_DF,
+                                 start_from = start_from_data,
                                  msg = "Avg of method of residuals on PO and IV data")
         }else{ #if no IV data, only PO data
           #k21, kelim, k12:
@@ -657,19 +747,22 @@ if(is.null(par_DF)){
                                  start_from = start_from_data,
                                  msg = "Method of residuals on PO data")
         } #end if(has_iv %in% TRUE)/else
+        } #end if nrow... >= 2
       } #end if(has_po %in% TRUE)
     } #end if(model %in% "2compartment")
 
 
     #sigma: Assign starting value as the median concentration
   TRYSIGMA <- stats::median(fitdata$Value, na.rm = TRUE)
-  par_DF <- assign_start(param_name = grep(x = par_DF$param_name,
-                                           pattern= "sigma",
-                                           value = TRUE),
+  for(this_sigma in grep(x = par_DF$param_name,
+                         pattern= "sigma",
+                         value = TRUE)){
+  par_DF <- assign_start(param_name = this_sigma,
                          param_value = TRYSIGMA,
                          msg = "Median concentration",
                          par_DF = par_DF,
                          start_from = start_from_data)
+  }
 
   #For anything with use_param == FALSE, set the starting value to NA
     #because no starting value will be used
@@ -728,10 +821,9 @@ assign_start <- function(param_name,
     start_from <- par_DF$param_name
   }
 
-  #test bounds
   if((param_value >= lower) %in% TRUE &
      (param_value <= upper) %in% TRUE &
-     param_name %in% start_from){     #if within bounds, update par_DF
+     (param_name %in% start_from) %in% TRUE){     #if within bounds, update par_DF
     par_DF[param_name, c("start_value",
                          "start_value_msg")] <- list(param_value,
                                                      msg)
