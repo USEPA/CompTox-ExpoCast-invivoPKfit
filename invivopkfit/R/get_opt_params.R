@@ -103,10 +103,24 @@ get_opt_params <- function(model,
     use_params["Fgutabs"] <- FALSE
   }
 
-  if("Fgutabs" %in% param_names &
-     ("po" %in% fitdata$Route)){
+  if("Fgutabs_Vdist" %in% param_names &
+     !("po" %in% fitdata$Route)){
+    #if no oral data, can't fit Fgutabs_Vdist,
+    #and it won't be used.
+    opt_params["Fgutabs_Vdist"] <- FALSE
+    use_params["Fgutabs_Vdist"] <- FALSE
+  }
+
+  if("Fgutabs_V1" %in% param_names &
+     !("po" %in% fitdata$Route)){
+    #if no oral data, can't fit Fgutabs_V1,
+    #and it won't be used.
+    opt_params["Fgutabs_V1"] <- FALSE
+    use_params["Fgutabs_V1"] <- FALSE
+  }
+
+  if(("po" %in% fitdata$Route)){
     #if there *is* oral data
-    #if oral data...
     if("iv" %in% fitdata$Route){
       #if both oral and IV data,
       #then fit Fgutabs and Vdist separately,
