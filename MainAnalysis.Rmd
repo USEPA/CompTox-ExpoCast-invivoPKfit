@@ -77,31 +77,38 @@ Fit the 1-compartment model.
 devtools::load_all("invivopkfit")
 
 ### do 1-Compartment fit
-system.time(PK.fit.table.1comp <- fit_all(
-  data.set = cvt.data,
-  model = "1compartment",
-  modelfun = "analytic",
-  compound.col = "analyte_name_original",
-  dtxsid.col = "dsstox_substance_id",
-  cas.col = "dsstox_casrn",
-  reference.col = "fk_reference_document_id",
-  species.col = "species",
-  species.weight.col = "weight_kg",
-  species.weight.units.default = "kg",
-  dose.col = "dose_level_normalized",
-  time.col = "time_hr",
-  time.units.default = "hr",
-  media.col = "conc_medium_normalized",
-  media.units.default = "normalized",
-  value.col = "conc",
-  units.default = NA,
-  route.col = "administration_route_normalized",
-  source.col = "document_id",
-  loq.col ="calc_loq",
-  subject.default = NA,
-  info.default = NA,
-  suppress.messages = FALSE
-))
+system.time(
+  capture.output(
+    PK.fit.table.1comp <- fit_all(
+      data.set = cvt.data,
+      model = "1compartment",
+      modelfun = "analytic",
+      compound.col = "analyte_name_original",
+      dtxsid.col = "dsstox_substance_id",
+      cas.col = "dsstox_casrn",
+      reference.col = "fk_reference_document_id",
+      species.col = "species",
+      species.weight.col = "weight_kg",
+      species.weight.units.default = "kg",
+      dose.col = "dose_level_normalized",
+      time.col = "time_hr",
+      time.units.default = "hr",
+      media.col = "conc_medium_normalized",
+      media.units.default = "normalized",
+      value.col = "conc",
+      units.default = NA,
+      route.col = "administration_route_normalized",
+      source.col = "document_id",
+      loq.col ="calc_loq",
+      subject.default = NA,
+      info.default = NA,
+      suppress.messages = FALSE
+    ),
+    file = paste0("inst/ext/PK_fit_table_1comp_output_",
+                  format(Sys.time(), "%Y_%m_%d_%H_%M_%S"),
+                  ".txt")
+  )
+)
 
 
 write.csv(PK.fit.table.1comp,
@@ -119,31 +126,39 @@ Fit the 2-compartment model.
 devtools::load_all("invivopkfit")
 
 ### do 2-Compartment fit
-system.time(PK.fit.table.2comp <- fit_all(
-  data.set = cvt.data,
-  model = "2compartment",
-  modelfun = "analytic",
-  compound.col = "analyte_name_original",
-  dtxsid.col = "dsstox_substance_id",
-  cas.col = "dsstox_casrn",
-  reference.col = "fk_reference_document_id",
-  species.col = "species",
-  species.weight.col = "weight_kg",
-  species.weight.units.default = "kg",
-  dose.col = "dose_level_normalized",
-  time.col = "time_hr",
-  time.units.default = "hr",
-  media.col = "conc_medium_normalized",
-  media.units.default = "normalized",
-  value.col = "conc",
-    units.default = NA,
-  route.col = "administration_route_normalized",
-  source.col = "document_id",
-  loq.col ="calc_loq",
-  subject.default = NA,
-  info.default = NA,
-  suppress.messages = FALSE
-))
+system.time(
+  capture.output(
+    PK.fit.table.2comp <- fit_all(
+      data.set = cvt.data,
+      model = "2compartment",
+      modelfun = "analytic",
+      compound.col = "analyte_name_original",
+      dtxsid.col = "dsstox_substance_id",
+      cas.col = "dsstox_casrn",
+      reference.col = "fk_reference_document_id",
+      species.col = "species",
+      species.weight.col = "weight_kg",
+      species.weight.units.default = "kg",
+      dose.col = "dose_level_normalized",
+      time.col = "time_hr",
+      time.units.default = "hr",
+      media.col = "conc_medium_normalized",
+      media.units.default = "normalized",
+      value.col = "conc",
+      units.default = NA,
+      route.col = "administration_route_normalized",
+      source.col = "document_id",
+      loq.col ="calc_loq",
+      subject.default = NA,
+      info.default = NA,
+      suppress.messages = FALSE
+    ),
+    file = paste0("inst/ext/PK_fit_table_2comp_output_",
+                  format(Sys.time(), "%Y_%m_%d_%H_%M_%S"),
+                  ".txt")
+  )
+)
+
 write.csv(PK.fit.table.2comp, paste("inst/ext/PK_fit_table_2comp_",
                                     format(Sys.time(), "%Y_%m_%d_%H_%M_%S"),
                                     ".csv",
