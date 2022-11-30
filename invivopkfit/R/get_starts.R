@@ -473,11 +473,22 @@ if(is.null(par_DF)){
         Cavg <- tapply(po_data$logValueDose,
                        po_data$Time,
                        FUN = function(x) mean(x, na.rm = TRUE))
+        #Cavg will be sorted by ascending time
         #get corresponding time points for the averages
         Cavg_times <- as.numeric(names(Cavg))
 
         Cpeak <- max(Cavg, na.rm = TRUE) #peak average conc
         tpeak <- Cavg_times[Cavg == Cpeak] #time of peak conc
+
+        #if tpeak is the first or last time, bump it to the second or second to last
+        if(all(po_data$Time >= tpeak)){ #if it is the first time
+          tpeak <- Cavg_times[2]
+          Cpeak <- Cavg[2]
+        }else if(all(po_data$Time <= tpeak)){ #if it is the last time
+          tpeak <- Cavg_times[length(Cavg_times)-1]
+          Cpeak <- Cavg[length(Cavg)-1]
+        }
+
         po_early <- subset(po_data,
                            Time <= tpeak)
         po_late <- subset(po_data,
@@ -623,6 +634,17 @@ if(is.null(par_DF)){
           elbow_time <- median(iv.data$Time)
         }
 
+        if(length(unique(iv_data$Time))>1){
+        #if elbow time is first or last time point in po_nonabs,
+        #then bump it to the second or second-to-last
+        if(all(iv_data$Time >= elbow_time)){
+          elbow_time <- sort(unique(iv_data$Time))[2]
+        }else if(all(iv_data$Time <= elbow_time)){
+          elbow_time <- sort(unique(iv_data$Time),
+                             decreasing = TRUE)[2]
+        }
+        }
+
         iv_early <- subset(iv_data,
                            Time <= elbow_time)
         iv_late <- subset(iv_data,
@@ -635,10 +657,10 @@ if(is.null(par_DF)){
         B_Dose_iv <- exp(coef(lm_late)[1])
         }else if(nrow(iv_late)==2){ #if we have exactly 2 points, draw a line through them
           iv_late <- iv_late[order(iv_late$Time), ]
-          if(length(unique(iv_late$Time))>1){
+          if(length(unique(iv_late$Time))>1){ #if two time points
           beta_iv <- -diff(iv_late$logValueDose)/diff(iv_late$Time)
           B_Dose_iv <- iv_late[1, "ValueDose"]
-          }else{
+          }else{ #if only one time point, can't get slope
             B_Dose_iv <- exp(mean(iv_late$logValueDose))
             beta_iv <- NA_real_
           }
@@ -732,6 +754,17 @@ if(is.null(par_DF)){
         Cpeak <- max(Cavg, na.rm = TRUE) #peak average conc
         tpeak <- Cavg_times[Cavg == Cpeak] #time of peak conc
 
+        if(length(unique(po_data$Time))>1){
+        #if tpeak is the first or last time, bump it to the second or second to last
+        if(all(po_data$Time >= tpeak)){ #if it is the first time
+          tpeak <- Cavg_times[2]
+          Cpeak <- Cavg[2]
+        }else if(all(po_data$Time <= tpeak)){ #if it is the last time
+          tpeak <- Cavg_times[length(Cavg_times)-1]
+          Cpeak <- Cavg[length(Cavg)-1]
+        }
+        }
+
         po_abs <- subset(po_data, Time <= tpeak)
         po_nonabs <- subset(po_data, Time >= tpeak)
 
@@ -748,6 +781,17 @@ if(is.null(par_DF)){
           elbow_time <- median(po_nonabs$Time)
         }
 
+        if(length(unique(po_nonabs$Time))>1){
+        #if elbow time is first or last time point in po_nonabs,
+        #then bump it to the second or second-to-last
+        if(all(po_nonabs$Time >= elbow_time)){
+          elbow_time <- sort(unique(po_nonabs$Time))[2]
+        }else if(all(po_nonabs$Time <= elbow_time)){
+          elbow_time <- sort(unique(po_nonabs$Time),
+                             decreasing = TRUE)[2]
+        }
+        }
+
         po_early <- subset(po_nonabs, Time <= elbow_time)
         po_late <- subset(po_nonabs, Time >= elbow_time)
 
@@ -762,19 +806,20 @@ if(is.null(par_DF)){
           po_late <- po_late[order(po_late$Time), ]
           beta_po <- -(diff(po_late$logValueDose)/diff(po_late$Time))
           B_Dose_po <- po_late[1, "ValueDose"]
-          }else{
+          }else{ #if 2 points but at the same time, can't get slope
             B_Dose_po <- exp(mean(po_late$logValueDose))
             beta_po <- NA_real_
           }
         }else if(nrow(po_late)==1){ #if only one point
           B_Dose_po <- po_late$ValueDose
           beta_po <- NA_real_
-        }else{
+        }else{ #if zero points
           B_Dose_po <- NA_real_
           beta_po <- NA_real_
         }
 
         #residuals for early data
+        #obs should be greater than predicted
         po_early$logresid <- po_early$logValueDose -
           (log(B_Dose_po) + -beta_po * po_early$Time)
       #drop any NA residuals

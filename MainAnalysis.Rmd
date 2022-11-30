@@ -103,10 +103,11 @@ system.time(
       subject.default = NA,
       info.default = NA,
       suppress.messages = FALSE
-    ),
-    file = paste0("inst/ext/PK_fit_table_1comp_output_",
-                  format(Sys.time(), "%Y_%m_%d_%H_%M_%S"),
-                  ".txt")
+  ),
+  file = paste0("inst/ext/PK_fit_table_1comp_output_",
+                format(Sys.time(), "%Y_%m_%d_%H_%M_%S"),
+                ".txt"),
+  type = "message"
   )
 )
 
@@ -155,7 +156,8 @@ system.time(
     ),
     file = paste0("inst/ext/PK_fit_table_2comp_output_",
                   format(Sys.time(), "%Y_%m_%d_%H_%M_%S"),
-                  ".txt")
+                  ".txt"),
+    type = "message"
   )
 )
 

@@ -142,7 +142,7 @@ analyze_subset <- function(fitdata,
   if(length(this.species) > 1) stop("analyze_subset(): More than one species in data")
 
   if(!suppress.messages){
-    message(paste0("Beginning analysis for:",
+    message(paste0("Beginning analysis for:\n",
                   "Chemical = ",
                    this.dtxsid,
                    "\n",
@@ -245,7 +245,9 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
     #include a message about why no fit was done
     msg <- paste("For chemical ", this.dtxsid, " there were ",
                 sum(par_DF$optimize_param),
-                 " parameters to be estimated and only ",
+                 " parameters to be estimated (",
+                paste(names(opt_params), collapse = ", "),
+                 ") and only ",
                  nrow(fitdata),
                 " data points. Optimization aborted.",
                 sep = "")
@@ -307,6 +309,27 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                               1, function(x) paste(x, collapse = ": ")),
                         collapse = ", "),
                   sep = ""))
+
+    loglike_grad_start <- numDeriv::grad(func = function(x){
+      -1 * log_likelihood(x,
+                          DF = fitdata,
+                          modelfun = modelfun,
+                          model = model,
+                          LOQ_factor = LOQ_factor,
+                          force_finite = all(
+                            optimx_args$method %in% "L-BFGS-B"
+                          ) )
+    },
+    x = opt_params)
+
+    message(paste("Gradient at initial values:",
+                  paste(apply(data.frame(Names = names(opt_params),
+                                         Values = loglike_grad_start,
+                                         stringsAsFactors = F),
+                              1, function(x) paste(x, collapse = ": ")),
+                        collapse = ", ")
+                  )
+    )
   }
 
   all_data_fit <- tryCatch({
