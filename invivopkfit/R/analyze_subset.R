@@ -125,7 +125,8 @@ analyze_subset <- function(fitdata,
                            optimx_args = list(
                              "method" = "L-BFGS-B",
                              "control" = list("factr" = 1e7,
-                                              "fnscale" = -1)
+                                              "fnscale" = -1,
+                                              "maxit" = 500)
                            ),
                            suppress.messages = FALSE,
                            sig.figs = 5,
@@ -152,7 +153,12 @@ analyze_subset <- function(fitdata,
                    length(unique(fitdata$Reference)),
                    "\n",
                    "Number of observations = ",
-                   nrow(fitdata)
+                   nrow(fitdata),
+                  " (iv: ",
+                  sum(fitdata$Route %in% "iv"),
+                  "; po: ",
+                  sum(fitdata$Route %in% "po"),
+                  ")"
     )
     )
   }
@@ -238,8 +244,8 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
     #include a message about why no fit was done
     msg <- paste("For chemical ", this.dtxsid, " there were ",
-                par_DF[, sum(optimize_param)],
-                 " parameters and only ",
+                sum(par_DF$optimize_param),
+                 " parameters to be estimated and only ",
                  nrow(fitdata),
                 " data points. Optimization aborted.",
                 sep = "")
@@ -247,8 +253,10 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
     out_DF$flag <- ""
     #Record the unique routes in this dataset
     #Route info provides context for why some parameters were/were not estimated
-    out_DF$Routes <- paste(sort(unique(fitdata$Route)),
-                           collapse = ", ")
+    out_DF$Routes <- paste("iv: ",
+                           sum(fitdata$Route %in% "iv"),
+                           "; po: ",
+                           sum(fitdata$Route %in% "po"))
 
     if(!suppress.messages){
     message(msg)
@@ -367,8 +375,10 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   out_DF$flag <- ""
   #Record the unique routes in this dataset
   #Route info provides context for why some parameters were/were not estimated
-  out_DF$Routes <- paste(sort(unique(fitdata$Route)),
-                         collapse = ", ")
+  out_DF$Routes <- paste("iv: ",
+                         sum(fitdata$Route %in% "iv"),
+                         "; po: ",
+                         sum(fitdata$Route %in% "po"))
   if(!suppress.messages){
     message(msg)
   }
@@ -433,31 +443,30 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
     #perturb starting values by up to 50% in either direction,
     #so long as they are within 5% of the bounds
 
-    opt_params_new <- runif(n = length(opt_params),
-                        min = pmax(exp(opt_params) * 0.5,
-                                   exp(lower_params) * 1.05),
-                        max = pmin(exp(opt_params) * 1.5,
-                                   exp(upper_params) * 0.95))
-    names(opt_params_new) <- names(opt_params)
-
-    #update the starting points in par_DF so they will be recorded
-    par_DF[match(names(opt_params),
-                 par_DF$param_name),
-           "start_value"] <- exp(opt_params)
-
-    #params to be optimized
-    opt_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
-                             "start_value"])
-    names(opt_params) <- par_DF[par_DF$optimize_param %in% TRUE,
-                                "param_name"]
+    # opt_params_new <- runif(n = length(opt_params),
+    #                     min = pmax(exp(opt_params) * 0.5,
+    #                                exp(lower_params) * 1.05),
+    #                     max = pmin(exp(opt_params) * 1.5,
+    #                                exp(upper_params) * 0.95))
+    # names(opt_params_new) <- names(opt_params)
+    #
+    # #update the starting points in par_DF so they will be recorded
+    # par_DF[match(names(opt_params),
+    #              par_DF$param_name),
+    #        "start_value"] <- exp(opt_params_new)
+    #
+    # #params to be optimized
+    # opt_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
+    #                          "start_value"])
+    # names(opt_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+    #                             "param_name"]
 
 
     optimx_args$control$factr <- optimx_args$control$factr / 10 #reducing factr by 10 (requiring closer convergence)
 
     if (!suppress.messages){
       message(paste0("One or more parameters has NaN standard deviation. ",
-                     "Repeating optimization with smaller convergence tolerance ",
-                     "and perturbed starting values."
+                     "Repeating optimization with smaller convergence tolerance."
                      ))
       message(paste0("Estimating parameters ",
                      paste(names(opt_params), collapse = ", "),
@@ -467,14 +476,14 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                      "Convergence tolerance factr = ",
                      optimx_args$control$factr, "\n",
                      "..."))
-        message(paste("New initial values:    ",
-                      paste(apply(data.frame(Names = names(opt_params),
-                                             Values = unlist(lapply(opt_params,
-                                                                    exp)),
-                                             stringsAsFactors = F),
-                                  1, function(x) paste(x, collapse = ": ")),
-                            collapse = ", "),
-                      sep = ""))
+        # message(paste("New initial values:    ",
+        #               paste(apply(data.frame(Names = names(opt_params),
+        #                                      Values = unlist(lapply(opt_params,
+        #                                                             exp)),
+        #                                      stringsAsFactors = F),
+        #                           1, function(x) paste(x, collapse = ": ")),
+        #                     collapse = ", "),
+        #               sep = ""))
     }
 
     all_data_fit <-  do.call(optimx::optimx,
@@ -486,7 +495,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                                              upper = upper_params),
                                         #method and control
                                         optimx_args,
-                                        #... additional args to log_likelihood and grad_log_likelihood
                                         list(
                                           DF = fitdata,
                                           modelfun = modelfun,
@@ -647,8 +655,10 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
   #Record the unique routes in this dataset
   #Route info provides context for why some parameters were/were not estimated
-  out_DF$Routes <- paste(sort(unique(fitdata$Route)),
-                         collapse = ", ")
+  out_DF$Routes <- paste("iv: ",
+                         sum(fitdata$Route %in% "iv"),
+                         "; po: ",
+                         sum(fitdata$Route %in% "po"))
   out_DF$message <- "Optimization successful."
 return(out_DF)
 
