@@ -39,7 +39,7 @@ log_likelihood <- function(opt_params,
   params <- as.list(c(opt_params, const_params))
 
   #Back-transform the log-transformed parameters onto the natural scale
-  params <- lapply(params, exp)
+  #params <- lapply(params, exp)
 
   # if(any(is.na(params))) return(-Inf)
 

@@ -76,17 +76,17 @@ get_upper_bounds <- function(fitdata,
                                               "Fgutabs_Vdist",
                                               "Fgutabs_V1",
                                               "sigma"),
-                               upper_bound = c(1e8, #A
-                                               1e4, #kelim
-                                               1e8, #Vdist
-                                               1e4, #kgutabs
+                               upper_bound = c(Inf, #A
+                                               Inf, #kelim
+                                               Inf, #Vdist
+                                               Inf, #kgutabs
                                                1, #Fgutabs
-                                               1e8, #V1
-                                               1e4, #k12
-                                               1e4, #k21
-                                               1e8, #Fgutabs_Vdist
-                                               1e8, #Fgutabs_V1
-                                               1e8), #sigma
+                                               Inf, #V1
+                                               Inf, #k12
+                                               Inf, #k21
+                                               Inf, #Fgutabs_Vdist
+                                               Inf, #Fgutabs_V1
+                                               Inf), #sigma
                                upper_bound_msg = "Default"
                              ),
                              sigma_upper_from_data = TRUE,

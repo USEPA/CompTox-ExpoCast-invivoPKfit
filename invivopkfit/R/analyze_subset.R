@@ -269,25 +269,22 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   #otherwise, if we have enough data, proceed with the fit.
 
   #From par_DF, get vectors of:
-  #(note all of these are log transformed!!)
-  #(parameters are optimized on the log scale,
-  #to try and reduce scaling issues)
 
   #params to be optimized
-  opt_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
-                       "start_value"])
+  opt_params <- par_DF[par_DF$optimize_param %in% TRUE,
+                       "start_value"]
   names(opt_params) <- par_DF[par_DF$optimize_param %in% TRUE,
                               "param_name"]
 
   #param lower bounds (only on params to be optimized)
-  lower_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
-                       "lower_bound"])
+  lower_params <- par_DF[par_DF$optimize_param %in% TRUE,
+                       "lower_bound"]
   names(lower_params) <- par_DF[par_DF$optimize_param %in% TRUE,
                                 "param_name"]
 
   #param upper bounds (only on params to be optimized)
-  upper_params <- log(par_DF[par_DF$optimize_param %in% TRUE,
-                         "upper_bound"])
+  upper_params <- par_DF[par_DF$optimize_param %in% TRUE,
+                         "upper_bound"]
   names(upper_params) <- par_DF[par_DF$optimize_param %in% TRUE,
                                 "param_name"]
 
@@ -303,8 +300,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
     message(paste("Initial values:    ",
                   paste(apply(data.frame(Names = names(opt_params),
-                                         Values = unlist(lapply(opt_params,
-                                                                exp)),
+                                         Values = unlist(opt_params),
                                          stringsAsFactors = F),
                               1, function(x) paste(x, collapse = ": ")),
                         collapse = ", "),
@@ -330,6 +326,15 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                         collapse = ", ")
                   )
     )
+  }
+
+  #set parscale as loglike_grad_start unless otherwise specified
+  #unless that would scale the parameters too tin (take them down to a minimum of sqrt(.Machine$double.eps))
+  if(!("parscale" %in% names(optimx_args$control))){
+  optimx_args$control <- c(optimx_args$control,
+                           list("parscale" = pmin(abs(loglike_grad_start),
+                                                  opt_params/sqrt(.Machine$double.eps)
+                                                  )))
   }
 
   all_data_fit <- tryCatch({
@@ -412,13 +417,13 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 #post-processing of fit results
 
   #Get MLE params
-  ln_means <- as.vector(stats::coef(all_data_fit))
-  names(ln_means) <- names(opt_params)
+  means <- as.vector(stats::coef(all_data_fit))
+  names(means) <- names(opt_params)
 
   if (!suppress.messages){
     message(paste("Optimized values:  ",
-                  paste(apply(data.frame(Names = names(ln_means),
-                                         Values = sapply(ln_means,exp),
+                  paste(apply(data.frame(Names = names(means),
+                                         Values = means,
                                          stringsAsFactors = FALSE),
                               1, function(x) paste(x, collapse = ": ")),
                         collapse = ", "),"\n", sep = ""))
@@ -437,11 +442,11 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                           optimx_args$method %in% "L-BFGS-B"
                         ) )
   },
-  x = ln_means,
+  x = means,
   method = 'Richardson')
 
   #try inverting Hessian to get SDs
-  ln_sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
+  sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                      error = function(err){
                        #if hessian can't be inverted
                        if (!suppress.messages) {
@@ -454,11 +459,11 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                        return(tmp) #pseudovariance matrix
                        #see http://gking.harvard.edu/files/help.pdf
                      })
-  names(ln_sds) <- names(ln_means)
+  names(sds) <- names(means)
 
   #If any of the SDs are NaN,
   #repeat optimization with smaller convergence tolerance
-  while(any(is.nan(ln_sds)) & optimx_args$control$factr > 1) {
+  while(any(is.nan(sds)) & optimx_args$control$factr > 1) {
 
 
     #then redo optimization
@@ -530,12 +535,12 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                                         )
     )
 
-    ln_means <- as.vector(stats::coef(all_data_fit))
-    names(ln_means) <- names(opt_params)
+    means <- as.vector(stats::coef(all_data_fit))
+    names(means) <- names(opt_params)
     if (!suppress.messages){
       message(paste("Optimized values:  ",
-                    paste(apply(data.frame(Names = names(ln_means),
-                                           Values = sapply(ln_means, exp),
+                    paste(apply(data.frame(Names = names(means),
+                                           Values = means,
                                            stringsAsFactors=F),
                                 1, function(x) paste(x, collapse=": ")),
                           collapse = ", "),
@@ -555,10 +560,10 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                             optimx_args$method %in% "L-BFGS-B"
                           ) )
     },
-    x = ln_means,
+    x = means,
     method = 'Richardson')
 
-    ln_sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
+    sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
                        error = function(err){
                          #if hessian can't be inverted
                          if (!suppress.messages){
@@ -569,31 +574,37 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                          return(tmp) #pseduovariance matrix
                          #see http://gking.harvard.edu/files/help.pdf
                        })
-    names(ln_sds) <- names(ln_means)
+    names(sds) <- names(means)
   }
 
   #Arithmetic means:
   #assume log-scale means are for a log-normal distribution
-  arith_means <- exp(ln_means + ln_sds ^ 2 / 2)
-  names(arith_means) <- names(ln_means)
+  # arith_means <- exp(ln_means + ln_sds ^ 2 / 2)
+  arith_means <- means
+  names(arith_means) <- names(means)
 
   #Arithmetic SD
-  arith_sd <- (exp(ln_sds ^ 2) - 1)*sqrt(exp(2 * ln_means+
-                                             ln_sds ^ 2))
+  # arith_sd <- (exp(ln_sds ^ 2) - 1)*sqrt(exp(2 * ln_means+
+  #                                            ln_sds ^ 2))
 
-  names(arith_sd) <- names(ln_means)
+  arith_sd <- sds
+
+  names(arith_sd) <- names(means)
 
   #Geometric means
-  geo_means <- exp(ln_means)
-  names(geo_means) <- names(ln_means)
+  # geo_means <- exp(ln_means)
+  geo_means <- means
+  names(geo_means) <- names(means)
 
   #Geometric SDs
-  geo_sd <- exp(ln_sds)
-  names(geo_sd) <- names(ln_means)
+  # geo_sd <- exp(ln_sds)
+  geo_sd <- sds
+  names(geo_sd) <- names(means)
 
   #Modes
-  modes <- exp(ln_means - ln_sds ^ 2)
-  names(modes) <- names(ln_means)
+  # modes <- exp(ln_means - ln_sds ^ 2)
+  modes <- means
+  names(modes) <- names(means)
 
   #Produce a data frame of fitted parameters
   fit_DF <- data.frame(arith_means,
@@ -601,10 +612,10 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                    geo_means,
                    geo_sd,
                    modes,
-                   ln_means,
-                   ln_sds)
+                   means,
+                   sds)
   names(fit_DF) <-  fitted_types
-  fit_DF$param_name <- names(ln_means)
+  fit_DF$param_name <- names(means)
 
   #Merge it with the original data frame of parameters
   #keep only the ones that were actually fit
