@@ -39,7 +39,9 @@ analytic_model_fun <- function(params,
                               params=params,
                               dose=dose,
                               iv.dose=iv.dose)),
-                 error=rep(NA_real_,length=length(times)))
+                 error= function(err){
+                   rep(NA_real_,length=length(times))
+                   })
 
   #Cp will have units mg/L
 
@@ -55,13 +57,17 @@ analytic_model_fun <- function(params,
                               params=params,
                               dose=dose,
                               iv.dose=iv.dose)),
-                 error=rep(NA_real_,length=length(times)))
+                 error=function(err){
+                   rep(NA_real_,length=length(times))
+                   })
 
   out.mat <- matrix(rep(0, length(times)*3),
                     nrow=length(times),
                     dimnames=list(NULL, c('time',
                                           'Ccompartment',
-                                          'AUC')))
+                                          'AUC')
+                                  )
+                    )
   if (time.units=='h') {
     out.mat[, 'time'] <- times
   } else if (time.units=='d'){

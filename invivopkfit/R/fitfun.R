@@ -37,9 +37,9 @@ fitfun <- function(design.times,
                                    iv.dose=design.iv,
                                    model=model),
                      error = function(err){
-                       cat("fitfun: Error in analytic_model_fun\n")
-                       cat(paste0(err$message, "\n"))
-                       cat(paste(paste(apply(data.frame(Names=names(model.params),
+                       message("fitfun: Error in analytic_model_fun\n")
+                       message(paste0(err$message, "\n"))
+                       message(paste(paste(apply(data.frame(Names=names(model.params),
                                                         Values=model.params,
                                                         stringsAsFactors=FALSE),
                                              1,
@@ -47,6 +47,7 @@ fitfun <- function(design.times,
                                        collapse=", "),
                                  "\n",
                                  sep=""))
+                       browser()
                        out_tmp <- cbind("time" = these.times,
                                         "Ccompartment" = rep(NA_real_, length(these.times)),
                                         "AUC" = rep(NA_real_, length(these.times)))
@@ -67,9 +68,9 @@ fitfun <- function(design.times,
                            iv.dose=design.iv,
                            suppress.messages=TRUE),
                     error = function(err){
-                      cat("fitfun: Error in httk::solve_1comp()\n")
-                      cat(paste0(err$message, "\n"))
-                      cat(paste(paste(apply(data.frame(Names=names(model.params),
+                      message("fitfun: Error in httk::solve_1comp()\n")
+                      message(paste0(err$message, "\n"))
+                      message(paste(paste(apply(data.frame(Names=names(model.params),
                                                        Values=model.params,
                                                        stringsAsFactors=FALSE),
                                             1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))
@@ -94,9 +95,9 @@ fitfun <- function(design.times,
                                         suppress.messages=TRUE,
                                         atol = atol),
                       error = function(err){
-                        cat("fitfun: Error in httk::solve_1comp()\n")
-                        cat(paste0(err$message, "\n"))
-                        cat(paste(paste(apply(data.frame(Names=names(model.params),
+                        message("fitfun: Error in httk::solve_1comp()\n")
+                        message(paste0(err$message, "\n"))
+                        message(paste(paste(apply(data.frame(Names=names(model.params),
                                                          Values=model.params,
                                                          stringsAsFactors=FALSE),
                                               1,function(x) paste(x,collapse=": ")),collapse=", "),"\n",sep=""))

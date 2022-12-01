@@ -14,64 +14,83 @@
 #'  only the ratio of `Fgutabs` to `Vdist` is identifiable. if `Fgutabs` and
 #'  `Vdist` are provided along with `Fgutabs_Vdist`, then `Fgutabs_Vdist` will
 #'  not be used.
-#'@param time A vector of times in hours.
-#'@param dose Dose in mg/kg
-#'@param iv.dose Logical: TRUE for single IV bolus dose; FALSE for single oral
+#'@param time A numeric vector of times in hours.
+#'@param dose A numeric vector of doses in mg/kg
+#'@param iv.dose A logical vector: TRUE for single IV bolus dose; FALSE for single oral
 #'  dose
 #'
-#'@return A vector of plasma concentration values corresponding to `time`.
+#'@return A vector of plasma concentration values (mg/L) corresponding to `time`.
 #'
 #'@author Caroline Ring, John Wambaugh
 #'
 #'@export cp_1comp
 cp_1comp <- function(params, time, dose, iv.dose){
 
+  #compute Fgutabs/Vdist if necessary
+  if(all(c("Fgutabs", "Vdist") %in% names(params))){
+    params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
+  }
 
+  #drop any length-0 params
+  param_length <- sapply(params, length)
+  params <- params[param_length>0]
 
-  if (iv.dose){
-    #for iv administration
+  if(any(iv.dose %in% FALSE)){
+
     #check for needed params
+    if(!all(c("kelim", "kgutabs", "Fgutabs_Vdist") %in% names(params))){
+      stop(paste0("cp_1comp(): Error: For 1-compartment oral model, ",
+                  "missing parameter(s): ",
+                  paste(setdiff(c("kelim", "kgutabs", "Fgutabs_Vdist"),
+                                names(params)
+                  ),
+                  collapse = ", ")
+      )
+      )
+    }
+  }
+
+  if(any(iv.dose %in% TRUE)){
     if(!all(c("kelim", "Vdist") %in% names(params))){
       stop(paste0("cp_1comp(): Error: For 1-compartment IV model, ",
-      "missing parameter(s): ",
-           paste(setdiff(c("kelim", "Vdist"), names(params)),
-                 collapse = ", "),
+                  "missing parameter(s): ",
+                  paste(setdiff(c("kelim", "Vdist"), names(params)),
+                        collapse = ", "),
       )
       )
     }
+  }
 
-    cp <- dose*exp(-params$kelim * time)/params$Vdist
+  cp <- vector(mode = "numeric", length = length(time))
 
-    }else{
-      #for oral administration
+  #IV model\
+  if(any(iv.dose %in% TRUE)){
+  cp[iv.dose %in% TRUE] <- dose[iv.dose %in% TRUE]*
+    exp(-params$kelim *
+          time[iv.dose %in% TRUE])/
+    params$Vdist
+  }
 
-      if(all(c("Fgutabs", "Vdist") %in% names(params))){
-        params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
-      }
+  #Oral model
+  if(any(iv.dose %in% FALSE)){
 
-      #check for needed params
-      if(!all(c("kelim", "kgutabs", "Fgutabs_Vdist") %in% names(params))){
-        stop(paste0("cp_1comp(): Error: For 1-compartment oral model, ",
-        "missing parameter(s): ",
-                    paste(setdiff(c("kelim", "kgutabs", "Fgutabs_Vdist"),
-                            names(params)
-                            ),
-                          collapse = ", ")
-        )
-        )
-      }
+    if(!(params$kelim == params$kgutabs)){
+      #the usual case: kelim != kgutabs
+      cp[iv.dose %in% FALSE] <- (params$Fgutabs_Vdist *
+                                   dose[iv.dose %in% FALSE] *
+                                   params$kgutabs)/
+        (params$kgutabs - params$kelim) *
+        (exp(-params$kelim * time[iv.dose %in% FALSE]) -
+           exp(-params$kgutabs* time[iv.dose %in% FALSE]))
 
-      if(!(params$kelim == params$kgutabs)){
-        #the usual case: kelim != kgutabs
-      const <- (params$Fgutabs_Vdist * dose * params$kgutabs)/
-        (params$kgutabs - params$kelim)
-    cp <- const * (exp(-params$kelim * time) - exp(-params$kgutabs* time))
-
-      }else{ #in case kelim = kgutabs, use the alternate model equation
-        cp <- params$Fgutabs_Vdist * dose * params$kelim *
-          time * exp(-params$kelim * time)
-      }
+    }else{ #in case kelim = kgutabs, use the alternate model equation
+      cp[iv.dose %in% FALSE] <- params$Fgutabs_Vdist *
+        dose[iv.dose %in% FALSE] * params$kelim *
+        time[iv.dose %in% FALSE] *
+        exp(-params$kelim * time[iv.dose %in% FALSE])
     }
+  }
+
 
   return(cp)
 }

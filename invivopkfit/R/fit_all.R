@@ -147,9 +147,10 @@ fit_all <- function(data.set,
                     get_lower_args = NULL,
                     get_upper_args = NULL,
                     optimx_args = list(
-                      "method" = "L-BFGS-B",
+                      "method" = "bobyqa",
                       "control" = list("factr" = 1e7,
-                                       "fnscale" = -1)
+                                       "maximize" = TRUE,
+                                       "maxfun" = 1000)
                     ),
 
                     suppress.messages = FALSE,
@@ -228,29 +229,9 @@ if(!suppress.messages){
   message("Analyzing data by chemical and species, with each reference having its own error SD...")
 }
 
-    # tmp <- split(data.set,
-    #             by = c("DTXSID", "Species"))
-    # #
-    # PK_fit_joint_list <- lapply(tmp,
-    #                            function(fitdata){
-    #                              analyze_subset(fitdata = fitdata,
-    #                                             #fitdata = .SD passes a data.table
-    #                                             #consisting of the columns
-    #                                             #referenced in .SDcols, split by the
-    #                                             #values in "by"
-    #                                             modelfun = modelfun,
-    #                                             model = model,
-    #                                             pool_sigma = FALSE,
-    #                                             LOQ_factor = LOQ_factor,
-    #                                             get_starts_args = get_starts_args,
-    #                                             get_lower_args = get_lower_args,
-    #                                             get_upper_args = get_upper_args,
-    #                                             optimx_args = optimx_args,
-    #                                             suppress.messages=suppress.messages)
-    #                            } )
+
 
     PK.fit.joint <- data.set[,
-
                              analyze_subset(fitdata = .SD,
                                             #fitdata = .SD passes a data.table
                                             #consisting of the columns

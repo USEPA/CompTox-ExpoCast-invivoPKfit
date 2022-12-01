@@ -1027,13 +1027,13 @@ if(is.null(par_DF)){
     modelf <- "cp_flat"
   }
 
-  pred <- mapply(modelf,
-         time = fitdata$Time,
-         dose = fitdata$Dose,
-         iv.dose = fitdata$Route %in% "iv",
-         MoreArgs = list("params" = params))
+  pred <- do.call(modelf,
+                  list(params = params,
+                       time = fitdata$Time,
+                       dose = fitdata$Dose,
+                       iv.dose = fitdata$Route %in% "iv"))
 
-  pred <- pred + 1e-12
+  pred[pred >0 & pred <= .Machine$double.eps] <- .Machine$double.eps
 
   logresid <- log(pred) - log(fitdata$Value)
 
