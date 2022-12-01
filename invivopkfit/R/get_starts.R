@@ -375,12 +375,14 @@ if(is.null(par_DF)){
 
     #Try roughly estimating parameters from data
 
-    #if model is flat, take A to be the median concentration
+    #if model is flat, take A to be the median concentration/dose
     if(model %in% "flat"){
-      A <- median(fitdata$Value, na.rm = TRUE)
+      tmpdata <- subset(fitdata, Dose > 0 &
+                          !is.na(Value))
+      A <- median(tmpdata$Value/tmpdata$Dose, na.rm = TRUE)
       par_DF <- assign_start(param_name = "A",
                              param_value = A,
-                             msg = "Median concentration",
+                             msg = "Median concentration/dose",
                              start_from = start_from_data,
                              par_DF = par_DF)
     }else{
@@ -1027,13 +1029,13 @@ if(is.null(par_DF)){
     modelf <- "cp_flat"
   }
 
-  pred <- mapply(modelf,
-         time = fitdata$Time,
-         dose = fitdata$Dose,
-         iv.dose = fitdata$Route %in% "iv",
-         MoreArgs = list("params" = params))
+  pred <- do.call(modelf,
+                  list(params = params,
+                       time = fitdata$Time,
+                       dose = fitdata$Dose,
+                       iv.dose = fitdata$Route %in% "iv"))
 
-  pred <- pred + 1e-12
+  pred[pred >0 & pred <= .Machine$double.eps] <- .Machine$double.eps
 
   logresid <- log(pred) - log(fitdata$Value)
 

@@ -10,7 +10,7 @@
 #'   \item{k21}{Rate at which compound moves from peripheral to central
 #'   compartment, 1/h.}
 #'   \item{kelim}{Elimination rate, 1/h.}
-#'   \item{V1}{Apparent volume of central compartment, L. Or see below for
+#'   \item{V1}{Apparent volume of central compartment, L/kg BW. Or see below for
 #'   "Fgutabs_V1"}
 #'   }
 #'
@@ -30,10 +30,10 @@
 #'   used.
 #'
 #' @author Caroline Ring, John Wambaugh
-#' @param time A vector of time values, in hours
-#' @param dose A dose in mg/kg
-#' @param iv.dose TRUE for single IV bolus dose, FALSE for single oral dose
-#' @return A vector of plasma concentration values corresponding to each value
+#' @param time A numeric vector of time values, in hours
+#' @param dose A numeric vector of doses in mg/kg
+#' @param iv.dose A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose
+#' @return A vector of plasma concentration values (mg/L) corresponding to each value
 #'   in \code{time}
 #' @export cp_2comp
 cp_2comp <- function(params, time, dose, iv.dose)
@@ -43,20 +43,11 @@ cp_2comp <- function(params, time, dose, iv.dose)
     params$Fgutabs_V1 <- params$Fgutabs/params$V1
   }
 
-  #Check for needed params
-  if (iv.dose){
-   missing_params <- setdiff(c("kelim",
-                               "V1",
-                               "k12",
-                               "k21"),
-                             names(params))
-   if(length(missing_params)>0){
-     stop(paste("cp_2comp(): Error: For 2-compartment IV model,",
-          "missing parameters:",
-          paste(missing_params, collapse = ", ")))
-   }
-  }else{
-    #check needed params for oral dose
+  #drop any length-0 params
+  param_length <- sapply(params, length)
+  params <- params[param_length>0]
+
+  if(any(iv.dose %in% FALSE)){
     missing_params <- setdiff(c("kelim",
                                 "k21",
                                 "k12",
@@ -70,6 +61,23 @@ cp_2comp <- function(params, time, dose, iv.dose)
     }
   }
 
+  if(any(iv.dose %in% TRUE)){
+    missing_params <- setdiff(c("kelim",
+                                "V1",
+                                "k12",
+                                "k21"),
+                              names(params))
+    if(length(missing_params)>0){
+      stop(paste("cp_2comp(): Error: For 2-compartment IV model,",
+                 "missing parameters:",
+                 paste(missing_params, collapse = ", ")))
+    }
+  }
+
+  cp <- vector(mode = "numeric", length = length(time))
+  A <- vector(mode = "numeric", length = length(time))
+  B <- vector(mode = "numeric", length = length(time))
+
   #see https://www.boomer.org/c/p4/c19/c1902.php
   #for these equations
 
@@ -80,22 +88,38 @@ cp_2comp <- function(params, time, dose, iv.dose)
   beta <- (alpha_beta_sum - sqrt(alpha_beta_sum^2 - 4*alpha_beta_prod)) / 2
 
 
-  if (iv.dose){ #for IV dosing
-  A <- (dose * (alpha - params$k21)) / (params$V1 * (alpha - beta))
-  B <- (dose * (params$k21 - beta)) / (params$V1 * (alpha - beta))
+  A[iv.dose %in% TRUE] <- (dose[iv.dose %in% TRUE] *
+                             (alpha - params$k21)) /
+    (params$V1 * (alpha - beta))
+  B[iv.dose %in% TRUE] <- (dose[iv.dose %in% TRUE] *
+                             (params$k21 - beta)) /
+    (params$V1 * (alpha - beta))
 
-  cp <- A * exp(-alpha * time) + B * exp(-beta * time)
-  }else{ #for oral dosing
+  cp[iv.dose %in% TRUE] <-  A[iv.dose %in% TRUE] *
+    exp(-alpha * time[iv.dose %in% TRUE]) +
+    B[iv.dose %in% TRUE] *
+    exp(-beta * time[iv.dose %in% TRUE])
 
-  A <- (params$kgutabs * params$Fgutabs_V1 * dose * (alpha - params$k21)) /
+
+  #if any oral data, in which case params$kgutabs and params$Fgutabs_V1 exist:
+  if(any(iv.dose %in% FALSE)){
+  A[iv.dose %in% FALSE] <- (params$kgutabs * params$Fgutabs_V1 *
+                              dose[iv.dose %in% FALSE] *
+                              (alpha - params$k21)) /
     ( (params$kgutabs - alpha) * (alpha - beta))
 
-  B <- (params$kgutabs * params$Fgutabs_V1 * dose * (params$k21 - beta)) /
+  B[iv.dose %in% FALSE] <- (params$kgutabs * params$Fgutabs_V1 *
+                              dose[iv.dose %in% FALSE] *
+                              (params$k21 - beta)) /
     ( (params$kgutabs - beta) * (alpha - beta))
 
-  cp <-  A * exp(-alpha * time) +
-    B * exp(-beta * time) +
-    -(A + B) * exp(-params$kgutabs * time)
+  cp[iv.dose %in% FALSE] <-   A[iv.dose %in% FALSE] *
+    exp(-alpha * time[iv.dose %in% FALSE]) +
+    B[iv.dose %in% FALSE] *
+    exp(-beta * time[iv.dose %in% FALSE]) +
+    -(A[iv.dose %in% FALSE] + B[iv.dose %in% FALSE]) *
+    exp(-params$kgutabs * time[iv.dose %in% FALSE])
+
   }
 
   return(cp)

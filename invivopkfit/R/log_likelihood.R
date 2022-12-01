@@ -3,16 +3,16 @@
 #' The log-likelihood function (probability of data given model parameters).
 #'
 #'
-#' @param opt_params A named vector of log-scaled parameter values. When this
+#' @param params A named vector of log-scaled parameter values. When this
 #'   function is the objective function for a numerical optimizer, these are the
 #'   parameters to be optimized.
 #' @param const_params A named vector of additional log-scaled parameter values.
 #'   When this function is the objective function for a numerical optimizer,
 #'   these are additional model parameters whose value is to be held constant
 #'   while the other parameters are optimized. Default NULL (meaning that all
-#'   model parameters are supplied in `opt_params`). (If you are calling this
-#'   function directly, you probably want to leave `const_param = NULL` and
-#'   just supply all model parameters in `opt_params`.)
+#'   model parameters are supplied in `params`). (If you are calling this
+#'   function directly, you probably want to leave `const_params = NULL` and
+#'   just supply all model parameters in `params`.)
 #' @param DF A `data.frame` of concentration-time data
 #' @param modelfun "analytic" to use the analytic model solution, "full" to use
 #'   the full ODE model
@@ -26,7 +26,7 @@
 #'
 #' @return A log-likelihood value for the data given the parameter values in
 #'   params
-log_likelihood <- function(opt_params,
+log_likelihood <- function(params,
                            const_params = NULL,
                            DF,
                            modelfun,
@@ -36,12 +36,7 @@ log_likelihood <- function(opt_params,
 
   #combine parameters to be optimized and held constant,
   #and convert into a list, since that is what model functions expect
-  params <- as.list(c(opt_params, const_params))
-
-  #Back-transform the log-transformed parameters onto the natural scale
-  #params <- lapply(params, exp)
-
-  # if(any(is.na(params))) return(-Inf)
+  params <- as.list(c(params, const_params))
 
   model <- model
 
@@ -55,61 +50,109 @@ log_likelihood <- function(opt_params,
   #get predicted plasma concentration vs. time for the current parameter
   #values, by dose and route
 
-  DF <- as.data.table(DF)
+  if(modelfun %in% "analytic"){
+  mfun <- switch(model,
+                 '1compartment' = cp_1comp,
+                 '2compartment' = cp_2comp,
+                 'flat' = cp_flat)
 
-  DF[, pred := fitfun(design.times = Time.Days,
-                 design.dose = unique(Dose),
-                 design.iv = unique(iv),
-                 design.times.max = unique(Max.Time.Days),
-                 design.time.step = unique(Time.Steps.PerHour),
-                 modelfun = modelfun,
-                 model = model,
-                 model.params = model.params),
-             by = .(Dose, Route)]
+  #get predicted plasma concentration
+  pred <- do.call(mfun,
+          args = list(params = model.params,
+                      time = DF$Time, #in hours
+                      dose = DF$Dose,
+                      iv.dose = DF$iv
+                      ))
+
+  }else{ #evaluate full model
+    if(!(model %in% "1compartment")){
+      stop(paste0("modelfun = 'analytic' specfied with model = '",
+                  model,
+                  ". Full ODE model only implemented for 1-compartment model"))
+    }else{
+      #for each dose and route, eval httk::solve_1comp
+      df_list <- split(DF, DF[c("Dose", "iv")])
+      predlist <- lapply(df_list,
+             function(this_df){
+               these_times <- sort(unique(this_df$Time))
+               this_tstep <- 1/min(diff(these_times))
+               tmp <-  httk::solve_1comp(parameters=model.params,
+                                          times=this_df$Time,
+                                          dose=unique(this_df$Dose),
+                                          days=max(this_df$Time.Days),
+                                          tsteps = round(this_tstep),
+                                          output.units = 'mg/L',
+                                          initial.value=0,
+                                          iv.dose = unique(this_df$iv),
+                                          suppress.messages=TRUE)
+               tmpdf <- data.frame(Ccomp = tmp[, 'Ccompartment'],
+                                   Time = tmp[, "time"],
+                                   Dose = unique(this_df$Dose),
+                                   iv = unique(this_df$iv))
+             })
+      #bind list of data.frames into one big one
+      pred_df <- Reduce(f = rbind, x = predlist)
+
+      #add a tmp variable encoding row ordering in DF
+      DF$rowid <- 1:.N
+
+      #merge with DF
+      pred_merge <- merge(DF, pred_df, by = c("Time", "Dose", "iv"))
+
+      #sort rows in the same order as DF
+      pred_merge <- pred_merge[order(pred_merge$rowid), ]
+
+      #extract predicted plasma concentrations
+      pred <- pred_merge$Ccomp
+
+    }
+  }
+
+  #if pred is non-negative but tiny, then replace with machine tolerance
+  pred[pred >= 0 &
+         pred < .Machine$double.eps] <- .Machine$double.eps
 
   #Match sigmas to references:
   #get vector of sigmas, named as "sigma_ref_ReferenceID" or just "sigma"
-  sigmas <- unlist(params[grepl(x=names(params),
-                         pattern = "sigma")])
+  sigma_names <- grep(x = names(params),
+                      pattern = "sigma",
+                      fixed = TRUE,
+                      value = TRUE)
+  sigmas <- unlist(params[sigma_names])
+
   nref <- length(sigmas)
   if(nref > 1){
     #get the Reference ID for each sigma, based on its name
-  refs_sigmas <- gsub(x = names(sigmas),
+  refs_sigmas <- gsub(x = sigma_names,
                       pattern = "sigma_ref_",
-                      replacement = "")
+                      replacement = "",
+                      fixed = TRUE)
   #match the Reference ID and assign each sigma to its corresponding reference
-  DF[, sigma.ref:=sigmas[match(Reference,
-                             refs_sigmas,
-                             nomatch = 0)]
-     ]
+  sigma_ref <- sigmas[match(DF$Reference,
+                            refs_sigmas,
+                            nomatch = 0)]
+
   }else{ #if only one reference, the parameter is just called "sigma"
-    DF[, sigma.ref := sigmas]
+    sigma_ref <- rep(sigmas, nrow(DF))
   }
 
-  #add 1e-12 to pred
-  #to avoid blowing up log transformation unnecessarily if it's zero
-  #(because concentration could realistically be zero, though not negative)
-  DF[, pred:= pred + 1e-12]
-
   #log-transform predicted values -- suppress warnings about 'NaNs produced'
-  suppressWarnings(DF[, logpred := log(pred)])
+  suppressWarnings(logpred <- log(pred))
 
-  #Compute log-normal log-likelihood (LL):
-  #For detects: PDF
-  DF[!is.na(Value),
-                 loglike := dnorm(x = log(Value),
-                       mean = logpred,
-                       sd = sigma.ref,
-                       log = TRUE)]
-  #For non-detets: CDF
-  DF[is.na(Value),
-                 loglike := pnorm(q = log(LOQ * LOQ_factor),
-                       mean = logpred,
-                       sd = sigma.ref,
-                       log.p = TRUE)]
-
-  #And sum over references to get overall LL
-  ll <- DF[, sum(loglike)]
+  #get log-likelihood for each observation
+  loglike <- ifelse(is.na(DF$Value),
+                    #for non-detects: CDF
+                    pnorm(q = log(DF$LOQ * LOQ_factor),
+                          mean = logpred,
+                          sd = sigma_ref,
+                          log.p = TRUE),
+                    #for detects: PDF
+                    dnorm(x = log(DF$Value),
+                          mean = logpred,
+                          sd = sigma_ref,
+                          log = TRUE))
+  #sum log-likelihoods over observations
+  ll <- sum(loglike)
   #do *not* remove NAs, because they mean this parameter combination is impossible!
 
   #If ll isn't finite -- for example if a predicted concentration was negative --

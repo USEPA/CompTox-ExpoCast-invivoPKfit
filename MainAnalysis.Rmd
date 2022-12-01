@@ -76,6 +76,9 @@ Fit the 1-compartment model.
 
 devtools::load_all("invivopkfit")
 
+
+run_timestamp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
+
 ### do 1-Compartment fit
 system.time(
   capture.output(
@@ -105,7 +108,7 @@ system.time(
       suppress.messages = FALSE
   ),
   file = paste0("inst/ext/PK_fit_table_1comp_output_",
-                format(Sys.time(), "%Y_%m_%d_%H_%M_%S"),
+                run_timestamp,
                 ".txt"),
   type = "message"
   )
@@ -114,7 +117,7 @@ system.time(
 
 write.csv(PK.fit.table.1comp,
           paste("inst/ext/PK_fit_table_1comp_",
-                                    format(Sys.time(), "%Y_%m_%d_%H_%M_%S"),
+                                    run_timestamp,
                                     ".csv",
                                     sep=""),
           row.names = FALSE)
@@ -125,6 +128,8 @@ Fit the 2-compartment model.
 
 ```{r, run_invivoPKfit_2comp, eval = FALSE}
 devtools::load_all("invivopkfit")
+
+run_timestamp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
 
 ### do 2-Compartment fit
 system.time(
@@ -155,49 +160,62 @@ system.time(
       suppress.messages = FALSE
     ),
     file = paste0("inst/ext/PK_fit_table_2comp_output_",
-                  format(Sys.time(), "%Y_%m_%d_%H_%M_%S"),
+                  run_timestamp,
                   ".txt"),
     type = "message"
   )
 )
 
 write.csv(PK.fit.table.2comp, paste("inst/ext/PK_fit_table_2comp_",
-                                    format(Sys.time(), "%Y_%m_%d_%H_%M_%S"),
+                                    run_timestamp,
                                     ".csv",
                                     sep=""), row.names = FALSE)
 
 ```
 
 ```{r, run_invivoPKfit_flat, eval = FALSE}
-### do flat fit
-system.time(PK.fit.table.flat <- fit_all(
-  data.set = cvt.data,
-  model = "flat",
-  modelfun = "analytic",
-  compound.col = "analyte_name_original",
-  dtxsid.col = "dsstox_substance_id",
-  cas.col = "dsstox_casrn",
-  reference.col = "fk_reference_document_id",
-  species.col = "species",
-  species.weight.col = "weight_kg",
-  species.weight.units.default = "kg",
-  dose.col = "dose_level_normalized",
-  time.col = "time_hr",
-  time.units.default = "hr",
-  media.col = "conc_medium_normalized",
-  media.units.default = "normalized",
-  value.col = "conc",
-  units.default = NA,
-  route.col = "administration_route_normalized",
-  source.col = "document_id",
-  loq.col ="calc_loq",
-  subject.default = NA,
-  info.default = NA,
-  suppress.messages = TRUE
-))
+devtools::load_all("invivopkfit")
 
-write.csv(PK.fit.table.flat[[1]], paste("inst/ext/PK.fit.table.flat.",THIS.DATE,".csv",sep=""), row.names = FALSE)
-write.csv(PK.fit.table.flat[[2]], paste("inst/ext/processed.flat.data.",THIS.DATE,".csv",sep=""), row.names = FALSE)
+run_timestamp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
+
+system.time(
+  capture.output(
+    PK.fit.table.flat <- fit_all(
+      data.set = cvt.data,
+      model = "flat",
+      modelfun = "analytic",
+      compound.col = "analyte_name_original",
+      dtxsid.col = "dsstox_substance_id",
+      cas.col = "dsstox_casrn",
+      reference.col = "fk_reference_document_id",
+      species.col = "species",
+      species.weight.col = "weight_kg",
+      species.weight.units.default = "kg",
+      dose.col = "dose_level_normalized",
+      time.col = "time_hr",
+      time.units.default = "hr",
+      media.col = "conc_medium_normalized",
+      media.units.default = "normalized",
+      value.col = "conc",
+      units.default = NA,
+      route.col = "administration_route_normalized",
+      source.col = "document_id",
+      loq.col ="calc_loq",
+      subject.default = NA,
+      info.default = NA,
+      suppress.messages = FALSE
+    ),
+    file = paste0("inst/ext/PK_fit_table_flat_output_",
+                  run_timestamp,
+                  ".txt"),
+    type = "message"
+  )
+)
+
+write.csv(PK.fit.table.flat, paste("inst/ext/PK_fit_table_flat_",
+                                    run_timestamp,
+                                    ".csv",
+                                    sep=""), row.names = FALSE)
 ```
 
 ```{r, read_data}
