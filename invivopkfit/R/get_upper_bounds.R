@@ -158,8 +158,7 @@ get_upper_bounds <- function(fitdata,
 
   if(Vdist_upper_from_data %in% TRUE){
   #Overwrite Vdist/V1 max with a value taken from the data
-  par_DF[grepl(x = par_DF$param_name,
-               pattern = "Vdist|V1"),
+  par_DF[par_DF$param_name %in% c("Vdist", "V1"),
          c("upper_bound",
            "upper_bound_msg")] <- list(Vdist_factor *
                                          max(fitdata$Dose) /
