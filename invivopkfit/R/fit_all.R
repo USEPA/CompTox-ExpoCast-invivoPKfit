@@ -149,8 +149,7 @@ fit_all <- function(data.set,
                     optimx_args = list(
                       "method" = "bobyqa",
                       "control" = list("factr" = 1e7,
-                                       "maximize" = TRUE,
-                                       "maxfun" = 1000)
+                                       "maximize" = TRUE)
                     ),
 
                     suppress.messages = FALSE,

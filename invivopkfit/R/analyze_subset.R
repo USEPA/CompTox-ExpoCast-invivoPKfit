@@ -105,8 +105,7 @@
 #'     list(
 #'           "method" = "bobyqa",
 #'           "control" = list("factr" = 1e7,
-#'                            "maximize" = TRUE,
-#'                            "maxit" = 500)
+#'                            "maximize" = TRUE)
 #'          )
 #'    ```
 #'  See documentation for [optimx::optimx()] for arguments and details. Note
@@ -126,9 +125,7 @@ analyze_subset <- function(fitdata,
                            optimx_args = list(
                              "method" = "bobyqa",
                              "control" = list("factr" = 1e7,
-                                              #"fnscale" = -1,
-                                              "maximize" = TRUE,
-                                              "maxfun" = 500)
+                                              "maximize" = TRUE)
                            ),
                            suppress.messages = FALSE,
                            sig.figs = 5,
@@ -207,13 +204,8 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
 
   #Types of fitted param values to return
-  fitted_types <- c("Fitted arithmetic mean",
-                    "Fitted arithmetic std dev",
-                    "Fitted geometric mean",
-                    "Fitted geometric std dev",
-                    "Fitted mode",
-                    "Fitted log-scale mean",
-                    "Fitted log-scale std dev")
+  fitted_types <- c("Fitted mean",
+                    "Fitted std dev")
 
   #From par_DF, get vectors of:
 
@@ -247,6 +239,22 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                                 "param_name"]
   }else{
     const_params <- NULL
+  }
+
+
+  if(!("maxit" %in% names(optimx_args$control))){
+    optimx_args$control <- c(
+      optimx_args$control,
+      list(
+        "maxit" = max(1e4,
+                      5000*round(
+                        sqrt(
+                          length(opt_params)+1
+                        )
+                      )
+        )
+      )
+    )
   }
 
   #If the number of parameters is >= the number of data points,
@@ -295,7 +303,13 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                            sum(fitdata$Route %in% "iv"),
                            "; po: ",
                            sum(fitdata$Route %in% "po"))
-
+    out_DF$fevals <- NA_integer_
+    out_DF$convcode <- NA_integer_
+    out_DF$niter <- NA_integer_
+    out_DF$method <- optimx_args$method
+    #record control params
+    out_DF[paste0("control_",
+                  names(optimx_args$control))] <- optimx_args$control
     if(!suppress.messages){
     message(msg)
     }
@@ -326,41 +340,57 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   }
 
 
-  tmp <- log_likelihood(opt_params,
-                        const_params = const_params,
-                        DF = fitdata,
-                        modelfun = modelfun,
-                        model = model,
-                        LOQ_factor = LOQ_factor,
-                        force_finite = FALSE)
-  # }
 
-  if(!("npt" %in% names(optimx_args$control))){
-  optimx_args$control <- c(optimx_args$control,
-                           list("npt" = length(opt_params)*2))
-  }
+
 
   all_data_fit <- tryCatch({
-    tmp <- do.call(optimx::optimx,
-                   args = c(
-                     #
-                     list(par = opt_params,
-                                 fn = log_likelihood,
-                                 lower = lower_params,
-                                 upper = upper_params),
-                            #method, and control
-                            optimx_args,
-                            #... additional args to log_likelihood
-                            list(
-                                 const_params = const_params,
-                                 DF = fitdata,
-                                 modelfun = modelfun,
-                                 model = model,
-                                 LOQ_factor = LOQ_factor,
-                                 force_finite = FALSE
-                                 )
-                     )
-                            )
+    if(suppress.messages %in% TRUE){
+      junk <- capture.output(
+        tmp <- do.call(
+          optimx::optimx,
+          args = c(
+            #
+            list(par = opt_params,
+                 fn = log_likelihood,
+                 lower = lower_params,
+                 upper = upper_params),
+            #method, and control
+            optimx_args,
+            #... additional args to log_likelihood
+            list(
+              const_params = const_params,
+              DF = fitdata,
+              modelfun = modelfun,
+              model = model,
+              LOQ_factor = LOQ_factor,
+              force_finite = FALSE
+            ) #end list()
+          ) #end args = c()
+        ) #end do.call
+      ) #end capture.output
+    }else{
+      tmp <- do.call(
+        optimx::optimx,
+        args = c(
+          #
+          list(par = opt_params,
+               fn = log_likelihood,
+               lower = lower_params,
+               upper = upper_params),
+          #method, and control
+          optimx_args,
+          #... additional args to log_likelihood
+          list(
+            const_params = const_params,
+            DF = fitdata,
+            modelfun = modelfun,
+            model = model,
+            LOQ_factor = LOQ_factor,
+            force_finite = FALSE
+          )
+        )
+      ) #end do.call
+    }
     #tmp is a 1-row data.frame with one variable for each fitted param,
     #plus variables with info on fitting (number of evals, convergence code, etc.)
     #collect any messages from optimx -- in attribute "details" (another data.frame)
@@ -409,6 +439,15 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                          sum(fitdata$Route %in% "iv"),
                          "; po: ",
                          sum(fitdata$Route %in% "po"))
+
+  out_DF$fevals <- NA_integer_
+  out_DF$convcode <- NA_integer_
+  out_DF$niter <- NA_integer_
+  out_DF$method <- optimx_args$method
+  #record control params
+  out_DF[paste0("control_",
+                names(optimx_args$control))] <- optimx_args$control
+
   if(!suppress.messages){
     message(msg)
   }
@@ -510,27 +549,51 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                      "Convergence tolerance factr = ",
                      optimx_args$control$factr, "\n",
                      "..."))
-    }
 
-    all_data_fit <-  do.call(optimx::optimx,
-                                      args = c(
-                                        #
-                                        list(par = opt_params,
-                                             fn = log_likelihood,
-                                             lower = lower_params,
-                                             upper = upper_params),
-                                        #method and control
-                                        optimx_args,
-                                        list(
-                                          const_params = const_params,
-                                          DF = fitdata,
-                                          modelfun = modelfun,
-                                          model = model,
-                                          LOQ_factor = LOQ_factor,
-                                          force_finite = FALSE
-                                          )
-                                        )
-    )
+      all_data_fit <-  do.call(optimx::optimx,
+                               args = c(
+                                 #
+                                 list(par = opt_params,
+                                      fn = log_likelihood,
+                                      lower = lower_params,
+                                      upper = upper_params),
+                                 #method and control
+                                 optimx_args,
+                                 list(
+                                   const_params = const_params,
+                                   DF = fitdata,
+                                   modelfun = modelfun,
+                                   model = model,
+                                   LOQ_factor = LOQ_factor,
+                                   force_finite = FALSE
+                                 )
+                               )
+      )
+    }else{
+
+      junk <- capture.output(
+        all_data_fit <-  do.call(
+          optimx::optimx,
+          args = c(
+            #
+            list(par = opt_params,
+                 fn = log_likelihood,
+                 lower = lower_params,
+                 upper = upper_params),
+            #method and control
+            optimx_args,
+            list(
+              const_params = const_params,
+              DF = fitdata,
+              modelfun = modelfun,
+              model = model,
+              LOQ_factor = LOQ_factor,
+              force_finite = FALSE
+            )
+          )
+        )
+      )
+    }
 
     means <- as.vector(stats::coef(all_data_fit))
     names(means) <- names(opt_params)
@@ -573,42 +636,8 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
     names(sds) <- names(means)
   }
 
-  #Arithmetic means:
-  #assume log-scale means are for a log-normal distribution
-  # arith_means <- exp(ln_means + ln_sds ^ 2 / 2)
-  arith_means <- means
-  names(arith_means) <- names(means)
-
-  #Arithmetic SD
-  # arith_sd <- (exp(ln_sds ^ 2) - 1)*sqrt(exp(2 * ln_means+
-  #                                            ln_sds ^ 2))
-
-  arith_sd <- sds
-
-  names(arith_sd) <- names(means)
-
-  #Geometric means
-  # geo_means <- exp(ln_means)
-  geo_means <- means
-  names(geo_means) <- names(means)
-
-  #Geometric SDs
-  # geo_sd <- exp(ln_sds)
-  geo_sd <- sds
-  names(geo_sd) <- names(means)
-
-  #Modes
-  # modes <- exp(ln_means - ln_sds ^ 2)
-  modes <- means
-  names(modes) <- names(means)
-
   #Produce a data frame of fitted parameters
-  fit_DF <- data.frame(arith_means,
-                   arith_sd,
-                   geo_means,
-                   geo_sd,
-                   modes,
-                   means,
+  fit_DF <- data.frame(means,
                    sds)
   names(fit_DF) <-  fitted_types
   fit_DF$param_name <- names(means)
@@ -648,40 +677,40 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
   #if anything has not moved from its starting value:
   out_DF[out_DF$optimize_param %in% TRUE &
-           out_DF$`Fitted log-scale mean` %in% log(out_DF$start_value),
+           out_DF$`Fitted mean` %in% out_DF$start_value,
          "flag"] <- paste0(out_DF[out_DF$optimize_param %in% TRUE &
-                                    out_DF$`Fitted log-scale mean` %in%
+                                    out_DF$`Fitted mean` %in%
                                     log(out_DF$start_value),
                                   "flag"],
-                           "Fitted log-scale mean equal to log(start value). ")
+                           "Fitted mean equal to start value. ")
 
   #if log-scale std dev is 0 for any parameters
   out_DF[out_DF$optimize_param %in% TRUE &
-           out_DF$`Fitted log-scale std dev`%in% 0,
+           out_DF$`Fitted std dev`%in% 0,
          "flag"] <- paste0(out_DF[out_DF$optimize_param %in% TRUE &
-                                    out_DF$`Fitted log-scale std dev`%in% 0,
+                                    out_DF$`Fitted std dev`%in% 0,
                                   "flag"],
-                           "Fitted log-scale std dev = 0. ")
+                           "Fitted std dev = 0. ")
 
   #if log-scale std dev is NaN for any parameters
   out_DF[out_DF$optimize_param %in% TRUE &
-           !is.finite(out_DF$`Fitted log-scale std dev`),
+           !is.finite(out_DF$`Fitted std dev`),
          "flag"] <- paste0(out_DF[out_DF$optimize_param %in% TRUE &
-                                    !is.finite(out_DF$`Fitted log-scale std dev`),
+                                    !is.finite(out_DF$`Fitted std dev`),
                                   "flag"],
-                           "Fitted log-scale std dev is not finite. ")
+                           "Fitted std dev is not finite. ")
 
   #if any parameters are exactly at their bounds
   out_DF[out_DF$optimize_param %in% TRUE &
-           (out_DF$`Fitted log-scale mean` %in% log(out_DF$upper_bound) |
-           out_DF$`Fitted log-scale mean` %in% log(out_DF$lower_bound)),
+           (out_DF$`Fitted mean` %in% out_DF$upper_bound |
+           out_DF$`Fitted mean` %in% out_DF$lower_bound),
          "flag"] <- paste0(out_DF[out_DF$optimize_param %in% TRUE &
-                                    (out_DF$`Fitted log-scale mean` %in%
-                                       log(out_DF$upper_bound) |
-                                       out_DF$`Fitted log-scale mean` %in%
-                                       log(out_DF$lower_bound)),
+                                    (out_DF$`Fitted mean` %in%
+                                       out_DF$upper_bound |
+                                       out_DF$`Fitted mean` %in%
+                                       out_DF$lower_bound),
                                   "flag"],
-                           "Fitted log-scale mean is equal to lower or upper bound.")
+                           "Fitted mean is equal to lower or upper bound.")
 
   #Record the unique routes in this dataset
   #Route info provides context for why some parameters were/were not estimated
@@ -690,6 +719,16 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                          "; po: ",
                          sum(fitdata$Route %in% "po"))
   out_DF$message <- "Optimization successful."
+
+  out_DF$method <- optimx_args$method
+  out_DF$fevals <- as.integer(all_data_fit$fevals)
+  out_DF$convcode <- as.integer(all_data_fit$convcode)
+  out_DF$niter <- as.integer(all_data_fit$niter)
+  #record control params
+  out_DF[paste0("control_",
+                names(optimx_args$control))] <- optimx_args$control
+
+
 return(out_DF)
 
 
