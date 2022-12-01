@@ -123,9 +123,10 @@ analyze_subset <- function(fitdata,
                            get_lower_args = NULL,
                            get_upper_args = NULL,
                            optimx_args = list(
-                             "method" = "L-BFGS-B",
+                             "method" = "bobyqa",
                              "control" = list("factr" = 1e7,
-                                              "fnscale" = -1,
+                                              #"fnscale" = -1,
+                                              maximize = TRUE,
                                               "maxit" = 500)
                            ),
                            suppress.messages = FALSE,
@@ -213,10 +214,44 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                     "Fitted log-scale mean",
                     "Fitted log-scale std dev")
 
+  #From par_DF, get vectors of:
+
+  #params to be optimized
+  opt_params <- par_DF[par_DF$optimize_param %in% TRUE,
+                       "start_value"]
+  names(opt_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+                              "param_name"]
+
+  #param lower bounds (only on params to be optimized)
+  lower_params <- par_DF[par_DF$optimize_param %in% TRUE,
+                         "lower_bound"]
+  names(lower_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+                                "param_name"]
+
+  #param upper bounds (only on params to be optimized)
+  upper_params <- par_DF[par_DF$optimize_param %in% TRUE,
+                         "upper_bound"]
+  names(upper_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+                                "param_name"]
+
+  #get constant params if any
+  if(any(par_DF$optimize_param %in% FALSE &
+         par_DF$use_param %in% TRUE)){
+  const_params <- par_DF[par_DF$optimize_param %in% FALSE &
+                           par_DF$use_param %in% TRUE,
+                         "start_value"]
+
+  names(const_params) <- par_DF[par_DF$optimize_param %in% FALSE &
+                                  par_DF$use_param %in% TRUE,
+                                "param_name"]
+  }else{
+    const_params <- NULL
+  }
+
   #If the number of parameters is >= the number of data points,
   #then throw back everything NA with a message,
   #because there is no point wasting time trying to fit them.
-  if (sum(par_DF$optimize_param) >= nrow(fitdata)){
+  if (length(opt_params) >= nrow(fitdata)){
 
    out_DF[, fitted_types] <- NA_real_
 
@@ -268,25 +303,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
   #otherwise, if we have enough data, proceed with the fit.
 
-  #From par_DF, get vectors of:
 
-  #params to be optimized
-  opt_params <- par_DF[par_DF$optimize_param %in% TRUE,
-                       "start_value"]
-  names(opt_params) <- par_DF[par_DF$optimize_param %in% TRUE,
-                              "param_name"]
-
-  #param lower bounds (only on params to be optimized)
-  lower_params <- par_DF[par_DF$optimize_param %in% TRUE,
-                       "lower_bound"]
-  names(lower_params) <- par_DF[par_DF$optimize_param %in% TRUE,
-                                "param_name"]
-
-  #param upper bounds (only on params to be optimized)
-  upper_params <- par_DF[par_DF$optimize_param %in% TRUE,
-                         "upper_bound"]
-  names(upper_params) <- par_DF[par_DF$optimize_param %in% TRUE,
-                                "param_name"]
 
   if (!suppress.messages){
     message(paste0("Estimating parameters ",
@@ -306,36 +323,36 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                         collapse = ", "),
                   sep = ""))
 
-    loglike_grad_start <- numDeriv::grad(func = function(x){
-      -1 * log_likelihood(x,
-                          DF = fitdata,
-                          modelfun = modelfun,
-                          model = model,
-                          LOQ_factor = LOQ_factor,
-                          force_finite = all(
-                            optimx_args$method %in% "L-BFGS-B"
-                          ) )
-    },
-    x = opt_params)
-
-    message(paste("Gradient at initial values:",
-                  paste(apply(data.frame(Names = names(opt_params),
-                                         Values = loglike_grad_start,
-                                         stringsAsFactors = F),
-                              1, function(x) paste(x, collapse = ": ")),
-                        collapse = ", ")
-                  )
-    )
+    # loglike_grad_start <- numDeriv::grad(func = function(x){
+    #   -1 * log_likelihood(x,
+    #                       DF = fitdata,
+    #                       modelfun = modelfun,
+    #                       model = model,
+    #                       LOQ_factor = LOQ_factor,
+    #                       force_finite = all(
+    #                         optimx_args$method %in% "L-BFGS-B"
+    #                       ) )
+    # },
+    # x = opt_params)
+    #
+    # message(paste("Gradient at initial values:",
+    #               paste(apply(data.frame(Names = names(opt_params),
+    #                                      Values = loglike_grad_start,
+    #                                      stringsAsFactors = F),
+    #                           1, function(x) paste(x, collapse = ": ")),
+    #                     collapse = ", ")
+    #               )
+    # )
   }
 
-  #set parscale as loglike_grad_start unless otherwise specified
-  #unless that would scale the parameters too tin (take them down to a minimum of sqrt(.Machine$double.eps))
-  if(!("parscale" %in% names(optimx_args$control))){
-  optimx_args$control <- c(optimx_args$control,
-                           list("parscale" = pmin(abs(loglike_grad_start),
-                                                  opt_params/sqrt(.Machine$double.eps)
-                                                  )))
-  }
+  # #set parscale as loglike_grad_start unless otherwise specified
+  # #unless that would scale the parameters too tin (take them down to a minimum of sqrt(.Machine$double.eps))
+  # if(!("parscale" %in% names(optimx_args$control))){
+  # optimx_args$control <- c(optimx_args$control,
+  #                          list("parscale" = pmin(abs(loglike_grad_start),
+  #                                                 opt_params/sqrt(.Machine$double.eps)
+  #                                                 )))
+  # }
 
   all_data_fit <- tryCatch({
     tmp <- do.call(optimx::optimx,
@@ -349,13 +366,15 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                             optimx_args,
                             #... additional args to log_likelihood
                             list(
-                                 # const_params = const_params,
+                                 const_params = const_params,
                                  DF = fitdata,
                                  modelfun = modelfun,
                                  model = model,
                                  LOQ_factor = LOQ_factor,
-                                 force_finite = all(
-                                   optimx_args$method %in% "L-BFGS-B")
+                                 force_finite = FALSE
+                                 # force_finite = all(
+                                 #   optimx_args$method %in% "L-BFGS-B"
+                                 #   )
                                  )
                      )
                             )
@@ -434,6 +453,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   #Calculate Hessian using function from numDeriv
   numhess <- numDeriv::hessian(func = function(x){
     -1 * log_likelihood(x,
+                        const_params = const_params,
                         DF = fitdata,
                         modelfun = modelfun,
                         model = model,
@@ -524,6 +544,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                                         #method and control
                                         optimx_args,
                                         list(
+                                          const_params = const_params,
                                           DF = fitdata,
                                           modelfun = modelfun,
                                           model = model,
@@ -552,6 +573,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
     #but use NEGATIVE log likelihood
     numhess <- numDeriv::hessian(func = function(x){
       -1 * log_likelihood(opt_params = x,
+                          const_params = const_params,
                           DF = fitdata,
                           modelfun = modelfun,
                           model = model,

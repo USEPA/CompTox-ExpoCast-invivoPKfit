@@ -477,8 +477,8 @@ if(is.null(par_DF)){
         #get corresponding time points for the averages
         Cavg_times <- as.numeric(names(Cavg))
 
-        Cpeak <- max(Cavg, na.rm = TRUE) #peak average conc
-        tpeak <- Cavg_times[Cavg == Cpeak] #time of peak conc
+        Cpeak <- max(Cavg, na.rm = TRUE) #peak average log conc/dose
+        tpeak <- Cavg_times[Cavg == Cpeak] #time of peak log conc/dose
 
         #if tpeak is the first or last time, bump it to the second or second to last
         if(all(po_data$Time >= tpeak)){ #if it is the first time
@@ -617,21 +617,24 @@ if(is.null(par_DF)){
     #####################
     if(model %in% "2compartment"){
       if(has_iv %in% TRUE){
+        #--------------------------------------------------
         #get alpha, beta, A, and B from method of residuals
         #see https://www.boomer.org/c/p4/c19/c1903.php
+        #--------------------------------------------------
+
         #split IV data into early and late parts
         #find the dividing line between early and late as the "elbow" point
         elbow_time <- tryCatch(akmedoids::elbow_point(iv_data$Time,
                                              iv_data$logValueDose)$x,
                                error = function(err){
                                  #if akmedoids::elbow_point() does not work,
-                                 #fallback to median time (naive)
-                                 median(iv_data$Time)
+                                 #fallback to middle time (naive)
+                                 (max(iv_data$Time) - min(iv_data$Time))/2
                                })
 
         if(!is.finite(elbow_time) |
            elbow_time < 0){
-          elbow_time <- median(iv.data$Time)
+          elbow_time <- (max(iv_data$Time) - min(iv_data$Time))/2
         }
 
         if(length(unique(iv_data$Time))>1){
@@ -649,6 +652,10 @@ if(is.null(par_DF)){
                            Time <= elbow_time)
         iv_late <- subset(iv_data,
                           Time >= elbow_time)
+
+        #--------------------------------------------------
+        # Regression on late-phase data
+        #-------------------------------------------------
 
         if(nrow(iv_late)> 2){ #if enough late data to regress
         #linear regression of late data gives beta, B/Dose
@@ -672,36 +679,42 @@ if(is.null(par_DF)){
           beta_iv <- NA_real_
         }
 
-        #if(!is.numeric(B_Dose_iv)) browser()
-        #log-scale residuals during early phase
+        #---------------------------------------------------
+        # Regression on early-phase RESIDUALS
+        #---------------------------------------------------
+
+        #calc log-scale residuals during early phase
+        #observed - (predicted from late-phase regression)
         iv_early$logresid <-  iv_early$logValueDose -
           (log(B_Dose_iv) + -beta_iv * iv_early$Time)
 
         #drop any NA residuals
         iv_early <- subset(iv_early, is.finite(logresid))
 
-        #regress log residuals on Time again
+        #regress log residuals on Time
 
-        if(nrow(iv_early) > 2){ #if more than 2 points
+        if(nrow(iv_early) > 2){ #if enough early-phase data for regression
           lm_resid <- lm(logresid ~ Time,
                          data = iv_early)
         alpha_iv <- -coef(lm_resid)[2]
         A_Dose_iv <- exp(coef(lm_resid)[1])
-        }else if(nrow(iv_early) == 2){ #if only 2 points
+        }else if(nrow(iv_early) == 2){ #if only 2 early-phase points
 
-          if(length(unique(iv_early$Time))>1){
+          if(length(unique(iv_early$Time))>1){ #2 unique time points
+            #get slope & intercept by drawing line through 2 points
             iv_early <- iv_early[order(iv_early$Time), ]
             A_Dose_iv <- exp(iv_early[1, "logresid"])
             alpha_iv <- -(diff(iv_early$logresid)/diff(iv_early$Time))
-          }else{
+          }else{ #only 1 unique time point (2 obs at same time)
+            #can get intercept but not slope
             A_Dose_iv <- exp(mean(iv_early$logresid))
             alpha_iv <- NA_real_
           }
 
-        }else if(nrow(iv_early)==1){ #if only 1 point
+        }else if(nrow(iv_early)==1){ #if only 1 early-phase point
           A_Dose_iv <- exp(iv_early$logresid)
           alpha_iv <- NA_real_
-        }else{ #if zero points
+        }else{ #if no early-phase points (or all resids NA)
           A_Dose_iv <- NA_real_
           alpha_iv <- NA_real_
         }
@@ -710,6 +723,9 @@ if(is.null(par_DF)){
         kel_iv <- (alpha_iv * beta_iv)/k21_iv
         k12_iv <- alpha_iv + beta_iv - k21_iv - kel_iv
         V1_iv <- 1/(A_Dose_iv + B_Dose_iv)
+        #to show V1 relation:
+        #see https://www.boomer.org/c/p4/c19/c1902.php for A. B equations;
+        #write A+B and solve for V1
 
         #update par_DF
         par_DF <- assign_start(param_name = "V1",
@@ -738,12 +754,18 @@ if(is.null(par_DF)){
                                msg = "Method of residuals on IV data")
       } #end  if(has_iv %in% TRUE)
 
+      #----------------------------------------------------------------
+      # Oral data -- 2 compartment model
+      # See https://www.boomer.org/c/p4/c19/c1907.php
+      # Use method of residuals *twice*
+      #----------------------------------------------------------------
+
       if(has_po %in% TRUE){
-        #run method of residuals twice to get kgutabs, alpha, beta, A, and B
-        #this time, split the data into three parts:
-        #absorption phase, early phase, and late phase.
-        #absorption phase ends when peak concentration is achieved:
-        #to get time of peak concentration:
+        #Split the data into three parts:
+        #Absorption phase, early phase, and late phase.
+
+        #Absorption phase ends when peak concentration is achieved:
+        #To get time of peak concentration:
         #get average log conc/dose by time point
         Cavg <- tapply(po_data$logValueDose,
                        po_data$Time,
@@ -765,20 +787,24 @@ if(is.null(par_DF)){
         }
         }
 
+        #split data into absorption and non-absorption phases
         po_abs <- subset(po_data, Time <= tpeak)
         po_nonabs <- subset(po_data, Time >= tpeak)
 
+        #further split the non-absorption phase into early and late parts
         #find the dividing line between early and late as the "elbow" point
         elbow_time <- tryCatch(akmedoids::elbow_point(po_nonabs$Time,
                                            po_nonabs$logValueDose)$x,
                                error = function(err){
                                  #if akmedoids::elbow_point() does not work
-                                 median(po_nonabs$Time)
+                                 #fall back to middle of time (naive)
+                                (max(po_nonabs$Time) - min(po_nonabs$Time))/2
                                })
-        #in case we get NA or infinite or negative elbow time, go to median time
+        #in case we get NA or infinite or negative elbow time,
+        #fallback to middle time
         if(!is.finite(elbow_time) |
            elbow_time < 0){
-          elbow_time <- median(po_nonabs$Time)
+          elbow_time <- (max(po_nonabs$Time) - min(po_nonabs$Time))/2
         }
 
         if(length(unique(po_nonabs$Time))>1){
