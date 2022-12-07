@@ -41,22 +41,37 @@
 #' underlying PK model, but each study may have a different amount of random
 #' measurement error (analogous to meta-regression with fixed effects).
 #'
-#'  Parameters are estimated using [optimx::optimx()] using the 'L-BFGS-B'
-#'  algorithm by default, to enforce lower and upper bounds on parameters.
-#'  Parameter starting values are set in [get_starts()]. Parameter lower bounds
-#'  are set in [get_lower_bounds()]. Parameter upper bounds are set in
-#'  [get_upper_bounds()].
+#'  # Parameter estimation via numerical optimization
 #'
-#'  The objective function to be maximized is the log-likelihood, defined in
-#'  [log_likelihood()]. It models the residuals as log-normal. The
-#'  objective-function gradient is defined analytically in
-#'  [grad_log_likelihood()].
+#'  Parameters are estimated using [optimx::optimx()] by default using the
+#'  [minqa::bobyqa()] algorithm. (The algorithm is specified in
+#'  `optimx_args$method`.) The objective function to be maximized is the
+#'  log-likelihood, defined in [log_likelihood()]. It models the residuals as
+#'  log-normal. Note that the log-likelihood is *maximized*, not minimized.
+#'  Maximization is specified by setting argument `optimx_args$control$maximize
+#'  = TRUE`. Parameter starting values are set in [get_starts()]. Parameter
+#'  lower bounds are set in [get_lower_bounds()]. Parameter upper bounds are set
+#'  in [get_upper_bounds()].
 #'
-#'  Parameters are optimized on the log scale, to reduce scaling issues. This
-#'  means that parameter starting values and lower/upper bounds are
-#'  log-transformed before being passed to [optimx::optimx()], so if any
-#'  starting values or bounds are zero or negative, they will be non-finite when
-#'  log-transformed, and [optimx::optimx()] will fail with an error.
+#'  By default, the objective function gradient is estimated numerically.
+#'
+#'  ## Parameter standard deviations via numerical Hessian
+#'
+#'  Parameter standard deviations (uncertainty) are estimated as the square root
+#'  of the diagonal of the inverse of the Hessian (the matrix of second
+#'  derivatives of the objective function). The inverse Hessian approximates the
+#'  variance-covariance matrix of estimated parameters. The square root of its
+#'  diagonal approximates parameter standard deviations.
+#'
+#'  If the numerically-estimated Hessian cannot be inverted, a
+#'  pseudoinverse is attempted.
+#'
+#'  If the square root of the inverse Hessian contains NaN, then if
+#'  `optimx_args$method %in% 'L-BFGS-B'`, optimization is repeated with a
+#'  smaller convergence tolerance, until either there are no more NaNs or
+#'  convergence tolerance factor is equal to 1 (i.e. tolerance is at machine
+#'  epsilon). This is not done if `optimx_args$method %in% 'bobyqa'` because
+#'  that method does not use a convergence tolerance control parameter.
 #'
 #' # Expected variables in \code{fitdata}
 #'
@@ -104,13 +119,14 @@
 #'    ```
 #'     list(
 #'           "method" = "bobyqa",
-#'           "control" = list("factr" = 1e7,
-#'                            "maximize" = TRUE)
+#'           "itnmax" = 1e6,
+#'           "control" = list("maximize" = TRUE)
 #'          )
 #'    ```
 #'  See documentation for [optimx::optimx()] for arguments and details. Note
 #'  lower and upper bounds (box constraints) will be supplied; if you want them
-#'  to be respected, please choose a method that allows box constraints.
+#'  to be respected, please choose a method that allows box constraints (e.g.
+#'  "bobyqa" or "L-BFGS-B").
 #'
 #'
 
@@ -124,12 +140,11 @@ analyze_subset <- function(fitdata,
                            get_upper_args = NULL,
                            optimx_args = list(
                              "method" = "bobyqa",
-                             "control" = list("factr" = 1e7,
-                                              "maximize" = TRUE)
+                             "itnmax" = 1e6,
+                             "control" = list("maximize" = TRUE,
+                                              "kkt" = FALSE)
                            ),
-                           suppress.messages = FALSE,
-                           sig.figs = 5,
-                           factr = 1e7){
+                           suppress.messages = FALSE){
 
   #convert back to data.frame
   fitdata <- as.data.frame(fitdata)
@@ -160,6 +175,38 @@ analyze_subset <- function(fitdata,
                   ")"
     )
     )
+  }
+
+  #assign default max iterations/function evals if missing
+  if(is.null(optimx_args$itnmax)){
+    optimx_args$itnmax <- max(5e4,
+                      5000*round(
+                        sqrt(
+                          length(opt_params)+1
+                        )
+                      )
+        )
+
+
+    if(!suppress.messages){
+      message(paste("optimx_args does not include item 'itnmax'.",
+                    "Setting optimx_args$itnmax =",
+                    "max(5e4, 5000*round(sqrt(n+1)))",
+                    "where n = number of params to be optimized.",
+                    "(This is the optimx() default)"))
+    }
+  }
+
+  #assign convergence tolerance factor if missing and relevant
+  if(optimx_args$method %in% "L-BFGS-B" &
+     is.null(optimx_args$control$factr)){
+    optimx_args$control$factr <- 1e7
+    if(!suppress.messages){
+      message(paste("Optimization method is",
+                    optimx_args$method,
+                    "but control argument factr was not provided;",
+                    "setting factr = 1e7"))
+    }
   }
 
   #get parameter names and
@@ -242,20 +289,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   }
 
 
-  if(!("maxit" %in% names(optimx_args$control))){
-    optimx_args$control <- c(
-      optimx_args$control,
-      list(
-        "maxit" = max(1e4,
-                      5000*round(
-                        sqrt(
-                          length(opt_params)+1
-                        )
-                      )
-        )
-      )
-    )
-  }
+
 
   #If the number of parameters is >= the number of data points,
   #then throw back everything NA with a message,
@@ -339,10 +373,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                   sep = ""))
   }
 
-
-
-
-
   all_data_fit <- tryCatch({
     if(suppress.messages %in% TRUE){
       junk <- capture.output(
@@ -354,7 +384,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                  fn = log_likelihood,
                  lower = lower_params,
                  upper = upper_params),
-            #method, and control
+            #method and control
             optimx_args,
             #... additional args to log_likelihood
             list(
@@ -501,8 +531,11 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                      })
   names(sds) <- names(means)
 
+  #Only if
   #If any of the SDs are NaN,
   #repeat optimization with smaller convergence tolerance
+  #-- only if method is "L-BFGS-B" -- other methods do not use this
+  if(optimx_args$method %in% "L-BFGS-B"){
   while(any(is.nan(sds)) & optimx_args$control$factr > 1) {
 
 
@@ -634,7 +667,8 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                          #see http://gking.harvard.edu/files/help.pdf
                        })
     names(sds) <- names(means)
-  }
+  } #end while(any(is.nan(sds)) & optimx_args$control$factr > 1)
+  } #end if method %in% "L-BFGS-B"
 
   #Produce a data frame of fitted parameters
   fit_DF <- data.frame(means,
@@ -668,8 +702,8 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   }
 
   #Add log-likelihood and AIC values
-  out_DF$LogLikelihood <- -all_data_fit$value
-  out_DF$AIC <- 2 * length(opt_params) + 2 * all_data_fit$value
+  out_DF$LogLikelihood <- all_data_fit$value
+  out_DF$AIC <- 2 * length(opt_params) - 2 * all_data_fit$value
 
   #Check for red flags
   #Initialize flag to blank string...
@@ -712,6 +746,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                                   "flag"],
                            "Fitted mean is equal to lower or upper bound.")
 
+
   #Record the unique routes in this dataset
   #Route info provides context for why some parameters were/were not estimated
   out_DF$Routes <- paste("iv: ",
@@ -720,10 +755,11 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                          sum(fitdata$Route %in% "po"))
   out_DF$message <- "Optimization successful."
 
-  out_DF$method <- optimx_args$method
+
   out_DF$fevals <- as.integer(all_data_fit$fevals)
   out_DF$convcode <- as.integer(all_data_fit$convcode)
   out_DF$niter <- as.integer(all_data_fit$niter)
+  out_DF$method <- optimx_args$method
   #record control params
   out_DF[paste0("control_",
                 names(optimx_args$control))] <- optimx_args$control
