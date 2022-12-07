@@ -7,17 +7,17 @@
 #'
 #' | param_name     | upper_bound | upper_bound_msg |
 #' | ---------------| ----------- | --------------- |
-#' | A              | 1e8           | Default         |
-#' | kelim          | 1e4        | Default         |
-#' | Vdist          | 1e8        | Default         |
-#' | kgutabs        | 1e4        | Default         |
+#' | A              | Inf           | Default         |
+#' | kelim          | Inf        | Default         |
+#' | Vdist          | Inf        | Default         |
+#' | kgutabs        | Inf        | Default         |
 #' | Fgutabs        | 1         | Default         |
-#' | V1             | 1e8           | Default         |
-#' | k12            | 1e4         | Default         |
-#' | k21            | 1e4         | Default         |
-#' | Fgutabs_Vdist  | 1e8    | Default         |
-#' | Fgutabs_V1     | 1e8    | Default         |
-#' | sigma          | 1e8         | Default         |
+#' | V1             | Inf           | Default         |
+#' | k12            | Inf         | Default         |
+#' | k21            | Inf         | Default         |
+#' | Fgutabs_Vdist  | Inf    | Default         |
+#' | Fgutabs_V1     | Inf    | Default         |
+#' | sigma          | Inf         | Default         |
 #'
 #' @param fitdata A data.frame: the concentration-time-dose data to be used for
 #'   fitting.
@@ -89,12 +89,10 @@ get_upper_bounds <- function(fitdata,
                                                Inf), #sigma
                                upper_bound_msg = "Default"
                              ),
-                             sigma_upper_from_data = TRUE,
-                             Vdist_upper_from_data = TRUE,
+                             sigma_upper_from_data = FALSE,
+                             Vdist_upper_from_data = FALSE,
                              Vdist_factor = 2,
-                             suppress.messages = FALSE,
-                             digits = 5,
-                             scientific = -3){
+                             suppress.messages = FALSE){
 
   if(is.null(par_DF)){
   par_DF <- get_opt_params(model = model,

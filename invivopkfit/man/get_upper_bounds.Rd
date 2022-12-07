@@ -10,15 +10,12 @@ get_upper_bounds(
   model,
   pool_sigma = FALSE,
   upper_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
-    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), upper_bound = c(1e+08,
-    10000, 1e+08, 10000, 1, 1e+08, 10000, 10000, 1e+08, 1e+08, 1e+08), upper_bound_msg =
-    "Default"),
-  sigma_upper_from_data = TRUE,
-  Vdist_upper_from_data = TRUE,
+    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), upper_bound = c(Inf,
+    Inf, Inf, Inf, 1, Inf, Inf, Inf, Inf, Inf, Inf), upper_bound_msg = "Default"),
+  sigma_upper_from_data = FALSE,
+  Vdist_upper_from_data = FALSE,
   Vdist_factor = 2,
-  suppress.messages = FALSE,
-  digits = 5,
-  scientific = -3
+  suppress.messages = FALSE
 )
 }
 \arguments{
@@ -81,17 +78,17 @@ The default `upper_default` `data.frame` is shown below in table format:
 
 | param_name     | upper_bound | upper_bound_msg |
 | ---------------| ----------- | --------------- |
-| A              | 1e8           | Default         |
-| kelim          | 1e4        | Default         |
-| Vdist          | 1e8        | Default         |
-| kgutabs        | 1e4        | Default         |
+| A              | Inf           | Default         |
+| kelim          | Inf        | Default         |
+| Vdist          | Inf        | Default         |
+| kgutabs        | Inf        | Default         |
 | Fgutabs        | 1         | Default         |
-| V1             | 1e8           | Default         |
-| k12            | 1e4         | Default         |
-| k21            | 1e4         | Default         |
-| Fgutabs_Vdist  | 1e8    | Default         |
-| Fgutabs_V1     | 1e8    | Default         |
-| sigma          | 1e8         | Default         |
+| V1             | Inf           | Default         |
+| k12            | Inf         | Default         |
+| k21            | Inf         | Default         |
+| Fgutabs_Vdist  | Inf    | Default         |
+| Fgutabs_V1     | Inf    | Default         |
+| sigma          | Inf         | Default         |
 }
 \author{
 Caroline Ring, John Wambaugh, Mitchell Teague

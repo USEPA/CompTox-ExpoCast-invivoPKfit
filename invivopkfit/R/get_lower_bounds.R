@@ -7,17 +7,17 @@
 #'
 #' | param_name     | lower_bound | lower_bound_msg |
 #' | ---------------| ----------- | --------------- |
-#' | A              | 1e-8           | Default         |
+#' | A              | 1e-4           | Default         |
 #' | kelim          | 1e-4        | Default         |
-#' | Vdist          | 1e-8        | Default         |
+#' | Vdist          | 1e-4        | Default         |
 #' | kgutabs        | 1e-4        | Default         |
-#' | Fgutabs        | 1e-8         | Default         |
-#' | V1             | 1e-8           | Default         |
+#' | Fgutabs        | 1e-4         | Default         |
+#' | V1             | 1e-4           | Default         |
 #' | k12            | 1e-4         | Default         |
 #' | k21            | 1e-4         | Default         |
-#' | Fgutabs_Vdist  | 1e-8    | Default         |
-#' | Fgutabs_V1     | 1e-8    | Default         |
-#' | sigma          | 1e-8         | Default         |
+#' | Fgutabs_Vdist  | 1e-4    | Default         |
+#' | Fgutabs_V1     | 1e-4    | Default         |
+#' | sigma          | 1e-4         | Default         |
 #'
 #' @param fitdata A data.frame: the concentration-time-dose data to be used for
 #'   fitting.

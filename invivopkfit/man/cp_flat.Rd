@@ -7,19 +7,19 @@
 cp_flat(time, params, dose, iv.dose)
 }
 \arguments{
-\item{time}{A vector of times in hours}
+\item{time}{A numeric vector of times in hours.}
 
-\item{params}{A named list of model parameter values. Must include:
-\describe{
-\item{A}{Average concentration}
-}}
+\item{params}{A named list of model parameter values. Must include: \describe{
+\item{A}{Average concentration} }}
 
-\item{dose}{Dose in mg/kg}
+\item{dose}{A numeric vector of doses in mg/kg}
 
-\item{iv.dose}{TRUE for single IV bolus dose; FALSE for single oral dose}
+\item{iv.dose}{A logical vector: TRUE for single IV bolus dose; FALSE for
+single oral dose. Not used, but must be present for compatibility with other
+model functions.}
 }
 \value{
-A vector of plasma concentration values corresponding to \code{time}.
+A vector of plasma concentration values (mg/L) corresponding to \code{time}.
 }
 \description{
 Flat model

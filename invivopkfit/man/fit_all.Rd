@@ -42,9 +42,9 @@ fit_all(
   get_starts_args = NULL,
   get_lower_args = NULL,
   get_upper_args = NULL,
-  optimx_args = list(method = "L-BFGS-B", control = list(factr = 1e+07, fnscale = -1)),
-  suppress.messages = FALSE,
-  sig.figs = 4
+  optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(maximize = TRUE,
+    kkt = FALSE)),
+  suppress.messages = FALSE
 )
 }
 \arguments{
@@ -153,17 +153,34 @@ created and filled with this value.  Default NULL.}
 \item{LOQ_factor}{Numeric. Observations with concentrations less than
 `LOQ_factor * LOQ` will be removed. Default 2.}
 
-\item{get_starts_args}{Any additional arguments to [get_starts()] (other than
+\item{get_starts_args}{Named list or NULL: any additional arguments to [get_starts()] (other than
 `model` and `fitdata`, which are always passed). Default NULL to accept the
 default arguments for [get_starts()].}
 
-\item{get_lower_args}{Any additional arguments to [get_lower_bounds()] (other
+\item{get_lower_args}{Named list or NULL: any additional arguments to [get_lower_bounds()] (other
 than `model` and `fitdata`, which are always passed). Default NULL to
 accept the default arguments for [get_lower_bounds()].}
 
-\item{get_upper_args}{Any additional arguments to [get_upper_bounds()] (other
+\item{get_upper_args}{Named list or NULL: any additional arguments to [get_upper_bounds()] (other
 than `model` and `fitdata`, which are always passed). Default NULL to
 accept the default arguments for [get_upper_bounds()].}
+
+\item{optimx_args}{A named list of additional arguments to [optimx::optimx()]
+  (used for parameter estimation), other than `par`, `fn`, `lower`, and
+  `upper`. Default is:
+
+   ```
+    list(
+          "method" = "bobyqa",
+          "itnmax" = 1e6,
+          "control" = list("maximize" = TRUE,
+                           "kkt" = FALSE)
+         )
+   ```
+ See documentation for [optimx::optimx()] for possible arguments and details.
+ Note lower and upper bounds (box constraints) will be supplied; if you want
+ them to be respected, please choose a method that allows box constraints
+ (e.g. "bobyqa" or "L-BFGS-B").}
 
 \item{suppress.messages}{Logical: Whether to suppress verbose messages.
 Default FALSE, to be verbose.}

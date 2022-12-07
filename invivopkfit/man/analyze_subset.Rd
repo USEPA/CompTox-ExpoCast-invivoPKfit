@@ -13,10 +13,9 @@ analyze_subset(
   get_starts_args = NULL,
   get_lower_args = NULL,
   get_upper_args = NULL,
-  optimx_args = list(method = "L-BFGS-B", control = list(factr = 1e+07, fnscale = -1)),
-  suppress.messages = FALSE,
-  sig.figs = 5,
-  factr = 1e+07
+  optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(maximize = TRUE,
+    kkt = FALSE)),
+  suppress.messages = FALSE
 )
 }
 \arguments{
@@ -59,14 +58,15 @@ accept the default arguments for [get_upper_bounds()].}
 
    ```
     list(
-          "method" = "L-BFGS-B",
-          "control" = list("factr" = 1e7,
-                           "maximize" = TRUE)
+          "method" = "bobyqa",
+          "itnmax" = 1e6,
+          "control" = list("maximize" = TRUE)
          )
    ```
  See documentation for [optimx::optimx()] for arguments and details. Note
  lower and upper bounds (box constraints) will be supplied; if you want them
- to be respected, please choose a method that allows box constraints.}
+ to be respected, please choose a method that allows box constraints (e.g.
+ "bobyqa" or "L-BFGS-B").}
 }
 \description{
 Fit a specified PK model to one set of concentration vs. time data and return
@@ -111,22 +111,37 @@ assumption that all concentration vs. time studies in `fitdata` obey the same
 underlying PK model, but each study may have a different amount of random
 measurement error (analogous to meta-regression with fixed effects).
 
- Parameters are estimated using [optimx::optimx()] using the 'L-BFGS-B'
- algorithm by default, to enforce lower and upper bounds on parameters.
- Parameter starting values are set in [get_starts()]. Parameter lower bounds
- are set in [get_lower_bounds()]. Parameter upper bounds are set in
- [get_upper_bounds()].
+ # Parameter estimation via numerical optimization
 
- The objective function to be maximized is the log-likelihood, defined in
- [log_likelihood()]. It models the residuals as log-normal. The
- objective-function gradient is defined analytically in
- [grad_log_likelihood()].
+ Parameters are estimated using [optimx::optimx()] by default using the
+ [minqa::bobyqa()] algorithm. (The algorithm is specified in
+ `optimx_args$method`.) The objective function to be maximized is the
+ log-likelihood, defined in [log_likelihood()]. It models the residuals as
+ log-normal. Note that the log-likelihood is *maximized*, not minimized.
+ Maximization is specified by setting argument `optimx_args$control$maximize
+ = TRUE`. Parameter starting values are set in [get_starts()]. Parameter
+ lower bounds are set in [get_lower_bounds()]. Parameter upper bounds are set
+ in [get_upper_bounds()].
 
- Parameters are optimized on the log scale, to reduce scaling issues. This
- means that parameter starting values and lower/upper bounds are
- log-transformed before being passed to [optimx::optimx()], so if any
- starting values or bounds are zero or negative, they will be non-finite when
- log-transformed, and [optimx::optimx()] will fail with an error.
+ By default, the objective function gradient is estimated numerically.
+
+ ## Parameter standard deviations via numerical Hessian
+
+ Parameter standard deviations (uncertainty) are estimated as the square root
+ of the diagonal of the inverse of the Hessian (the matrix of second
+ derivatives of the objective function). The inverse Hessian approximates the
+ variance-covariance matrix of estimated parameters. The square root of its
+ diagonal approximates parameter standard deviations.
+
+ If the numerically-estimated Hessian cannot be inverted, a
+ pseudoinverse is attempted.
+
+ If the square root of the inverse Hessian contains NaN, then if
+ `optimx_args$method %in% 'L-BFGS-B'`, optimization is repeated with a
+ smaller convergence tolerance, until either there are no more NaNs or
+ convergence tolerance factor is equal to 1 (i.e. tolerance is at machine
+ epsilon). This is not done if `optimx_args$method %in% 'bobyqa'` because
+ that method does not use a convergence tolerance control parameter.
 
 # Expected variables in \code{fitdata}
 

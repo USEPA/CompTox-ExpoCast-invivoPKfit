@@ -145,7 +145,7 @@ are estimated using the method of residuals on `log(Value/Dose)` vs. `Time`
 from the PO data.
 
 Specifically, the PO data are divided into two parts: "early" and "late"
-phases, naively using the median value of Time as the dividing line.
+phases, using the time of peak concentration as the dividing line.
 
 First, a linear regression is performed on the "late" data. The negative
 slope of the "late" linear regression gives an estimate for `kelim`. The
@@ -179,7 +179,8 @@ Concentrations are normalized by Dose, then log-transformed.
 
 `V1`, `kelim`, `k12` and `k21` are estimated using the method of residuals on
 `log(Value/Dose)` vs. `Time` from the PO data. Specifically, the data are
-divided into "early" and "late" parts at the median value of Time.
+divided into "early" and "late" parts, with the dividing line being the
+"elbow point" of the data (using [akmedoids::elbow_point()]).
 
 First, a
 linear regression is performed on the "late" data. The negative slope of the
@@ -198,15 +199,18 @@ https://www.boomer.org/c/p4/c19/c1902.php):
 -`k12 <- alpha + beta - k21 - kel`
 -`V1 <- (alpha - k21)/(A * (alpha - beta))`
 
+In case there are not enough data available in each phase to perform regression,
+
 ### PO dosing data available
 
 `kelim`, `k12`, `k21` `kgutabs`, and `Fgutabs_V1` (the ratio of `Fgutabs` to
 `V1`) are estimated using the method of residuals on `log(Value/Dose)` vs.
 `Time` from the PO data. Specifically, the data are divided into three parts:
-"absorption" phase, "early" phase, and "late" phase, naively using the 25th
-percentile of Time as the boundary between "absorption" and "early" phases,
-and the 75th percentile of Time as the boundary between "early" and "late"
-phases.
+"absorption" phase, "early" phase, and "late" phase. The time of peak
+concentration is taken as the end of the "absorption" phase data. Then, for
+all data after the time of peak concentration, the "elbow" point is found
+(using [akmedoids::elbow_point()]) and used as the dividing line between
+early and late-phase data.
 
 First, a linear regression is performed on the "late" data. The negative
 slope of the "late" linear regression is recorded as `beta`, and the
@@ -234,6 +238,9 @@ Using the estimates for `k21` and `kgutabs`, along with `A`, `alpha`, and
 `beta`, an estimate can be made for `Fgutabs_V1`.
 
  - `Fgutabs_V1 <- A * ( (kgutabs - alpha) * (beta - alpha))/( kgutabs * (k21 - alpha) )`
+
+ In case there is not enough data available in each phase to perform
+ regression, the default or `httk`-derived starting values are used.
 
 #### Both PO and IV dosing data available
 

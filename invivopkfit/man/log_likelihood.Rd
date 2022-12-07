@@ -5,7 +5,7 @@
 \title{Log-likelihood}
 \usage{
 log_likelihood(
-  opt_params,
+  params,
   const_params = NULL,
   DF,
   modelfun,
@@ -15,7 +15,7 @@ log_likelihood(
 )
 }
 \arguments{
-\item{opt_params}{A named vector of log-scaled parameter values. When this
+\item{params}{A named vector of log-scaled parameter values. When this
 function is the objective function for a numerical optimizer, these are the
 parameters to be optimized.}
 
@@ -23,9 +23,9 @@ parameters to be optimized.}
 When this function is the objective function for a numerical optimizer,
 these are additional model parameters whose value is to be held constant
 while the other parameters are optimized. Default NULL (meaning that all
-model parameters are supplied in `opt_params`). (If you are calling this
-function directly, you probably want to leave `const_param = NULL` and
-just supply all model parameters in `opt_params`.)}
+model parameters are supplied in `params`). (If you are calling this
+function directly, you probably want to leave `const_params = NULL` and
+just supply all model parameters in `params`.)}
 
 \item{DF}{A `data.frame` of concentration-time data}
 

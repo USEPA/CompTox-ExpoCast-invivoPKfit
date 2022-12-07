@@ -19,15 +19,15 @@ only the ratio of `Fgutabs` to `Vdist` is identifiable. if `Fgutabs` and
 `Vdist` are provided along with `Fgutabs_Vdist`, then `Fgutabs_Vdist` will
 not be used.}
 
-\item{time}{A vector of times in hours.}
+\item{time}{A numeric vector of times in hours.}
 
-\item{dose}{Dose in mg/kg}
+\item{dose}{A numeric vector of doses in mg/kg}
 
-\item{iv.dose}{Logical: TRUE for single IV bolus dose; FALSE for single oral
+\item{iv.dose}{A logical vector: TRUE for single IV bolus dose; FALSE for single oral
 dose}
 }
 \value{
-A vector of plasma concentration values corresponding to `time`.
+A vector of plasma concentration values (mg/L) corresponding to `time`.
 }
 \description{
 Calculates plasma concentrations according to the analytical solution for the

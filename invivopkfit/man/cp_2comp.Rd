@@ -14,7 +14,7 @@ cp_2comp(params, time, dose, iv.dose)
   \item{k21}{Rate at which compound moves from peripheral to central
   compartment, 1/h.}
   \item{kelim}{Elimination rate, 1/h.}
-  \item{V1}{Apparent volume of central compartment, L. Or see below for
+  \item{V1}{Apparent volume of central compartment, L/kg BW. Or see below for
   "Fgutabs_V1"}
   }
 
@@ -33,14 +33,14 @@ cp_2comp(params, time, dose, iv.dose)
   not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
   used.}
 
-\item{time}{A vector of time values, in hours}
+\item{time}{A numeric vector of time values, in hours}
 
-\item{dose}{A dose in mg/kg}
+\item{dose}{A numeric vector of doses in mg/kg}
 
-\item{iv.dose}{TRUE for single IV bolus dose, FALSE for single oral dose}
+\item{iv.dose}{A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose}
 }
 \value{
-A vector of plasma concentration values corresponding to each value
+A vector of plasma concentration values (mg/L) corresponding to each value
   in \code{time}
 }
 \description{
