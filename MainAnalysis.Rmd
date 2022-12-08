@@ -72,16 +72,12 @@ Run a one-compartment fit on the data, and write out the results. Timestamp the 
 
 Fit the 1-compartment model.
 
-```{r, run_invivoPKfit_1comp, eval = FALSE}
+```{r, run_invivoPKfit_1comp}
 
-devtools::load_all("invivopkfit")
-
-
-run_timestamp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
+run_timestamp_1comp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
 
 ### do 1-Compartment fit
 system.time(
-  capture.output(
     PK.fit.table.1comp <- fit_all(
       data.set = cvt.data,
       model = "1compartment",
@@ -105,19 +101,14 @@ system.time(
       loq.col ="calc_loq",
       subject.default = NA,
       info.default = NA,
-      suppress.messages = FALSE
-  ),
-  file = paste0("inst/ext/PK_fit_table_1comp_output_",
-                run_timestamp,
-                ".txt"),
-  type = "message"
+      suppress.messages = TRUE
   )
 )
 
 
 write.csv(PK.fit.table.1comp,
           paste("inst/ext/PK_fit_table_1comp_",
-                                    run_timestamp,
+                                    run_timestamp_1comp,
                                     ".csv",
                                     sep=""),
           row.names = FALSE)
@@ -126,14 +117,12 @@ write.csv(PK.fit.table.1comp,
 
 Fit the 2-compartment model.
 
-```{r, run_invivoPKfit_2comp, eval = FALSE}
-devtools::load_all("invivopkfit")
+```{r, run_invivoPKfit_2comp}
 
-run_timestamp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
+run_timestamp_2comp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
 
 ### do 2-Compartment fit
 system.time(
-  capture.output(
     PK.fit.table.2comp <- fit_all(
       data.set = cvt.data,
       model = "2compartment",
@@ -157,29 +146,21 @@ system.time(
       loq.col ="calc_loq",
       subject.default = NA,
       info.default = NA,
-      suppress.messages = FALSE
-    ),
-    file = paste0("inst/ext/PK_fit_table_2comp_output_",
-                  run_timestamp,
-                  ".txt"),
-    type = "message"
-  )
+      suppress.messages = TRUE
+    )
 )
 
 write.csv(PK.fit.table.2comp, paste("inst/ext/PK_fit_table_2comp_",
-                                    run_timestamp,
+                                    run_timestamp_2comp,
                                     ".csv",
                                     sep=""), row.names = FALSE)
 
 ```
 
-```{r, run_invivoPKfit_flat, eval = FALSE}
-devtools::load_all("invivopkfit")
-
-run_timestamp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
+```{r, run_invivoPKfit_flat}
+run_timestamp_flat <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
 
 system.time(
-  capture.output(
     PK.fit.table.flat <- fit_all(
       data.set = cvt.data,
       model = "flat",
@@ -203,37 +184,116 @@ system.time(
       loq.col ="calc_loq",
       subject.default = NA,
       info.default = NA,
-      suppress.messages = FALSE
-    ),
-    file = paste0("inst/ext/PK_fit_table_flat_output_",
-                  run_timestamp,
-                  ".txt"),
-    type = "message"
-  )
+      suppress.messages = TRUE
+    )
 )
 
 write.csv(PK.fit.table.flat, paste("inst/ext/PK_fit_table_flat_",
-                                    run_timestamp,
+                                    run_timestamp_flat,
                                     ".csv",
                                     sep=""), row.names = FALSE)
 ```
 
-```{r, read_data}
+For ease of plotting, get the pre-processed, harmonized data:
 
+```{r}
+DF <- preprocess_data(data.set = cvt.data,
+                       ratio.data.to.dose = 1,
+      compound.col = "analyte_name_original",
+      dtxsid.col = "dsstox_substance_id",
+      cas.col = "dsstox_casrn",
+      reference.col = "fk_reference_document_id",
+      species.col = "species",
+      species.weight.col = "weight_kg",
+      species.weight.units.default = "kg",
+      dose.col = "dose_level_normalized",
+      time.col = "time_hr",
+      time.units.default = "hr",
+      media.col = "conc_medium_normalized",
+      media.units.default = "normalized",
+      value.col = "conc",
+      units.default = NA,
+      route.col = "administration_route_normalized",
+      source.col = "document_id",
+      loq.col ="calc_loq",
+      subject.default = NA,
+      info.default = NA,)
+```
+
+
+```{r, read_data, eval = FALSE}
 ### this block reads the exported model fit csv files from run_invivoPKfit
 
-pk_output_2comp <- read.csv(paste("inst/ext/PK.fit.table.2comp.",THIS.DATE,".csv",sep=""))
-pk_output_flat <- read.csv(paste("inst/ext/PK.fit.table.flat.",THIS.DATE,".csv",sep=""))
-pk_output_1comp <- read.csv(paste("inst/ext/PK.fit.table.1comp.",THIS.DATE,".csv",sep=""))
-
-raw_1comp <- read.csv(paste("inst/ext/processed.1comp.data.",THIS.DATE,".csv",sep=""))
-raw_2comp <- read.csv(paste("inst/ext/processed.2comp.data.",THIS.DATE,".csv",sep=""))
-raw_flat <- read.csv(paste("inst/ext/processed.flat.data.",THIS.DATE,".csv",sep=""))
-
-pk_output_2comp$Vdist <- pk_output_2comp$V1*(pk_output_2comp$k12+pk_output_2comp$k21)/pk_output_2comp$k21
+pk_output_2comp <- read.csv(paste("inst/ext/PK_fit_table_2comp_",run_timestamp_1comp,".csv",sep=""))
+pk_output_flat <- read.csv(paste("inst/ext/PK_fit_table_flat.",run_timestamp_2comp,".csv",sep=""))
+pk_output_1comp <- read.csv(paste("inst/ext/PK_fit_table_1comp_",run_timestamp_flat,".csv",sep=""))
 
 pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 ```
+
+Rowbind together all of the fitted parameter tables into one big one.
+```{r}
+pk_fit <- rbindlist(list("1comp" = PK.fit.table.1comp,
+                         "2comp" = PK.fit.table.2comp,
+                         "flat" = PK.fit.table.flat),
+                    idcol = "Model",
+                    use.names = TRUE,
+                    fill = TRUE)
+```
+
+
+Get a table of the winning model for each dataset (minimum AIC).
+
+```{r}
+setorder(pk_fit,
+         Analysis_Type,
+         DTXSID,
+         Species,
+         AIC,
+         na.last = TRUE)
+
+pk_fit_win <- unique(pk_fit[, .(Analysis_Type, DTXSID, Species, model, AIC)] )
+```
+
+Plot concentration vs time with the best-fit params by data subset (DTXSID and species). 
+
+Indicate the following:
+
+- One line for each model
+- Which is the winning model
+- Dose group
+- Blood vs. plasma
+- Below LOQ vs. above LOQ (plot below-LOQ points at LOQ)
+- IV vs. oral administration
+
+
+Would also like to plot uncertainty in predictions based on uncertainty in parameter estimates.
+
+Plot versions:
+- Winning model only
+- One model at a time
+- All three models on same plot
+
+
+
+```{r}
+
+plot_table <- unique(pk_fit[, .(DTXSID, Species, Analysis_Type, Reference)])
+plot_table <- plot_table[Analysis_Type %in% "Joint"]
+
+tmp <- mapply(plot_fit,
+              DTXSID_in = plot_table$DTXSID,
+                     Species_in = plot_table$Species,
+                     Analysis_Type_in = plot_table$Analysis_Type,
+                     Reference_in = plot_table$Reference,
+              MoreArgs = list(
+                     model_in = c("1compartment", "2compartment", "flat"),
+                     fitdata = DF,
+                     pk_fit = pk_fit)
+                     )
+    ```
+
+
 
 ```{r, merge_pkfits, eval=FALSE}
 all.fit.table <- merge_model_fits(list("1compartment"=pk_output_1comp,
