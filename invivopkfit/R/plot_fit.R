@@ -4,10 +4,48 @@ plot_fit <- function(DTXSID_in,
                      Reference_in,
                      model_in = c("1compartment", "2compartment", "flat"),
                      fitdata,
-                     pk_fit){
+                     pk_fit,
+                     save_plot = TRUE,
+                     return_plot = FALSE,
+                     file_path = "inst/ext/plots/",
+                     file_suffix = NULL,
+                     file_format = "pdf",
+                     ggsave_args = list(scale = 1,
+                                        width = 8.5,
+                                        height = 11,
+                                        units = "in",
+                                        dpi = 300,
+                                        limitsize = TRUE,
+                                        bg = NULL)){
   #if more than one refrence in comma separated list, get a vector of references
   reflist <- strsplit(Reference_in,
                       split =  ", ")[[1]]
+
+#set up filename for saving
+  filename <- paste0(DTXSID_in,
+                     "_",
+                     Species_in,
+                     "_",
+                     Reference_in,
+                     "_",
+                     Analysis_Type_in,
+                     "_",
+                     paste(model_in, collapse = "_"))
+
+  if(length(file_suffix) > 0){
+    filename <- paste0(filename,
+                       "_",
+                       file_suffix)
+  }
+
+  filename <- paste0(filename, ".", file_format)
+
+  # set up plot title
+ plot_title <- paste0(DTXSID_in, "\n",
+         "Species = ", Species_in, "\n",
+         "Reference = ", Reference_in, "\n",
+         "Analysis Type = ", Analysis_Type_in,
+         "Model = ", paste(model_in, collapse = ", "))
 
   #subset the data appropriately
   fitsub <- subset(fitdata, DTXSID %in% DTXSID_in &
@@ -18,8 +56,24 @@ plot_fit <- function(DTXSID_in,
   pksub <- subset(pk_fit, DTXSID %in% DTXSID_in &
                     Species %in% Species_in &
                     Reference %in% Reference_in &
-                    Analysis_Type %in% Analysis_Type_in &
-                    model %in% model_in)
+                    Analysis_Type %in% Analysis_Type_in)
+
+  #if user specified the winning model, figure out which one that is
+  if(all(model_in %in% "winning")){
+    #get models & AICs
+    pk_aic <- unique(pksub[, .(model, AIC)])
+    #sort models by ascending AIC
+    setorder(pk_aic, AIC)
+    #winning model is the first row
+    model_in <- pk_aic[1, AIC]
+  }
+
+  if(all(model_in %in% "all")){
+    model_in = c("1compartment", "2compartment", "flat")
+  }
+
+  #now subset down to the selected model or models
+  pksub <- pksub[model %in% model_in]
 
   #Get concentration or LOQ
   fitsub[, Conc:=pmax(Value, LOQ, na.rm = TRUE)]
@@ -27,10 +81,8 @@ plot_fit <- function(DTXSID_in,
   fitsub[, Detect:=!is.na(Value)]
 
   #calculate concentration normalized to dose
-  #this allows easier visualization
+  #this allows easier visualization -- all doses plotted together
   fitsub[, ConcDose:=Conc/Dose]
-
-  fitsub[, Dose_cat:=factor(Dose)]
 
   #Get a list of lists of model params, one for each model_in
   params <- sapply(model_in,
@@ -44,16 +96,17 @@ plot_fit <- function(DTXSID_in,
                    USE.NAMES = TRUE,
                    simplify = FALSE)
 
-  #color will represent dose
+  #color will represent route (po/iv)
   #filled symbols will represent detects (>LOQ)
   #emtpy symbols will represent nondetects (<LOQ)
-  #circles represent po, triangles represent IV
-
   #So we need to map shape to ND
   shapevect <- c(
                  "FALSE" = 1, #open circle
                  "TRUE" = 19 #filled circle
   )
+
+  colorvect <- RColorBrewer::brewer.pal(n = 3, name = "Set2")[1:2]
+  names(colorvect) <- c("po", "iv")
 
 
   #plot the conc-time-dose data
@@ -62,7 +115,8 @@ plot_fit <- function(DTXSID_in,
                   y = ConcDose,
                   color = Route,
                   shape = Detect
-              )) +
+              ),
+              size = 3) +
     geom_point()
 
   #get a table of unique combinations of model & route
@@ -70,8 +124,11 @@ plot_fit <- function(DTXSID_in,
                             route = unique(fitsub$Route),
                             stringsAsFactors = FALSE)
 
-  #For each model & route, add a stat_function() layer to solve the model
+  #For each model & route, add a stat_function() layer to plot model predictions
+  #Produce a list of stat_function() layers
+
   layer_list <- mapply(function(mod, route){
+    #which model function to use
     if(mod %in% "1compartment"){
       modfun <- "cp_1comp"
     }else if(mod %in% "2compartment"){
@@ -106,20 +163,27 @@ plot_fit <- function(DTXSID_in,
     scale_y_log10() +
     annotation_logticks(sides = "l") +
     scale_shape_manual(values = shapevect,
-                       breaks = c("TRUE.po",
-                                  "FALSE.po",
-                                  "TRUE.iv",
-                                  "FALSE.iv"),
-                       labels = c("Oral, nondetect",
-                                  "Oral, detect",
-                                  "IV, nondetect",
-                                  "IV, detect"),
+                       name = NULL,
+                       breaks = c("TRUE",
+                                  "FALSE"),
+                       labels = c("Detect",
+                                  "Nondetect"),
                        drop = TRUE) +
     scale_linetype_manual(name = "Model",
                           values = c("1compartment" = 1,
                                      "2compartment" = 2,
                                      "flat" = 3),
-                          drop = TRUE)
+                          drop = TRUE) +
+    scale_color_manual(values = colorvect,
+                       drop = TRUE)
+
+  #limit y axis scaling to go only 10x smaller than smallest observation
+  new_y_min <- fitsub[, 0.1*min(ConcDose,
+                            na.rm = TRUE)]
+  if(is.finite(new_y_min)){
+    p_all <- p_all +
+      scale_y_log10(limits = c(new_y_min, NA))
+  }
 
   #axis labeling
   p_all <- p_all +
@@ -133,26 +197,24 @@ plot_fit <- function(DTXSID_in,
 
   #and add title
   p_all <- p_all +
-    ggtitle(paste0(DTXSID_in, "\n",
-                   "Species = ", Species_in, "\n",
-                   "Reference = ", Reference_in, "\n",
-                   "Analysis Type = ", Analysis_Type_in))
+    ggtitle(plot_title)
 
+if(save_plot %in% TRUE){
 
   #and save
-  ggsave(paste0("inst/ext/plots/",
-                DTXSID_in,
-                "_",
-                Species_in,
-                "_",
-                Reference_in,
-                "_",
-                Analysis_Type_in,
-                ".pdf"),
-         p_all,
-         height = 8.5,
-         width = 11)
+  do.call(ggasve,
+          args = c(list(filename = filename,
+                        plot = p_all,
+                        device = file_format,
+                        path = file_path),
+                   ggsave_args)
+          )
+}
 
-  return(0)
+  if(return_plot %in% TRUE){
+    return(p_all)
+  }else{
+    return(0)
+  }
 
 }
