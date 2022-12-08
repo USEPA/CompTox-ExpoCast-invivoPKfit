@@ -108,10 +108,6 @@ log_likelihood <- function(params,
     }
   }
 
-  #if pred is non-negative but tiny, then replace with machine tolerance
-  pred[pred >= 0 &
-         pred < .Machine$double.eps] <- .Machine$double.eps
-
   #Match sigmas to references:
   #get vector of sigmas, named as "sigma_ref_ReferenceID" or just "sigma"
   sigma_names <- grep(x = names(params),
