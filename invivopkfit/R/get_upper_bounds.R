@@ -89,9 +89,7 @@ get_upper_bounds <- function(fitdata,
                                                Inf), #sigma
                                upper_bound_msg = "Default"
                              ),
-                             sigma_upper_from_data = FALSE,
-                             Vdist_upper_from_data = FALSE,
-                             Vdist_factor = 2,
+                             sigma_upper_from_data = TRUE,
                              suppress.messages = FALSE){
 
   if(is.null(par_DF)){
@@ -112,35 +110,16 @@ get_upper_bounds <- function(fitdata,
                   all.y = FALSE)
 
   if(sigma_upper_from_data %in% TRUE){
-  #Set a plausible upper bound for sigmas:
-  #by default, this is 100 times the median of the concentrations.
-  MAXSIGMA <- 100*stats::median(fitdata$Value, na.rm = TRUE)
-  #for comparison, check the sd of the concentrations.
-  sigma_test <- sd(fitdata$Value, na.rm = TRUE)
+  #It really shouldn't ever be that much worse than the null model...
+    Astart <- exp(mean(log(fitdata$Value/fitdata$Dose), na.rm = TRUE))
+    log_resid_flat <-  log(Astart * fitdata$Dose) - log(fitdata$Value)
+    log_resid_flat[!is.finite(log_resid)] <- NA_real_
+    sd_flat <- sd(log_resid_flat, na.rm = TRUE)
 
-  #Catch cases where the sd of the data is much larger than the median.
-  if (sigma_test > MAXSIGMA) {
-    sigma_msg <- paste("BIGSD: Conc. std. dev., ",
-                 format(sigma_test, digits = digits, scientific = scientific),
-                 "is much higher than than usual upper bound = 100 * conc. median = ",
-                 format(MAXSIGMA, digits = digits, scientific = scientific),
-                 ". Using upper bound = 2 * SD = ",
-                 format(2*sigma_test, digits = digits, scientific = scientific),
-                 ".", sep="")
-    if(!suppress.messages){
-    message(sigma_msg)
-    }
-    big.sd <- TRUE
-    MAXSIGMA <- 2*sigma_test
-  } else {
-    big.sd <- FALSE
-    sigma_msg <- paste0("Upper bound = 100 * conc. median = ",
-    format(MAXSIGMA, digits = digits, scientific = scientific))
-  }
-
+#...but give it a factor of 10 just to be sure
   par_DF[grepl(x = par_DF$param_name,
                pattern = "sigma"),
-         c("upper_bound", "upper_bound_msg")] <- list(MAXSIGMA,
+         c("upper_bound", "upper_bound_msg")] <- list(10*sd_flat,
                                                       sigma_msg)
   }else{
     #use defaults
@@ -152,22 +131,6 @@ get_upper_bounds <- function(fitdata,
                  pattern = "sigma"),
            "upper_bound_msg"] <- upper_default[upper_default$param_name %in% "sigma",
                                                "upper_bound_msg"]
-  }
-
-  if(Vdist_upper_from_data %in% TRUE){
-  #Overwrite Vdist/V1 max with a value taken from the data
-  par_DF[par_DF$param_name %in% c("Vdist", "V1"),
-         c("upper_bound",
-           "upper_bound_msg")] <- list(Vdist_factor *
-                                         max(fitdata$Dose) /
-                                         min(
-                                           pmin(fitdata$LOQ,
-                                                                  fitdata$Value,
-                                                                  na.rm = TRUE)
-                                           ),
-                                       paste(Vdist_factor,
-                                             "* max dose/[min conc or LOQ]")
-           )
   }
 
   #For anything not to be optimized, set its bounds to NA
