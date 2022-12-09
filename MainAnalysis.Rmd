@@ -72,7 +72,7 @@ Run a one-compartment fit on the data, and write out the results. Timestamp the 
 
 Fit the 1-compartment model.
 
-```{r, run_invivoPKfit_1comp}
+```{r, run_invivoPKfit_1comp, eval = FALSE}
 
 run_timestamp_1comp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
 
@@ -117,7 +117,7 @@ write.csv(PK.fit.table.1comp,
 
 Fit the 2-compartment model.
 
-```{r, run_invivoPKfit_2comp}
+```{r, run_invivoPKfit_2comp, eval = FALSE}
 
 run_timestamp_2comp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
 
@@ -157,7 +157,9 @@ write.csv(PK.fit.table.2comp, paste("inst/ext/PK_fit_table_2comp_",
 
 ```
 
-```{r, run_invivoPKfit_flat}
+Fit the flat model.
+
+```{r, run_invivoPKfit_flat, eval = FALSE}
 run_timestamp_flat <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
 
 system.time(
@@ -217,18 +219,19 @@ DF <- preprocess_data(data.set = cvt.data,
       source.col = "document_id",
       loq.col ="calc_loq",
       subject.default = NA,
-      info.default = NA,)
+      info.default = NA,
+      suppress.messages = FALSE)
 ```
 
 
-```{r, read_data, eval = FALSE}
+```{r, read_data}
 ### this block reads the exported model fit csv files from run_invivoPKfit
 
-pk_output_2comp <- read.csv(paste("inst/ext/PK_fit_table_2comp_",run_timestamp_1comp,".csv",sep=""))
-pk_output_flat <- read.csv(paste("inst/ext/PK_fit_table_flat.",run_timestamp_2comp,".csv",sep=""))
-pk_output_1comp <- read.csv(paste("inst/ext/PK_fit_table_1comp_",run_timestamp_flat,".csv",sep=""))
+PK.fit.table.1comp <- fread(paste0("inst/ext/", "PK_fit_table_1comp_2022_12_08_09_44_34.csv",sep=""))
+PK.fit.table.2comp <- fread(paste0("inst/ext/", "PK_fit_table_2comp_2022_12_08_10_31_09.csv",sep=""))
+PK.fit.table.flat <- fread(paste0("inst/ext/", "PK_fit_table_flat_2022_12_08_12_03_24.csv",sep=""))
 
-pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
+#pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 ```
 
 Rowbind together all of the fitted parameter tables into one big one.
@@ -236,7 +239,6 @@ Rowbind together all of the fitted parameter tables into one big one.
 pk_fit <- rbindlist(list("1comp" = PK.fit.table.1comp,
                          "2comp" = PK.fit.table.2comp,
                          "flat" = PK.fit.table.flat),
-                    idcol = "Model",
                     use.names = TRUE,
                     fill = TRUE)
 ```
@@ -245,14 +247,12 @@ pk_fit <- rbindlist(list("1comp" = PK.fit.table.1comp,
 Get a table of the winning model for each dataset (minimum AIC).
 
 ```{r}
-setorder(pk_fit,
-         Analysis_Type,
-         DTXSID,
-         Species,
-         AIC,
-         na.last = TRUE)
+tmp <- unique(pk_fit[, .(DTXSID, Species, Analysis_Type, model, AIC)])
+setorder(tmp, DTXSID, Species, Analysis_Type, AIC, na.last = TRUE)
+model_win <- tmp[, .(winmodel = model[1]), by = .(DTXSID, Species, Analysis_Type)]
+pk_fit <- model_win[pk_fit, on = c("DTXSID", "Species", "Analysis_Type")]
+pk_fit[, winning:=(model == winmodel)]
 
-pk_fit_win <- unique(pk_fit[, .(Analysis_Type, DTXSID, Species, model, AIC)] )
 ```
 
 Plot concentration vs time with the best-fit params by data subset (DTXSID and species). 
@@ -274,24 +274,48 @@ Plot versions:
 - One model at a time
 - All three models on same plot
 
-
+Get unique combinations of DTXSID and species -- each of these will be one plot.
 
 ```{r}
+plot_table <- unique(pk_fit[, .(DTXSID, Species)])
+```
 
-plot_table <- unique(pk_fit[, .(DTXSID, Species, Analysis_Type, Reference)])
-plot_table <- plot_table[Analysis_Type %in% "Joint"]
+Plot all models for the joint analysis.
+```{r}
 
+#plot all models
 tmp <- mapply(plot_fit,
               DTXSID_in = plot_table$DTXSID,
                      Species_in = plot_table$Species,
-                     Analysis_Type_in = plot_table$Analysis_Type,
-                     Reference_in = plot_table$Reference,
               MoreArgs = list(
-                     model_in = c("1compartment", "2compartment", "flat"),
-                     fitdata = DF,
-                     pk_fit = pk_fit)
+                     model_in = "all",
+                     Analysis_Type_in = "Joint",
+                     DF = DF,
+                     pk_fit = pk_fit,
+                     n = 101,
+                     log10_scale_time = FALSE,
+                     file_path = "inst/ext/plots/Joint Analysis/model_all/")
                      )
-    ```
+
+```
+
+Plot only the winning model
+
+```{r}
+#plot all models
+tmp <- mapply(plot_fit,
+              DTXSID_in = plot_table$DTXSID,
+                     Species_in = plot_table$Species,
+              MoreArgs = list(
+                Analysis_Type_in = c("Joint", "Separate"),
+                     model_in = "winning",
+                     fitdata = DF,
+                     pk_fit = pk_fit,
+                     file_path = "inst/ext/plots/analysis_all_model_winning/",
+                log10_scale_time = TRUE)
+                     )
+```
+
 
 
 
