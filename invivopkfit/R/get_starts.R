@@ -26,7 +26,7 @@
 #' | k21            | 0.5         | Default         |
 #' | Fgutabs_Vdist  | 0.5/2.19    | Default         |
 #' | Fgutabs_V1     | 0.5/2.19    | Default         |
-#' | sigma          | 100         | Default         |
+#' | sigma          | 1         | Default         |
 #'
 #'
 #' # `httk` 1-compartment model parameterization starting values
@@ -253,7 +253,7 @@ get_starts <- function(par_DF = NULL,
                                          0.5, #k21
                                          0.5/2.19, #Fgutabs_Vdist
                                          0.51/2.19, #Fgutabs_V1
-                                         100), #sigma
+                                         1), #sigma
                          start_value_msg = "Default"
                        ),
                        start_from_httk = "all",
@@ -379,7 +379,7 @@ if(is.null(par_DF)){
     if(model %in% "flat"){
       tmpdata <- subset(fitdata, Dose > 0 &
                           !is.na(Value))
-      A <- median(tmpdata$Value/tmpdata$Dose, na.rm = TRUE)
+      A <- exp(mean(log(tmpdata$Value/tmpdata$Dose), na.rm = TRUE))
       par_DF <- assign_start(param_name = "A",
                              param_value = A,
                              msg = "Median concentration/dose",
@@ -1004,18 +1004,12 @@ if(is.null(par_DF)){
     } #end if(model %in% "2compartment")
 } #end if model %in% "flat"/else
 
-    #sigma: Assign starting value as the median concentration
-
-  TRYSIGMA <- stats::median(fitdata$Value, na.rm = TRUE)
-  for(this_sigma in grep(x = par_DF$param_name,
-                         pattern= "sigma",
-                         value = TRUE)){
-  par_DF <- assign_start(param_name = this_sigma,
-                         param_value = TRYSIGMA,
-                         msg = "Median concentration",
-                         par_DF = par_DF,
-                         start_from = start_from_data)
-  }
+    #sigma:
+    #Default starting value: sd of log residuals from flat mode
+    Astart <- exp(mean(log(fitdata$Value/fitdata$Dose), na.rm = TRUE))
+  log_resid_flat <-  log(Astart * fitdata$Dose) - log(fitdata$Value)
+  log_resid_flat[!is.finite(log_resid)] <- NA_real_
+  sd_flat <- sd(log_resid_flat, na.rm = TRUE)
 
   #Try evaluating model with the starting values for parameters
   #Then get SD of residuals
@@ -1035,18 +1029,20 @@ if(is.null(par_DF)){
                        dose = fitdata$Dose,
                        iv.dose = fitdata$Route %in% "iv"))
 
-  pred[pred >0 & pred <= .Machine$double.eps] <- .Machine$double.eps
-
   logresid <- log(pred) - log(fitdata$Value)
+  logresid[!is.finite(logresid)] <- NA_real_
 
   for(this_sigma in grep(x = par_DF$param_name,
                          pattern= "sigma",
                          value = TRUE)){
-    if(this_sigma == "sigma"){
+    if(this_sigma == "sigma"){ #if only one sigma (one reference, or pooled)
       tmp_sigma <- sd(logresid, na.rm = TRUE)
+
       par_DF <- assign_start(param_name = this_sigma,
-                             param_value = tmp_sigma,
-                             msg = "SD of log resid for model preds with starting values",
+                             param_value = ifelse(tmp_sigma <= sd_flat, tmp_sigma, sd_flat),
+                             msg = ifelse(tmp_sigma <= sd_flat,
+                                          "SD of log resid for model with starting values",
+                                          "SD of log resid for flat model"),
                              par_DF = par_DF,
                              start_from = start_from_data)
     }else{
@@ -1058,8 +1054,10 @@ if(is.null(par_DF)){
       logresid_ref <- logresid[fitdata$Reference %in% refid]
       tmp_sigma <- sd(logresid_ref, na.rm = TRUE)
       par_DF <- assign_start(param_name = this_sigma,
-                             param_value = tmp_sigma,
-                             msg = "SD of log resid for model preds with starting values",
+                             param_value = ifelse(tmp_sigma <= sd_flat, tmp_sigma, sd_flat),
+                             msg = ifelse(tmp_sigma <= sd_flat,
+                                          "SD of log resid for model with starting values",
+                                          "SD of log resid for flat model"),
                              par_DF = par_DF,
                              start_from = start_from_data)
 
