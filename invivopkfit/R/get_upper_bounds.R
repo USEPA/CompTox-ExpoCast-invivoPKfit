@@ -113,14 +113,14 @@ get_upper_bounds <- function(fitdata,
   #It really shouldn't ever be that much worse than the null model...
     Astart <- exp(mean(log(fitdata$Value/fitdata$Dose), na.rm = TRUE))
     log_resid_flat <-  log(Astart * fitdata$Dose) - log(fitdata$Value)
-    log_resid_flat[!is.finite(log_resid)] <- NA_real_
+    log_resid_flat[!is.finite(log_resid_flat)] <- NA_real_
     sd_flat <- sd(log_resid_flat, na.rm = TRUE)
 
 #...but give it a factor of 10 just to be sure
   par_DF[grepl(x = par_DF$param_name,
                pattern = "sigma"),
          c("upper_bound", "upper_bound_msg")] <- list(10*sd_flat,
-                                                      sigma_msg)
+                                                      "10 times SD of log(Value/Dose)")
   }else{
     #use defaults
     par_DF[grepl(x = par_DF$param_name,

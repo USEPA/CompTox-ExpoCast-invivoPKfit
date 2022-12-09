@@ -1008,7 +1008,7 @@ if(is.null(par_DF)){
     #Default starting value: sd of log residuals from flat mode
     Astart <- exp(mean(log(fitdata$Value/fitdata$Dose), na.rm = TRUE))
   log_resid_flat <-  log(Astart * fitdata$Dose) - log(fitdata$Value)
-  log_resid_flat[!is.finite(log_resid)] <- NA_real_
+  log_resid_flat[!is.finite(log_resid_flat)] <- NA_real_
   sd_flat <- sd(log_resid_flat, na.rm = TRUE)
 
   #Try evaluating model with the starting values for parameters
