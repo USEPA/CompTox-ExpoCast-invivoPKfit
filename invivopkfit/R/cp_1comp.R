@@ -74,7 +74,7 @@ cp_1comp <- function(params, time, dose, iv.dose){
   #Oral model
   if(any(iv.dose %in% FALSE)){
 
-    if(!(params$kelim == params$kgutabs)){
+    if(params$kelim != params$kgutabs){
       #the usual case: kelim != kgutabs
       cp[iv.dose %in% FALSE] <- (params$Fgutabs_Vdist *
                                    dose[iv.dose %in% FALSE] *
