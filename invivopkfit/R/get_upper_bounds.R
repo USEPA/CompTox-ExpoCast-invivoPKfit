@@ -89,7 +89,7 @@ get_upper_bounds <- function(fitdata,
                                                Inf), #sigma
                                upper_bound_msg = "Default"
                              ),
-                             sigma_upper_from_data = TRUE,
+                             sigma_upper_from_data = FALSE,
                              suppress.messages = FALSE){
 
   if(is.null(par_DF)){

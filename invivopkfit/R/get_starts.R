@@ -412,6 +412,9 @@ if(is.null(par_DF)){
     iv_data$logValueDose <- log(iv_data$ValueDose)
     po_data$logValueDose <- log(po_data$ValueDose)
 
+    #####################
+    # 1-compartment model
+    #####################
     if(model %in% "1compartment"){
       if(has_iv %in% TRUE){
         if(nrow(iv_data)>2){
@@ -1006,9 +1009,23 @@ if(is.null(par_DF)){
 
     #sigma:
     #Default starting value: sd of log residuals from flat mode
-    Astart <- exp(mean(log(fitdata$Value/fitdata$Dose), na.rm = TRUE))
+    #remove any zero-dose points
+    tmpdat <- subset(fitdata,
+                     Dose > 0)
+
+    #substitute NA values with LOQ/2
+    tmpdat[is.na(tmpdat$Value), "Value"] <- tmpdat[is.na(tmpdat$Value),
+                                                   "LOQ"]/2
+
+    #drop any remaining NA values
+    tmpdat <- subset(tmpdat, is.finite(Value))
+    #compute "flat" model -- exp of mean log Value/Dose
+    Astart <- exp(mean(log(tmpdat$Value/tmpdat$Dose), na.rm = TRUE))
+    #calculate residuals from "flat" model
   log_resid_flat <-  log(Astart * fitdata$Dose) - log(fitdata$Value)
+  #replace any non-finite residuals with NA
   log_resid_flat[!is.finite(log_resid_flat)] <- NA_real_
+  #calculate SD of residuals, removing NAs
   sd_flat <- sd(log_resid_flat, na.rm = TRUE)
 
   #Try evaluating model with the starting values for parameters
@@ -1025,11 +1042,11 @@ if(is.null(par_DF)){
 
   pred <- do.call(modelf,
                   list(params = params,
-                       time = fitdata$Time,
-                       dose = fitdata$Dose,
-                       iv.dose = fitdata$Route %in% "iv"))
+                       time = tmpdat$Time,
+                       dose = tmpdat$Dose,
+                       iv.dose = tmpdat$Route %in% "iv"))
 
-  logresid <- log(pred) - log(fitdata$Value)
+  logresid <- log(pred) - log(tmpdat$Value)
   logresid[!is.finite(logresid)] <- NA_real_
 
   for(this_sigma in grep(x = par_DF$param_name,
