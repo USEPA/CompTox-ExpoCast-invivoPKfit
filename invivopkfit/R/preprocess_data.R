@@ -12,7 +12,14 @@
 #' - Converts concentrations to numeric, if they are not already.
 #' - Converts doses to numeric, if they are not already.
 #' - Converts times to numeric, if they are not already.
-#' - Converts references to character, if they are not already.
+#' - Converts reference ID to character, if not already.
+#' - Converts extraction source ID to character, if not already.
+#' - If reference ID is NA, sets it to be the same as extraction source ID. (By
+#' default in CvTdb, reference ID is only set if it is different from
+#' extraction-source ID. For example, if data were extracted from a figure in a
+#' meta-analysis paper that republished data from multiple other publications,
+#' the extraction-source ID would be for the meta-analysis paper, but the
+#' reference ID would be for the original publication.)
 #' - Harmonizes routes recorded as "oral" to "po" and "intravenous" to "iv".
 #' - Removes all observations that have routes other than "po" or "iv".
 #' - Adds variable `iv`: a TRUE/FALSE flag, for whether route is "iv" or not.
@@ -197,6 +204,22 @@ preprocess_data <- function(data.set,
                      " to character."))
     }
   }
+
+  ### Coerce all 'Extraction' values to be character, and say so
+  if(!is.character(data.set$Extraction)){
+    data.set$Extraction <- as.character(data.set$Extraction)
+    if(!suppress.messages){
+      message(paste0("Column \"Extraction\" converted from ",
+                     class(data.set$Extraction),
+                     " to character."))
+    }
+  }
+
+  #If Reference is NA, set it the same as Extraction.
+
+  data.set[is.na(data.set$Reference),
+           "Reference"] <- data.set[is.na(data.set$Reference),
+                                    "Extraction"]
 
   # Right now code only recognizes "po" and "iv" as routes:
   ### coerce route names, 'oral' and 'intravenous', to 'po' and 'iv'
