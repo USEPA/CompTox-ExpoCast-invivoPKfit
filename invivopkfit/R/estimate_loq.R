@@ -9,38 +9,41 @@
 #' literature, so this function estimates a LOQ such that all the reported
 #' values are above the LOQ.
 
-#' The LOQ is assumed to vary from study to study, as each study would have
-#' different mass spectrometry equipment and methods. LOQ also is assumed to
-#' vary by media, as preparation of samples may be different. For each unique
-#' combination of study, chemical, and medium, the LOQ is estimated by
-#' multiplying the lowest detected concentration (the minimum non-NA reported
-#' concentration greater than zero) by a constant factor (\code{loq.factor}). If
-#' there are no detected concentrations for a given combination of study,
-#' chemical, and medium (i.e., all reported concentrations are NA or 0), then
-#' that study/chemical/medium combination will be removed from the returned
-#' data.frame.
+#' The LOQ is assumed to vary from reference to reference, as each study would
+#' have different mass spectrometry equipment and methods. LOQ also is assumed
+#' to vary by medium (e.g. blood or plasma), as preparation of samples may be
+#' different. For each unique combination of reference, chemical, species, and
+#' medium, the LOQ is estimated by multiplying the lowest detected concentration
+#' (the minimum non-NA reported concentration greater than zero) by a constant
+#' factor (\code{loq.factor}). If there are no detected concentrations for a
+#' given combination of reference, chemical, species, and medium (i.e., all
+#' reported concentrations are NA), then the imputed LOQ will be NA.
 #'
-#' @param cvt.data A \code{data.frame} of concentration vs. time data with at
-#'   least the following columns:
+#' @param dat A \code{data.frame} of concentration vs. time data with at least
+#'   the following columns:
 #'
-#' @param source.col The name of the column indicating different research study
-#'   source documents (and therefore different mass spectrometry methods).
-#'   Default "document_id".
+#' @param reference_col The name of the column indicating different research
+#'   study reference documents (and therefore different mass spectrometry
+#'   methods). Default "document_reference.id".
 #'
-#' @param chem.col The name of the column indicating chemical identity. Default
-#'   "dsstox_casrn".
+#' @param chem_col The name of the column indicating chemical identity. Default
+#'   "chemicals_dosed.dsstox_substance_id".
 #'
-#' @param media.col The name of the column indicating sample medium. Default
-#'   "conc_medium_normalized".
+#' @param media_col The name of the column indicating sample medium. Default
+#'   "series.conc_medium_normalized".
 #'
-#' @param value.col The name of the column indicating concentration. Default
-#'   "conc". Nondetects should be reported as 0 or NA in this column.
+#' @param value_col The name of the column indicating concentration. Default
+#'   "conc_time_values.conc". Nondetects should be reported as NA in this
+#'   column.
 #'
-#' @param calc.loq.col The name of the column to be added to the table holding
-#'   the estimated LOQ's. Default "calc_loq".
+#' @param species_col The name of the column indicating species. Default
+#'   "subjects.species."
 #'
-#' @param loq.factor A factor by which to multiply the lowest detected value to
-#'   estimate an LOQ. Default 0.45.
+#' @param calc.loq.col The name of the LOQ column. Default "calc_loq". If this
+#'   column does not already exist, it will be created.
+#'
+#' @param loq.factor A factor by which to multiply the lowest detected value in
+#'   each group to estimate an LOQ. Default 0.45.
 #'
 #' @return A \code{data.frame} that is the same as \code{cvt.data}, but with the
 #'   column specifed in \code{calc_loq} added, and any rows for
@@ -49,44 +52,52 @@
 #' @author John Wambaugh
 #'
 #' @export estimate_loq
-estimate_loq <- function(cvt.data,
-                         source.col = "document_id",
-                         chem.col = "dsstox_casrn",
-                         media.col = "conc_medium_normalized",
-                         value.col = "conc",
-                         calc.loq.col = "calc_loq",
-                         loq.factor = 0.45)
+estimate_loq <- function(dat,
+                         reference_col = "document_reference.id",
+                         chem_col = "chemicals_dosed.dsstox_substance_id",
+                         media_col = "series.conc_medium_normalized",
+                         species_col = "subjects.species",
+                         value_col = "conc_time_values.conc",
+                         loq_col = "calc_loq",
+                         calc_loq_factor = 0.45)
 {
 
-  for (this.study in unique(cvt.data[,source.col]))
-  {
-    this.subset1 <- subset(cvt.data,
-                           cvt.data[,source.col]==this.study)
-    for (this.chem in unique(this.subset1[,chem.col]))
-    {
-      this.subset2 <- subset(this.subset1,
-                             this.subset1[,chem.col]==this.chem)
-      for (this.media in unique(this.subset2[,media.col]))
-      {
-        this.subset3 <- subset(this.subset2,
-                               this.subset2[media.col]==this.media &
-                                 !is.na(this.subset2[,value.col])
-                               )
-        this.subset3 <- subset(this.subset3,
-                               this.subset3[,value.col]>0)
-        this.loq <- suppressWarnings(min(this.subset3[,value.col],
-                                         na.rm=TRUE))
-        this.loq <- this.loq*loq.factor
-        cvt.data[
-          cvt.data[,source.col]==this.study &
-            cvt.data[,chem.col]==this.chem &
-            cvt.data[,media.col]==this.media,calc.loq.col] <- this.loq
-      }
-    }
+  #if LOQ column does not already exist, create it and fill with NA's
+  if(!(loq_col %in% names(dat))){
+    dat[[loq_col]] <- NA_real_
   }
-  cvt.data <- subset(cvt.data,
-                     !is.infinite(cvt.data[,calc.loq.col])
+
+  #split dat into groups by reference, chem, media, species
+  dat_split <- split(dat,
+                     dat[c(reference_col,
+                           chem_col,
+                           media_col,
+                           species_col)]
                      )
 
-  return(cvt.data)
+  #for each group, impute any missing LOQ as calc_loq_factor * the minimum
+  #detected concentration.
+  dat_split_loq <- lapply(dat_split,
+                     function(this_dat){
+                       impute_loq <- calc_loq_factor *
+                         min(this_dat[[value_col]], na.rm = TRUE)
+                       #If there were no detects for this group, the imputed LOQ
+                       #will be Inf. Set it to NA instead.
+                       if(!is.finite(impute_loq)){
+                         impute_loq <- NA_real_
+                       }
+                       this_dat[is.na(this_dat[[loq_col]]),
+                                loq_col] <- impute_loq
+                       return(this_dat)
+                     })
+
+  #rejoin
+  dat_out <- unsplit(dat_split_loq,
+                     dat[c(reference_col,
+                           chem_col,
+                           media_col,
+                           species_col)])
+
+
+  return(dat_out)
 }
