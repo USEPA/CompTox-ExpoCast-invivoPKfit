@@ -1,0 +1,399 @@
+---
+title: "Pulling oral and IV data from CvTdb"
+author: "Caroline Ring"
+date: "2022-12-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load necessary package
+
+```{r}
+library(DBI)
+library(data.table)
+library(ggplot2)
+```
+
+For connection to CvTdb:
+
+Connect to EPA VPN.
+
+Set environment variables for the user name, password, host, and dbname that will be used to connect. In Windows 10, go to the search bar in the menu and type "environment variables." A menu item should pop up that says "Edit the system environment variables." Click it. A window should pop up. On tab "Advanced " (where you should be already), there is a button "Environment Variables" in the lower right. Click it. Under "User variables for [YOURNAME]", the top window, click the "New" button. Add a variable and value and click "OK". Repeat clicking the "New" button and adding variables. I added the following system environment variables:
+
+cvt_user = app_cvtdb
+cvt_password = Svg=ZDZkzxX7R=+J
+cvt_host = ccte-postgres-res.dmap-prod.aws.epa.gov
+cvt_dbname = res_cvtdb
+
+Doing it this way allows me to not hardcode the password.
+
+# Connect to database
+
+Open a PostGreSQL connection.
+
+```{r}
+ con <-  dbConnect(RPostgreSQL::PostgreSQL(),
+            user = Sys.getenv("cvt_user"),
+            password = Sys.getenv("cvt_password"), #
+            host = Sys.getenv("cvt_host"), #
+            dbname = Sys.getenv("cvt_dbname"))
+```
+
+# View the available tables
+
+```{r}
+dbGetQuery(con, "SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'")
+```
+
+I don't fully know what all of this means, but it filters out various "internal" tables that are not actually part of CvTdb, and shows only the tables that are.
+
+See the EER diagram showing the various tables within CvtDb and the relations between them.
+
+# Formulate a query
+
+In PostGreSQL, you have to refer to tables as "[schema].[table]". Note that in the table above, the schema for CvT tables is always "cvt."
+
+I don't fully understand schemas yet.
+
+I don't have a full data dictionary so I don't yet know how to filter correctly. The most expedient way to do it for me is to pull down each table separately, then filter and merge using e.g. data.table.
+
+Here's how to pull down each table separately.
+
+```{r}
+fpath <- "C:/Users/cring/OneDrive - Environmental Protection Agency (EPA)/CvTdb/"
+this_date <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
+
+#list of table names to pull down
+tables <- c("conc_time_values",
+            "series",
+            "subjects",
+            "studies",
+            "chemicals",
+            "documents")
+
+#loop over table names and pull down each one
+for (this_table in tables){
+  print(this_table)
+  this_query <- paste("SELECT * FROM",
+                      paste0("cvt.", this_table))
+  this_item <- dbGetQuery(con, this_query)
+  this_item <- as.data.table(this_item)
+  assign(this_table, this_item)
+  
+  #prepend table name to all variable names in each table
+  #some variable names are repeated in multiple tables
+  #this will let me keep track
+  these_names <- names(eval(parse(text = this_table)))
+  setnames(eval(parse(text = this_table)),
+           these_names,
+           paste(this_table,
+                 these_names,
+                 sep = "."))
+}
+```
+
+Disconnect from database
+
+```{r}
+dbDisconnect(con)
+```
+
+Now there are a bunch of `data.table` variables in the environment, one for each CvT table. They are `conc_time_values`, `series`, `studies`, `subjects`, `chemicals`, and `documents`.
+
+# Merge
+
+Merge conc_time_values with series
+
+```{r}
+tmp1 <- series[conc_time_values,
+                         on = c("series.id" = "conc_time_values.fk_series_id"),
+                         nomatch = NA]
+```
+
+
+Merge with studies
+
+```{r}
+tmp2 <- studies[tmp1,
+               on = c("studies.id" = "series.fk_study_id"),
+               nomatch = NA]
+```
+
+
+Merge in subjects info
+
+```{r}
+tmp3 <- subjects[tmp2, on = c("subjects.id" = "series.fk_subject_id"), nomatch = NA]
+```
+
+Merge in chemical info. There are two chemical ID foreign keys.
+
+`series.fk_test_chemical_id` = chemical that was dosed
+
+`series.fk_analyzed_chemical_id`  = chemical that was measured in body media (tissue, blood/plasma, urine, etc.) May be the same as dosed chemical, but may be different if, for example, a metabolite was measured instead of the parent chemical.
+
+To keep track of this, let me create two copies of the `chemicals` table -- one called `chemicals_dosed` and one called `chemicals_analyzed`. That way I can get the DTXSID, CASRN, and preferred names for each one.
+
+```{r}
+chemicals_dosed <- copy(chemicals)
+chemicals_analyzed <- copy(chemicals)
+```
+
+Change the variable-name prefixes from "chemicals.[var]" to "chemicals_dosed.[var]" and "chemicals_analyzed.[var]" .
+```{r}
+setnames(chemicals_dosed,
+         names(chemicals_dosed),
+         gsub(x = names(chemicals_dosed),
+              pattern = "chemicals.",
+              replacement = "chemicals_dosed.",
+              fixed = TRUE))
+
+setnames(chemicals_analyzed,
+         names(chemicals_analyzed),
+         gsub(x = names(chemicals_analyzed),
+              pattern = "chemicals.",
+              replacement = "chemicals_analyzed.",
+              fixed = TRUE))
+```
+
+Now merge
+
+```{r}
+tmp4 <- chemicals_dosed[tmp3,
+                        on = c("chemicals_dosed.id" = "series.fk_test_chemical_id"),
+                        nomatch = NA]
+tmp5 <- chemicals_analyzed[tmp4,
+                           on = c("chemicals_analyzed.id" = "series.fk_analyzed_chemical_id"),
+                           nomatch = NA]
+```
+
+Merge in documents info.
+
+There are both extraction documents and reference documents_reference. Make two copies of documents -- one for each.
+
+```{r}
+documents_reference <- copy(documents)
+documents_extraction <- copy(documents)
+
+setnames(documents_reference,
+         names(documents_reference),
+         gsub(x = names(documents_reference),
+              pattern = "documents.",
+              replacement = "documents_reference.",
+              fixed = TRUE))
+
+setnames(documents_extraction,
+         names(documents_extraction),
+         gsub(x = names(documents_extraction),
+              pattern = "documents.",
+              replacement = "documents_extraction.",
+              fixed = TRUE))
+```
+
+
+```{r}
+tmp6 <- documents_extraction[tmp5,
+                  on = c("documents_extraction.id" ="studies.fk_extraction_document_id"),
+                  nomatch = NA]
+tmp7 <- documents_reference[tmp6,
+                  on = c("documents_reference.id" ="studies.fk_reference_document_id"),
+                  nomatch = NA]
+```
+
+
+
+
+I think this should do it.
+
+```{r}
+cvt_data <- copy(tmp7)
+rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7)
+```
+
+Filter down to only blood/plasma studies and to only oral/iv administration.
+
+```{r}
+cvt_data <- cvt_data[series.conc_medium_normalized %in% c("blood", "plasma") &
+                       studies.administration_route_normalized %in% c("oral", "iv")]
+```
+
+
+# Exploring the data
+
+How many series per study?
+
+```{r}
+n_series_per_study <- cvt_data[,
+                               .(n_series = length(unique(series.id))),
+                               by = studies.id]
+n_series_per_study[, range(n_series)]
+```
+
+
+# Look at one weird case
+
+DTXSID1034187 had a weird situation where concentrations seemed very low for the "300" dose group. Let's see what is going on there
+
+```{r}
+tmp <- cvt_data[chemicals_analyzed.dsstox_substance_id %in% "DTXSID1034187"]
+```
+
+This should have reference IDs 141 and 142 -- does it?
+
+```{r}
+tmp[, unique(documents_extraction.id)]
+```
+
+OK good, so this is the data we were expecting.
+
+This is tamoxifen. Though it does not have much document info, I traced it to https://doi.org/10.22427/NTP-DATA-DTXSID8021301
+
+(the only curated document info avalable is this:)
+
+```{r}
+unique(tmp[, .(documents_extraction.url, documents_extraction.other_study_identifier)])
+```
+
+That URL is now broken. But if I google "ntp S0916" I get the page at https://doi.org/10.22427/NTP-DATA-DTXSID8021301.
+
+
+Though items are marked below LOD or below LOQ, the original data does not include what the LOD/LOQ actually were. I cannot find a written report with more information anywhere.
+
+The original data does note the dose units as ug/mL and notes that 5 mL/kg were administered, and contains the initial body weight of each subject.
+
+In fact I think these doses have *not* been correctly normalized. There should be values for `studies.dose_volume` and there are not
+
+```{r}
+tmp[, unique(studies.dose_volume)]
+```
+
+```{r}
+unique(tmp[, .(studies.dose_level_original, studies.dose_level_original_units, studies.dose_level_normalized, studies.dose_volume)])
+```
+
+This apepars to be the only document where that original units of ug/mL do not get changed for normalized dose level
+
+```{r}
+cvt_data[studies.dose_level_normalized == studies.dose_level_original &
+           studies.dose_level_original_units %in% "ug/mL",
+         unique(documents_extraction.id)]
+```
+
+Also, there is lots and lots of below-LOD data from study S0917 oral gavage administration that is not included in CvTdb at all.
+
+Incidentally, the one with 300 mg/kg as the original dose level also seems to be wrong. That is study S0916. Looking at the original NTP data, those units are really ug/mL.
+
+Visualize what I mean
+
+```{r}
+ggplot(data = tmp) +
+  geom_point(aes(x = conc_time_values.time_hr,
+                 y = conc_time_values.conc,
+                 shape = factor(documents_extraction.id),
+                 color = as.numeric(studies.dose_level_normalized))) +
+  facet_grid(rows = vars(studies.administration_route_normalized)) +
+  scale_y_log10() + 
+  annotation_logticks(sides = "l") +
+  scale_color_viridis_c(breaks = as.numeric(unique(tmp$studies.dose_level_normalized)))
+```
+
+Or plot dose-normalized
+
+```{r}
+ggplot(data = tmp) +
+  geom_point(aes(x = conc_time_values.time_hr,
+                 y = conc_time_values.conc/as.numeric(studies.dose_level_normalized),
+                 shape = factor(documents_extraction.id),
+                 color = as.numeric(studies.dose_level_normalized))) +
+  facet_grid(rows = vars(studies.administration_route_normalized)) +
+  scale_y_log10() + 
+  annotation_logticks(sides = "l") +
+  scale_color_viridis_c(breaks = as.numeric(unique(tmp$studies.dose_level_normalized)))
+```
+
+
+We need to actually normalize the doses for these, properly. We will have to go to the original NTP data to do this, because the volumes of administration were not properly retained in CvTdb.
+
+for study S0916, the oral gavage volume of administration was 5 mL/kg, and the IV volume of administration was 2 ml/kg.
+
+```{r}
+tmp[, correct.dose_level_normalized:=as.numeric(studies.dose_level_normalized)]
+
+tmp[studies.dose_level_original_units %in% "ug/mL" &
+      studies.administration_route_normalized %in% "oral",
+    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 5 * subjects.weight_kg/1000]
+
+tmp[studies.dose_level_original_units %in% "ug/mL" &
+      studies.administration_route_normalized %in% "iv",
+    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
+
+tmp[studies.dose_level_original_units %in% "mg/kg" &
+      studies.dose_level_original %in% 300 &
+      studies.administration_route_normalized %in% "iv",
+    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
+
+```
+
+```{r}
+ggplot(data = tmp) +
+  geom_point(aes(x = conc_time_values.time_hr,
+                 y = conc_time_values.conc,
+                 shape = factor(documents_extraction.id),
+                 color = as.numeric(correct.dose_level_normalized))) +
+  facet_grid(rows = vars(studies.administration_route_normalized)) +
+  scale_y_log10() + 
+  annotation_logticks(sides = "l") +
+  scale_color_viridis_c()
+```
+
+```{r}
+ggplot(data = tmp) +
+  geom_point(aes(x = conc_time_values.time_hr,
+                 y = conc_time_values.conc/as.numeric(correct.dose_level_normalized),
+                 shape = factor(documents_extraction.id),
+                 color = as.numeric(correct.dose_level_normalized))) +
+  facet_grid(rows = vars(studies.administration_route_normalized)) +
+  scale_y_log10() + 
+  annotation_logticks(sides = "l") +
+  scale_color_viridis_c()
+```
+
+Apply dose corrections to the full data table
+
+```{r}
+cvt_data[, correct.dose_level_normalized:=as.numeric(studies.dose_level_normalized)]
+
+cvt_data[documents_extraction.id %in% 141 &
+           studies.dose_level_original_units %in% "ug/mL" &
+      studies.administration_route_normalized %in% "oral",
+    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 5 * subjects.weight_kg/1000]
+
+cvt_data[documents_extraction.id %in% 141 &
+      studies.dose_level_original_units %in% "ug/mL" &
+      studies.administration_route_normalized %in% "iv",
+    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
+
+cvt_data[documents_extraction.id %in% 141 &
+           studies.dose_level_original_units %in% "mg/kg" &
+      studies.dose_level_original %in% 300 &
+      studies.administration_route_normalized %in% "iv",
+    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
+```
+
+
+Save the pulled CVT data
+
+```{r}
+write.csv(cvt_data,
+          paste0("../inst/ext/cvt_data_",
+          this_date,
+          ".csv"),
+          row.names = FALSE)
+```
+
+
+
+
