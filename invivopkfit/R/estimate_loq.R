@@ -45,7 +45,7 @@
 #' @param loq.factor A factor by which to multiply the lowest detected value in
 #'   each group to estimate an LOQ. Default 0.45.
 #'
-#' @return A \code{data.frame} that is the same as \code{cvt.data}, but with the
+#' @return A \code{data.frame} that is the same as \code{dat}, but with the
 #'   column specifed in \code{calc_loq} added
 #'
 #' @author John Wambaugh
