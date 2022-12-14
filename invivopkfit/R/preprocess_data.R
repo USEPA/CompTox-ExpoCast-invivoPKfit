@@ -21,7 +21,8 @@
 #' the extraction-source ID would be for the meta-analysis paper, but the
 #' reference ID would be for the original publication.)
 #' - Harmonizes routes recorded as "oral" to "po" and "intravenous" to "iv".
-#' - Removes all observations that have routes other than "po" or "iv".
+#' - Removes all observations that have routes other than those listed in `routes_keep`.
+#' - Removes all observations in media other than those listed in `media_keep`.
 #' - Adds variable `iv`: a TRUE/FALSE flag, for whether route is "iv" or not.
 #' - Converts `Compound` and `Species` to lower-case.
 #' - Multiplies concentrations by `ratio_conc_to_dose` (*i.e.*, by the ratio
@@ -58,6 +59,10 @@
 #'   are the new variable names, and the values are the default values to fill
 #'   for each new variable, if the corresponding old variable name is NULL in
 #'   `names_list`.
+#' @param routes_keep List of routes to retain. Default `c("po", "iv")` to
+#'   retain only oral and IV administration data.
+#' @param media_keep List of media to retain. Default `c("blood", "plasma")` to
+#'   retain only concentrations in blood and plasma.
 #' @param suppress.messages Logical: Whether to suppress verbose messages.
 #'   Default FALSE, to be verbose.
 #' @return A `data.table` containing the cleaned, harmonized data, ready for
@@ -118,6 +123,8 @@ preprocess_data <- function(data.set,
                               "Value.Units" = "mg/L"),
                             ratio_conc_to_dose = 1,
                             calc_loq_factor = 0.45,
+                            routes_keep = c("po", "iv"),
+                            media_keep = c("blood", "plasma"),
                             suppress.messages = FALSE){
 
 
@@ -226,14 +233,36 @@ preprocess_data <- function(data.set,
   data.set[data.set$Route %in% "oral", "Route"] <- "po"
   data.set[data.set$Route %in% "intravenous", "Route"] <- "iv"
 
-  if(any(!(data.set$Route %in% c("po", "iv")))){
+  if(any(!(data.set$Route %in% routes_keep))){
     if(!suppress.messages){
-      message(paste("Restricting to intravenous and oral routes eliminates",
-                    sum(!(data.set$Route %in% c("po", "iv"))), "observations."))
+      message(paste("Restricting to routes in",
+                    paste(routes_keep, collapse = ", "),
+      "eliminates",
+                    sum(!(data.set$Route %in% routes_keep)), "observations."))
     }
 
-    ### subset to data of routes 'po' and 'iv' only
-    data.set <- data.set[data.set$Route %in% c("po", "iv"), ]
+    ### subset to data of routes in routes_keep only
+    data.set <- data.set[data.set$Route %in% routes_keep, ]
+    if(!suppress.messages){
+      message(paste(dim(data.set)[1], "observations of",
+                    length(unique(data.set$DTXSID)), "unique chemicals,",
+                    length(unique(data.set$Species)), "unique species, and",
+                    length(unique(data.set$Reference)), "unique references remain."))
+    }
+  }
+
+  #Subset to only media in media_keep
+
+  if(any(!(data.set$Media %in% media_keep))){
+    if(!suppress.messages){
+      message(paste("Restricting to media in",
+                    paste(media_keep, collapse = ", "),
+                    "eliminates",
+                    sum(!(data.set$Media %in% media_keep)), "observations."))
+    }
+
+    ### subset to data of with media in media_keep
+    data.set <- data.set[data.set$Media %in% media_keep, ]
     if(!suppress.messages){
       message(paste(dim(data.set)[1], "observations of",
                     length(unique(data.set$DTXSID)), "unique chemicals,",
