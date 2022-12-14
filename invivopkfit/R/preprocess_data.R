@@ -18,10 +18,8 @@
 #' - Removes all observations that have routes other than "po" or "iv".
 #' - Converts all Compound and Species to lower-case.
 #' - Coerces any zero concentrations to NA (nondetect).
-#' - Multiplies concentrations by `ratio.data.to.dose` (*i.e.*, by the ratio
+#' - Multiplies concentrations by `ratio_conc_to_dose` (*i.e.*, by the ratio
 #' between the mass units for concentration and the mass units for dose.)
-#' - Coerces any concentrations less than `LOQ_factor * LOQ` to NA (treat as
-#' nondetect).
 #' - Adds variable `iv`: a TRUE/FALSE flag, for whether route is "iv" or not.
 #' - Removes any observations with NA Time.
 #' - Adds a variable where Time (in hours) is converted to time in days.
@@ -40,68 +38,21 @@
 #'   analytic solution to the model, or the full ODE model. Presently,
 #'   "analytic" is recommended (because the analytic solution is exact and much
 #'   faster).
-#' @param ratio.data.to.dose Ratio between the mass units used to report the
+#' @param ratio_conc_to_dose Ratio between the mass units used to report the
 #'   concentration data and the mass units used to report the dose. Default 1.
 #'   For example, concentration reported in ug/L and dose reported in mg/kg/day
-#'   would require `ratio.data.to.dose = 0.001`, because 1 ug/1 mg = 1e-6 g
+#'   would require `ratio_conc_to_dose = 0.001`, because 1 ug/1 mg = 1e-6 g
 #'   / 1e-3 g = 0.001.
-#' @param compound.col Column name in `data.set` that identifies chemical
-#'   compound. Default "Compound".
-#' @param cas.col Column name in `data.set` to identify CASRN.
-#'   Default"CAS".
-#' @param reference.col Column name in `data.set` to identify reference.
-#'   Default "Reference".
-#' @param species.col Column name in `data.set` to identify species.
-#'   Default "Species".
-#' @param species.default If no species column exists in `data.set`, one
-#'   will be created and filled with this value.  Default NULL.
-#' @param species.weight.col Column name in `data.set` to identify species
-#'   weight. Default "Species.Weight".
-#' @param species.weight.units.col Column name in `data.set` to identify
-#'   species weigh units. Default"Species.Weight.Units".
-#' @param species.weight.units.default If no species weight units column exists
-#'   in `data.set`, one will be created and filled with this value. Default
-#'   NULL.
-#' @param dose.col Column name in `data.set` to identify dose. Default
-#'   "Dose".
-#' @param time.col Column name in `data.set` to identify time. Default
-#'   "Time".
-#' @param time.units.col Column name in `data.set` to identify time units.
-#'   Default "Time.Units."
-#' @param time.units.default If no time units column exists in `data.set`,
-#'   one will be created and filled with this value.  Default NULL.
-#' @param media.col Column name in `data.set` to identify media. Default
-#'   "Media".
-#' @param media.units.col Column name in `data.set` to identify media
-#'   units. Default "Media.Units".
-#' @param media.units.default If no media units column exists in
-#'   `data.set`, one will be created and filled with this value.  Default
-#'   NULL.
-#' @param value.col Column name in `data.set` to identify value. Default
-#'   "Value".
-#' @param units.col Column name in `data.set` to identify units. Default
-#'   "Units".
-#' @param units.default If no units column exists in `data.set`, one will
-#'   be created and filled with this value.  Default NULL.
-#' @param route.col Column name in `data.set` to identify route of
-#'   administration. Default "Route".
-#' @param route.default If no route column exists in `data.set`, one will
-#'   be created and filled with this value.  Default NULL.
-#' @param source.col Column name in `data.set` to identify source. Default
-#'   "Source."
-#' @param source.default If no source column exists in `data.set`, one will
-#'   be created and filled with this value.  Default NULL.
-#' @param loq.col Column name in `data.set` to identify LOQ. Default "LOQ".
-#' @param loq.default If no LOQ column exists in `data.set`, one will be
-#'   created and filled with this value.  Default NULL.
-#' @param subject.col Column name in `data.set` to identify subject.
-#'   Default "Subject."
-#' @param subject.default If no subject column exists in `data.set`, one
-#'   will be created and filled with this value.  Default NULL.
-#' @param info.col Column name in `data.set` to serve as info column.
-#'   Default "Info".
-#' @param info.default If no info column exists in `data.set`, one will be
-#'   created and filled with this value.  Default NULL.
+#' @param names_list As for [rename_columns()]: A named list where the names are
+#'   the new variable names, and the values are the old variable names. If a
+#'   value is NULL, then there is no old variable corresponding to that new
+#'   variable. A new variable will be added, with default value as given in
+#'   `defaults_list`; if no default is given in `defaults_list`, the new
+#'   variable will be filled with `NA_character`.
+#' @param defaults_list As for [rename_columns()]: A named list where the names
+#'   are the new variable names, and the values are the default values to fill
+#'   for each new variable, if the corresponding old variable name is NULL in
+#'   `names_list`.
 #' @param LOQ_factor Numeric. Observations with concentrations less than
 #'   `LOQ_factor * LOQ` will be removed. Default 2.
 #' @param suppress.messages Logical: Whether to suppress verbose messages.
@@ -141,89 +92,46 @@
 #'   \item{`N.Obs.Ref`}{The number of observations remaining for each unique
 #'   value of `Reference`, after the removal steps described in Details.}
 #'   }
+#'
+#'  new_name = old_name
 
 preprocess_data <- function(data.set,
-                            ratio.data.to.dose = 1,
-
-                            compound.col = "Compound",
-                            dtxsid.col = "DTXSID",
-                            cas.col = "CAS",
-
-                            reference.col = "Reference",
-
-                            species.col = "Species",
-                            species.default = NULL,
-
-                            species.weight.col = "Species.Weight",
-                            species.weight.units.col = "Species.Weight.Units",
-                            species.weight.units.default = NULL,
-
-                            dose.col = "Dose",
-
-                            time.col = "Time",
-                            time.units.col = "Time.Units",
-                            time.units.default = NULL,
-
-                            media.col = "Media",
-                            media.units.col = "Media.Units",
-                            media.units.default = NULL,
-
-                            value.col = "Value",
-
-                            units.col = "Units",
-                            units.default = NULL,
-
-                            route.col = "Route",
-                            route.default = NULL,
-
-                            source.col = "Source",
-                            source.default = NULL,
-
-                            loq.col = "LOQ",
-                            loq.default = NULL,
-
-                            subject.col = "Subject",
-                            subject.default = NULL,
-
-                            info.col = "info",
-                            info.default = NULL,
-
-                            LOQ_factor = 2,
+                            names_list =list(
+                              "Compound" = "chemicals_dosed.id",
+                              "DTXSID" = "chemicals_dosed.dsstox_substance_id",
+                              "CAS" = "chemicals_dosed.dsstox_casrn",
+                              "Reference" = "documents_reference.id",
+                              "Extraction" = "documents_extraction.id",
+                              "Weight" ="subjects.weight_kg",
+                              "Weight.Units" = NULL,
+                              "Dose" = "studies.dose_level_normalized",
+                              "Dose.Units" = NULL,
+                              "Time" = "conc_time_values.time_hr",
+                              "Time.Units" = NULL,
+                              "Media" = "series.conc_medium_normalized",
+                              "Value" = "series.conc",
+                              "Value.Units" = NULL,
+                              "Route" = "studies.administration_route_normalized",
+                              "Source" = "documents_extraction.id",
+                              "LOQ" = "series.loq",
+                              "Subject" = "subjects.id"),
+                            defaults_list =   list(
+                              "Weight.Units" = "kg",
+                              "Dose.Units" = "mg/kg",
+                              "Time.Units" = "h",
+                              "Value.Units" = "mg/L"),
+                            ratio_conc_to_dose = 1,
+                            calc_loq_factor = 0.45,
                             suppress.messages = FALSE){
+
+
   if(!suppress.messages){
     message("Renaming data columns...")
   }
-  #rename columns to
-  data.set <- rename_columns(data.set,
-                             compound.col,
-                             dtxsid.col,
-                             cas.col,
-                             reference.col,
-                             species.col,
-                             species.default,
-                             species.weight.col,
-                             species.weight.units.col,
-                             species.weight.units.default,
-                             dose.col,
-                             time.col,
-                             time.units.col,
-                             time.units.default,
-                             media.col,
-                             media.units.col,
-                             media.units.default,
-                             value.col,
-                             units.col,
-                             units.default,
-                             route.col,
-                             route.default,
-                             source.col,
-                             source.default,
-                             loq.col,
-                             loq.default,
-                             subject.col,
-                             subject.default,
-                             info.col,
-                             info.default)
+  #rename columns
+  data.set <- rename_columns(data.set = data.set,
+                             names_list = names_list,
+                             defaults_list = defaults_list)
 
   ### number of rows in data.set
   N.PREV <- dim(data.set)[1]
@@ -304,16 +212,13 @@ preprocess_data <- function(data.set,
     }
   }
 
-  ### coerce data.set to data.table object
-  data.set <- as.data.table(data.set)
-
   # Right now code only recognizes "po" and "iv" as routes:
   ### coerce route names, 'oral' and 'intravenous', to 'po' and 'iv'
-  data.set[Route == "oral", Route := "po"]
-  data.set[Route == "intravenous", Route:="iv"]
+  data.set[data.set$Route %in% "oral", "Route"] <- "po"
+  data.set[data.set$Route %in% "intravenous", "Route"] <- "iv"
 
   ### subset to data of routes 'po' and 'iv' only
-  data.set <- data.set[Route %in% c("po", "iv")]
+  data.set <- data.set[data.set$Route %in% c("po", "iv"), ]
   if(!suppress.messages){
   message(paste("Restricting to intravenous and oral routes eliminates",
             N.PREV - dim(data.set)[1], "observations."))
@@ -328,119 +233,80 @@ preprocess_data <- function(data.set,
 
   # Harmonize the compound names:
   ### make all compound names completely lower-case
-  data.set[, Compound := tolower(Compound)]
+  data.set$Compound <- tolower(data.set$Compound)
 
   ### do the same thing for species
-  data.set[, Species := tolower(Species)]
+  data.set$Species <- tolower(data.set$Species)
 
-  ### coerce any 'Value' values of 0 to NA
-
-  if(!suppress.messages){
-  message(paste0("Converting 'Value' values of 0 to NA.\n",
-                 data.set[Value == 0, .N],
-                 " values will be converted."))
-  }
-  data.set[Value == 0, Value := NA_real_]
-
-  ### normalize 'Value' by ratio.data.to.dose
+  ### normalize 'Value' by ratio_conc_to_dose
   ### this makes the mass units of Value and Dose the same --
   ### e.g. mg/L and mg/kg/day
-  data.set[, Value := Value * ratio.data.to.dose]
+  data.set$Value <- data.set$Value * ratio_conc_to_dose
+
+  # Impute LOQ if it is missing
+  if(any(is.na(data.set$LOQ))){
+    data.set <- estimate_loq(dat = data.set,
+                             reference_col = "Reference",
+                             chem_col = "Compound",
+                             media_col = "Media",
+                             species_col = "Species",
+                             value_col = "Value",
+                             loq_col = "LOQ",
+                             calc_loq_factor = calc_loq_factor)
+  }
 
   #Ignore data close to LOQ:
   if(!suppress.messages){
     message(paste0("Converting 'Value' values of less than ",
                    LOQ_factor,
                    " * LOQ to NA\n.",
-                   data.set[Value < LOQ_factor * LOQ, .N],
+                   sum(data.set$Value < LOQ_factor * data.set$LOQ),
                    " values will be converted."))
   }
-  data.set[Value < LOQ_factor * LOQ, Value := NA]
+  data.set[data.set$Value < LOQ_factor * data.set$LOQ, "Value"] <- NA_real_
 
-  #set an iv variable to TRUE/FALSE
-  data.set[Route == 'iv', iv := TRUE]
-  data.set[Route !='iv', iv := FALSE]
+  #set TRUE/FALSE flag for IV administration
+  data.set$iv <- data.set$Route %in% "iv"
 
   #convert time from hours to days
 
   #first remove any NA time values
+  if(any(is.na(data.set$Time))){
   if(!suppress.messages){
     message(paste0("Removing observations with NA time values.\n",
-            data.set[is.na(Time), .N],
+            sum(is.na(data.set$Time)),
             " observations will be removed."))
   }
-  data.set <- data.set[!is.na(Time)]
+  data.set <- subset(data.set, !is.na(Time))
 
   if(!suppress.messages){
-  message(paste(dim(data.set)[1], "observations of",
-            length(unique(data.set$DTXSID)), "unique chemicals,",
-            length(unique(data.set$Species)), "unique species, and",
-            length(unique(data.set$Reference)), "unique references remain."))
+    message(paste(dim(data.set)[1], "observations of",
+                  length(unique(data.set$DTXSID)), "unique chemicals,",
+                  length(unique(data.set$Species)), "unique species, and",
+                  length(unique(data.set$Reference)), "unique references remain."))
+  }
   }
 
   N.PREV <- dim(data.set)[1]
 
   ### convert time from hours to days
-  data.set[, Time.Days := Time / 24]
+  data.set$Time.Days <- data.set$Time/24
 
-  data.set[, Max.Time.Days := max(Time.Days)]
-
-  data.set[, Time.Steps.PerHour := {
-    timepts <- c(0, sort(unique(Time)))
-    timediff <- diff(timepts)
-    min_timediff <- min(timediff)
-    1/min_timediff
-  },
-  by = .(DTXSID, Dose, Route)]
 
   # How many >LOQ observations do we have per chemical/species/reference?
-  data.set[, N.Obs.Ref := sum(!is.na(Value)),
-           by = .(Reference, DTXSID, Species)]
-  # Not much we can do if fewer than 4 points (for instance, can't estimate Sigma):
-  data.set[, Usable := N.Obs.Ref > 3,
-           by = .(DTXSID, Reference, Species, Route)]
-  if(!suppress.messages){
-    message(paste("Restricting to references with more than three observations",
-    "above LOQ eliminates",
-              data.set[Usable %in% FALSE, .N],
-    "observations."))
-  }
-
-  data.set <- data.set[Usable == TRUE]
-if(!suppress.messages){
-  message(paste(dim(data.set)[1], "observations of",
-            length(unique(data.set$DTXSID)), "unique chemicals,",
-            length(unique(data.set$Species)), "unique species, and",
-            length(unique(data.set$Reference)), "unique references remain."))
-}
-  N.PREV <- dim(data.set)[1]
-
-  #Eliminate observations for doses that are below LOQ before the peak conc.
-  #Get time of peak conc for each group
-  data.set[, Tpeak := Time[which.max(Value)],
-           by=.(Route,Reference,DTXSID,Species)]
-  data.set[, Usable := !(Time < Tpeak & is.na(Value))]
-
-  if(!suppress.messages){
-    message(paste("Eliminating observations for doses that are",
-    "below LOQ before the peak conc. is reached eliminates",
-              data.set[, sum(!(Usable %in% TRUE))],
-    "observations."))
-  }
-
-  ### subset data to where Usable == TRUE
-  data.set <- data.set[Usable %in% TRUE]
-
-  #Remove extraneous columns
-  data.set[, c("Usable",
-               "Tpeak") := NULL]
-
-  if(!suppress.messages){
-  message(paste(dim(data.set)[1], "observations of",
-            length(unique(data.set$DTXSID)), "unique chemicals,",
-            length(unique(data.set$Species)), "unique species, and",
-            length(unique(data.set$Reference)), "unique references remain."))
-  }
+  data_split <- split(data.set,
+                      data.set[c("Reference",
+                                 "DTXSID",
+                                 "Species")])
+  data_split2 <- lapply(data_split,
+                        function(this_dat){
+                          this_dat$N.Obs.Ref <- sum(!is.na(this_dat$Value))
+                          return(this_dat)
+                        })
+  data.set <- unsplit(data_split2,
+                      data.set[c("Reference",
+                                 "DTXSID",
+                                 "Species")])
 
   if(!suppress.messages){
     "Data preprocessing complete."
