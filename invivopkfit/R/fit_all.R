@@ -15,65 +15,16 @@
 #'   For example, concentration reported in ug/L and dose reported in mg/kg/day
 #'   would require \code{ratio.data.to.dose = 0.001}, because 1 ug/1 mg = 1e-6 g
 #'   / 1e-3 g = 0.001.
-#' @param compound.col Column name in \code{data.set} that identifies chemical
-#'   compound. Default "Compound".
-#' @param cas.col Column name in \code{data.set} to identify CASRN.
-#'   Default"CAS".
-#' @param reference.col Column name in \code{data.set} to identify reference.
-#'   Default "Reference".
-#' @param species.col Column name in \code{data.set} to identify species.
-#'   Default "Species".
-#' @param species.default If no species column exists in \code{data.set}, one
-#'   will be created and filled with this value.  Default NULL.
-#' @param species.weight.col Column name in \code{data.set} to identify species
-#'   weight. Default "Species.Weight".
-#' @param species.weight.units.col Column name in \code{data.set} to identify
-#'   species weigh units. Default"Species.Weight.Units".
-#' @param species.weight.units.default If no species weight units column exists
-#'   in \code{data.set}, one will be created and filled with this value. Default
-#'   NULL.
-#' @param dose.col Column name in \code{data.set} to identify dose. Default
-#'   "Dose".
-#' @param time.col Column name in \code{data.set} to identify time. Default
-#'   "Time".
-#' @param time.units.col Column name in \code{data.set} to identify time units.
-#'   Default "Time.Units."
-#' @param time.units.default If no time units column exists in \code{data.set},
-#'   one will be created and filled with this value.  Default NULL.
-#' @param media.col Column name in \code{data.set} to identify media. Default
-#'   "Media".
-#' @param media.units.col Column name in \code{data.set} to identify media
-#'   units. Default "Media.Units".
-#' @param media.units.default If no media units column exists in
-#'   \code{data.set}, one will be created and filled with this value.  Default
-#'   NULL.
-#' @param value.col Column name in \code{data.set} to identify value. Default
-#'   "Value".
-#' @param units.col Column name in \code{data.set} to identify units. Default
-#'   "Units".
-#' @param units.default If no units column exists in \code{data.set}, one will
-#'   be created and filled with this value.  Default NULL.
-#' @param route.col Column name in \code{data.set} to identify route of
-#'   administration. Default "Route".
-#' @param route.default If no route column exists in \code{data.set}, one will
-#'   be created and filled with this value.  Default NULL.
-#' @param source.col Column name in \code{data.set} to identify source. Default
-#'   "Source."
-#' @param source.default If no source column exists in \code{data.set}, one will
-#'   be created and filled with this value.  Default NULL.
-#' @param loq.col Column name in \code{data.set} to identify LOQ. Default "LOQ".
-#' @param loq.default If no LOQ column exists in \code{data.set}, one will be
-#'   created and filled with this value.  Default NULL.
-#' @param subject.col Column name in \code{data.set} to identify subject.
-#'   Default "Subject."
-#' @param subject.default If no subject column exists in \code{data.set}, one
-#'   will be created and filled with this value.  Default NULL.
-#' @param info.col Column name in \code{data.set} to serve as info column.
-#'   Default "Info".
-#' @param info.default If no info column exists in \code{data.set}, one will be
-#'   created and filled with this value.  Default NULL.
-#' @param LOQ_factor Numeric. Observations with concentrations less than
-#'   `LOQ_factor * LOQ` will be removed. Default 2.
+#' @param names_list As for [rename_columns()]: A named list where the names are
+#'   the new variable names, and the values are the old variable names. If a
+#'   value is NULL, then there is no old variable corresponding to that new
+#'   variable. A new variable will be added, with default value as given in
+#'   `defaults_list`; if no default is given in `defaults_list`, the new
+#'   variable will be filled with `NA_character`.
+#' @param defaults_list As for [rename_columns()]: A named list where the names
+#'   are the new variable names, and the values are the default values to fill
+#'   for each new variable, if the corresponding old variable name is NULL in
+#'   `names_list`.
 #' @param get_starts_args Named list or NULL: any additional arguments to [get_starts()] (other than
 #'   `model` and `fitdata`, which are always passed). Default NULL to accept the
 #'   default arguments for [get_starts()].
@@ -112,52 +63,34 @@
 fit_all <- function(data.set,
                     model,
                     modelfun = NA,
-                    ratio.data.to.dose = 1,
 
-                    compound.col = "Compound",
-                    dtxsid.col = "DTXSID",
-                    cas.col = "CAS",
+                    names_list =list(
+                      "Compound" = "chemicals_dosed.id",
+                      "DTXSID" = "chemicals_dosed.dsstox_substance_id",
+                      "CAS" = "chemicals_dosed.dsstox_casrn",
+                      "Reference" = "documents_reference.id",
+                      "Extraction" = "documents_extraction.id",
+                      "Weight" ="subjects.weight_kg",
+                      "Weight.Units" = NULL,
+                      "Dose" = "studies.dose_level_normalized",
+                      "Dose.Units" = NULL,
+                      "Time" = "conc_time_values.time_hr",
+                      "Time.Units" = NULL,
+                      "Media" = "series.conc_medium_normalized",
+                      "Value" = "series.conc",
+                      "Value.Units" = NULL,
+                      "Route" = "studies.administration_route_normalized",
+                      "Source" = "documents_extraction.id",
+                      "LOQ" = "series.loq",
+                      "Subject" = "subjects.id"),
+                    defaults_list =   list(
+                      "Weight.Units" = "kg",
+                      "Dose.Units" = "mg/kg",
+                      "Time.Units" = "h",
+                      "Value.Units" = "mg/L"),
 
-                    reference.col = "Reference",
-
-                    species.col = "Species",
-                    species.default = NULL,
-
-                    species.weight.col = "Species.Weight",
-                    species.weight.units.col = "Species.Weight.Units",
-                    species.weight.units.default = NULL,
-
-                    dose.col = "Dose",
-
-                    time.col = "Time",
-                    time.units.col = "Time.Units",
-                    time.units.default = NULL,
-
-                    media.col = "Media",
-                    media.units.col = "Media.Units",
-                    media.units.default = NULL,
-
-                    value.col = "Value",
-
-                    units.col = "Units",
-                    units.default = NULL,
-
-                    route.col = "Route",
-                    route.default = NULL,
-
-                    source.col = "Source",
-                    source.default = NULL,
-
-                    loq.col = "LOQ",
-                    loq.default = NULL,
-
-                    subject.col = "Subject",
-                    subject.default = NULL,
-
-                    info.col = "info",
-                    info.default = NULL,
-
-                    LOQ_factor = 2,
+                    ratio_conc_to_dose = 1,
+                    calc_loq_factor = 0.45,
 
                     get_starts_args = NULL,
                     get_lower_args = NULL,
@@ -179,58 +112,12 @@ fit_all <- function(data.set,
   #############################
   #############################
 
- data.set <- preprocess_data(data.set,
-                             ratio.data.to.dose,
-
-                             compound.col ,
-                             dtxsid.col,
-                             cas.col,
-
-                             reference.col,
-
-                             species.col ,
-                             species.default,
-
-                             species.weight.col ,
-                             species.weight.units.col ,
-                             species.weight.units.default ,
-
-                             dose.col,
-
-                             time.col,
-                             time.units.col ,
-                             time.units.default ,
-
-                             media.col,
-                             media.units.col ,
-                             media.units.default,
-
-                             value.col ,
-
-                             units.col ,
-                             units.default,
-
-                             route.col,
-                             route.default ,
-
-                             source.col ,
-                             source.default ,
-
-                             loq.col ,
-                             loq.default ,
-
-                             subject.col ,
-                             subject.default,
-
-                             info.col,
-                             info.default,
-
-                             LOQ_factor = LOQ_factor,
+ data.set <- preprocess_data(data.set = data.set,
+                             names_list = names_list,
+                             defaults_list = defaults_list,
+                             ratio_conc_to_dose = ratio_conc_to_dose,
+                             calc_loq_factor = calc_loq_factor,
                              suppress.messages = suppress.messages)
-
-  ### recalcuate N.PREV after preprocessing
-  N.PREV <- dim(data.set)[1]
-
 
   #Non-comapartmental fits:
   if (model=="noncompartment") {
@@ -243,9 +130,6 @@ fit_all <- function(data.set,
 if(!suppress.messages){
   message("Analyzing data by chemical and species, with each reference having its own error SD...")
 }
-
-
-
     PK.fit.joint <- data.set[,
                              analyze_subset(fitdata = .SD,
                                             #fitdata = .SD passes a data.table
