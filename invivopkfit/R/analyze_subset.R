@@ -102,8 +102,6 @@
 #'   each reference). Default FALSE to estimate separate error SDs for each
 #'   reference. (If `fitdata` only includes one reference, `pool_sigma` will have
 #'   no effect, because only one error SD would be estimated in the first place.)
-#' @param LOQ_factor `fitdata$LOQ` will be multiplied by `LOQ_factor` to get the
-#'   effective LOQ. Default `LOQ_factor` is 2.
 #' @param get_starts_args Any additional arguments to [get_starts()] (other than
 #'   `model` and `fitdata`, which are always passed). Default NULL to accept the
 #'   default arguments for [get_starts()].
@@ -134,7 +132,6 @@ analyze_subset <- function(fitdata,
                            model,
                            modelfun,
                            pool_sigma = FALSE,
-                           LOQ_factor = 2,
                            get_starts_args = NULL,
                            get_lower_args = NULL,
                            get_upper_args = NULL,
@@ -392,7 +389,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
               DF = fitdata,
               modelfun = modelfun,
               model = model,
-              LOQ_factor = LOQ_factor,
               force_finite = FALSE
             ) #end list()
           ) #end args = c()
@@ -415,7 +411,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
             DF = fitdata,
             modelfun = modelfun,
             model = model,
-            LOQ_factor = LOQ_factor,
             force_finite = FALSE
           )
         )
@@ -458,11 +453,11 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   out_DF$AIC <-  NA_real_
 
   #include a message about why no fit was done
-  msg <- paste("Optimization failed. Error message:",
+  msg <- paste("Optimization failed. Error message from optimx():",
                all_data_fit)
   out_DF$message <- msg
 
-  out_DF$flag <- ""
+  out_DF$flag <- NA_character_
   #Record the unique routes in this dataset
   #Route info provides context for why some parameters were/were not estimated
   out_DF$Routes <- paste("iv: ",
@@ -509,7 +504,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                         DF = fitdata,
                         modelfun = modelfun,
                         model = model,
-                        LOQ_factor = LOQ_factor,
                         force_finite = FALSE )
   },
   x = means,
@@ -597,7 +591,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                                    DF = fitdata,
                                    modelfun = modelfun,
                                    model = model,
-                                   LOQ_factor = LOQ_factor,
                                    force_finite = FALSE
                                  )
                                )
@@ -620,7 +613,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
               DF = fitdata,
               modelfun = modelfun,
               model = model,
-              LOQ_factor = LOQ_factor,
               force_finite = FALSE
             )
           )
@@ -649,7 +641,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                           DF = fitdata,
                           modelfun = modelfun,
                           model = model,
-                          LOQ_factor = LOQ_factor,
                           force_finite = FALSE )
     },
     x = means,

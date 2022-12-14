@@ -53,8 +53,6 @@
 #'   are the new variable names, and the values are the default values to fill
 #'   for each new variable, if the corresponding old variable name is NULL in
 #'   `names_list`.
-#' @param LOQ_factor Numeric. Observations with concentrations less than
-#'   `LOQ_factor * LOQ` will be removed. Default 2.
 #' @param suppress.messages Logical: Whether to suppress verbose messages.
 #'   Default FALSE, to be verbose.
 #' @return A `data.table` containing the cleaned, harmonized data, ready for
@@ -257,13 +255,11 @@ preprocess_data <- function(data.set,
 
   #Ignore data close to LOQ:
   if(!suppress.messages){
-    message(paste0("Converting 'Value' values of less than ",
-                   LOQ_factor,
-                   " * LOQ to NA\n.",
-                   sum(data.set$Value < LOQ_factor * data.set$LOQ),
+    message(paste0("Converting 'Value' values of less than LOQ to NA\n.",
+                   sum(data.set$Value <  data.set$LOQ),
                    " values will be converted."))
   }
-  data.set[data.set$Value < LOQ_factor * data.set$LOQ, "Value"] <- NA_real_
+  data.set[data.set$Value <data.set$LOQ, "Value"] <- NA_real_
 
   #set TRUE/FALSE flag for IV administration
   data.set$iv <- data.set$Route %in% "iv"

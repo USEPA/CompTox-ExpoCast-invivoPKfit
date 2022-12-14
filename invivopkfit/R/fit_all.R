@@ -10,10 +10,10 @@
 #'   analytic solution to the model, or the full ODE model. Presently,
 #'   "analytic" is recommended (because the analytic solution is exact and much
 #'   faster).
-#' @param ratio.data.to.dose Ratio between the mass units used to report the
+#' @param ratio_conc_to_dose Ratio between the mass units used to report the
 #'   concentration data and the mass units used to report the dose. Default 1.
 #'   For example, concentration reported in ug/L and dose reported in mg/kg/day
-#'   would require \code{ratio.data.to.dose = 0.001}, because 1 ug/1 mg = 1e-6 g
+#'   would require \code{ratio_conc_to_dose = 0.001}, because 1 ug/1 mg = 1e-6 g
 #'   / 1e-3 g = 0.001.
 #' @param names_list As for [rename_columns()]: A named list where the names are
 #'   the new variable names, and the values are the old variable names. If a
@@ -139,7 +139,6 @@ if(!suppress.messages){
                                              modelfun = modelfun,
                                              model = model,
                                             pool_sigma = FALSE,
-                                            LOQ_factor = LOQ_factor,
                                             get_starts_args = get_starts_args,
                                             get_lower_args = get_lower_args,
                                             get_upper_args = get_upper_args,
@@ -174,7 +173,6 @@ if(!suppress.messages){
                                                  modelfun = modelfun,
                                                  model = model,
                                                 pool_sigma = FALSE,
-                                                LOQ_factor = LOQ_factor,
                                                 get_starts_args = get_starts_args,
                                                 get_lower_args = get_lower_args,
                                                 get_upper_args = get_upper_args,
@@ -195,7 +193,6 @@ if(!suppress.messages){
                                                          modelfun = modelfun,
                                                          model = model,
                                                          pool_sigma = TRUE,
-                                                         LOQ_factor = LOQ_factor,
                                                          get_starts_args = get_starts_args,
                                                          get_lower_args = get_lower_args,
                                                          get_upper_args = get_upper_args,
