@@ -24,6 +24,7 @@ rename_columns <- function(data.set,
                              "DTXSID" = "chemicals_dosed.dsstox_substance_id",
                              "CAS" = "chemicals_dosed.dsstox_casrn",
                              "Reference" = "documents_reference.id",
+                             "Extraction" = "documents_extraction.id",
                              "Species" = "subjects.species",
                              "Weight" ="subjects.weight_kg",
                              "Weight.Units" = NULL,
@@ -35,7 +36,6 @@ rename_columns <- function(data.set,
                              "Value" = "series.conc",
                              "Value.Units" = NULL,
                              "Route" = "studies.administration_route_normalized",
-                             "Source" = "documents_extraction.id",
                              "LOQ" = "series.loq",
                              "Subject" = "subjects.id"),
                            defaults_list =   list(
@@ -46,8 +46,27 @@ rename_columns <- function(data.set,
 
   data.set <- as.data.frame(data.set)
 
+  #if any old names are not present in data.set,
+  #throw an errror
+  missing_items <- names_list[!names_list %in% names(data.set)]
+  if(length(missing_items)>0){
+    warning(paste0("invivopkfit::rename_columns():\n",
+                  "The following items in names_list are columns not present in data.set:\n",
+                 paste(
+                   paste(names(missing_items),
+                       missing_items,
+                       sep = " = "),
+                       collapse = "\n"
+                   ),
+                 "\nThey will be treated as though they were NULL."))
+    names_list[!names_list %in% names(data.set)] <- list(NULL)
+  }
+
+  #new column names
   new_names <- names(names_list[!is.null(names_list)])
+  #old column names
   old_names <- unlist(names_list[!is.null(names_list)])
+  #columns to add: had NULL instead of an old_name
   add_names <- names(names_list)[is.null(names_list)]
 
   #pull the specified old names
