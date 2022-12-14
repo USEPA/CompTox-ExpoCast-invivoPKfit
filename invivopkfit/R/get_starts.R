@@ -327,9 +327,6 @@ if(is.null(par_DF)){
 
     rownames(par_DF) <- par_DF$param_name
 
-
-
-
     #if httk 1-comp model params exist, replace the defaults with these
     #and mark the source accordingly
     if(this.dtxsid %in% httk::get_cheminfo(info="dtxsid",
@@ -375,7 +372,7 @@ if(is.null(par_DF)){
 
     #Try roughly estimating parameters from data
 
-    #if model is flat, take A to be the median concentration/dose
+    #if model is flat, take A to be the mean log concentration/dose, on natural scale
     if(model %in% "flat"){
       tmpdata <- subset(fitdata, Dose > 0 &
                           !is.na(Value))
@@ -387,17 +384,11 @@ if(is.null(par_DF)){
                              par_DF = par_DF)
     }else{
 
-    #Split into IV and oral data
+    #Drop control points & non-detects
     tmpdat <- subset(fitdata,
-                       Dose > 0)
-
-    #substitute NA values with LOQ/2
-    tmpdat[is.na(tmpdat$Value), "Value"] <- tmpdat[is.na(tmpdat$Value),
-                                                   "LOQ"]/2
-
-    #drop any remaining NA values
-    tmpdat <- subset(tmpdat, is.finite(Value))
-
+                       Dose > 0 &
+                       is.finite(Value))
+    #Split into IV and oral datasets
     iv_data <- tmpdat[tmpdat$Route %in% "iv", ] #will be empty if no IV data
     po_data <- tmpdat[tmpdat$Route %in% "po", ] #will be empty if no PO data
 
@@ -408,7 +399,7 @@ if(is.null(par_DF)){
     iv_data$ValueDose <- iv_data$Value / iv_data$Dose
     po_data$ValueDose <- po_data$Value / po_data$Dose
 
-    #log transform
+    #log transform Value/Dose
     iv_data$logValueDose <- log(iv_data$ValueDose)
     po_data$logValueDose <- log(po_data$ValueDose)
 
@@ -417,59 +408,76 @@ if(is.null(par_DF)){
     #####################
     if(model %in% "1compartment"){
       if(has_iv %in% TRUE){
-        if(nrow(iv_data)>2){
-        #get kelim from a linear regression of log (Value/Dose) vs. Time
-        lm_iv <- lm(logValueDose ~ Time,
-                    data = iv_data)
-        Vdist_iv <- exp(coef(lm_iv)[1])
-        kelim_iv <- -coef(lm_iv)[2]
-        }else if(nrow(iv_data)==2){
-          iv_data <- iv_data[order(iv_data$Time), ]
-          if(length(unique(iv_data$Time))>1){
-          Vdist_iv <- iv_data[1, "ValueDose"]
-          kelim_iv <- - diff(iv_data$logValueDose)/diff(iv_data$Time)
-          }else{
-            Vdist_iv <- exp(mean(iv_data$logValueDose))
-            kelim_iv <- NA_real_
+        #--------------------------------------------------
+        #get kelim and Vdist from linear regression
+        #see https://www.boomer.org/c/p4/c04/c0406.php
+        #--------------------------------------------------
+        if(length(unique(iv_data$Time))>=2){
+          if(nrow(iv_data)>2){
+            #if there is enough data to do linear regression, get Vdist and kelim from a
+            #linear regression of log (Value/Dose) vs. Time
+            lm_iv <- lm(logValueDose ~ Time,
+                        data = iv_data)
+            Vdist_iv <- 1/exp(coef(lm_iv)[1])
+            kelim_iv <- -coef(lm_iv)[2]
+          }else if(nrow(iv_data)==2){
+            #if there are exactly 2 data points,
+            iv_data <- iv_data[order(iv_data$Time), ]
+            #draw a line connecting them
+            kelim_iv <- - diff(iv_data$logValueDose)/diff(iv_data$Time)
+            #extrapolate back to time 0 to get Vdist
+            log_A_Dose <- iv_data[1, "logValueDose"] + kelim_iv * iv_data[1, "Time"]
+            Vdist_iv <- 1/exp(log_A_Dose)
           }
-        }else if(nrow(iv_data==1)){
-          Vdist_iv <- iv_data$ValueDose
+        }else{
+          #if there is only 1 IV data point, or none
+          Vdist_iv <- NA_real_
           kelim_iv <- NA_real_
         }
 
-        #update par_DF, checking if estimates are within bounds
         par_DF <- assign_start(param_name = "Vdist",
                                param_value = Vdist_iv,
                                par_DF = par_DF,
                                start_from = start_from_data,
                                msg = "Linear regression of IV data")
-
-        par_DF <- assign_start(param_name = "kelim",
-                               param_value = kelim_iv,
-                               par_DF = par_DF,
-                               start_from = start_from_data,
-                               msg = "Linear regression of IV data")
-
-        if(isTRUE(par_DF["Vdist", "start_value"] != Vdist_iv)){
+        if(!is.finite(Vdist_iv) |
+           Vdist_iv < par_DF["Vdist", "lower_bound"]){
           #if trying to fit Vdist failed,
-          #then try to get Vdist as median Value/Dose at min time
-          Vdist_iv <- median(iv_data[iv_data$Time == min(iv_data$Time),
-                                                               "ValueDose"])
+          #then try to get Vdist as 1/median Value/Dose at min time
+          Vdist_iv <- 1/median(iv_data[iv_data$Time == min(iv_data$Time),
+                                       "ValueDose"])
           par_DF <- assign_start(param_name = "Vdist",
                                  param_value = Vdist_iv,
                                  par_DF = par_DF,
                                  start_from = start_from_data,
-                                 msg = "Median Value/Dose at min time")
+                                 msg = "1/Median Value/Dose at min time")
         }
 
+        #if trying to fit kelim failed,
+        #then draw a line between the last IV time point and log(1/Vdist)
+        if(!is.finite(kelim_iv) | kelim_iv < par_DF["kelim", "lower_bound"]){
+          iv_data <- iv_data[order(iv_data$Time, decreasing = TRUE), ]
+          kelim_iv <- -(iv_data[1, "logValueDose"] - log(1/Vdist_iv))/
+            (iv_data[1, "Time"] - min(iv_data$Time))
+
+          par_DF <- assign_start(param_name = "kelim",
+                                 param_value = kelim_iv,
+                                 par_DF = par_DF,
+                                 start_from = start_from_data,
+                                 msg = "Slope of line between log Value/Dose for min and max time points in IV data")
+        }
 
       }else{
+        #if no iv data, just keep NA as estimates
         kelim_iv <- NA_real_
         Vdist_iv <- NA_real_
       }
 
       if(has_po %in% TRUE){
-        #method of residuals:
+        #--------------------------------------------------
+        #get kelim and Fgutabs/Vdist from linear regression
+        #see https://www.boomer.org/c/p4/c09/c0901.php
+        #--------------------------------------------------
         #split data into early and late parts,
         #using the time of peak concentration as the dividing line
 
@@ -499,45 +507,36 @@ if(is.null(par_DF)){
         po_late <- subset(po_data,
                           Time >= tpeak) #yes, include tpeak in both
 
-        if(nrow(po_late) > 2){ #if enough late data to do regression
-        #linear regression of late data
-        lm_late <- lm(logValueDose ~ Time, data = po_late)
-        kelim_po <- -coef(lm_late)[2]
-        A_Dose_po <- exp(coef(lm_late)[1]) #intercept -- use later to get Fgutabs/Vdist
+        if(length(unique(po_late$Time)) >= 2){
+          if(nrow(po_late) > 2){ #if enough late data to do regression
+            #linear regression of late data
+            lm_late <- lm(logValueDose ~ Time, data = po_late)
+            kelim_po <- -coef(lm_late)[2]
+            A_Dose_po <- exp(coef(lm_late)[1]) #intercept -- use later to get Fgutabs/Vdist
 
-        }else if(nrow(po_late)==2){ #if only 2 points, just draw a line between the two points
-         po_late <- po_late[order(po_late$Time), ]
-         if(length(unique(po_late$Time))>1){
-         A_Dose_po <- po_late[1, "ValueDose"]
-         kelim_po <- -diff(po_late$logValueDose)/diff(po_late$Time)
-         }else{
-           A_Dose_po <- exp(mean(po_late$logValueDose))
-           kelim_po<- NA_real_
-         }
-        }else{ #there should be at least one point (tpeak)
-          A_Dose_po <- po_late[1, "ValueDose"]
+          }else{ #if only 2 points in late data
+            po_late <- po_late[order(po_late$Time), ]
+            #draw a line between points
+            kelim_po <- -diff(po_late$logValueDose)/diff(po_late$Time)
+            #extrapolate back to time 0
+            A_Dose_po <- exp(po_late[1, "logValueDose"] + kelim_po * po_late[1, "Time"])
+          }
+        }else{ #if only one point in late data, or none
+          A_Dose_po <- NA_real_
           kelim_po <- NA_real_
         }
 
-        #This regression should predict Cpeak or higher at tpeak --
-        #if it does not, then force it to pass through Cpeak
-        #otherwise residuals will be wrong sign...
-        if(A_Dose_po < exp(Cpeak)){
-         A_Dose_po <- exp(Cpeak)
-         if(nrow(po_late)>2){
-           #I think will will only happen if nrow(po_late)>=2, but just to be sure
-           lm_late <- lm(logValueDose ~ Time + 0 + offset(rep(log(A_Dose_po),
-                                                              nrow(po_late))),
-                         data = po_late)
-           #with offset, slope is now first and only coefficient
-           kelim_po <- -coef(lm_late)[1]
-         }
+        #if regression failed for kelim, then assume max time = 5 * elimination half-life
+        if(!is.finite(kelim_po) | kelim_po <= par_DF["kelim", "lower_bound"]){
+          thalf_elim <- max(po_data$Time)/5
+          kelim_po <- log(2)/thalf_elim
+          #extrapolate back to time 0
+          A_Dose_po <- exp(po_late[1, "logValueDose"] + kelim_po * po_late[1, "Time"])
         }
 
         if(has_iv %in% TRUE){  #if we also have iv data, take average kelim value
-          kelim <- mean(c(kelim_iv, kelim_po), na.rm = TRUE)
           par_DF <- assign_start(param_name = "kelim",
-                                 param_value = kelim,
+                                 param_value =  mean(c(kelim_iv, kelim_po), na.rm = TRUE),
                                  par_DF = par_DF,
                                  start_from = start_from_data,
                                  msg = "Avg of lin reg on IV data and method of residuals on PO data")
@@ -549,34 +548,35 @@ if(is.null(par_DF)){
                                  msg = "Method of residuals on PO data")
         }
 
-        if(is.na(kelim_po)){
-          #get current value for kelim to get residuals
-        kelim <- par_DF["kelim", "start_value"]
-        }else{
-          #use the PO estimated kelim to get residuals
-          kelim <- kelim_po
-        }
-
-        #log-scale residuals
-        po_early$logresid <- log(A_Dose_po) + -kelim * po_early$Time  -
-          po_early$logValueDose
-        #drop any NA residuals
+        #get residuals
+        #predicted values:
+        pred_late <- exp(log(A_Dose_po) - kelim_po * po_early$Time)
+        #residuals: late predictions - early observations
+        resid_early <- pred_late - po_early$ValueDose
+        #log-transform residuals
+        suppressWarnings(po_early$logresid <- log(resid_early))
+        #drop any NA log residuals
         po_early <- subset(po_early, is.finite(logresid))
 
-        if(nrow(po_early) > 2){
-        #regress log residuals on Time
-        lm_resid <- lm(logresid ~ Time,
-                       data = po_early)
-        kgutabs_po <- -coef(lm_resid)[2]
-        }else if(nrow(po_early)==2){ #if only 2 points, draw a line through them
-          if(length(unique(po_early$Time))>1){
-         po_early <- po_early[order(po_early$Time), ]
-         kgutabs_po <- -(diff(po_early$logresid)/diff(po_early$Time))
-          }else{ #if the 2 points have the same time, then can't get a sloope
-            kgutabs_po <- NA_real_
+        if(length(unique(po_early$Time)) >= 2){
+          if(nrow(po_early) > 2){
+            #regress log residuals on Time
+            lm_resid <- lm(logresid ~ Time,
+                           data = po_early)
+            kgutabs_po <- -coef(lm_resid)[2]
+          }else if(nrow(po_early)==2){ #if only 2 points, draw a line through them
+            po_early <- po_early[order(po_early$Time), ]
+            kgutabs_po <- -(diff(po_early$logresid)/diff(po_early$Time))
           }
         }else{ #if 1 or 0 non-NA residuals
           kgutabs_po <- NA_real_
+        }
+
+        #if method of residuals failed, then try just assuming that tpeak = 5 *
+        #absorption half-life -- see https://www.boomer.org/c/p4/c09/c0904.php
+        if(!is.finite(kgutabs_po) | kgutabs_po < par_DF["kgutabs", "lower_bound"]){
+          thalf_abs <- tpeak/5
+          kgutabs_po <- log(2)/thalf_abs
         }
 
         #update par_DF
@@ -589,7 +589,7 @@ if(is.null(par_DF)){
 
 
         #use intercept to get Fgutabs_Vdist
-        Fgutabs_Vdist_po <- A_Dose_po * (kgutabs_po - kelim) / kgutabs_po
+        Fgutabs_Vdist_po <- A_Dose_po * (kgutabs_po - kelim_po) / kgutabs_po
 
         #Fgutabs_Vdist
         par_DF <- assign_start(param_name = "Fgutabs_Vdist",
@@ -597,7 +597,6 @@ if(is.null(par_DF)){
                                par_DF = par_DF,
                                start_from = start_from_data,
                                msg = "Method of residuals on PO data")
-
 
         if(has_iv %in% TRUE){  #if we also have iv data
           #then we can estimate Fgutabs separately
@@ -621,7 +620,7 @@ if(is.null(par_DF)){
     # 2-compartment model
     #####################
     if(model %in% "2compartment"){
-      if(has_iv %in% TRUE){
+      if(has_iv %in% TRUE & length(unique(iv_data$Time)) > 2){
         #--------------------------------------------------
         #get alpha, beta, A, and B from method of residuals
         #see https://www.boomer.org/c/p4/c19/c1903.php
@@ -629,30 +628,53 @@ if(is.null(par_DF)){
 
         #split IV data into early and late parts
         #find the dividing line between early and late as the "elbow" point
-        elbow_time <- tryCatch(akmedoids::elbow_point(iv_data$Time,
-                                             iv_data$logValueDose)$x,
+        elbow <- tryCatch(akmedoids::elbow_point(iv_data$Time,
+                                             iv_data$logValueDose)[c("x", "y")],
                                error = function(err){
                                  #if akmedoids::elbow_point() does not work,
                                  #fallback to middle time (naive)
-                                 (max(iv_data$Time) - min(iv_data$Time))/2
+                                 elbow_x <- (max(iv_data$Time) - min(iv_data$Time))/2
+                                 elbow_y <- approx(x = iv_data$Time,
+                                                   y = iv_data$logValueDose,
+                                                   xout = elbow_x)
+                                 return(list(x = elbow_x,
+                                               y = elbow_y))
                                })
 
-        if(!is.finite(elbow_time) |
-           elbow_time < 0){
-          elbow_time <- (max(iv_data$Time) - min(iv_data$Time))/2
+        if(!is.finite(elbow$x) |
+           elbow$x < 0){
+          elbow_x <- (max(iv_data$Time) - min(iv_data$Time))/2
+          elbow_y <- approx(x = iv_data$Time,
+                            y = iv_data$logValueDose,
+                            xout = elbow_x)
+          elbow <- list(x = elbow_x,
+                      y = elbow_y)
         }
 
-        if(length(unique(iv_data$Time))>1){
-        #if elbow time is first or last time point in po_nonabs,
-        #then bump it to the second or second-to-last
-        if(all(iv_data$Time >= elbow_time)){
-          elbow_time <- sort(unique(iv_data$Time))[2]
-        }else if(all(iv_data$Time <= elbow_time)){
-          elbow_time <- sort(unique(iv_data$Time),
-                             decreasing = TRUE)[2]
-        }
-        }
+        elbow_time <- elbow$x
 
+          #if elbow time does not allow 2 time points in both early and late phases,
+          #then move it so that it does
+          if(sum(iv_data$Time >= elbow_time)<2){
+            elbow_x <- sort(unique(iv_data$Time))[2]
+            elbow_y <- approx(x = iv_data$Time,
+                              y = iv_data$logValueDose,
+                              xout = elbow_x)
+            elbow <- list(x = elbow_x,
+                          y = elbow_y)
+            elbow_time <- elbow$x
+          }else if(sum(iv_data$Time <= elbow_time)<2){
+            elbow_x <- sort(unique(iv_data$Time),
+                            decreasing = TRUE)[2]
+            elbow_y <- approx(x = iv_data$Time,
+                              y = iv_data$logValueDose,
+                              xout = elbow_x)
+            elbow <- list(x = elbow_x,
+                          y = elbow_y)
+            elbow_time <- elbow$x
+          }
+
+        #split IV data into early and late phases at elbow_time
         iv_early <- subset(iv_data,
                            Time <= elbow_time)
         iv_late <- subset(iv_data,
@@ -662,66 +684,75 @@ if(is.null(par_DF)){
         # Regression on late-phase data
         #-------------------------------------------------
 
-        if(nrow(iv_late)> 2){ #if enough late data to regress
-        #linear regression of late data gives beta, B/Dose
-        lm_late <- lm(logValueDose ~ Time, data = iv_late)
-        beta_iv <- -coef(lm_late)[2]
-        B_Dose_iv <- exp(coef(lm_late)[1])
-        }else if(nrow(iv_late)==2){ #if we have exactly 2 points, draw a line through them
-          iv_late <- iv_late[order(iv_late$Time), ]
-          if(length(unique(iv_late$Time))>1){ #if two time points
-          beta_iv <- -diff(iv_late$logValueDose)/diff(iv_late$Time)
-          B_Dose_iv <- iv_late[1, "ValueDose"]
-          }else{ #if only one time point, can't get slope
-            B_Dose_iv <- exp(mean(iv_late$logValueDose))
-            beta_iv <- NA_real_
+        if(length(unique(iv_late$Time))>=2){
+          if(nrow(iv_late) > 2){
+            #if enough late data to regress
+            #linear regression of late data gives beta, B/Dose
+            lm_late <- lm(logValueDose ~ Time, data = iv_late)
+            beta_iv <- -coef(lm_late)[2]
+            B_Dose_iv <- exp(coef(lm_late)[1])
+          }else{
+            #if we have exactly 2 time points, draw a line through them
+            iv_late <- iv_late[order(iv_late$Time), ]
+            beta_iv <- -diff(iv_late$logValueDose)/diff(iv_late$Time)
+            #intercept: extrapolate back to time zero
+            B_Dose_iv <- exp(iv_late[1, "logValueDose"] + beta_iv * iv_late[1, "Time"])
           }
-        }else if(nrow(iv_late)==1){ #if we have only 1 late point
-          B_Dose_iv <- iv_late$ValueDose
-          beta_iv <- NA_real_
-        }else{ #if we have zero late points
+        }else{ #if we don't have at least two late time points, can't do anything
           B_Dose_iv <- NA_real_
           beta_iv <- NA_real_
+        }
+
+        #if regression failed for beta, assume max time is 5 * terminal half-life
+        if(!is.finite(beta_iv) | beta_iv <= 0){
+          #use max time for all IV data, whether detect or no
+          iv_all <- subset(fitdata, Route %in% "iv")
+          thalf_beta <- max(iv_all$Time)/5
+          beta_iv <- log(2)/thalf_beta
+          #extrapolate back from elbow point to zero
+          B_Dose_iv <- exp(elbow$y + beta_iv * elbow$x)
         }
 
         #---------------------------------------------------
         # Regression on early-phase RESIDUALS
         #---------------------------------------------------
 
-        #calc log-scale residuals during early phase
-        #observed - (predicted from late-phase regression)
-        iv_early$logresid <-  iv_early$logValueDose -
-          (log(B_Dose_iv) + -beta_iv * iv_early$Time)
-
+        #calc residuals during early phase observed - (predicted from late-phase
+        #regression) (because late-phase predictions should be less than
+        #early-phase observations)
+        pred_late <- exp(log(B_Dose_iv) + -beta_iv * iv_early$Time)
+        resid_early <- iv_early$ValueDose - pred_late
+        suppressWarnings(iv_early$logresid <-  log(resid_early))
         #drop any NA residuals
         iv_early <- subset(iv_early, is.finite(logresid))
 
         #regress log residuals on Time
-
+        if(length(unique(iv_early$Time))>=2){
         if(nrow(iv_early) > 2){ #if enough early-phase data for regression
           lm_resid <- lm(logresid ~ Time,
                          data = iv_early)
         alpha_iv <- -coef(lm_resid)[2]
         A_Dose_iv <- exp(coef(lm_resid)[1])
         }else if(nrow(iv_early) == 2){ #if only 2 early-phase points
-
-          if(length(unique(iv_early$Time))>1){ #2 unique time points
             #get slope & intercept by drawing line through 2 points
             iv_early <- iv_early[order(iv_early$Time), ]
-            A_Dose_iv <- exp(iv_early[1, "logresid"])
             alpha_iv <- -(diff(iv_early$logresid)/diff(iv_early$Time))
-          }else{ #only 1 unique time point (2 obs at same time)
-            #can get intercept but not slope
-            A_Dose_iv <- exp(mean(iv_early$logresid))
-            alpha_iv <- NA_real_
-          }
-
-        }else if(nrow(iv_early)==1){ #if only 1 early-phase point
-          A_Dose_iv <- exp(iv_early$logresid)
-          alpha_iv <- NA_real_
-        }else{ #if no early-phase points (or all resids NA)
+            #extrapolate back from beginning of early-phase to time = zero
+            A_Dose_iv <- exp(iv_early[1, "logValueDose"] + alpha_iv * iv_early[1, "Time"])
+        }
+      }else{ #if one or zero early-phase time points with finite log residuals
           A_Dose_iv <- NA_real_
           alpha_iv <- NA_real_
+        }
+
+        #if method of residuals failed for alpha,
+        #then try assuming that elbow point = 5 * early-phase half life
+        if(!is.finite(alpha_iv) | alpha_iv <= 0){
+          thalf_alpha_iv <- elbow_time/5
+          alpha_iv <- log(2)/thalf_alpha_iv
+          #use iv_early data before NA residuals were dropped
+          #extrapolate back from elbow point to time = zero
+          A_Dose_iv <- exp(elbow$y + alpha_iv * elbow$x)
         }
 
         k21_iv <- (A_Dose_iv * beta_iv + B_Dose_iv*alpha_iv)/(A_Dose_iv + B_Dose_iv)
@@ -778,156 +809,189 @@ if(is.null(par_DF)){
         #get corresponding time points for the averages
         Cavg_times <- as.numeric(names(Cavg))
 
-        Cpeak <- max(Cavg, na.rm = TRUE) #peak average conc
+        Cpeak <- max(Cavg, na.rm = TRUE) #peak average conc (in units of log Conc/Dose)
         tpeak <- Cavg_times[Cavg == Cpeak] #time of peak conc
-
-        if(length(unique(po_data$Time))>1){
-        #if tpeak is the first or last time, bump it to the second or second to last
-        if(all(po_data$Time >= tpeak)){ #if it is the first time
-          tpeak <- Cavg_times[2]
-          Cpeak <- Cavg[2]
-        }else if(all(po_data$Time <= tpeak)){ #if it is the last time
-          tpeak <- Cavg_times[length(Cavg_times)-1]
-          Cpeak <- Cavg[length(Cavg)-1]
-        }
-        }
 
         #split data into absorption and non-absorption phases
         po_abs <- subset(po_data, Time <= tpeak)
-        po_nonabs <- subset(po_data, Time >= tpeak)
+        po_nonabs <- subset(po_data, Time > tpeak)
 
         #further split the non-absorption phase into early and late parts
         #find the dividing line between early and late as the "elbow" point
-        elbow_time <- tryCatch(akmedoids::elbow_point(po_nonabs$Time,
-                                           po_nonabs$logValueDose)$x,
+        elbow <- tryCatch(akmedoids::elbow_point(po_nonabs$Time,
+                                           po_nonabs$logValueDose)[c("x", "y")],
                                error = function(err){
                                  #if akmedoids::elbow_point() does not work
-                                 #fall back to middle of time (naive)
-                                (max(po_nonabs$Time) - min(po_nonabs$Time))/2
+                                 #fall back to middle time (naive)
+                                 elbow_x <- (max(po_nonabs$Time) - min(po_nonabs$Time))/2
+                                 elbow_y <- approx(x = po_nonabs$Time,
+                                                   y = po_nonabs$logValueDose,
+                                                   xout = elbow_x)
+                                return(list(x = elbow_x,
+                                      y = elbow_y))
                                })
+
+
+
         #in case we get NA or infinite or negative elbow time,
         #fallback to middle time
-        if(!is.finite(elbow_time) |
-           elbow_time < 0){
-          elbow_time <- (max(po_nonabs$Time) - min(po_nonabs$Time))/2
+        if(!is.finite(elbow$x) |
+           elbow$x < 0){
+          elbow_x <- (max(po_nonabs$Time) - min(po_nonabs$Time))/2
+          elbow_y <- approx(x = po_nonabs$Time,
+                            y = po_nonabs$logValueDose,
+                            xout = elbow_x)
+          elbow <- list(x = elbow_x,
+                        y = elbow_y)
         }
 
+        elbow_time <- elbow$x
+
         if(length(unique(po_nonabs$Time))>1){
-        #if elbow time is first or last time point in po_nonabs,
-        #then bump it to the second or second-to-last
-        if(all(po_nonabs$Time >= elbow_time)){
-          elbow_time <- sort(unique(po_nonabs$Time))[2]
-        }else if(all(po_nonabs$Time <= elbow_time)){
-          elbow_time <- sort(unique(po_nonabs$Time),
+        #if elbow time does not allow 2 points in both early and late phases,
+          #then move it so that it does
+        if(sum(po_nonabs$Time >= elbow_time)<2){
+          elbow_x <- sort(unique(po_nonabs$Time))[2]
+          elbow_y <- approx(x = po_nonabs$Time,
+                            y = po_nonabs$logValueDose,
+                            xout = elbow_x)
+          elbow <- list(x = elbow_x,
+                        y = elbow_y)
+          elbow_time <- elbow$x
+        }else if(sum(po_nonabs$Time <= elbow_time)<2){
+          elbow_x <- sort(unique(po_nonabs$Time),
                              decreasing = TRUE)[2]
+          elbow_y <- approx(x = po_nonabs$Time,
+                            y = po_nonabs$logValueDose,
+                            xout = elbow_x)
+          elbow <- list(x = elbow_x,
+                        y = elbow_y)
+          elbow_time <- elbow$x
         }
         }
 
         po_early <- subset(po_nonabs, Time <= elbow_time)
         po_late <- subset(po_nonabs, Time >= elbow_time)
 
-        if(nrow(po_late) > 2){
-        #linear regression of late data gives beta, B/Dose
-        lm_late <- lm(logValueDose ~ Time, data = po_late)
-        beta_po <- -coef(lm_late)[2]
-        B_Dose_po <- exp(coef(lm_late)[1])
-        }else if(nrow(po_late) == 2){
-          if(length(unique(po_late$Time))>1){
-          #if only 2 points of late data, draw a line through them
-          po_late <- po_late[order(po_late$Time), ]
-          beta_po <- -(diff(po_late$logValueDose)/diff(po_late$Time))
-          B_Dose_po <- po_late[1, "ValueDose"]
-          }else{ #if 2 points but at the same time, can't get slope
-            B_Dose_po <- exp(mean(po_late$logValueDose))
-            beta_po <- NA_real_
+        if(length(unique(po_late$Time))>=2){
+          if(nrow(po_late) > 2){
+            #linear regression of late data gives beta, B/Dose
+            lm_late <- lm(logValueDose ~ Time, data = po_late)
+            beta_po <- -coef(lm_late)[2]
+            B_Dose_po <- exp(coef(lm_late)[1])
+          }else if(nrow(po_late) == 2){
+            #if only 2 timepoints of late data, draw a line through them
+            po_late <- po_late[order(po_late$Time), ]
+            beta_po <- -(diff(po_late$logValueDose)/diff(po_late$Time))
+            #intercept -- extrapolate back to time 0
+            B_Dose_po <- exp(po_late[1, "logValueDose"] + beta_po * po_late[1, "Time"])
           }
-        }else if(nrow(po_late)==1){ #if only one point
-          B_Dose_po <- po_late$ValueDose
-          beta_po <- NA_real_
-        }else{ #if zero points
+        }else{ #if one or zero points
           B_Dose_po <- NA_real_
           beta_po <- NA_real_
         }
 
+        #if regression fails for beta_po,
+        #assume last time point is 5 times terminal half-life
+        if(!is.finite(beta_po) |
+           beta_po < 0){
+          #use max time for all po data, whether detect or nondetect
+          po_all <- subset(fitdata, Route == "po")
+          thalf_beta <- max(po_all$Time)/5
+          beta_po <- log(2)/thalf_beta
+          #intercept: extrapolate back to time = 0 from elbow point
+          B_Dose_po <- exp(elbow$y + beta_po * elbow_time)
+        }
+
         #residuals for early data
         #obs should be greater than predicted
-        po_early$logresid <- po_early$logValueDose -
-          (log(B_Dose_po) + -beta_po * po_early$Time)
-      #drop any NA residuals
+        #calc residuals during early phase observed - (predicted from late-phase
+        #regression) (because late-phase predictions should be less than
+        #early-phase observations)
+        pred_late_po <- exp(log(B_Dose_po) + -beta_po * po_early$Time)
+        resid_early_po <- po_early$ValueDose - pred_late_po
+        suppressWarnings(po_early$logresid <-  log(resid_early_po))
+      #drop any NA log residuals
+        #but keep a version before dropping
+        po_early1 <- copy(po_early)
         po_early <- subset(po_early,
                            is.finite(logresid))
 
-        if(nrow(po_early) > 2){
-          #linear regression of residuals gives alpha, A/Dose
-          lm_resid_early <- lm(logresid ~ Time,
-                               data = po_early)
-        alpha_po <- -coef(lm_resid_early)[2]
-        A_Dose_po <- exp(coef(lm_resid_early)[1])
-        }else if(nrow(po_early) == 2){ #if 2 points
-          if(length(unique(po_early$Time))>1){
-          po_early <- po_early[order(po_early$Time), ]
-          alpha_po <- -(diff(po_early$logresid)/diff(po_early$Time))
-          A_Dose_po <- exp(po_early[1, "logresid"])
-          }else{
-            A_Dose_po <- exp(mean(po_early$logresid))
-            alpha_po <- NA_real_
+        if(length(unique(po_early$Time))>=2){
+          if(nrow(po_early) > 2){
+            #linear regression of residuals gives alpha, A/Dose
+            lm_resid_early <- lm(logresid ~ Time,
+                                 data = po_early)
+            alpha_po <- -coef(lm_resid_early)[2]
+            A_Dose_po <- exp(coef(lm_resid_early)[1])
+          }else if(nrow(po_early) == 2){ #if 2 points
+
+            po_early <- po_early[order(po_early$Time), ]
+            alpha_po <- -(diff(po_early$logresid)/diff(po_early$Time))
+            A_Dose_po <- exp(po_early[1, "logresid"])
           }
-        }else if(nrow(po_early)==1){ #if only one pont
-          alpha_po <- NA_real_
-          A_Dose_po <- exp(po_early$logresid)
-        }else{ #if zero points
+        }else{ #if one or zero time points
           alpha_po <- NA_real_
           A_Dose_po <- NA_real_
         }
 
-       # if(!is.numeric(A_Dose_po + B_Dose_po)) browser()
-
-        if(is.finite(A_Dose_po + B_Dose_po)){
-        if((A_Dose_po + B_Dose_po) < exp(Cpeak)){
-          #then residuals will be in the wrong direction for absorption phase
-          #since predictions will be lower than observed.
-          #roughly estimate A_Dose_po as Cpeak itself minus B predicted at Cpeak.
-          A_Dose_po <- exp(Cpeak) - exp(log(B_Dose_po) + -beta_po * tpeak)
-          #and force the regression to go through this point
-          if(nrow(po_early)>2){
-            #I think this will ONLY happen when nrow(po_early)>2, but just to be sure
-            lm_resid_early <- lm(logresid ~ Time + 0 + offset(rep(log(A_Dose_po),
-                                                                  nrow(po_early))),
-                                 data = po_early)
-            alpha_po <- -coef(lm_resid_early)[1] #with fixed intercept, now slope is 1st and only coef
-          }
-        }
+        #if method of residuals failed for alpha,
+        #then try assuming that elbow point = 5 * early-phase half life
+        if(!is.finite(alpha_po) | alpha_po <= 0){
+          thalf_alpha <- elbow_time/5
+          alpha_po <- log(2)/thalf_alpha
+          #extrapolate from elbow point back to time = 0
+            A_Dose_po <- exp(elbow$y + alpha_po * elbow_time)
         }
 
         #residuals for absorption phase
         #predictions from late-phase regression:
-        late_pred <- (log(B_Dose_po) + -beta_po * po_abs$Time)
+        late_pred <- exp(log(B_Dose_po) + -beta_po * po_abs$Time)
         #predictions from early-phase residuals regression
-        early_pred <- (log(A_Dose_po) + -alpha_po * po_abs$Time)
+        early_pred <- exp(log(A_Dose_po) + -alpha_po * po_abs$Time)
 
         #predictions should be > observations now, so reverse sign to calc resids
-        po_abs$logresid <- late_pred + early_pred - po_abs$logValueDose
+        po_abs$resid <- (late_pred + early_pred) - po_abs$ValueDose
+        suppressWarnings(po_abs$logresid <- log(po_abs$resid))
 
         #drop NA residuals
         po_abs <- subset(po_abs,
                          is.finite(logresid))
 
-        if(nrow(po_abs) > 2){
-        #linear regression of residuals gives kgutabs
-        lm_resid_abs <- lm(logresid ~ Time,
-                       data = po_abs)
+        if(length(unique(po_abs$Time))>=2){
+          if(nrow(po_abs) > 2){
+            #linear regression of residuals gives kgutabs
+            lm_resid_abs <- lm(logresid ~ Time,
+                               data = po_abs)
 
-        kgutabs_po <- -coef(lm_resid_abs)[2]
-        }else if(nrow(po_abs)==2){
-          if(length(unique(po_abs$Time))>1){
-          po_abs <- po_abs[order(po_abs$Time), ]
-          kgutabs_po <- -(diff(po_abs$logresid)/diff(po_abs$Time))
+            kgutabs_po <- -coef(lm_resid_abs)[2]
           }else{
-            kgutabs_po <- NA_real_
+            po_abs <- po_abs[order(po_abs$Time), ]
+            kgutabs_po <- -(diff(po_abs$logresid)/diff(po_abs$Time))
           }
-        }else{ #if zero or 1 points
+        }else{ #if zero or 1 time points
           kgutabs_po <- NA_real_
         }
+
+        par_DF <- assign_start(param_name = "kgutabs",
+                               param_value = kgutabs_po,
+                               par_DF = par_DF,
+                               start_from = start_from_data,
+                               msg = "Method of residuals on PO data")
+
+        #if method of residuals failed, then try just assuming that tpeak = 5 *
+        #absorption half-life -- see https://www.boomer.org/c/p4/c09/c0904.php
+        if(!is.finite(kgutabs_po) | kgutabs_po <= 0){
+          thalf_abs <- tpeak/5
+          kgutabs_po <- log(2)/thalf_abs
+          par_DF <- assign_start(param_name = "kgutabs",
+                                 param_value = kgutabs_po,
+                                 par_DF = par_DF,
+                                 start_from = start_from_data,
+                                 msg = "Assuming tpeak = 5 * absorption half-life")
+        }
+
+
 
         #get k21, k12, kel from A, B, alpha, beta
         #source: https://www.boomer.org/c/p4/c19/c1903.php
@@ -1005,29 +1069,9 @@ if(is.null(par_DF)){
         } #end if(has_iv %in% TRUE)/else
       } #end if(has_po %in% TRUE)
     } #end if(model %in% "2compartment")
-} #end if model %in% "flat"/else
+    }#end if model %in% "flat"/else
 
     #sigma:
-    #Default starting value: sd of log residuals from flat mode
-    #remove any zero-dose points
-    tmpdat <- subset(fitdata,
-                     Dose > 0)
-
-    #substitute NA values with LOQ/2
-    tmpdat[is.na(tmpdat$Value), "Value"] <- tmpdat[is.na(tmpdat$Value),
-                                                   "LOQ"]/2
-
-    #drop any remaining NA values
-    tmpdat <- subset(tmpdat, is.finite(Value))
-    #compute "flat" model -- exp of mean log Value/Dose
-    Astart <- exp(mean(log(tmpdat$Value/tmpdat$Dose), na.rm = TRUE))
-    #calculate residuals from "flat" model
-  log_resid_flat <-  log(Astart * fitdata$Dose) - log(fitdata$Value)
-  #replace any non-finite residuals with NA
-  log_resid_flat[!is.finite(log_resid_flat)] <- NA_real_
-  #calculate SD of residuals, removing NAs
-  sd_flat <- sd(log_resid_flat, na.rm = TRUE)
-
   #Try evaluating model with the starting values for parameters
   #Then get SD of residuals
   params <- as.list(par_DF[par_DF$use_param %in% TRUE, "start_value"])
@@ -1054,14 +1098,6 @@ if(is.null(par_DF)){
                          value = TRUE)){
     if(this_sigma == "sigma"){ #if only one sigma (one reference, or pooled)
       tmp_sigma <- sd(logresid, na.rm = TRUE)
-
-      par_DF <- assign_start(param_name = this_sigma,
-                             param_value = ifelse(tmp_sigma <= sd_flat, tmp_sigma, sd_flat),
-                             msg = ifelse(tmp_sigma <= sd_flat,
-                                          "SD of log resid for model with starting values",
-                                          "SD of log resid for flat model"),
-                             par_DF = par_DF,
-                             start_from = start_from_data)
     }else{
       #if multiple sigmas for multiple references
       #get the reference
@@ -1070,15 +1106,13 @@ if(is.null(par_DF)){
                     replacement = "")
       logresid_ref <- logresid[fitdata$Reference %in% refid]
       tmp_sigma <- sd(logresid_ref, na.rm = TRUE)
-      par_DF <- assign_start(param_name = this_sigma,
-                             param_value = ifelse(tmp_sigma <= sd_flat, tmp_sigma, sd_flat),
-                             msg = ifelse(tmp_sigma <= sd_flat,
-                                          "SD of log resid for model with starting values",
-                                          "SD of log resid for flat model"),
-                             par_DF = par_DF,
-                             start_from = start_from_data)
-
     }
+
+    par_DF <- assign_start(param_name = this_sigma,
+                           param_value = tmp_sigma,
+                           msg = "SD of log resid for model with starting values",
+                           par_DF = par_DF,
+                           start_from = start_from_data)
   } #end for loop over sigmas
 
   #For anything with use_param == FALSE, set the starting value to NA
