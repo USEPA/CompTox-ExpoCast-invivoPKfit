@@ -13,21 +13,19 @@
 #' - Converts doses to numeric, if they are not already.
 #' - Converts times to numeric, if they are not already.
 #' - Converts references to character, if they are not already.
-#' - Converts the data to `data.table` format.
 #' - Harmonizes routes recorded as "oral" to "po" and "intravenous" to "iv".
 #' - Removes all observations that have routes other than "po" or "iv".
-#' - Converts all Compound and Species to lower-case.
-#' - Coerces any zero concentrations to NA (nondetect).
-#' - Multiplies concentrations by `ratio_conc_to_dose` (*i.e.*, by the ratio
-#' between the mass units for concentration and the mass units for dose.)
 #' - Adds variable `iv`: a TRUE/FALSE flag, for whether route is "iv" or not.
-#' - Removes any observations with NA Time.
-#' - Adds a variable where Time (in hours) is converted to time in days.
-#' - Calculates the minimum number of time steps per hour for each chemical,
-#' dose, and route.
-#' - Removes data from any references that had fewer than 4 observations.
-#' - Removes any observations where concentration was NA (nondetect) before the
-#' time of peak concentration for each reference, route, DTXSID, and species.
+#' - Converts `Compound` and `Species` to lower-case.
+#' - Multiplies concentrations by `ratio_conc_to_dose` (*i.e.*, by the ratio
+#' between the mass units for concentration and the mass units for dose).
+#'  - Imputes LOQ for any observations missing it, using [estimate_loq()].
+#'  - Substitutes NA for any concentration observations below LOQ (these are non-detects).
+#' - Removes any observations with NA `Time`.
+#' - Adds a variable where `Time` (in hours) is converted to time in days.
+#' - Computes variable `N.Obs.Ref`, counting the number of detected observations
+#' (above LOQ) for each unique combination of `Reference`, `DTXSID`, and
+#' `Species`.
 #'
 #'
 #' @param data.set A `data.frame` of concentration-time data. Preferably
@@ -58,37 +56,30 @@
 #' @return A `data.table` containing the cleaned, harmonized data, ready for
 #'   model fitting. This data.table contains the following variables:
 #'   \describe{
-#'   \item{`Compound`}{Chemical compound name, from `compound.col`}
-#'   \item{`DTXSID`}{DSSTox Substance ID, from `dtxsid.col`}
-#'   \item{`CAS`}{Chemical CASRN, from `cas.col`}
-#'   \item{`Reference`}{Study reference ID, from `reference.col`}
-#'   \item{`Species`}{Species, from `species.col` (coereced to lowercase).}
-#'   \item{`Species.Weight`}{Body weight, from `species.weight.col`}
-#'   \item{`Species.Weight.Units`}{Units of body weight, from
-#'   `species.weight.units.col`}
-#'   \item{`Dose`}{Dose, from `dose.col`, Coerced to numeric if necessary.}
-#'   \item{`Time`}{Time of each observation, from `time.col`. Coerced to numeric
-#'   if necessary.}
-#'   \item{`Time.Units`}{Units of times in `Time`, from `time.units.col`.}
+#'   \item{`Compound`}{Chemical compound name}
+#'   \item{`DTXSID`}{DSSTox Substance ID,}
+#'   \item{`CAS`}{Chemical CASRN}
+#'   \item{`Reference`}{Study reference document ID}
+#'   \item{`Species`}{Species.}
+#'   \item{`Weight`}{Body weight}
+#'   \item{`Weight_Units`}{Units of body weight`}
+#'   \item{`Dose`}{Dose for each observation}
+#'   \item{`Time`}{Time of each observation}
+#'   \item{`Time.Units`}{Units of times in `Time`}
 #'   \item{`Media`}{Medium in which concentrations were measured, e.g. "blood"
-#'   or "plasma". From `media.col`.}
-#'   \item{`Media.Units`}{"Units" of `Media`, e.g. "normalized".}
-#'   \item{`Value`}{Concentration values of each observation, from `value.col`.
-#'   Coerced to numeric if necessary.}
-#'   \item{`Units`}{Units of concentration values in `Value`, from `units.col`.}
+#'   or "plasma".}
+#'   \item{`Value`}{Concentration values of each observation}
+#'   \item{`Units`}{Units of concentration values in `Value`}
 #'   \item{`Route`}{Route of dose administration: either "iv" (intravenous) or
 #'   "po" (oral). Observations with any other routes are removed.}
-#'   \item{`Source`}{Source of data, from `source.col`.}
-#'   \item{`LOQ`}{Limit of quantitation for concentrations, from `loq.col`.}
-#'   \item{`Subject`}{Individual subject identifier, if available. From
-#'   `subject.col`.}
-#'   \item{`info`}{Additional info, if any. From `info.col`.}
+#'   \item{`Extraction`}{Study extraction document ID.}
+#'   \item{`LOQ`}{Limit of quantitation for concentrations}
+#'   \item{`Subject`}{Individual subject identifier, if available. }
 #'   \item{`iv`}{Logical TRUE/FALSE flag indicating whether `Route == "iv"`.}
 #'   \item{`Time.Days`}{Time of each observation, converted to units of days.}
-#'   \item{`Time.Steps.PerHour`}{The smallest interval between observation time
-#'   points (in hours) for each unique combination of DTXSID, Dose, and Route.}
 #'   \item{`N.Obs.Ref`}{The number of observations remaining for each unique
-#'   value of `Reference`, after the removal steps described in Details.}
+#'   combination of `Reference`, `DTXSID`, and `Species`, after the removal
+#'   steps described in Details.}
 #'   }
 #'
 #'  new_name = old_name
@@ -110,7 +101,7 @@ preprocess_data <- function(data.set,
                               "Value" = "series.conc",
                               "Value.Units" = NULL,
                               "Route" = "studies.administration_route_normalized",
-                              "Source" = "documents_extraction.id",
+                              "Extraction" = "documents_extraction.id",
                               "LOQ" = "series.loq",
                               "Subject" = "subjects.id"),
                             defaults_list =   list(
@@ -131,12 +122,9 @@ preprocess_data <- function(data.set,
                              names_list = names_list,
                              defaults_list = defaults_list)
 
-  ### number of rows in data.set
-  N.PREV <- dim(data.set)[1]
-
   if(!suppress.messages){
   ### display messages describing loaded data
-  message(paste(N.PREV, "concentration vs. time observations loaded.\n"))
+  message(paste(nrow(data.set), "concentration vs. time observations loaded.\n"))
   message(paste(length(unique(data.set$DTXSID)), "unique chemicals,",
             length(unique(data.set$Species)), "unique species, and",
             length(unique(data.set$Reference)), "unique references."))
@@ -215,19 +203,24 @@ preprocess_data <- function(data.set,
   data.set[data.set$Route %in% "oral", "Route"] <- "po"
   data.set[data.set$Route %in% "intravenous", "Route"] <- "iv"
 
-  ### subset to data of routes 'po' and 'iv' only
-  data.set <- data.set[data.set$Route %in% c("po", "iv"), ]
-  if(!suppress.messages){
-  message(paste("Restricting to intravenous and oral routes eliminates",
-            N.PREV - dim(data.set)[1], "observations."))
-  message(paste(dim(data.set)[1], "observations of",
-            length(unique(data.set$DTXSID)), "unique chemicals,",
-            length(unique(data.set$Species)), "unique species, and",
-            length(unique(data.set$Reference)), "unique references remain."))
+  if(any(!(data.set$Route %in% c("po", "iv")))){
+    if(!suppress.messages){
+      message(paste("Restricting to intravenous and oral routes eliminates",
+                    sum(!(data.set$Route %in% c("po", "iv"))), "observations."))
+    }
+
+    ### subset to data of routes 'po' and 'iv' only
+    data.set <- data.set[data.set$Route %in% c("po", "iv"), ]
+    if(!suppress.messages){
+      message(paste(dim(data.set)[1], "observations of",
+                    length(unique(data.set$DTXSID)), "unique chemicals,",
+                    length(unique(data.set$Species)), "unique species, and",
+                    length(unique(data.set$Reference)), "unique references remain."))
+    }
   }
 
-  ### recalcuate N.PREV after removal of rows corresponding to other routes
-  N.PREV <- dim(data.set)[1]
+  #set TRUE/FALSE flag for IV administration
+  data.set$iv <- data.set$Route %in% "iv"
 
   # Harmonize the compound names:
   ### make all compound names completely lower-case
@@ -261,8 +254,7 @@ preprocess_data <- function(data.set,
   }
   data.set[data.set$Value <data.set$LOQ, "Value"] <- NA_real_
 
-  #set TRUE/FALSE flag for IV administration
-  data.set$iv <- data.set$Route %in% "iv"
+
 
   #convert time from hours to days
 
@@ -282,8 +274,6 @@ preprocess_data <- function(data.set,
                   length(unique(data.set$Reference)), "unique references remain."))
   }
   }
-
-  N.PREV <- dim(data.set)[1]
 
   ### convert time from hours to days
   data.set$Time.Days <- data.set$Time/24

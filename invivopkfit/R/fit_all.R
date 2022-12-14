@@ -80,7 +80,7 @@ fit_all <- function(data.set,
                       "Value" = "series.conc",
                       "Value.Units" = NULL,
                       "Route" = "studies.administration_route_normalized",
-                      "Source" = "documents_extraction.id",
+                      "Extraction" = "documents_extraction.id",
                       "LOQ" = "series.loq",
                       "Subject" = "subjects.id"),
                     defaults_list =   list(
