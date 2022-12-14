@@ -39,15 +39,14 @@
 #' @param species_col The name of the column indicating species. Default
 #'   "subjects.species."
 #'
-#' @param calc.loq.col The name of the LOQ column. Default "calc_loq". If this
+#' @param loq_col The name of the LOQ column. Default "calc_loq". If this
 #'   column does not already exist, it will be created.
 #'
 #' @param loq.factor A factor by which to multiply the lowest detected value in
 #'   each group to estimate an LOQ. Default 0.45.
 #'
 #' @return A \code{data.frame} that is the same as \code{cvt.data}, but with the
-#'   column specifed in \code{calc_loq} added, and any rows for
-#'   source/chemical/medium combinations with no detected concentrations removed
+#'   column specifed in \code{calc_loq} added
 #'
 #' @author John Wambaugh
 #'
