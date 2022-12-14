@@ -72,7 +72,7 @@ Run a one-compartment fit on the data, and write out the results. Timestamp the 
 
 Fit the 1-compartment model.
 
-```{r, run_invivoPKfit_1comp, eval = FALSE}
+```{r, run_invivoPKfit_1comp}
 
 run_timestamp_1comp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
 
@@ -117,7 +117,7 @@ write.csv(PK.fit.table.1comp,
 
 Fit the 2-compartment model.
 
-```{r, run_invivoPKfit_2comp, eval = FALSE}
+```{r, run_invivoPKfit_2comp}
 
 run_timestamp_2comp <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
 
@@ -159,7 +159,7 @@ write.csv(PK.fit.table.2comp, paste("inst/ext/PK_fit_table_2comp_",
 
 Fit the flat model.
 
-```{r, run_invivoPKfit_flat, eval = FALSE}
+```{r, run_invivoPKfit_flat}
 run_timestamp_flat <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
 
 system.time(
