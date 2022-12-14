@@ -77,7 +77,7 @@ fit_all <- function(data.set,
                       "Time" = "conc_time_values.time_hr",
                       "Time.Units" = NULL,
                       "Media" = "series.conc_medium_normalized",
-                      "Value" = "series.conc",
+                      "Value" = "conc_time_values.conc",
                       "Value.Units" = NULL,
                       "Route" = "studies.administration_route_normalized",
                       "Extraction" = "documents_extraction.id",
@@ -91,6 +91,8 @@ fit_all <- function(data.set,
 
                     ratio_conc_to_dose = 1,
                     calc_loq_factor = 0.45,
+                    routes_keep = c("po", "iv"),
+                    media_keep = c("blood", "plasma"),
 
                     get_starts_args = NULL,
                     get_lower_args = NULL,
@@ -117,7 +119,11 @@ fit_all <- function(data.set,
                              defaults_list = defaults_list,
                              ratio_conc_to_dose = ratio_conc_to_dose,
                              calc_loq_factor = calc_loq_factor,
+                             routes_keep = routes_keep,
+                             media_keep = media_keep,
                              suppress.messages = suppress.messages)
+
+ data.set <- as.data.table(data.set)
 
   #Non-comapartmental fits:
   if (model=="noncompartment") {
