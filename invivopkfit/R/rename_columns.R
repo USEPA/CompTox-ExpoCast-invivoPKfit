@@ -33,7 +33,7 @@ rename_columns <- function(data.set,
                              "Time" = "conc_time_values.time_hr",
                              "Time.Units" = NULL,
                              "Media" = "series.conc_medium_normalized",
-                             "Value" = "series.conc",
+                             "Value" = "conc_time_values.conc",
                              "Value.Units" = NULL,
                              "Route" = "studies.administration_route_normalized",
                              "LOQ" = "series.loq",
@@ -48,7 +48,8 @@ rename_columns <- function(data.set,
 
   #if any old names are not present in data.set,
   #throw an errror
-  missing_items <- names_list[!names_list %in% names(data.set)]
+  missing_items <- names_list[!(names_list %in% names(data.set)) &
+                                sapply(names_list, function(x) !is.null(x))]
   if(length(missing_items)>0){
     warning(paste0("invivopkfit::rename_columns():\n",
                   "The following items in names_list are columns not present in data.set:\n",
@@ -63,11 +64,11 @@ rename_columns <- function(data.set,
   }
 
   #new column names
-  new_names <- names(names_list[!is.null(names_list)])
+  new_names <- names(names_list[sapply(names_list, function(x) !is.null(x))])
   #old column names
-  old_names <- unlist(names_list[!is.null(names_list)])
+  old_names <- unlist(names_list[sapply(names_list, function(x) !is.null(x))])
   #columns to add: had NULL instead of an old_name
-  add_names <- names(names_list)[is.null(names_list)]
+  add_names <- names(names_list)[sapply(names_list, is.null)]
 
   #pull the specified old names
   dat <- data.set[old_names]
@@ -81,8 +82,5 @@ rename_columns <- function(data.set,
   #fill with default values if provided
   dat[names(defaults_list)] <- defaults_list
 
-  ### delete extra/NA columns
-  data.set <- data.set[!is.na(names(data.set))]
-
-  return(data.set)
+  return(dat)
 }
