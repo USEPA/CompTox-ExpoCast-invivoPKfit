@@ -924,8 +924,6 @@ if(is.null(par_DF)){
         resid_early_po <- po_early$ValueDose - pred_late_po
         suppressWarnings(po_early$logresid <-  log(resid_early_po))
       #drop any NA log residuals
-        #but keep a version before dropping
-        po_early1 <- copy(po_early)
         po_early <- subset(po_early,
                            is.finite(logresid))
 
