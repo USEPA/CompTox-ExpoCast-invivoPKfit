@@ -213,6 +213,87 @@ analyze_subset <- function(fitdata,
                               "fitdata" = fitdata,
                           "pool_sigma" = pool_sigma,
                         "suppress.messages" = suppress.messages))
+
+ #Types of fitted param values to return
+ fitted_types <- c("Fitted mean",
+                   "Fitted std dev")
+
+ #If the number of parameters is >= the number of detected data points,
+ #then throw back everything NA with a message,
+ #because there is no point wasting time trying to fit them.
+ if (sum(par_DF$optimize_param) >= sum(!is.na(fitdata$Value))){
+
+   out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
+
+   #add NA for lower, upper bounds and start values
+   out_DF[, c("lower_bound",
+              "lower_bound_msg",
+              "upper_bound",
+              "upper_bound_msg",
+              "start_value",
+              "start_value_msg")] <- list(NA_real_,
+                                          NA_character_,
+                                          NA_real_,
+                                          NA_character_,
+                                          NA_real_,
+                                          NA_character_)
+
+   out_DF[, fitted_types] <- NA_real_
+
+   #check whether there is more than one reference or not
+   nref <- length(unique(fitdata$Reference))
+
+   if (nref>1) {
+     if(pool_sigma %in% FALSE){
+       out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+                                 collapse =", ")
+       out_DF$Data.Analyzed <- "Joint Analysis"
+     }else{
+       out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+                                 collapse =", ")
+       out_DF$Data.Analyzed <- "Pooled Analysis"
+     }
+   }else {
+     out_DF$Reference <- unique(fitdata$Reference)
+     out_DF$Data.Analyzed <- "Single-Reference Analysis"
+   }
+
+   #fill in the loglike and AIC with NA s since no fit was done
+   out_DF$LogLikelihood <-  NA_real_
+   out_DF$AIC <-  NA_real_
+
+   #include a message about why no fit was done
+   msg <- paste("For chemical ", this.dtxsid, " there were ",
+                sum(par_DF$optimize_param),
+                " parameters to be estimated (",
+                paste(par_DF[par_DF$optimize_param %in% TRUE, "param_name"],
+                      collapse = ", "),
+                ") and only ",
+                sum(!is.na(fitdata$Value)),
+                " detected data points. Optimization aborted.",
+                sep = "")
+   out_DF$message <- msg
+   out_DF$flag <- NA_character_
+   #Record the unique routes in this dataset
+   #Route info provides context for why some parameters were/were not estimated
+   out_DF$Routes <- paste("iv: ",
+                          sum(fitdata$Route %in% "iv"),
+                          "; po: ",
+                          sum(fitdata$Route %in% "po"))
+   out_DF$fevals <- NA_integer_
+   out_DF$convcode <- NA_integer_
+   out_DF$niter <- NA_integer_
+   out_DF$method <- optimx_args$method
+   #record control params
+   out_DF[paste0("control_",
+                 names(optimx_args$control))] <- optimx_args$control
+   if(!suppress.messages){
+     message(msg)
+   }
+   return(out_DF)
+ } #end  if (sum(par_DF$opt.par) >= nrow(fitdata))
+
+ #else -- continue
 #get lower bounds
  par_DF <- do.call(get_lower_bounds,
                    c(list("par_DF" = par_DF,
@@ -245,11 +326,6 @@ analyze_subset <- function(fitdata,
  #Initialize out_DF
  #There will be one row for each parameter
 out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
-
-
-  #Types of fitted param values to return
-  fitted_types <- c("Fitted mean",
-                    "Fitted std dev")
 
   #From par_DF, get vectors of:
 
@@ -284,72 +360,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   }else{
     const_params <- NULL
   }
-
-
-
-
-  #If the number of parameters is >= the number of data points,
-  #then throw back everything NA with a message,
-  #because there is no point wasting time trying to fit them.
-  if (length(opt_params) >= nrow(fitdata)){
-
-   out_DF[, fitted_types] <- NA_real_
-
-   #check whether there is more than one reference or not
-   nref <- length(unique(fitdata$Reference))
-
-    if (nref>1) {
-      if(pool_sigma %in% FALSE){
-      out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
-                                collapse =", ")
-      out_DF$Data.Analyzed <- "Joint Analysis"
-      }else{
-        out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
-                                  collapse =", ")
-        out_DF$Data.Analyzed <- "Pooled Analysis"
-      }
-    }else {
-      out_DF$Reference <- unique(fitdata$Reference)
-      out_DF$Data.Analyzed <- "Single-Reference Analysis"
-    }
-
-    #fill in the loglike and AIC with NA s since no fit was done
-    out_DF$LogLikelihood <-  NA_real_
-    out_DF$AIC <-  NA_real_
-
-    #include a message about why no fit was done
-    msg <- paste("For chemical ", this.dtxsid, " there were ",
-                sum(par_DF$optimize_param),
-                 " parameters to be estimated (",
-                paste(names(opt_params), collapse = ", "),
-                 ") and only ",
-                 nrow(fitdata),
-                " data points. Optimization aborted.",
-                sep = "")
-    out_DF$message <- msg
-    out_DF$flag <- ""
-    #Record the unique routes in this dataset
-    #Route info provides context for why some parameters were/were not estimated
-    out_DF$Routes <- paste("iv: ",
-                           sum(fitdata$Route %in% "iv"),
-                           "; po: ",
-                           sum(fitdata$Route %in% "po"))
-    out_DF$fevals <- NA_integer_
-    out_DF$convcode <- NA_integer_
-    out_DF$niter <- NA_integer_
-    out_DF$method <- optimx_args$method
-    #record control params
-    out_DF[paste0("control_",
-                  names(optimx_args$control))] <- optimx_args$control
-    if(!suppress.messages){
-    message(msg)
-    }
-    return(out_DF)
-  } #end  if (sum(par_DF$opt.par) >= nrow(fitdata))
-
-  #otherwise, if we have enough data, proceed with the fit.
-
-
 
   if (!suppress.messages){
     message(paste0("Estimating parameters ",
@@ -736,6 +746,8 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                                        out_DF$lower_bound),
                                   "flag"],
                            "Fitted mean is equal to lower or upper bound.")
+
+  out_DF[!nzchar(out_DF$flag), "flag"] <- NA_character_
 
 
   #Record the unique routes in this dataset
