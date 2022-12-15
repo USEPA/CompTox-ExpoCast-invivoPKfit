@@ -52,12 +52,12 @@
 #'
 #' @export estimate_loq
 estimate_loq <- function(dat,
-                         reference_col = "document_reference.id",
-                         chem_col = "chemicals_dosed.dsstox_substance_id",
-                         media_col = "series.conc_medium_normalized",
-                         species_col = "subjects.species",
-                         value_col = "conc_time_values.conc",
-                         loq_col = "calc_loq",
+                         reference_col = "Reference",
+                         chem_col = "DTXSID",
+                         media_col = "Media",
+                         species_col = "Species",
+                         value_col = "Value",
+                         loq_col = "LOQ",
                          calc_loq_factor = 0.45)
 {
 
@@ -99,6 +99,8 @@ estimate_loq <- function(dat,
                            species_col)],
                      drop = TRUE)
 
+  #If all observations were NA for a given reference, chemical, media, and
+  #species, then imputed LOQ will also be NA.
 
   return(dat_out)
 }
