@@ -325,7 +325,19 @@ if(is.null(par_DF)){
                     all.x = TRUE,
                     all.y = FALSE)
 
+    #this merge won't get reference-specific sigmas: handle them
+    for(this_sigma in grep(x = par_DF$param_name,
+                           pattern= "sigma",
+                           value = TRUE)){
+      par_DF <- assign_start(param_name = this_sigma,
+                             param_value = starts_default[starts_default$param_name %in% "sigma", "start_value"],
+                             msg = "SD of log resid for model with starting values",
+                             par_DF = par_DF,
+                             start_from = start_from_data)
+    } #end for loop over reference-specific sigmas
+
     rownames(par_DF) <- par_DF$param_name
+
 
     #if httk 1-comp model params exist, replace the defaults with these
     #and mark the source accordingly
@@ -1086,11 +1098,11 @@ if(is.null(par_DF)){
 
   pred <- do.call(modelf,
                   list(params = params,
-                       time = tmpdat$Time,
-                       dose = tmpdat$Dose,
-                       iv.dose = tmpdat$Route %in% "iv"))
+                       time = fitdata$Time,
+                       dose = fitdata$Dose,
+                       iv.dose = fitdata$Route %in% "iv"))
 
-  logresid <- log(pred) - log(tmpdat$Value)
+  logresid <- log(pred) - log(fitdata$Value)
   logresid[!is.finite(logresid)] <- NA_real_
 
   for(this_sigma in grep(x = par_DF$param_name,
