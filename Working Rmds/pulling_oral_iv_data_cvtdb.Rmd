@@ -213,14 +213,6 @@ cvt_data <- copy(tmp7)
 rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7)
 ```
 
-Filter down to only blood/plasma studies and to only oral/iv administration.
-
-```{r}
-cvt_data <- cvt_data[series.conc_medium_normalized %in% c("blood", "plasma") &
-                       studies.administration_route_normalized %in% c("oral", "iv")]
-```
-
-
 # Exploring the data
 
 How many series per study?
@@ -238,7 +230,9 @@ n_series_per_study[, range(n_series)]
 DTXSID1034187 had a weird situation where concentrations seemed very low for the "300" dose group. Let's see what is going on there
 
 ```{r}
-tmp <- cvt_data[chemicals_analyzed.dsstox_substance_id %in% "DTXSID1034187"]
+tmp <- cvt_data[chemicals_analyzed.dsstox_substance_id %in% "DTXSID1034187" &
+                  studies.administration_route_normalized %in% c("oral", "iv") &
+                  series.conc_medium_normalized %in% c("blood", "plasma")]
 ```
 
 This should have reference IDs 141 and 142 -- does it?
@@ -382,6 +376,22 @@ cvt_data[documents_extraction.id %in% 141 &
       studies.administration_route_normalized %in% "iv",
     correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
 ```
+
+# Normalize LOQ units to mg/L
+
+```{r}
+cvt_data[, unique(series.loq_units)]
+```
+
+```{r}
+cvt_data[, series.loq := as.numeric(series.loq)]
+cvt_data[series.loq_units %in% "ug/L", series.loq_normalized := series.loq * 1e-3]
+cvt_data[trimws(series.loq_units) %in% "ug/mL", series.loq_normalized := series.loq]
+cvt_data[series.loq_units %in% "mg/L", series.loq_normalized := series.loq]
+cvt_data[series.loq_units %in% "ng/mL", series.loq_normalized := series.loq * 1e-3]
+```
+
+For that with nmol/L we will need the molecular weight. For items with units ug we would need the volume of media analyzed. Both of these are for inhalation data, though, which we are not analyzing right now. So I will leave it alone for now.
 
 
 Save the pulled CVT data
