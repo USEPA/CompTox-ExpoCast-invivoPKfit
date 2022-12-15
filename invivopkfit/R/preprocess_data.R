@@ -20,6 +20,9 @@
 #' meta-analysis paper that republished data from multiple other publications,
 #' the extraction-source ID would be for the meta-analysis paper, but the
 #' reference ID would be for the original publication.)
+#' - Removes all observations where `DTXSID_Dosed` and `DTXSID_Analyzed` are not
+#' the same (i.e., keeps only data where the parent chemical is what was
+#' monitored).
 #' - Harmonizes routes recorded as "oral" to "po" and "intravenous" to "iv".
 #' - Removes all observations that have routes other than those listed in `routes_keep`.
 #' - Removes all observations in media other than those listed in `media_keep`.
@@ -28,10 +31,16 @@
 #' - Multiplies concentrations by `ratio_conc_to_dose` (*i.e.*, by the ratio
 #' between the mass units for concentration and the mass units for dose).
 #' - For any concentrations reported as 0, substitute NA.
-#'  - Imputes LOQ for any observations missing it, using [estimate_loq()].
+#'  - Imputes LOQ for any observations missing it, using [estimate_loq()]. LOQ
+#'  is imputed for each unique combination of `Reference`, `DTXSID`, `Species`,
+#'  and `Media` as `calc_loq_factor` times the minimum *detected* `Value`.
 #'  - Substitutes NA for any concentration observations below LOQ (these are non-detects).
+#'  - Removes any remaining observations where both `Value` and `LOQ` are NA.
+#'  For example, this situation occurs for reference/chemical/species/media
+#'  combinations where no LOQ was reported, and all concentrations were reported
+#'  as NA, so that no LOQ could be imputed.
 #' - Removes any observations with NA `Time`.
-#' - Adds a variable where `Time` (in hours) is converted to time in days.
+#' - Adds a variable `Time.Days` where `Time` (in hours) is converted to time in days.
 #'
 #'
 #' @param data.set A `data.frame` of concentration-time data. Preferably
@@ -96,9 +105,12 @@
 
 preprocess_data <- function(data.set,
                             names_list =list(
-                              "Compound" = "chemicals_dosed.id",
-                              "DTXSID" = "chemicals_dosed.dsstox_substance_id",
-                              "CAS" = "chemicals_dosed.dsstox_casrn",
+                              "Compound_Dosed" = "studies.test_substance_name_original",
+                              "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
+                              "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
+                              "Compound_Analyzed" = "series.analyte_name_original",
+                              "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
+                              "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
                               "Reference" = "documents_reference.id",
                               "Extraction" = "documents_extraction.id",
                               "Species" = "subjects.species",
@@ -223,10 +235,16 @@ preprocess_data <- function(data.set,
   }
 
   #If Reference is NA, set it the same as Extraction.
-
   data.set[is.na(data.set$Reference),
            "Reference"] <- data.set[is.na(data.set$Reference),
                                     "Extraction"]
+
+  #Subset to only data where the dosed and analyzed chemical are the same --
+  #i.e., measuring concentration of parent chemical.
+  data.set <- subset(data.set, DTXSID_Dosed == DTXSID_Analyzed)
+
+  #Add just "DTXSID", "Compound", "CAS" columns
+  data.set[, c("DTXSID", "Compound", "CAS")] <- data.set[, c("DTXSID_Analyzed", "Compound_Analyzed", "CAS_Analyzed")]
 
   # Right now code only recognizes "po" and "iv" as routes:
   ### coerce route names, 'oral' and 'intravenous', to 'po' and 'iv'
@@ -297,11 +315,14 @@ preprocess_data <- function(data.set,
   # Impute LOQ if it is missing
   if(any(is.na(data.set$LOQ))){
     if(!suppress.messages){
-      message("Estimating missing LOQs")
+      message(paste0("Estimating missing LOQs as ",
+                     calc_loq_factor,
+                     "* minimum detected Value for each unique combination of ",
+                     "Reference, DTXSID, Media, and Species"))
     }
     data.set <- estimate_loq(dat = data.set,
                              reference_col = "Reference",
-                             chem_col = "Compound",
+                             chem_col = "DTXSID",
                              media_col = "Media",
                              species_col = "Species",
                              value_col = "Value",
@@ -316,15 +337,33 @@ preprocess_data <- function(data.set,
   }
   data.set[(data.set$Value < data.set$LOQ) %in% TRUE, "Value"] <- NA_real_
 
-
-
   #Likewise set any LOQ of 0 to NA
+  if(any(data.set$LOQ %in% 0)){
   if(!suppress.messages){
     message(paste0("Converting 'LOQ' values of 0 to NA.\n",
                    sum(data.set$LOQ %in% 0),
                    " values will be converted."))
   }
   data.set[data.set$LOQ %in% 0, "LOQ"] <- NA_real_
+  }
+
+  #Remove any remaining cases where both Value and LOQ are NA
+  if(any(is.na(data.set$Value) & is.na(data.set$LOQ))){
+    if(!suppress.messages){
+      message(paste0("Removing observations where both Value and LOQ were NA.\n",
+                     sum(is.na(data.set$Value) & is.na(data.set$LOQ)),
+                     " observations will be removed."))
+    }
+      data.set <- subset(data.set,
+                         !(is.na(data.set$Value) & is.na(data.set$LOQ)))
+
+      if(!suppress.messages){
+        message(paste(dim(data.set)[1], "observations of",
+                      length(unique(data.set$DTXSID)), "unique chemicals,",
+                      length(unique(data.set$Species)), "unique species, and",
+                      length(unique(data.set$Reference)), "unique references remain."))
+      }
+  }
 
 
   #convert time from hours to days
