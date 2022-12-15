@@ -71,7 +71,8 @@ estimate_loq <- function(dat,
                      dat[c(reference_col,
                            chem_col,
                            media_col,
-                           species_col)]
+                           species_col)],
+                     drop = TRUE
                      )
 
   #for each group, impute any missing LOQ as calc_loq_factor * the minimum
@@ -95,7 +96,8 @@ estimate_loq <- function(dat,
                      dat[c(reference_col,
                            chem_col,
                            media_col,
-                           species_col)])
+                           species_col)],
+                     drop = TRUE)
 
 
   return(dat_out)
