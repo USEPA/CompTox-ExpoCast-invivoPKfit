@@ -27,13 +27,11 @@
 #' - Converts `Compound` and `Species` to lower-case.
 #' - Multiplies concentrations by `ratio_conc_to_dose` (*i.e.*, by the ratio
 #' between the mass units for concentration and the mass units for dose).
+#' - For any concentrations reported as 0, substitute NA.
 #'  - Imputes LOQ for any observations missing it, using [estimate_loq()].
 #'  - Substitutes NA for any concentration observations below LOQ (these are non-detects).
 #' - Removes any observations with NA `Time`.
 #' - Adds a variable where `Time` (in hours) is converted to time in days.
-#' - Computes variable `N.Obs.Ref`, counting the number of detected observations
-#' (above LOQ) for each unique combination of `Reference`, `DTXSID`, and
-#' `Species`.
 #'
 #'
 #' @param data.set A `data.frame` of concentration-time data. Preferably
@@ -103,6 +101,7 @@ preprocess_data <- function(data.set,
                               "CAS" = "chemicals_dosed.dsstox_casrn",
                               "Reference" = "documents_reference.id",
                               "Extraction" = "documents_extraction.id",
+                              "Species" = "subjects.species",
                               "Weight" ="subjects.weight_kg",
                               "Weight.Units" = NULL,
                               "Dose" = "studies.dose_level_normalized",
@@ -113,7 +112,6 @@ preprocess_data <- function(data.set,
                               "Value" = "conc_time_values.conc",
                               "Value.Units" = NULL,
                               "Route" = "studies.administration_route_normalized",
-                              "Extraction" = "documents_extraction.id",
                               "LOQ" = "series.loq",
                               "Subject" = "subjects.id"),
                             defaults_list =   list(
@@ -204,22 +202,24 @@ preprocess_data <- function(data.set,
 
   ### Coerce all 'Reference' values to be character, and say so
   if(!is.character(data.set$Reference)){
-    data.set$Reference <- as.character(data.set$Reference)
     if(!suppress.messages){
       message(paste0("Column \"Reference\" converted from ",
                      class(data.set$Reference),
                      " to character."))
     }
+    data.set$Reference <- as.character(data.set$Reference)
+
   }
 
   ### Coerce all 'Extraction' values to be character, and say so
   if(!is.character(data.set$Extraction)){
-    data.set$Extraction <- as.character(data.set$Extraction)
     if(!suppress.messages){
       message(paste0("Column \"Extraction\" converted from ",
                      class(data.set$Extraction),
                      " to character."))
     }
+    data.set$Extraction <- as.character(data.set$Extraction)
+
   }
 
   #If Reference is NA, set it the same as Extraction.
@@ -286,8 +286,19 @@ preprocess_data <- function(data.set,
   ### e.g. mg/L and mg/kg/day
   data.set$Value <- data.set$Value * ratio_conc_to_dose
 
+  #Set any 0 concentrations to NA
+  if(!suppress.messages){
+    message(paste0("Converting 'Value' values of 0 to NA.\n",
+                   sum(data.set$Value %in% 0),
+                   " values will be converted."))
+  }
+  data.set[data.set$Value %in% 0, "Value"] <- NA_real_
+
   # Impute LOQ if it is missing
   if(any(is.na(data.set$LOQ))){
+    if(!suppress.messages){
+      message("Estimating missing LOQs")
+    }
     data.set <- estimate_loq(dat = data.set,
                              reference_col = "Reference",
                              chem_col = "Compound",
@@ -298,14 +309,22 @@ preprocess_data <- function(data.set,
                              calc_loq_factor = calc_loq_factor)
   }
 
-  #Ignore data close to LOQ:
   if(!suppress.messages){
-    message(paste0("Converting 'Value' values of less than LOQ to NA\n.",
-                   sum(data.set$Value <  data.set$LOQ),
+    message(paste0("Converting 'Value' values of less than LOQ to NA.\n",
+                   sum((data.set$Value <  data.set$LOQ) %in% TRUE),
                    " values will be converted."))
   }
-  data.set[data.set$Value <data.set$LOQ, "Value"] <- NA_real_
+  data.set[(data.set$Value < data.set$LOQ) %in% TRUE, "Value"] <- NA_real_
 
+
+
+  #Likewise set any LOQ of 0 to NA
+  if(!suppress.messages){
+    message(paste0("Converting 'LOQ' values of 0 to NA.\n",
+                   sum(data.set$LOQ %in% 0),
+                   " values will be converted."))
+  }
+  data.set[data.set$LOQ %in% 0, "LOQ"] <- NA_real_
 
 
   #convert time from hours to days
@@ -329,22 +348,6 @@ preprocess_data <- function(data.set,
 
   ### convert time from hours to days
   data.set$Time.Days <- data.set$Time/24
-
-
-  # How many >LOQ observations do we have per chemical/species/reference?
-  data_split <- split(data.set,
-                      data.set[c("Reference",
-                                 "DTXSID",
-                                 "Species")])
-  data_split2 <- lapply(data_split,
-                        function(this_dat){
-                          this_dat$N.Obs.Ref <- sum(!is.na(this_dat$Value))
-                          return(this_dat)
-                        })
-  data.set <- unsplit(data_split2,
-                      data.set[c("Reference",
-                                 "DTXSID",
-                                 "Species")])
 
   if(!suppress.messages){
     "Data preprocessing complete."
