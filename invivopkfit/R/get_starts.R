@@ -325,25 +325,27 @@ if(is.null(par_DF)){
                     all.x = TRUE,
                     all.y = FALSE)
 
-    #this merge won't get reference-specific sigmas: handle them
+    rownames(par_DF) <- par_DF$param_name
+
+    #the abovemerge won't get reference-specific sigmas: handle them
     for(this_sigma in grep(x = par_DF$param_name,
                            pattern= "sigma",
                            value = TRUE)){
       par_DF <- assign_start(param_name = this_sigma,
-                             param_value = starts_default[starts_default$param_name %in% "sigma", "start_value"],
-                             msg = "SD of log resid for model with starting values",
+                             param_value = starts_default[
+                               starts_default$param_name %in% "sigma",
+                               "start_value"],
+                             msg = "Default starting value",
                              par_DF = par_DF,
                              start_from = start_from_data)
     } #end for loop over reference-specific sigmas
-
-    rownames(par_DF) <- par_DF$param_name
-
 
     #if httk 1-comp model params exist, replace the defaults with these
     #and mark the source accordingly
     if(this.dtxsid %in% httk::get_cheminfo(info="dtxsid",
                                            model = "1compartment",
                                            suppress.messages = TRUE)){
+
       #use this_species if httk has data for it, otherwise use human
       httk_species <- ifelse(tolower(this.species) %in%
                                colnames(httk::physiology.data),
@@ -384,11 +386,19 @@ if(is.null(par_DF)){
 
     #Try roughly estimating parameters from data
 
+    #Drop control points & non-detects
+    tmpdat <- subset(fitdata,
+                     Dose > 0 &
+                       is.finite(Value))
+
+    #normalize concentration by dose
+    tmpdat$ValueDose <- tmpdat$Value/tmpdat$Dose
+    #log transform Value/Dose
+    tmpdat$logValueDose <- log(tmpdat$ValueDose)
+
     #if model is flat, take A to be the mean log concentration/dose, on natural scale
     if(model %in% "flat"){
-      tmpdata <- subset(fitdata, Dose > 0 &
-                          !is.na(Value))
-      A <- exp(mean(log(tmpdata$Value/tmpdata$Dose), na.rm = TRUE))
+      A <- exp(mean(tmpdat$logValueDose, na.rm = TRUE))
       par_DF <- assign_start(param_name = "A",
                              param_value = A,
                              msg = "Median concentration/dose",
@@ -396,24 +406,13 @@ if(is.null(par_DF)){
                              par_DF = par_DF)
     }else{
 
-    #Drop control points & non-detects
-    tmpdat <- subset(fitdata,
-                       Dose > 0 &
-                       is.finite(Value))
+
     #Split into IV and oral datasets
     iv_data <- tmpdat[tmpdat$Route %in% "iv", ] #will be empty if no IV data
     po_data <- tmpdat[tmpdat$Route %in% "po", ] #will be empty if no PO data
 
     has_iv <- any(tmpdat$Route %in% "iv")
     has_po <- any(tmpdat$Route %in% "po")
-
-    #normalize concentration by dose
-    iv_data$ValueDose <- iv_data$Value / iv_data$Dose
-    po_data$ValueDose <- po_data$Value / po_data$Dose
-
-    #log transform Value/Dose
-    iv_data$logValueDose <- log(iv_data$ValueDose)
-    po_data$logValueDose <- log(po_data$ValueDose)
 
     #####################
     # 1-compartment model
@@ -462,7 +461,7 @@ if(is.null(par_DF)){
                                  param_value = Vdist_iv,
                                  par_DF = par_DF,
                                  start_from = start_from_data,
-                                 msg = "1/Median Value/Dose at min time")
+                                 msg = "1/(Median Value/Dose) at min time")
         }
 
         #if trying to fit kelim failed,
@@ -584,13 +583,6 @@ if(is.null(par_DF)){
           kgutabs_po <- NA_real_
         }
 
-        #if method of residuals failed, then try just assuming that tpeak = 5 *
-        #absorption half-life -- see https://www.boomer.org/c/p4/c09/c0904.php
-        if(!is.finite(kgutabs_po) | kgutabs_po < par_DF["kgutabs", "lower_bound"]){
-          thalf_abs <- tpeak/5
-          kgutabs_po <- log(2)/thalf_abs
-        }
-
         #update par_DF
         #kgutabs
         par_DF <- assign_start(param_name = "kgutabs",
@@ -598,6 +590,22 @@ if(is.null(par_DF)){
                                par_DF = par_DF,
                                start_from = start_from_data,
                                msg = "Method of residuals on PO data")
+
+        #if method of residuals failed, then try just assuming that tpeak = 5 *
+        #absorption half-life -- see https://www.boomer.org/c/p4/c09/c0904.php
+        if(!is.finite(kgutabs_po) | kgutabs_po < par_DF["kgutabs", "lower_bound"]){
+          thalf_abs <- tpeak/5
+          kgutabs_po <- log(2)/thalf_abs
+          #update par_DF
+          #kgutabs
+          par_DF <- assign_start(param_name = "kgutabs",
+                                 param_value = kgutabs_po,
+                                 par_DF = par_DF,
+                                 start_from = start_from_data,
+                                 msg = "Method of inspection on PO data (assume tpeak = 5 * absorp half-life)")
+
+        }
+
 
 
         #use intercept to get Fgutabs_Vdist
@@ -621,7 +629,7 @@ if(is.null(par_DF)){
                                  param_value = Fgutabs_po,
                                  par_DF = par_DF,
                                  start_from = start_from_data,
-                                 msg = "Method of residuals on PO data with IV Vdist")
+                                 msg = "Method of residuals on PO data to get Fgutabs/Vdist, combined with estimate of Vdist")
 
 
         }
@@ -1132,7 +1140,6 @@ if(is.null(par_DF)){
            "start_value_msg")] <- list(NA_real_,
                                     "use_param is not TRUE")
 
-
   return(par_DF)
 }
 
@@ -1168,8 +1175,8 @@ assign_start <- function(param_name,
                          par_DF,
                          start_from){
   #get lower bounds
-  lower <- par_DF[param_name, "lower_bound"]
-  upper <- par_DF[param_name, "upper_bound"]
+  lower <- par_DF[par_DF$param_name %in% param_name, "lower_bound"]
+  upper <- par_DF[par_DF$param_name %in% param_name, "upper_bound"]
 
   if(all(is.null(start_from) |
          is.na(start_from) |
@@ -1187,7 +1194,7 @@ assign_start <- function(param_name,
     (param_value >= lower) %in% TRUE &
      (param_value <= upper) %in% TRUE &
      (param_name %in% start_from) %in% TRUE){     #if within bounds and finite, update par_DF
-    par_DF[param_name, c("start_value",
+    par_DF[par_DF$param_name %in% param_name, c("start_value",
                          "start_value_msg")] <- list(param_value,
                                                      msg)
   } #if outside bounds or not finite, return par_DF unchanged
