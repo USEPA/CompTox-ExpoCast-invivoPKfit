@@ -22,7 +22,7 @@
 #' reference ID would be for the original publication.)
 #' - Removes all observations where `DTXSID_Dosed` and `DTXSID_Analyzed` are not
 #' the same (i.e., keeps only data where the parent chemical is what was
-#' monitored).
+#' monitored). Creates new columns `Compound`, `DTXSID`, and `CAS` identifying the chemical both dosed and analyzed.
 #' - Harmonizes routes recorded as "oral" to "po" and "intravenous" to "iv".
 #' - Removes all observations that have routes other than those listed in `routes_keep`.
 #' - Removes all observations in media other than those listed in `media_keep`.
@@ -33,7 +33,7 @@
 #' - For any concentrations reported as 0, substitute NA.
 #'  - Imputes LOQ for any observations missing it, using [estimate_loq()]. LOQ
 #'  is imputed for each unique combination of `Reference`, `DTXSID`, `Species`,
-#'  and `Media` as `calc_loq_factor` times the minimum *detected* `Value`.
+#'  and `Media` as `calc_loq_factor` times the minimum *detected* `Value`.s
 #'  - Substitutes NA for any concentration observations below LOQ (these are non-detects).
 #'  - Removes any remaining observations where both `Value` and `LOQ` are NA.
 #'  For example, this situation occurs for reference/chemical/species/media
@@ -125,7 +125,9 @@ preprocess_data <- function(data.set,
                               "Value.Units" = NULL,
                               "Route" = "studies.administration_route_normalized",
                               "LOQ" = "series.loq",
-                              "Subject" = "subjects.id"),
+                              "Subject" = "subjects.id",
+                              "N_Subjects" = "series.n_subjects_in_series",
+                              "Value_SD" = "conc_time_values.conc_sd"),
                             defaults_list =   list(
                               "Weight.Units" = "kg",
                               "Dose.Units" = "mg/kg",
@@ -149,7 +151,7 @@ preprocess_data <- function(data.set,
   if(!suppress.messages){
   ### display messages describing loaded data
   message(paste(nrow(data.set), "concentration vs. time observations loaded.\n"))
-  message(paste(length(unique(data.set$DTXSID)), "unique chemicals,",
+  message(paste(length(unique(data.set$DTXSID_Analyzed)), "unique analytes,",
             length(unique(data.set$Species)), "unique species, and",
             length(unique(data.set$Reference)), "unique references."))
   }
@@ -241,10 +243,32 @@ preprocess_data <- function(data.set,
 
   #Subset to only data where the dosed and analyzed chemical are the same --
   #i.e., measuring concentration of parent chemical.
-  data.set <- subset(data.set, DTXSID_Dosed == DTXSID_Analyzed)
+  analyte_dosed_match <- (data.set$DTXSID_Dosed == data.set$DTXSID_Analyzed) %in% TRUE
+  if(any(!analyte_dosed_match)){
+  if(!suppress.messages){
+    message(paste("Restricting to observations where dosed DTXSID == analyzed DTXSID eliminates",
+                  sum(!analyte_dosed_match),
+                  "observations.")
+    )
+  }
+  data.set <- subset(data.set,
+                     analyte_dosed_match)
+  }
 
   #Add just "DTXSID", "Compound", "CAS" columns
-  data.set[, c("DTXSID", "Compound", "CAS")] <- data.set[, c("DTXSID_Analyzed", "Compound_Analyzed", "CAS_Analyzed")]
+  if(!suppress.messages){
+    message("Creating columns DTXSID, Compound, and CAS, containing the dosed & analyzed chemical identifiers.")
+  }
+  data.set$DTXSID <- data.set$DTXSID_Analyzed
+  data.set$Compound <- data.set$Compound_Analyzed
+  data.set$CAS <- data.set$CAS_Analyzed
+
+  if(!suppress.messages){
+    message(paste(dim(data.set)[1], "observations of",
+                  length(unique(data.set$DTXSID)), "unique chemicals,",
+                  length(unique(data.set$Species)), "unique species, and",
+                  length(unique(data.set$Reference)), "unique references remain."))
+  }
 
   # Right now code only recognizes "po" and "iv" as routes:
   ### coerce route names, 'oral' and 'intravenous', to 'po' and 'iv'
@@ -303,6 +327,9 @@ preprocess_data <- function(data.set,
   ### this makes the mass units of Value and Dose the same --
   ### e.g. mg/L and mg/kg/day
   data.set$Value <- data.set$Value * ratio_conc_to_dose
+  # do the same for LOQ and SD
+  data.set$LOQ <- data.set$LOQ * ratio_conc_to_dose
+  data.set$Value_SD <- data.set$Value_SD * ratio_conc_to_dose
 
   #Set any 0 concentrations to NA
   if(!suppress.messages){
@@ -314,6 +341,7 @@ preprocess_data <- function(data.set,
 
   # Impute LOQ if it is missing
   if(any(is.na(data.set$LOQ))){
+    data.set$LOQ_orig <- data.set$LOQ
     if(!suppress.messages){
       message(paste0("Estimating missing LOQs as ",
                      calc_loq_factor,
@@ -354,15 +382,75 @@ preprocess_data <- function(data.set,
                      sum(is.na(data.set$Value) & is.na(data.set$LOQ)),
                      " observations will be removed."))
     }
-      data.set <- subset(data.set,
-                         !(is.na(data.set$Value) & is.na(data.set$LOQ)))
+    data.set <- subset(data.set,
+                       !(is.na(data.set$Value) & is.na(data.set$LOQ)))
 
-      if(!suppress.messages){
-        message(paste(dim(data.set)[1], "observations of",
-                      length(unique(data.set$DTXSID)), "unique chemicals,",
-                      length(unique(data.set$Species)), "unique species, and",
-                      length(unique(data.set$Reference)), "unique references remain."))
-      }
+    if(!suppress.messages){
+      message(paste(dim(data.set)[1], "observations of",
+                    length(unique(data.set$DTXSID)), "unique chemicals,",
+                    length(unique(data.set$Species)), "unique species, and",
+                    length(unique(data.set$Reference)), "unique references remain."))
+    }
+  }
+
+  #Impute missing SDs
+  if(any((data.set$N_Subjects >1) %in% TRUE & is.na(data.set$Value_SD))){
+    data.set$Value_SD_orig <- data.set$Value_SD
+    if(!suppress.messages){
+      n_sd_est <- sum(
+        (data.set$N_Subjects >1) %in% TRUE &
+          is.na(data.set$Value_SD)
+      )
+      message(paste0("Estimating missing concentration SDs for multi-subject data points as ",
+                     "minimum non-missing SD for each unique combination of ",
+                     "Reference, DTXSID, Media, and Species. ",
+                     n_sd_est, " missing SDs will be estimated."))
+    }
+  data.set <- estimate_conc_sd(dat = data.set,
+                           reference_col = "Reference",
+                           chem_col = "DTXSID",
+                           media_col = "Media",
+                           species_col = "Species",
+                           value_col = "Value",
+                           sd_col = "Value_SD",
+                           n_subj_col = "N_Subjects")
+  }
+
+  #Remove any remaining multi-subject observations where SD is NA
+  if(any((data.set$N_Subjects >1) %in% TRUE & is.na(data.set$Value_SD))){
+    if(!suppress.messages){
+      message(paste0("Removing observations with N_Subjects > 1 where reported SD is NA.\n",
+                     sum((data.set$N_Subjects >1) %in% TRUE &
+                           is.na(data.set$Value_SD)),
+                     " observations will be removed."))
+    }
+    data.set <- subset(data.set,
+                       !((N_Subjects >1) %in% TRUE & is.na(Value_SD))
+    )
+
+    if(!suppress.messages){
+      message(paste(dim(data.set)[1], "observations of",
+                    length(unique(data.set$DTXSID)), "unique chemicals,",
+                    length(unique(data.set$Species)), "unique species, and",
+                    length(unique(data.set$Reference)), "unique references remain."))
+    }
+  }
+
+
+# For any cases where N_Subjects is NA, impute N_Subjects = 1
+  if(any(is.na(data.set$N_Subjects))){
+    data.set$N_Subjects_orig <- data.set$N_Subjects
+    if(!suppress.messages){
+      message(
+        paste0(
+          "N_Subjects is NA for ",
+          sum(is.na(data.set$N_Subjects)),
+          " observations. It will be assumed = 1."
+        )
+      )
+    }
+
+    data.set[is.na(data.set$N_Subjects), "N_Subjects"] <- 1
   }
 
 
