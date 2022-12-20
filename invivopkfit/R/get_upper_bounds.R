@@ -15,8 +15,8 @@
 #' | V1             | Inf           | Default         |
 #' | k12            | Inf         | Default         |
 #' | k21            | Inf         | Default         |
-#' | Fgutabs_Vdist  | Inf    | Default         |
-#' | Fgutabs_V1     | Inf    | Default         |
+#' | Fgutabs_Vdist  | 1e4    | Default         |
+#' | Fgutabs_V1     | 1e4    | Default         |
 #' | sigma          | Inf         | Default         |
 #'
 #' @param fitdata A data.frame: the concentration-time-dose data to be used for
@@ -84,8 +84,8 @@ get_upper_bounds <- function(fitdata,
                                                Inf, #V1
                                                Inf, #k12
                                                Inf, #k21
-                                               Inf, #Fgutabs_Vdist
-                                               Inf, #Fgutabs_V1
+                                               1e4, #Fgutabs_Vdist
+                                               1e4, #Fgutabs_V1
                                                Inf), #sigma
                                upper_bound_msg = "Default"
                              ),
