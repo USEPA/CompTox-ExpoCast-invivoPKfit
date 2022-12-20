@@ -156,6 +156,8 @@ preprocess_data <- function(data.set,
             length(unique(data.set$Reference)), "unique references."))
   }
 
+  data.set$Value_orig <- data.set$Value
+
   ### Coerce all 'Value' values to be numeric and say so
   if (!is.numeric(data.set$Value))
   {
@@ -176,6 +178,7 @@ preprocess_data <- function(data.set,
   }
 
   ### coerce 'Dose' values to numeric and say so
+  data.set$Dose_orig <- data.set$Dose
   if (!is.numeric(data.set$Dose))
   {
     dose_num <- as.numeric(data.set$Dose)
@@ -195,6 +198,7 @@ preprocess_data <- function(data.set,
   }
 
   ### coerce 'Time' values to numeric and say so
+  data.set$Time_orig <- data.set$Time
   if (!is.numeric(data.set$Time))
   {
     time_num <- as.numeric(data.set$Time)
@@ -215,6 +219,7 @@ preprocess_data <- function(data.set,
 
 
   ### Coerce all 'Reference' values to be character, and say so
+  data.set$Reference_orig <- data.set$Reference
   if(!is.character(data.set$Reference)){
     if(!suppress.messages){
       message(paste0("Column \"Reference\" converted from ",
@@ -237,6 +242,7 @@ preprocess_data <- function(data.set,
   }
 
   #If Reference is NA, set it the same as Extraction.
+  data.set$Reference_orig <- data.set$Reference
   data.set[is.na(data.set$Reference),
            "Reference"] <- data.set[is.na(data.set$Reference),
                                     "Extraction"]
@@ -331,13 +337,13 @@ preprocess_data <- function(data.set,
   data.set$LOQ <- data.set$LOQ * ratio_conc_to_dose
   data.set$Value_SD <- data.set$Value_SD * ratio_conc_to_dose
 
-  #Set any 0 concentrations to NA
-  if(!suppress.messages){
-    message(paste0("Converting 'Value' values of 0 to NA.\n",
-                   sum(data.set$Value %in% 0),
-                   " values will be converted."))
-  }
-  data.set[data.set$Value %in% 0, "Value"] <- NA_real_
+  # #Set any 0 concentrations to NA
+  # if(!suppress.messages){
+  #   message(paste0("Converting 'Value' values of 0 to NA.\n",
+  #                  sum(data.set$Value %in% 0),
+  #                  " values will be converted."))
+  # }
+  # data.set[data.set$Value %in% 0, "Value"] <- NA_real_
 
   # Impute LOQ if it is missing
   if(any(is.na(data.set$LOQ))){
@@ -365,15 +371,15 @@ preprocess_data <- function(data.set,
   }
   data.set[(data.set$Value < data.set$LOQ) %in% TRUE, "Value"] <- NA_real_
 
-  #Likewise set any LOQ of 0 to NA
-  if(any(data.set$LOQ %in% 0)){
-  if(!suppress.messages){
-    message(paste0("Converting 'LOQ' values of 0 to NA.\n",
-                   sum(data.set$LOQ %in% 0),
-                   " values will be converted."))
-  }
-  data.set[data.set$LOQ %in% 0, "LOQ"] <- NA_real_
-  }
+  # #Likewise set any LOQ of 0 to NA
+  # if(any(data.set$LOQ %in% 0)){
+  # if(!suppress.messages){
+  #   message(paste0("Converting 'LOQ' values of 0 to NA.\n",
+  #                  sum(data.set$LOQ %in% 0),
+  #                  " values will be converted."))
+  # }
+  # data.set[data.set$LOQ %in% 0, "LOQ"] <- NA_real_
+  # }
 
   #Remove any remaining cases where both Value and LOQ are NA
   if(any(is.na(data.set$Value) & is.na(data.set$LOQ))){
@@ -403,7 +409,9 @@ preprocess_data <- function(data.set,
       )
       message(paste0("Estimating missing concentration SDs for multi-subject data points as ",
                      "minimum non-missing SD for each unique combination of ",
-                     "Reference, DTXSID, Media, and Species. ",
+                     "Reference, DTXSID, Media, and Species.",
+                     "If all SDs are missing for such a unique combination, ",
+                     "SD will be imputed equal to mean. ",
                      n_sd_est, " missing SDs will be estimated."))
     }
   data.set <- estimate_conc_sd(dat = data.set,
@@ -417,6 +425,7 @@ preprocess_data <- function(data.set,
   }
 
   #Remove any remaining multi-subject observations where SD is NA
+  #(with imputing SD = Mean as a fallback, this will only be cases where Value was NA)
   if(any((data.set$N_Subjects >1) %in% TRUE & is.na(data.set$Value_SD))){
     if(!suppress.messages){
       message(paste0("Removing observations with N_Subjects > 1 where reported SD is NA.\n",
@@ -426,6 +435,26 @@ preprocess_data <- function(data.set,
     }
     data.set <- subset(data.set,
                        !((N_Subjects >1) %in% TRUE & is.na(Value_SD))
+    )
+
+    if(!suppress.messages){
+      message(paste(dim(data.set)[1], "observations of",
+                    length(unique(data.set$DTXSID)), "unique chemicals,",
+                    length(unique(data.set$Species)), "unique species, and",
+                    length(unique(data.set$Reference)), "unique references remain."))
+    }
+  }
+
+  #Remove any remaining multi-subject observations where Value is NA
+  if(any((data.set$N_Subjects >1) %in% TRUE & is.na(data.set$Value))){
+    if(!suppress.messages){
+      message(paste0("Removing observations with N_Subjects > 1 where reported Value is NA.\n",
+                     sum((data.set$N_Subjects >1) %in% TRUE &
+                           is.na(data.set$Value)),
+                     " observations will be removed."))
+    }
+    data.set <- subset(data.set,
+                       !((N_Subjects >1) %in% TRUE & is.na(Value))
     )
 
     if(!suppress.messages){
