@@ -245,16 +245,16 @@ analyze_subset <- function(fitdata,
 
    if (nref>1) {
      if(pool_sigma %in% FALSE){
-       out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+       out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
                                  collapse =", ")
        out_DF$Data.Analyzed <- "Joint Analysis"
      }else{
-       out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+       out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
                                  collapse =", ")
        out_DF$Data.Analyzed <- "Pooled Analysis"
      }
    }else {
-     out_DF$Reference <- unique(fitdata$Reference)
+     out_DF$References.Analyzed <- unique(fitdata$Reference)
      out_DF$Data.Analyzed <- "Single-Reference Analysis"
    }
 
@@ -262,6 +262,14 @@ analyze_subset <- function(fitdata,
    out_DF$LogLikelihood <-  NA_real_
    out_DF$AIC <-  NA_real_
 
+
+   out_DF$flag <- NA_character_
+   #Record the unique routes in this dataset
+   #Route info provides context for why some parameters were/were not estimated
+   out_DF$Routes <- paste("iv: ",
+                          sum(fitdata$Route %in% "iv"),
+                          "; po: ",
+                          sum(fitdata$Route %in% "po"))
    #include a message about why no fit was done
    msg <- paste("For chemical ", this.dtxsid, " there were ",
                 sum(par_DF$optimize_param),
@@ -273,13 +281,6 @@ analyze_subset <- function(fitdata,
                 " detected data points. Optimization aborted.",
                 sep = "")
    out_DF$message <- msg
-   out_DF$flag <- NA_character_
-   #Record the unique routes in this dataset
-   #Route info provides context for why some parameters were/were not estimated
-   out_DF$Routes <- paste("iv: ",
-                          sum(fitdata$Route %in% "iv"),
-                          "; po: ",
-                          sum(fitdata$Route %in% "po"))
    out_DF$fevals <- NA_integer_
    out_DF$convcode <- NA_integer_
    out_DF$niter <- NA_integer_
@@ -438,23 +439,24 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
            })
 
   #If fit failed, then return everything as NA and record the message
-  if(!is.data.frame(all_data_fit)){
+  if(!is.data.frame(all_data_fit) |
+     any(is.na(as.vector(stats::coef(all_data_fit))))){
   out_DF[, fitted_types] <- NA_real_
 
   nref <- length(unique(fitdata$Reference))
 
   if (nref>1) {
     if(pool_sigma %in% FALSE){
-    out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+    out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
                               collapse =", ")
     out_DF$Data.Analyzed <- "Joint Analysis"
     }else{
-      out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+      out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
                                 collapse =", ")
       out_DF$Data.Analyzed <- "Pooled Analysis"
     }
   } else {
-    out_DF$Reference <- unique(fitdata$Reference)
+    out_DF$References.Analyzed <- unique(fitdata$Reference)
     out_DF$Data.Analyzed <- "Single-Reference Analysis"
   }
 
@@ -462,10 +464,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   out_DF$LogLikelihood <-  NA_real_
   out_DF$AIC <-  NA_real_
 
-  #include a message about why no fit was done
-  msg <- paste("Optimization failed. Error message from optimx():",
-               all_data_fit)
-  out_DF$message <- msg
 
   out_DF$flag <- NA_character_
   #Record the unique routes in this dataset
@@ -474,6 +472,10 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                          sum(fitdata$Route %in% "iv"),
                          "; po: ",
                          sum(fitdata$Route %in% "po"))
+  #include a message about why no fit was done
+  msg <- paste("Optimization failed. Error message from optimx():",
+               all_data_fit)
+  out_DF$message <- msg
 
   out_DF$fevals <- NA_integer_
   out_DF$convcode <- NA_integer_
@@ -632,6 +634,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
     means <- as.vector(stats::coef(all_data_fit))
     names(means) <- names(opt_params)
+
     if (!suppress.messages){
       message(paste("Optimized values:  ",
                     paste(apply(data.frame(Names = names(means),
@@ -689,16 +692,16 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
   if (nref>1) {
     if(pool_sigma %in% FALSE){
-      out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+      out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
                                 collapse =", ")
       out_DF$Data.Analyzed <- "Joint Analysis"
     }else{
-      out_DF$Reference <- paste(sort(unique(fitdata$Reference)),
+      out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
                                 collapse =", ")
       out_DF$Data.Analyzed <- "Pooled Analysis"
     }
   } else {
-    out_DF$Reference <- unique(fitdata$Reference)
+    out_DF$References.Analyzed <- unique(fitdata$Reference)
     out_DF$Data.Analyzed <- "Single-Reference Analysis"
   }
 

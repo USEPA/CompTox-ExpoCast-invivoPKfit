@@ -178,7 +178,7 @@ if(!suppress.messages){
         message("Analyzing data by chemical, species, and reference...")
       }
       data.set.multi.ref <- subset(data.set, MultipleReferences == TRUE)
-      data.set.multi.ref[, Reference_orig := Reference]
+      #data.set.multi.ref[, Reference_orig := Reference]
       PK.fit.separate <- data.set.multi.ref[,
                                  analyze_subset(fitdata = .SD,
                                                  modelfun = modelfun,
@@ -193,7 +193,7 @@ if(!suppress.messages){
                                                  by = c(
                                                    "DTXSID",
                                                    "Species",
-                                                   "Reference_orig")]
+                                                   "Reference")]
 
 
       if(!suppress.messages){
