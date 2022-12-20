@@ -59,10 +59,10 @@ dnorm_summary <- function(mu,
 
   #Evaluate
   y_log <- x_N * log(1/(sigma*sqrt(2*pi))) +
-    (1/(2*sigma^2)) * (-x_sd^2 -
-                         x_N * x_mean^2 +
-                         2 * mu * x_N * x_mean -
-                         mu * x_N)
+    (-1/(2*sigma^2)) * (
+      (x_N - 1) * x_sd^2 +
+                         x_N * (x_mean - mu)^2
+      )
 
  if(log == TRUE){
    return(y_log)
