@@ -834,7 +834,9 @@ if(is.null(par_DF)){
 
         #split data into absorption and non-absorption phases
         po_abs <- subset(po_data, Time <= tpeak)
-        po_nonabs <- subset(po_data, Time > tpeak)
+        po_nonabs <- subset(po_data, Time >= tpeak)
+
+        if(nrow(po_nonabs)>=2){
 
         #further split the non-absorption phase into early and late parts
         #find the dividing line between early and late as the "elbow" point
@@ -851,8 +853,6 @@ if(is.null(par_DF)){
                                       y = elbow_y))
                                })
 
-
-
         #in case we get NA or infinite or negative elbow time,
         #fallback to middle time
         if(!is.finite(elbow$x) |
@@ -868,26 +868,31 @@ if(is.null(par_DF)){
         elbow_time <- elbow$x
 
         if(length(unique(po_nonabs$Time))>1){
-        #if elbow time does not allow 2 points in both early and late phases,
+          #if elbow time does not allow 2 points in both early and late phases,
           #then move it so that it does
-        if(sum(po_nonabs$Time >= elbow_time)<2){
-          elbow_x <- sort(unique(po_nonabs$Time))[2]
-          elbow_y <- approx(x = po_nonabs$Time,
-                            y = po_nonabs$logValueDose,
-                            xout = elbow_x)
-          elbow <- list(x = elbow_x,
-                        y = elbow_y)
-          elbow_time <- elbow$x
-        }else if(sum(po_nonabs$Time <= elbow_time)<2){
-          elbow_x <- sort(unique(po_nonabs$Time),
-                             decreasing = TRUE)[2]
-          elbow_y <- approx(x = po_nonabs$Time,
-                            y = po_nonabs$logValueDose,
-                            xout = elbow_x)
-          elbow <- list(x = elbow_x,
-                        y = elbow_y)
-          elbow_time <- elbow$x
+          if(sum(po_nonabs$Time >= elbow_time)<2){
+            elbow_x <- sort(unique(po_nonabs$Time))[2]
+            elbow_y <- approx(x = po_nonabs$Time,
+                              y = po_nonabs$logValueDose,
+                              xout = elbow_x)
+            elbow <- list(x = elbow_x,
+                          y = elbow_y)
+            elbow_time <- elbow$x
+          }else if(sum(po_nonabs$Time <= elbow_time)<2){
+            elbow_x <- sort(unique(po_nonabs$Time),
+                            decreasing = TRUE)[2]
+            elbow_y <- approx(x = po_nonabs$Time,
+                              y = po_nonabs$logValueDose,
+                              xout = elbow_x)
+            elbow <- list(x = elbow_x,
+                          y = elbow_y)
+            elbow_time <- elbow$x
+          }
         }
+        }else{ #if we only have one data point in po_nonabs
+          elbow <- list(x = unique(po_nonabs$Time),
+                        y = unique(po_nonabs$logValueDose))
+          elbow_time <- elbow$x
         }
 
         po_early <- subset(po_nonabs, Time <= elbow_time)
