@@ -131,28 +131,50 @@ log_likelihood <- function(params,
     sigma_ref <- rep(sigmas, nrow(DF))
   }
 
-  #log-transform predicted values -- suppress warnings about 'NaNs produced'
-  suppressWarnings(logpred <- log(pred))
+
+  #add sigma_ref and pred as temp columns to DF
+  #this makes logical indexing easier
+  DF$sigma_ref <- sigma_ref
+  DF$pred <- pred
 
   #get log-likelihood for each observation
-  loglike <- ifelse(is.na(DF$Value),
+
+  #For single-subject observations:
+  DF_single_subj <- subset(DF,
+                           N_Subjects %in% 1)
+
+  loglike_single_subj <- ifelse(is.na(DF_single_subj$Value),
                     #for non-detects: CDF
-                    pnorm(q = log(DF$LOQ),
-                          mean = logpred,
-                          sd = sigma_ref,
+                    pnorm(q = DF_single_subj$LOQ,
+                          mean = DF_single_subj$pred,
+                          sd = DF_single_subj$sigma_ref,
                           log.p = TRUE),
                     #for detects: PDF
-                    dnorm(x = log(DF$Value),
-                          mean = logpred,
-                          sd = sigma_ref,
+                    dnorm(x = DF_single_subj$Value,
+                          mean = DF_single_subj$pred,
+                          sd = DF_single_subj$sigma_ref,
                           log = TRUE))
+
+  #For multi-subject observations:
+  DF_multi_subj <- subset(DF, N_Subjects > 1)
+  loglike_multi_subj <-  dnorm_summary(mu = DF_multi_subj$pred,
+                                            sigma = DF_multi_subj$sigma_ref,
+                                            x_mean = DF_multi_subj$Value,
+                                            x_sd = DF_multi_subj$Value_SD,
+                                            x_N = DF_multi_subj$N_Subjects,
+                                            log = TRUE)
+
   #sum log-likelihoods over observations
-  ll <- sum(loglike)
+  ll <- sum(c(loglike_single_subj, loglike_multi_subj))
   #do *not* remove NAs, because they mean this parameter combination is impossible!
 
-  #If ll isn't finite -- for example if a predicted concentration was negative --
+  #If ll isn't finite,
   #just set it to -Inf to indicate that these parameters are infinitely unlikely
   if (!is.finite(ll)) ll <- -Inf
+
+  #if model predicted any negative concentrations,
+  #then these parameters are infinitely unlikely
+ if(any(pred < 0)) ll <- -Inf
 
   #If user has selected to force return of a finite value,
   #e.g. as required by optimix with method 'L-BFGS-B',
