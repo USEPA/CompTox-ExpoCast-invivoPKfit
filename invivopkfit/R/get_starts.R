@@ -1108,27 +1108,27 @@ if(is.null(par_DF)){
                        dose = fitdata$Dose,
                        iv.dose = fitdata$Route %in% "iv"))
 
-  logresid <- log(pred) - log(fitdata$Value)
-  logresid[!is.finite(logresid)] <- NA_real_
+  resid <- pred - fitdata$Value
+  resid[!is.finite(resid)] <- NA_real_
 
   for(this_sigma in grep(x = par_DF$param_name,
                          pattern= "sigma",
                          value = TRUE)){
     if(this_sigma == "sigma"){ #if only one sigma (one reference, or pooled)
-      tmp_sigma <- sd(logresid, na.rm = TRUE)
+      tmp_sigma <- sd(resid, na.rm = TRUE)
     }else{
       #if multiple sigmas for multiple references
       #get the reference
       refid <- gsub(x = this_sigma,
                     pattern = "sigma_ref_",
                     replacement = "")
-      logresid_ref <- logresid[fitdata$Reference %in% refid]
-      tmp_sigma <- sd(logresid_ref, na.rm = TRUE)
+      resid_ref <- resid[fitdata$Reference %in% refid]
+      tmp_sigma <- sd(resid_ref, na.rm = TRUE)
     }
 
     par_DF <- assign_start(param_name = this_sigma,
                            param_value = tmp_sigma,
-                           msg = "SD of log resid for model with starting values",
+                           msg = "SD of resid for model with starting values",
                            par_DF = par_DF,
                            start_from = start_from_data)
   } #end for loop over sigmas
