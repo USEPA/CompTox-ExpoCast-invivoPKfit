@@ -1,122 +1,159 @@
-postprocess_data <- function(PK.fit.bind,
-                             data.set){
-#Do post fit calculations:
-### basically calculate parameters based on previously calculated paramaters
-PK.fit.table <- PK.fit.bind
-if (model == "1compartment") {
-  #Get stats for fitted total clearance :    L/kg body weight/h
-  PK.fit.table[, CLtot := signif(Vdist * kelim, sig.figs)]
+#' Postprocess fitted PK models
+#'
+#' Derive quantities such as half-life, tpeak, Cpeak, Css from fitted PK models
+#'
+#' @param PK_fit A data.table of fitted PK parameters, as produced by `fit_all()` or `analyze_subset()`
+#' @param model The name of the relevant model: "1compartment", "2compartment", or "flat"
+#' @return A data.table of derived quantities relevant to the model, with one row for each set of model parameters
+#' @export postprocess_data
+#' @author John Wambaugh, Caroline Ring
+postprocess_data <- function(PK_fit,
+                             model){
 
-  #      PK.fit.table[,
-  #                   AUC1mgkg:=kgutabs/Vdist/(kgutabs-kelim)*(
-  #                     exp(-kgutabs*Tmax)/kgutabs  -exp(-kelim*Tmax)/kelim-
-  #                     1/kgutabs + 1/kelim)]
-  #      if (!is.na(Fgutabs)) PK.fit.table[,AUC1mgkg:=Fgutabs*AUC1mgkg]
+#Do post fit calculations
+if(model %in% "1compartment"){
+  #for 1-compartment model:
+  #Calculate: total clearance; half-life;tpeak;
+  #Cpeak and Css for a dose of 1 mg/kg/day
+  #for two-comaprtment: the above plus Vss and Varea/Vbeta
 
+  #1-compartment model
+  PK_1comp <- PK_fit[model %in% "1compartment" &
+                       !grepl(x = param_name,
+                              pattern = "sigma")]
+  #reshape wide
+  PK_1comp <- dcast(PK_1comp,
+                    Analysis_Type + DTXSID + Species +
+                      model + Reference + Reference_orig +
+                      AIC ~ param_name,
+                    value.var = "Fitted mean")
+  PK_1comp[, Fgutabs_Vdist := Fgutabs/Vdist]
+  #CLtot:
+  #If kelim and Vdist are available, CLtot = kelim * Vdist
+  PK_1comp[, CLtot := kelim * Vdist]
 
-  #Get statistics for Css from fitted CLtot values
-  #Get stats for fitted total clearance:
-  ### if Fgutabs is NA, assign value of 1, else return existing Fgutabs value, then divide by (24 * CLtot)
-  PK.fit.table[,
-               Css := ifelse(is.na(Fgutabs), 1, Fgutabs) / (24 * CLtot)] # 1 mg/kg/day / L/day/kg -> mg/L
+  #if kelim and Fgutabs/Vdist are available, can only get CLtot/Fgutabs
+  #kelim * (Vdist/Fgutabs) = CLtot/Fgutabs
+  PK_1comp[, CLtot_Fgutabs := kelim / Fgutabs_Vdist]
 
-  #Get statistics for halflife from fitted values
-  PK.fit.table[,
-               halflife := signif(log(2) / kelim, sig.figs)]
+  #Css_oral
+  PK_1comp[, Css_oral := Fgutabs_Vdist * (1/(24*kelim))]
+  #if only kelim and Vdist available -- get Css for IV infusion
+  PK_1comp[, Css_iv := 1/(24 * CLtot)]
 
+  #half-life
+  PK_1comp[, halflife := log(2) / kelim]
 
-  PK.fit.table[,
-               tpeak.oral := signif(log(kgutabs / kelim) / (kgutabs - kelim), sig.figs)]
+  #tpeak -- only available if kgutabs was fitted
+  PK_1comp[, tpeak_oral := log(kgutabs / kelim) / (kgutabs - kelim)]
 
-  ### why does Fgutabs have to be 1 right here
-  ### this just copies the Ccompartment column
-  ### not sure how values correspond to specific param.value.types
-  ### again, it's just a time, conc, and auc matrix
-  PK.fit.table[,
-               Cpeak.oral.1mgkg := signif(analytic_1comp_fun(
-                 params=list(Fgutabs = 1,
-                             kgutabs = kgutabs,
-                             kelim = kelim,
-                             Vdist = Vdist),
-                 dose = 1,
-                 tpeak.oral,
-                 iv.dose = F)[, "Ccompartment"], sig.figs)]
+  #Cpeak for oral dose of 1 mg/kg
+  PK_1comp[, Cpeak_oral := cp_1comp(params = list("kelim" = kelim,
+                                                  "Fgutabs_Vdist" = Fgutabs_Vdist,
+                                                  "kgutabs" = kgutabs),
+                                    time = tpeak_oral,
+                                    dose = 1,
+                                    iv.dose = FALSE)]
+  PK_out <- copy(PK_1comp)
+}else if(model %in% "2compartment"){
 
-  ### subset only certain param.value.types, not sure why
-  PK.fit.table <- PK.fit.table[param.value.type %in% c("Predicted",
-                                                       "Fitted geometric mean",
-                                                       "Fitted geometric std dev")]
+  #2-compartment model
+  PK_2comp <- PK_fit[model %in% "2compartment" &
+                       !grepl(x = param_name,
+                              pattern = "sigma")]
+  #reshape to wide format
+  PK_2comp <- dcast(PK_2comp,
+                    Analysis_Type + DTXSID + Species +
+                      model + Reference + Reference_orig +
+                      AIC ~ param_name,
+                    value.var = "Fitted mean")
+  #in case Fgutabs and V1 were fitted separately, compute Fgutabs/V1
+  PK_2comp[is.na(Fgutabs_V1), Fgutabs_V1 := Fgutabs/V1]
+  #Total clearance
+  PK_2comp[, CLtot := kelim * V1]
+  #total clearance divdied by Fgutabs, in case only Fgutabs/V1 was available
+  PK_2comp[, CLtot_Fgutabs := kelim / Fgutabs_V1]
 
-} else if(model == "2compartment") {
-  PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
-                                       "Fitted geometric mean",
-                                       "Fitted mode"),
-               c("beta",
-                 "alpha") := lapply(list(Fbetaofalpha*Ralphatokelim*kelim,
-                                         Ralphatokelim*(kelim+10^-6)),
-                                    function(x) signif(x, sig.figs))]
+  #Vss
+  PK_2comp[, Vss := V1 * (k21 + k12) / k21]
+  #Vss/Fgutabs, in case only Fgutabs/V1 was available and not V1 by itself
+  PK_2comp[, Vss_Fgutabs := (1/Fgutabs_V1) * (k21 + k12) / k21]
 
-  PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
-                                       "Fitted geometric mean",
-                                       "Fitted mode"),
-               c("k21",
-                 "k12") := lapply(list(alpha * beta / kelim,
-                                       alpha + beta - kelim - alpha * beta / kelim),
-                                  function(x) signif(x, sig.figs))]
+  #compute A, B, alpha, beta
+  PK_2comp[, alphabeta_sum := kelim + k12 + k21]
+  PK_2comp[, alphabeta_prod := kelim * k21]
+  PK_2comp[, alpha := (alphabeta_sum + sqrt(alphabeta_sum^2 - 4*alphabeta_prod))/2 ]
+  PK_2comp[, beta := (alphabeta_sum - sqrt(alphabeta_sum^2 - 4*alphabeta_prod))/2 ]
+  #A and B when only IV data were available
+  PK_2comp[, A := 1*(alpha - k21) / (V1 * (alpha - beta))]
+  PK_2comp[, B:= 1*(k21 - beta) / (V1 * (alpha - beta))]
+  #A and B when oral data were available
+  PK_2comp[!is.na(kgutabs), A := (kgutabs * Fgutabs_V1 *
+                     (alpha - k21)) /
+             ( (kgutabs - alpha) * (alpha - beta))]
+  PK_2comp[!is.na(kgutabs), B := (kgutabs * Fgutabs_V1 *
+                     (k21 - beta)) /
+             ( (kgutabs - beta) * (alpha - beta))]
+  #Vbeta
+  PK_2comp[, Vbeta := V1 * kelim / beta]
+  PK_2comp[, Vbeta_Fgutabs := (1/Fgutabs_v1) * kelim / beta]
 
-  PK.fit.table[param.value.type %in% c("Fitted arithmetic mean",
-                                       "Fitted geometric mean",
-                                       "Fitted mode"),
-               c("halflife",
-                 "Vss",
-                 "CLtot",
-                 "Varea.or.Vbeta") := lapply(list(log(2) / beta,
-                                                  V1 * (k21 + k12) / k21,
-                                                  V1 * (k21 + k12) / k21 * beta,
-                                                  V1 * kelim / beta),
-                                             function(x) signif(x, sig.figs))]
   #Get Css = average plasma concentration for 1 mg/kg/day every 1 days
-  #this is the same as the average for an equivalent constant oral infusion --
-  #(1/24) mg/kg/hour every hour,
-  #(1/(24*60)) mg/kg/minute every minute,
-  #(1/(24*60*60)) mg/kg/second every second,
-  #however finely you want to subdivide it.
-  #If you subdivide it finely enough then you won't get peaks and valleys,
-  #you'll just get an overall average time course.
-  #the 1 in the numerator = dose = 1 mg/kg/day
-  #the 1 in the denominator = time interval between doses = 1 day
-  PK.fit.table[, Css := ifelse(is.na(Fgutabs), 1, Fgutabs) / (24 * CLtot)]
+  PK_2comp[, Css_iv := 1/(24 * CLtot)]
+  PK_2comp[, Css_oral := Fgutabs_V1 * (1/(24*kelim))]
 
-  PK.fit.table <- PK.fit.table[param.value.type %in% c("Predicted",
-                                                       "Fitted geometric mean",
-                                                       "Fitted geometric std dev")]
-} else if (model == 'flat') {
-  PK.fit.table <- PK.fit.table[param.value.type %in% c("Predicted",
-                                                       "Fitted geometric mean",
-                                                       "Fitted geometric std dev")]
+  #terminal half-life
+  PK_2comp[, halflife_beta := log(2) / beta]
+  PK_2comp[, halflife_alpha := log(2) / alpha]
+  PK_2comp[, halflife_abs := log(2) / kgutabs]
+  #tpeak for oral dose
+  #I don't think it can be done analytically
+  #so do it numerically
+#search for zeros of cp_2comp_dt for each set of parametrers
+  #if findzeros() fails, then just return NA
+  PK_2comp[!is.na(kgutabs), tpeak := tryCatch(findzeros(function(x){
+    cp_2comp_dt(params = list("kelim" = kelim,
+                              "Fgutabs_V1" = Fgutabs_V1,
+                              "kgutabs" = kgutabs,
+                              "k12" = k12,
+                              "k21" = k21),
+                time = x,
+                dose = 1,
+                iv.dose = FALSE)
+  },
+            a = 0,
+             b = 5*log(2)/beta,
+            n = 100),
+  error = function(err) return(NA_real_)),
+  by = 1:nrows(PK_2comp)]
+
+  #Cpeak for oral dose of 1 mg/kg
+  PK_2comp[!is.na(kgutabs), Cpeak_oral := cp_2comp(params = list("kelim" = kelim,
+                                                  "Fgutabs_V1" = Fgutabs_V1,
+                                                  "kgutabs" = kgutabs,
+                                                  "k12" = k12,
+                                                  "k21" = k21),
+                                    time = tpeak_oral,
+                                    dose = 1,
+                                    iv.dose = FALSE)]
+
+  #remove temporary calculation columns
+  PK_2comp[, c("alphabeta_sum",
+               "alphabeta_prod") := NULL]
+  PK_out <- copy(PK_2comp)
+}else if(model %in% "flat"){
+  #2-compartment model
+  PK_flat <- PK_fit[model %in% "flat" &
+                      !grepl(x = param_name,
+                             pattern = "sigma")]
+  #reshape to wide format
+  PK_flat <- dcast(PK_flat,
+                    Analysis_Type + DTXSID + Species +
+                      model + Reference + Reference_orig +
+                      AIC ~ param_name,
+                    value.var = "Fitted mean")
+  PK_out <- copy(PK_flat)
 }
 
-###########################################################################################################
-###########################################################################################################
-###########################################################################################################
-
-PK.fit.table <- PK.fit.table[order(Compound, Species)]
-
-### split data.set into list of data.frame objects
-split_df <- split(data.set, list(data.set$Compound, data.set$Reference, data.set$Media), drop = TRUE)
-
-### apply fix_loq to each data.set
-split_df_loq <- lapply(split_df, fix_loq)
-
-### 'unsplit' data.sets
-data.set <- do.call(rbind, split_df_loq)
-
-rownames(data.set) <- c()
-
-### coerce data.set back to data.table
-# data.set <- as.data.table(data.set)
-
-out <- list(PK.fit.table, data.set)
-
-return(out)
+return(PK_out)
 }
