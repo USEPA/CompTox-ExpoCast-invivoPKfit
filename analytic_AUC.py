@@ -55,7 +55,7 @@ integrate(comp2_iv, (Time, 0, T_end))
 
 ### Oral data
 A_exp_po = (kgutabs * Fgutabs/V1 * Dose * (alpha - k21)) / ( (kgutabs - alpha) * (alpha - beta))
-B_exp_po = (ka * Fgutabs/V1 * Dose * (k21 - beta)) / ( (kgutabs - beta) * (alpha - beta))
+B_exp_po = (kgutabs * Fgutabs/V1 * Dose * (k21 - beta)) / ( (kgutabs - beta) * (alpha - beta))
 
 comp2_po =  A * exp(-alpha * Time) + B * exp(-beta * Time) + -(A + B) * exp(-kgutabs * Time)
 integrate(comp2_po, (Time, 0, T_end))
