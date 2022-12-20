@@ -377,6 +377,62 @@ cvt_data[documents_extraction.id %in% 141 &
     correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
 ```
 
+# Missing LOQs
+
+```{r}
+cvt_data[, n_obs_ref := sum(is.finite(conc_time_values.conc) & (conc_time_values.conc > 0) %in% TRUE),
+         by = .(documents_extraction.id, documents_reference.id,
+                chemicals_analyzed.dsstox_substance_id, chemicals_dosed.dsstox_substance_id,
+                series.conc_medium_normalized, subjects.species)]
+
+unique(cvt_data[n_obs_ref==0 &
+                  series.conc_medium_normalized %in% c("blood", "plasma") &
+                  studies.administration_route_normalized %in% c("oral", "iv"), 
+                  #chemicals_dosed.dsstox_substance_id == chemicals_analyzed.dsstox_substance_id,
+                .(documents_extraction.id, documents_reference.id, documents_extraction.pmid, documents_extraction.doi, documents_extraction.other_study_identifier, chemicals_analyzed.dsstox_substance_id, chemicals_dosed.dsstox_substance_id, studies.test_substance_name_original, series.analyte_name_original, series.conc_medium_normalized, studies.administration_route_normalized)])
+```
+
+
+# Missing LOQ for documents_extraction.id 136
+
+This is an NTP study. For some reason LOQs were not extracted. I looked up the original data and LOQs are noted. I will add them here. Source: https://cebs.niehs.nih.gov/cebs/test_article/58-08-2 click on "Individual Animal Data" to download spreadsheet. The LOQs are stated in comments like "XX is less than YYY, the ELOQ for [substance]."
+
+```{r}
+cvt_data[documents_extraction.id %in% 136 &
+           series.analyte_name_original %in% "Caffeine",
+         c("series.loq", "series.loq_units") := .(4.00, "ng/mL")]
+
+cvt_data[documents_extraction.id %in% 136 &
+           series.analyte_name_original %in% "L-Ephedrine",
+         c("series.loq", "series.loq_units") := .(4.44, "ng/mL")]
+
+cvt_data[documents_extraction.id %in% 136 &
+           series.analyte_name_original %in% "Pseudoephedrine",
+         c("series.loq", "series.loq_units") := .(4.43, "ng/mL")]
+```
+
+## Missing LOQ for documents_extraction.id 138
+
+```{r}
+cvt_data[documents_extraction.id %in% 138 &
+           series.analyte_name_original %in% "Pentachloroanisole",
+         c("series.loq", "series.loq_units") := .(0.05, "ug/mL")]
+
+```
+
+## Missing LOQ for documents_extraction.if 178
+
+See https://ntp.niehs.nih.gov/publications/reports/tr/500s/tr526/index.html?utm_source=direct&utm_medium=prod&utm_campaign=ntpgolinks&utm_term=tr526abs Appendix F
+
+LOQ in blood for rat was 30 pg/mL. (Individual animal data refers to plasma, but the PDF report refers to blood?)
+
+```{r}
+cvt_data[documents_extraction.id %in% 178 &
+          series.analyte_name_original %in% "2,3,4,7,8-pentachlorodibenzofuran" &
+           series.conc_medium_normalized %in% "plasma",
+         c("series.loq", "series.loq_units") := .(30, "pg/mL")]
+```
+
 # Normalize LOQ units to mg/L
 
 ```{r}
@@ -389,12 +445,48 @@ cvt_data[series.loq_units %in% "ug/L", series.loq_normalized := series.loq * 1e-
 cvt_data[trimws(series.loq_units) %in% "ug/mL", series.loq_normalized := series.loq]
 cvt_data[series.loq_units %in% "mg/L", series.loq_normalized := series.loq]
 cvt_data[series.loq_units %in% "ng/mL", series.loq_normalized := series.loq * 1e-3]
+cvt_data[series.loq_units %in% "pg/mL", series.loq_normalized := series.loq * 1e-6]
 ```
 
-For that with nmol/L we will need the molecular weight. For items with units ug we would need the volume of media analyzed. Both of these are for inhalation data, though, which we are not analyzing right now. So I will leave it alone for now.
+For that with nmol/L we will need the molecular weight. For items with units ug we would need the volume of media analyzed. Both of these are for inhalation data, though, which we aare not analyzing right now. So I will leave it alone for now.
+
+# Concentration SD
+
+These have not been normalized so we need to do it now.
+
+```{r}
+cvt_data[!is.na(conc_time_values.conc_sd_original), unique(series.conc_units_original)]
+```
+
+```{r}
+cvt_data[series.conc_units_original == "ug/L",
+         conc_time_values.conc_sd := conc_time_values.conc_sd_original * 1e-3]
+
+cvt_data[series.conc_units_original == "ug/mL",
+         conc_time_values.conc_sd := conc_time_values.conc_sd_original]
+
+cvt_data[series.conc_units_original == "mg/L",
+         conc_time_values.conc_sd := conc_time_values.conc_sd_original]
+
+cvt_data[series.conc_units_original == "ug/dL",
+         conc_time_values.conc_sd := conc_time_values.conc_sd_original * 1e-4]
+
+cvt_data[series.conc_units_original == "ng/mL",
+         conc_time_values.conc_sd := conc_time_values.conc_sd_original * 1e-3]
+
+cvt_data[series.conc_units_original == "pg/mL",
+         conc_time_values.conc_sd := conc_time_values.conc_sd_original * 1e-6]
+
+```
+
+We don't have any cases for oral/IV in blood/plasma where concentration lower/upper bounds are given, so we won't worry about normalizing these bounds right now.
+
+```{r}
+cvt_data[!is.na(conc_time_values.conc_upper_bound_original) & studies.administration_route_normalized %in% c("oral", "iv") & series.conc_medium_normalized %in% c("blood", "plasma")]
+```
 
 
-Save the pulled CVT data
+Save the pulled CVT data with the edits/normalizations
 
 ```{r}
 write.csv(cvt_data,
