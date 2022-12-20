@@ -76,11 +76,14 @@ estimate_loq <- function(dat,
                      )
 
   #for each group, impute any missing LOQ as calc_loq_factor * the minimum
-  #detected concentration.
+  #detected concentration (that is greater than zero).
   dat_split_loq <- lapply(dat_split,
                      function(this_dat){
-                       impute_loq <- calc_loq_factor *
-                         min(this_dat[[value_col]], na.rm = TRUE)
+                       these_values <- this_dat[[value_col]]
+                       suppressWarnings(
+                         minval <- min(these_values[these_values > 0],
+                                       na.rm = TRUE))
+                       impute_loq <- calc_loq_factor * minval
                        #If there were no detects for this group, the imputed LOQ
                        #will be Inf. Set it to NA instead.
                        if(!is.finite(impute_loq)){
