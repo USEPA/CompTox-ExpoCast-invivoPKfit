@@ -88,6 +88,7 @@ cp_2comp <- function(params, time, dose, iv.dose)
   beta <- (alpha_beta_sum - sqrt(alpha_beta_sum^2 - 4*alpha_beta_prod)) / 2
 
 
+  if(any(iv.dose %in% TRUE)){
   A[iv.dose %in% TRUE] <- (dose[iv.dose %in% TRUE] *
                              (alpha - params$k21)) /
     (params$V1 * (alpha - beta))
@@ -99,6 +100,7 @@ cp_2comp <- function(params, time, dose, iv.dose)
     exp(-alpha * time[iv.dose %in% TRUE]) +
     B[iv.dose %in% TRUE] *
     exp(-beta * time[iv.dose %in% TRUE])
+  }
 
 
   #if any oral data, in which case params$kgutabs and params$Fgutabs_V1 exist:

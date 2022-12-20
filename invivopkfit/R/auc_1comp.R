@@ -4,63 +4,43 @@
 #' 1-compartment model, using an analytical equation (the integral of the
 #' 1-compartment model equation with respect to time).
 #'
-#' # Model equations
 #'
-#' ## IV dosing
+#'@param params A named list of model parameter values. For either IV or oral
+#'  dosing, this must include `kelim` (elimination rate, 1/h). For IV dosing, it
+#'  must also include `Vdist`. For oral dosing, it must include `kgutabs` (oral
+#'  absorption rate, 1/h), and either `Fgutabs` and `Vdist` (respectively,
+#'  unitless fraction of oral dose that is absorbed, and volume of
+#'  distribution), or `Fgutabs_Vdist` (the ratio of Fgutabs to Vdist).
+#'  `Fgutabs_Vdist` is an alternate parameterization useful for parameter
+#'  estimation when only oral data are available with no IV data, in which case
+#'  only the ratio of `Fgutabs` to `Vdist` is identifiable. if `Fgutabs` and
+#'  `Vdist` are provided along with `Fgutabs_Vdist`, then `Fgutabs_Vdist` will
+#'  not be used.
+#'@param time A numeric vector of times in hours.
+#'@param dose A numeric vector of doses in mg/kg
+#'@param iv.dose A logical vector: TRUE for single IV bolus dose; FALSE for single oral
+#'  dose
 #'
-#' \deqn{\frac{D}{V_d k_e}  (1 - \exp(-t k_e))}
-#'
-#' ## Oral dosing
-#'
-#' \deqn{\frac{dose Fa ka}{V_d (k_a-k_e)} ((\frac{1}{k_e} - \frac{1}{k_a}) +
-#' (\frac{-\exp(-t k_e)}{k_e} + \frac{\exp(-t k_a)}{k_a} )}
-#'
-#'@param time A vector of times in hours
-#'@param params A named list of model parameter values. Must include:
-#'\describe{
-#'\item{kelim}{Elimination rate, 1/h}
-#'\item{Vdist}{Volume of distribution, L/kg body weight}}
-#'For oral administration (\code{iv.dose} FALSE), \code{params} must also include:
-#'\describe{
-#'\item{Fgutabs}{Oral bioavailability, unitless fraction}
-#'\item{kgutabs}{Oral absorption rate, 1/h}}
-#'@param dose Dose in mg/kg
-#'@param iv.dose TRUE for single IV bolus dose; FALSE for single oral dose
-#'
-#'@return A vector of plasma AUC values, evaluated at each time point in `time`.
+#'@return A vector of plasma AUC values (mg/L*time) corresponding to `time`.
 #'
 #'@author Caroline Ring, John Wambaugh
 #' @export auc_1comp
 
-auc_1comp <- function(time,
-                      params,
+auc_1comp <- function(params,
+                      time,
                       dose,
                       iv.dose){
 
-  Vd <- params$Vdist
-  ke <- params$kelim
-  Fa <- params$Fgutabs
-  ka <- params$kgutabs
+  #compute Fgutabs/Vdist if necessary
+  if(all(c("Fgutabs", "Vdist") %in% names(params))){
+    params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
+  }
 
-  if (iv.dose){
-    #for iv administration
-    #check for needed params
-    if(!all(c("kelim", "Vdist") %in% names(params))){
-      stop(paste0("cp_1comp(): Error: For 1-compartment IV model, ",
-                  "missing parameter(s): ",
-                  paste(setdiff(c("kelim", "Vdist"), names(params)),
-                        collapse = ", "),
-      )
-      )
-    }
+  #drop any length-0 params
+  param_length <- sapply(params, length)
+  params <- params[param_length>0]
 
-    auc <- dose/(params$Vdist*params$kelim) * (1 - exp(-time*params$kelim))
-  }else{
-    #for oral administration
-
-    if(all(c("Fgutabs", "Vdist") %in% names(params))){
-      params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
-    }
+  if(any(iv.dose %in% FALSE)){
 
     #check for needed params
     if(!all(c("kelim", "kgutabs", "Fgutabs_Vdist") %in% names(params))){
@@ -73,21 +53,56 @@ auc_1comp <- function(time,
       )
       )
     }
+  }
 
-    if(!(params$kelim == params$kgutabs)){
-      auc <- dose*params$Fgutabs_Vdist*params$kgutabs/
-        (params$kgutabs-params$kelim) *
-        ((1/params$kelim - 1/params$kgutabs) +
-           (-exp(-time*params$kelim)/params$kelim +
-              exp(-time*params$kgutabs)/params$kgutabs
-           ))
-    }else{
-      auc <- dose*params$Fgutabs_Vdist/params$kelim +
-        (-dose*params$Fgutabs_Vdist*time*params$kelim -
-           dose*params$Fgutabs_Vdist)*
-        exp(-time*params$kelim)/params$kelim
+  if(any(iv.dose %in% TRUE)){
+    if(!all(c("kelim", "Vdist") %in% names(params))){
+      stop(paste0("cp_1comp(): Error: For 1-compartment IV model, ",
+                  "missing parameter(s): ",
+                  paste(setdiff(c("kelim", "Vdist"), names(params)),
+                        collapse = ", "),
+      )
+      )
     }
   }
+
+  auc <- vector(mode = "numeric", length = length(time))
+
+  #IV model\
+  if(any(iv.dose %in% TRUE)){
+    auc[iv.dose %in% TRUE] <- dose[iv.dose %in% TRUE]/
+      (params$Vdist*params$kelim) -
+      dose[iv.dose %in% TRUE]*
+      exp(-time[iv.dose %in% TRUE]*params$kelim)/
+      (params$Vdist*params$kelim)
+  }
+
+  #Oral model
+  if(any(iv.dose %in% FALSE)){
+
+    if(params$kelim != params$kgutabs){
+      #the usual case: kelim != kgutabs
+      auc[iv.dose %in% FALSE] <- -dose[iv.dose %in% FALSE]*
+        params$Fgutabs*params$kgutabs*
+        (1/params$kgutabs - 1/params$kelim)/
+        (params$Vdist*(-params$kelim + params$kgutabs)) +
+        dose[iv.dose %in% FALSE]*
+        params$Fgutabs*params$kgutabs*
+        (exp(-time[iv.dose %in% FALSE]*params$kgutabs)/params$kgutabs -
+           exp(-time[iv.dose %in% FALSE]*params$kelim)/params$kelim)/
+        (params$Vdist*(-params$kelim + params$kgutabs))
+
+    }else{ #in case kelim = kgutabs, use the alternate model equation
+      auc[iv.dose %in% FALSE] <- dose[iv.dose %in% FALSE]*params$Fgutabs/
+        (params$Vdist*params$kelim) +
+        (-dose[iv.dose %in% FALSE]*params$Fgutabs*
+           time[iv.dose %in% FALSE]*params$kelim -
+           dose[iv.dose %in% FALSE]*params$Fgutabs)*
+        exp(-time[iv.dose %in% FALSE]*params$kelim)/
+        (params$Vdist*params$kelim)
+    }
+  }
+
 
   return(auc)
 }
