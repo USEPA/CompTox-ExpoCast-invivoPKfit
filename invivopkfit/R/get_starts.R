@@ -656,17 +656,17 @@ if(is.null(par_DF)){
                                  elbow_x <- (max(iv_data$Time) - min(iv_data$Time))/2
                                  elbow_y <- approx(x = iv_data$Time,
                                                    y = iv_data$logValueDose,
-                                                   xout = elbow_x)
+                                                   xout = elbow_x)$y
                                  return(list(x = elbow_x,
                                                y = elbow_y))
                                })
 
         if(!is.finite(elbow$x) |
-           elbow$x < 0){
+           elbow$x <= 0){
           elbow_x <- (max(iv_data$Time) - min(iv_data$Time))/2
           elbow_y <- approx(x = iv_data$Time,
                             y = iv_data$logValueDose,
-                            xout = elbow_x)
+                            xout = elbow_x)$y
           elbow <- list(x = elbow_x,
                       y = elbow_y)
         }
@@ -679,7 +679,7 @@ if(is.null(par_DF)){
             elbow_x <- sort(unique(iv_data$Time))[2]
             elbow_y <- approx(x = iv_data$Time,
                               y = iv_data$logValueDose,
-                              xout = elbow_x)
+                              xout = elbow_x)$y
             elbow <- list(x = elbow_x,
                           y = elbow_y)
             elbow_time <- elbow$x
@@ -688,7 +688,7 @@ if(is.null(par_DF)){
                             decreasing = TRUE)[2]
             elbow_y <- approx(x = iv_data$Time,
                               y = iv_data$logValueDose,
-                              xout = elbow_x)
+                              xout = elbow_x)$y
             elbow <- list(x = elbow_x,
                           y = elbow_y)
             elbow_time <- elbow$x
@@ -772,7 +772,9 @@ if(is.null(par_DF)){
           alpha_iv <- log(2)/thalf_alpha_iv
           #use iv_early data before NA residuals were dropped
           #extrapolate back from elbow point to time = zero
-          A_Dose_iv <- exp(elbow$y + alpha_iv * elbow$x)
+
+          A_Dose_iv <- tryCatch(exp(elbow$y + alpha_iv * elbow$x),
+                                error = function(err) browser())
         }
 
         k21_iv <- (A_Dose_iv * beta_iv + B_Dose_iv*alpha_iv)/(A_Dose_iv + B_Dose_iv)
@@ -848,7 +850,7 @@ if(is.null(par_DF)){
                                  elbow_x <- (max(po_nonabs$Time) - min(po_nonabs$Time))/2
                                  elbow_y <- approx(x = po_nonabs$Time,
                                                    y = po_nonabs$logValueDose,
-                                                   xout = elbow_x)
+                                                   xout = elbow_x)$y
                                 return(list(x = elbow_x,
                                       y = elbow_y))
                                })
@@ -860,7 +862,7 @@ if(is.null(par_DF)){
           elbow_x <- (max(po_nonabs$Time) - min(po_nonabs$Time))/2
           elbow_y <- approx(x = po_nonabs$Time,
                             y = po_nonabs$logValueDose,
-                            xout = elbow_x)
+                            xout = elbow_x)$y
           elbow <- list(x = elbow_x,
                         y = elbow_y)
         }
@@ -874,7 +876,7 @@ if(is.null(par_DF)){
             elbow_x <- sort(unique(po_nonabs$Time))[2]
             elbow_y <- approx(x = po_nonabs$Time,
                               y = po_nonabs$logValueDose,
-                              xout = elbow_x)
+                              xout = elbow_x)$y
             elbow <- list(x = elbow_x,
                           y = elbow_y)
             elbow_time <- elbow$x
@@ -883,7 +885,7 @@ if(is.null(par_DF)){
                             decreasing = TRUE)[2]
             elbow_y <- approx(x = po_nonabs$Time,
                               y = po_nonabs$logValueDose,
-                              xout = elbow_x)
+                              xout = elbow_x)$y
             elbow <- list(x = elbow_x,
                           y = elbow_y)
             elbow_time <- elbow$x
