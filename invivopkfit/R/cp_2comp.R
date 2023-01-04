@@ -1,9 +1,9 @@
-#' Analytical 2-compartment model
+#'Analytical 2-compartment model
 #'
-#' Calculates plasma concentration according to the analytical solution for the
-#' 2-compartment model.
+#'Calculates plasma concentration according to the analytical solution for the
+#'2-compartment model.
 #'
-#' @param params A named list of parameter values including the following:
+#'`params` must include the following named list elements:
 #'   \describe{
 #'   \item{k12}{Rate at which compound moves from central to peripheral
 #'   compartment, 1/h.}
@@ -11,42 +11,95 @@
 #'   compartment, 1/h.}
 #'   \item{kelim}{Elimination rate, 1/h.}
 #'   \item{V1}{Apparent volume of central compartment, L/kg BW. Or see below for
-#'   "Fgutabs_V1"}
+#'   `Fgutabs_V1`}
 #'   }
 #'
-#'   For oral administration (\code{iv.dose} FALSE), \code{params} must also
-#'   include:
+#'For oral administration (any `iv.dose == FALSE`), `params` must also include
+#'the following named list items:
 #'   \describe{
 #'   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
-#'   "Fgutabs_V1"}
+#'   `Fgutabs_V1`}
 #'   \item{kgutabs}{Rate of absorption from gut, 1/h.}
 #'   }
 #'
-#'   For oral administration, in lieu of "V1" and "Fgutabs", you may instead
-#'   provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an
-#'   alternate parameterization for situations where "Fgutabs" and "V1" are not
-#'   identifiable separately (i.e. when oral data are available, but IV data are
-#'   not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
-#'   used.
+#'For oral administration, in lieu of `V1` and `Fgutabs`, you may instead
+#'provide `Fgutabs_V1`, the ratio of Fgutabs to V1 (1/L). This is an alternate
+#'parameterization for situations where `Fgutabs` and `V1` are not identifiable
+#'separately (i.e. when oral TK data are available, but IV data are not). If
+#'`Fgutabs` and `V1` are provided, they will override any value also provided
+#'for `Fgutabs_V1`.
 #'
-#' @author Caroline Ring, John Wambaugh
-#' @param time A numeric vector of time values, in hours
-#' @param dose A numeric vector of doses in mg/kg
-#' @param iv.dose A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose
-#' @return A vector of plasma concentration values (mg/L) corresponding to each value
-#'   in \code{time}
-#' @export cp_2comp
+#'If both oral and IV administration are specified (i.e., some `iv.dose == TRUE`
+#'and some `iv.dose == FALSE`), then `V1` is required along with either
+#'`Fgutabs` or `Fgutabs_V1`. (If `V1` and `Fgutabs_V1` are provided, but
+#'`Fgutabs` is not provided, then `Fgutabs` will be calculated from `V1` and
+#'`Fgutabs_V1`.)
+#'
+#'@param params A named list of parameter values. See Details for requirements.
+#'
+#'@author Caroline Ring, John Wambaugh
+#'@param time A numeric vector of times in hours, reflecting the time points
+#'  when concentration is measured after the corresponding single bolus dose.
+#'  Must be same length as `dose` and `iv.dose`, or length 1.
+#'@param dose A numeric vector of doses in mg/kg, reflecting single bolus doses
+#'  administered at time 0. Must be same length as `time` and `iv.dose`, or
+#'  length 1.
+#'@param iv.dose A logical vector, reflecting the route of administration of
+#'  each single bolus dose. TRUE for single IV bolus dose; FALSE for single oral
+#'  bolus dose. Must be same length as `time` and `dose`, or length 1.
+#'@return A vector of plasma concentration values (mg/L) corresponding to each
+#'  value in \code{time}
+#'@export cp_2comp
 cp_2comp <- function(params, time, dose, iv.dose)
 {
 
+  #check whether lengths of time, dose, and iv.dose match
+  time_len <- length(time)
+  dose_len <- length(dose)
+  ivdose_len <- length(iv.dose)
+  len_all <- c(time_len, dose_len, ivdose_len)
+  #Cases:
+  # All three lengths are the same -- OK
+  # Two lengths are the same and the third is 1 -- OK
+  # Two lengths are 1 and the third is not 1 -- OK
+  # Otherwise there is a problem
+  good_len <- (length(unique(len_all)) == 1) |
+    (length(unique(len_all)) == 2 &
+       sum(len_all == 1) %in% c(1, 2))
+
+  if(!good_len){
+    stop(paste0("invivopkfit::cp_2comp(): ",
+                "'time', 'dose', and 'iv.dose' ",
+                "must either be the same length or length 1.\n",
+                "'time' is length ", time_len, "\n",
+                "'dose' is length ", dose_len, "\n",
+                "'iv.dose' is length ", ivdose_len, "\n")
+    )
+  }
+
+  #if any are length-1, repeat them to match the longest
+  max_len <- max(len_all)
+  time <- rep(time, length.out = max_len)
+  dose <- rep(dose, length.out = max_len)
+  iv.dose <- rep(iv.dose, length.out = max_len)
+
   if(all(c("Fgutabs", "V1") %in% names(params))){
     params$Fgutabs_V1 <- params$Fgutabs/params$V1
+  }
+
+  #if V1 and Fgutabs_V1 are provided, but not Fgutabs, compute Fgutabs
+  if(all(c("V1", "Fgutabs_V1") %in% names(params)) &
+     !("Fgutabs" %in% names(params))
+  ){
+    params$Fgutabs <- params$Fgutabs_V1 * params$V1
   }
 
   #drop any length-0 params
   param_length <- sapply(params, length)
   params <- params[param_length>0]
 
+  #check for any missing parameters
+  #required params for oral dose
   if(any(iv.dose %in% FALSE)){
     missing_params <- setdiff(c("kelim",
                                 "k21",
@@ -61,6 +114,7 @@ cp_2comp <- function(params, time, dose, iv.dose)
     }
   }
 
+  #required params for IV dose
   if(any(iv.dose %in% TRUE)){
     missing_params <- setdiff(c("kelim",
                                 "V1",

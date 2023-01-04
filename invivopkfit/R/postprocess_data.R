@@ -21,12 +21,15 @@ if(model %in% "1compartment"){
   PK_1comp <- PK_fit[model %in% "1compartment" &
                        !grepl(x = param_name,
                               pattern = "sigma")]
-  #reshape wide
+  #reshape wide (one column for each parameter)
   PK_1comp <- dcast(PK_1comp,
                     Analysis_Type + DTXSID + Species +
-                      model + Reference + Reference_orig +
+                      model + References.Analyzed +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
+
+
+
   PK_1comp[, Fgutabs_Vdist := Fgutabs/Vdist]
   #CLtot:
   #If kelim and Vdist are available, CLtot = kelim * Vdist
@@ -41,6 +44,10 @@ if(model %in% "1compartment"){
   #if only kelim and Vdist available -- get Css for IV infusion
   PK_1comp[, Css_iv := 1/(24 * CLtot)]
 
+  #half-life, tpeak, Cpeak:
+
+  #see https://www.boomer.org/c/p4/c08/c0803.php
+
   #half-life
   PK_1comp[, halflife := log(2) / kelim]
 
@@ -48,12 +55,19 @@ if(model %in% "1compartment"){
   PK_1comp[, tpeak_oral := log(kgutabs / kelim) / (kgutabs - kelim)]
 
   #Cpeak for oral dose of 1 mg/kg
-  PK_1comp[, Cpeak_oral := cp_1comp(params = list("kelim" = kelim,
+  PK_1comp[!is.na(kgutabs), Cpeak_oral := cp_1comp(params = list("kelim" = kelim,
                                                   "Fgutabs_Vdist" = Fgutabs_Vdist,
                                                   "kgutabs" = kgutabs),
                                     time = tpeak_oral,
                                     dose = 1,
-                                    iv.dose = FALSE)]
+                                    iv.dose = FALSE),
+           by = .(Analysis_Type,
+           DTXSID,
+           Species,
+             model,
+           References.Analyzed,
+             AIC)]
+
   PK_out <- copy(PK_1comp)
 }else if(model %in% "2compartment"){
 
@@ -64,54 +78,71 @@ if(model %in% "1compartment"){
   #reshape to wide format
   PK_2comp <- dcast(PK_2comp,
                     Analysis_Type + DTXSID + Species +
-                      model + Reference + Reference_orig +
+                      model + References.Analyzed +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
+
   #in case Fgutabs and V1 were fitted separately, compute Fgutabs/V1
   PK_2comp[is.na(Fgutabs_V1), Fgutabs_V1 := Fgutabs/V1]
+
   #Total clearance
   PK_2comp[, CLtot := kelim * V1]
-  #total clearance divdied by Fgutabs, in case only Fgutabs/V1 was available
+
+  #Total clearance divided by Fgutabs, in case only Fgutabs/V1 was available
   PK_2comp[, CLtot_Fgutabs := kelim / Fgutabs_V1]
 
-  #Vss
-  PK_2comp[, Vss := V1 * (k21 + k12) / k21]
-  #Vss/Fgutabs, in case only Fgutabs/V1 was available and not V1 by itself
-  PK_2comp[, Vss_Fgutabs := (1/Fgutabs_V1) * (k21 + k12) / k21]
+
 
   #compute A, B, alpha, beta
+  #see https://www.boomer.org/c/p4/c19/c1902.php
   PK_2comp[, alphabeta_sum := kelim + k12 + k21]
   PK_2comp[, alphabeta_prod := kelim * k21]
   PK_2comp[, alpha := (alphabeta_sum + sqrt(alphabeta_sum^2 - 4*alphabeta_prod))/2 ]
   PK_2comp[, beta := (alphabeta_sum - sqrt(alphabeta_sum^2 - 4*alphabeta_prod))/2 ]
-  #A and B when only IV data were available
+  #A and B when only IV data were available (for dose of 1 mg/kg)
   PK_2comp[, A := 1*(alpha - k21) / (V1 * (alpha - beta))]
   PK_2comp[, B:= 1*(k21 - beta) / (V1 * (alpha - beta))]
-  #A and B when oral data were available
+  #A and B when oral data were available (for dose of 1 mg/kg)
   PK_2comp[!is.na(kgutabs), A := (kgutabs * Fgutabs_V1 *
                      (alpha - k21)) /
              ( (kgutabs - alpha) * (alpha - beta))]
   PK_2comp[!is.na(kgutabs), B := (kgutabs * Fgutabs_V1 *
                      (k21 - beta)) /
              ( (kgutabs - beta) * (alpha - beta))]
+
+  #Apparent volumes of distribution
+
   #Vbeta
+  #Terminal volume of distribution
+  #see https://www.boomer.org/c/p4/c19/c1905.php
+
   PK_2comp[, Vbeta := V1 * kelim / beta]
   PK_2comp[, Vbeta_Fgutabs := (1/Fgutabs_v1) * kelim / beta]
+
+  #Vss
+  #apparent volume of distribution at steady state
+  #see https://www.boomer.org/c/p4/c19/c1905.php
+  PK_2comp[, Vss := V1 * (k21 + k12) / k21]
+  #Vss/Fgutabs, in case only Fgutabs/V1 was available and not V1 by itself
+  PK_2comp[, Vss_Fgutabs := (1/Fgutabs_V1) * (k21 + k12) / k21]
+
+  #overall relationship: Vbeta > Vss > V1
 
   #Get Css = average plasma concentration for 1 mg/kg/day every 1 days
   PK_2comp[, Css_iv := 1/(24 * CLtot)]
   PK_2comp[, Css_oral := Fgutabs_V1 * (1/(24*kelim))]
 
-  #terminal half-life
+  #half-lives for each phase
   PK_2comp[, halflife_beta := log(2) / beta]
   PK_2comp[, halflife_alpha := log(2) / alpha]
   PK_2comp[, halflife_abs := log(2) / kgutabs]
+
   #tpeak for oral dose
   #I don't think it can be done analytically
   #so do it numerically
-#search for zeros of cp_2comp_dt for each set of parametrers
+  #search for zeros of cp_2comp_dt for each set of parameters
   #if findzeros() fails, then just return NA
-  PK_2comp[!is.na(kgutabs), tpeak := tryCatch(findzeros(function(x){
+  PK_2comp[!is.na(kgutabs), tpeak_oral := tryCatch(findzeros(function(x){
     cp_2comp_dt(params = list("kelim" = kelim,
                               "Fgutabs_V1" = Fgutabs_V1,
                               "kgutabs" = kgutabs,
@@ -125,17 +156,28 @@ if(model %in% "1compartment"){
              b = 5*log(2)/beta,
             n = 100),
   error = function(err) return(NA_real_)),
-  by = 1:nrows(PK_2comp)]
+  by = .(Analysis_Type,
+         DTXSID,
+         Species,
+         model,
+         References.Analyzed,
+         AIC)]
 
   #Cpeak for oral dose of 1 mg/kg
-  PK_2comp[!is.na(kgutabs), Cpeak_oral := cp_2comp(params = list("kelim" = kelim,
+  PK_2comp[!is.na(kgutabs), Cpeak_oral_1mgkg := cp_2comp(params = list("kelim" = kelim,
                                                   "Fgutabs_V1" = Fgutabs_V1,
                                                   "kgutabs" = kgutabs,
                                                   "k12" = k12,
                                                   "k21" = k21),
                                     time = tpeak_oral,
                                     dose = 1,
-                                    iv.dose = FALSE)]
+                                    iv.dose = FALSE),
+           by = .(Analysis_Type,
+                  DTXSID,
+                  Species,
+                  model,
+                  References.Analyzed,
+                  AIC)]
 
   #remove temporary calculation columns
   PK_2comp[, c("alphabeta_sum",
@@ -149,7 +191,7 @@ if(model %in% "1compartment"){
   #reshape to wide format
   PK_flat <- dcast(PK_flat,
                     Analysis_Type + DTXSID + Species +
-                      model + Reference + Reference_orig +
+                      model + References.Analyzed +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
   PK_out <- copy(PK_flat)
