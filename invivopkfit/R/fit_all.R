@@ -105,8 +105,7 @@ fit_all <- function(data.set,
                     optimx_args = list(
                       "method" = "bobyqa",
                       "itnmax" = 1e6,
-                      "control" = list("maximize" = TRUE,
-                                       "kkt" = FALSE)
+                      "control" = list("kkt" = FALSE)
                     ),
 
                     suppress.messages = FALSE) {

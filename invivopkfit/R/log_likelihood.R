@@ -31,7 +31,8 @@ log_likelihood <- function(params,
                            DF,
                            modelfun,
                            model,
-                           force_finite = FALSE) {
+                           force_finite = FALSE,
+                           negative = TRUE) {
 
   #combine parameters to be optimized and held constant,
   #and convert into a list, since that is what model functions expect
@@ -182,6 +183,11 @@ log_likelihood <- function(params,
   #return a large negative number instead
   if(force_finite %in% TRUE){
   if (!is.finite(ll)) ll <- -999999
+  }
+
+  #to get negative log-likelihood (e.g. for minimization)
+  if(negative %in% TRUE){
+    ll <- -1 * ll
   }
 
   return(ll)
