@@ -2,8 +2,10 @@
 #'
 #' Helper function to do linear regression for method of residuals
 #'
-#' If there are more than two `x` values, this function calls `stats::lm()` and
-#' takes the coefficients. If there are exactly two `x` values, this function d
+#' If there are two or more unique `x` values, this function calls [stats::lm()]
+#' and takes the resulting coefficients. If there are fewer than two unique `x`
+#' values, this function returns `NA_real_` for both intercept and slope,
+#' because no line fit can be done in this case.
 #'
 #' @param x A numeric vector of `x` values
 #' @param y A numeric vector of `y` values
@@ -13,7 +15,7 @@
 #' @param slope_neg Logical: Whether to take the negative of the slope before
 #'   returning. Default TRUE. For example, this is useful when a time constant
 #'   is the negative of the slope, and you ultimately desire the time constant.
-#' @return A list with two numeric scalar components: `intercept` and `slope`,
+#' @return A list with two named numeric scalar elements: `intercept` and `slope`,
 #'   containing the intercept and slope of the fitted line, respectively
 #' @author Caroline Ring
 #'

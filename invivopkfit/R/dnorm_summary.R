@@ -3,11 +3,10 @@
 #' Evaluates the normal distribution density function for summary data reported
 #' as sample mean, sample SD, and sample N.
 #'
-#' `x_mean`, `x_sd`, and `X_N` must either be length 1, or the same size as the
-#' others. If two or more are different lengths and not length 1, the function
-#' will stop with an error.
+#' `x_mean`, `x_sd`, `X_N`, `mu`, and `sigma` should either be all the same size, or length 1.
+#' If they are different lengths, they will be repeated until their lengths
+#' match, with a warning.
 #'
-#' If `mu` and `sigma` are not the same
 #'
 #' @param mu Mean of the normal distribution to be evaluated (*not* the sample
 #'   mean). May be a numeric scalar or vector.
@@ -21,6 +20,7 @@
 #'
 #' @return A numeric scalar or vector matching the length of the longest of
 #'   `mu`, `sigma`, `x_mean`, `x_sd`, and `x_N`.
+#' @author Caroline Ring
 #' @export
 
 dnorm_summary <- function(mu,
@@ -32,29 +32,36 @@ dnorm_summary <- function(mu,
 
   x_len <- c("x_mean" = length(x_mean),
              "x_sd" = length(x_sd),
-             "x_N" = length(x_N))
+             "x_N" = length(x_N),
+             "mu" = length(mu),
+             "sigma" = length(sigma))
+
+  max_len <- max(x_len)
+  which_max_len <- which.max(x_len)
+
+  bad_len <- (x_len < max_len) & (x_len != 1)
 
 
-  if(sum(x_len %in% 1) == 2){
-    #if two of them are length 1, repeat to match the longer
-    if(x_len["x_mean"] %in% 1) x_mean <- rep(x_mean, length.out = max(x_len))
-    if(x_len["x_sd"] %in% 1) x_sd <- rep(x_sd, length.out = max(x_len))
-    if(x_len["x_N"] %in% 1) x_N <- rep(x_N, length.out = max(x_len))
-  }else if(sum(x_len %in% 1) == 1 &
-     length(unique(x_len)) == 2 ){
-    #if one of them is length 1 and the others have the same length,
-    #repeat to match the longest
-    if(x_len["x_mean"] %in% 1) x_mean <- rep(x_mean, length.out = max(x_len))
-    if(x_len["x_sd"] %in% 1) x_sd <- rep(x_sd, length.out = max(x_len))
-    if(x_len["x_N"] %in% 1) x_N <- rep(x_N, length.out = max(x_len))
-  }else if(sum(x_len %in% 1)==0 &
-           length(unique(x_len)) > 1){
-    #if none are length 1 and they have different lengths, throw error
-    stop("invivopkfit::dnorm_summary(): x_mean, x_sd, and x_N must either be all the same length, or length 1.")
-  }else if(sum(x_len %in% 1)==1 &
-           length(unique(x_len)) > 2){
-    #if one is length 1 and the other 2 have different lengths, throw error
-    stop("invivopkfit::dnorm_summary(): x_mean, x_sd, and x_N must either be all the same length, or length 1.")
+  if(any(bad_len)){
+    warning(paste("invivopkfit::dnorm_summary():",
+                  "the following inputs do not have matching lengths: ",
+                  paste(paste0(names(x_len)[bad_len],
+                        " length = ",
+                        x_len[bad_len]),
+                        collapse = "\n"
+                  ),
+                  "\n They will be repeated to match the length of the longest input,",
+                  names(x_len)[which_max_len],
+                  " length = ",
+                  max_len,
+                  "."
+            ))
+  }
+
+  #repeat to match longest
+  for (i in seq_along(x_len)){
+    assign(names(x_len)[i],
+           rep(x_len[i], length.out = max_len))
   }
 
   #Evaluate

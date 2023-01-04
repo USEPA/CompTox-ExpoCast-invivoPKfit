@@ -21,11 +21,11 @@
 #' | Vdist          | 5.56        | Default         |
 #' | kgutabs        | 2.19        | Default         |
 #' | Fgutabs        | 0.5         | Default         |
-#' | V1             | 1           | Default         |
+#' | V1             | 5.56           | Default         |
 #' | k12            | 0.2         | Default         |
 #' | k21            | 0.5         | Default         |
-#' | Fgutabs_Vdist  | 0.5/2.19    | Default         |
-#' | Fgutabs_V1     | 0.5/2.19    | Default         |
+#' | Fgutabs_Vdist  | 0.5/5.56    | Default         |
+#' | Fgutabs_V1     | 0.5/5.56    | Default         |
 #' | sigma          | 1         | Default         |
 #'
 #'
@@ -474,11 +474,18 @@ if(is.null(par_DF)){
         kelim_po <- lm_po_late$slope
         if(!is.na(kelim_iv)){
           #if we also have a kelim estimate from IV data, take average
-          par_DF <- assign_start(param_name = "kelim",
-                                 param_value =  mean(c(kelim_iv, kelim_po), na.rm = TRUE),
-                                 par_DF = par_DF,
-                                 start_from = start_from_data,
-                                 msg = "Avg of lin reg on IV data and method of residuals on PO data")
+          par_DF <-  assign_start(param_name = "kelim",
+                                  param_value =  mean(c(kelim_iv,
+                                                        kelim_po), na.rm = TRUE),
+                                  par_DF = par_DF,
+                                  start_from = start_from_data,
+                                  msg = paste0("Avg of lin reg on IV data (kelim_iv = ",
+                                               kelim_iv,
+                                               ") ",
+                                               "and method of residuals on PO data ",
+                                               "(kelim_po = ",
+                                               kelim_po,
+                                               ")"))
         }else{
           #if we do not have a kelim estimate from IV data, use the PO estimate
         par_DF <- assign_start(param_name = "kelim",
@@ -503,7 +510,14 @@ if(is.null(par_DF)){
                                                          kelim_po), na.rm = TRUE),
                                    par_DF = par_DF,
                                    start_from = start_from_data,
-                                   msg = "Avg of lin reg on IV data and method of inspection on PO data (assume max time = 5 * elim half-life)")
+                                   msg = paste0("Avg of lin reg on IV data (kelim_iv = ",
+                                               kelim_iv,
+                                               ") ",
+                                   "and method of inspection on PO data ",
+                                   "(assume max time = 5 * elim half-life) ",
+                                   "(kelim_po = ",
+                                   kelim_po,
+                                   ")"))
           }else{
           par_DF <- assign_start(param_name = "kelim",
                                  param_value = kelim_po,
@@ -578,7 +592,11 @@ if(is.null(par_DF)){
                                  param_value = Fgutabs_po,
                                  par_DF = par_DF,
                                  start_from = start_from_data,
-                                 msg = "Method of residuals on PO data to get Fgutabs/Vdist, combined with estimate of Vdist")
+                                 msg = paste0(
+                                   "Method of residuals on PO data to get Fgutabs/Vdist (",
+                                   Fgutabs_Vdist_po, ")",
+                                   " combined with estimate of Vdist")
+          )
 
 
         }
@@ -847,7 +865,16 @@ if(is.null(par_DF)){
                                  param_value = k21_avg,
                                  par_DF = par_DF,
                                  start_from = start_from_data,
-                                 msg = "Avg of method of residuals on PO and IV data")
+                                 msg = paste0(
+                                   "Avg of method of residuals on PO and IV data",
+                                   " (k21_iv = ",
+                                   k21_iv,
+                                   ", k21_po = ",
+                                   k21_po,
+                                   ")"
+                                   )
+                                 )
+
           kel_avg <- mean(c(kel_iv,
                             kel_po),
                           na.rm = TRUE)
@@ -855,7 +882,17 @@ if(is.null(par_DF)){
                                  param_value = kel_avg,
                                  par_DF = par_DF,
                                  start_from = start_from_data,
-                                 msg = "Avg of method of residuals on PO and IV data")
+                                 msg = paste0(
+                                   "Avg of method of residuals on PO and IV data",
+                                   " (kelim_iv = ",
+                                   kel_iv,
+                                   ", kelim_po = ",
+                                   kel_po,
+                                   ")"
+                                 )
+                                 )
+
+
           k12_avg <- mean(c(k12_iv,
                             k12_po),
                           na.rm = TRUE)
@@ -863,7 +900,14 @@ if(is.null(par_DF)){
                                  param_value = k12_avg,
                                  par_DF = par_DF,
                                  start_from = start_from_data,
-                                 msg = "Avg of method of residuals on PO and IV data")
+                                 msg = paste0(
+                                   "Avg of method of residuals on PO and IV data",
+                                   " (k12_iv = ",
+                                   k12_iv,
+                                   ", k12_po = ",
+                                   k12_po,
+                                   ")"
+                                 ))
         }else{ #if no IV data, only PO data
           #k21, kelim, k12:
           #update par_DF using PO estimates

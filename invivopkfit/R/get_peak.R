@@ -2,9 +2,14 @@
 #'
 #' Finds x- and y-value at peak y value.
 #'
+#' This is a helper function called by [get_starts()] to estimate the end of the
+#' absorption phase for oral TK data.
+#'
 #' If there is more than one unique `x` value where both `x` and corresponding
-#' `y` are finite, this function calls `stats::approx()`, then uses
-#' `base::which.max()` to locate the maximum interpolated `y`-value.
+#' `y` are finite, this function calls [stats::approx()], then uses
+#' [base::which.max()] to locate the maximum interpolated `y`-value. In effect,
+#' this takes the average `y` value for each unique `x` value, then finds the
+#' maximum.
 #'
 #' If there is only one unique `x` value where both `x` and corresponding `y`
 #' are finite, this function returns that `x` value, along with the average of
@@ -15,9 +20,12 @@
 #'
 #' @param x A numeric vector of `x` data
 #' @param y A numeric vector of `y` data
-#' @param ... Optional: Additional arguments which will be passed to `stats::approx()`.
-#' @return A list with two numeric scalar components, `x` and `y`, containing
-#'   the x- and y-values at peak `y`.
+#' @param ... Optional: Additional arguments which will be passed to
+#'   [stats::approx()] (other than `x`, `y`, and `xout`).
+#' @return A list with two named numeric scalar components, `x` and `y`,
+#'   containing the x- and y-values at the peak.
+#' @author Caroline Ring
+
 get_peak <- function(x, y, ...){
 
   x_finite <- x[is.finite(x) & is.finite(y)]

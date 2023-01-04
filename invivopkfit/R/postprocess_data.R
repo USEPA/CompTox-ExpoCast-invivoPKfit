@@ -117,7 +117,7 @@ if(model %in% "1compartment"){
   #see https://www.boomer.org/c/p4/c19/c1905.php
 
   PK_2comp[, Vbeta := V1 * kelim / beta]
-  PK_2comp[, Vbeta_Fgutabs := (1/Fgutabs_v1) * kelim / beta]
+  PK_2comp[, Vbeta_Fgutabs := (1/Fgutabs_V1) * kelim / beta]
 
   #Vss
   #apparent volume of distribution at steady state

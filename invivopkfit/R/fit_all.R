@@ -10,11 +10,6 @@
 #'   analytic solution to the model, or the full ODE model. Presently,
 #'   "analytic" is recommended (because the analytic solution is exact and much
 #'   faster).
-#' @param ratio_conc_to_dose Ratio between the mass units used to report the
-#'   concentration data and the mass units used to report the dose. Default 1.
-#'   For example, concentration reported in ug/L and dose reported in mg/kg/day
-#'   would require \code{ratio_conc_to_dose = 0.001}, because 1 ug/1 mg = 1e-6 g
-#'   / 1e-3 g = 0.001.
 #' @param names_list As for [rename_columns()]: A named list where the names are
 #'   the new variable names, and the values are the old variable names. If a
 #'   value is NULL, then there is no old variable corresponding to that new
@@ -25,15 +20,33 @@
 #'   are the new variable names, and the values are the default values to fill
 #'   for each new variable, if the corresponding old variable name is NULL in
 #'   `names_list`.
-#' @param get_starts_args Named list or NULL: any additional arguments to [get_starts()] (other than
-#'   `model` and `fitdata`, which are always passed). Default NULL to accept the
-#'   default arguments for [get_starts()].
-#' @param get_lower_args Named list or NULL: any additional arguments to [get_lower_bounds()] (other
-#'   than `model` and `fitdata`, which are always passed). Default NULL to
-#'   accept the default arguments for [get_lower_bounds()].
-#' @param get_upper_args Named list or NULL: any additional arguments to [get_upper_bounds()] (other
-#'   than `model` and `fitdata`, which are always passed). Default NULL to
-#'   accept the default arguments for [get_upper_bounds()].
+#' @param ratio_conc_to_dose Ratio between the mass units used to report the
+#'   concentration data and the mass units used to report the dose. Default 1.
+#'   For example, concentration reported in ug/L and dose reported in mg/kg/day
+#'   would require `ratio_conc_to_dose = 0.001`, because 1 ug/1 mg = 1e-6 g /
+#'   1e-3 g = 0.001.
+#' @param calc_loq_factor As for [estimate_loq()]
+#' @param routes_keep Character vector of administration routes to keep. Default
+#'   `c("po", "iv")` to keep only oral and intravenous data (because at present,
+#'   model fitting is only implemented for oral and IV routes). Any data where
+#'   route is not on this list will be discarded. (For example, with the
+#'   default, inhalation and dermal data will be discarded.)
+#' @param media_keep Character vector of sample media to keep. Default is
+#'   `c("blood", "plasma")` to keep only concentration data measured in blood
+#'   and plasma (because at present, model fitting is only implemented for blood
+#'   and plasma). Any data where medium is not on this list will be discarded.
+#'   (For example, with the default, urine data will be discarded.)
+#' @param get_starts_args Named list or NULL: any additional arguments to
+#'   [get_starts()] (other than `model` and `fitdata`, which are always passed).
+#'   Default NULL to accept the default arguments for [get_starts()].
+#' @param get_lower_args Named list or NULL: any additional arguments to
+#'   [get_lower_bounds()] (other than `model` and `fitdata`, which are always
+#'   passed). Default NULL to accept the default arguments for
+#'   [get_lower_bounds()].
+#' @param get_upper_args Named list or NULL: any additional arguments to
+#'   [get_upper_bounds()] (other than `model` and `fitdata`, which are always
+#'   passed). Default NULL to accept the default arguments for
+#'   [get_upper_bounds()].
 #' @param optimx_args A named list of additional arguments to [optimx::optimx()]
 #'   (used for parameter estimation), other than `par`, `fn`, `lower`, and
 #'   `upper`. Default is:
@@ -42,14 +55,13 @@
 #'     list(
 #'           "method" = "bobyqa",
 #'           "itnmax" = 1e6,
-#'           "control" = list("maximize" = TRUE,
-#'                            "kkt" = FALSE)
+#'           "control" = list("kkt" = FALSE)
 #'          )
 #'    ```
-#'  See documentation for [optimx::optimx()] for possible arguments and details.
-#'  Note lower and upper bounds (box constraints) will be supplied; if you want
-#'  them to be respected, please choose a method that allows box constraints
-#'  (e.g. "bobyqa" or "L-BFGS-B").
+#'   See documentation for [optimx::optimx()] for possible arguments and
+#'   details. Note lower and upper bounds (box constraints) will be supplied; if
+#'   you want them to be respected, please choose a method that allows box
+#'   constraints (e.g. "bobyqa" or "L-BFGS-B").
 #' @param suppress.messages Logical: Whether to suppress verbose messages.
 #'   Default FALSE, to be verbose.
 #'
@@ -58,7 +70,6 @@
 #' @author Caroline Ring, John Wambaugh
 #' @export fit_all
 #' @importFrom PK nca.batch
-#' @importFrom magrittr "%>%"
 
 fit_all <- function(data.set,
                     model,

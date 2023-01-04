@@ -5,50 +5,51 @@
 #' is, as a concentration). These detects can still be used to refine parameter
 #' estimates by preferring curve fits that predict concentrations below the
 #' known "limit of quantitation" (LOQ) -- the lowest detectable quantifiable
-#' concentration. LOQ's are not always available from data reported in the
-#' literature, so this function estimates a LOQ such that all the reported
-#' values are above the LOQ.
+#' concentration. LOQs are not always available from data reported in the
+#' literature. When LOQ is missing, this function imputes an LOQ such that all
+#' the reported values are above the LOQ.
 
 #' The LOQ is assumed to vary from reference to reference, as each study would
 #' have different mass spectrometry equipment and methods. LOQ also is assumed
 #' to vary by medium (e.g. blood or plasma), as preparation of samples may be
-#' different. For each unique combination of reference, chemical, species, and
-#' medium, the LOQ is estimated by multiplying the lowest detected concentration
-#' (the minimum non-NA reported concentration greater than zero) by a constant
-#' factor (\code{loq.factor}). If there are no detected concentrations for a
-#' given combination of reference, chemical, species, and medium (i.e., all
-#' reported concentrations are NA), then the imputed LOQ will be NA.
+#' different.
+#'
+#' For each unique combination of reference, chemical, species, and medium, the
+#' LOQ is estimated by multiplying the lowest detected concentration (the
+#' minimum non-NA reported concentration greater than zero) by a constant factor
+#' (`calc_loq_factor`). If there are no detected concentrations for a given
+#' combination of reference, chemical, species, and medium (*i.e.*, all reported
+#' concentrations are NA), then the imputed LOQ will be NA.
 #'
 #' @param dat A \code{data.frame} of concentration vs. time data with at least
-#'   the following columns:
+#'   the following variables:
 #'
-#' @param reference_col The name of the column indicating different research
-#'   study reference documents (and therefore different mass spectrometry
-#'   methods). Default "document_reference.id".
+#' @param reference_col The name of the variable in `dat` indicating different
+#'   research study reference documents (and therefore different mass
+#'   spectrometry methods). Default "Reference".
 #'
-#' @param chem_col The name of the column indicating chemical identity. Default
-#'   "chemicals_dosed.dsstox_substance_id".
+#' @param chem_col The name of the variable in `dat` indicating chemical
+#'   identity. Default "DTXSID".
 #'
-#' @param media_col The name of the column indicating sample medium. Default
-#'   "series.conc_medium_normalized".
+#' @param media_col The name of the variable in `dat` indicating sample medium.
+#'   Default "Medium".
 #'
-#' @param value_col The name of the column indicating concentration. Default
-#'   "conc_time_values.conc". Nondetects should be reported as NA in this
-#'   column.
+#' @param value_col The name of the variable in `dat` indicating concentration.
+#'   Default "Value". Nondetects should be reported as NA in this column.
 #'
-#' @param species_col The name of the column indicating species. Default
-#'   "subjects.species."
+#' @param species_col The name of the variable in `dat` indicating species.
+#'   Default "Species".
 #'
-#' @param loq_col The name of the LOQ column. Default "calc_loq". If this
-#'   column does not already exist, it will be created.
+#' @param loq_col The name of the LOQ column. Default "LOQ". If this column does
+#'   not already exist, it will be created and filled with `NA_real_`.
 #'
-#' @param loq.factor A factor by which to multiply the lowest detected value in
-#'   each group to estimate an LOQ. Default 0.45.
+#' @param calc_loq_factor A factor by which to multiply the lowest detected
+#'   value in each group to estimate an LOQ. Default 0.45.
 #'
-#' @return A \code{data.frame} that is the same as \code{dat}, but with the
-#'   column specifed in \code{calc_loq} added
+#' @return A \code{data.frame} that is the same as \code{dat}, but with any
+#'   missing values in variable `calc_loq` imputed as above.
 #'
-#' @author John Wambaugh
+#' @author John Wambaugh, Caroline Ring
 #'
 #' @export estimate_loq
 estimate_loq <- function(dat,
