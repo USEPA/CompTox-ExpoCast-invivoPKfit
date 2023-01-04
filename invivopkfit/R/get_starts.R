@@ -376,7 +376,7 @@ if(is.null(par_DF)){
           par_DF <- assign_start(param_name = this_param,
                                  param_value = httk_params[[this_param]],
                                  msg = paste0("httk::parameterize_1comp(",
-                                              "DTXSID = '", this.dtxsid, "', ",
+                                              "dtxsid = '", this.dtxsid, "', ",
                                               "default.to.human = TRUE, ",
                                               "suppress.messages = TRUE, ",
                                               "species = '", httk_species,
