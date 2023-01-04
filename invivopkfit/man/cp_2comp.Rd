@@ -7,7 +7,30 @@
 cp_2comp(params, time, dose, iv.dose)
 }
 \arguments{
-\item{params}{A named list of parameter values including the following:
+\item{params}{A named list of parameter values. See Details for requirements.}
+
+\item{time}{A numeric vector of times in hours, reflecting the time points
+when concentration is measured after the corresponding single bolus dose.
+Must be same length as `dose` and `iv.dose`, or length 1.}
+
+\item{dose}{A numeric vector of doses in mg/kg, reflecting single bolus doses
+administered at time 0. Must be same length as `time` and `iv.dose`, or
+length 1.}
+
+\item{iv.dose}{A logical vector, reflecting the route of administration of
+each single bolus dose. TRUE for single IV bolus dose; FALSE for single oral
+bolus dose. Must be same length as `time` and `dose`, or length 1.}
+}
+\value{
+A vector of plasma concentration values (mg/L) corresponding to each
+ value in \code{time}
+}
+\description{
+Calculates plasma concentration according to the analytical solution for the
+2-compartment model.
+}
+\details{
+`params` must include the following named list elements:
   \describe{
   \item{k12}{Rate at which compound moves from central to peripheral
   compartment, 1/h.}
@@ -15,37 +38,29 @@ cp_2comp(params, time, dose, iv.dose)
   compartment, 1/h.}
   \item{kelim}{Elimination rate, 1/h.}
   \item{V1}{Apparent volume of central compartment, L/kg BW. Or see below for
-  "Fgutabs_V1"}
+  `Fgutabs_V1`}
   }
 
-  For oral administration (\code{iv.dose} FALSE), \code{params} must also
-  include:
+For oral administration (any `iv.dose == FALSE`), `params` must also include
+the following named list items:
   \describe{
   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
-  "Fgutabs_V1"}
+  `Fgutabs_V1`}
   \item{kgutabs}{Rate of absorption from gut, 1/h.}
   }
 
-  For oral administration, in lieu of "V1" and "Fgutabs", you may instead
-  provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an
-  alternate parameterization for situations where "Fgutabs" and "V1" are not
-  identifiable separately (i.e. when oral data are available, but IV data are
-  not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
-  used.}
+For oral administration, in lieu of `V1` and `Fgutabs`, you may instead
+provide `Fgutabs_V1`, the ratio of Fgutabs to V1 (1/L). This is an alternate
+parameterization for situations where `Fgutabs` and `V1` are not identifiable
+separately (i.e. when oral TK data are available, but IV data are not). If
+`Fgutabs` and `V1` are provided, they will override any value also provided
+for `Fgutabs_V1`.
 
-\item{time}{A numeric vector of time values, in hours}
-
-\item{dose}{A numeric vector of doses in mg/kg}
-
-\item{iv.dose}{A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose}
-}
-\value{
-A vector of plasma concentration values (mg/L) corresponding to each value
-  in \code{time}
-}
-\description{
-Calculates plasma concentration according to the analytical solution for the
-2-compartment model.
+If both oral and IV administration are specified (i.e., some `iv.dose == TRUE`
+and some `iv.dose == FALSE`), then `V1` is required along with either
+`Fgutabs` or `Fgutabs_V1`. (If `V1` and `Fgutabs_V1` are provided, but
+`Fgutabs` is not provided, then `Fgutabs` will be calculated from `V1` and
+`Fgutabs_V1`.)
 }
 \author{
 Caroline Ring, John Wambaugh

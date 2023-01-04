@@ -5,42 +5,45 @@
 \title{Assign an estimated limit of quantification wherever missing}
 \usage{
 estimate_loq(
-  cvt.data,
-  source.col = "document_id",
-  chem.col = "dsstox_casrn",
-  media.col = "conc_medium_normalized",
-  value.col = "conc",
-  calc.loq.col = "calc_loq",
-  loq.factor = 0.45
+  dat,
+  reference_col = "Reference",
+  chem_col = "DTXSID",
+  media_col = "Media",
+  species_col = "Species",
+  value_col = "Value",
+  loq_col = "LOQ",
+  calc_loq_factor = 0.45
 )
 }
 \arguments{
-\item{cvt.data}{A \code{data.frame} of concentration vs. time data with at
-least the following columns:}
+\item{dat}{A \code{data.frame} of concentration vs. time data with at least
+the following variables:}
 
-\item{source.col}{The name of the column indicating different research study
-source documents (and therefore different mass spectrometry methods).
-Default "document_id".}
+\item{reference_col}{The name of the variable in `dat` indicating different
+research study reference documents (and therefore different mass
+spectrometry methods). Default "Reference".}
 
-\item{chem.col}{The name of the column indicating chemical identity. Default
-"dsstox_casrn".}
+\item{chem_col}{The name of the variable in `dat` indicating chemical
+identity. Default "DTXSID".}
 
-\item{media.col}{The name of the column indicating sample medium. Default
-"conc_medium_normalized".}
+\item{media_col}{The name of the variable in `dat` indicating sample medium.
+Default "Medium".}
 
-\item{value.col}{The name of the column indicating concentration. Default
-"conc". Nondetects should be reported as 0 or NA in this column.}
+\item{species_col}{The name of the variable in `dat` indicating species.
+Default "Species".}
 
-\item{calc.loq.col}{The name of the column to be added to the table holding
-the estimated LOQ's. Default "calc_loq".}
+\item{value_col}{The name of the variable in `dat` indicating concentration.
+Default "Value". Nondetects should be reported as NA in this column.}
 
-\item{loq.factor}{A factor by which to multiply the lowest detected value to
-estimate an LOQ. Default 0.45.}
+\item{loq_col}{The name of the LOQ column. Default "LOQ". If this column does
+not already exist, it will be created and filled with `NA_real_`.}
+
+\item{calc_loq_factor}{A factor by which to multiply the lowest detected
+value in each group to estimate an LOQ. Default 0.45.}
 }
 \value{
-A \code{data.frame} that is the same as \code{cvt.data}, but with the
-  column specifed in \code{calc_loq} added, and any rows for
-  source/chemical/medium combinations with no detected concentrations removed
+A \code{data.frame} that is the same as \code{dat}, but with any
+  missing values in variable `calc_loq` imputed as above.
 }
 \description{
 Sometimes in mass spectrometry a compound is detected, but the signal is too
@@ -48,20 +51,22 @@ low and falls outside the range that can be interpreted quantitatively (that
 is, as a concentration). These detects can still be used to refine parameter
 estimates by preferring curve fits that predict concentrations below the
 known "limit of quantitation" (LOQ) -- the lowest detectable quantifiable
-concentration. LOQ's are not always available from data reported in the
-literature, so this function estimates a LOQ such that all the reported
-values are above the LOQ.
-The LOQ is assumed to vary from study to study, as each study would have
-different mass spectrometry equipment and methods. LOQ also is assumed to
-vary by media, as preparation of samples may be different. For each unique
-combination of study, chemical, and medium, the LOQ is estimated by
-multiplying the lowest detected concentration (the minimum non-NA reported
-concentration greater than zero) by a constant factor (\code{loq.factor}). If
-there are no detected concentrations for a given combination of study,
-chemical, and medium (i.e., all reported concentrations are NA or 0), then
-that study/chemical/medium combination will be removed from the returned
-data.frame.
+concentration. LOQs are not always available from data reported in the
+literature. When LOQ is missing, this function imputes an LOQ such that all
+the reported values are above the LOQ.
+The LOQ is assumed to vary from reference to reference, as each study would
+have different mass spectrometry equipment and methods. LOQ also is assumed
+to vary by medium (e.g. blood or plasma), as preparation of samples may be
+different.
+}
+\details{
+For each unique combination of reference, chemical, species, and medium, the
+LOQ is estimated by multiplying the lowest detected concentration (the
+minimum non-NA reported concentration greater than zero) by a constant factor
+(`calc_loq_factor`). If there are no detected concentrations for a given
+combination of reference, chemical, species, and medium (*i.e.*, all reported
+concentrations are NA), then the imputed LOQ will be NA.
 }
 \author{
-John Wambaugh
+John Wambaugh, Caroline Ring
 }

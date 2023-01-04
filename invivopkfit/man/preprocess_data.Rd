@@ -6,37 +6,25 @@
 \usage{
 preprocess_data(
   data.set,
-  ratio.data.to.dose = 1,
-  compound.col = "Compound",
-  dtxsid.col = "DTXSID",
-  cas.col = "CAS",
-  reference.col = "Reference",
-  species.col = "Species",
-  species.default = NULL,
-  species.weight.col = "Species.Weight",
-  species.weight.units.col = "Species.Weight.Units",
-  species.weight.units.default = NULL,
-  dose.col = "Dose",
-  time.col = "Time",
-  time.units.col = "Time.Units",
-  time.units.default = NULL,
-  media.col = "Media",
-  media.units.col = "Media.Units",
-  media.units.default = NULL,
-  value.col = "Value",
-  units.col = "Units",
-  units.default = NULL,
-  route.col = "Route",
-  route.default = NULL,
-  source.col = "Source",
-  source.default = NULL,
-  loq.col = "LOQ",
-  loq.default = NULL,
-  subject.col = "Subject",
-  subject.default = NULL,
-  info.col = "info",
-  info.default = NULL,
-  LOQ_factor = 2,
+  names_list = list(Compound_Dosed = "studies.test_substance_name_original", DTXSID_Dosed
+    = "chemicals_dosed.dsstox_substance_id", CAS_Dosed = "chemicals_dosed.dsstox_casrn",
+    Compound_Analyzed = "series.analyte_name_original", DTXSID_Analyzed =
+    "chemicals_analyzed.dsstox_substance_id", CAS_Analyzed =
+    "chemicals_analyzed.dsstox_casrn", Reference = "documents_reference.id", Extraction =
+    "documents_extraction.id", Species = "subjects.species", Weight =
+    "subjects.weight_kg", Weight.Units = NULL, Dose = "studies.dose_level_normalized", 
+ 
+       Dose.Units = NULL, Time = "conc_time_values.time_hr", Time.Units = NULL, Media =
+    "series.conc_medium_normalized", Value = "conc_time_values.conc", Value.Units = NULL,
+    Route = "studies.administration_route_normalized", LOQ = "series.loq", Subject =
+    "subjects.id", N_Subjects = "series.n_subjects_in_series", Value_SD =
+    "conc_time_values.conc_sd"),
+  defaults_list = list(Weight.Units = "kg", Dose.Units = "mg/kg", Time.Units = "h",
+    Value.Units = "mg/L"),
+  ratio_conc_to_dose = 1,
+  calc_loq_factor = 0.45,
+  routes_keep = c("po", "iv"),
+  media_keep = c("blood", "plasma"),
   suppress.messages = FALSE
 )
 }
@@ -44,99 +32,29 @@ preprocess_data(
 \item{data.set}{A `data.frame` of concentration-time data. Preferably
 `pkdataset_nheerlcleaned` or `pkdataset_nheerlorig`.}
 
-\item{ratio.data.to.dose}{Ratio between the mass units used to report the
+\item{names_list}{As for [rename_columns()]: A named list where the names are
+the new variable names, and the values are the old variable names. If a
+value is NULL, then there is no old variable corresponding to that new
+variable. A new variable will be added, with default value as given in
+`defaults_list`; if no default is given in `defaults_list`, the new
+variable will be filled with `NA_character`.}
+
+\item{defaults_list}{As for [rename_columns()]: A named list where the names
+are the new variable names, and the values are the default values to fill
+for each new variable, if the corresponding old variable name is NULL in
+`names_list`.}
+
+\item{ratio_conc_to_dose}{Ratio between the mass units used to report the
 concentration data and the mass units used to report the dose. Default 1.
 For example, concentration reported in ug/L and dose reported in mg/kg/day
-would require `ratio.data.to.dose = 0.001`, because 1 ug/1 mg = 1e-6 g
+would require `ratio_conc_to_dose = 0.001`, because 1 ug/1 mg = 1e-6 g
 / 1e-3 g = 0.001.}
 
-\item{compound.col}{Column name in `data.set` that identifies chemical
-compound. Default "Compound".}
+\item{routes_keep}{List of routes to retain. Default `c("po", "iv")` to
+retain only oral and IV administration data.}
 
-\item{cas.col}{Column name in `data.set` to identify CASRN.
-Default"CAS".}
-
-\item{reference.col}{Column name in `data.set` to identify reference.
-Default "Reference".}
-
-\item{species.col}{Column name in `data.set` to identify species.
-Default "Species".}
-
-\item{species.default}{If no species column exists in `data.set`, one
-will be created and filled with this value.  Default NULL.}
-
-\item{species.weight.col}{Column name in `data.set` to identify species
-weight. Default "Species.Weight".}
-
-\item{species.weight.units.col}{Column name in `data.set` to identify
-species weigh units. Default"Species.Weight.Units".}
-
-\item{species.weight.units.default}{If no species weight units column exists
-in `data.set`, one will be created and filled with this value. Default
-NULL.}
-
-\item{dose.col}{Column name in `data.set` to identify dose. Default
-"Dose".}
-
-\item{time.col}{Column name in `data.set` to identify time. Default
-"Time".}
-
-\item{time.units.col}{Column name in `data.set` to identify time units.
-Default "Time.Units."}
-
-\item{time.units.default}{If no time units column exists in `data.set`,
-one will be created and filled with this value.  Default NULL.}
-
-\item{media.col}{Column name in `data.set` to identify media. Default
-"Media".}
-
-\item{media.units.col}{Column name in `data.set` to identify media
-units. Default "Media.Units".}
-
-\item{media.units.default}{If no media units column exists in
-`data.set`, one will be created and filled with this value.  Default
-NULL.}
-
-\item{value.col}{Column name in `data.set` to identify value. Default
-"Value".}
-
-\item{units.col}{Column name in `data.set` to identify units. Default
-"Units".}
-
-\item{units.default}{If no units column exists in `data.set`, one will
-be created and filled with this value.  Default NULL.}
-
-\item{route.col}{Column name in `data.set` to identify route of
-administration. Default "Route".}
-
-\item{route.default}{If no route column exists in `data.set`, one will
-be created and filled with this value.  Default NULL.}
-
-\item{source.col}{Column name in `data.set` to identify source. Default
-"Source."}
-
-\item{source.default}{If no source column exists in `data.set`, one will
-be created and filled with this value.  Default NULL.}
-
-\item{loq.col}{Column name in `data.set` to identify LOQ. Default "LOQ".}
-
-\item{loq.default}{If no LOQ column exists in `data.set`, one will be
-created and filled with this value.  Default NULL.}
-
-\item{subject.col}{Column name in `data.set` to identify subject.
-Default "Subject."}
-
-\item{subject.default}{If no subject column exists in `data.set`, one
-will be created and filled with this value.  Default NULL.}
-
-\item{info.col}{Column name in `data.set` to serve as info column.
-Default "Info".}
-
-\item{info.default}{If no info column exists in `data.set`, one will be
-created and filled with this value.  Default NULL.}
-
-\item{LOQ_factor}{Numeric. Observations with concentrations less than
-`LOQ_factor * LOQ` will be removed. Default 2.}
+\item{media_keep}{List of media to retain. Default `c("blood", "plasma")` to
+retain only concentrations in blood and plasma.}
 
 \item{suppress.messages}{Logical: Whether to suppress verbose messages.
 Default FALSE, to be verbose.}
@@ -153,38 +71,33 @@ faster).}
 A `data.table` containing the cleaned, harmonized data, ready for
   model fitting. This data.table contains the following variables:
   \describe{
-  \item{`Compound`}{Chemical compound name, from `compound.col`}
-  \item{`DTXSID`}{DSSTox Substance ID, from `dtxsid.col`}
-  \item{`CAS`}{Chemical CASRN, from `cas.col`}
-  \item{`Reference`}{Study reference ID, from `reference.col`}
-  \item{`Species`}{Species, from `species.col` (coereced to lowercase).}
-  \item{`Species.Weight`}{Body weight, from `species.weight.col`}
-  \item{`Species.Weight.Units`}{Units of body weight, from
-  `species.weight.units.col`}
-  \item{`Dose`}{Dose, from `dose.col`, Coerced to numeric if necessary.}
-  \item{`Time`}{Time of each observation, from `time.col`. Coerced to numeric
-  if necessary.}
-  \item{`Time.Units`}{Units of times in `Time`, from `time.units.col`.}
+  \item{`Compound`}{Chemical compound name}
+  \item{`DTXSID`}{DSSTox Substance ID,}
+  \item{`CAS`}{Chemical CASRN}
+  \item{`Reference`}{Study reference document ID}
+  \item{`Species`}{Species.}
+  \item{`Weight`}{Body weight}
+  \item{`Weight_Units`}{Units of body weight`}
+  \item{`Dose`}{Dose for each observation}
+  \item{`Time`}{Time of each observation}
+  \item{`Time.Units`}{Units of times in `Time`}
   \item{`Media`}{Medium in which concentrations were measured, e.g. "blood"
-  or "plasma". From `media.col`.}
-  \item{`Media.Units`}{"Units" of `Media`, e.g. "normalized".}
-  \item{`Value`}{Concentration values of each observation, from `value.col`.
-  Coerced to numeric if necessary.}
-  \item{`Units`}{Units of concentration values in `Value`, from `units.col`.}
+  or "plasma".}
+  \item{`Value`}{Concentration values of each observation}
+  \item{`Units`}{Units of concentration values in `Value`}
   \item{`Route`}{Route of dose administration: either "iv" (intravenous) or
   "po" (oral). Observations with any other routes are removed.}
-  \item{`Source`}{Source of data, from `source.col`.}
-  \item{`LOQ`}{Limit of quantitation for concentrations, from `loq.col`.}
-  \item{`Subject`}{Individual subject identifier, if available. From
-  `subject.col`.}
-  \item{`info`}{Additional info, if any. From `info.col`.}
+  \item{`Extraction`}{Study extraction document ID.}
+  \item{`LOQ`}{Limit of quantitation for concentrations}
+  \item{`Subject`}{Individual subject identifier, if available. }
   \item{`iv`}{Logical TRUE/FALSE flag indicating whether `Route == "iv"`.}
   \item{`Time.Days`}{Time of each observation, converted to units of days.}
-  \item{`Time.Steps.PerHour`}{The smallest interval between observation time
-  points (in hours) for each unique combination of DTXSID, Dose, and Route.}
   \item{`N.Obs.Ref`}{The number of observations remaining for each unique
-  value of `Reference`, after the removal steps described in Details.}
+  combination of `Reference`, `DTXSID`, and `Species`, after the removal
+  steps described in Details.}
   }
+
+ new_name = old_name
 }
 \description{
 Clean data to set up for PK model fitting.
@@ -200,22 +113,33 @@ adds any missing columns. See [rename_columns()].
 - Converts concentrations to numeric, if they are not already.
 - Converts doses to numeric, if they are not already.
 - Converts times to numeric, if they are not already.
-- Converts references to character, if they are not already.
-- Converts the data to `data.table` format.
+- Converts reference ID to character, if not already.
+- Converts extraction source ID to character, if not already.
+- If reference ID is NA, sets it to be the same as extraction source ID. (By
+default in CvTdb, reference ID is only set if it is different from
+extraction-source ID. For example, if data were extracted from a figure in a
+meta-analysis paper that republished data from multiple other publications,
+the extraction-source ID would be for the meta-analysis paper, but the
+reference ID would be for the original publication.)
+- Removes all observations where `DTXSID_Dosed` and `DTXSID_Analyzed` are not
+the same (i.e., keeps only data where the parent chemical is what was
+monitored). Creates new columns `Compound`, `DTXSID`, and `CAS` identifying the chemical both dosed and analyzed.
 - Harmonizes routes recorded as "oral" to "po" and "intravenous" to "iv".
-- Removes all observations that have routes other than "po" or "iv".
-- Converts all Compound and Species to lower-case.
-- Coerces any zero concentrations to NA (nondetect).
-- Multiplies concentrations by `ratio.data.to.dose` (*i.e.*, by the ratio
-between the mass units for concentration and the mass units for dose.)
-- Coerces any concentrations less than `LOQ_factor * LOQ` to NA (treat as
-nondetect).
+- Removes all observations that have routes other than those listed in `routes_keep`.
+- Removes all observations in media other than those listed in `media_keep`.
 - Adds variable `iv`: a TRUE/FALSE flag, for whether route is "iv" or not.
-- Removes any observations with NA Time.
-- Adds a variable where Time (in hours) is converted to time in days.
-- Calculates the minimum number of time steps per hour for each chemical,
-dose, and route.
-- Removes data from any references that had fewer than 4 observations.
-- Removes any observations where concentration was NA (nondetect) before the
-time of peak concentration for each reference, route, DTXSID, and species.
+- Converts `Compound` and `Species` to lower-case.
+- Multiplies concentrations by `ratio_conc_to_dose` (*i.e.*, by the ratio
+between the mass units for concentration and the mass units for dose).
+- For any concentrations reported as 0, substitute NA.
+ - Imputes LOQ for any observations missing it, using [estimate_loq()]. LOQ
+ is imputed for each unique combination of `Reference`, `DTXSID`, `Species`,
+ and `Media` as `calc_loq_factor` times the minimum *detected* `Value`.s
+ - Substitutes NA for any concentration observations below LOQ (these are non-detects).
+ - Removes any remaining observations where both `Value` and `LOQ` are NA.
+ For example, this situation occurs for reference/chemical/species/media
+ combinations where no LOQ was reported, and all concentrations were reported
+ as NA, so that no LOQ could be imputed.
+- Removes any observations with NA `Time`.
+- Adds a variable `Time.Days` where `Time` (in hours) is converted to time in days.
 }

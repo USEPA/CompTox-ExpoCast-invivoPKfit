@@ -11,7 +11,8 @@ get_starts(
   pool_sigma = FALSE,
   starts_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
     "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), start_value = c(1, 0.25,
-    5.56, 2.19, 0.5, 1, 0.2, 0.5, 0.5/2.19, 0.51/2.19, 100), start_value_msg = "Default"),
+    5.56, 2.19, 0.5, 5.56, 0.2, 0.5, 0.5/5.56, 0.51/5.56, 1), start_value_msg =
+    "Default"),
   start_from_httk = "all",
   start_from_data = "all",
   suppress.messages = FALSE
@@ -58,9 +59,9 @@ whose starting values are to be estimated from the data. Default value is
 estimated from the data, so long as the `httk`-derived parameter
 values are within the lower and upper bounds defined by `par_DF$lower` and
 `par_DF$upper`. To suppress estimation of starting values from data, set
-`start_from_data` to NULL, NA, or a zero-length character vector. If both
-`start_from_httk` and `start_from_data` are `TRUE`, then data-derived
-starting values will override `httk` starting values.}
+`start_from_data` to NULL, NA, or a zero-length character vector. If a parameter name is in both
+`start_from_httk` and `start_from_data`, then data-derived
+starting values will override `httk` starting values for that parameter.}
 
 \item{suppress.messages}{Logical: Whether to suppress printing of messages.}
 }
@@ -89,15 +90,15 @@ The default `starts_default` `data.frame` is shown below in table format:
 | ---------------| ----------- | --------------- |
 | A              | 1           | Default         |
 | kelim          | 0.25        | Default         |
-| Vdist          | 2.19        | Default         |
-| kgutabs        | 0.25        | Default         |
+| Vdist          | 5.56        | Default         |
+| kgutabs        | 2.19        | Default         |
 | Fgutabs        | 0.5         | Default         |
-| V1             | 1           | Default         |
+| V1             | 5.56           | Default         |
 | k12            | 0.2         | Default         |
 | k21            | 0.5         | Default         |
-| Fgutabs_Vdist  | 0.5/2.19    | Default         |
-| Fgutabs_V1     | 0.5/2.19    | Default         |
-| sigma          | 100         | Default         |
+| Fgutabs_Vdist  | 0.5/5.56    | Default         |
+| Fgutabs_V1     | 0.5/5.56    | Default         |
+| sigma          | 1         | Default         |
 
 
 # `httk` 1-compartment model parameterization starting values

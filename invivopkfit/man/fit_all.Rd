@@ -8,42 +8,29 @@ fit_all(
   data.set,
   model,
   modelfun = NA,
-  ratio.data.to.dose = 1,
-  compound.col = "Compound",
-  dtxsid.col = "DTXSID",
-  cas.col = "CAS",
-  reference.col = "Reference",
-  species.col = "Species",
-  species.default = NULL,
-  species.weight.col = "Species.Weight",
-  species.weight.units.col = "Species.Weight.Units",
-  species.weight.units.default = NULL,
-  dose.col = "Dose",
-  time.col = "Time",
-  time.units.col = "Time.Units",
-  time.units.default = NULL,
-  media.col = "Media",
-  media.units.col = "Media.Units",
-  media.units.default = NULL,
-  value.col = "Value",
-  units.col = "Units",
-  units.default = NULL,
-  route.col = "Route",
-  route.default = NULL,
-  source.col = "Source",
-  source.default = NULL,
-  loq.col = "LOQ",
-  loq.default = NULL,
-  subject.col = "Subject",
-  subject.default = NULL,
-  info.col = "info",
-  info.default = NULL,
-  LOQ_factor = 2,
+  names_list = list(Compound_Dosed = "studies.test_substance_name_original", DTXSID_Dosed
+    = "chemicals_dosed.dsstox_substance_id", CAS_Dosed = "chemicals_dosed.dsstox_casrn",
+    Compound_Analyzed = "series.analyte_name_original", DTXSID_Analyzed =
+    "chemicals_analyzed.dsstox_substance_id", CAS_Analyzed =
+    "chemicals_analyzed.dsstox_casrn", Reference = "documents_reference.id", Extraction =
+    "documents_extraction.id", Species = "subjects.species", Weight =
+    "subjects.weight_kg", Weight.Units = NULL, Dose = "studies.dose_level_normalized", 
+ 
+       Dose.Units = NULL, Time = "conc_time_values.time_hr", Time.Units = NULL, Media =
+    "series.conc_medium_normalized", Value = "conc_time_values.conc", Value.Units = NULL,
+    Route = "studies.administration_route_normalized", LOQ = "series.loq", Subject =
+    "subjects.id", N_Subjects = "series.n_subjects_in_series", Value_SD =
+    "conc_time_values.conc_sd"),
+  defaults_list = list(Weight.Units = "kg", Dose.Units = "mg/kg", Time.Units = "h",
+    Value.Units = "mg/L"),
+  ratio_conc_to_dose = 1,
+  calc_loq_factor = 0.45,
+  routes_keep = c("po", "iv"),
+  media_keep = c("blood", "plasma"),
   get_starts_args = NULL,
   get_lower_args = NULL,
   get_upper_args = NULL,
-  optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(maximize = TRUE,
-    kkt = FALSE)),
+  optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(kkt = FALSE)),
   suppress.messages = FALSE
 )
 }
@@ -59,111 +46,51 @@ analytic solution to the model, or the full ODE model. Presently,
 "analytic" is recommended (because the analytic solution is exact and much
 faster).}
 
-\item{ratio.data.to.dose}{Ratio between the mass units used to report the
+\item{names_list}{As for [rename_columns()]: A named list where the names are
+the new variable names, and the values are the old variable names. If a
+value is NULL, then there is no old variable corresponding to that new
+variable. A new variable will be added, with default value as given in
+`defaults_list`; if no default is given in `defaults_list`, the new
+variable will be filled with `NA_character`.}
+
+\item{defaults_list}{As for [rename_columns()]: A named list where the names
+are the new variable names, and the values are the default values to fill
+for each new variable, if the corresponding old variable name is NULL in
+`names_list`.}
+
+\item{ratio_conc_to_dose}{Ratio between the mass units used to report the
 concentration data and the mass units used to report the dose. Default 1.
 For example, concentration reported in ug/L and dose reported in mg/kg/day
-would require \code{ratio.data.to.dose = 0.001}, because 1 ug/1 mg = 1e-6 g
-/ 1e-3 g = 0.001.}
+would require `ratio_conc_to_dose = 0.001`, because 1 ug/1 mg = 1e-6 g /
+1e-3 g = 0.001.}
 
-\item{compound.col}{Column name in \code{data.set} that identifies chemical
-compound. Default "Compound".}
+\item{calc_loq_factor}{As for [estimate_loq()]}
 
-\item{cas.col}{Column name in \code{data.set} to identify CASRN.
-Default"CAS".}
+\item{routes_keep}{Character vector of administration routes to keep. Default
+`c("po", "iv")` to keep only oral and intravenous data (because at present,
+model fitting is only implemented for oral and IV routes). Any data where
+route is not on this list will be discarded. (For example, with the
+default, inhalation and dermal data will be discarded.)}
 
-\item{reference.col}{Column name in \code{data.set} to identify reference.
-Default "Reference".}
+\item{media_keep}{Character vector of sample media to keep. Default is
+`c("blood", "plasma")` to keep only concentration data measured in blood
+and plasma (because at present, model fitting is only implemented for blood
+and plasma). Any data where medium is not on this list will be discarded.
+(For example, with the default, urine data will be discarded.)}
 
-\item{species.col}{Column name in \code{data.set} to identify species.
-Default "Species".}
+\item{get_starts_args}{Named list or NULL: any additional arguments to
+[get_starts()] (other than `model` and `fitdata`, which are always passed).
+Default NULL to accept the default arguments for [get_starts()].}
 
-\item{species.default}{If no species column exists in \code{data.set}, one
-will be created and filled with this value.  Default NULL.}
+\item{get_lower_args}{Named list or NULL: any additional arguments to
+[get_lower_bounds()] (other than `model` and `fitdata`, which are always
+passed). Default NULL to accept the default arguments for
+[get_lower_bounds()].}
 
-\item{species.weight.col}{Column name in \code{data.set} to identify species
-weight. Default "Species.Weight".}
-
-\item{species.weight.units.col}{Column name in \code{data.set} to identify
-species weigh units. Default"Species.Weight.Units".}
-
-\item{species.weight.units.default}{If no species weight units column exists
-in \code{data.set}, one will be created and filled with this value. Default
-NULL.}
-
-\item{dose.col}{Column name in \code{data.set} to identify dose. Default
-"Dose".}
-
-\item{time.col}{Column name in \code{data.set} to identify time. Default
-"Time".}
-
-\item{time.units.col}{Column name in \code{data.set} to identify time units.
-Default "Time.Units."}
-
-\item{time.units.default}{If no time units column exists in \code{data.set},
-one will be created and filled with this value.  Default NULL.}
-
-\item{media.col}{Column name in \code{data.set} to identify media. Default
-"Media".}
-
-\item{media.units.col}{Column name in \code{data.set} to identify media
-units. Default "Media.Units".}
-
-\item{media.units.default}{If no media units column exists in
-\code{data.set}, one will be created and filled with this value.  Default
-NULL.}
-
-\item{value.col}{Column name in \code{data.set} to identify value. Default
-"Value".}
-
-\item{units.col}{Column name in \code{data.set} to identify units. Default
-"Units".}
-
-\item{units.default}{If no units column exists in \code{data.set}, one will
-be created and filled with this value.  Default NULL.}
-
-\item{route.col}{Column name in \code{data.set} to identify route of
-administration. Default "Route".}
-
-\item{route.default}{If no route column exists in \code{data.set}, one will
-be created and filled with this value.  Default NULL.}
-
-\item{source.col}{Column name in \code{data.set} to identify source. Default
-"Source."}
-
-\item{source.default}{If no source column exists in \code{data.set}, one will
-be created and filled with this value.  Default NULL.}
-
-\item{loq.col}{Column name in \code{data.set} to identify LOQ. Default "LOQ".}
-
-\item{loq.default}{If no LOQ column exists in \code{data.set}, one will be
-created and filled with this value.  Default NULL.}
-
-\item{subject.col}{Column name in \code{data.set} to identify subject.
-Default "Subject."}
-
-\item{subject.default}{If no subject column exists in \code{data.set}, one
-will be created and filled with this value.  Default NULL.}
-
-\item{info.col}{Column name in \code{data.set} to serve as info column.
-Default "Info".}
-
-\item{info.default}{If no info column exists in \code{data.set}, one will be
-created and filled with this value.  Default NULL.}
-
-\item{LOQ_factor}{Numeric. Observations with concentrations less than
-`LOQ_factor * LOQ` will be removed. Default 2.}
-
-\item{get_starts_args}{Named list or NULL: any additional arguments to [get_starts()] (other than
-`model` and `fitdata`, which are always passed). Default NULL to accept the
-default arguments for [get_starts()].}
-
-\item{get_lower_args}{Named list or NULL: any additional arguments to [get_lower_bounds()] (other
-than `model` and `fitdata`, which are always passed). Default NULL to
-accept the default arguments for [get_lower_bounds()].}
-
-\item{get_upper_args}{Named list or NULL: any additional arguments to [get_upper_bounds()] (other
-than `model` and `fitdata`, which are always passed). Default NULL to
-accept the default arguments for [get_upper_bounds()].}
+\item{get_upper_args}{Named list or NULL: any additional arguments to
+[get_upper_bounds()] (other than `model` and `fitdata`, which are always
+passed). Default NULL to accept the default arguments for
+[get_upper_bounds()].}
 
 \item{optimx_args}{A named list of additional arguments to [optimx::optimx()]
   (used for parameter estimation), other than `par`, `fn`, `lower`, and
@@ -173,14 +100,13 @@ accept the default arguments for [get_upper_bounds()].}
     list(
           "method" = "bobyqa",
           "itnmax" = 1e6,
-          "control" = list("maximize" = TRUE,
-                           "kkt" = FALSE)
+          "control" = list("kkt" = FALSE)
          )
    ```
- See documentation for [optimx::optimx()] for possible arguments and details.
- Note lower and upper bounds (box constraints) will be supplied; if you want
- them to be respected, please choose a method that allows box constraints
- (e.g. "bobyqa" or "L-BFGS-B").}
+  See documentation for [optimx::optimx()] for possible arguments and
+  details. Note lower and upper bounds (box constraints) will be supplied; if
+  you want them to be respected, please choose a method that allows box
+  constraints (e.g. "bobyqa" or "L-BFGS-B").}
 
 \item{suppress.messages}{Logical: Whether to suppress verbose messages.
 Default FALSE, to be verbose.}

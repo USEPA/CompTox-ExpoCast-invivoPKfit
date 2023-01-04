@@ -9,12 +9,10 @@ analyze_subset(
   model,
   modelfun,
   pool_sigma = FALSE,
-  LOQ_factor = 2,
   get_starts_args = NULL,
   get_lower_args = NULL,
   get_upper_args = NULL,
-  optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(maximize = TRUE,
-    kkt = FALSE)),
+  optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(kkt = FALSE)),
   suppress.messages = FALSE
 )
 }
@@ -35,11 +33,9 @@ supported.}
 \item{pool_sigma}{Logical: Whether to pool all data (estimate only one error
 standard deviation) or not (estimate separate error standard deviations for
 each reference). Default FALSE to estimate separate error SDs for each
-reference. (If `fitdata` only includes one reference, `pool_sigma` will have
-no effect, because only one error SD would be estimated in the first place.)}
-
-\item{LOQ_factor}{`fitdata$LOQ` will be multiplied by `LOQ_factor` to get the
-effective LOQ. Default `LOQ_factor` is 2.}
+reference. (If `fitdata` only includes one reference, `pool_sigma` will
+have no effect, because only one error SD would be estimated in the first
+place.)}
 
 \item{get_starts_args}{Any additional arguments to [get_starts()] (other than
 `model` and `fitdata`, which are always passed). Default NULL to accept the
@@ -54,19 +50,19 @@ than `model` and `fitdata`, which are always passed). Default NULL to
 accept the default arguments for [get_upper_bounds()].}
 
 \item{optimx_args}{A named list of additional arguments to
-  [optimx::optimx()], other than `par`, `fn`, `lower`, and `upper`. Default is:
+  [optimx::optimx()], other than `par`, `fn`, `lower`, and `upper`. Default
+  is:
 
    ```
     list(
           "method" = "bobyqa",
           "itnmax" = 1e6,
-          "control" = list("maximize" = TRUE)
-         )
+         "control" = list("kkt" = FALSE))
    ```
- See documentation for [optimx::optimx()] for arguments and details. Note
- lower and upper bounds (box constraints) will be supplied; if you want them
- to be respected, please choose a method that allows box constraints (e.g.
- "bobyqa" or "L-BFGS-B").}
+  See documentation for [optimx::optimx()] for arguments and details. Note
+  lower and upper bounds (box constraints) will be supplied; if you want them
+  to be respected, please choose a method that allows box constraints (e.g.
+  "bobyqa" or "L-BFGS-B").}
 }
 \description{
 Fit a specified PK model to one set of concentration vs. time data and return
@@ -74,74 +70,86 @@ a set of fitted parameter values.
 }
 \details{
 Typically this function is not called directly by the user, but is called
-from [fit_all], the main fitting function.
+from [fit_all()], the main fitting function.
 
 This function estimates one set of parameters for a specified PK model, based
 on a set of concentration vs. time data in `fitdata`. `fitdata` is typically
 data for one chemical and one species, but it may include data from more than
 one study and more than one dosing route.
 
-The parameters to be estimated are those defined in
-[get_opt_params()] for the model specified in `model` and `modelfun`:
+The parameters to be estimated are those defined in [get_opt_params()] for
+the model specified in `model` and `modelfun`:
 
  - for `model = 'flat'`, the parameter estimated is `A`
  - for `model = '1compartment'`, the parameters estimated are `Vdist`,
- `kelim`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist` (see below).
+`kelim`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist` (see below).
  - for `model = '2compartment'`, the parameters estimated are `V1`, `kelim`,
- `k12`, `k21`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist`.
+`k12`, `k21`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist`.
 
- For 1-compartment and 2-compartment models, `kgutabs` will be estimated from
- the data only if `fitdata` includes oral dosing data; otherwise it will be
- set to NA.
+For 1-compartment and 2-compartment models, `kgutabs` will be estimated from
+the data only if `fitdata` includes oral dosing data; otherwise it will be
+set to NA.
 
- `Fgutabs` will be estimated from the data only if `fitdata` includes both
- oral and IV data. If `fitdata` includes oral data but not IV data, then
- `Fgutabs_Vdist` (1-compartment) or `Fgutabs_V1` (2-compartment) will be
- estimated instead of `Fgutabs` and `Vdist` or `V1` (because only the ratio
- of `Fgutabs` and `Vdist` is identifiable in that case).
+`Fgutabs` will be estimated from the data only if `fitdata` includes both
+oral and IV data. If `fitdata` includes oral data but not IV data, then
+`Fgutabs_Vdist` (1-compartment) or `Fgutabs_V1` (2-compartment) will be
+estimated instead of `Fgutabs` and `Vdist` or `V1` (because only the ratio of
+`Fgutabs` and `Vdist` is identifiable in that case).
 
-In addition to the model parameters, the log-scale standard deviation of the
-residual errors will be estimated. If `fitdata` includes more than one unique
+In addition to the model parameters, the standard deviation of the residual
+errors will be estimated. If `fitdata` includes more than one unique
 reference value (`length(unique(fitdata$Reference))>1`) and `pool_sigma ==
-FALSE`, then a separate log-scale error SD will be estimated for each unique
-reference. These log-scale error SDs will be named following the pattern
-`sigma_ref_ReferenceID`, where `ReferenceID` is one unique value of
-`fitdata$Reference`, coerced to character if necessary. This reflects an
-assumption that all concentration vs. time studies in `fitdata` obey the same
-underlying PK model, but each study may have a different amount of random
-measurement error (analogous to meta-regression with fixed effects).
+FALSE`, then a separate error SD will be estimated for each unique reference.
+These error SDs will be named following the pattern `sigma_ref_ReferenceID`,
+where `ReferenceID` is one unique value of `fitdata$Reference`, coerced to
+character if necessary. This reflects an assumption that all concentration
+vs. time studies in `fitdata` obey the same underlying PK model, but each
+study may have a different amount of random measurement error (analogous to
+meta-regression with fixed effects).
 
- # Parameter estimation via numerical optimization
+# Parameter estimation via numerical optimization
 
- Parameters are estimated using [optimx::optimx()] by default using the
- [minqa::bobyqa()] algorithm. (The algorithm is specified in
- `optimx_args$method`.) The objective function to be maximized is the
- log-likelihood, defined in [log_likelihood()]. It models the residuals as
- log-normal. Note that the log-likelihood is *maximized*, not minimized.
- Maximization is specified by setting argument `optimx_args$control$maximize
- = TRUE`. Parameter starting values are set in [get_starts()]. Parameter
- lower bounds are set in [get_lower_bounds()]. Parameter upper bounds are set
- in [get_upper_bounds()].
+Parameters are estimated using [optimx::optimx()].
 
- By default, the objective function gradient is estimated numerically.
+The objective function to be minimized is the negative log-likelihood,
+defined in [log_likelihood()] with argument `negative = TRUE`. See
+documentation for [log_likelihood()] for details.
 
- ## Parameter standard deviations via numerical Hessian
+Parameter starting values are set in [get_starts()]. Parameter lower bounds
+are set in [get_lower_bounds()]. Parameter upper bounds are set in
+[get_upper_bounds()].
 
- Parameter standard deviations (uncertainty) are estimated as the square root
- of the diagonal of the inverse of the Hessian (the matrix of second
- derivatives of the objective function). The inverse Hessian approximates the
- variance-covariance matrix of estimated parameters. The square root of its
- diagonal approximates parameter standard deviations.
+By default, optimization is performed using the "bobyqa" method (see
+[minqa::bobyqa()]). The method to use is specified in argument
+`optimx_args$method`.
 
- If the numerically-estimated Hessian cannot be inverted, a
- pseudoinverse is attempted.
+Because parameter bounds are used, `optimx_args$method` should name a method
+supported in [optimx::optimx()] that supports parameter bounds (i.e., one of
+"bobyqa", "L-BFGS-B", "nlminb", "spg", "Rcgmin", "Rvmmin", "nmkb", "hjkb").
+If a different method is specified, then parameter bounds will be ignored,
+and resulting parameter estimates may be non-physical.
 
- If the square root of the inverse Hessian contains NaN, then if
- `optimx_args$method %in% 'L-BFGS-B'`, optimization is repeated with a
- smaller convergence tolerance, until either there are no more NaNs or
- convergence tolerance factor is equal to 1 (i.e. tolerance is at machine
- epsilon). This is not done if `optimx_args$method %in% 'bobyqa'` because
- that method does not use a convergence tolerance control parameter.
+The objective function gradient is estimated numerically.
+
+## Parameter standard deviations via numerical Hessian
+
+Parameter standard deviations (uncertainty) are estimated from the Hessian
+matrix (matrix of second derivatives of the objective function). The Hessian
+matrix is estimated numerically. Parameter SDs are estimated as the square
+root of the diagonal of the inverse of the Hessian (the matrix of second
+derivatives of the objective function). The inverse Hessian approximates the
+variance-covariance matrix of estimated parameters. The square root of its
+diagonal approximates parameter standard deviations.
+
+If the numerically-estimated Hessian cannot be inverted, a pseudoinverse is
+attempted.
+
+If the square root of the inverse Hessian contains NaN, then if
+`optimx_args$method %in% 'L-BFGS-B'`, optimization is repeated with a smaller
+convergence tolerance, until either there are no more NaNs or convergence
+tolerance factor is equal to 1 (i.e. tolerance is at machine epsilon). This
+is not done if `optimx_args$method %in% 'bobyqa'` because that method does
+not use a convergence tolerance control parameter.
 
 # Expected variables in \code{fitdata}
 

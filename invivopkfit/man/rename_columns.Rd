@@ -2,160 +2,92 @@
 % Please edit documentation in R/rename_columns.R
 \name{rename_columns}
 \alias{rename_columns}
-\title{Produce data with harmonized variable names.}
+\title{Harmonize variable names.}
 \usage{
 rename_columns(
   data.set,
-  compound.col,
-  dtxsid.col,
-  cas.col,
-  reference.col,
-  species.col,
-  species.default,
-  species.weight.col,
-  species.weight.units.col,
-  species.weight.units.default,
-  dose.col,
-  time.col,
-  time.units.col,
-  time.units.default,
-  media.col,
-  media.units.col,
-  media.units.default,
-  value.col,
-  units.col,
-  units.default,
-  route.col,
-  route.default,
-  source.col,
-  source.default,
-  loq.col,
-  loq.default,
-  subject.col,
-  subject.default,
-  info.col,
-  info.default
+  names_list = list(Compound_Dosed = "studies.test_substance_name_original", DTXSID_Dosed
+    = "chemicals_dosed.dsstox_substance_id", CAS_Dosed = "chemicals_dosed.dsstox_casrn",
+    Compound_Analyzed = "series.analyte_name_original", DTXSID_Analyzed =
+    "chemicals_analyzed.dsstox_substance_id", CAS_Analyzed =
+    "chemicals_analyzed.dsstox_casrn", Reference = "documents_reference.id", Extraction =
+    "documents_extraction.id", Species = "subjects.species", Weight =
+    "subjects.weight_kg", Weight.Units = NULL, Dose = "studies.dose_level_normalized", 
+ 
+       Dose.Units = NULL, Time = "conc_time_values.time_hr", Time.Units = NULL, Media =
+    "series.conc_medium_normalized", Value = "conc_time_values.conc", Value.Units = NULL,
+    Route = "studies.administration_route_normalized", LOQ = "series.loq", Subject =
+    "subjects.id", N_Subjects = "series.n_subjects_in_series", Value_SD =
+    "conc_time_values.conc_sd"),
+  defaults_list = list(Weight.Units = "kg", Dose.Units = "mg/kg", Time.Units = "h",
+    Value.Units = "mg/L")
 )
 }
 \arguments{
-\item{data.set}{A \code{data.frame} of concentration-time data.}
+\item{data.set}{A \code{data.frame} of concentration-time data. Must contain
+the variables specified in `names_list`.}
 
-\item{compound.col}{Column name in \code{data.set} that identifies chemical
-compound. Default "Compound".}
+\item{names_list}{A named list of format `list(new_name = old_name)`, where
+the names are the new variable names, and the list elements (character) are
+the old variable names (in `data.set`).  Each old variable name will be
+renamed to its corresponding new variable name. If a named list element is
+NULL, then there is no old variable corresponding to that new variable. In
+this case, a new variable will be added, with default value as given in
+`defaults_list`; if no default is given in `defaults_list`, the new variable
+will be filled with `NA_character`. See Details for default value.}
 
-\item{cas.col}{Column name in \code{data.set} to identify CASRN.
-Default"CAS".}
-
-\item{reference.col}{Column name in \code{data.set} to identify reference.
-Default "Reference".}
-
-\item{species.col}{Column name in \code{data.set} to identify species.
-Default "Species".}
-
-\item{species.default}{If no species column exists in \code{data.set}, one
-will be created and filled with this value.  Default NULL.}
-
-\item{species.weight.col}{Column name in \code{data.set} to identify species
-weight. Default "Species.Weight".}
-
-\item{species.weight.units.col}{Column name in \code{data.set} to identify
-species weigh units. Default"Species.Weight.Units".}
-
-\item{species.weight.units.default}{If no species weight units column exists
-in \code{data.set}, one will be created and filled with this value. Default
-NULL.}
-
-\item{dose.col}{Column name in \code{data.set} to identify dose. Default
-"Dose".}
-
-\item{time.col}{Column name in \code{data.set} to identify time. Default
-"Time".}
-
-\item{time.units.col}{Column name in \code{data.set} to identify time units.
-Default "Time.Units."}
-
-\item{time.units.default}{If no time units column exists in \code{data.set},
-one will be created and filled with this value.  Default NULL.}
-
-\item{media.col}{Column name in \code{data.set} to identify media. Default
-"Media".}
-
-\item{media.units.col}{Column name in \code{data.set} to identify media
-units. Default "Media.Units".}
-
-\item{media.units.default}{If no media units column exists in
-\code{data.set}, one will be created and filled with this value.  Default
-NULL.}
-
-\item{value.col}{Column name in \code{data.set} to identify value. Default
-"Value".}
-
-\item{units.col}{Column name in \code{data.set} to identify units. Default
-"Units".}
-
-\item{units.default}{If no units column exists in \code{data.set}, one will
-be created and filled with this value.  Default NULL.}
-
-\item{route.col}{Column name in \code{data.set} to identify route of
-administration. Default "Route".}
-
-\item{route.default}{If no route column exists in \code{data.set}, one will
-be created and filled with this value.  Default NULL.}
-
-\item{source.col}{Column name in \code{data.set} to identify source. Default
-"Source."}
-
-\item{source.default}{If no source column exists in \code{data.set}, one will
-be created and filled with this value.  Default NULL.}
-
-\item{loq.col}{Column name in \code{data.set} to identify LOQ. Default "LOQ".}
-
-\item{loq.default}{If no LOQ column exists in \code{data.set}, one will be
-created and filled with this value.  Default NULL.}
-
-\item{subject.col}{Column name in \code{data.set} to identify subject.
-Default "Subject."}
-
-\item{subject.default}{If no subject column exists in \code{data.set}, one
-will be created and filled with this value.  Default NULL.}
-
-\item{info.col}{Column name in \code{data.set} to serve as info column.
-Default "Info".}
-
-\item{info.default}{If no info column exists in \code{data.set}, one will be
-created and filled with this value.  Default NULL.}
+\item{defaults_list}{A named list where the names are the new variable names,
+and the values are the default values to fill for each new variable, if the
+corresponding old variable name is NULL in `names_list`. See Details for
+default value.}
 }
 \value{
-A `data.frame` which is `data.set` with variables renamed to
-  harmonized names.
+A `data.frame` that contains the variables specfiied in `names_list`,
+ but renamed to use the harmonized names given as the names of `names_list`.
 }
 \description{
-Renames data to use harmonized variable names.
+Renames concentration vs. time data to use harmonized variable names.
 }
 \details{
-Variables will be renamed according to the following table:
+# Default values for `names_list`
 
-| Old name | New name | Definition |
-| -------- | -------- | ----------------------|
-| `compound.col` | "Compound" | Compound name |
-| `cas.col` | "CAS" | CASRN |
-| `reference.col` | "Reference" | Reference identifier |
-| `species.col` | "Species" | Species name |
-| `species.weight.col` | "Species.Weight" | Species-specific body weight |
-| `species.weight.units.col` | "Species.Weight.Units" | Units of species-specific body weight |
-| `dose.col` | "Dose" | Administered dose |
-| `time.col` | "Time" | Time of each observation |
-| `time.units.col` | "Time.Units" | Units of times |
-|`media.col` | "Media" | Medium in which concentration was observed (e.g. "plasma" or "blood")
-| `media.units.col` | "Media.Units" | Units of media (e.g. "harmonized") |
-| `value.col` | "Value" | Observed concentrations |
-| `units.col` | "Units" | Units of observed concentrations |
-| `route.col` | "Route" | Route of dose administration (e.g. "iv" or "po") |
-| `source.col` | "Source" | Source identifier (may be the same as reference identifier) |
-| `loq.col` | "LOQ" | Limit of quantification for each observed concentration |
-| `subject.col` | "Subject" | Subject identifier, if available (e.g. individual animal ID) |
-| `info.col` | "Info" | Any other information for each observation |
+```
+list(
+"Compound_Dosed" = "studies.test_substance_name_original",
+"DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
+"CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
+"Compound_Analyzed" = "series.analyte_name_original",
+"DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
+"CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
+"Reference" = "documents_reference.id",
+"Extraction" = "documents_extraction.id",
+"Species" = "subjects.species",
+"Weight" ="subjects.weight_kg",
+"Weight.Units" = NULL,
+"Dose" = "studies.dose_level_normalized",
+"Dose.Units" = NULL,
+"Time" = "conc_time_values.time_hr",
+"Time.Units" = NULL,
+"Media" = "series.conc_medium_normalized",
+"Value" = "conc_time_values.conc",
+"Value.Units" = NULL,
+"Route" = "studies.administration_route_normalized",
+"LOQ" = "series.loq",
+"Subject" = "subjects.id",
+"N_Subjects" = "series.n_subjects_in_series",
+"Value_SD" = "conc_time_values.conc_sd")
+```
+
+# Default values for `defaults_list`
+
+```
+list(
+"Weight.Units" = "kg",
+"Dose.Units" = "mg/kg",
+"Time.Units" = "h",
+"Value.Units" = "mg/L")
+```
 }
 \author{
-John Wambaugh, Chris Cook
+John Wambaugh, Chris Cook, Caroline Ring
 }

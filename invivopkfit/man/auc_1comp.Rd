@@ -4,43 +4,35 @@
 \alias{auc_1comp}
 \title{Analytic AUC for 1-compartment model}
 \usage{
-auc_1comp(time, params, dose, iv.dose)
+auc_1comp(params, time, dose, iv.dose)
 }
 \arguments{
-\item{time}{A vector of times in hours}
+\item{params}{A named list of model parameter values. For either IV or oral
+dosing, this must include `kelim` (elimination rate, 1/h). For IV dosing, it
+must also include `Vdist`. For oral dosing, it must include `kgutabs` (oral
+absorption rate, 1/h), and either `Fgutabs` and `Vdist` (respectively,
+unitless fraction of oral dose that is absorbed, and volume of
+distribution), or `Fgutabs_Vdist` (the ratio of Fgutabs to Vdist).
+`Fgutabs_Vdist` is an alternate parameterization useful for parameter
+estimation when only oral data are available with no IV data, in which case
+only the ratio of `Fgutabs` to `Vdist` is identifiable. if `Fgutabs` and
+`Vdist` are provided along with `Fgutabs_Vdist`, then `Fgutabs_Vdist` will
+not be used.}
 
-\item{params}{A named list of model parameter values. Must include:
-\describe{
-\item{kelim}{Elimination rate, 1/h}
-\item{Vdist}{Volume of distribution, L/kg body weight}}
-For oral administration (\code{iv.dose} FALSE), \code{params} must also include:
-\describe{
-\item{Fgutabs}{Oral bioavailability, unitless fraction}
-\item{kgutabs}{Oral absorption rate, 1/h}}}
+\item{time}{A numeric vector of times in hours.}
 
-\item{dose}{Dose in mg/kg}
+\item{dose}{A numeric vector of doses in mg/kg}
 
-\item{iv.dose}{TRUE for single IV bolus dose; FALSE for single oral dose}
+\item{iv.dose}{A logical vector: TRUE for single IV bolus dose; FALSE for single oral
+dose}
 }
 \value{
-A vector of plasma AUC values, evaluated at each time point in `time`.
+A vector of plasma AUC values (mg/L*time) corresponding to `time`.
 }
 \description{
 Calculate area under the plasma concentration vs. time curve for the
 1-compartment model, using an analytical equation (the integral of the
 1-compartment model equation with respect to time).
-}
-\details{
-# Model equations
-
-## IV dosing
-
-\deqn{\frac{D}{V_d k_e}  (1 - \exp(-t k_e))}
-
-## Oral dosing
-
-\deqn{\frac{dose Fa ka}{V_d (k_a-k_e)} ((\frac{1}{k_e} - \frac{1}{k_a}) +
-(\frac{-\exp(-t k_e)}{k_e} + \frac{\exp(-t k_a)}{k_a} )}
 }
 \author{
 Caroline Ring, John Wambaugh

@@ -8,19 +8,36 @@ auc_2comp(params, time, dose, iv.dose)
 }
 \arguments{
 \item{params}{A named list of parameter values including the following:
-\describe{ \item{k12}{Rate at which compound moves from central to
-peripheral compartment} \item{k21}{Rate at which compound moves from
-peripheral to central compartment} \item{kelim}{Elimination rate}
-\item{V1}{Apparent volume of central compartment} } For oral administration
-(\code{iv.dose} FALSE), \code{params} must also include: \describe{
-\item{Fgutabs}{Oral bioavailability} \item{kgutabs}{Rate of absorption from
-gut} }}
+  \describe{
+  \item{k12}{Rate at which compound moves from central to peripheral
+  compartment, 1/h.}
+  \item{k21}{Rate at which compound moves from peripheral to central
+  compartment, 1/h.}
+  \item{kelim}{Elimination rate, 1/h.}
+  \item{V1}{Apparent volume of central compartment, L/kg BW. Or see below for
+  "Fgutabs_V1"}
+  }
 
-\item{time}{A vector of time values, in hours}
+  For oral administration (\code{iv.dose} FALSE), \code{params} must also
+  include:
+  \describe{
+  \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
+  "Fgutabs_V1"}
+  \item{kgutabs}{Rate of absorption from gut, 1/h.}
+  }
 
-\item{dose}{A dose in mg/kg}
+  For oral administration, in lieu of "V1" and "Fgutabs", you may instead
+  provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an
+  alternate parameterization for situations where "Fgutabs" and "V1" are not
+  identifiable separately (i.e. when oral data are available, but IV data are
+  not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
+  used.}
 
-\item{iv.dose}{TRUE for single IV bolus dose, FALSE for single oral dose}
+\item{time}{A numeric vector of time values, in hours}
+
+\item{dose}{A numeric vector of doses in mg/kg}
+
+\item{iv.dose}{A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose}
 }
 \value{
 A vector of plasma AUC values, evaluated at each time point in `time`.
