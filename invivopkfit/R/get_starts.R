@@ -18,8 +18,8 @@
 #' | ---------------| ----------- | --------------- |
 #' | A              | 1           | Default         |
 #' | kelim          | 0.25        | Default         |
-#' | Vdist          | 2.19        | Default         |
-#' | kgutabs        | 0.25        | Default         |
+#' | Vdist          | 5.56        | Default         |
+#' | kgutabs        | 2.19        | Default         |
 #' | Fgutabs        | 0.5         | Default         |
 #' | V1             | 1           | Default         |
 #' | k12            | 0.2         | Default         |
@@ -217,9 +217,9 @@
 #'   estimated from the data, so long as the `httk`-derived parameter
 #'   values are within the lower and upper bounds defined by `par_DF$lower` and
 #'   `par_DF$upper`. To suppress estimation of starting values from data, set
-#'   `start_from_data` to NULL, NA, or a zero-length character vector. If both
-#'   `start_from_httk` and `start_from_data` are `TRUE`, then data-derived
-#'   starting values will override `httk` starting values.
+#'   `start_from_data` to NULL, NA, or a zero-length character vector. If a parameter name is in both
+#'   `start_from_httk` and `start_from_data`, then data-derived
+#'   starting values will override `httk` starting values for that parameter.
 #' @param suppress.messages Logical: Whether to suppress printing of messages.
 #'
 #' @return The data.frame `par_DF` with added variables `start_value`,
@@ -248,11 +248,11 @@ get_starts <- function(par_DF = NULL,
                                          5.56, #Vdist
                                          2.19, #kgutabs
                                          0.5, #Fgutabs
-                                         1, #V1
+                                         5.56, #V1
                                          0.2, #k12
                                          0.5, #k21
-                                         0.5/2.19, #Fgutabs_Vdist
-                                         0.51/2.19, #Fgutabs_V1
+                                         0.5/5.56, #Fgutabs_Vdist
+                                         0.51/5.56, #Fgutabs_V1
                                          1), #sigma
                          start_value_msg = "Default"
                        ),
@@ -359,6 +359,11 @@ if(is.null(par_DF)){
         #set V1 to the httk-predicted Vdist if necessary
         #create a new "V1" parameter in httk_params for this purpose
         httk_params[["V1"]] <- httk_params[["Vdist"]]
+
+        #set "Fgutabs_Vdist" or "Fgutabs_V1" appropriately
+        httk_params[["Fgutabs_Vdist"]] <- httk_params[["Fgutabs"]]/httk_params[["Vdist"]]
+        httk_params[["Fgutabs_V1"]] <- httk_params[["Fgutabs"]]/httk_params[["V1"]]
+
       #replace the parameters in par_DF whose names match those in httk_params,
       #and are named in start_from_Httk
       #find matching names
@@ -371,11 +376,11 @@ if(is.null(par_DF)){
           par_DF <- assign_start(param_name = this_param,
                                  param_value = httk_params[[this_param]],
                                  msg = paste0("httk::parameterize_1comp(",
-                                              "DTXSID = ", this.dtxsid, ", ",
+                                              "DTXSID = '", this.dtxsid, "', ",
                                               "default.to.human = TRUE, ",
-                                              "suppress.messages = TRUE",
-                                              "species = ", httk_species,
-                                              ")"),
+                                              "suppress.messages = TRUE, ",
+                                              "species = '", httk_species,
+                                              "')"),
                                  start_from = start_from_httk,
                                  par_DF <- par_DF)
         }
@@ -489,7 +494,7 @@ if(is.null(par_DF)){
           #then assume max time = 5 * elimintation half-life
           thalf_elim <- max(po_data$Time)/5
           kelim_po <- log(2)/thalf_elim
-          #extrapolate back to time 0
+          #extrapolate back to time 0 to get intercept
           po_late <- po_late[order(po_late$Time), ]
           A_Dose_po <- exp(po_late[1, "logValueDose"] + kelim_po * po_late[1, "Time"])
           if(is.finite(kelim_iv)){  #if we also have iv data, take average kelim value
@@ -536,7 +541,8 @@ if(is.null(par_DF)){
 
         #if method of residuals failed, then try just assuming that tpeak = 5 *
         #absorption half-life -- see https://www.boomer.org/c/p4/c09/c0904.php
-        if(!is.finite(kgutabs_po) | kgutabs_po < par_DF["kgutabs", "lower_bound"]){
+        if(!is.finite(kgutabs_po) |
+           kgutabs_po < par_DF["kgutabs", "lower_bound"]){
           thalf_abs <- po_peak$x/5
           kgutabs_po <- log(2)/thalf_abs
           #update par_DF
@@ -650,8 +656,7 @@ if(is.null(par_DF)){
           #use iv_early data before NA residuals were dropped
           #extrapolate back from elbow point to time = zero
 
-          A_Dose_iv <- tryCatch(exp(elbow$y + alpha_iv * elbow$x),
-                                error = function(err) browser())
+          A_Dose_iv <- exp(elbow$y + alpha_iv * elbow$x)
         }
 
         k21_iv <- (A_Dose_iv * beta_iv + B_Dose_iv*alpha_iv)/(A_Dose_iv + B_Dose_iv)
@@ -803,7 +808,7 @@ if(is.null(par_DF)){
                                  param_value = kgutabs_po,
                                  par_DF = par_DF,
                                  start_from = start_from_data,
-                                 msg = "Assuming tpeak = 5 * absorption half-life")
+                                 msg = "Method of inspection on PO data, assume tpeak = 5 * absorption half-life")
         }
 
         #get k21, k12, kel from A, B, alpha, beta
