@@ -1,9 +1,14 @@
-#' Derivative of analytical 2-compartment model wrt time
+#'Time derivative of analytical 2-compartment model
 #'
-#' Calculates derivative wrt time of plasma concentration according to the analytical solution for the
-#' 2-compartment model.
+#'Calculates the time derivative (instantaneous rate of change) of plasma
+#'concentration according to the analytical solution for the 2-compartment
+#'model.
 #'
-#' @param params A named list of parameter values including the following:
+#'This function is used by [postprocess_data()] to determine the time of peak
+#'concentration for the 2-compartment model, by locating the point where the
+#'time derivative of concentration crosses zero.
+#'
+#'@param params A named list of parameter values including the following:
 #'   \describe{
 #'   \item{k12}{Rate at which compound moves from central to peripheral
 #'   compartment, 1/h.}
@@ -14,28 +19,34 @@
 #'   "Fgutabs_V1"}
 #'   }
 #'
-#'   For oral administration (\code{iv.dose} FALSE), \code{params} must also
-#'   include:
+#'  For oral administration (\code{iv.dose} FALSE), \code{params} must also
+#'  include:
 #'   \describe{
 #'   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
 #'   "Fgutabs_V1"}
 #'   \item{kgutabs}{Rate of absorption from gut, 1/h.}
 #'   }
 #'
-#'   For oral administration, in lieu of "V1" and "Fgutabs", you may instead
-#'   provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an
-#'   alternate parameterization for situations where "Fgutabs" and "V1" are not
-#'   identifiable separately (i.e. when oral data are available, but IV data are
-#'   not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
-#'   used.
+#'  For oral administration, in lieu of "V1" and "Fgutabs", you may instead
+#'  provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an alternate
+#'  parameterization for situations where "Fgutabs" and "V1" are not
+#'  identifiable separately (i.e. when oral data are available, but IV data are
+#'  not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
+#'  used.
 #'
-#' @author Caroline Ring, John Wambaugh
-#' @param time A numeric vector of time values, in hours
-#' @param dose A numeric vector of doses in mg/kg
-#' @param iv.dose A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose
-#' @return A vector of instantaneous rates of change of plasma concentration values (mg/L/time) corresponding to each value
-#'   in \code{time}
-#' @export cp_2comp_dt
+#'@author Caroline Ring, John Wambaugh
+#'@param time A numeric vector of times in hours, reflecting the time points
+#'  when concentration is measured after the corresponding single bolus dose.
+#'  Must be same length as `dose` and `iv.dose`, or length 1.
+#'@param dose A numeric vector of doses in mg/kg, reflecting single bolus doses
+#'  administered at time 0. Must be same length as `time` and `iv.dose`, or
+#'  length 1.
+#'@param iv.dose A logical vector, reflecting the route of administration of
+#'  each single bolus dose. TRUE for single IV bolus dose; FALSE for single oral
+#'  bolus dose. Must be same length as `time` and `dose`, or length 1.
+#'@return A vector of instantaneous rates of change of plasma concentration
+#'  values (mg/L/time) corresponding to each value in \code{time}
+#'@export cp_2comp_dt
 cp_2comp_dt <- function(params, time, dose, iv.dose)
 {
 
