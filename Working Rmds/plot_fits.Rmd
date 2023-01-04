@@ -1,0 +1,155 @@
+---
+title: "Plot curve fits"
+author: "Caroline Ring"
+date: "2023-01-04"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(results = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r, include = FALSE}
+library(tidyverse)
+library(data.table)
+library(readxl)
+devtools::load_all("../invivopkfit")
+```
+
+For ease of plotting, get the pre-processed, harmonized data:
+
+```{r}
+cvt <- preprocess_data(data.set = cvt_data,
+                       names_list =list(
+                       "Compound_Dosed" = "studies.test_substance_name_original",
+                              "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
+                              "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
+                              "Compound_Analyzed" = "series.analyte_name_original",
+                              "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
+                              "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
+                      "Reference" = "documents_reference.id",
+                      "Extraction" = "documents_extraction.id",
+                      "Species" = "subjects.species",
+                      "Weight" ="subjects.weight_kg",
+                      "Weight.Units" = NULL,
+                      "Dose" = "correct.dose_level_normalized",
+                      "Dose.Units" = NULL,
+                      "Time" = "conc_time_values.time_hr",
+                      "Time.Units" = NULL,
+                      "Media" = "series.conc_medium_normalized",
+                      "Value" = "conc_time_values.conc",
+                      "Value.Units" = NULL,
+                      "Route" = "studies.administration_route_normalized",
+                      "LOQ" = "series.loq_normalized",
+                      "Subject" = "subjects.id",
+                              "N_Subjects" = "series.n_subjects_in_series",
+                              "Value_SD" = "conc_time_values.conc_sd"),
+                    defaults_list =   list(
+                      "Weight.Units" = "kg",
+                      "Dose.Units" = "mg/kg",
+                      "Time.Units" = "h",
+                      "Value.Units" = "mg/L"),
+      ratio_conc_to_dose = 1,
+                    calc_loq_factor = 0.45,
+                    routes_keep = c("po", "iv"),
+                    media_keep = c("blood", "plasma"),
+      suppress.messages = FALSE)
+```
+
+
+```{r, read_data}
+### this block reads the exported model fit csv files from run_invivoPKfit
+
+PK.fit.table.1comp <- fread(paste0("inst/ext/", "PK_fit_table_1comp_2022_12_08_09_44_34.csv",sep=""))
+PK.fit.table.2comp <- fread(paste0("inst/ext/", "PK_fit_table_2comp_2022_12_08_10_31_09.csv",sep=""))
+PK.fit.table.flat <- fread(paste0("inst/ext/", "PK_fit_table_flat_2022_12_08_12_03_24.csv",sep=""))
+
+#pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
+```
+
+Rowbind together all of the fitted parameter tables into one big one.
+```{r}
+pk_fit <- rbindlist(list("1comp" = PK.fit.table.1comp,
+                         "2comp" = PK.fit.table.2comp,
+                         "flat" = PK.fit.table.flat),
+                    use.names = TRUE,
+                    fill = TRUE)
+```
+
+
+Get a table of the winning model for each dataset (minimum AIC).
+
+```{r}
+tmp <- unique(pk_fit[, .(DTXSID, Species, Analysis_Type, model, AIC)])
+setorder(tmp, DTXSID, Species, Analysis_Type, AIC, na.last = TRUE)
+model_win <- tmp[, .(winmodel = model[1]), by = .(DTXSID, Species, Analysis_Type)]
+pk_fit <- model_win[pk_fit, on = c("DTXSID", "Species", "Analysis_Type")]
+pk_fit[, winning:=(model == winmodel)]
+
+```
+
+Plot concentration vs time with the best-fit params by data subset (DTXSID and species). 
+
+Indicate the following:
+
+- One line for each model
+- Which is the winning model
+- Dose group
+- Blood vs. plasma
+- Below LOQ vs. above LOQ (plot below-LOQ points at LOQ)
+- IV vs. oral administration
+
+
+Would also like to plot uncertainty in predictions based on uncertainty in parameter estimates.
+
+Plot versions:
+- Winning model only
+- One model at a time
+- All three models on same plot
+
+Get unique combinations of DTXSID and species -- each of these will be one plot.
+
+```{r}
+plot_table <- unique(pk_fit[, .(DTXSID, Species)])
+```
+
+Plot all models for the joint analysis.
+```{r}
+
+#plot all models
+tmp <- mapply(plot_fit,
+              DTXSID_in = plot_table$DTXSID,
+                     Species_in = plot_table$Species,
+              MoreArgs = list(
+                     model_in = "all",
+                     Analysis_Type_in = "Joint",
+                     DF = DF,
+                     pk_fit = pk_fit,
+                     n = 101,
+                     log10_scale_time = FALSE,
+                     file_path = "inst/ext/plots/Joint Analysis/model_all/")
+                     )
+
+```
+
+Plot only the winning model
+
+```{r}
+#plot all models
+tmp <- mapply(plot_fit,
+              DTXSID_in = plot_table$DTXSID,
+                     Species_in = plot_table$Species,
+              MoreArgs = list(
+                Analysis_Type_in = c("Joint", "Separate"),
+                     model_in = "winning",
+                     fitdata = DF,
+                     pk_fit = pk_fit,
+                     file_path = "inst/ext/plots/analysis_all_model_winning/",
+                log10_scale_time = TRUE)
+                     )
+```
+
+

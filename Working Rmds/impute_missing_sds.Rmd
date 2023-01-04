@@ -1,0 +1,102 @@
+---
+title: "Imputing missing SDs"
+author: "Caroline Ring"
+date: "2023-01-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(results = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r, include = FALSE}
+library(tidyverse)
+library(data.table)
+library(readxl)
+devtools::load_all("../invivopkfit")
+```
+
+Read in CvTdb data.
+
+```{r, load_cvt, eval = TRUE}
+cvt_data <- fread("../inst/ext/cvt_data_2022_12_15_16_20_21.csv")
+```
+
+```{r}
+cvt <- preprocess_data(data.set = cvt_data,
+                       names_list =list(
+                       "Compound_Dosed" = "studies.test_substance_name_original",
+                              "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
+                              "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
+                              "Compound_Analyzed" = "series.analyte_name_original",
+                              "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
+                              "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
+                      "Reference" = "documents_reference.id",
+                      "Extraction" = "documents_extraction.id",
+                      "Species" = "subjects.species",
+                      "Weight" ="subjects.weight_kg",
+                      "Weight.Units" = NULL,
+                      "Dose" = "correct.dose_level_normalized",
+                      "Dose.Units" = NULL,
+                      "Time" = "conc_time_values.time_hr",
+                      "Time.Units" = NULL,
+                      "Media" = "series.conc_medium_normalized",
+                      "Value" = "conc_time_values.conc",
+                      "Value.Units" = NULL,
+                      "Route" = "studies.administration_route_normalized",
+                      "LOQ" = "series.loq_normalized",
+                      "Subject" = "subjects.id",
+                              "N_Subjects" = "series.n_subjects_in_series",
+                              "Value_SD" = "conc_time_values.conc_sd"),
+                    defaults_list =   list(
+                      "Weight.Units" = "kg",
+                      "Dose.Units" = "mg/kg",
+                      "Time.Units" = "h",
+                      "Value.Units" = "mg/L"),
+      ratio_conc_to_dose = 1,
+                    calc_loq_factor = 0.45,
+                    routes_keep = c("po", "iv"),
+                    media_keep = c("blood", "plasma"),
+      suppress.messages = FALSE)
+```
+
+There are many, many cases where N > 1 but no SD is reported. Can we impute these based on patterns in the cases where SD is reported? Calculate mean and SD for the individual cases:
+
+```{r}
+cvt <- as.data.table(cvt)
+cvt_summarized <- cvt[N_Subjects==1,
+                      .(meanval = mean(Value, na.rm = TRUE),
+                        sdvals = sd(Value, na.rm = TRUE),
+                        n = .N),
+                      by = .(Reference, DTXSID, Media, Dose)]
+ggplot(cvt_summarized) +
+  geom_point(aes(x = meanval, y = sdvals, color = n)) +
+  scale_x_log10() + scale_y_log10() + scale_color_viridis_c(trans = "log10")
+
+summary(lm(log10(sdvals) ~ log10(meanval), data = cvt_summarized))
+```
+
+The relationship between sample SD and sample mean seems to be almost the identity line.
+
+What about the multi-subject cases with reported SD?
+
+```{r}
+ggplot(cvt[N_Subjects > 1],
+       aes(x = Value, y = Value_SD)) +
+  geom_point(aes(x = Value, y = Value_SD, color = N_Subjects))  +
+  scale_x_log10() + scale_y_log10() + geom_smooth(method = "lm")
+
+summary(lm(log10(Value_SD) ~ log10(Value), data = cvt[N_Subjects > 1]))
+```
+
+This one isn't quite the identity line but still, we can get some idea.
+
+These ones with entirely missing SDs are different from the studies where only a few SDs are missing. When only a few are missing, it was usually because the data were pulled from a plot where the error bars were smaller thant the plotting symbol on a few points. Instead of recording the size of the symbol as the error bars, the error was recorded as NA. But when all SDs are missing, it is usually because the study did not report the SDs in the first place. 
+
+In this case, it seems like a reasonable choice to impute the mean value itself as the SD. This relation seems to be borne out by the individual-anumal data, and it is more conservative than the relation suggested by the (limited) multi-animal data. 
