@@ -178,11 +178,11 @@ log_likelihood <- function(params,
  if(any(pred < 0)) ll <- -Inf
 
   #If user has selected to force return of a finite value,
-  #e.g. as required by optimix with method 'L-BFGS-B',
+  #e.g. as required by optimx with method 'L-BFGS-B',
   #then when log-likelihood is infinitely unlikely,
   #return a large negative number instead
   if(force_finite %in% TRUE){
-  if (!is.finite(ll)) ll <- -999999
+  if (!is.finite(ll)) ll <- -1 * 0.5*(.Machine$double.xmax)
   }
 
   #to get negative log-likelihood (e.g. for minimization)
