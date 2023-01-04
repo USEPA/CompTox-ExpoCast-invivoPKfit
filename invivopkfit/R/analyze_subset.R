@@ -151,6 +151,24 @@ analyze_subset <- function(fitdata,
   if(length(this.species) > 1) stop("analyze_subset(): More than one species in data")
 
   if(!suppress.messages){
+    if (nref>1) {
+      if(pool_sigma %in% FALSE){
+        refs_analyzed <- paste(sort(unique(fitdata$Reference)),
+                                            collapse =", ")
+        analysis_type <- "Joint Analysis"
+      }else{
+        refs_analyzed <- paste(sort(unique(fitdata$Reference)),
+                                            collapse =", ")
+        analysis_type <- "Pooled Analysis"
+      }
+    }else {
+      refs_analyzed <- unique(fitdata$Reference)
+      analysis_type <- "Single-Reference Analysis"
+    }
+
+    n_subj <- range(fitdata$N_Subjects)
+    if (all(n_subj %in% 1)) n_subj <- 1
+
     message(paste0("Beginning analysis for:\n",
                   "Chemical = ",
                    this.dtxsid,
@@ -158,8 +176,9 @@ analyze_subset <- function(fitdata,
                    "Species = ",
                    this.species,
                    "\n",
-                   "Number of references = ",
-                   length(unique(fitdata$Reference)),
+                  "Analysis Type =  ", analysis_type, "\n",
+                   "Reference IDs = ",
+                   refs_analyzed,
                    "\n",
                    "Number of observations = ",
                    nrow(fitdata),
@@ -167,7 +186,10 @@ analyze_subset <- function(fitdata,
                   sum(fitdata$Route %in% "iv"),
                   "; po: ",
                   sum(fitdata$Route %in% "po"),
-                  ")"
+                  ")\n",
+                  "Number of subjects per observation = ",
+                  paste(n_subj,
+                        collapse = "-")
     )
     )
   }
