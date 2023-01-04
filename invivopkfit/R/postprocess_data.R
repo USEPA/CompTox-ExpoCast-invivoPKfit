@@ -40,9 +40,9 @@ if(model %in% "1compartment"){
   PK_1comp[, CLtot_Fgutabs := kelim / Fgutabs_Vdist]
 
   #Css_oral
-  PK_1comp[, Css_oral := Fgutabs_Vdist * (1/(24*kelim))]
+  PK_1comp[, Css_oral_1mgkg := Fgutabs_Vdist * (1/(24*kelim))]
   #if only kelim and Vdist available -- get Css for IV infusion
-  PK_1comp[, Css_iv := 1/(24 * CLtot)]
+  PK_1comp[, Css_iv_1mgkg := 1/(24 * CLtot)]
 
   #half-life, tpeak, Cpeak:
 
@@ -55,7 +55,7 @@ if(model %in% "1compartment"){
   PK_1comp[, tpeak_oral := log(kgutabs / kelim) / (kgutabs - kelim)]
 
   #Cpeak for oral dose of 1 mg/kg
-  PK_1comp[!is.na(kgutabs), Cpeak_oral := cp_1comp(params = list("kelim" = kelim,
+  PK_1comp[!is.na(kgutabs), Cpeak_oral_1mgkg := cp_1comp(params = list("kelim" = kelim,
                                                   "Fgutabs_Vdist" = Fgutabs_Vdist,
                                                   "kgutabs" = kgutabs),
                                     time = tpeak_oral,
@@ -100,13 +100,13 @@ if(model %in% "1compartment"){
   PK_2comp[, alpha := (alphabeta_sum + sqrt(alphabeta_sum^2 - 4*alphabeta_prod))/2 ]
   PK_2comp[, beta := (alphabeta_sum - sqrt(alphabeta_sum^2 - 4*alphabeta_prod))/2 ]
   #A and B when only IV data were available (for dose of 1 mg/kg)
-  PK_2comp[, A := 1*(alpha - k21) / (V1 * (alpha - beta))]
-  PK_2comp[, B:= 1*(k21 - beta) / (V1 * (alpha - beta))]
+  PK_2comp[, A_1mgkg := 1*(alpha - k21) / (V1 * (alpha - beta))]
+  PK_2comp[, B_1mgkg:= 1*(k21 - beta) / (V1 * (alpha - beta))]
   #A and B when oral data were available (for dose of 1 mg/kg)
-  PK_2comp[!is.na(kgutabs), A := (kgutabs * Fgutabs_V1 *
+  PK_2comp[!is.na(kgutabs), A_1mgkg := (kgutabs * Fgutabs_V1 *
                      (alpha - k21)) /
              ( (kgutabs - alpha) * (alpha - beta))]
-  PK_2comp[!is.na(kgutabs), B := (kgutabs * Fgutabs_V1 *
+  PK_2comp[!is.na(kgutabs), B_1mgkg := (kgutabs * Fgutabs_V1 *
                      (k21 - beta)) /
              ( (kgutabs - beta) * (alpha - beta))]
 
@@ -129,8 +129,8 @@ if(model %in% "1compartment"){
   #overall relationship: Vbeta > Vss > V1
 
   #Get Css = average plasma concentration for 1 mg/kg/day every 1 days
-  PK_2comp[, Css_iv := 1/(24 * CLtot)]
-  PK_2comp[, Css_oral := Fgutabs_V1 * (1/(24*kelim))]
+  PK_2comp[, Css_iv_1mgkg := 1/(24 * CLtot)]
+  PK_2comp[, Css_oral_1mgkg := Fgutabs_V1 * (1/(24*kelim))]
 
   #half-lives for each phase
   PK_2comp[, halflife_beta := log(2) / beta]
@@ -164,7 +164,8 @@ if(model %in% "1compartment"){
          AIC)]
 
   #Cpeak for oral dose of 1 mg/kg
-  PK_2comp[!is.na(kgutabs), Cpeak_oral_1mgkg := cp_2comp(params = list("kelim" = kelim,
+  PK_2comp[!is.na(kgutabs),
+           Cpeak_oral_1mgkg := cp_2comp(params = list("kelim" = kelim,
                                                   "Fgutabs_V1" = Fgutabs_V1,
                                                   "kgutabs" = kgutabs,
                                                   "k12" = k12,
