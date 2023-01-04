@@ -18,15 +18,39 @@ if(model %in% "1compartment"){
   #for two-comaprtment: the above plus Vss and Varea/Vbeta
 
   #1-compartment model
-  PK_1comp <- PK_fit[model %in% "1compartment" &
-                       !grepl(x = param_name,
-                              pattern = "sigma")]
   #reshape wide (one column for each parameter)
-  PK_1comp <- dcast(PK_1comp,
+  PK_1comp <- dcast(PK_fit[model %in% "1compartment" &
+                             !grepl(x = param_name,
+                                    pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed +
+                      Routes +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
+  #also get the SD for each fitted param
+  PK_1comp_sd <- dcast(PK_fit[model %in% "1compartment" &
+                                !grepl(x = param_name,
+                                       pattern = "sigma")],
+                    Analysis_Type + DTXSID + Species +
+                      model + References.Analyzed +
+                      Routes +
+                      AIC ~ param_name,
+                    value.var = "Fitted std dev")
+  #append "_sd" for these params
+  setnames(PK_1comp_sd,
+           PK_fit[model %in% "1compartment" &
+                    !grepl(x = param_name,
+                           pattern = "sigma"), unique(param_name)],
+           PK_fit[model %in% "1compartment" &
+                    !grepl(x = param_name,
+                           pattern = "sigma"), paste0(unique(param_name),
+           "_sd")])
+  #merge
+ PK_1comp <- merge(PK_1comp,
+                   PK_1comp_sd,
+                   by = intersect(names(PK_1comp),
+                                  names(PK_1comp_sd))
+                   )
 
 
 
@@ -72,15 +96,40 @@ if(model %in% "1compartment"){
 }else if(model %in% "2compartment"){
 
   #2-compartment model
-  PK_2comp <- PK_fit[model %in% "2compartment" &
-                       !grepl(x = param_name,
-                              pattern = "sigma")]
   #reshape to wide format
-  PK_2comp <- dcast(PK_2comp,
+  PK_2comp <- dcast(PK_fit[model %in% "2compartment" &
+                             !grepl(x = param_name,
+                                    pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed +
+                      Routes +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
+
+  #also get the SD for each fitted param
+  PK_2comp_sd <- dcast(PK_fit[model %in% "2compartment" &
+                                !grepl(x = param_name,
+                                       pattern = "sigma")],
+                       Analysis_Type + DTXSID + Species +
+                         model + References.Analyzed +
+                         Routes +
+                         AIC ~ param_name,
+                       value.var = "Fitted std dev")
+  #append "_sd" for these params
+  setnames(PK_2comp_sd,
+           PK_fit[model %in% "2compartment" &
+                    !grepl(x = param_name,
+                           pattern = "sigma"), unique(param_name)],
+           PK_fit[model %in% "2compartment" &
+                    !grepl(x = param_name,
+                           pattern = "sigma"), paste0(unique(param_name),
+                                                      "_sd")])
+  #merge
+  PK_2comp <- merge(PK_2comp,
+                    PK_2comp_sd,
+                    by = intersect(names(PK_2comp),
+                                   names(PK_2comp_sd))
+  )
 
   #in case Fgutabs and V1 were fitted separately, compute Fgutabs/V1
   PK_2comp[is.na(Fgutabs_V1), Fgutabs_V1 := Fgutabs/V1]
@@ -140,9 +189,13 @@ if(model %in% "1compartment"){
   #tpeak for oral dose
   #I don't think it can be done analytically
   #so do it numerically
-  #search for zeros of cp_2comp_dt for each set of parameters
-  #if findzeros() fails, then just return NA
-  PK_2comp[!is.na(kgutabs), tpeak_oral := tryCatch(findzeros(function(x){
+  #use uniroot() to search for zeros of time deriv of Cp vs. time
+  #for each set of parameters
+  #look between 0 and what would be the 1-compartment tpeak
+  #extending the interval if necessary
+  #if uniroot() fails, then just return NA
+  PK_2comp[!is.na(kgutabs), tpeak_oral := tryCatch(
+    uniroot( f = function(x){
     cp_2comp_dt(params = list("kelim" = kelim,
                               "Fgutabs_V1" = Fgutabs_V1,
                               "kgutabs" = kgutabs,
@@ -152,9 +205,11 @@ if(model %in% "1compartment"){
                 dose = 1,
                 iv.dose = FALSE)
   },
-            a = 0,
-             b = 5*log(2)/beta,
-            n = 100),
+            lower = 0,
+             upper = log(kgutabs / kelim) / (kgutabs - kelim),
+  extendInt = "downX", #function should be decreasing
+            maxiter = 1000,
+  tol = .Machine$double.eps)$root,
   error = function(err) return(NA_real_)),
   by = .(Analysis_Type,
          DTXSID,
