@@ -22,11 +22,17 @@ do_linreg <- function(x, y,
                       slope_neg = TRUE){
   x_finite <- x[is.finite(x) & is.finite(y)]
   y_finite <- y[is.finite(x) & is.finite(y)]
-    if(length(unique(x_finite))>=2){
-      #if there is enough data to do linear regression, do so
-      lm_out <- lm(y ~ x, na.action = "exclude")
+  if(length(unique(x_finite))>=2){
+    #if there is enough data to do linear regression, do so
+    lm_out <- tryCatch(lm(y ~ x),
+                       error = function(err) NA_real_)
+    if("lm" %in% class(lm_out)){
       intercept <- coef(lm_out)[1]
       slope <- coef(lm_out)[2]
+    }else{
+      intercept <- NA_real_
+      slope <- NA_real_
+    }
   }else{
     #if there is only 1 unique x value, or none
     intercept <- NA_real_
