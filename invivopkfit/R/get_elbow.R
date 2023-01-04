@@ -56,7 +56,7 @@ get_elbow <- function(x, y, ...){
   if(length(unique(x_good))>=4){
     elbow <- tryCatch(akmedoids::elbow_point(x_good,
                                              y_good)[c("x", "y")],
-                      error = function(x, y, ...){
+                      error = function(err){
                         return(get_middle(x, y, ...))
                       })
 
