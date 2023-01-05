@@ -6,7 +6,7 @@
 #'
 #' | param_name     | lower_bound | lower_bound_msg |
 #' | ---------------| ----------- | --------------- |
-#' | A              | 0           | Default         |
+#' | A              | 1e-12           | Default         |
 #' | kelim          | 1e-4        | Default         |
 #' | Vdist          | 1e-4        | Default         |
 #' | kgutabs        | 1e-4        | Default         |
@@ -77,7 +77,7 @@ get_lower_bounds <- function(fitdata,
                                               "Fgutabs_Vdist",
                                               "Fgutabs_V1",
                                               "sigma"),
-                               lower_bound = c(0, #A
+                               lower_bound = c(1e-12, #A
                                                1e-4, #kelim
                                                1e-4, #Vdist
                                                1e-4, #kgutabs
