@@ -142,11 +142,11 @@ get_upper_bounds <- function(fitdata,
           #assign 1/10 of this value as theoretical lower bound on Vdist
           par_DF[par_DF$param_name %in%
                    c("Fgutabs_Vdist", "Fgutabs_V1"),
-                 "lower_bound"] <- Fgutabs_upper/Vdist_lower
+                 "upper_bound"] <- Fgutabs_upper/Vdist_lower
           #add message explaining lower bound & source
           par_DF[par_DF$param_name %in%
                    c("Fgutabs_Vdist", "Fgutabs_V1"),
-                 "lower_bound_msg"] <- paste0("[Upper bound of Fgutabs,",
+                 "upper_bound_msg"] <- paste0("[Upper bound of Fgutabs,",
                                               signif(Fgutabs_upper, digits = 3),
                  "]/ [lower bound of Vdist, 0.1 * ",
                                               "average total plasma volume for species (",
