@@ -165,6 +165,8 @@ analyze_subset <- function(fitdata,
   if(length(this.species) > 1) stop("analyze_subset(): More than one species in data")
 
   if(!suppress.messages){
+    #check whether there is more than one reference or not
+    nref <- length(unique(fitdata$Reference))
     if (nref>1) {
       if(pool_sigma %in% FALSE){
         refs_analyzed <- paste(sort(unique(fitdata$Reference)),
