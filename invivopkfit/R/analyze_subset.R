@@ -487,8 +487,14 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
            })
 
   #If fit failed, then return everything as NA and record the message
-  if(!is.data.frame(all_data_fit) |
-     any(is.na(as.vector(stats::coef(all_data_fit))))){
+  tmp <- try(any(is.na(as.vector(stats::coef(all_data_fit)))))
+  if(inherits(tmp, "try-error")){
+    fitfail <- TRUE
+  }else{
+    fitfail <- tmp
+  }
+
+  if(fitfail){
   out_DF[, fitted_types] <- NA_real_
 
   nref <- length(unique(fitdata$Reference))
@@ -579,10 +585,21 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                          "using pseudovariance matrix ",
                          "to estimate parameter uncertainty."))
                        }
-                       suppressWarnings(tmp <- diag(chol(MASS::ginv(numhess),
-                                        pivot = TRUE)) ^ (1/2))
-                       return(tmp) #pseudovariance matrix
+                       #pseudovariance matrix
                        #see http://gking.harvard.edu/files/help.pdf
+                       suppressWarnings(tmp <- tryCatch(
+                         diag(chol(MASS::ginv(numhess),
+                                        pivot = TRUE)) ^ (1/2),
+                         error = function(err){
+                           if (!suppress.messages) {
+                             message(paste0("Pseudovariance matrix failed,",
+                                            " returning NAs"))
+                           }
+                           rep(NA_real_, nrow(numhess))
+                         }
+                       )
+                       )
+                       return(tmp)
                      })
   names(sds) <- names(means)
 
@@ -711,18 +728,33 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
     x = means,
     method = 'Richardson')
 
+    #try inverting Hessian to get SDs
     sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
-                       error = function(err){
-                         #if hessian can't be inverted
-                         if (!suppress.messages){
-                           message("Hessian can't be inverted, using pseudovariance matrix to estimate parameter uncertainty.")
-                         }
-                         suppressWarnings(tmp <- diag(chol(MASS::ginv(numhess),
-                                          pivot = TRUE)) ^ (1/2))
-                         return(tmp) #pseduovariance matrix
-                         #see http://gking.harvard.edu/files/help.pdf
-                       })
+                    error = function(err){
+                      #if hessian can't be inverted
+                      if (!suppress.messages) {
+                        message(paste0("Hessian can't be inverted, ",
+                                       "using pseudovariance matrix ",
+                                       "to estimate parameter uncertainty."))
+                      }
+                      #pseudovariance matrix
+                      #see http://gking.harvard.edu/files/help.pdf
+                      suppressWarnings(tmp <- tryCatch(
+                        diag(chol(MASS::ginv(numhess),
+                                  pivot = TRUE)) ^ (1/2),
+                        error = function(err){
+                          if (!suppress.messages) {
+                            message(paste0("Pseudovariance matrix failed,",
+                                           " returning NAs"))
+                          }
+                          rep(NA_real_, nrow(numhess))
+                        }
+                      )
+                      )
+                      return(tmp)
+                    })
     names(sds) <- names(means)
+
   } #end while(any(is.nan(sds)) & optimx_args$control$factr > 1)
   } #end if method %in% "L-BFGS-B"
 
