@@ -10,7 +10,7 @@ get_lower_bounds(
   model,
   pool_sigma = FALSE,
   lower_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
-    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), lower_bound = c(0,
+    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), lower_bound = c(1e-12,
     1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04),
     lower_bound_msg = "Default"),
   Vdist_from_species = TRUE,
@@ -63,7 +63,7 @@ The default `lower_default` `data.frame` is shown below in table format:
 
 | param_name     | lower_bound | lower_bound_msg |
 | ---------------| ----------- | --------------- |
-| A              | 0           | Default         |
+| A              | 1e-12           | Default         |
 | kelim          | 1e-4        | Default         |
 | Vdist          | 1e-4        | Default         |
 | kgutabs        | 1e-4        | Default         |
