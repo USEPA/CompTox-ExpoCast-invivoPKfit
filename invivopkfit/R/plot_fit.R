@@ -5,6 +5,9 @@ plot_fit <- function(DTXSID_in,
                      DF,
                      pk_fit,
                      n = 101,
+                     limit_y_axis = FALSE,
+                     log10_scale_y = FALSE,
+                     plot_errbars = TRUE,
                      log10_scale_time = FALSE,
                      save_plot = TRUE,
                      return_plot = FALSE,
@@ -40,6 +43,9 @@ plot_fit <- function(DTXSID_in,
   #calculate concentration normalized to dose
   #this allows easier visualization -- all doses plotted together
   DFsub[, ConcDose:=Conc/Dose]
+
+  DFsub[, ConcDose_upper := (Value + Value_SD)/Dose]
+  DFsub[, ConcDose_lower := (Value - Value_SD)/Dose]
 
   #Produce a table with unique "experiments":
   #ombinations of chemical, species, reference, route, dose, and medium (blood or plasma).
@@ -91,19 +97,21 @@ plot_fit <- function(DTXSID_in,
                            .(DTXSID,
                              Species,
                              Analysis_Type,
-                             Reference,
+                             References.Analyzed,
                              model,
                              winning)])
 #Merge `DF3` and `pk_wide`
   pred_DT <- pk_wide[DF3,
-                     on = c("DTXSID", "Species", "Reference"),
+                     on = c("DTXSID" = "DTXSID",
+                            "Species" = "Species",
+                            "References.Analyzed" = "Reference"),
                      allow.cartesian = TRUE]
 
   #Now add time points for prediction.
   pred_DT2 <- pred_DT[, .(Time = 10^(seq(from = log10(0.5/60),
                                          to = log10(Max_Time),
                                          length.out = n))),
-                      by = .(DTXSID, Species, Analysis_Type, Reference,
+                      by = .(DTXSID, Species, Analysis_Type, References.Analyzed,
                              model, winning, Route, Dose, iv, Media, Max_Time)]
 
   #Now evaluate modelfor each analysis & model
@@ -117,20 +125,30 @@ plot_fit <- function(DTXSID_in,
       modfun <- "cp_flat"
     }
     this_group <- unique(.SD)
-    pksub_tmp <- pk_fit[this_group, on = c("DTXSID", "Species", "Analysis_Type", "Reference", "model")]
-    #model params
-    par <- as.list(pksub_tmp[, `Fitted mean`])
+    pksub_tmp <- pk_fit[this_group,
+                        on = c("DTXSID", "Species", "Analysis_Type",
+                               "References.Analyzed", "model")]
+    #get a named list of fitted model params
+    par <- pksub_tmp[, `Fitted mean`]
     names(par) <- pksub_tmp[, param_name]
 
+    #remove any NA or infinite parameters
+    par <- par[is.finite(par)]
+    #convert into a list
+    par <- as.list(par)
+
     #call model function
-    do.call(modfun,
+    conc_out <- tryCatch(do.call(modfun,
             args = list(params = par,
                         time = Time,
                         dose = Dose,
-                        iv.dose = iv))
+                        iv.dose = iv)),
+            error = function(err) rep(NA_real_, .N))
+    conc_out
+
   },
-  .SDcols = c("DTXSID", "Species", "Analysis_Type", "Reference", "model"),
-  by = .(DTXSID, Species, Analysis_Type, Reference, model)]
+  .SDcols = c("DTXSID", "Species", "Analysis_Type", "References.Analyzed", "model"),
+  by = .(DTXSID, Species, Analysis_Type, References.Analyzed, model)]
 
   #get predicted conc normalized by dose
   pred_DT2[, ConcDose:=Conc/Dose]
@@ -157,9 +175,21 @@ plot_fit <- function(DTXSID_in,
   p <- ggplot(data = DFsub,
          aes(x = Time,
              y = ConcDose)) +
-    #first plot points with no fill, only stroke
-    geom_point(aes(shape = Reference,
+    geom_blank()
+
+  #add errorbars if so specified
+  if(plot_errbars %in% TRUE){
+    p <- p +
+      geom_errorbar(aes(ymin = ConcDose_lower,
+                        ymax = ConcDose_upper,
+                        color = Dose))
+  }
+
+  #now plot the rest
+    #first plot points with white fill
+    p <- p + geom_point(aes(shape = Reference,
                    color = Dose),
+               fill = "white",
                size = 4,
                stroke = 1.5) +
     #then plot points with fill, but alpha mapped to Detect
@@ -171,18 +201,19 @@ plot_fit <- function(DTXSID_in,
     #plot lines for model predictions
     geom_line(data = predsub,
               aes(linetype = model,
-                  group = interaction(Analysis_Type, Reference, Dose, model))
+                  group = interaction(Analysis_Type, References.Analyzed, Dose, model))
     ) +
     facet_grid(rows = vars(Route),
-               cols = vars(Media)) +
+               cols = vars(Media),
+               scales = "free_y") +
     scale_color_viridis_c() +
     scale_fill_viridis_c(na.value = NA) +
     scale_shape_manual(values = 21:25) + #use only the 5 shapes where a fill can be added
+    #this limits us to visualizing only 5 references
+    #but admittedly it's hard to distinguish more than 5 shapes anyway
     #if detect =FALSE, fully transparent; if detect = TRUE, fully solid
     scale_alpha_manual(values = c("Detect" = 1, "Non-Detect" = 0),
                        drop = FALSE) +
-    scale_y_log10() +
-    annotation_logticks(sides ="l") +
     guides(alpha = guide_legend(override.aes = list(shape = 21,
                                                     color = "black",
                                                     stroke = 1,
@@ -195,22 +226,50 @@ plot_fit <- function(DTXSID_in,
     ylab("Concentration/Dose") +
     theme_bw()
 
+
+
   #limit y axis scaling to go only 2x smaller than smallest observation
-  new_y_min <- DFsub[, min(ConcDose,
+    if(limit_y_axis %in% TRUE){
+  new_y_min <- DFsub[, min(pmin(ConcDose,
+                                ConcDose_lower,
+                                na.rm = TRUE),
                             na.rm = TRUE)/2]
-  if(is.finite(new_y_min)){
+  if(!is.finite(new_y_min)) new_y_min <- NA
+
+  new_y_max <- DFsub[, max(pmax(ConcDose,
+                                ConcDose_upper,
+                                na.rm = TRUE),
+                           na.rm = TRUE)*1.05]
+  if(!is.finite(new_y_max)) new_y_max <- NA
+
     p <- p +
-      coord_cartesian(ylim = c(new_y_min, NA))
+      coord_cartesian(ylim = c(new_y_min, new_y_max))
+    }
+
+
+  #log-scale concentration/dose if so specified
+  if(log10_scale_y %in% TRUE){
+    p <- p + scale_y_log10()
   }
 
   #log-scale time if so specified
   if(log10_scale_time %in% TRUE){
 
     p <- p +
-      scale_x_log10()  +
-      annotation_logticks(sides = "bl")
+      scale_x_log10()
   }
 
+  #add logtick annotations if appropriate
+  if(log10_scale_y %in% TRUE &
+     log10_scale_time %in% TRUE){
+    p <- p + annotation_logticks(sides = "bl")
+  }else if(log10_scale_y %in% TRUE &
+           log10_scale_time %in% FALSE){
+    p <- p + annotation_logticks(sides = "l")
+  }else if(log10_scale_y %in% FALSE &
+           log10_scale_time %in% TRUE){
+    p <- p + annotation_logticks(sides = "b")
+  }
 
 #set up filename for saving
   filename <- paste0(DTXSID_in,
