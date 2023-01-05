@@ -21,70 +21,93 @@ library(readxl)
 devtools::load_all("../invivopkfit")
 ```
 
-Read in CvTdb data pulled in `pulling_oral_iv_data_cvtdb.Rmd`.
+# Read in CvTdb data
+
+Read in CvTdb data that was pulled and normalized in `pulling_oral_iv_data_cvtdb.Rmd`.
 
 ```{r, load_cvt, eval = TRUE}
-cvt_data <- fread("../inst/ext/cvt_data_2022_12_15_16_20_21.csv")
+cvt_data <- fread("../inst/ext/cvt_data_2023_01_05_09_37_22.csv")
 ```
 
-Run a one-compartment fit on the data, and write out the results. Timestamp the file name with the current date and time (at the beginning of the runs) in format YYYY_MM_DD_hh_mm.
+
+# Setup for model fitting
+
+## Timestamp
+Timestamp the file name with the current date and time (at the beginning of the runs) in format YYYY_MM_DD_hh_mm.
 
 ```{r}
 timestamp <- format(Sys.time(), "%Y_%m_%d_%H_%M")
 ```
 
-Fit the flat model.
+## Settings for pre-processing data
+
+List of new_name = old_name to supply for preprocessing data
+
+```{r}
+names_list <- list(
+  "Compound_Dosed" = "studies.test_substance_name_original",
+  "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
+  "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
+  "Compound_Analyzed" = "series.analyte_name_original",
+  "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
+  "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
+  "Reference" = "documents_reference.id",
+  "Extraction" = "documents_extraction.id",
+  "Species" = "subjects.species",
+  "Weight" ="subjects.weight_kg",
+  "Weight.Units" = NULL,
+  "Dose" = "studies.dose_level_normalized_corrected", #note that dose levels were corrected in pulling_oral_iv_data_cvtdb.Rmd
+  "Dose.Units" = NULL,
+  "Time" = "conc_time_values.time_hr",
+  "Time.Units" = NULL,
+  "Media" = "series.conc_medium_normalized",
+  "Value" = "conc_time_values.conc", #already normalized to mg/L units in CvTdb
+  "Value.Units" = NULL,
+  "Route" = "studies.administration_route_normalized",
+  "LOQ" = "series.loq_normalized", #note that LOQs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  "Subject" = "subjects.id",
+  "N_Subjects" = "series.n_subjects_in_series",
+  "Value_SD" = "conc_time_values.conc_sd_normalized" #note that SDs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  )
+```
+
+List of default values for new columns added in preprocessing data
+
+```{r}
+defaults_list <- list(
+                      "Weight.Units" = "kg",
+                      "Dose.Units" = "mg/kg",
+                      "Time.Units" = "h",
+                      "Value.Units" = "mg/L")
+```
+
+# Model fitting
+
+## Flat model
 
 ```{r, run_invivoPKfit_flat}
 
 system.time(
-    PK.fit.table.flat <- fit_all(
-     data.set = cvt_data,
-      model = "flat",
-      modelfun = "analytic",
-      names_list =list(
-                      "Compound_Dosed" = "studies.test_substance_name_original",
-                      "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
-                      "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
-                      "Compound_Analyzed" = "series.analyte_name_original",
-                      "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
-                      "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
-                      "Reference" = "documents_reference.id",
-                      "Extraction" = "documents_extraction.id",
-                      "Species" = "subjects.species",
-                      "Weight" ="subjects.weight_kg",
-                      "Weight.Units" = NULL,
-                      "Dose" = "studies.dose_level_normalized",
-                      "Dose.Units" = NULL,
-                      "Time" = "conc_time_values.time_hr",
-                      "Time.Units" = NULL,
-                      "Media" = "series.conc_medium_normalized",
-                      "Value" = "conc_time_values.conc",
-                      "Value.Units" = NULL,
-                      "Route" = "studies.administration_route_normalized",
-                      "LOQ" = "series.loq",
-                      "Subject" = "subjects.id",
-                      "N_Subjects" = "series.n_subjects_in_series",
-                      "Value_SD" = "conc_time_values.conc_sd"),
-                    defaults_list =   list(
-                      "Weight.Units" = "kg",
-                      "Dose.Units" = "mg/kg",
-                      "Time.Units" = "h",
-                      "Value.Units" = "mg/L"),
-      ratio_conc_to_dose = 1,
-                    calc_loq_factor = 0.45,
-                    routes_keep = c("po", "iv"),
-                    media_keep = c("blood", "plasma"),
-      optimx_args = list(
-                      "method" = "bobyqa",
-                      "itnmax" = 1e6,
-                      "control" = list("kkt" = FALSE)
-                    ),
-      suppress.messages = TRUE
-    )
+  PK.fit.table.flat <- fit_all(
+    data.set = cvt_data,
+    model = "flat",
+    modelfun = "analytic",
+    names_list = names_list,
+    defaults_list =  defaults_list,
+    ratio_conc_to_dose = 1,
+    calc_loq_factor = 0.45,
+    routes_keep = c("po", "iv"),
+    media_keep = c("blood", "plasma"),
+    optimx_args = list(
+      "method" = "bobyqa",
+      "itnmax" = 1e6,
+      "control" = list("kkt" = FALSE)
+    ),
+    suppress.messages = TRUE
+  )
 )
 
-write.csv(PK.fit.table.flat, paste("inst/ext/PK_fit_table_flat_",
+write.csv(PK.fit.table.flat, paste("../inst/ext/PK_fit_table_flat_",
                                     timestamp,
                                     ".csv",
                                     sep=""), row.names = FALSE)
@@ -92,8 +115,7 @@ write.csv(PK.fit.table.flat, paste("inst/ext/PK_fit_table_flat_",
 rm(PK.fit.table.flat)
 ```
 
-
-Fit the 1-compartment model.
+## 1-compartment model
 
 ```{r, run_invivoPKfit_1comp}
 
@@ -103,35 +125,8 @@ system.time(
       data.set = cvt_data,
       model = "1compartment",
       modelfun = "analytic",
-      names_list =list(
-                      "Compound_Dosed" = "studies.test_substance_name_original",
-                      "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
-                      "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
-                      "Compound_Analyzed" = "series.analyte_name_original",
-                      "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
-                      "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
-                      "Reference" = "documents_reference.id",
-                      "Extraction" = "documents_extraction.id",
-                      "Species" = "subjects.species",
-                      "Weight" ="subjects.weight_kg",
-                      "Weight.Units" = NULL,
-                      "Dose" = "studies.dose_level_normalized",
-                      "Dose.Units" = NULL,
-                      "Time" = "conc_time_values.time_hr",
-                      "Time.Units" = NULL,
-                      "Media" = "series.conc_medium_normalized",
-                      "Value" = "conc_time_values.conc",
-                      "Value.Units" = NULL,
-                      "Route" = "studies.administration_route_normalized",
-                      "LOQ" = "series.loq",
-                      "Subject" = "subjects.id",
-                      "N_Subjects" = "series.n_subjects_in_series",
-                      "Value_SD" = "conc_time_values.conc_sd"),
-                    defaults_list =   list(
-                      "Weight.Units" = "kg",
-                      "Dose.Units" = "mg/kg",
-                      "Time.Units" = "h",
-                      "Value.Units" = "mg/L"),
+        names_list = names_list,
+    defaults_list =  defaults_list,
       ratio_conc_to_dose = 1,
                     calc_loq_factor = 0.45,
                     routes_keep = c("po", "iv"),
@@ -167,7 +162,7 @@ rm(PK.fit.table.1comp, post_1comp)
 
 ```
 
-Fit the 2-compartment model.
+## 2-compartment model
 
 ```{r, run_invivoPKfit_2comp}
 ### do 2-Compartment fit
@@ -176,35 +171,8 @@ system.time(
       data.set = cvt_data,
       model = "2compartment",
       modelfun = "analytic",
-      names_list =list(
-                      "Compound_Dosed" = "studies.test_substance_name_original",
-                      "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
-                      "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
-                      "Compound_Analyzed" = "series.analyte_name_original",
-                      "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
-                      "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
-                      "Reference" = "documents_reference.id",
-                      "Extraction" = "documents_extraction.id",
-                      "Species" = "subjects.species",
-                      "Weight" ="subjects.weight_kg",
-                      "Weight.Units" = NULL,
-                      "Dose" = "studies.dose_level_normalized",
-                      "Dose.Units" = NULL,
-                      "Time" = "conc_time_values.time_hr",
-                      "Time.Units" = NULL,
-                      "Media" = "series.conc_medium_normalized",
-                      "Value" = "conc_time_values.conc",
-                      "Value.Units" = NULL,
-                      "Route" = "studies.administration_route_normalized",
-                      "LOQ" = "series.loq",
-                      "Subject" = "subjects.id",
-                      "N_Subjects" = "series.n_subjects_in_series",
-                      "Value_SD" = "conc_time_values.conc_sd"),
-                    defaults_list =   list(
-                      "Weight.Units" = "kg",
-                      "Dose.Units" = "mg/kg",
-                      "Time.Units" = "h",
-                      "Value.Units" = "mg/L"),
+          names_list = names_list,
+    defaults_list =  defaults_list,
       ratio_conc_to_dose = 1,
                     calc_loq_factor = 0.45,
                     routes_keep = c("po", "iv"),

@@ -19,53 +19,61 @@ library(readxl)
 devtools::load_all("../invivopkfit")
 ```
 
+Read in CvTdb data pulled in `pulling_oral_iv_data_cvtdb.Rmd`.
+
+```{r, load_cvt, eval = TRUE}
+cvt_data <- fread("../inst/ext/cvt_data_2023_01_05_09_37_22.csv")
+```
+
 For ease of plotting, get the pre-processed, harmonized data:
 
 ```{r}
 cvt <- preprocess_data(data.set = cvt_data,
                        names_list =list(
-                       "Compound_Dosed" = "studies.test_substance_name_original",
-                              "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
-                              "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
-                              "Compound_Analyzed" = "series.analyte_name_original",
-                              "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
-                              "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
-                      "Reference" = "documents_reference.id",
-                      "Extraction" = "documents_extraction.id",
-                      "Species" = "subjects.species",
-                      "Weight" ="subjects.weight_kg",
-                      "Weight.Units" = NULL,
-                      "Dose" = "correct.dose_level_normalized",
-                      "Dose.Units" = NULL,
-                      "Time" = "conc_time_values.time_hr",
-                      "Time.Units" = NULL,
-                      "Media" = "series.conc_medium_normalized",
-                      "Value" = "conc_time_values.conc",
-                      "Value.Units" = NULL,
-                      "Route" = "studies.administration_route_normalized",
-                      "LOQ" = "series.loq_normalized",
-                      "Subject" = "subjects.id",
-                              "N_Subjects" = "series.n_subjects_in_series",
-                              "Value_SD" = "conc_time_values.conc_sd"),
-                    defaults_list =   list(
-                      "Weight.Units" = "kg",
-                      "Dose.Units" = "mg/kg",
-                      "Time.Units" = "h",
-                      "Value.Units" = "mg/L"),
-      ratio_conc_to_dose = 1,
-                    calc_loq_factor = 0.45,
-                    routes_keep = c("po", "iv"),
-                    media_keep = c("blood", "plasma"),
-      suppress.messages = FALSE)
+                         "Compound_Dosed" = "studies.test_substance_name_original",
+                         "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
+                         "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
+                         "Compound_Analyzed" = "series.analyte_name_original",
+                         "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
+                         "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
+                         "Reference" = "documents_reference.id",
+                         "Extraction" = "documents_extraction.id",
+                         "Species" = "subjects.species",
+                         "Weight" ="subjects.weight_kg",
+                         "Weight.Units" = NULL,
+                         "Dose" = "studies.dose_level_normalized_corrected", #note that dose levels were corrected in pulling_oral_iv_data_cvtdb.Rmd
+                         "Dose.Units" = NULL,
+                         "Time" = "conc_time_values.time_hr",
+                         "Time.Units" = NULL,
+                         "Media" = "series.conc_medium_normalized",
+                         "Value" = "conc_time_values.conc", #already in mg/L units
+                         "Value.Units" = NULL,
+                         "Route" = "studies.administration_route_normalized",
+                         "LOQ" = "series.loq_normalized", #note that LOQs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+                         "Subject" = "subjects.id",
+                         "N_Subjects" = "series.n_subjects_in_series",
+                         "Value_SD" = "conc_time_values.conc_sd_normalized" #note that SDs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+                         ),
+                       defaults_list =   list(
+                         "Weight.Units" = "kg",
+                         "Dose.Units" = "mg/kg",
+                         "Time.Units" = "h",
+                         "Value.Units" = "mg/L"),
+                       ratio_conc_to_dose = 1,
+                       calc_loq_factor = 0.45,
+                       routes_keep = c("po", "iv"),
+                       media_keep = c("blood", "plasma"),
+                       suppress.messages = FALSE)
+cvt <- as.data.table(cvt)
 ```
 
+Read in the fitted model parameter values.
 
 ```{r, read_data}
-### this block reads the exported model fit csv files from run_invivoPKfit
-
-PK.fit.table.1comp <- fread(paste0("inst/ext/", "PK_fit_table_1comp_2022_12_08_09_44_34.csv",sep=""))
-PK.fit.table.2comp <- fread(paste0("inst/ext/", "PK_fit_table_2comp_2022_12_08_10_31_09.csv",sep=""))
-PK.fit.table.flat <- fread(paste0("inst/ext/", "PK_fit_table_flat_2022_12_08_12_03_24.csv",sep=""))
+timestamp <- "2023_01_04_10_56"
+PK.fit.table.1comp <- fread(paste0("../inst/ext/", "PK_fit_table_1comp_", timestamp, ".csv",sep=""))
+PK.fit.table.2comp <- fread(paste0("../inst/ext/", "PK_fit_table_2comp_", timestamp, ".csv",sep=""))
+PK.fit.table.flat <- fread(paste0("../inst/ext/", "PK_fit_table_flat_", timestamp, ".csv",sep=""))
 
 #pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 ```
@@ -80,13 +88,16 @@ pk_fit <- rbindlist(list("1comp" = PK.fit.table.1comp,
 ```
 
 
-Get a table of the winning model for each dataset (minimum AIC).
+Get a table of the winning model for each dataset (the one with minimum AIC).
 
 ```{r}
-tmp <- unique(pk_fit[, .(DTXSID, Species, Analysis_Type, model, AIC)])
-setorder(tmp, DTXSID, Species, Analysis_Type, AIC, na.last = TRUE)
-model_win <- tmp[, .(winmodel = model[1]), by = .(DTXSID, Species, Analysis_Type)]
-pk_fit <- model_win[pk_fit, on = c("DTXSID", "Species", "Analysis_Type")]
+tmp <- unique(pk_fit[, .(DTXSID, Species, Analysis_Type, References.Analyzed, model, AIC)])
+
+#sort AIC from smallest to largest within each dataset, putting NAs last
+setorder(tmp, DTXSID, Species, Analysis_Type, References.Analyzed, AIC, na.last = TRUE)
+#the winning model will now be listed first within each dataset (smallest AIC)
+model_win <- tmp[, .(winmodel = model[1]), by = .(DTXSID, Species, Analysis_Type, References.Analyzed)]
+pk_fit <- model_win[pk_fit, on = c("DTXSID", "Species", "Analysis_Type", "References.Analyzed")]
 pk_fit[, winning:=(model == winmodel)]
 
 ```
@@ -126,14 +137,31 @@ tmp <- mapply(plot_fit,
               MoreArgs = list(
                      model_in = "all",
                      Analysis_Type_in = "Joint",
-                     DF = DF,
+                     DF = cvt,
                      pk_fit = pk_fit,
                      n = 101,
+                     limit_y_axis = FALSE,
+                     log10_scale_y = FALSE,
+                     plot_errbars = TRUE,
                      log10_scale_time = FALSE,
-                     file_path = "inst/ext/plots/Joint Analysis/model_all/")
+                     file_path = "../inst/ext/plots/Joint Analysis/model_all/")
                      )
 
 ```
+
+Problem: DTXSID0022985_rat_Joint_all does not plot any model lines. Why?
+
+```{r}
+pk_fit[DTXSID %in% "DTXSID0022985"]
+```
+
+Apparently there were no detected data points?
+
+```{r}
+cvt[DTXSID %in% "DTXSID0022985", .(Reference, Value, LOQ)]
+```
+
+Hmm. Something is very weird here. I definitely see some detected points. They are all the same reference, so it isn't that a single-reference fit did not work but a joint fit did work. 
 
 Plot only the winning model
 
