@@ -314,20 +314,20 @@ We need to actually normalize the doses for these, properly. We will have to go 
 for study S0916, the oral gavage volume of administration was 5 mL/kg, and the IV volume of administration was 2 ml/kg.
 
 ```{r}
-tmp[, correct.dose_level_normalized:=as.numeric(studies.dose_level_normalized)]
+tmp[, studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_normalized)]
 
 tmp[studies.dose_level_original_units %in% "ug/mL" &
       studies.administration_route_normalized %in% "oral",
-    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 5 * subjects.weight_kg/1000]
+    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 5 * subjects.weight_kg/1000]
 
 tmp[studies.dose_level_original_units %in% "ug/mL" &
       studies.administration_route_normalized %in% "iv",
-    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
+    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
 
 tmp[studies.dose_level_original_units %in% "mg/kg" &
       studies.dose_level_original %in% 300 &
       studies.administration_route_normalized %in% "iv",
-    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
+    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
 
 ```
 
@@ -336,7 +336,7 @@ ggplot(data = tmp) +
   geom_point(aes(x = conc_time_values.time_hr,
                  y = conc_time_values.conc,
                  shape = factor(documents_extraction.id),
-                 color = as.numeric(correct.dose_level_normalized))) +
+                 color = as.numeric(studies.dose_level_normalized_corrected))) +
   facet_grid(rows = vars(studies.administration_route_normalized)) +
   scale_y_log10() + 
   annotation_logticks(sides = "l") +
@@ -346,9 +346,9 @@ ggplot(data = tmp) +
 ```{r}
 ggplot(data = tmp) +
   geom_point(aes(x = conc_time_values.time_hr,
-                 y = conc_time_values.conc/as.numeric(correct.dose_level_normalized),
+                 y = conc_time_values.conc/as.numeric(studies.dose_level_normalized_corrected),
                  shape = factor(documents_extraction.id),
-                 color = as.numeric(correct.dose_level_normalized))) +
+                 color = as.numeric(studies.dose_level_normalized_corrected))) +
   facet_grid(rows = vars(studies.administration_route_normalized)) +
   scale_y_log10() + 
   annotation_logticks(sides = "l") +
@@ -358,23 +358,23 @@ ggplot(data = tmp) +
 Apply dose corrections to the full data table
 
 ```{r}
-cvt_data[, correct.dose_level_normalized:=as.numeric(studies.dose_level_normalized)]
+cvt_data[, studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_normalized)]
 
 cvt_data[documents_extraction.id %in% 141 &
            studies.dose_level_original_units %in% "ug/mL" &
       studies.administration_route_normalized %in% "oral",
-    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 5 * subjects.weight_kg/1000]
+    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 5 * subjects.weight_kg/1000]
 
 cvt_data[documents_extraction.id %in% 141 &
       studies.dose_level_original_units %in% "ug/mL" &
       studies.administration_route_normalized %in% "iv",
-    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
+    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
 
 cvt_data[documents_extraction.id %in% 141 &
            studies.dose_level_original_units %in% "mg/kg" &
       studies.dose_level_original %in% 300 &
       studies.administration_route_normalized %in% "iv",
-    correct.dose_level_normalized:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
+    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
 ```
 
 # Missing LOQs
@@ -460,22 +460,22 @@ cvt_data[!is.na(conc_time_values.conc_sd_original), unique(series.conc_units_ori
 
 ```{r}
 cvt_data[series.conc_units_original == "ug/L",
-         conc_time_values.conc_sd := conc_time_values.conc_sd_original * 1e-3]
+         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original * 1e-3]
 
 cvt_data[series.conc_units_original == "ug/mL",
-         conc_time_values.conc_sd := conc_time_values.conc_sd_original]
+         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original]
 
 cvt_data[series.conc_units_original == "mg/L",
-         conc_time_values.conc_sd := conc_time_values.conc_sd_original]
+         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original]
 
 cvt_data[series.conc_units_original == "ug/dL",
-         conc_time_values.conc_sd := conc_time_values.conc_sd_original * 1e-4]
+         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original * 1e-4]
 
 cvt_data[series.conc_units_original == "ng/mL",
-         conc_time_values.conc_sd := conc_time_values.conc_sd_original * 1e-3]
+         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original * 1e-3]
 
 cvt_data[series.conc_units_original == "pg/mL",
-         conc_time_values.conc_sd := conc_time_values.conc_sd_original * 1e-6]
+         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original * 1e-6]
 
 ```
 
