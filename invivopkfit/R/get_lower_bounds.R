@@ -1,13 +1,12 @@
 #' Get lower bounds for estimating model parameters
 #'
-#' For a set of model parameters, get the lower bounds for the optimizer (if
-#' parameter is to be estimated).
+#' For a set of model parameters, get the lower bounds for the optimizer.
 #'
 #' The default `lower_default` `data.frame` is shown below in table format:
 #'
 #' | param_name     | lower_bound | lower_bound_msg |
 #' | ---------------| ----------- | --------------- |
-#' | A              | 1e-4           | Default         |
+#' | A              | 0           | Default         |
 #' | kelim          | 1e-4        | Default         |
 #' | Vdist          | 1e-4        | Default         |
 #' | kgutabs        | 1e-4        | Default         |
@@ -19,27 +18,44 @@
 #' | Fgutabs_V1     | 1e-4    | Default         |
 #' | sigma          | 1e-4         | Default         |
 #'
-#' @param fitdata A data.frame: the concentration-time-dose data to be used for
-#'   fitting.
-#' @param par_DF Optional: A data.frame as produced by [get_opt_params()], with a
+#' If `Vdist_from_species == TRUE`, then this function will set a lower bound
+#' for `Vdist` or `V1` equal to 1/10 of the physiological plasma volume for the
+#' species represented in `fitdata`. The physiological plasma volume is taken
+#' from [httk::physiology.data], and represents the average plasma volume (mL/kg
+#' body weight) multiplied by the average body weight (kg), converted from mL to
+#' L by dividing by 1000.
+#'
+#' Any parameters which will not be estimated from data (based on either the
+#' variable `optimize_param` in `par_DF` if `par_DF` is provided, or the output
+#' of [get_opt_params()] if `par_DF` is not provided) are assigned a lower bound
+#' of `NA_real_`.
+#'
+#' @param fitdata A `data.frame`: the concentration-time-dose data to be used for
+#'   fitting, for example as produced by [preprocess_data()].
+#' @param par_DF Optional: A `data.frame` as produced by [get_opt_params()], with a
 #'   character variable `param_name` containing parameter names, and a logical
-#'   variable `optimize_param` containing TRUE if parameter is to be fitted, and
-#'   FALSE if parameter is to be held constant. Any other variables will be
-#'   ignored. Default NULL, in which case it will be determined by calling
+#'   variable `optimize_param` containing `TRUE` if parameter is to be fitted, and
+#'   `FALSE` if parameter is to be held constant. Any other variables will be
+#'   ignored. Default `NULL`, in which case it will be determined by calling
 #'   [get_opt_params()].
 #' @param model The name of the model whose parameters are to be estimated.
 #'   Currently only "flat", "1compartment", or "2compartment" is supported.
 #'   Ignored if `par_DF` is provided.
 #' @param pool_sigma Logical: Whether to pool all data (estimate only one error
 #'   standard deviation) or not (estimate separate error standard deviations for
-#'   each reference). Default FALSE to estimate separate error SDs for each
+#'   each reference). Default `FALSE` to estimate separate error SDs for each
 #'   reference. (If `fitdata` only includes one reference, `pool_sigma` will
 #'   have no effect.) Ignored if `par_DF` is provided.
-#' @param lower_default  A `data.frame` with three variables: `param_name`, giving
-#'   the names of parameters; `lower_bound`, giving the default lower-bound values for each
-#'   parameter; and `lower_bound_msg`, giving a message about the default lower
-#'   bound values. See Details for default value.
-#' @return A data.frame: `parDF` with additional variables `lower_bound`
+#' @param lower_default  A `data.frame` with three variables: `param_name`,
+#'   giving the names of parameters; `lower_bound`, giving the default
+#'   lower-bound values for each parameter; and `lower_bound_msg`, giving a
+#'   message about the default lower bound values. See Details for default
+#'   value.
+#'@param  Vdist_from_species Logical: TRUE to estimate the lower bound
+#'   of `Vdist` or `V1` as 1/10 of species-specific physiological plasma
+#'   volume. FALSE to use the lower bound for `Vdist` or `V1`
+#'   specified in `lower_default`.
+#' @return A `data.frame`: the same as `parDF` with additional variables `lower_bound`
 #'   (numeric, containing the lower bound for each parameter) and
 #'   `lower_bound_msg` (character, containing a brief message explaining how the
 #'   lower-bound value was calculated).
@@ -61,7 +77,7 @@ get_lower_bounds <- function(fitdata,
                                               "Fgutabs_Vdist",
                                               "Fgutabs_V1",
                                               "sigma"),
-                               lower_bound = c(1e-4, #A
+                               lower_bound = c(0, #A
                                                1e-4, #kelim
                                                1e-4, #Vdist
                                                1e-4, #kgutabs
@@ -75,6 +91,7 @@ get_lower_bounds <- function(fitdata,
                                                ),
                                lower_bound_msg = "Default"
                              ),
+                             Vdist_from_species = TRUE,
                              suppress.messages = FALSE
                              ){
   if(is.null(par_DF)){
@@ -106,6 +123,41 @@ get_lower_bounds <- function(fitdata,
            ]
 #set rownames to param names
   rownames(par_DF) <- par_DF$param_name
+
+  if(Vdist_from_species %in% TRUE){
+    #For Vdist or V1: Set the theoretical lower bound to something on the order of
+    #the species-specific total plasma volume, pulled from httk physiology.data
+    phys <- httk::physiology.data
+    species <- unique(tolower(fitdata$Species)) #there should be only one species
+    #if httk::physiology.data has data on this species:
+    if(any(tolower(names(phys)) %in%  species)){
+      #get the column number corresponding to this species
+      species_col <- which(tolower(names(phys)) %in%
+                             species)
+      #pull the average plasma volume in mL/kg
+      plasma_vol_mL_kg <- phys[phys$Parameter %in% "Plasma Volume",
+                               species_col]
+      #pull the average body weight in kg
+      body_wt_kg <- phys[phys$Parameter %in% "Average BW",
+                         species_col]
+      #convert mL/kg to L plasma
+      plasma_vol_L <- plasma_vol_mL_kg * body_wt_kg * 1e-3
+      #assuming this gives us a valid answer:
+      if(is.finite(plasma_vol_L)){
+        #assign 1/10 of this value as theoretical lower bound on Vdist
+        par_DF[par_DF$param_name %in%
+                 c("Vdist", "V1"),
+               "lower_bound"] <- plasma_vol_L/10
+        #add message explaining lower bound & source
+        par_DF[par_DF$param_name %in%
+                 c("Vdist", "V1"),
+               "lower_bound_msg"] <- paste0("0.1 * ",
+                                            "average total plasma volume for species (",
+                                            signif(plasma_vol_L, digits = 3),
+                                            " L), from httk::physiology.data")
+      } #end if(is.finite(plasma_vol_L))
+    } #end if(any(tolower(names(phys)) %in%  species))
+  } #end if if(Vdist_from_species %in% TRUE)
 
   #For anything not to be optimized, set its bounds to NA
   #because the bounds will not be used
