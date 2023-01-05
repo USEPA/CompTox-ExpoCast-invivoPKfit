@@ -1,58 +1,121 @@
-#' Determine which parameters to fit (optimize)
+#' Determine which parameters to optimize from data
 #'
-#' Determine whether to fit (optimize) each model parameter from the data or
-#' hold it constant
+#' Determine whether to optimize each model parameter from the data
 #'
-#' All model parameters will be fitted (optimized) with the following
-#' exceptions:
+#' Typically this function is not called directly by the user. Rather, it is
+#' called by [analyze_subset()] which in turn is called by the main fitting
+#' function, [fit_all()].
 #'
-#' For 1-compartment and 2-compartment models:
+#' It may not be possible to estimate the full set of model parameters from a
+#' given dataset, depending on which routes of dose administration are
+#' represented in the dataset (oral and/or intravenous dosing). Some parameters
+#' can be identified only if oral dosing data are available. Some can be
+#' identified only if both oral and intravenous dosing data are available. This
+#' function determines which parameters will and will not be optimized, based on
+#' whether oral and/or intravenous dosing data are available.
 #'
-#' If no oral dosing data are available, then the parameter "kgutabs" will not
-#' be estimated from the data. Instead it will be held constant at its
-#' "starting" value while other parameters are estimated.
+#' # 1-compartment model
 #'
-#' If data do not include both oral dosing and IV dosing, then the parameter
-#' "Fgutabs" will not be estimated from the data. Instead it will be held
-#' constant at its "starting" value while other parameters are estimated.
+#' The full set of model parameters for the 1-compartment model includes
+#' `Vdist`, `kelim`, `kgutabs`, and `Fgutabs`.
 #'
-#' If non-NULL `param_names` do not match the result of
-#' `get_model_parameters(param_names)`, this function will throw a warning, but
-#' will otherwise proceed using `param_names`.
+#' ## IV data, no oral data
+#'
+#' If IV dosing data are available, but no oral dosing data are available, then
+#' only the parameters `Vdist` and `kelim` will be estimated from the data. The
+#' parameters `kgutabs` and `Fgutabs` cannot be estimated from IV data alone.
+#'
+#' ## Oral data, no IV data
+#'
+#' If oral dosing data are available, but no IV dosing data are available, then
+#' the parameters `kelim` and `kgutabs` can be estimated from the data. However,
+#' the parameters `Fgutabs` and `Vdist` cannot be identified separately. From
+#' oral data alone, only the ratio `Fgutabs/Vdist` can be identified. This ratio
+#' is represented by a single parameter named `Fgutabs_Vdist`. `Fgutabs` and
+#' `Vdist` will not be optimized, but `Fgutabs_Vdist` will be optimized, along
+#' with `kelim` and `kgutabs`.
+#'
+#' ## Oral data and IV data
+#'
+#' If both oral and IV dosing data are available, then `Vdist`, `kelim`,
+#' `kgutabs`, and `Fgutabs` will all be estimated from the data.
+#'
+#' # 2-compartment model
+#'
+#' The full set of model parameters for the 1-compartment model includes `V1`,
+#' `kelim`, `k12`, `k21`, `kgutabs`, and `Fgutabs`.
+#'
+#' ## IV data, no oral data
+#'
+#' If IV dosing data are available, but no oral dosing data are available, then
+#' only the parameters `V1`, `kelim`, `k12`, and `k21` will be estimated from
+#' the data. The parameters `kgutabs` and `Fgutabs` cannot be estimated from IV
+#' data alone.
+#'
+#' ## Oral data, no IV data
+#'
+#' If oral dosing data are available, but no IV dosing data are available, then
+#' the parameters `kelim`, `k12`, `k21`, and `kgutabs` will be estimated from
+#' the data. However, the parameters `Fgutabs` and `V1` cannot be identified
+#' separately. From oral data alone, only the ratio `Fgutabs/V1` can be
+#' identified. This ratio is represented by a single parameter named
+#' `Fgutabs_V1`. `Fgutabs` and `V1` will not be optimized, but `Fgutabs_V1` will
+#' be optimized, along with `kelim`, `k12`, `k21`, and `kgutabs`.
+#'
+#' ## Oral data and IV data
+#'
+#' If both oral and IV dosing data are available, then `V1`, `kelim`, `k12`,
+#' `k21`, `kgutabs`, and `Fgutabs` will all be estimated from the data.
+#'
+#' # Further note on parameter identifiability
+#'
+#' This function does *not* guarantee that all parameters to be estimated are in
+#' fact identifiable from the available data. This function does not check that
+#' a sufficient number of observations are available, nor that those
+#' observations cover sufficient time, to identify all parameters.
+#'
+#' For example, in order to fully identify all parameters of the 2-compartment
+#' model, concentration measurements must be made at time points that capture
+#' all three phases: absorption, distribution, and elimination phases. If no
+#' measurements were made late enough to capture the elimination phase, then
+#' `kelim` may not be identifiable from the data. This function makes no attempt
+#' to detect such situations.
+#'
+#' # If user-specified parameter names do not match user-specified model
+#'
+#' If user-specified non-NULL `param_names` do not match the result of
+#' [get_model_parameters()] for the user-specified `model`, this function will
+#' throw a warning, but will otherwise proceed using the user-specified
+#' `param_names`.
 #'
 #' @param model Character: the name of the model to parameterize.
-#' @param fitdata Data.frame: The set of concentration-dose-time data to be used
-#'   to fit the model parameters. Requires a variable named "Route" which
-#'   contains the dosing route, either "po" (oral dosing) or "iv" (intravenous
-#'   dosing).
+#' @param fitdata `data.frame`: The set of concentration-dose-time data to be
+#'   used to fit the model parameters, for example as produced by
+#'   [preprocess_data()]. Requires a variable named "Route" which contains the
+#'   dosing route, either "po" (oral dosing) or "iv" (intravenous dosing), and a
+#'   variable named "Reference" which contains reference identifiers.
 #' @param param_names Optional: A character vector of parameter names needed by
 #'   the model. Default NULL to automatically determine these from `model` by
-#'   calling [get_model_paramnames].
+#'   calling [get_model_paramnames()].
 #' @param pool_sigma Logical: Whether to pool all data (estimate only one error
 #'   standard deviation) or not (estimate separate error standard deviations for
 #'   each reference). Default FALSE to estimate separate error SDs for each
-#'   reference. (If `fitdata` only includes one reference, `pool_sigma` will have
-#'   no effect.)
+#'   reference. (If `fitdata` only includes one reference, `pool_sigma` will
+#'   have no effect.)
 #'
 #' @return A `data.frame` with the following variables:
 #' - `param_name` Character: the name of each model parameter.
 #' - `optimize_param` Logical: Whether the parameter is to be
-#' optimized/estimated from the data (TRUE), or not (FALSE). For example, if
-#' `model` is '1compartment' and `fitdata` does not contain both oral and IV
-#' data, then the parameter "Fgutabs" cannot be estimated from the data, so
-#' `optimize_param` for "Fgutabs" will be FALSE.
+#'   optimized/estimated from the data (TRUE), or not (FALSE).
 #' - `use_param` Logical: Whether the parameter gets used in the model at all
-#' (TRUE) or not (FALSE). For example, if `model` is '1compartment' and
-#' `fitdata` contains no oral data at all, then for parameter "Fgutabs",
-#' `use_param` will be FALSE, because the 1-compartment model function for
-#' IV-only data will not use the value for "Fgutabs".
+#'   (TRUE) or not (FALSE).
 #'
-#'  By default, `use_param` and `opt_param` will be the same -- for each
-#'  parameter, both `TRUE` or both `FALSE`. However, both variables are retained
-#'  to allow for the possibility of holding one or more parameters constant and
-#'  optimizing the rest (which would be accomplished by setting
-#' `optimize_param  = FALSE` but keeping `use_param = TRUE` for the parameters
-#' to be held constant).
+#'   By default, `use_param` and `opt_param` will be the same -- for each
+#'   parameter, both `TRUE` or both `FALSE`. However, both variables are
+#'   retained to allow for the possibility of holding one or more parameters
+#'   constant and optimizing the rest (which would be accomplished by setting
+#'   `optimize_param  = FALSE` but keeping `use_param = TRUE` for the parameters
+#'   to be held constant).
 #'
 #'
 
