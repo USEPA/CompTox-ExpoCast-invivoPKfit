@@ -10,21 +10,22 @@ get_lower_bounds(
   model,
   pool_sigma = FALSE,
   lower_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
-    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), lower_bound = c(1e-04,
+    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), lower_bound = c(0,
     1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04),
     lower_bound_msg = "Default"),
+  Vdist_from_species = TRUE,
   suppress.messages = FALSE
 )
 }
 \arguments{
-\item{fitdata}{A data.frame: the concentration-time-dose data to be used for
-fitting.}
+\item{fitdata}{A `data.frame`: the concentration-time-dose data to be used for
+fitting, for example as produced by [preprocess_data()].}
 
-\item{par_DF}{Optional: A data.frame as produced by [get_opt_params()], with a
+\item{par_DF}{Optional: A `data.frame` as produced by [get_opt_params()], with a
 character variable `param_name` containing parameter names, and a logical
-variable `optimize_param` containing TRUE if parameter is to be fitted, and
-FALSE if parameter is to be held constant. Any other variables will be
-ignored. Default NULL, in which case it will be determined by calling
+variable `optimize_param` containing `TRUE` if parameter is to be fitted, and
+`FALSE` if parameter is to be held constant. Any other variables will be
+ignored. Default `NULL`, in which case it will be determined by calling
 [get_opt_params()].}
 
 \item{model}{The name of the model whose parameters are to be estimated.
@@ -33,31 +34,36 @@ Ignored if `par_DF` is provided.}
 
 \item{pool_sigma}{Logical: Whether to pool all data (estimate only one error
 standard deviation) or not (estimate separate error standard deviations for
-each reference). Default FALSE to estimate separate error SDs for each
+each reference). Default `FALSE` to estimate separate error SDs for each
 reference. (If `fitdata` only includes one reference, `pool_sigma` will
 have no effect.) Ignored if `par_DF` is provided.}
 
-\item{lower_default}{A `data.frame` with three variables: `param_name`, giving
-the names of parameters; `lower_bound`, giving the default lower-bound values for each
-parameter; and `lower_bound_msg`, giving a message about the default lower
-bound values. See Details for default value.}
+\item{lower_default}{A `data.frame` with three variables: `param_name`,
+giving the names of parameters; `lower_bound`, giving the default
+lower-bound values for each parameter; and `lower_bound_msg`, giving a
+message about the default lower bound values. See Details for default
+value.}
+
+\item{Vdist_from_species}{Logical: TRUE to estimate the lower bound
+of `Vdist` or `V1` as 1/10 of species-specific physiological plasma
+volume. FALSE to use the lower bound for `Vdist` or `V1`
+specified in `lower_default`.}
 }
 \value{
-A data.frame: `parDF` with additional variables `lower_bound`
+A `data.frame`: the same as `parDF` with additional variables `lower_bound`
   (numeric, containing the lower bound for each parameter) and
   `lower_bound_msg` (character, containing a brief message explaining how the
   lower-bound value was calculated).
 }
 \description{
-For a set of model parameters, get the lower bounds for the optimizer (if
-parameter is to be estimated).
+For a set of model parameters, get the lower bounds for the optimizer.
 }
 \details{
 The default `lower_default` `data.frame` is shown below in table format:
 
 | param_name     | lower_bound | lower_bound_msg |
 | ---------------| ----------- | --------------- |
-| A              | 1e-4           | Default         |
+| A              | 0           | Default         |
 | kelim          | 1e-4        | Default         |
 | Vdist          | 1e-4        | Default         |
 | kgutabs        | 1e-4        | Default         |
@@ -68,6 +74,18 @@ The default `lower_default` `data.frame` is shown below in table format:
 | Fgutabs_Vdist  | 1e-4    | Default         |
 | Fgutabs_V1     | 1e-4    | Default         |
 | sigma          | 1e-4         | Default         |
+
+If `Vdist_from_species == TRUE`, then this function will set a lower bound
+for `Vdist` or `V1` equal to 1/10 of the physiological plasma volume for the
+species represented in `fitdata`. The physiological plasma volume is taken
+from [httk::physiology.data], and represents the average plasma volume (mL/kg
+body weight) multiplied by the average body weight (kg), converted from mL to
+L by dividing by 1000.
+
+Any parameters which will not be estimated from data (based on either the
+variable `optimize_param` in `par_DF` if `par_DF` is provided, or the output
+of [get_opt_params()] if `par_DF` is not provided) are assigned a lower bound
+of `NA_real_`.
 }
 \author{
 Caroline Ring, John Wambaugh, Mitchell Teague

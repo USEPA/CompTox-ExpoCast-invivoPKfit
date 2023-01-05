@@ -12,7 +12,7 @@ LazyData: TRUE
 Depends: 
     httk,
     R (>= 2.10)
-Imports: data.table, PK, MASS, minqa, numDeriv, optimx, pracma, scales,
+Imports: data.table, PK, MASS, minqa, numDeriv, optimx, scales,
         ggplot2, RColorBrewer, rmarkdown, dplyr, magrittr, tidyr
 Suggests: knitr, stringr
 RoxygenNote: 7.2.2

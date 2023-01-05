@@ -139,7 +139,8 @@
 #'   to be respected, please choose a method that allows box constraints (e.g.
 #'   "bobyqa" or "L-BFGS-B").
 #'
-#'
+#'@return A `data.frame` of model-fitting results.
+#'@author Caroline Ring, Chris Cook, John Wambaugh
 
 analyze_subset <- function(fitdata,
                            model,

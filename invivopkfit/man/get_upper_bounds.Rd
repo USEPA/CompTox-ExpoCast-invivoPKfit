@@ -12,12 +12,12 @@ get_upper_bounds(
   upper_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
     "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), upper_bound = c(Inf,
     Inf, Inf, Inf, 1, Inf, Inf, Inf, 10000, 10000, Inf), upper_bound_msg = "Default"),
-  sigma_upper_from_data = FALSE,
+  Fgutabs_Vdist_from_species = TRUE,
   suppress.messages = FALSE
 )
 }
 \arguments{
-\item{fitdata}{A data.frame: the concentration-time-dose data to be used for
+\item{fitdata}{A `data.frame`: the concentration-time-dose data to be used for
 fitting.}
 
 \item{par_DF}{Optional: A data.frame as produced by [get_opt_params()], with a
@@ -43,23 +43,12 @@ upper-bound values for each parameter; and `upper_bound_msg`, giving a
 message about the default upper bound values. See Details for default
 value.}
 
-\item{sigma_upper_from_data}{Logical: if TRUE, override the value for "sigma"
-in `upper_default` and instead use either 100 times the median
-concentration, or 2 times the overall standard deviation of concentrations,
-whichever is greater. If FALSE, use the upper bound for "sigma" in
-`upper_default.` Default value is TRUE.}
-
-\item{Vdist_upper_from_data}{Logical: if TRUE, override the value for "Vdist"
-or "V1" in `upper_default`, and instead use `Vdist_factor` times the
-maximum dose in the data, divided by the minimum concentration or LOQ in
-the data. If FALSE, use the upper bound for "Vdist" or "V1" in
-`upper_default`. Default value is TRUE.}
-
-\item{Vdist_factor}{Numeric: If `Vdist_upper_from_data` is TRUE, then
-`Vdist_factor` scales the ratio between the maximum dose and minimum
-concentration to arrive at a theoretical upper bound for the volume of
-distribution ("vdist" or "V1"). Default value is 1. If
-`Vdist_upper_from_data` is FALSE, then `Vdist_factor` has no effect.}
+\item{Fgutabs_Vdist_from_species}{Logical: TRUE to estimate the upper bound
+of `Fgutabs_Vdist` or `Fgutabs_V1` using the upper bound of `Fgutabs`
+specified in `upper_default`, divided by a species-specific lower bound on
+the volume of distribution, based on species-specific physiological plasma
+volumes. FALSE to use the upper bound for `Fgutabs_Vdist` or `Fgutabs_V1`
+specified in `upper_default`.}
 }
 \value{
 A data.frame: `parDF` with additional variables `upper_bound`
@@ -87,6 +76,11 @@ The default `upper_default` `data.frame` is shown below in table format:
 | Fgutabs_Vdist  | 1e4    | Default         |
 | Fgutabs_V1     | 1e4    | Default         |
 | sigma          | Inf         | Default         |
+
+#' Any parameters which will not be estimated from data (based on either the
+variable `optimize_param` in `par_DF` if `par_DF` is provided, or the output
+of [get_opt_params()] if `par_DF` is not provided) are assigned an upper bound
+of `NA_real_`.
 }
 \author{
 Caroline Ring, John Wambaugh, Mitchell Teague

@@ -123,7 +123,8 @@ the data in `fitdata`.
 
 ## Flat model
 
-A starting value for `A` is estimated as the median concentration in `fitdata`.
+A starting value for `A` is estimated as the median dose-normalized
+concentration in `fitdata`.
 
 ## 1-compartment model
 
@@ -138,6 +139,9 @@ Concentrations are normalized by Dose, then log-transformed.
 `log(Value/Dose)` vs. `Time` from the IV data. `kelim` is the negative slope
 of this linear regression; `Vdist` is the intercept, exponentiated to bring
 it back to the natural scale.
+
+ In case there is not enough data available in each phase to perform
+ regression, the default or `httk`-derived starting values are used.
 
 ### PO dosing data available
 
@@ -159,15 +163,21 @@ regression provides an estimate for `kgutabs`. Then, the intercept of the
 late regression, `A`, can be used with the estimates for `kelim` and
 `kgutabs` to calculate an estimate for `Fgutabs_Vdist`:
 
--  `Fgutabs_Vdist <- A * (kgutab - kelim) / kgutabs`
+-  `Fgutabs_Vdist <- A * (kgutabs - kelim) / kgutabs`
+
+ In case there is not enough data available in each phase to perform
+ regression, the default or `httk`-derived starting values are used.
 
 #### Both PO and IV dosing data available
 
 The final starting value for `kelim` is taken as the average of the IV-based
-estimate and the PO-based estimate (with any NAs removed).
+estimate and the PO-based estimate.
 
 The estimates for `Vdist` (from the IV data) and `Fgutabs_Vdist` (from the PO
 data) are multiplied to produce an estimate for `Fgutabs`.
+
+ In case there is not enough data available in each phase to perform
+ regression, the default or `httk`-derived starting values are used.
 
 ## 2-compartment model
 
@@ -181,12 +191,11 @@ Concentrations are normalized by Dose, then log-transformed.
 `V1`, `kelim`, `k12` and `k21` are estimated using the method of residuals on
 `log(Value/Dose)` vs. `Time` from the PO data. Specifically, the data are
 divided into "early" and "late" parts, with the dividing line being the
-"elbow point" of the data (using [akmedoids::elbow_point()]).
+"elbow point" of the data (using [find_elbow()]).
 
-First, a
-linear regression is performed on the "late" data. The negative slope of the
-"late" linear regression is recorded as `beta`, and the exponentiated
-intercept as `B`.
+First, a linear regression is performed on the "late" data. The negative
+slope of the "late" linear regression is recorded as `beta`, and the
+exponentiated intercept as `B`.
 
 Then the "early" data are predicted using the "late" linear
 regression, and the residuals are calculated. A second linear regression is
@@ -200,7 +209,8 @@ https://www.boomer.org/c/p4/c19/c1902.php):
 -`k12 <- alpha + beta - k21 - kel`
 -`V1 <- (alpha - k21)/(A * (alpha - beta))`
 
-In case there are not enough data available in each phase to perform regression,
+ In case there is not enough data available in each phase to perform
+ regression, the default or `httk`-derived starting values are used.
 
 ### PO dosing data available
 
@@ -208,10 +218,10 @@ In case there are not enough data available in each phase to perform regression,
 `V1`) are estimated using the method of residuals on `log(Value/Dose)` vs.
 `Time` from the PO data. Specifically, the data are divided into three parts:
 "absorption" phase, "early" phase, and "late" phase. The time of peak
-concentration is taken as the end of the "absorption" phase data. Then, for
-all data after the time of peak concentration, the "elbow" point is found
-(using [akmedoids::elbow_point()]) and used as the dividing line between
-early and late-phase data.
+concentration is taken as the end of the "absorption" phase data, found using
+[find_peak()]. Then, for all data after the time of peak concentration, the
+"elbow" point is found (using [find_elbow()]) and used as the dividing line
+between early and late-phase data.
 
 First, a linear regression is performed on the "late" data. The negative
 slope of the "late" linear regression is recorded as `beta`, and the
@@ -251,6 +261,9 @@ removed).
 
 The estimates for `V1` (from the IV data) and `Fgutabs_V1` (from the PO data)
 are multiplied to produce an estimate for `Fgutabs`.
+
+ In case there is not enough data available in each phase to perform
+ regression, the default or `httk`-derived starting values are used.
 }
 \author{
 Caroline Ring, John Wambaugh, Mitchell Teague

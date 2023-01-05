@@ -64,6 +64,9 @@ accept the default arguments for [get_upper_bounds()].}
   to be respected, please choose a method that allows box constraints (e.g.
   "bobyqa" or "L-BFGS-B").}
 }
+\value{
+A `data.frame` of model-fitting results.
+}
 \description{
 Fit a specified PK model to one set of concentration vs. time data and return
 a set of fitted parameter values.
@@ -164,4 +167,7 @@ there are multiple values, it will stop with an error.}
 \item{\code{Reference}}{String identifying the reference or study for each
 data point. Each reference is assumed to have its own residual error standard
 deviation.} }
+}
+\author{
+Caroline Ring, Chris Cook, John Wambaugh
 }

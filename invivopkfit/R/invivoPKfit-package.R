@@ -11,9 +11,9 @@
 #'
 #' @section Main function: fit_all
 #'
-#' @import rmarkdown httk data.table MASS minqa numDeriv optimx pracma scales ggplot2 RColorBrewer
+#' @import rmarkdown httk data.table MASS minqa numDeriv optimx scales ggplot2 RColorBrewer
 #'
-#' @author Caroline Ring
+#' @author Caroline Ring, Chris Cook, John Wambaugh, Mitchell Teague
 NULL
 
 

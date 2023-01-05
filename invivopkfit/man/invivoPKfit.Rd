@@ -15,5 +15,5 @@ start there.
 }
 
 \author{
-Caroline Ring
+Caroline Ring, Chris Cook, John Wambaugh, Mitchell Teague
 }
