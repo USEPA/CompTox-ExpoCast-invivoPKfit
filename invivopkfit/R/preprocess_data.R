@@ -5,7 +5,8 @@
 #' # Preprocessing steps
 #'
 #' This function does the following things in the following order, and is
-#' verbose about it unless told otherwise (by setting `suppress.messages = FALSE`):
+#' verbose about it unless told otherwise (by setting `suppress.messages =
+#' FALSE`):
 #'
 #' - Renames columns to the standard names that invivoPKfit uses internally, and
 #' adds any missing columns. See [rename_columns()].
@@ -22,7 +23,8 @@
 #' reference ID would be for the original publication.)
 #' - Removes all observations where `DTXSID_Dosed` and `DTXSID_Analyzed` are not
 #' the same (i.e., keeps only data where the parent chemical is what was
-#' monitored). Creates new columns `Compound`, `DTXSID`, and `CAS` identifying the chemical both dosed and analyzed.
+#' monitored). Creates new columns `Compound`, `DTXSID`, and `CAS` identifying
+#' the chemical both dosed and analyzed.
 #' - Harmonizes routes recorded as "oral" to "po" and "intravenous" to "iv".
 #' - Removes all observations that have routes other than those listed in `routes_keep`.
 #' - Removes all observations in media other than those listed in `media_keep`.
@@ -32,13 +34,13 @@
 #' between the mass units for concentration and the mass units for dose).
 #' - For any concentrations reported as 0, substitute NA.
 #'  - Imputes LOQ for any observations missing it, using [estimate_loq()]. LOQ
-#'  is imputed for each unique combination of `Reference`, `DTXSID`, `Species`,
-#'  and `Media` as `calc_loq_factor` times the minimum *detected* `Value`.s
+#' is imputed for each unique combination of `Reference`, `DTXSID`, `Species`,
+#' and `Media` as `calc_loq_factor` times the minimum *detected* `Value`.s
 #'  - Substitutes NA for any concentration observations below LOQ (these are non-detects).
 #'  - Removes any remaining observations where both `Value` and `LOQ` are NA.
-#'  For example, this situation occurs for reference/chemical/species/media
-#'  combinations where no LOQ was reported, and all concentrations were reported
-#'  as NA, so that no LOQ could be imputed.
+#' For example, this situation occurs for reference/chemical/species/media
+#' combinations where no LOQ was reported, and all concentrations were reported
+#' as NA, so that no LOQ could be imputed.
 #' - Removes any observations with NA `Time`.
 #' - Adds a variable `Time.Days` where `Time` (in hours) is converted to time in days.
 #'
@@ -54,8 +56,8 @@
 #' @param ratio_conc_to_dose Ratio between the mass units used to report the
 #'   concentration data and the mass units used to report the dose. Default 1.
 #'   For example, concentration reported in ug/L and dose reported in mg/kg/day
-#'   would require `ratio_conc_to_dose = 0.001`, because 1 ug/1 mg = 1e-6 g
-#'   / 1e-3 g = 0.001.
+#'   would require `ratio_conc_to_dose = 0.001`, because 1 ug/1 mg = 1e-6 g /
+#'   1e-3 g = 0.001.
 #' @param names_list As for [rename_columns()]: A named list where the names are
 #'   the new variable names, and the values are the old variable names. If a
 #'   value is NULL, then there is no old variable corresponding to that new
@@ -70,6 +72,10 @@
 #'   retain only oral and IV administration data.
 #' @param media_keep List of media to retain. Default `c("blood", "plasma")` to
 #'   retain only concentrations in blood and plasma.
+#' @param impute_loq Logical: TRUE to impute values for missing LOQs; FALSE to
+#'   leave them alone.
+#' @param impute_sd Logical: TRUE to impute values for missing sample SDs for
+#'   multi-subject observations; FALSE to leave them alone
 #' @param suppress.messages Logical: Whether to suppress verbose messages.
 #'   Default FALSE, to be verbose.
 #' @return A `data.table` containing the cleaned, harmonized data, ready for
@@ -101,7 +107,7 @@
 #'   steps described in Details.}
 #'   }
 #'
-#'  new_name = old_name
+#'   new_name = old_name
 
 preprocess_data <- function(data.set,
                             names_list =list(
@@ -137,6 +143,8 @@ preprocess_data <- function(data.set,
                             calc_loq_factor = 0.45,
                             routes_keep = c("po", "iv"),
                             media_keep = c("blood", "plasma"),
+                            impute_loq = TRUE,
+                            impute_sd = TRUE,
                             suppress.messages = FALSE){
 
 
@@ -345,6 +353,7 @@ preprocess_data <- function(data.set,
   # }
   # data.set[data.set$Value %in% 0, "Value"] <- NA_real_
 
+  if(impute_loq %in% TRUE){
   # Impute LOQ if it is missing
   if(any(is.na(data.set$LOQ))){
     data.set$LOQ_orig <- data.set$LOQ
@@ -380,6 +389,7 @@ preprocess_data <- function(data.set,
   # }
   # data.set[data.set$LOQ %in% 0, "LOQ"] <- NA_real_
   # }
+  } #end if impute_loq %in% TRUE
 
   #Remove any remaining cases where both Value and LOQ are NA
   if(any(is.na(data.set$Value) & is.na(data.set$LOQ))){
@@ -399,6 +409,7 @@ preprocess_data <- function(data.set,
     }
   }
 
+  if(impute_sd %in% TRUE){
   #Impute missing SDs
   if(any((data.set$N_Subjects >1) %in% TRUE & is.na(data.set$Value_SD))){
     data.set$Value_SD_orig <- data.set$Value_SD
@@ -423,6 +434,7 @@ preprocess_data <- function(data.set,
                            sd_col = "Value_SD",
                            n_subj_col = "N_Subjects")
   }
+  }#end if impute_sd %in% TRUE
 
   #Remove any remaining multi-subject observations where SD is NA
   #(with imputing SD = Mean as a fallback, this will only be cases where Value was NA)
