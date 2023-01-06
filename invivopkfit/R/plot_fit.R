@@ -162,6 +162,7 @@ plot_fit <- function(DTXSID_in,
 
   #generate plot title
   plot_title <- paste0("DTXSID = ", DTXSID_in, "\n",
+                       "(", DFsub[, unique(Compound_Analyzed)], ")\n",
                        "Species = ", Species_in, "\n",
                        "Analysis Type =", paste(Analysis_Type_in, collapse= ", "))
   #if plotting a joint analysis (only one winning model for this DTXSID and species),
@@ -197,7 +198,8 @@ plot_fit <- function(DTXSID_in,
                    color = Dose,
                    fill = Dose,
                    alpha = Detect),
-               size = 4) +
+               size = 4,
+               stroke = 1.5) +
     #plot lines for model predictions
     geom_line(data = predsub,
               aes(linetype = model,
