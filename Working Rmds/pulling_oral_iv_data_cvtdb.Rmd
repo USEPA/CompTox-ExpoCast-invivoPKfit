@@ -64,7 +64,7 @@ Here's how to pull down each table separately.
 
 ```{r}
 fpath <- "C:/Users/cring/OneDrive - Environmental Protection Agency (EPA)/CvTdb/"
-this_date <- format(Sys.time(), "%Y_%m_%d_%H_%M_%S")
+this_date <- format(Sys.time(), "%Y_%m_%d")
 
 #list of table names to pull down
 tables <- c("conc_time_values",
@@ -376,6 +376,16 @@ cvt_data[documents_extraction.id %in% 141 &
       studies.administration_route_normalized %in% "iv",
     studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
 ```
+
+## Correcting dose level units for PCB-126
+
+Upon examining PCB-126, I think the original dose units should be ng/kg rather than mg/kg. If we look at https://cebs.niehs.nih.gov/cebs/study/002-02863-0008-0000-9 and look at the summary data rather than individual animal data, the dose units are listed as "ng/kg." In the rest of the studies at https://cebs.niehs.nih.gov/cebs/test_article/57465-28-8 all of the dosing units are ng/kg. So I think that is what it should be.
+
+```{r}
+cvt_data[chemicals_dosed.dsstox_substance_id %in% "DTXSID3032179", studies.dose_level_original := "ng/kg"]
+cvt_data[chemicals_dosed.dsstox_substance_id %in% "DTXSID3032179", studies.dose_level_normalized_corrected := as.numeric(studies.dose_level_normalized) * 1e-6] #convert to mg/kg
+```
+
 
 # Missing LOQs
 
