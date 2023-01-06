@@ -5,41 +5,53 @@
 #' @param data.set A \code{data.frame} of concentration-time data. Preferably
 #'   \code{pkdataset_nheerlcleaned} or \code{pkdataset_nheerlorig}.
 #' @param model Which general model should be fit for each chemical. Presently,
-#'   only "1compartment" and "2compartment" are implemented.
-#' @param modelfun Either "analytic" or "full" -- whether to fit using the
-#'   analytic solution to the model, or the full ODE model. Presently,
-#'   "analytic" is recommended (because the analytic solution is exact and much
-#'   faster).
-#' @param names_list As for [rename_columns()]: A named list where the names are
-#'   the new variable names, and the values are the old variable names. If a
+#'   only `"flat"`, `"1compartment"`, and `"2compartment"` are implemented.
+#' @param modelfun Character, either `"analytic"` or `"full"` -- whether to fit
+#'   using the analytic solution to the model, or numerical solution of the full
+#'   ODE model. Presently, `"analytic"` is the default, and is recommended
+#'   because the analytic solutions are exact and much faster than numerically
+#'   integrating the full ODE model.
+#' @param preprocess Logical: `TRUE` to preprocess data using
+#'   [preprocess_data()]; `FALSE` to use already-pre-processed data (i.e. the
+#'   output of [preprocess_data()]. Default `TRUE`.
+#' @param names_list Used only if `preprocess == TRUE`. As for
+#'   [preprocess_data()] and [rename_columns()]: A named list where the names
+#'   are the new variable names, and the values are the old variable names. If a
 #'   value is NULL, then there is no old variable corresponding to that new
 #'   variable. A new variable will be added, with default value as given in
 #'   `defaults_list`; if no default is given in `defaults_list`, the new
 #'   variable will be filled with `NA_character`.
-#' @param defaults_list As for [rename_columns()]: A named list where the names
+#' @param defaults_list Used only if `preprocess == TRUE`. As for
+#'   [preprocess_data()] and [rename_columns()]: A named list where the names
 #'   are the new variable names, and the values are the default values to fill
 #'   for each new variable, if the corresponding old variable name is NULL in
 #'   `names_list`.
-#' @param ratio_conc_to_dose Ratio between the mass units used to report the
+#' @param ratio_conc_to_dose Used only if `preprocess == TRUE`. As for
+#'   [preprocess_data()]. Ratio between the mass units used to report the
 #'   concentration data and the mass units used to report the dose. Default 1.
 #'   For example, concentration reported in ug/L and dose reported in mg/kg/day
 #'   would require `ratio_conc_to_dose = 0.001`, because 1 ug/1 mg = 1e-6 g /
 #'   1e-3 g = 0.001.
-#' @param calc_loq_factor As for [estimate_loq()]
-#' @param routes_keep Character vector of administration routes to keep. Default
-#'   `c("po", "iv")` to keep only oral and intravenous data (because at present,
-#'   model fitting is only implemented for oral and IV routes). Any data where
-#'   route is not on this list will be discarded. (For example, with the
-#'   default, inhalation and dermal data will be discarded.)
-#' @param media_keep Character vector of sample media to keep. Default is
+#' @param calc_loq_factor Used only if `preprocess == TRUE`. As for
+#'   [preprocess_data()] and [estimate_loq()].
+#' @param routes_keep Used only if `preprocess == TRUE`. As for
+#'   [preprocess_data()]. Character vector of administration routes to keep.
+#'   Default `c("po", "iv")` to keep only oral and intravenous data (because at
+#'   present, model fitting is only implemented for oral and IV routes). Any
+#'   data where route is not on this list will be discarded. (For example, with
+#'   the default, inhalation and dermal data will be discarded.)
+#' @param media_keep Used only if `preprocess == TRUE`. As for
+#'   [preprocess_data()]. Character vector of sample media to keep. Default is
 #'   `c("blood", "plasma")` to keep only concentration data measured in blood
 #'   and plasma (because at present, model fitting is only implemented for blood
 #'   and plasma). Any data where medium is not on this list will be discarded.
 #'   (For example, with the default, urine data will be discarded.)
-#' @param impute_loq Logical: TRUE to impute values for missing LOQs; FALSE to
-#'   leave them alone.
-#' @param impute_sd Logical: TRUE to impute values for missing sample SDs for
-#'   multi-subject observations; FALSE to leave them alone
+#' @param impute_loq Used only if `preprocess == TRUE`. As for
+#'   [preprocess_data()]. Logical: TRUE to impute values for missing LOQs; FALSE
+#'   to leave them alone.
+#' @param impute_sd Used only if `preprocess == TRUE`. As for
+#'   [preprocess_data()]. Logical: TRUE to impute values for missing sample SDs
+#'   for multi-subject observations; FALSE to leave them alone
 #' @param get_starts_args Named list or NULL: any additional arguments to
 #'   [get_starts()] (other than `model` and `fitdata`, which are always passed).
 #'   Default NULL to accept the default arguments for [get_starts()].
@@ -51,9 +63,9 @@
 #'   [get_upper_bounds()] (other than `model` and `fitdata`, which are always
 #'   passed). Default NULL to accept the default arguments for
 #'   [get_upper_bounds()].
-#' @param optimx_args A named list of additional arguments to [optimx::optimx()]
-#'   (used for parameter estimation), other than `par`, `fn`, `lower`, and
-#'   `upper`. Default is:
+#' @param optimx_args As for [analyze_subset()]. A named list of additional
+#'   arguments to [optimx::optimx()] (used for parameter estimation), other than
+#'   `par`, `fn`, `lower`, and `upper`. Default is:
 #'
 #'    ```
 #'     list(
@@ -62,22 +74,28 @@
 #'           "control" = list("kkt" = FALSE)
 #'          )
 #'    ```
-#'   See documentation for [optimx::optimx()] for possible arguments and
-#'   details. Note lower and upper bounds (box constraints) will be supplied; if
-#'   you want them to be respected, please choose a method that allows box
-#'   constraints (e.g. "bobyqa" or "L-BFGS-B").
+#'   Briefly:  `"method"` allows you to select an optimization algorithm.
+#'  `"itnmax"` controls the maximum number of iterations allowed in an attempt
+#'  to optimize. `"control"` is itself a named list of control parameters
+#'  relevant to the selected method. See documentation for [optimx::optimx()]
+#'  for more details and more options. Note lower and upper bounds (box constraints)
+#'  will be supplied; if you want them to be respected, please choose a method
+#'  that allows box constraints (e.g. "bobyqa" or "L-BFGS-B").
 #' @param suppress.messages Logical: Whether to suppress verbose messages.
 #'   Default FALSE, to be verbose.
 #'
-#' @return A `data.table` of fitted parameter values for each chemical.
+#' @return A `data.table` of fitted parameter values for each dataset.
 #'
 #' @author Caroline Ring, John Wambaugh
 #' @export fit_all
 #' @importFrom PK nca.batch
+#' @import data.table
 
 fit_all <- function(data.set,
                     model,
-                    modelfun = NA,
+                    modelfun = "analytic",
+
+                    preprocess = TRUE,
 
                     names_list =list(
                       "Compound_Dosed" = "studies.test_substance_name_original",
@@ -135,6 +153,7 @@ fit_all <- function(data.set,
   #############################
   #############################
 
+  if(preprocess %in% TRUE){
  data.set <- preprocess_data(data.set = data.set,
                              names_list = names_list,
                              defaults_list = defaults_list,
@@ -145,6 +164,7 @@ fit_all <- function(data.set,
                              impute_loq = impute_loq,
                              impute_sd = impute_sd,
                              suppress.messages = suppress.messages)
+  }
 
  data.set <- as.data.table(data.set)
 
