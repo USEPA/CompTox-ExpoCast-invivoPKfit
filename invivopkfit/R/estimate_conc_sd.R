@@ -100,15 +100,20 @@ estimate_conc_sd <- function(dat,
                            species_col)],
                      drop = TRUE)
 
-  #For any remaining cases with N_Subjects > 1 and SD still NA, impute SD as
-  #mean itself. This is based on examining the relationship of mean and SD for
-  #individual animal data by reference, chemical, dose, and time. The
-  #relationship is nearly the identity line.
+  #For any remaining cases with N_Subjects > 1 and SD still NA, impute SD using
+  #a relation based on examining the relationship of mean and SD for individual
+  #animal data by reference, chemical, medium, dose, and time. See
+  #`impute_missing_sds.Rmd` for the analysis.
 if(any((dat_out[[n_subj_col]] > 1) %in% TRUE &
        is.na(dat_out[[sd_col]]))){
+  #select cases with N_Subjects > 1 and SD still NA
   selected <- (dat_out[[n_subj_col]] > 1) %in% TRUE &
     is.na(dat_out[[sd_col]])
-  dat_out[selected, sd_col] <- dat_out[selected, value_col]
+  #apply relation to impute missing SDs
+  dat_out[selected, sd_col] <- 10^(-0.5170722) *
+                                    dat_out[selected,
+                                            value_col]^(0.9529368)
+
 }
 
   return(dat_out)

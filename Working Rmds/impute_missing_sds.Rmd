@@ -5,9 +5,7 @@ date: "2023-01-04"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
@@ -16,87 +14,179 @@ knitr::opts_chunk$set(message = FALSE)
 ```
 
 ```{r, include = FALSE}
-library(tidyverse)
 library(data.table)
-library(readxl)
 devtools::load_all("../invivopkfit")
 ```
 
-Read in CvTdb data.
-
-```{r, load_cvt, eval = TRUE}
-cvt_data <- fread("../inst/ext/cvt_data_2022_12_15_16_20_21.csv")
+```{r}
+timestamp <- "2023_01_05"
 ```
 
+Read in CvTdb data pulled in `pulling_oral_iv_data_cvtdb.Rmd`.
+
+```{r, load_cvt, eval = TRUE}
+cvt_data <- fread(paste0("../inst/ext/cvt_data_",
+timestamp,
+".csv"))
+```
+List of new_name = old_name to supply for preprocessing data
+
 ```{r}
-cvt <- preprocess_data(data.set = cvt_data,
-                       names_list =list(
-                       "Compound_Dosed" = "studies.test_substance_name_original",
-                              "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
-                              "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
-                              "Compound_Analyzed" = "series.analyte_name_original",
-                              "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
-                              "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
-                      "Reference" = "documents_reference.id",
-                      "Extraction" = "documents_extraction.id",
-                      "Species" = "subjects.species",
-                      "Weight" ="subjects.weight_kg",
-                      "Weight.Units" = NULL,
-                      "Dose" = "correct.dose_level_normalized",
-                      "Dose.Units" = NULL,
-                      "Time" = "conc_time_values.time_hr",
-                      "Time.Units" = NULL,
-                      "Media" = "series.conc_medium_normalized",
-                      "Value" = "conc_time_values.conc",
-                      "Value.Units" = NULL,
-                      "Route" = "studies.administration_route_normalized",
-                      "LOQ" = "series.loq_normalized",
-                      "Subject" = "subjects.id",
-                              "N_Subjects" = "series.n_subjects_in_series",
-                              "Value_SD" = "conc_time_values.conc_sd"),
-                    defaults_list =   list(
+names_list <- list(
+  "Compound_Dosed" = "studies.test_substance_name_original",
+  "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
+  "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
+  "Compound_Analyzed" = "series.analyte_name_original",
+  "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
+  "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
+  "Reference" = "documents_reference.id",
+  "Extraction" = "documents_extraction.id",
+  "Species" = "subjects.species",
+  "Weight" ="subjects.weight_kg",
+  "Weight.Units" = NULL,
+  "Dose" = "studies.dose_level_normalized_corrected", #note that dose levels were corrected in pulling_oral_iv_data_cvtdb.Rmd
+  "Dose.Units" = NULL,
+  "Time" = "conc_time_values.time_hr",
+  "Time.Units" = NULL,
+  "Media" = "series.conc_medium_normalized",
+  "Value" = "conc_time_values.conc", #already normalized to mg/L units in CvTdb
+  "Value.Units" = NULL,
+  "Route" = "studies.administration_route_normalized",
+  "LOQ" = "series.loq_normalized", #note that LOQs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  "Subject" = "subjects.id",
+  "N_Subjects" = "series.n_subjects_in_series",
+  "Value_SD" = "conc_time_values.conc_sd_normalized" #note that SDs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  )
+```
+
+List of default values for new columns added in preprocessing data
+
+```{r}
+defaults_list <- list(
                       "Weight.Units" = "kg",
                       "Dose.Units" = "mg/kg",
                       "Time.Units" = "h",
-                      "Value.Units" = "mg/L"),
-      ratio_conc_to_dose = 1,
-                    calc_loq_factor = 0.45,
-                    routes_keep = c("po", "iv"),
-                    media_keep = c("blood", "plasma"),
-      suppress.messages = FALSE)
+                      "Value.Units" = "mg/L")
 ```
 
-There are many, many cases where N > 1 but no SD is reported. Can we impute these based on patterns in the cases where SD is reported? Calculate mean and SD for the individual cases:
+For ease of plotting, get the pre-processed, harmonized data:
 
 ```{r}
+cvt <- preprocess_data(data.set = cvt_data,
+                       names_list =names_list,
+                       defaults_list =   defaults_list,
+                       ratio_conc_to_dose = 1,
+                       calc_loq_factor = 0.45,
+                       routes_keep = c("po", "iv"),
+                       media_keep = c("blood", "plasma"),
+                       impute_loq = TRUE,
+                       impute_sd = FALSE,
+                       suppress.messages = FALSE)
 cvt <- as.data.table(cvt)
+```
+
+There are many, many cases where N > 1 but no SD is reported. Can we impute these based on other data?
+
+# Individual subject data
+
+By chemical, species, reference, medium, dose group, and time point: calculate mean and standard deviation.
+
+```{r}
+
 cvt_summarized <- cvt[N_Subjects==1,
                       .(meanval = mean(Value, na.rm = TRUE),
                         sdvals = sd(Value, na.rm = TRUE),
                         n = .N),
-                      by = .(Reference, DTXSID, Media, Dose)]
-ggplot(cvt_summarized) +
-  geom_point(aes(x = meanval, y = sdvals, color = n)) +
-  scale_x_log10() + scale_y_log10() + scale_color_viridis_c(trans = "log10")
-
-summary(lm(log10(sdvals) ~ log10(meanval), data = cvt_summarized))
+                      by = .(Reference,
+                             DTXSID,
+                             Media,
+                             Dose,
+                             Time)]
 ```
 
-The relationship between sample SD and sample mean seems to be almost the identity line.
+Plot SD vs. mean across all chemicals, studies, media, doses, and timepoints. Is there an overall relation between SD and mean?
+
+```{r}
+
+ggplot(cvt_summarized,
+       aes(x = meanval,
+           y = sdvals)) +
+  geom_point(aes(color = n)) +
+  geom_abline(intercept = 0, slope =1 , linetype = 2) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_color_viridis_c(trans = "log10",
+                        name = "# subjects") +
+  annotation_logticks(sides = "bl") +
+  xlab("Mean conc., mg/kg") +
+  ylab("Sample std dev conc., mg/kg") +
+  ggtitle("Mean vs. SD for N=1 data\ngrouped by chemical, reference, medium, dose, timepoint") 
+```
+
+Linear regression of the relation:
+
+```{r}
+cvt_summarized[, log10_sdvals := log10(sdvals)]
+cvt_summarized[, log10_meanval := log10(meanval)]
+
+cvt_summarized[!is.finite(log10_sdvals), log10_sdvals := NA_real_]
+cvt_summarized[!is.finite(log10_meanval), log10_meanval := NA_real_]
+```
+
+
+```{r}
+summary(lm(log10_sdvals ~ log10_meanval,
+           data = cvt_summarized,
+           na.action = na.omit))
+```
+
+
 
 What about the multi-subject cases with reported SD?
 
 ```{r}
 ggplot(cvt[N_Subjects > 1],
-       aes(x = Value, y = Value_SD)) +
-  geom_point(aes(x = Value, y = Value_SD, color = N_Subjects))  +
-  scale_x_log10() + scale_y_log10() + geom_smooth(method = "lm")
-
-summary(lm(log10(Value_SD) ~ log10(Value), data = cvt[N_Subjects > 1]))
+       aes(x = Value,
+           y = Value_SD)) +
+  geom_point(aes(color = N_Subjects)) +
+  geom_abline(intercept = 0, slope =1 , linetype = 2) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_color_viridis_c(trans = "log10",
+                        name = "# subjects") +
+  annotation_logticks(sides = "bl") +
+  xlab("Mean conc., mg/kg") +
+  ylab("Sample std dev conc., mg/kg") +
+  ggtitle("Mean vs. SD for N>1 data") 
 ```
 
-This one isn't quite the identity line but still, we can get some idea.
+```{r}
 
-These ones with entirely missing SDs are different from the studies where only a few SDs are missing. When only a few are missing, it was usually because the data were pulled from a plot where the error bars were smaller thant the plotting symbol on a few points. Instead of recording the size of the symbol as the error bars, the error was recorded as NA. But when all SDs are missing, it is usually because the study did not report the SDs in the first place. 
+summary(lm(log10(Value_SD) ~ log10(Value),
+           data = cvt[N_Subjects > 1]))
+```
 
-In this case, it seems like a reasonable choice to impute the mean value itself as the SD. This relation seems to be borne out by the individual-anumal data, and it is more conservative than the relation suggested by the (limited) multi-animal data. 
+Studies with entirely missing SDs are different from the studies where only a few SDs are missing. When only a few are missing, it was usually because the data were pulled from a plot where the error bars were smaller thant the plotting symbol on a few points. Instead of recording the size of the symbol as the error bars, the error was recorded as NA. But when all SDs are missing, it is usually because the study did not report the SDs in the first place. 
+
+
+I suggest using the relation from the summarized individual-animal data to impute standard deviations. That is
+
+$$ \log \textrm{SD} = -0.517 + 0.953 \log \textrm{Mean} $$
+
+When translated to the natural scale (raising 10 to the power of both sides), this becomes
+
+$$ \log_{10} \textrm{SD} = -0.517 + \log_{10} \textrm{Mean}^{0.953} $$
+$$ \log_{10} \textrm{SD} = \log_{10}{ \left( 10^{-0.517} \times \textrm{Mean}^{0.953} \right)}  $$
+
+Raising 10 to the power of both sides,
+
+$$ \textrm{SD} = 10^{-0.517} \times \textrm{Mean}^{0.953} $$
+
+or approximately
+
+$$ \textrm{SD} = 0.3 \times \textrm{Mean}^{0.953} $$
+
+Very roughly, this is about a 30% coefficient of variation.
+
