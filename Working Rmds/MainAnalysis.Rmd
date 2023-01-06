@@ -26,9 +26,8 @@ devtools::load_all("../invivopkfit")
 Read in CvTdb data that was pulled and normalized in `pulling_oral_iv_data_cvtdb.Rmd`.
 
 ```{r, load_cvt, eval = TRUE}
-cvt_data <- fread("../inst/ext/cvt_data_2023_01_05_09_37_22.csv")
+cvt_data <- fread("../inst/ext/cvt_data_2023_01_05.csv")
 ```
-
 
 # Setup for model fitting
 
@@ -36,7 +35,7 @@ cvt_data <- fread("../inst/ext/cvt_data_2023_01_05_09_37_22.csv")
 Timestamp the file name with the current date and time (at the beginning of the runs) in format YYYY_MM_DD_hh_mm.
 
 ```{r}
-timestamp <- format(Sys.time(), "%Y_%m_%d_%H_%M")
+timestamp <- format(Sys.time(), "%Y_%m_%d")
 ```
 
 ## Settings for pre-processing data
