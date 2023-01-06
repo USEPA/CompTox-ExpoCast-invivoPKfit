@@ -36,6 +36,14 @@ dnorm_summary <- function(mu,
              "mu" = length(mu),
              "sigma" = length(sigma))
 
+  if(any(x_len %in% 0)){
+    stop(paste0("invivopkfit::dnorm_summary(): ",
+                "the following arguments have zero length: ",
+                paste(names(x_len)[x_len %in% 0],
+                      collapse = ", ")
+                ))
+  }
+
   max_len <- max(x_len)
   which_max_len <- which.max(x_len)
 
