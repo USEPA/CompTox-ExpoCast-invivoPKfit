@@ -380,15 +380,6 @@ preprocess_data <- function(data.set,
   }
   data.set[(data.set$Value < data.set$LOQ) %in% TRUE, "Value"] <- NA_real_
 
-  # #Likewise set any LOQ of 0 to NA
-  # if(any(data.set$LOQ %in% 0)){
-  # if(!suppress.messages){
-  #   message(paste0("Converting 'LOQ' values of 0 to NA.\n",
-  #                  sum(data.set$LOQ %in% 0),
-  #                  " values will be converted."))
-  # }
-  # data.set[data.set$LOQ %in% 0, "LOQ"] <- NA_real_
-  # }
   } #end if impute_loq %in% TRUE
 
   #Remove any remaining cases where both Value and LOQ are NA
