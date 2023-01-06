@@ -200,8 +200,10 @@ get_opt_params <- function(model,
       #if oral but no IV data,
       #then turn off Fgutabs and Vdist,
       #and just fit Fgutabs_Vdist
+      if("Fgutabs" %in% param_names){
       opt_params["Fgutabs"] <- FALSE
       use_params["Fgutabs"] <- FALSE
+      }
       if("Vdist" %in% param_names){
         opt_params["Vdist"] <- FALSE
         use_params["Vdist"] <- FALSE
@@ -238,6 +240,9 @@ get_opt_params <- function(model,
   }
 
   par_DF <- rbind(par_DF, sigma_ref_DF)
+
+  #set rownames equal to param_name
+  rownames(par_DF) <- par_DF$param_name
 
   return(par_DF)
 }

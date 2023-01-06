@@ -116,7 +116,8 @@ get_upper_bounds <- function(fitdata,
            "upper_bound_msg"] <- upper_default[upper_default$param_name %in% "sigma",
                                                "upper_bound_msg"]
 
-    if(Fgutabs_Vdist_from_species %in% TRUE){
+    if(Fgutabs_Vdist_from_species %in% TRUE &
+       model %in% c("1compartment", "2compartment")){
       #For Vdist or V1: Set the theoretical lower bound to something on the order of
       #the species-specific total plasma volume, pulled from httk physiology.data
       phys <- httk::physiology.data

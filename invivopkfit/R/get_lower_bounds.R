@@ -124,7 +124,8 @@ get_lower_bounds <- function(fitdata,
 #set rownames to param names
   rownames(par_DF) <- par_DF$param_name
 
-  if(Vdist_from_species %in% TRUE){
+  if(Vdist_from_species %in% TRUE &
+     model %in% c("1compartment", "2compartment")){
     #For Vdist or V1: Set the theoretical lower bound to something on the order of
     #the species-specific total plasma volume, pulled from httk physiology.data
     phys <- httk::physiology.data
