@@ -134,10 +134,13 @@
 #'           "itnmax" = 1e6,
 #'          "control" = list("kkt" = FALSE))
 #'    ```
-#'   See documentation for [optimx::optimx()] for arguments and details. Note
-#'   lower and upper bounds (box constraints) will be supplied; if you want them
-#'   to be respected, please choose a method that allows box constraints (e.g.
-#'   "bobyqa" or "L-BFGS-B").
+#'  Briefly:  `"method"` allows you to select an optimization algorithm.
+#'  `"itnmax"` controls the maximum number of iterations allowed in an attempt
+#'  to optimize. `"control"` is itself a named list of control parameters
+#'  relevant to the selected method. See documentation for [optimx::optimx()]
+#'  for more details and more options. Note lower and upper bounds (box constraints)
+#'  will be supplied; if you want them to be respected, please choose a method
+#'  that allows box constraints (e.g. "bobyqa" or "L-BFGS-B").
 #'
 #'@return A `data.frame` of model-fitting results.
 #'@author Caroline Ring, Chris Cook, John Wambaugh
