@@ -29,7 +29,7 @@ Read in CvTdb data that was pulled and normalized in `pulling_oral_iv_data_cvtdb
 cvt_data <- fread("../inst/ext/cvt_data_2023_01_05.csv")
 ```
 
-# Setup for model fitting
+# Setup for data processing and model fitting
 
 ## Timestamp
 Timestamp the file name with the current date and time (at the beginning of the runs) in format YYYY_MM_DD_hh_mm.
@@ -80,7 +80,29 @@ defaults_list <- list(
                       "Value.Units" = "mg/L")
 ```
 
-# Model fitting
+# Preprocess data
+
+```{r}
+cvt <- preprocess_data(data.set = cvt_data,
+                       names_list =names_list,
+                       defaults_list =   defaults_list,
+                       ratio_conc_to_dose = 1,
+                       calc_loq_factor = 0.45,
+                       routes_keep = c("po", "iv"),
+                       media_keep = c("blood", "plasma"),
+                       impute_loq = TRUE,
+                       impute_sd = TRUE,
+                       suppress.messages = FALSE)
+
+#save pre-processed data
+write.csv(cvt,
+          paste0("../inst/ext/cvt_preprocessed_",
+                 timestamp,
+          ".csv"),
+          row.names = FALSE)
+```
+
+# Fit TK models to data
 
 ## Flat model
 
@@ -88,15 +110,10 @@ defaults_list <- list(
 
 system.time(
   PK.fit.table.flat <- fit_all(
-    data.set = cvt_data,
+    data.set = cvt,
     model = "flat",
     modelfun = "analytic",
-    names_list = names_list,
-    defaults_list =  defaults_list,
-    ratio_conc_to_dose = 1,
-    calc_loq_factor = 0.45,
-    routes_keep = c("po", "iv"),
-    media_keep = c("blood", "plasma"),
+    preprocess = FALSE,
     optimx_args = list(
       "method" = "bobyqa",
       "itnmax" = 1e6,
@@ -121,15 +138,10 @@ rm(PK.fit.table.flat)
 ### do 1-Compartment fit
 system.time(
     PK.fit.table.1comp <- fit_all(
-      data.set = cvt_data,
+      data.set = cvt,
       model = "1compartment",
       modelfun = "analytic",
-        names_list = names_list,
-    defaults_list =  defaults_list,
-      ratio_conc_to_dose = 1,
-                    calc_loq_factor = 0.45,
-                    routes_keep = c("po", "iv"),
-                    media_keep = c("blood", "plasma"),
+      preprocess = FALSE,
       optimx_args = list(
                       "method" = "bobyqa",
                       "itnmax" = 1e6,
@@ -167,15 +179,10 @@ rm(PK.fit.table.1comp, post_1comp)
 ### do 2-Compartment fit
 system.time(
     PK.fit.table.2comp <- fit_all(
-      data.set = cvt_data,
+      data.set = cvt,
       model = "2compartment",
       modelfun = "analytic",
-          names_list = names_list,
-    defaults_list =  defaults_list,
-      ratio_conc_to_dose = 1,
-                    calc_loq_factor = 0.45,
-                    routes_keep = c("po", "iv"),
-                    media_keep = c("blood", "plasma"),
+      preprocess = FALSE,
       optimx_args = list(
                       "method" = "bobyqa",
                       "itnmax" = 1e6,
@@ -202,3 +209,6 @@ write.csv(post_2comp,
 
 rm(PK.fit.table.2comp, post_2comp)
 ```
+
+
+
