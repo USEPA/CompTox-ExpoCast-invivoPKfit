@@ -19,58 +19,84 @@ library(readxl)
 devtools::load_all("../invivopkfit")
 ```
 
+Timestamp
+
+```{r}
+timestamp <- "2023_01_05"
+```
+
+
 Read in CvTdb data pulled in `pulling_oral_iv_data_cvtdb.Rmd`.
 
 ```{r, load_cvt, eval = TRUE}
-cvt_data <- fread("../inst/ext/cvt_data_2023_01_05_09_37_22.csv")
+cvt_data <- fread(paste0("../inst/ext/cvt_data_",
+timestamp,
+".csv"))
+```
+List of new_name = old_name to supply for preprocessing data
+
+```{r}
+names_list <- list(
+  "Compound_Dosed" = "studies.test_substance_name_original",
+  "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
+  "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
+  "Compound_Analyzed" = "series.analyte_name_original",
+  "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
+  "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
+  "Reference" = "documents_reference.id",
+  "Extraction" = "documents_extraction.id",
+  "Species" = "subjects.species",
+  "Weight" ="subjects.weight_kg",
+  "Weight.Units" = NULL,
+  "Dose" = "studies.dose_level_normalized_corrected", #note that dose levels were corrected in pulling_oral_iv_data_cvtdb.Rmd
+  "Dose.Units" = NULL,
+  "Time" = "conc_time_values.time_hr",
+  "Time.Units" = NULL,
+  "Media" = "series.conc_medium_normalized",
+  "Value" = "conc_time_values.conc", #already normalized to mg/L units in CvTdb
+  "Value.Units" = NULL,
+  "Route" = "studies.administration_route_normalized",
+  "LOQ" = "series.loq_normalized", #note that LOQs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  "Subject" = "subjects.id",
+  "N_Subjects" = "series.n_subjects_in_series",
+  "Value_SD" = "conc_time_values.conc_sd_normalized" #note that SDs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  )
+```
+
+List of default values for new columns added in preprocessing data
+
+```{r}
+defaults_list <- list(
+                      "Weight.Units" = "kg",
+                      "Dose.Units" = "mg/kg",
+                      "Time.Units" = "h",
+                      "Value.Units" = "mg/L")
 ```
 
 For ease of plotting, get the pre-processed, harmonized data:
 
 ```{r}
 cvt <- preprocess_data(data.set = cvt_data,
-                       names_list =list(
-                         "Compound_Dosed" = "studies.test_substance_name_original",
-                         "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
-                         "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
-                         "Compound_Analyzed" = "series.analyte_name_original",
-                         "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
-                         "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
-                         "Reference" = "documents_reference.id",
-                         "Extraction" = "documents_extraction.id",
-                         "Species" = "subjects.species",
-                         "Weight" ="subjects.weight_kg",
-                         "Weight.Units" = NULL,
-                         "Dose" = "studies.dose_level_normalized_corrected", #note that dose levels were corrected in pulling_oral_iv_data_cvtdb.Rmd
-                         "Dose.Units" = NULL,
-                         "Time" = "conc_time_values.time_hr",
-                         "Time.Units" = NULL,
-                         "Media" = "series.conc_medium_normalized",
-                         "Value" = "conc_time_values.conc", #already in mg/L units
-                         "Value.Units" = NULL,
-                         "Route" = "studies.administration_route_normalized",
-                         "LOQ" = "series.loq_normalized", #note that LOQs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
-                         "Subject" = "subjects.id",
-                         "N_Subjects" = "series.n_subjects_in_series",
-                         "Value_SD" = "conc_time_values.conc_sd_normalized" #note that SDs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
-                         ),
-                       defaults_list =   list(
-                         "Weight.Units" = "kg",
-                         "Dose.Units" = "mg/kg",
-                         "Time.Units" = "h",
-                         "Value.Units" = "mg/L"),
+                       names_list =names_list,
+                       defaults_list =   defaults_list,
                        ratio_conc_to_dose = 1,
                        calc_loq_factor = 0.45,
                        routes_keep = c("po", "iv"),
                        media_keep = c("blood", "plasma"),
                        suppress.messages = FALSE)
 cvt <- as.data.table(cvt)
+
+#save pre-processed data
+write.csv(cvt,
+          paste0("cvt_preprocessed_",
+                 timestamp,
+          ".csv"))
 ```
 
 Read in the fitted model parameter values.
 
 ```{r, read_data}
-timestamp <- "2023_01_04_10_56"
+
 PK.fit.table.1comp <- fread(paste0("../inst/ext/", "PK_fit_table_1comp_", timestamp, ".csv",sep=""))
 PK.fit.table.2comp <- fread(paste0("../inst/ext/", "PK_fit_table_2comp_", timestamp, ".csv",sep=""))
 PK.fit.table.flat <- fread(paste0("../inst/ext/", "PK_fit_table_flat_", timestamp, ".csv",sep=""))
@@ -85,6 +111,10 @@ pk_fit <- rbindlist(list("1comp" = PK.fit.table.1comp,
                          "flat" = PK.fit.table.flat),
                     use.names = TRUE,
                     fill = TRUE)
+
+rm(PK.fit.table.1comp,
+   PK.fit.table.2comp,
+   PK.fit.table.flat)
 ```
 
 
@@ -144,10 +174,32 @@ tmp <- mapply(plot_fit,
                      log10_scale_y = FALSE,
                      plot_errbars = TRUE,
                      log10_scale_time = FALSE,
-                     file_path = "../inst/ext/plots/Joint Analysis/model_all/")
+                     file_path = "../inst/ext/plots/Joint Analysis/model_all/errbars_naturaly")
                      )
 
 ```
+
+```{r}
+
+#plot all models
+tmp <- mapply(plot_fit,
+              DTXSID_in = plot_table$DTXSID,
+                     Species_in = plot_table$Species,
+              MoreArgs = list(
+                     model_in = "all",
+                     Analysis_Type_in = "Joint",
+                     DF = cvt,
+                     pk_fit = pk_fit,
+                     n = 101,
+                     limit_y_axis = FALSE,
+                     log10_scale_y = TRUE,
+                     plot_errbars = FALSE,
+                     log10_scale_time = FALSE,
+                     file_path = "../inst/ext/plots/Joint Analysis/model_all/noerrbars_logy")
+                     )
+
+```
+
 
 Problem: DTXSID0022985_rat_Joint_all does not plot any model lines. Why?
 
