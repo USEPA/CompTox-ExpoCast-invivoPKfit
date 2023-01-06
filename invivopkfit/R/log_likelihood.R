@@ -232,8 +232,13 @@ log_likelihood <- function(params,
                             refs_sigmas,
                             nomatch = 0)]
 
-  }else{ #if only one reference, the parameter is just called "sigma"
+  }else if(nref == 1){ #if only one reference, the parameter is just called "sigma"
     sigma_ref <- rep(sigmas, nrow(DF))
+  }else{
+    stop(paste("Could not find any parameters with 'sigma' in the name.",
+    "Param names are:",
+    paste(names(params), collapse = "; ")
+    ))
   }
 
 
@@ -245,6 +250,7 @@ log_likelihood <- function(params,
   #get log-likelihood for each observation
 
   #For single-subject observations:
+  if(any(DF$N_Subjects %in% 1)){
   DF_single_subj <- subset(DF,
                            N_Subjects %in% 1)
 
@@ -259,8 +265,12 @@ log_likelihood <- function(params,
                           mean = DF_single_subj$pred,
                           sd = DF_single_subj$sigma_ref,
                           log = TRUE))
+  }else{
+    loglike_single_subj <- 0
+  }
 
   #For multi-subject observations:
+  if(any(DF$N_Subjects > 1)){
   DF_multi_subj <- subset(DF, N_Subjects > 1)
   loglike_multi_subj <-  dnorm_summary(mu = DF_multi_subj$pred,
                                             sigma = DF_multi_subj$sigma_ref,
@@ -268,6 +278,9 @@ log_likelihood <- function(params,
                                             x_sd = DF_multi_subj$Value_SD,
                                             x_N = DF_multi_subj$N_Subjects,
                                             log = TRUE)
+  }else{
+    loglike_multi_subj <- 0
+  }
 
   #sum log-likelihoods over observations
   ll <- sum(c(loglike_single_subj, loglike_multi_subj))
