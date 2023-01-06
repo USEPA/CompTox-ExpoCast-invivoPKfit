@@ -36,6 +36,10 @@
 #'   and plasma (because at present, model fitting is only implemented for blood
 #'   and plasma). Any data where medium is not on this list will be discarded.
 #'   (For example, with the default, urine data will be discarded.)
+#' @param impute_loq Logical: TRUE to impute values for missing LOQs; FALSE to
+#'   leave them alone.
+#' @param impute_sd Logical: TRUE to impute values for missing sample SDs for
+#'   multi-subject observations; FALSE to leave them alone
 #' @param get_starts_args Named list or NULL: any additional arguments to
 #'   [get_starts()] (other than `model` and `fitdata`, which are always passed).
 #'   Default NULL to accept the default arguments for [get_starts()].
@@ -109,6 +113,8 @@ fit_all <- function(data.set,
                     calc_loq_factor = 0.45,
                     routes_keep = c("po", "iv"),
                     media_keep = c("blood", "plasma"),
+                    impute_loq = TRUE,
+                    impute_sd = TRUE,
 
                     get_starts_args = NULL,
                     get_lower_args = NULL,
@@ -136,6 +142,8 @@ fit_all <- function(data.set,
                              calc_loq_factor = calc_loq_factor,
                              routes_keep = routes_keep,
                              media_keep = media_keep,
+                             impute_loq = impute_loq,
+                             impute_sd = impute_sd,
                              suppress.messages = suppress.messages)
 
  data.set <- as.data.table(data.set)
