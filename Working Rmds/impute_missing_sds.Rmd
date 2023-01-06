@@ -89,7 +89,7 @@ There are many, many cases where N > 1 but no SD is reported. Can we impute thes
 
 # Individual subject data
 
-By chemical, species, reference, medium, dose group, and time point: calculate mean and standard deviation.
+By chemical, species, reference, medium, dose group, route, and time point: calculate mean and standard deviation.
 
 ```{r}
 
@@ -99,7 +99,9 @@ cvt_summarized <- cvt[N_Subjects==1,
                         n = .N),
                       by = .(Reference,
                              DTXSID,
+                             Species,
                              Media,
+                             Route,
                              Dose,
                              Time)]
 ```
@@ -121,7 +123,7 @@ ggplot(cvt_summarized,
   annotation_logticks(sides = "bl") +
   xlab("Mean conc., mg/kg") +
   ylab("Sample std dev conc., mg/kg") +
-  ggtitle("Mean vs. SD for N=1 data\ngrouped by chemical, reference, medium, dose, timepoint") 
+  ggtitle("Mean vs. SD for N=1 data") 
 ```
 
 Linear regression of the relation:
@@ -132,10 +134,7 @@ cvt_summarized[, log10_meanval := log10(meanval)]
 
 cvt_summarized[!is.finite(log10_sdvals), log10_sdvals := NA_real_]
 cvt_summarized[!is.finite(log10_meanval), log10_meanval := NA_real_]
-```
 
-
-```{r}
 summary(lm(log10_sdvals ~ log10_meanval,
            data = cvt_summarized,
            na.action = na.omit))
@@ -173,20 +172,20 @@ Studies with entirely missing SDs are different from the studies where only a fe
 
 I suggest using the relation from the summarized individual-animal data to impute standard deviations. That is
 
-$$ \log \textrm{SD} = -0.517 + 0.953 \log \textrm{Mean} $$
+$$ \log \textrm{SD} = -0.555 + 0.939 \log \textrm{Mean} $$
 
 When translated to the natural scale (raising 10 to the power of both sides), this becomes
 
-$$ \log_{10} \textrm{SD} = -0.517 + \log_{10} \textrm{Mean}^{0.953} $$
-$$ \log_{10} \textrm{SD} = \log_{10}{ \left( 10^{-0.517} \times \textrm{Mean}^{0.953} \right)}  $$
+$$ \log_{10} \textrm{SD} = -0.555 + \log_{10} \textrm{Mean}^{0.939} $$
+$$ \log_{10} \textrm{SD} = \log_{10}{ \left( 10^{-0.555} \times \textrm{Mean}^{0.939} \right)}  $$
 
 Raising 10 to the power of both sides,
 
-$$ \textrm{SD} = 10^{-0.517} \times \textrm{Mean}^{0.953} $$
+$$ \textrm{SD} = 10^{-0.555} \times \textrm{Mean}^{0.939} $$
 
 or approximately
 
-$$ \textrm{SD} = 0.3 \times \textrm{Mean}^{0.953} $$
+$$ \textrm{SD} = 0.278 \times \textrm{Mean}^{0.939} $$
 
 Very roughly, this is about a 30% coefficient of variation.
 

@@ -110,9 +110,9 @@ if(any((dat_out[[n_subj_col]] > 1) %in% TRUE &
   selected <- (dat_out[[n_subj_col]] > 1) %in% TRUE &
     is.na(dat_out[[sd_col]])
   #apply relation to impute missing SDs
-  dat_out[selected, sd_col] <- 10^(-0.5170722) *
+  dat_out[selected, sd_col] <- 10^(-0.555364) *
                                     dat_out[selected,
-                                            value_col]^(0.9529368)
+                                            value_col]^(0.939218)
 
 }
 
