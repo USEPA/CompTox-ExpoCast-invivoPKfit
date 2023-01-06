@@ -61,7 +61,10 @@ dnorm_summary <- function(mu,
   #repeat to match longest
   for (i in seq_along(x_len)){
     assign(names(x_len)[i],
-           rep(x_len[i], length.out = max_len))
+           rep( #repeat the current value of each item to match the length
+             get(names(x_len)[i]), #get the current value of each item
+               length.out = max_len)
+           )
   }
 
   #Evaluate
