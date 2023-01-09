@@ -462,6 +462,7 @@ if(is.null(par_DF)){
       }
 
       if(has_po %in% TRUE){
+
         #--------------------------------------------------
         #get kelim and Fgutabs/Vdist from linear regression
         #see https://www.boomer.org/c/p4/c09/c0901.php
@@ -476,6 +477,8 @@ if(is.null(par_DF)){
                            Time <= po_peak$x)
         po_late <- subset(po_data,
                           Time >= po_peak$x) #yes, include tpeak in both
+
+        if(nrow(po_late)>1){
 
         lm_po_late <- do_linreg(x = po_late$Time,
                                 y = po_late$logValueDose,
@@ -509,7 +512,7 @@ if(is.null(par_DF)){
         if(!is.finite(kelim_po) |
            kelim_po <= par_DF["kelim", "lower_bound"]){
           #if no valid kelim estimate could be made,
-          #then assume max time = 5 * elimintation half-life
+          #then assume max time = 5 * elimination half-life
           thalf_elim <- max(po_data$Time)/5
           kelim_po <- log(2)/thalf_elim
           #extrapolate back to time 0 to get intercept
@@ -537,8 +540,6 @@ if(is.null(par_DF)){
                                  msg = "Method of inspection on PO data (assume max time = 5 * elim half-life")
           }
         } #end of check for valid kelim_po estimate
-
-
 
         #get residuals
         #predicted values:
@@ -580,8 +581,6 @@ if(is.null(par_DF)){
 
         }
 
-
-
         #use intercept to get Fgutabs_Vdist
         Fgutabs_Vdist_po <- A_Dose_po * (kgutabs_po - kelim_po) / kgutabs_po
 
@@ -591,6 +590,51 @@ if(is.null(par_DF)){
                                par_DF = par_DF,
                                start_from = start_from_data,
                                msg = "Method of residuals on PO data")
+        }else if(nrow(po_late) <= 1){
+          #if we only have absorption phase, not elimination phase
+          #then make a gross guess:
+          #assume tpeak is 5 * absorption halflife
+          thalf_abs <- po_peak$x/5
+          kgutabs_po <- log(2)/thalf_abs
+          #another gross guess: kelim is even slower
+          kelim_po <- kgutabs_po/2
+          #to get Fgutabs/Vdist:
+          #log(conc/dose) - log(A*exp(-kel*t) - A*exp(-ka*t)) = log(F/V)
+          A <- kgutabs_po/(kgutabs_po - kelim_po)
+          Fgutabs_Vdist_po <- exp(
+            mean(
+              po_data$logValueDose -
+                log(A*exp(-kelim_po*po_data$Time) -
+                      A*exp(-kgutabs_po*po_data$Time)
+                )
+            )
+          )
+
+
+          #update par_DF
+          #kgutabs
+          par_DF <- assign_start(param_name = "kgutabs",
+                                 param_value = kgutabs_po,
+                                 par_DF = par_DF,
+                                 start_from = start_from_data,
+                                 msg = "No elimination phase data: assume tpeak = 5 * absorp half-life")
+
+          #kelim
+          par_DF <- assign_start(param_name = "kelim",
+                                 param_value = kelim_po,
+                                 par_DF = par_DF,
+                                 start_from = start_from_data,
+                                 msg = "No elimination phase data: Assume kelim = 2 * kgutabs")
+
+          #Fgutabs_Vdist
+          par_DF <- assign_start(param_name = "Fgutabs_Vdist",
+                                 param_value = Fgutabs_Vdist_po,
+                                 par_DF = par_DF,
+                                 start_from = start_from_data,
+                                 msg = "No elimination phase data: based on assuming tpeak = 5 * absorp half-life and kelim = 2 * kgutabs")
+
+
+        }
 
         if(has_iv %in% TRUE){  #if we also have iv data
           #then we can estimate Fgutabs separately
