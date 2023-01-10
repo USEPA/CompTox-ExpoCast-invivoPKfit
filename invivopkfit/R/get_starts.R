@@ -383,6 +383,15 @@ if(is.null(par_DF)){
       replace_names <- intersect(names(httk_params),
                                        intersect(par_DF$param_name,
                                                  start_from_httk))
+
+      #if optimize_params is FALSE for Rblood2plasma, do not use its httk value
+      #keep the default of 1
+      if(par_DF[par_DF$param_name %in% "Rblood2plasma",
+                "optimize_param"] %in% FALSE){
+        replace_names <- setdiff(replace_names,
+                                 "Rblood2plasma")
+      }
+
       #update par_DF for any of these parameters
       for (this_param in replace_names){
         if(this_param %in% par_DF$param_name){
@@ -410,12 +419,6 @@ if(is.null(par_DF)){
 
     tmpdat <- subset(tmpdat,
                      is.finite(Value))
-
-    # #Substitute non-detects by LOQ
-    # tmpdat$Detect <- TRUE
-    # tmpdat[is.na(tmpdat$Value), "Detect"] <- FALSE
-    # tmpdat[is.na(tmpdat$Value), "Value"] <- tmpdat[is.na(tmpdat$Value),
-    #                                                "LOQ"]
 
     #normalize concentration by dose
     tmpdat$ValueDose <- tmpdat$Value/tmpdat$Dose
@@ -1071,7 +1074,8 @@ if(is.finite(kgutabs_po) &
                   list(params = params,
                        time = fitdata$Time,
                        dose = fitdata$Dose,
-                       iv.dose = fitdata$Route %in% "iv"))
+                       iv.dose = fitdata$Route %in% "iv",
+                       medium = fitdata$Media))
 
   resid <- pred - fitdata$Value
   resid[!is.finite(resid)] <- NA_real_
