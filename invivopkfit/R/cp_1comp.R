@@ -34,6 +34,10 @@
 #'but `Fgutabs` is not provided, then `Fgutabs` will be calculated from `Vdist`
 #'and `Fgutabs_V1`.)
 #'
+#'If `any(medium %in% 'blood')`, then `params` must also include
+#'`Rblood2plasma`, the ratio of chemical concentration in whole blood to the
+#'chemical concentration in blood plasma.
+#'
 #'@param params A named list of numeric parameter values. See Details for
 #'  requirements.
 #'@param time A numeric vector of times in hours, reflecting the time point when
@@ -45,20 +49,25 @@
 #'@param iv.dose A logical vector, reflecting the route of administration of
 #'  each single bolus dose. TRUE for single IV bolus dose; FALSE for single oral
 #'  bolus dose.  Must be same length as `time` and `dose`, or length 1.
+#'@param medium A character vector reflecting the medium in which each resulting
+#'  concentration is to be calculated: "blood" or "plasma". Default is "plasma".
+#'  Must be same length as `time` and `dose`, or length 1.
 #'
-#'@return A vector of plasma concentration values (mg/L) corresponding to
-#'  `time`.
+#'@return A vector of blood or plasma concentration values (mg/L) corresponding
+#'  to `time`.
 #'
 #'@author Caroline Ring, John Wambaugh
 #'
 #'@export cp_1comp
-cp_1comp <- function(params, time, dose, iv.dose){
+cp_1comp <- function(params, time, dose, iv.dose, medium = 'plasma'){
 
   #check whether lengths of time, dose, and iv.dose match
   time_len <- length(time)
   dose_len <- length(dose)
   ivdose_len <- length(iv.dose)
-  len_all <- c(time_len, dose_len, ivdose_len)
+  medium_len <- length(medium)
+
+  len_all <- c(time_len, dose_len, ivdose_len, medium_len)
   #Cases:
   # All three lengths are the same -- OK
   # Two lengths are the same and the third is 1 -- OK
@@ -70,11 +79,12 @@ cp_1comp <- function(params, time, dose, iv.dose){
 
   if(!good_len){
     stop(paste0("invivopkfit::cp_1comp(): ",
-                "'time', 'dose', and 'iv.dose' ",
+                "'time', 'dose', 'iv.dose', and 'medium'",
                 "must either be the same length or length 1.\n",
                 "'time' is length ", time_len, "\n",
                 "'dose' is length ", dose_len, "\n",
-                "'iv.dose' is length ", ivdose_len, "\n")
+                "'iv.dose' is length ", ivdose_len, "\n",
+                "'medium' is length ", medium_len, "\n")
     )
   }
 
@@ -83,6 +93,7 @@ cp_1comp <- function(params, time, dose, iv.dose){
   time <- rep(time, length.out = max_len)
   dose <- rep(dose, length.out = max_len)
   iv.dose <- rep(iv.dose, length.out = max_len)
+  medium <- rep(medium, length.out = max_len)
 
   #compute Fgutabs/Vdist if necessary
   if(all(c("Fgutabs", "Vdist") %in% names(params))){
@@ -126,6 +137,13 @@ cp_1comp <- function(params, time, dose, iv.dose){
     }
   }
 
+  if(any(medium %in% "blood")){
+    if(!("Rblood2plasma" %in% names(params))){
+      stop(paste0("cp_1comp(): Error: For 1-compartment model ",
+                  "in blood: missing parameter Rblood2plasma"))
+    }
+  }
+
   cp <- vector(mode = "numeric", length = length(time))
 
   #IV model\
@@ -156,6 +174,8 @@ cp_1comp <- function(params, time, dose, iv.dose){
     }
   }
 
+#convert blood concentrations using Rblood2plasma
+  cp[medium %in% "blood"] <- params$Rblood2plasma * cp[medium %in% "blood"]
 
   return(cp)
 }

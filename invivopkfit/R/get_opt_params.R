@@ -91,9 +91,11 @@
 #' @param model Character: the name of the model to parameterize.
 #' @param fitdata `data.frame`: The set of concentration-dose-time data to be
 #'   used to fit the model parameters, for example as produced by
-#'   [preprocess_data()]. Requires a variable named "Route" which contains the
-#'   dosing route, either "po" (oral dosing) or "iv" (intravenous dosing), and a
-#'   variable named "Reference" which contains reference identifiers.
+#'   [preprocess_data()]. Requires a variable named `Route` which contains the
+#'   dosing route, either "po" (oral dosing) or "iv" (intravenous dosing); a
+#'   variable named `Media` which contains the medium in which concentration
+#'   was measured (either "blood" or "plasma"), and a variable named `Reference`
+#'   which contains reference identifiers.
 #' @param param_names Optional: A character vector of parameter names needed by
 #'   the model. Default NULL to automatically determine these from `model` by
 #'   calling [get_model_paramnames()].
@@ -213,6 +215,16 @@ get_opt_params <- function(model,
         use_params["V1"] <- FALSE
       }
     }
+  }
+
+  #if both "blood" and "plasma" are not in data, then turn off Rblood2plasma
+  if(!(all(c("blood", "plasma") %in% fitdata$Media))){
+    opt_params["Rblood2plasma"] <- FALSE
+  }
+
+  if(!("blood" %in% fitdata$Media)){
+    use_params["Rblood2plasma"] <- FALSE
+    #otherwise, if blood-only data, Rblood2plasma will be used but held constant at 1
   }
 
   par_DF <- data.frame(param_name = names(opt_params),

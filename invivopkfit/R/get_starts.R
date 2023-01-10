@@ -253,6 +253,7 @@ get_starts <- function(par_DF = NULL,
                                         "k21",
                                         "Fgutabs_Vdist",
                                         "Fgutabs_V1",
+                                        "Rblood2plasma",
                                         "sigma"),
                          start_value = c(1, #A
                                          0.25, #kelim
@@ -264,6 +265,7 @@ get_starts <- function(par_DF = NULL,
                                          0.5, #k21
                                          0.5/5.56, #Fgutabs_Vdist
                                          0.51/5.56, #Fgutabs_V1
+                                         1, #Rblood2plasma
                                          1), #sigma
                          start_value_msg = "Default"
                        ),

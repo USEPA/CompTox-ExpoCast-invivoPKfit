@@ -165,7 +165,8 @@ log_likelihood <- function(params,
           args = list(params = model.params,
                       time = DF$Time, #in hours
                       dose = DF$Dose,
-                      iv.dose = DF$iv
+                      iv.dose = DF$iv,
+                      medium = DF$Media
                       ))
 
   }else{ #evaluate full model

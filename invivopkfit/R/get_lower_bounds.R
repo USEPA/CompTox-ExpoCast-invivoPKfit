@@ -76,6 +76,7 @@ get_lower_bounds <- function(fitdata,
                                               "k21",
                                               "Fgutabs_Vdist",
                                               "Fgutabs_V1",
+                                              "Rblood2plasma",
                                               "sigma"),
                                lower_bound = c(0, #A
                                                1e-4, #kelim
@@ -87,6 +88,7 @@ get_lower_bounds <- function(fitdata,
                                                1e-4, #k21
                                                1e-4, #Fgutabs_Vdist
                                                1e-4, #Fgutabs_V1
+                                               1e-4, #Rblood2plasma
                                                1e-4 #sigma
                                                ),
                                lower_bound_msg = "Default"
