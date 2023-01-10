@@ -80,8 +80,8 @@ get_upper_bounds <- function(fitdata,
                                                Inf, #V1
                                                Inf, #k12
                                                Inf, #k21
-                                               1e8, #Fgutabs_Vdist
-                                               1e8, #Fgutabs_V1
+                                               1e4, #Fgutabs_Vdist
+                                               1e4, #Fgutabs_V1
                                                Inf), #sigma
                                upper_bound_msg = "Default"
                              ),
