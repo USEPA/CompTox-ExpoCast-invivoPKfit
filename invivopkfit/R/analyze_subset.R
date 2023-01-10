@@ -696,50 +696,28 @@ out_DF$time_units_rescaled <- new_time_units
                      optimx_args$control$factr, "\n",
                      "..."))
 
-      all_data_fit <-  do.call(optimx::optimx,
-                               args = c(
-                                 #
-                                 list(par = opt_params,
-                                      fn = log_likelihood,
-                                      lower = lower_params,
-                                      upper = upper_params),
-                                 #method and control
-                                 optimx_args,
-                                 list(
-                                   const_params = const_params,
-                                   DF = fitdata,
-                                   modelfun = modelfun,
-                                   model = model,
-                                   force_finite = (optimx_args$method %in% "L-BFGS-B"),
-                                   negative = TRUE
-                                 )
-                               )
-      )
-    }else{
-
-      junk <- capture.output(
-        all_data_fit <-  do.call(
-          optimx::optimx,
-          args = c(
-            #
-            list(par = opt_params,
-                 fn = log_likelihood,
-                 lower = lower_params,
-                 upper = upper_params),
-            #method and control
-            optimx_args,
-            list(
-              const_params = const_params,
-              DF = fitdata,
-              modelfun = modelfun,
-              model = model,
-              force_finite = (optimx_args$method %in% "L-BFGS-B"),
-              negative = TRUE
-            )
-          )
-        )
-      )
     }
+
+
+    all_data_fit <-  do.call(optimx::optimx,
+                             args = c(
+                               #
+                               list(par = opt_params,
+                                    fn = log_likelihood,
+                                    lower = lower_params,
+                                    upper = upper_params),
+                               #method and control
+                               optimx_args,
+                               list(
+                                 const_params = const_params,
+                                 DF = fitdata,
+                                 modelfun = modelfun,
+                                 model = model,
+                                 force_finite = (optimx_args$method %in% "L-BFGS-B"),
+                                 negative = TRUE
+                               )
+                             )
+    )
 
     means <- as.vector(stats::coef(all_data_fit))
     names(means) <- names(opt_params)
