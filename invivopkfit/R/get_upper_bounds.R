@@ -80,12 +80,12 @@ get_upper_bounds <- function(fitdata,
                                                Inf, #V1
                                                Inf, #k12
                                                Inf, #k21
-                                               1e4, #Fgutabs_Vdist
-                                               1e4, #Fgutabs_V1
+                                               1e8, #Fgutabs_Vdist
+                                               1e8, #Fgutabs_V1
                                                Inf), #sigma
                                upper_bound_msg = "Default"
                              ),
-                             Fgutabs_Vdist_from_species = TRUE,
+                             Fgutabs_Vdist_from_species = FALSE,
                              suppress.messages = FALSE){
 
   if(is.null(par_DF)){
@@ -140,7 +140,7 @@ get_upper_bounds <- function(fitdata,
                                 "upper_bound"]
         #assuming this gives us a valid answer:
         if(is.finite(Vdist_lower)){
-          #assign 1/10 of this value as theoretical lower bound on Vdist
+          #theoretical upper bound on Fgutabs/Vdist is 1/Vdist_lower
           par_DF[par_DF$param_name %in%
                    c("Fgutabs_Vdist", "Fgutabs_V1"),
                  "upper_bound"] <- Fgutabs_upper/Vdist_lower
