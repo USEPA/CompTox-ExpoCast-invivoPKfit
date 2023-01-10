@@ -404,8 +404,16 @@ if(is.null(par_DF)){
 
     #Drop control points & non-detects
     tmpdat <- subset(fitdata,
-                     Dose > 0 &
-                       is.finite(Value))
+                     Dose > 0)
+
+    tmpdat <- subset(tmpdat,
+                     is.finite(Value))
+
+    # #Substitute non-detects by LOQ
+    # tmpdat$Detect <- TRUE
+    # tmpdat[is.na(tmpdat$Value), "Detect"] <- FALSE
+    # tmpdat[is.na(tmpdat$Value), "Value"] <- tmpdat[is.na(tmpdat$Value),
+    #                                                "LOQ"]
 
     #normalize concentration by dose
     tmpdat$ValueDose <- tmpdat$Value/tmpdat$Dose
@@ -478,163 +486,262 @@ if(is.null(par_DF)){
         po_late <- subset(po_data,
                           Time >= po_peak$x) #yes, include tpeak in both
 
-        if(nrow(po_late)>1){
+        A_Dose_po <- NA_real_
+        kelim_po <- NA_real_
+        kgutabs_po <- NA_real_
+        kelim_po_msg <- NA_character_
+        kgutabs_po_msg <- NA_character_
 
+        #if we have an IV estimate of kelim, use it
+        have_kelim_iv <- par_DF[par_DF$param_name %in% "kelim",
+                                "start_value_msg"] %in%
+          "Linear regression of IV data"
+        if(have_kelim_iv %in% TRUE){
+          kelim_po <- kelim_iv
+          kelim_po_msg <- "Linear regression on IV data"
+        }else{ #if we do not have an IV estimate of kelim, get one
+        if(nrow(po_late)>1){ #if we have any elimination-phase data
+#try to estimate kelim via linear regression
         lm_po_late <- do_linreg(x = po_late$Time,
                                 y = po_late$logValueDose,
                                 intercept_exp = TRUE,
                                 slope_neg = TRUE)
         A_Dose_po <- lm_po_late$intercept
         kelim_po <- lm_po_late$slope
-        if(!is.na(kelim_iv)){
-          #if we also have a kelim estimate from IV data, take average
-          par_DF <-  assign_start(param_name = "kelim",
-                                  param_value =  mean(c(kelim_iv,
-                                                        kelim_po), na.rm = TRUE),
-                                  par_DF = par_DF,
-                                  start_from = start_from_data,
-                                  msg = paste0("Avg of lin reg on IV data (kelim_iv = ",
-                                               kelim_iv,
-                                               ") ",
-                                               "and method of residuals on PO data ",
-                                               "(kelim_po = ",
-                                               kelim_po,
-                                               ")"))
-        }else{
-          #if we do not have a kelim estimate from IV data, use the PO estimate
+        kelim_po_msg <- "Linear regression on late-phase PO data"
+
+        if(!is.finite(kelim_po)){ #if regression didn't produce a valid estimate
+         #make a gross approximation
+            #assume tmax = 5 *elimination half-life
+          thalf_elim <- max(po_data$Time)/5
+          kelim_po <- log(2)/thalf_elim
+          kelim_po_msg <- "Assume PO data tmax = 5 * elimination half-life"
+          }
+
+        #Assign kelim starting value
         par_DF <- assign_start(param_name = "kelim",
                                param_value = kelim_po,
                                par_DF = par_DF,
                                start_from = start_from_data,
-                               msg = "Method of residuals on PO data")
-        }
-
-        if(!is.finite(kelim_po) |
-           kelim_po <= par_DF["kelim", "lower_bound"]){
-          #if no valid kelim estimate could be made,
-          #then assume max time = 5 * elimination half-life
-          thalf_elim <- max(po_data$Time)/5
-          kelim_po <- log(2)/thalf_elim
-          #extrapolate back to time 0 to get intercept
-          po_late <- po_late[order(po_late$Time), ]
-          A_Dose_po <- exp(po_late[1, "logValueDose"] + kelim_po * po_late[1, "Time"])
-          if(is.finite(kelim_iv)){  #if we also have iv data, take average kelim value
-            par_DF <- assign_start(param_name = "kelim",
-                                   param_value =  mean(c(kelim_iv,
-                                                         kelim_po), na.rm = TRUE),
-                                   par_DF = par_DF,
-                                   start_from = start_from_data,
-                                   msg = paste0("Avg of lin reg on IV data (kelim_iv = ",
-                                               kelim_iv,
-                                               ") ",
-                                   "and method of inspection on PO data ",
-                                   "(assume max time = 5 * elim half-life) ",
-                                   "(kelim_po = ",
-                                   kelim_po,
-                                   ")"))
-          }else{
-          par_DF <- assign_start(param_name = "kelim",
-                                 param_value = kelim_po,
-                                 par_DF = par_DF,
-                                 start_from = start_from_data,
-                                 msg = "Method of inspection on PO data (assume max time = 5 * elim half-life")
-          }
-        } #end of check for valid kelim_po estimate
-
-        #get residuals
-        #predicted values:
-        pred_late <- exp(log(A_Dose_po) - kelim_po * po_early$Time)
-        #residuals: late predictions - early observations
-        resid_early <- pred_late - po_early$ValueDose
-        #log-transform residuals
-        suppressWarnings(po_early$logresid <- log(resid_early))
-        #drop any NA log residuals
-        po_early <- subset(po_early, is.finite(logresid))
-
-        lm_resid_early <- do_linreg(x = po_early$Time,
-                                    y = po_early$logresid,
-                                    intercept_exp = TRUE,
-                                    slope_neg = TRUE)
-        kgutabs_po <- lm_resid_early$slope
-
-        #update par_DF
-        #kgutabs
-        par_DF <- assign_start(param_name = "kgutabs",
-                               param_value = kgutabs_po,
-                               par_DF = par_DF,
-                               start_from = start_from_data,
-                               msg = "Method of residuals on PO data")
-
-        #if method of residuals failed, then try just assuming that tpeak = 5 *
-        #absorption half-life -- see https://www.boomer.org/c/p4/c09/c0904.php
-        if(!is.finite(kgutabs_po) |
-           kgutabs_po < par_DF["kgutabs", "lower_bound"]){
-          thalf_abs <- po_peak$x/5
+                               msg = kelim_po_msg)
+        }else{ #if we don't have elimination phase
+          #if we only have absorption phase, not elimination phase
+          #then make a gross guess:
+          #assume tpeak is 2 * absorption halflife
+          thalf_abs <- po_peak$x/2
           kgutabs_po <- log(2)/thalf_abs
-          #update par_DF
-          #kgutabs
+          kgutabs_po_msg <- "No elimination phase data. Assume tpeak is 2*absorption halflife"
           par_DF <- assign_start(param_name = "kgutabs",
                                  param_value = kgutabs_po,
                                  par_DF = par_DF,
                                  start_from = start_from_data,
-                                 msg = "Method of inspection on PO data (assume tpeak = 5 * absorp half-life)")
+                                 msg = kgutabs_po_msg)
+          #another gross guess: kelim is same as kgutabs
+          #(unless we have IV estimate of kelim)
+          kelim_po <- ifelse(is.finite(kelim_iv),
+                             kelim_iv,
+                             kgutabs_po)
+          kelim_po_msg <- ifelse(is.finite(kelim_iv),
+                                 "Linear regression of IV data",
+                                 "No elimination phase data. Assume tpeak is 2*absorption halflife and kelim = kgutabs")
+          par_DF <- assign_start(param_name = "kelim",
+                                 param_value = kelim_po,
+                                 par_DF = par_DF,
+                                 start_from = start_from_data,
+                                 msg = kelim_po_msg)
+
+
+
+          }
+        } #end if(have_kelim_iv %in% TRUE)/else
+
+        #if we did not get an intercept before,
+        # back-calculate it from the kelim estimate
+        #and the peak time/ & peak conc
+        #this will be used to get kgutabs if Wagner-Nelson fails
+        if(!is.finite(A_Dose_po)){
+          A_Dose_po <- exp(po_peak$y +
+                             kelim_po * po_peak$x)
+        }
+
+#Continue with approximations of kgutabs
+        if(nrow(po_late)>1){
+#First, try Wagner-Nelson method
+        #see https://www.boomer.org/c/p4/c09/c0903.php
+        #get AUC/Dose
+
+        #sort data by dose, then by increasing time
+        po_data <- as.data.table(po_data)
+
+        setorder(po_data,
+                 Dose,
+                 Time)
+
+        #get average Value for every time point & each dose
+        po_avg <- po_data[, .(
+          ValueDose_avg =exp(
+            weighted.mean(
+              logValueDose,
+              N_Subjects)
+            )
+          ),
+                by = Time]
+
+        setorder(po_avg, Time)
+
+        po_avg[, AUCDose := pracma::cumtrapz(x =Time,
+                                          y = ValueDose_avg)]
+
+        po_avg[, ADose_V := ValueDose_avg + kelim_po * AUCDose]
+
+        #get the terminal rate constant
+        # po_avg[, k_inf := diff(rev(ValueDose_avg))[1] /
+        #          -diff(rev(Time))[1]]
+
+        po_avg[, AUCDose_inf := AUCDose[.N] + ValueDose_avg[.N] / kelim_po]
+
+        po_avg[, AmaxDose_V := kelim_po * AUCDose_inf]
+
+        po_avg[, Amax_minus_A := AmaxDose_V - ADose_V]
+
+        #keep only Amax - A values that canbe logged
+
+        po_avg <- po_avg[Amax_minus_A > 0, ]
+
+        setorder(po_avg, Time)
+
+        #take the earliest points:
+        #those before po_peak$x,
+        #and enough extras to allow linear regression, if necessary
+        n_keep <- max(po_avg[Time <= po_peak$x, .N],
+                      3)
+        po_avg_early <- po_avg[seq(1, n_keep), ]
+
+        #method of Wagner-Nelson:
+        #linear regression of log((Amax - A)/V) vs. time
+        #should have slope -kgutabs
+        wagnel <- do_linreg(x = po_avg_early$Time,
+                  y = log(po_avg_early$Amax_minus_A),
+                  slope_neg = TRUE)
+
+        kgutabs_po <- wagnel$slope
+        kgutabs_po_msg <- "Wagner-Nelson method on PO data"
+
+if(is.finite(kgutabs_po)){
+        par_DF <- assign_start(param_name = "kgutabs",
+                               param_value = kgutabs_po,
+                               par_DF = par_DF,
+                               start_from = start_from_data,
+                               msg = kgutabs_po_msg)
+}else{ #if Wagner-Nelson failed, try method of residuals to get kgutabs
+  #for this, we need to have >1 points in early-phase data
+
+  #get residuals
+  #predicted values:
+  pred_late <- exp(log(A_Dose_po) - kelim_po * po_early$Time)
+  #residuals: late predictions - early observations
+  resid_early <- pred_late - po_early$ValueDose
+  #log-transform residuals
+  suppressWarnings(po_early$logresid <- log(resid_early))
+  #drop any NA log residuals
+  po_early <- subset(po_early, is.finite(logresid))
+
+  lm_resid_early <- do_linreg(x = po_early$Time,
+                              y = po_early$logresid,
+                              intercept_exp = TRUE,
+                              slope_neg = TRUE)
+  kgutabs_po <- lm_resid_early$slope
+
+  #update par_DF
+  #kgutabs
+  kgutabs_po_msg <- "Method of residuals on PO data"
+  par_DF <- assign_start(param_name = "kgutabs",
+                         param_value = kgutabs_po,
+                         par_DF = par_DF,
+                         start_from = start_from_data,
+                         msg = kgutabs_po_msg)
+}
+        }
+
+#if both Wagner-Nelson and method of residuals failed
+        if(!is.finite(kgutabs_po)){
+        #Make a gross assumption that tpeak = 2 *
+        #absorption half-life -- see https://www.boomer.org/c/p4/c09/c0904.php
+          thalf_abs <- po_peak$x/2
+          kgutabs_po <- log(2)/thalf_abs
+          #update par_DF
+          #kgutabs
+          kgutabs_po_msg <- "Wagner-Nelson and method of residuals on PO data both failed. Assume tpeak = 2 * absorp half-life"
+          par_DF <- assign_start(param_name = "kgutabs",
+                                 param_value = kgutabs_po,
+                                 par_DF = par_DF,
+                                 start_from = start_from_data,
+                                 msg = kgutabs_po_msg)
 
         }
 
+        #Continue with estimations
         #use intercept to get Fgutabs_Vdist
-        Fgutabs_Vdist_po <- A_Dose_po * (kgutabs_po - kelim_po) / kgutabs_po
+
+        #
+#         if(kgutabs_po < kelim_po){
+#           #if we estimated kelim from PO data,
+#           #then we probably just got them flipped
+#           #reverse kgutabs and kelim
+# if(!(kelim_po_msg %in% "Linear regression on IV data")){
+#   kgutabs_orig <- kgutabs_po
+#   kelim_orig <- kelim_po
+#   kgutabs_po <- kelim_orig
+#   kelim_po <- kgutabs_orig
+#   par_DF <- assign_start(param_name = "kgutabs",
+#                          param_value = kgutabs_po,
+#                          par_DF = par_DF,
+#                          start_from = start_from_data,
+#                          msg = paste("kgutabs < kelim; swapping them:",
+#                                      "kelim message:",
+#                                      kelim_po_msg))
+#   par_DF <- assign_start(param_name = "kelim",
+#                          param_value = kelim_po,
+#                          par_DF = par_DF,
+#                          start_from = start_from_data,
+#                          msg = paste("kgutabs < kelim; swapping them:",
+#                                      "kgutabs message:",
+#                                      kgutabs_po_msg))
+# }else{
+#   #just set kgutabs = kelim
+#   par_DF <- assign_start(param_name = "kgutabs",
+#                          param_value = kelim_po,
+#                          par_DF = par_DF,
+#                          start_from = start_from_data,
+#                          msg = paste("kgutabs estimate < kelim;",
+#                          "assume kgutabs = kelim.",
+#                                      "Original kgutabs =",
+#                                      kgutabs_po,
+#                                      "with original message:",
+#                                      kgutabs_po_msg))
+# }
+#         }
+
+        #estimate Fgutabs_Vdist
+        if(kgutabs_po != kelim_po){
+          ktmp <- kgutabs_po/(kgutabs_po - kelim_po)
+          ypred <- (
+            ktmp * (exp(-kelim_po*po_data$Time) -
+                      exp(-kgutabs_po*po_data$Time)
+            )
+          )
+        }else{
+          ypred <- kelim_po * po_data$Time * exp(-kelim_po*po_data$Time)
+        }
+
+        Fgutabs_Vdist_po <- exp(mean(po_data$logValueDose - log(ypred)))
 
         #Fgutabs_Vdist
         par_DF <- assign_start(param_name = "Fgutabs_Vdist",
                                param_value = Fgutabs_Vdist_po,
                                par_DF = par_DF,
                                start_from = start_from_data,
-                               msg = "Method of residuals on PO data")
-        }else if(nrow(po_late) <= 1){
-          #if we only have absorption phase, not elimination phase
-          #then make a gross guess:
-          #assume tpeak is 5 * absorption halflife
-          thalf_abs <- po_peak$x/5
-          kgutabs_po <- log(2)/thalf_abs
-          #another gross guess: kelim is even slower
-          kelim_po <- kgutabs_po/2
-          #to get Fgutabs/Vdist:
-          #log(conc/dose) - log(A*exp(-kel*t) - A*exp(-ka*t)) = log(F/V)
-          A <- kgutabs_po/(kgutabs_po - kelim_po)
-          Fgutabs_Vdist_po <- exp(
-            mean(
-              po_data$logValueDose -
-                log(A*exp(-kelim_po*po_data$Time) -
-                      A*exp(-kgutabs_po*po_data$Time)
-                )
-            )
-          )
-
-
-          #update par_DF
-          #kgutabs
-          par_DF <- assign_start(param_name = "kgutabs",
-                                 param_value = kgutabs_po,
-                                 par_DF = par_DF,
-                                 start_from = start_from_data,
-                                 msg = "No elimination phase data: assume tpeak = 5 * absorp half-life")
-
-          #kelim
-          par_DF <- assign_start(param_name = "kelim",
-                                 param_value = kelim_po,
-                                 par_DF = par_DF,
-                                 start_from = start_from_data,
-                                 msg = "No elimination phase data: Assume kelim = 2 * kgutabs")
-
-          #Fgutabs_Vdist
-          par_DF <- assign_start(param_name = "Fgutabs_Vdist",
-                                 param_value = Fgutabs_Vdist_po,
-                                 par_DF = par_DF,
-                                 start_from = start_from_data,
-                                 msg = "No elimination phase data: based on assuming tpeak = 5 * absorp half-life and kelim = 2 * kgutabs")
-
-
-        }
+                               msg = "Estimated as mean(Value/y) where y = model prediction with current param estimates, divided by Fgutabs/Vdist")
 
         if(has_iv %in% TRUE){  #if we also have iv data
           #then we can estimate Fgutabs separately
