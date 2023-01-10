@@ -1,91 +1,91 @@
-#' Fit a PK model to one set of concentration vs. time data
+#'Fit a PK model to one set of concentration vs. time data
 #'
-#' Fit a specified PK model to one set of concentration vs. time data and return
-#' a set of fitted parameter values.
+#'Fit a specified PK model to one set of concentration vs. time data and return
+#'a set of fitted parameter values.
 #'
-#' Typically this function is not called directly by the user, but is called
-#' from [fit_all()], the main fitting function.
+#'Typically this function is not called directly by the user, but is called from
+#'[fit_all()], the main fitting function.
 #'
-#' This function estimates one set of parameters for a specified PK model, based
-#' on a set of concentration vs. time data in `fitdata`. `fitdata` is typically
-#' data for one chemical and one species, but it may include data from more than
-#' one study and more than one dosing route.
+#'This function estimates one set of parameters for a specified PK model, based
+#'on a set of concentration vs. time data in `fitdata`. `fitdata` is typically
+#'data for one chemical and one species, but it may include data from more than
+#'one study and more than one dosing route.
 #'
-#' The parameters to be estimated are those defined in [get_opt_params()] for
-#' the model specified in `model` and `modelfun`:
+#'The parameters to be estimated are those defined in [get_opt_params()] for the
+#'model specified in `model` and `modelfun`:
 #'
 #'  - for `model = 'flat'`, the parameter estimated is `A`
 #'  - for `model = '1compartment'`, the parameters estimated are `Vdist`,
-#' `kelim`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist` (see below).
+#'`kelim`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist` (see below).
 #'  - for `model = '2compartment'`, the parameters estimated are `V1`, `kelim`,
-#' `k12`, `k21`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist`.
+#'`k12`, `k21`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist`.
 #'
-#' For 1-compartment and 2-compartment models, `kgutabs` will be estimated from
-#' the data only if `fitdata` includes oral dosing data; otherwise it will be
-#' set to NA.
+#'For 1-compartment and 2-compartment models, `kgutabs` will be estimated from
+#'the data only if `fitdata` includes oral dosing data; otherwise it will be set
+#'to NA.
 #'
-#' `Fgutabs` will be estimated from the data only if `fitdata` includes both
-#' oral and IV data. If `fitdata` includes oral data but not IV data, then
-#' `Fgutabs_Vdist` (1-compartment) or `Fgutabs_V1` (2-compartment) will be
-#' estimated instead of `Fgutabs` and `Vdist` or `V1` (because only the ratio of
-#' `Fgutabs` and `Vdist` is identifiable in that case).
+#'`Fgutabs` will be estimated from the data only if `fitdata` includes both oral
+#'and IV data. If `fitdata` includes oral data but not IV data, then
+#'`Fgutabs_Vdist` (1-compartment) or `Fgutabs_V1` (2-compartment) will be
+#'estimated instead of `Fgutabs` and `Vdist` or `V1` (because only the ratio of
+#'`Fgutabs` and `Vdist` is identifiable in that case).
 #'
-#' In addition to the model parameters, the standard deviation of the residual
-#' errors will be estimated. If `fitdata` includes more than one unique
-#' reference value (`length(unique(fitdata$Reference))>1`) and `pool_sigma ==
-#' FALSE`, then a separate error SD will be estimated for each unique reference.
-#' These error SDs will be named following the pattern `sigma_ref_ReferenceID`,
-#' where `ReferenceID` is one unique value of `fitdata$Reference`, coerced to
-#' character if necessary. This reflects an assumption that all concentration
-#' vs. time studies in `fitdata` obey the same underlying PK model, but each
-#' study may have a different amount of random measurement error (analogous to
-#' meta-regression with fixed effects).
+#'In addition to the model parameters, the standard deviation of the residual
+#'errors will be estimated. If `fitdata` includes more than one unique reference
+#'value (`length(unique(fitdata$Reference))>1`) and `pool_sigma == FALSE`, then
+#'a separate error SD will be estimated for each unique reference. These error
+#'SDs will be named following the pattern `sigma_ref_ReferenceID`, where
+#'`ReferenceID` is one unique value of `fitdata$Reference`, coerced to character
+#'if necessary. This reflects an assumption that all concentration vs. time
+#'studies in `fitdata` obey the same underlying PK model, but each study may
+#'have a different amount of random measurement error (analogous to
+#'meta-regression with fixed effects).
 #'
-#' # Parameter estimation via numerical optimization
+#'# Parameter estimation via numerical optimization
 #'
-#' Parameters are estimated using [optimx::optimx()].
+#'Parameters are estimated using [optimx::optimx()].
 #'
-#' The objective function to be minimized is the negative log-likelihood,
-#' defined in [log_likelihood()] with argument `negative = TRUE`. See
-#' documentation for [log_likelihood()] for details.
+#'The objective function to be minimized is the negative log-likelihood, defined
+#'in [log_likelihood()] with argument `negative = TRUE`. See documentation for
+#'[log_likelihood()] for details.
 #'
-#' Parameter starting values are set in [get_starts()]. Parameter lower bounds
-#' are set in [get_lower_bounds()]. Parameter upper bounds are set in
-#' [get_upper_bounds()].
+#'Parameter starting values are set in [get_starts()]. Parameter lower bounds
+#'are set in [get_lower_bounds()]. Parameter upper bounds are set in
+#'[get_upper_bounds()].
 #'
-#' By default, optimization is performed using the "bobyqa" method (see
-#' [minqa::bobyqa()]). The method to use is specified in argument
-#' `optimx_args$method`.
+#'By default, optimization is performed using the "bobyqa" method (see
+#'[minqa::bobyqa()]). The method to use is specified in argument
+#'`optimx_args$method`.
 #'
-#' Because parameter bounds are used, `optimx_args$method` should name a method
-#' supported in [optimx::optimx()] that supports parameter bounds (i.e., one of
-#' "bobyqa", "L-BFGS-B", "nlminb", "spg", "Rcgmin", "Rvmmin", "nmkb", "hjkb").
-#' If a different method is specified, then parameter bounds will be ignored,
-#' and resulting parameter estimates may be non-physical.
+#'Because parameter bounds are used, `optimx_args$method` should name a method
+#'supported in [optimx::optimx()] that supports parameter bounds (i.e., one of
+#'"bobyqa", "L-BFGS-B", "nlminb", "spg", "Rcgmin", "Rvmmin", "nmkb", "hjkb"). If
+#'a different method is specified, then parameter bounds will be ignored, and
+#'resulting parameter estimates may be non-physical.
 #'
-#' The objective function gradient is estimated numerically.
+#'The objective function gradient is estimated numerically.
 #'
-#' ## Parameter standard deviations via numerical Hessian
+#'## Parameter standard deviations via numerical Hessian
 #'
-#' Parameter standard deviations (uncertainty) are estimated from the Hessian
-#' matrix (matrix of second derivatives of the objective function). The Hessian
-#' matrix is estimated numerically. Parameter SDs are estimated as the square
-#' root of the diagonal of the inverse of the Hessian (the matrix of second
-#' derivatives of the objective function). The inverse Hessian approximates the
-#' variance-covariance matrix of estimated parameters. The square root of its
-#' diagonal approximates parameter standard deviations.
+#'Parameter standard deviations (uncertainty) are estimated from the Hessian
+#'matrix (matrix of second derivatives of the objective function). The Hessian
+#'matrix is estimated numerically. Parameter SDs are estimated as the square
+#'root of the diagonal of the inverse of the Hessian (the matrix of second
+#'derivatives of the objective function). The inverse Hessian approximates the
+#'variance-covariance matrix of estimated parameters. The square root of its
+#'diagonal approximates parameter standard deviations.
 #'
-#' If the numerically-estimated Hessian cannot be inverted, a pseudoinverse is
-#' attempted.
+#'If the numerically-estimated Hessian cannot be inverted, a pseudoinverse is
+#'attempted.
 #'
-#' If the square root of the inverse Hessian contains NaN, then if
-#' `optimx_args$method %in% 'L-BFGS-B'`, optimization is repeated with a smaller
-#' convergence tolerance, until either there are no more NaNs or convergence
-#' tolerance factor is equal to 1 (i.e. tolerance is at machine epsilon). This
-#' is not done if `optimx_args$method %in% 'bobyqa'` because that method does
-#' not use a convergence tolerance control parameter.
+#'If the square root of the inverse Hessian contains NaN, then if
+#'`optimx_args$method %in% 'L-BFGS-B'`, optimization is repeated with a smaller
+#'convergence tolerance, until either there are no more NaNs or convergence
+#'tolerance factor is equal to 1 (i.e. tolerance is at machine epsilon). This is
+#'not done if `optimx_args$method %in% 'bobyqa'` because that method does not
+#'use a convergence tolerance control parameter.
 #'
-#' # Expected variables in \code{fitdata}
+#'# Expected variables in \code{fitdata}
 #'
 #' \describe{\item{\code{Time}}{Time for each data point}
 #' \item{\code{Value}}{Concentration for each data point}
@@ -99,34 +99,35 @@
 #' data point. Each reference is assumed to have its own residual error standard
 #' deviation.} }
 #'
-#' @param fitdata A \code{data.frame} containing the set of concentration vs.
-#'   time data to be fitted. See Details for expected variables. See also
-#'   `preprocess_data()`.
-#' @param model Which general model should be fit for each chemical. Presently,
-#'   only "flat", "1compartment", and "2compartment" are implemented.
-#' @param modelfun Either "analytic" or "full" -- whether to fit using the
-#'   analytic solution to the model, or the full ODE model. Presently,
-#'   "analytic" is recommended (because the analytic solution is exact and much
-#'   faster). For `modelfun = 'full'`, only `model = '1compartment'` is
-#'   supported.
-#' @param pool_sigma Logical: Whether to pool all data (estimate only one error
-#'   standard deviation) or not (estimate separate error standard deviations for
-#'   each reference). Default FALSE to estimate separate error SDs for each
-#'   reference. (If `fitdata` only includes one reference, `pool_sigma` will
-#'   have no effect, because only one error SD would be estimated in the first
-#'   place.)
-#' @param get_starts_args Any additional arguments to [get_starts()] (other than
-#'   `model` and `fitdata`, which are always passed). Default NULL to accept the
-#'   default arguments for [get_starts()].
-#' @param get_lower_args Any additional arguments to [get_lower_bounds()] (other
-#'   than `model` and `fitdata`, which are always passed). Default NULL to
-#'   accept the default arguments for [get_lower_bounds()].
-#' @param get_upper_args Any additional arguments to [get_upper_bounds()] (other
-#'   than `model` and `fitdata`, which are always passed). Default NULL to
-#'   accept the default arguments for [get_upper_bounds()].
-#' @param optimx_args A named list of additional arguments to
-#'   [optimx::optimx()], other than `par`, `fn`, `lower`, and `upper`. Default
-#'   is:
+#'@param fitdata A \code{data.frame} containing the set of concentration vs.
+#'  time data to be fitted. See Details for expected variables. See also
+#'  `preprocess_data()`.
+#'@param model Which general model should be fit for each chemical. Presently,
+#'  only "flat", "1compartment", and "2compartment" are implemented.
+#'@param modelfun Either "analytic" or "full" -- whether to fit using the
+#'  analytic solution to the model, or the full ODE model. Presently, "analytic"
+#'  is recommended (because the analytic solution is exact and much faster). For
+#'  `modelfun = 'full'`, only `model = '1compartment'` is supported.
+#'@param pool_sigma Logical: Whether to pool all data (estimate only one error
+#'  standard deviation) or not (estimate separate error standard deviations for
+#'  each reference). Default FALSE to estimate separate error SDs for each
+#'  reference. (If `fitdata` only includes one reference, `pool_sigma` will have
+#'  no effect, because only one error SD would be estimated in the first place.)
+#'@param rescale_time Logical: Whether to rescale time to make scale of time
+#'  constants better-behaved. If TRUE, then if maximum time is more than 72
+#'  hours, time will be converted to days before fitting; if maximum time is
+#'  more than 1440 hours, time will be converted to months before fitting.
+#'@param get_starts_args Any additional arguments to [get_starts()] (other than
+#'  `model` and `fitdata`, which are always passed). Default NULL to accept the
+#'  default arguments for [get_starts()].
+#'@param get_lower_args Any additional arguments to [get_lower_bounds()] (other
+#'  than `model` and `fitdata`, which are always passed). Default NULL to accept
+#'  the default arguments for [get_lower_bounds()].
+#'@param get_upper_args Any additional arguments to [get_upper_bounds()] (other
+#'  than `model` and `fitdata`, which are always passed). Default NULL to accept
+#'  the default arguments for [get_upper_bounds()].
+#'@param optimx_args A named list of additional arguments to [optimx::optimx()],
+#'  other than `par`, `fn`, `lower`, and `upper`. Default is:
 #'
 #'    ```
 #'     list(
@@ -138,9 +139,9 @@
 #'  `"itnmax"` controls the maximum number of iterations allowed in an attempt
 #'  to optimize. `"control"` is itself a named list of control parameters
 #'  relevant to the selected method. See documentation for [optimx::optimx()]
-#'  for more details and more options. Note lower and upper bounds (box constraints)
-#'  will be supplied; if you want them to be respected, please choose a method
-#'  that allows box constraints (e.g. "bobyqa" or "L-BFGS-B").
+#'  for more details and more options. Note lower and upper bounds (box
+#'  constraints) will be supplied; if you want them to be respected, please
+#'  choose a method that allows box constraints (e.g. "bobyqa" or "L-BFGS-B").
 #'
 #'@return A `data.frame` of model-fitting results.
 #'@author Caroline Ring, Chris Cook, John Wambaugh
@@ -149,6 +150,7 @@ analyze_subset <- function(fitdata,
                            model,
                            modelfun,
                            pool_sigma = FALSE,
+                           rescale_time = TRUE,
                            get_starts_args = NULL,
                            get_lower_args = NULL,
                            get_upper_args = NULL,
@@ -214,13 +216,23 @@ analyze_subset <- function(fitdata,
     )
   }
 
+  #get parameter names and
+  #determine whether to optimize each of these parameters or not
+  par_DF <- do.call(get_opt_params,
+                    list("model" = model,
+                         "fitdata" = fitdata,
+                         "pool_sigma" = pool_sigma,
+                         "suppress.messages" = suppress.messages))
+
+  n_opt <- sum(par_DF$optimize_param %in% TRUE)
+
   #assign optimx::optimx() default max iterations/function evals if missing
   #this is default from optimx code itself
   if(is.null(optimx_args$itnmax)){
     optimx_args$itnmax <- max(5e4,
                       5000*round(
                         sqrt(
-                          length(opt_params)+1
+                          n_opt+1
                         )
                       )
         )
@@ -230,7 +242,8 @@ analyze_subset <- function(fitdata,
       message(paste("optimx_args does not include item 'itnmax'.",
                     "Setting optimx_args$itnmax =",
                     "max(5e4, 5000*round(sqrt(n+1)))",
-                    "where n = number of params to be optimized.",
+                    "where n = number of params to be optimized =",
+                    n_opt,
                     "(This is the optimx() default)"))
     }
   }
@@ -248,13 +261,7 @@ analyze_subset <- function(fitdata,
     }
   }
 
-  #get parameter names and
-  #determine whether to optimize each of these parameters or not
- par_DF <- do.call(get_opt_params,
-                   list("model" = model,
-                              "fitdata" = fitdata,
-                          "pool_sigma" = pool_sigma,
-                        "suppress.messages" = suppress.messages))
+
 
  #Types of fitted param values to return
  fitted_types <- c("Fitted mean",
@@ -279,6 +286,8 @@ analyze_subset <- function(fitdata,
                                           NA_character_,
                                           NA_real_,
                                           NA_character_)
+
+   out_DF$time_units_rescaled <- "hours"
 
    out_DF[, fitted_types] <- NA_real_
 
@@ -336,7 +345,59 @@ analyze_subset <- function(fitdata,
    return(out_DF)
  } #end  if (sum(par_DF$opt.par) >= nrow(fitdata))
 
- #else -- continue
+ #rescale time if so requested
+ if(rescale_time %in% TRUE){
+
+   if(max(fitdata$Time) > (24*365*2)){
+     #if max time is longer than 2 years,
+     #convert to years
+     fitdata$Time_new <- fitdata$Time/24/365
+     new_time_units <- "years"
+   }else if(max(fitdata$Time) > (24*30*2)){
+     #if max time is longer than 2 months,
+     #convert to months
+     fitdata$Time_new <- fitdata$Time/24/30
+     new_time_units <- "months"
+   }else if(max(fitdata$Time) > (24*7*2)){
+     #if max time is longer than 2 weeks,
+    #convert to weeks
+     fitdata$Time_new <- fitdata$Time/24/7
+     new_time_units <- "weeks"
+   }else if(max(fitdata$Time) > 24*2){
+     #if max time is longer than 2 days,
+     #convert to days
+     fitdata$Time_new <- fitdata$Time/24
+     new_time_units <- "days"
+   }else if(max(fitdata$Time)<0.5){
+     #if max time is shorter than half an hour,
+     #convert to minutes
+     fitdata$Time_new <- fitdata$Time * 60
+     new_time_units <- "minutes"
+   }else{
+     #keep time in hours
+     fitdata$Time_new <- fitdata$Time
+     new_time_units = "hours"
+   }
+
+   if(!suppress.messages){
+     message(paste("Rescaling time from hours to",
+     new_time_units,
+     "\nOld time range: ",
+     paste(range(fitdata$Time),
+           collapse = "-"),
+     "hours",
+     "\nNew time range:",
+     paste(range(fitdata$Time_new),
+           collapse = "-"),
+     new_time_units))
+   }
+   fitdata$Time <- fitdata$Time_new
+   fitdata$Time.Units <- new_time_units
+
+ }else{
+   new_time_units <- "hours"
+ }
+
 #get lower bounds
  par_DF <- do.call(get_lower_bounds,
                    c(list("par_DF" = par_DF,
@@ -345,7 +406,6 @@ analyze_subset <- function(fitdata,
                         "pool_sigma" = pool_sigma,
                           "suppress.messages" = suppress.messages),
                      get_lower_args))
-
 
  #get upper bounds
  par_DF <- do.call(get_upper_bounds,
@@ -369,6 +429,8 @@ analyze_subset <- function(fitdata,
  #Initialize out_DF
  #There will be one row for each parameter
 out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
+#add a variable for time units
+out_DF$time_units_rescaled <- new_time_units
 
   #From par_DF, get vectors of:
 
@@ -429,54 +491,29 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   }
 
   all_data_fit <- tryCatch({
-    if(suppress.messages %in% TRUE){
-      #to suppress messages generated by optimx::optimx()
-      junk <- capture.output(
-        tmp <- do.call(
-          optimx::optimx,
-          args = c(
-            #
-            list(par = opt_params,
-                 fn = log_likelihood,
-                 lower = lower_params,
-                 upper = upper_params),
-            #method and control
-            optimx_args,
-            #... additional args to log_likelihood
-            list(
-              const_params = const_params,
-              DF = fitdata,
-              modelfun = modelfun,
-              model = model,
-              force_finite = (optimx_args$method %in% "L-BFGS-B"),
-              negative = TRUE
-            ) #end list()
-          ) #end args = c()
-        ) #end do.call
-      ) #end capture.output
-    }else{
-      tmp <- do.call(
-        optimx::optimx,
-        args = c(
-          #
-          list(par = opt_params,
-               fn = log_likelihood,
-               lower = lower_params,
-               upper = upper_params),
-          #method, and control
-          optimx_args,
-          #... additional args to log_likelihood
-          list(
-            const_params = const_params,
-            DF = fitdata,
-            modelfun = modelfun,
-            model = model,
-            force_finite = (optimx_args$method %in% "L-BFGS-B"),
-            negative = TRUE
-          )
-        )
-      ) #end do.call
-    }
+
+    tmp <- do.call(
+      optimx::optimx,
+      args = c(
+        #
+        list(par = opt_params,
+             fn = log_likelihood,
+             lower = lower_params,
+             upper = upper_params),
+        #method and control
+        optimx_args,
+        #... additional args to log_likelihood
+        list(
+          const_params = const_params,
+          DF = fitdata,
+          modelfun = modelfun,
+          model = model,
+          force_finite = (optimx_args$method %in% "L-BFGS-B"),
+          negative = TRUE
+        ) #end list()
+      ) #end args = c()
+    ) #end do.call
+
     #output of optimx::optimx():
     #tmp is a 1-row data.frame with one variable for each fitted param,
     #plus variables with info on fitting (number of evals, convergence code, etc.)
@@ -548,8 +585,9 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   return(out_DF)
   }
 
-
+#if fit was successful:
 #post-processing of fit results
+  #
 
   #Get MLE params
   means <- as.vector(stats::coef(all_data_fit))
@@ -606,7 +644,8 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
                      })
   names(sds) <- names(means)
 
-  #Only if
+
+
   #If any of the SDs are NaN,
   #repeat optimization with smaller convergence tolerance
   #-- only if method is "L-BFGS-B" -- other methods do not use this
@@ -618,7 +657,6 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
     #start from fitted values
 
-    #
     # #update the starting points in par_DF so they will be recorded
     par_DF[match(names(means),
                  par_DF$param_name),
@@ -761,6 +799,35 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
   } #end while(any(is.nan(sds)) & optimx_args$control$factr > 1)
   } #end if method %in% "L-BFGS-B"
 
+  #Convert units of time constants if rescale_time == TRUE
+  if(rescale_time %in% TRUE){
+    if(!suppress.messages){
+      if(new_time_units != "hours"){
+      message(paste0("Time was rescaled from hours to ",
+                    new_time_units,
+                    ". Fitted time constants and SDs will be scaled back to hours"))
+        time_const <- intersect(names(means), c("kelim",
+                                                "kgutabs",
+                                                "k12",
+                                                "k21"))
+      if(new_time_units == "days"){
+        convfun <- function(x) x/24
+      }else if(new_time_units == "weeks"){
+        convfun <- function(x) x/(24*7)
+      }else if(new_time_units == "months"){
+       convfun <- function(x) x/(24*30)
+      }else if(new_time_units == "years"){
+    convfun <- function(x) x/(24*365)
+      }else if(new_time_units == "minutes"){
+       convfun <- function(x) x*60
+      }
+
+        means[time_const] <- convfun(means[time_const])
+        sds[time_const] <- convfun(sds[time_const])
+      }
+    }
+  }
+
   #Produce a data frame of fitted parameters
   fit_DF <- data.frame(means,
                    sds)
@@ -769,6 +836,7 @@ out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 
   #Merge it with the original data frame of parameters
   #keep only the ones that were actually fit
+  par_DF$time_units_rescaled <- new_time_units
   out_DF <- merge(par_DF,
                   fit_DF,
                   by = "param_name",
