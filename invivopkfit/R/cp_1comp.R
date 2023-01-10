@@ -120,7 +120,7 @@ cp_1comp <- function(params, time, dose, iv.dose){
       stop(paste0("cp_1comp(): Error: For 1-compartment IV model, ",
                   "missing parameter(s): ",
                   paste(setdiff(c("kelim", "Vdist"), names(params)),
-                        collapse = ", "),
+                        collapse = ", ")
       )
       )
     }
