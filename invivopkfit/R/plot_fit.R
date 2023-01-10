@@ -4,7 +4,7 @@ plot_fit <- function(DTXSID_in,
                      model_in = "winning", #or "all" or by name
                      DF,
                      pk_fit,
-                     n = 101,
+                     n_interp_time = 10,
                      limit_y_axis = FALSE,
                      log10_scale_y = FALSE,
                      plot_errbars = TRUE,
@@ -47,34 +47,32 @@ plot_fit <- function(DTXSID_in,
   DFsub[, ConcDose_upper := (Value + Value_SD)/Dose]
   DFsub[, ConcDose_lower := (Value - Value_SD)/Dose]
 
-  #Produce a table with unique "experiments":
-  #ombinations of chemical, species, reference, route, dose, and medium (blood or plasma).
-  DF2 <- DFsub[, .(Max_Time = max(Time),
-                Reference = Reference,
-                Route = Route,
-                Dose = Dose,
-                iv = iv,
-                Media = Media),
-            by = .(DTXSID, Species)]
+  #Produce a table with unique "experiments": combinations of chemical, species,
+  #reference, route, dose, and medium (blood or plasma). Get the unique time
+  #points for each "experiment."
+  DF2 <- DFsub[, .(Time = sort(unique(c(0, Time)))),
+            by = .(DTXSID, Species,
+                   Reference, Route,
+                   Dose, iv, Media)]
 
 #Create a column with combined references, to match joint/pooled analyses.
-  DF2[, Reference_pooled:=paste(sort(unique(Reference)),
-                                collapse = ", "),
-      by = .(DTXSID, Species)]
+  DF2[, Reference_pooled:=paste(
+    sort(unique(Reference)),
+    collapse = ", "
+  ),
+  by = .(DTXSID, Species)]
 
   #Melt to longer format. The effect will be as though we row-bound two versions
   #of DF together: one with the original single referneces, and one with
-  #comma-separated combiend references.
+  #comma-separated combined references.
   DF3 <- melt(DF2, measure.vars = c("Reference", "Reference_pooled"),
               variable.name = "Reference_type",
               value.name = "Reference")
 
-  #Keep only the unique values of the Reference  column -- there will be
+  #Keep only the unique values of the Reference column -- there will be
   #duplicated rows for single-reference analyses.
   DF3 <- unique(DF3[, .(DTXSID, Species, Reference,
-                        Route, Dose, iv, Media, Max_Time)])
-
-
+                        Route, Dose, iv, Media, Time)])
 
 
   #subset the fitted parameter data appropriately
@@ -100,7 +98,7 @@ plot_fit <- function(DTXSID_in,
                              References.Analyzed,
                              model,
                              winning)])
-#Merge `DF3` and `pk_wide`
+#Merge `DF3` and `pk_wide` to get data.frame with experiment + models
   pred_DT <- pk_wide[DF3,
                      on = c("DTXSID" = "DTXSID",
                             "Species" = "Species",
@@ -108,11 +106,40 @@ plot_fit <- function(DTXSID_in,
                      allow.cartesian = TRUE]
 
   #Now add time points for prediction.
-  pred_DT2 <- pred_DT[, .(Time = 10^(seq(from = log10(0.5/60),
-                                         to = log10(Max_Time),
-                                         length.out = n))),
-                      by = .(DTXSID, Species, Analysis_Type, References.Analyzed,
-                             model, winning, Route, Dose, iv, Media, Max_Time)]
+  #Interpolate n_interp_time points between each existing time point.
+  pred_DT_time <- pred_DT[, .(Time = {
+    timepoints <- unique(Time)
+    time_interp <- sapply(1:(length(timepoints)-1),
+           function(i){
+             seq(from = timepoints[i],
+                 to = timepoints[i+1],
+                 length.out = n_interp_time)
+           }
+           )
+    sort(unique(time_interp))
+  }),
+          by = .(DTXSID,
+                 Species,
+                 References.Analyzed,
+                 Route,
+                 Media)]
+
+  pred_tmp <- unique(pred_DT[, .SD, .SDcols = setdiff(names(pred_DT),
+                                                      "Time")])
+
+  pred_DT2 <- pred_tmp[pred_DT_time,
+                      on = c("DTXSID",
+                             "Species",
+                             "References.Analyzed",
+                             "Route",
+                             "Media"),
+                      allow.cartesian = TRUE]
+
+  # pred_DT2 <- pred_DT[, .(Time = 10^(seq(from = log10(0.5/60),
+  #                                        to = log10(Max_Time),
+  #                                        length.out = n))),
+  #                     by = .(DTXSID, Species, Analysis_Type, References.Analyzed,
+  #                            model, winning, Route, Dose, iv, Media, Max_Time)]
 
   #Now evaluate modelfor each analysis & model
   pred_DT2[, Conc := {
