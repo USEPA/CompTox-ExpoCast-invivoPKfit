@@ -323,9 +323,9 @@ analyze_subset <- function(fitdata,
                           sum(fitdata$Route %in% "po"))
    #Record the unique media in this dataset
    out_DF$Media <- paste("blood: ",
-                          sum(fitdata$Medium %in% "blood"),
+                          sum(fitdata$Media %in% "blood"),
                           "; plasma: ",
-                          sum(fitdata$Medium %in% "plasma"))
+                          sum(fitdata$Media %in% "plasma"))
 
    #include a message about why no fit was done
    msg <- paste("For chemical ", this.dtxsid, " there were ",
@@ -574,9 +574,9 @@ out_DF$time_units_rescaled <- new_time_units
                          sum(fitdata$Route %in% "po"))
   #Record the unique media in this dataset
   out_DF$Media <- paste("blood: ",
-                        sum(fitdata$Medium %in% "blood"),
+                        sum(fitdata$Media %in% "blood"),
                         "; plasma: ",
-                        sum(fitdata$Medium %in% "plasma"))
+                        sum(fitdata$Media %in% "plasma"))
 
   #include a message about why no fit was done
   msg <- paste("Optimization failed. Error message from optimx():",
@@ -909,9 +909,9 @@ out_DF$time_units_rescaled <- new_time_units
                          sum(fitdata$Route %in% "po"))
   #Record the unique media in this dataset
   out_DF$Media <- paste("blood: ",
-                        sum(fitdata$Medium %in% "blood"),
+                        sum(fitdata$Media %in% "blood"),
                         "; plasma: ",
-                        sum(fitdata$Medium %in% "plasma"))
+                        sum(fitdata$Media %in% "plasma"))
   out_DF$message <- "Optimization successful."
 
 #Keep information about optimization
