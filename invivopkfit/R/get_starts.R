@@ -469,7 +469,7 @@ if(is.null(par_DF)){
                                msg = "Based on average Value/Dose from IV data")
       }
 
-      if(has_oral){
+      if(has_po){
         if(has_plasma){
         Fgutabs_Vdist_log <- mean(po_data[po_data$Media %in% "plasma",
                                                       "logValueDose"],
