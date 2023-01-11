@@ -32,7 +32,7 @@
 #'and some `iv.dose == FALSE`), then `Vdist` is required along with either
 #'`Fgutabs` or `Fgutabs_Vdist`. (If `Vdist` and `Fgutabs_Vdist` are provided,
 #'but `Fgutabs` is not provided, then `Fgutabs` will be calculated from `Vdist`
-#'and `Fgutabs_V1`.)
+#'and `Fgutabs_Vdist`.)
 #'
 #'If `any(medium %in% 'blood')`, then `params` must also include
 #'`Rblood2plasma`, the ratio of chemical concentration in whole blood to the
@@ -107,6 +107,13 @@ cp_1comp <- function(params, time, dose, iv.dose, medium = 'plasma'){
     params$Fgutabs <- params$Fgutabs_Vdist * params$Vdist
   }
 
+  #if Fgutabs and Fgutabs_Vdist provided, but not Vdist, compute Vdist
+  if(all(c("Fgutabs", "Fgutabs_Vdist") %in% names(params)) &
+     !("Vdist" %in% names(params))
+  ){
+    params$Vdist <- params$Fgutabs / params$Fgutabs_Vdist
+  }
+
   #drop any length-0 params
   param_length <- sapply(params, length)
   params <- params[param_length>0]
@@ -144,7 +151,7 @@ cp_1comp <- function(params, time, dose, iv.dose, medium = 'plasma'){
     }
   }
 
-  cp <- vector(mode = "numeric", length = length(time))
+  cp <- vector(mode = "numeric", length = max_len)
 
   #IV model\
   if(any(iv.dose %in% TRUE)){
@@ -175,7 +182,9 @@ cp_1comp <- function(params, time, dose, iv.dose, medium = 'plasma'){
   }
 
 #convert blood concentrations using Rblood2plasma
+  if(any(medium %in% "blood")){
   cp[medium %in% "blood"] <- params$Rblood2plasma * cp[medium %in% "blood"]
+  }
 
   return(cp)
 }

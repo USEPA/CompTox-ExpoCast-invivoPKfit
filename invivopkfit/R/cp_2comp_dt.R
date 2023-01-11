@@ -47,11 +47,59 @@
 #'@return A vector of instantaneous rates of change of plasma concentration
 #'  values (mg/L/time) corresponding to each value in \code{time}
 #'@export cp_2comp_dt
-cp_2comp_dt <- function(params, time, dose, iv.dose)
+cp_2comp_dt <- function(params, time, dose, iv.dose, medium)
 {
+
+  #check whether lengths of time, dose, and iv.dose match
+  time_len <- length(time)
+  dose_len <- length(dose)
+  ivdose_len <- length(iv.dose)
+  medium_len <- length(medium)
+
+  len_all <- c(time_len, dose_len, ivdose_len, medium_len)
+  #Cases:
+  # All three lengths are the same -- OK
+  # Two lengths are the same and the third is 1 -- OK
+  # Two lengths are 1 and the third is not 1 -- OK
+  # Otherwise there is a problem
+  good_len <- (length(unique(len_all)) == 1) |
+    (length(unique(len_all)) == 2 &
+       sum(len_all == 1) %in% c(1, 2))
+
+  if(!good_len){
+    stop(paste0("invivopkfit::cp_2comp_dt(): ",
+                "'time', 'dose', 'iv.dose', and 'medium'",
+                "must either be the same length or length 1.\n",
+                "'time' is length ", time_len, "\n",
+                "'dose' is length ", dose_len, "\n",
+                "'iv.dose' is length ", ivdose_len, "\n",
+                "'medium' is length ", medium_len, "\n")
+    )
+  }
+
+  #if any are length-1, repeat them to match the longest
+  max_len <- max(len_all)
+  time <- rep(time, length.out = max_len)
+  dose <- rep(dose, length.out = max_len)
+  iv.dose <- rep(iv.dose, length.out = max_len)
+  medium <- rep(medium, length.out = max_len)
 
   if(all(c("Fgutabs", "V1") %in% names(params))){
     params$Fgutabs_V1 <- params$Fgutabs/params$V1
+  }
+
+  #if V1 and Fgutabs_V1 are provided, but not Fgutabs, compute Fgutabs
+  if(all(c("V1", "Fgutabs_V1") %in% names(params)) &
+     !("Fgutabs" %in% names(params))
+  ){
+    params$Fgutabs <- params$Fgutabs_V1 * params$V1
+  }
+
+  #if Fgutabs and Fgutabs_V1 provided, but not V1, compute V1
+  if(all(c("Fgutabs", "Fgutabs_V1") %in% names(params)) &
+     !("V1" %in% names(params))
+  ){
+    params$V1 <- params$Fgutabs / params$Fgutabs_V1
   }
 
   #drop any length-0 params
@@ -66,7 +114,7 @@ cp_2comp_dt <- function(params, time, dose, iv.dose)
                                 "kgutabs"),
                               names(params))
     if(length(missing_params)>0){
-      stop(paste("cp_2comp(): Error: For 2-compartment oral model,",
+      stop(paste("cp_2comp_dt(): Error: For 2-compartment oral model,",
                  "missing parameters:",
                  paste(missing_params, collapse = ", ")))
     }
@@ -79,15 +127,22 @@ cp_2comp_dt <- function(params, time, dose, iv.dose)
                                 "k21"),
                               names(params))
     if(length(missing_params)>0){
-      stop(paste("cp_2comp(): Error: For 2-compartment IV model,",
+      stop(paste("cp_2comp_dt(): Error: For 2-compartment IV model,",
                  "missing parameters:",
                  paste(missing_params, collapse = ", ")))
     }
   }
 
-  dcpdt <- vector(mode = "numeric", length = length(time))
-  A <- vector(mode = "numeric", length = length(time))
-  B <- vector(mode = "numeric", length = length(time))
+  if(any(medium %in% "blood")){
+    if(!("Rblood2plasma" %in% names(params))){
+      stop(paste0("cp_2comp_dt(): Error: For 2-compartment model ",
+                  "in blood: missing parameter Rblood2plasma"))
+    }
+  }
+
+  dcpdt <- vector(mode = "numeric", length = max_len)
+  A <- vector(mode = "numeric", length = max_len)
+  B <- vector(mode = "numeric", length = max_len)
 
   #see https://www.boomer.org/c/p4/c19/c1902.php
   #for these equations
@@ -132,6 +187,11 @@ cp_2comp_dt <- function(params, time, dose, iv.dose)
     - params$kgutabs *
     exp(-params$kgutabs * time[iv.dose %in% FALSE])
 
+
+  }
+
+  if(any(medium %in% "blood")){
+    dcpdt[medium %in% blood] <- params$Rblood2plasma * dcpdt[medium %in% "blood"]
   }
 
   return(dcpdt)

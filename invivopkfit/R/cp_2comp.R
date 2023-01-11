@@ -105,6 +105,13 @@ cp_2comp <- function(params, time, dose, iv.dose, medium = "plasma")
     params$Fgutabs <- params$Fgutabs_V1 * params$V1
   }
 
+  #if Fgutabs and Fgutabs_V1 provided, but not V1, compute V1
+  if(all(c("Fgutabs", "Fgutabs_V1") %in% names(params)) &
+     !("V1" %in% names(params))
+  ){
+    params$V1 <- params$Fgutabs / params$Fgutabs_V1
+  }
+
   #drop any length-0 params
   param_length <- sapply(params, length)
   params <- params[param_length>0]
@@ -141,14 +148,14 @@ cp_2comp <- function(params, time, dose, iv.dose, medium = "plasma")
 
   if(any(medium %in% "blood")){
     if(!("Rblood2plasma" %in% names(params))){
-      stop(paste0("cp_2comp(): Error: For 1-compartment model ",
+      stop(paste0("cp_2comp(): Error: For 2-compartment model ",
                   "in blood: missing parameter Rblood2plasma"))
     }
   }
 
-  cp <- vector(mode = "numeric", length = length(time))
-  A <- vector(mode = "numeric", length = length(time))
-  B <- vector(mode = "numeric", length = length(time))
+  cp <- vector(mode = "numeric", length = max_len)
+  A <- vector(mode = "numeric", length = max_len)
+  B <- vector(mode = "numeric", length = max_len)
 
   #see https://www.boomer.org/c/p4/c19/c1902.php
   #for these equations
@@ -196,7 +203,9 @@ cp_2comp <- function(params, time, dose, iv.dose, medium = "plasma")
 
   }
 
+  if(any(medium %in% "blood")){
   cp[medium %in% "blood"] <- params$Rblood2plasma * cp[medium %in% "blood"]
+  }
 
   return(cp)
 }

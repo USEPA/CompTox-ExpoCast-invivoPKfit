@@ -111,6 +111,10 @@ cp_flat <- function(time, params, dose, iv.dose, medium) {
     params$Vdist <- params$Fgutabs / params$Fgutabs_Vdist
   }
 
+  #drop any length-0 params
+  param_length <- sapply(params, length)
+  params <- params[param_length>0]
+
   if(any(iv.dose %in% TRUE)){
     missing_params <- setdiff(c("Vdist"),
                               names(params))
