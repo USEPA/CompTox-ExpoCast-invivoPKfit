@@ -7,7 +7,6 @@
 #'
 #' | param_name     | upper_bound | upper_bound_msg |
 #' | ---------------| ----------- | --------------- |
-#' | A              | Inf           | Default         |
 #' | kelim          | Inf        | Default         |
 #' | Vdist          | Inf        | Default         |
 #' | kgutabs        | Inf        | Default         |
@@ -61,8 +60,7 @@ get_upper_bounds <- function(fitdata,
                              model,
                              pool_sigma = FALSE,
                              upper_default = data.frame(
-                               param_name = c("A",
-                                              "kelim",
+                               param_name = c("kelim",
                                               "Vdist",
                                               "kgutabs",
                                               "Fgutabs",
@@ -73,8 +71,7 @@ get_upper_bounds <- function(fitdata,
                                               "Fgutabs_V1",
                                               "Rblood2plasma",
                                               "sigma"),
-                               upper_bound = c(Inf, #A
-                                               Inf, #kelim
+                               upper_bound = c(Inf, #kelim
                                                Inf, #Vdist
                                                Inf, #kgutabs
                                                1, #Fgutabs

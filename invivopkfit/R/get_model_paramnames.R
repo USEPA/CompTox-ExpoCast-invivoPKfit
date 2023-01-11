@@ -10,7 +10,7 @@
 get_model_paramnames <- function(model){
   # Get parameter names for the specified model
   if(model %in% "flat"){
-    param_names <- c("A", "Rblood2plasma")
+    param_names <- c("Vdist", "Fgutabs", "Fgutabs_Vdist", "Rblood2plasma")
   }else if(model %in% "1compartment"){
     #all possible 1-compartment params
     param_names <- c("kelim", "Vdist",

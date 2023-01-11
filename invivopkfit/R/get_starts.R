@@ -16,7 +16,6 @@
 #'
 #' | param_name     | start_value | start_value_msg |
 #' | ---------------| ----------- | --------------- |
-#' | A              | 1           | Default         |
 #' | kelim          | 0.25        | Default         |
 #' | Vdist          | 5.56        | Default         |
 #' | kgutabs        | 2.19        | Default         |
@@ -236,6 +235,8 @@
 #' @return The data.frame `par_DF` with added variables `start_value`,
 #'   containing each parameter's starting value, and `start_value_msg`,
 #'   containing a brief message about how each starting value was calculated.
+#' @export
+#' @import data.table
 #' @author Caroline Ring, John Wambaugh, Mitchell Teague
 
 get_starts <- function(par_DF = NULL,
@@ -243,8 +244,7 @@ get_starts <- function(par_DF = NULL,
                        fitdata,
                        pool_sigma = FALSE,
                        starts_default = data.frame(
-                         param_name = c("A",
-                                        "kelim",
+                         param_name = c("kelim",
                                         "Vdist",
                                         "kgutabs",
                                         "Fgutabs",
@@ -255,8 +255,7 @@ get_starts <- function(par_DF = NULL,
                                         "Fgutabs_V1",
                                         "Rblood2plasma",
                                         "sigma"),
-                         start_value = c(1, #A
-                                         0.25, #kelim
+                         start_value = c(0.25, #kelim
                                          5.56, #Vdist
                                          2.19, #kgutabs
                                          0.5, #Fgutabs
@@ -386,10 +385,12 @@ if(is.null(par_DF)){
 
       #if optimize_params is FALSE for Rblood2plasma, do not use its httk value
       #keep the default of 1
+      if("Rblood2plasma" %in% par_DF$param_name){
       if(par_DF[par_DF$param_name %in% "Rblood2plasma",
                 "optimize_param"] %in% FALSE){
         replace_names <- setdiff(replace_names,
                                  "Rblood2plasma")
+      }
       }
 
       #update par_DF for any of these parameters
@@ -425,22 +426,102 @@ if(is.null(par_DF)){
     #log transform Value/Dose
     tmpdat$logValueDose <- log(tmpdat$ValueDose)
 
-    #if model is flat, take A to be the mean log concentration/dose, on natural scale
-    if(model %in% "flat"){
-      A <- exp(mean(tmpdat$logValueDose, na.rm = TRUE))
-      par_DF <- assign_start(param_name = "A",
-                             param_value = A,
-                             msg = "Median concentration/dose",
-                             start_from = start_from_data,
-                             par_DF = par_DF)
-    }else{
-
     #Split into IV and oral datasets
     iv_data <- tmpdat[tmpdat$Route %in% "iv", ] #will be empty if no IV data
     po_data <- tmpdat[tmpdat$Route %in% "po", ] #will be empty if no PO data
 
     has_iv <- any(tmpdat$Route %in% "iv")
     has_po <- any(tmpdat$Route %in% "po")
+
+    has_blood <- any(tmpdat$Media %in% "blood")
+    has_plasma <- any(tmpdat$Media %in% "plasma")
+
+    #flat model
+    if(model %in% "flat"){
+      Rblood2plasma_iv <- NA_real_
+      Rblood2plasma_po <- NA_real_
+
+      if(has_iv){
+        if(has_plasma){
+          Vdist_log <- -1 * mean(iv_data[iv_data$Media %in% "plasma",
+                                          "logValueDose"],
+                                  na.rm = TRUE)
+          Vdist <- exp(Vdist_log)
+          if(has_blood){ #if both blood and plasma IV data, estimate Rblood2plasma
+            ymean <- mean(iv_data[iv_data$Media %in% "blood",
+                                                  "logValueDose"],
+                                          na.rm = TRUE)
+            Rblood2plasma_iv_log <- ymean + Vdist_log
+            Rblood2plasma_iv <- exp(Rblood2plasma_iv_log)
+          }
+        }else{ #if blood data only
+          #just estimate a blood Vdist
+          Vdist_log <- mean(iv_data[iv_data$Media %in% "blood",
+                                             "logValueDose"],
+                                      na.rm = TRUE)
+          Vdist <- exp(Vdist_log)
+        }
+
+        par_DF <- assign_start(param_name = "Vdist",
+                               param_value = Vdist,
+                               par_DF = par_DF,
+                               start_from = start_from_data,
+                               msg = "Based on average Value/Dose from IV data")
+      }
+
+      if(has_oral){
+        if(has_plasma){
+        Fgutabs_Vdist_log <- mean(po_data[po_data$Media %in% "plasma",
+                                                      "logValueDose"],
+                                              na.rm = TRUE)
+        Fgutabs_Vdist <- exp(Fgutabs_Vdist_log)
+        if(has_blood){ #if both blood and plasma IV data, estimate Rblood2plasma
+          ymean <- mean(po_data[po_data$Media %in% "blood",
+                                "logValueDose"],
+                        na.rm = TRUE)
+          Rblood2plasma_po_log <- ymean - Fgutabs_Vdist_log
+          Rblood2plasma_po <- exp(Rblood2plasma_po_log)
+        }
+        }else{
+          #if blood-only data, estimate Fgutabs_Vdist for blood
+          Fgutabs_Vdist_log <- mean(po_data[po_data$Media %in% "blood",
+                                                   "logValueDose"],
+                                           na.rm = TRUE)
+          Fgutabs_Vdist <- exp(Fgutabs_Vdist_log)
+        }
+
+        #if both oral and IV data, then use Vdist from IV to calculate Fgutabs
+        if(has_iv){
+          Fgutabs <- Fgutabs_Vdist * Vdist
+          par_DF <- assign_start(param_name = "Fgutabs",
+                                 param_value = Fgutabs,
+                                 par_DF = par_DF,
+                                 start_from = start_from_data,
+                                 msg = "Based on average Value/Dose from PO and IV data")
+        }
+
+        par_DF <- assign_start(param_name = "Fgutabs_Vdist",
+                               param_value = Fgutabs_Vdist,
+                               par_DF = par_DF,
+                               start_from = start_from_data,
+                               msg = "Based on average Value/Dose from PO data")
+      }
+
+      if(has_blood & has_plasma){
+      Rblood2plasma <- mean(c(Rblood2plasma_iv,
+                              Rblood2plasma_po),
+                            na.rm = TRUE)
+
+      par_DF <- assign_start(param_name = "Rblood2plasma",
+                             param_value = Rblood2plasma,
+                             par_DF = par_DF,
+                             start_from = start_from_data,
+                             msg = "Based on comparing average Value/Dose from blood and plasma data")
+      }
+
+    }else{ #for non-flat models
+
+
 
     #####################
     # 1-compartment model
@@ -916,6 +997,8 @@ if(is.finite(kgutabs_po) &
         B_Dose_po <- lm_late$intercept
         beta_po <- lm_late$slope
 
+        B_Dose_po_fail <- FALSE
+
         #if regression fails for beta_po,
         #assume last time point is 2 times terminal half-life
         if(!is.finite(beta_po) |
@@ -926,6 +1009,7 @@ if(is.finite(kgutabs_po) &
           beta_po <- log(2)/thalf_beta
           #intercept: extrapolate back to time = 0 from elbow point
           B_Dose_po <- exp(elbow$y + beta_po * elbow$x)
+          B_Dose_po_fail <- TRUE
         }
 
         #residuals for early data
@@ -946,6 +1030,7 @@ if(is.finite(kgutabs_po) &
                                     slope_neg = TRUE)
         A_Dose_po <- lm_resid_early$intercept
         alpha_po <- lm_resid_early$slope
+        A_Dose_po_fail <- FALSE
 
         #if method of residuals failed for alpha,
         #then try assuming that elbow point = 2 * early-phase half life
@@ -954,6 +1039,7 @@ if(is.finite(kgutabs_po) &
           alpha_po <- log(2)/thalf_alpha
           #extrapolate from elbow point back to time = 0
             A_Dose_po <- exp(elbow$y + alpha_po * elbow$x)
+            A_Dose_po_fail <- TRUE
         }
 
         #residuals for absorption phase
@@ -994,17 +1080,41 @@ if(is.finite(kgutabs_po) &
                                  msg = "Method of inspection on PO data, assume tpeak = 5 * absorption half-life")
         }
 
-        #get k21, k12, kel from A, B, alpha, beta
-        #source: https://www.boomer.org/c/p4/c19/c1903.php
-        k21_po <- (A_Dose_po * beta_po + B_Dose_po*alpha_po) / (A_Dose_po + B_Dose_po)
+        #get k21, k12, kel from A, B, alpha, beta. Source: derived from formulas
+        #in spreadsheet at https://www.boomer.org/c/p4/c19/c1907.php. NB: PO A
+        #and B are not the same as IV A and B, so the formula for PO k21 is not the
+        #same as the formula for IV k21.
+        k21_po <- (A_Dose_po * (kgutabs_po - alpha_po) * beta_po +
+                     B_Dose_po * (kgutabs_po - beta_po) * alpha_po) /
+          (A_Dose_po* (kgutabs_po - alpha_po) +
+             B_Dose_po * (kgutabs_po - beta_po))
+
         kel_po <- (alpha_po * beta_po) / k21_po
         k12_po <- alpha_po + beta_po - k21_po - kel_po
 
         #Solve A_Dose for Fgutabs/V1
         #See cp_2comp()
-        Fgutabs_V1_po <- A_Dose_po *
+        Fgutabs_V1_po_A <- A_Dose_po *
           ( (kgutabs_po - alpha_po) * (beta_po - alpha_po))/
           ( kgutabs_po * (k21_po - alpha_po) )
+        #Solve B_Dose for Fgutabs/V1
+        #See cp_2comp()
+        Fgutabs_V1_po_B <- B_Dose_po *
+          ( (kgutabs_po - beta_po) * (alpha_po - beta_po)) /
+          ( kgutabs_po * (k21_po - beta_po))
+
+        if(A_Dose_po_fail %in% TRUE &
+           B_Dose_po_fail %in% FALSE){
+          #if late regression was OK but early regression failed,
+          #use estimate from late regression intercept
+          Fgutabs_V1_po <- Fgutabs_V1_po_B
+        }else{
+          #just take the average from early and late regression intercepts
+          Fgutabs_V1_po <- mean(c(Fgutabs_V1_po_A,
+                                 Fgutabs_V1_po_B),
+                                 na.rm = TRUE)
+        }
+
         #update par_DF with Fgutabs_V1
         par_DF <- assign_start(param_name = "Fgutabs_V1",
                                param_value = Fgutabs_V1_po,
@@ -1024,7 +1134,8 @@ if(is.finite(kgutabs_po) &
         }
 
           #k21, kelim, k12:
-          #update par_DF using PO estimates only if no IV data
+          #update par_DF using PO estimates only if no IV data,
+        #or if IV fitting failed to produce an acceptable estimate
          if(par_DF[par_DF$param_name %in% "k21",
                    "start_value_msg"] != "Method of residuals on IV data"){
           par_DF <- assign_start(param_name = "k21",

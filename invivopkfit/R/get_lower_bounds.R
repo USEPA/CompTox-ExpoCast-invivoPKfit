@@ -6,7 +6,6 @@
 #'
 #' | param_name     | lower_bound | lower_bound_msg |
 #' | ---------------| ----------- | --------------- |
-#' | A              | 0           | Default         |
 #' | kelim          | 1e-4        | Default         |
 #' | Vdist          | 1e-4        | Default         |
 #' | kgutabs        | 1e-4        | Default         |
@@ -66,8 +65,7 @@ get_lower_bounds <- function(fitdata,
                              model,
                              pool_sigma = FALSE,
                              lower_default = data.frame(
-                               param_name = c("A",
-                                              "kelim",
+                               param_name = c("kelim",
                                               "Vdist",
                                               "kgutabs",
                                               "Fgutabs",
@@ -78,8 +76,7 @@ get_lower_bounds <- function(fitdata,
                                               "Fgutabs_V1",
                                               "Rblood2plasma",
                                               "sigma"),
-                               lower_bound = c(0, #A
-                                               1e-4, #kelim
+                               lower_bound = c(1e-4, #kelim
                                                1e-4, #Vdist
                                                1e-4, #kgutabs
                                                1e-4, #Fgutabs

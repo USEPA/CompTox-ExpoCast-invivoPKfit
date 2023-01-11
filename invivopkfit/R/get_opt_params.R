@@ -217,11 +217,13 @@ get_opt_params <- function(model,
     }
   }
 
-  #if both "blood" and "plasma" are not in data, then turn off Rblood2plasma
+  #if both "blood" and "plasma" are not in data,
+  #then Rblood2plasma will not be optimized
   if(!(all(c("blood", "plasma") %in% fitdata$Media))){
     opt_params["Rblood2plasma"] <- FALSE
   }
 
+  #if no medium is "blood" then Rblood2plasma will not be used at all
   if(!("blood" %in% fitdata$Media)){
     use_params["Rblood2plasma"] <- FALSE
     #otherwise, if blood-only data, Rblood2plasma will be used but held constant at 1
