@@ -20,6 +20,7 @@ postprocess_data <- function(PK_fit,
                       Analysis_Type + DTXSID + Species +
                         model + References.Analyzed +
                         Routes + Media +
+                       time_units_fitted +
                         AIC ~ param_name,
                       value.var = "Fitted mean")
     #also get the SD for each fitted param
@@ -29,6 +30,7 @@ postprocess_data <- function(PK_fit,
                          Analysis_Type + DTXSID + Species +
                            model + References.Analyzed +
                            Routes + Media +
+                          time_units_fitted +
                            AIC ~ param_name,
                          value.var = "Fitted std dev")
     #append "_sd" for these params
@@ -60,6 +62,7 @@ postprocess_data <- function(PK_fit,
                                     pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed +
+                      time_units_fitted +
                       Routes + Media +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
@@ -70,6 +73,7 @@ postprocess_data <- function(PK_fit,
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed +
                       Routes + Media +
+                      time_units_fitted +
                       AIC ~ param_name,
                     value.var = "Fitted std dev")
   #append "_sd" for these params
@@ -87,6 +91,33 @@ postprocess_data <- function(PK_fit,
                    by = intersect(names(PK_1comp),
                                   names(PK_1comp_sd))
                    )
+
+ #convert time constants back to hours if necessary
+ time_units <- unique(PK_1comp$time_units_fitted)
+ if(!(time_units %in% "hours")){
+   time_const <- intersect(names(PK_1comp),
+                           c("kelim",
+                             "kgutabs",
+                             "kelim_sd",
+                             "kgutabs_sd")
+   )
+   if(time_units == "days"){
+     convfun <- function(x) x*24
+   }else if(time_units == "weeks"){
+     convfun <- function(x) x*(24*7)
+   }else if(time_units == "months"){
+     convfun <- function(x) x*(24*30)
+   }else if(time_units == "years"){
+     convfun <- function(x) x*(24*365)
+   }else if(time_units == "minutes"){
+     convfun <- function(x) x/60
+   }
+   PK_1comp[, (time_const) := lapply(.SD,
+                                     convfun),
+            .SDcols = time_const]
+ }
+
+ PK_1comp[, time_units_reported := "hours"]
 
   PK_1comp[is.na(Fgutabs_Vdist),
            Fgutabs_Vdist := Fgutabs/Vdist]
@@ -139,6 +170,7 @@ postprocess_data <- function(PK_fit,
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed +
                       Routes + Media +
+                      time_units_fitted +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
 
@@ -149,6 +181,7 @@ postprocess_data <- function(PK_fit,
                        Analysis_Type + DTXSID + Species +
                          model + References.Analyzed +
                          Routes + Media +
+                         time_units_fitted +
                          AIC ~ param_name,
                        value.var = "Fitted std dev")
   #append "_sd" for these params
@@ -166,6 +199,38 @@ postprocess_data <- function(PK_fit,
                     by = intersect(names(PK_2comp),
                                    names(PK_2comp_sd))
   )
+
+  #convert time constants back to hours if necessary
+  #Convert units of time constants if rescale_time == TRUE
+  time_units <- unique(PK_2comp$time_units_fitted)
+  if(!(time_units %in% "hours")){
+    time_const <- intersect(names(PK_2comp),
+                            c("kelim",
+                              "kgutabs",
+                              "k12",
+                              "k21",
+                              "kelim_sd",
+                              "kgutabs_sd",
+                              "k21_sd",
+                              "k12_sd")
+    )
+    if(time_units == "days"){
+      convfun <- function(x) x*24
+    }else if(time_units == "weeks"){
+      convfun <- function(x) x*(24*7)
+    }else if(time_units == "months"){
+      convfun <- function(x) x*(24*30)
+    }else if(time_units == "years"){
+      convfun <- function(x) x*(24*365)
+    }else if(time_units == "minutes"){
+      convfun <- function(x) x/60
+    }
+    PK_2comp[, (time_const) := lapply(.SD,
+                                      convfun),
+             .SDcols = time_const]
+  }
+
+  PK_2comp[, time_units_reported := "hours"]
 
   #in case Fgutabs and V1 were fitted separately, compute Fgutabs/V1
   PK_2comp[is.na(Fgutabs_V1), Fgutabs_V1 := Fgutabs/V1]

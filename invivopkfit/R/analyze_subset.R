@@ -287,7 +287,7 @@ analyze_subset <- function(fitdata,
                                           NA_real_,
                                           NA_character_)
 
-   out_DF$time_units_fitting <- "hours"
+   out_DF$time_units_fitted <- "hours"
 
    out_DF[, fitted_types] <- NA_real_
 
@@ -441,7 +441,7 @@ last_detect_time <- max(fitdata[is.finite(fitdata$Value),
  #There will be one row for each parameter
 out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 #add a variable for time units
-out_DF$time_units_fitting <- new_time_units
+out_DF$time_units_fitted <- new_time_units
 
   #From par_DF, get vectors of:
 
@@ -794,35 +794,6 @@ out_DF$time_units_fitting <- new_time_units
   } #end while(any(is.nan(sds)) & optimx_args$control$factr > 1)
   } #end if method %in% "L-BFGS-B"
 
-  #Convert units of time constants if rescale_time == TRUE
-  if(rescale_time %in% TRUE &
-     !(new_time_units %in% "hours")){
-    if(!(suppress.messages %in% TRUE)){
-      message(paste0("Time was rescaled from hours to ",
-                    new_time_units,
-                    ". Fitted time constants and their SDs will be scaled from ",
-                    "units of 1/", new_time_units,
-                    "to units of 1/hours"))
-      }
-        time_const <- intersect(names(means), c("kelim",
-                                                "kgutabs",
-                                                "k12",
-                                                "k21"))
-      if(new_time_units == "days"){
-        convfun <- function(x) x*24
-      }else if(new_time_units == "weeks"){
-        convfun <- function(x) x*(24*7)
-      }else if(new_time_units == "months"){
-       convfun <- function(x) x*(24*30)
-      }else if(new_time_units == "years"){
-    convfun <- function(x) x*(24*365)
-      }else if(new_time_units == "minutes"){
-       convfun <- function(x) x/60
-      }
-        means[time_const] <- convfun(means[time_const])
-        sds[time_const] <- convfun(sds[time_const])
-  }
-
   #Produce a data frame of fitted parameters
   fit_DF <- data.frame(means,
                    sds)
@@ -831,7 +802,7 @@ out_DF$time_units_fitting <- new_time_units
 
   #Merge it with the original data frame of parameters
   #keep only the ones that were actually fit
-  par_DF$time_units_fitting <- new_time_units
+  par_DF$time_units_fitted <- new_time_units
   out_DF <- merge(par_DF,
                   fit_DF,
                   by = "param_name",
