@@ -76,7 +76,7 @@ List of default values for new columns added in preprocessing data
 defaults_list <- list(
                       "Weight.Units" = "kg",
                       "Dose.Units" = "mg/kg",
-                      "Time.Units" = "h",
+                      "Time.Units" = "hours",
                       "Value.Units" = "mg/L")
 ```
 
@@ -144,7 +144,6 @@ rm(PK.fit.table.flat, post_flat)
 ## 1-compartment model
 
 ```{r, run_invivoPKfit_1comp}
-
 ### do 1-Compartment fit
 system.time(
     PK.fit.table.1comp <- fit_all(

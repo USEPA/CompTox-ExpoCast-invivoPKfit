@@ -80,7 +80,7 @@ get_upper_bounds <- function(fitdata,
                                                Inf, #k21
                                                1e4, #Fgutabs_Vdist
                                                1e4, #Fgutabs_V1
-                                               1e4, #Rblood2plasma
+                                               Inf, #Rblood2plasma
                                                Inf), #sigma
                                upper_bound_msg = "Default"
                              ),

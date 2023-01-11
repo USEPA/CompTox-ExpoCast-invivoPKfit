@@ -52,6 +52,9 @@
 #' @param impute_sd Used only if `preprocess == TRUE`. As for
 #'   [preprocess_data()]. Logical: TRUE to impute values for missing sample SDs
 #'   for multi-subject observations; FALSE to leave them alone
+#' @param rescale_time As for `analyze_subset()`. Logical: TRUE to rescale time
+#'   from hours if latest detection time corresponds to days, weeks, months, or
+#'   years. FALSE to leave time in units of hours. Default TRUE.
 #' @param get_starts_args Named list or NULL: any additional arguments to
 #'   [get_starts()] (other than `model` and `fitdata`, which are always passed).
 #'   Default NULL to accept the default arguments for [get_starts()].
@@ -75,12 +78,12 @@
 #'          )
 #'    ```
 #'   Briefly:  `"method"` allows you to select an optimization algorithm.
-#'  `"itnmax"` controls the maximum number of iterations allowed in an attempt
-#'  to optimize. `"control"` is itself a named list of control parameters
-#'  relevant to the selected method. See documentation for [optimx::optimx()]
-#'  for more details and more options. Note lower and upper bounds (box constraints)
-#'  will be supplied; if you want them to be respected, please choose a method
-#'  that allows box constraints (e.g. "bobyqa" or "L-BFGS-B").
+#'   `"itnmax"` controls the maximum number of iterations allowed in an attempt
+#'   to optimize. `"control"` is itself a named list of control parameters
+#'   relevant to the selected method. See documentation for [optimx::optimx()]
+#'   for more details and more options. Note lower and upper bounds (box
+#'   constraints) will be supplied; if you want them to be respected, please
+#'   choose a method that allows box constraints (e.g. "bobyqa" or "L-BFGS-B").
 #' @param suppress.messages Logical: Whether to suppress verbose messages.
 #'   Default FALSE, to be verbose.
 #'
@@ -123,7 +126,7 @@ fit_all <- function(data.set,
                     defaults_list =   list(
                       "Weight.Units" = "kg",
                       "Dose.Units" = "mg/kg",
-                      "Time.Units" = "h",
+                      "Time.Units" = "hours",
                       "Value.Units" = "mg/L"),
 
                     ratio_conc_to_dose = 1,
@@ -132,7 +135,7 @@ fit_all <- function(data.set,
                     media_keep = c("blood", "plasma"),
                     impute_loq = TRUE,
                     impute_sd = TRUE,
-
+                    rescale_time = TRUE,
                     get_starts_args = NULL,
                     get_lower_args = NULL,
                     get_upper_args = NULL,
@@ -176,7 +179,7 @@ fit_all <- function(data.set,
 
     #Analyze by chemical & species first.
 if(!suppress.messages){
-  message("Analyzing data by chemical and species, with each reference having its own error SD...")
+  message("Analyzing data by chemical and species, with each study having its own error SD...")
 }
     PK.fit.joint <- data.set[,
                              analyze_subset(fitdata = .SD,
@@ -187,6 +190,7 @@ if(!suppress.messages){
                                              modelfun = modelfun,
                                              model = model,
                                             pool_sigma = FALSE,
+                                            rescale_time = rescale_time,
                                             get_starts_args = get_starts_args,
                                             get_lower_args = get_lower_args,
                                             get_upper_args = get_upper_args,
@@ -203,50 +207,52 @@ if(!suppress.messages){
                                     "Species")
                              ]
 
-    ### If chemical/species combination has multiple references:
-    ### then analyze each reference individually,
-    ###and also do a pooled analysis without individual reference sigmas
-    data.set[, MultipleReferences := length(unique(Reference)) > 1,
+    ### If chemical/species combination has multiple studys:
+    ### then analyze each study individually,
+    ###and also do a pooled analysis without individual study sigmas
+    data.set[, MultipleStudies := length(unique(Study)) > 1,
              by = c("DTXSID", "Species")]
-    multi.ref.cas <- unique(subset(data.set,
-                                   MultipleReferences == TRUE)$DTXSID)
-    if (length(multi.ref.cas) > 0) {
+    multi.study.cas <- unique(subset(data.set,
+                                   MultipleStudies == TRUE)$DTXSID)
+    if (length(multi.study.cas) > 0) {
       if(!suppress.messages){
-        message("Analyzing data by chemical, species, and reference...")
+        message("Analyzing data by chemical, species, and study...")
       }
-      data.set.multi.ref <- subset(data.set, MultipleReferences == TRUE)
+      data.set.multi.study <- subset(data.set, MultipleStudies == TRUE)
 
-      PK.fit.separate <- data.set.multi.ref[,
+      PK.fit.separate <- data.set.multi.study[,
                                  analyze_subset(fitdata = .SD,
                                                  modelfun = modelfun,
                                                  model = model,
                                                 pool_sigma = FALSE,
+                                                rescale_time = rescale_time,
                                                 get_starts_args = get_starts_args,
                                                 get_lower_args = get_lower_args,
                                                 get_upper_args = get_upper_args,
                                                 optimx_args = optimx_args,
                                                 suppress.messages = suppress.messages),
-                                 .SDcols = names(data.set.multi.ref),
+                                 .SDcols = names(data.set.multi.study),
                                                  by = c(
                                                    "DTXSID",
                                                    "Species",
-                                                   "Reference")]
+                                                   "Study")]
 
 
       if(!suppress.messages){
-        message("Analyzing data by chemical and species, pooling all references...")
+        message("Analyzing data by chemical and species, pooling all studies...")
       }
-      PK.fit.pooled <- data.set.multi.ref[,
+      PK.fit.pooled <- data.set.multi.study[,
                                           analyze_subset(fitdata = .SD,
                                                          modelfun = modelfun,
                                                          model = model,
                                                          pool_sigma = TRUE,
+                                                         rescale_time = rescale_time,
                                                          get_starts_args = get_starts_args,
                                                          get_lower_args = get_lower_args,
                                                          get_upper_args = get_upper_args,
                                                          optimx_args = optimx_args,
                                                          suppress.messages = suppress.messages),
-                                          .SDcols = names(data.set.multi.ref),
+                                          .SDcols = names(data.set.multi.study),
                                           by = c(
                                             "DTXSID",
                                             "Species")]

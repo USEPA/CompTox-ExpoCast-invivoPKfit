@@ -94,7 +94,7 @@
 #'   [preprocess_data()]. Requires a variable named `Route` which contains the
 #'   dosing route, either "po" (oral dosing) or "iv" (intravenous dosing); a
 #'   variable named `Media` which contains the medium in which concentration
-#'   was measured (either "blood" or "plasma"), and a variable named `Reference`
+#'   was measured (either "blood" or "plasma"), and a variable named `Study`
 #'   which contains reference identifiers.
 #' @param param_names Optional: A character vector of parameter names needed by
 #'   the model. Default NULL to automatically determine these from `model` by
@@ -145,6 +145,50 @@ get_opt_params <- function(model,
       ))
     }
   }
+
+  #add parameter units
+  param_units <- vector(mode = "character", length = length(param_names))
+  names(param_units) <- param_names
+
+  param_units["Fgutabs"] <- "unitless fraction"
+  param_units["Rblood2plasma"] <- "unitless ratio"
+  param_units[intersect(param_names,
+                        c("kelim",
+                          "kgutabs",
+                          "k12",
+                          "k21"))] <- paste0("1/",
+                                             unique(fitdata$Time.Units))
+  if(all(fitdata$Value.Units %in% "mg/L") &
+     all(fitdata$Dose.Units %in% "mg/kg")){
+    param_units[intersect(param_names,
+                          c("Vdist",
+                            "V1"))] <- "L/kg BW"
+    param_units[intersect(param_names,
+                          c("Fgutabs_Vdist",
+                            "Fgutabs_V1"))] <- "kg BW/L"
+
+  }else{
+    param_units[intersect(param_names,
+                          c("Vdist",
+                            "V1"))] <- paste0("(",
+                                              unique(fitdata$Dose.Units),
+                                              ")",
+                                              "/",
+                                              "(",
+                                              unique(fitdata$Value.Units),
+                                              ")")
+
+    param_units[intersect(param_names,
+                          c("Fgutabs_Vdist",
+                            "Fgutabs_V1"))] <- paste0("(",
+                                              unique(fitdata$Value.Units),
+                                              ")",
+                                              "/",
+                                              "(",
+                                              unique(fitdata$Dose.Units),
+                                              ")")
+  }
+
 
   opt_params <- rep(TRUE, length(param_names))
   names(opt_params) <- param_names
@@ -229,31 +273,36 @@ get_opt_params <- function(model,
     #otherwise, if blood-only data, Rblood2plasma will be used but held constant at 1
   }
 
-  par_DF <- data.frame(param_name = names(opt_params),
+  par_DF <- data.frame(param_name = param_names,
+                       param_units = param_units,
                        optimize_param = opt_params,
                        use_param = use_params)
 
   #add hyperparameters: individual reference error SDs
-  refs <- unique(fitdata$Reference)
+  studies <- unique(fitdata$Study)
 
   #if more than one reference and user has not specified to pool data:
   if(pool_sigma %in% FALSE &
-     length(refs) > 1){
-    # Add individual reference error SDs, named as sigma_ref_[Reference ID]
+     length(studies) > 1){
+    # Add individual reference error SDs, named as sigma_study_[Study ID]
     # Mark these as parameters to be optimized
- sigma_ref_DF <- data.frame(param_name = paste("sigma",
-                                               "ref",
-                                               refs,
+ sigma_study_DF <- data.frame(param_name = paste("sigma",
+                                               "study",
+                                               studies,
                                                sep = "_"),
+                            param_units = unique(fitdata$Value.Units),
                             optimize_param = TRUE,
                             use_param = TRUE)
   }else{ #just add a single pooled "sigma" parameter
-    sigma_ref_DF <- data.frame(param_name = "sigma",
+    sigma_study_DF <- data.frame(param_name = "sigma",
+                               param_units = unique(fitdata$Value.Units),
                                optimize_param = TRUE,
                                use_param = TRUE)
   }
 
-  par_DF <- rbind(par_DF, sigma_ref_DF)
+  par_DF <- rbind(par_DF, sigma_study_DF)
+
+  #add paramet
 
   #set rownames equal to param_name
   rownames(par_DF) <- par_DF$param_name

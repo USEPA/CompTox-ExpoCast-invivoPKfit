@@ -31,11 +31,11 @@
 #'`Fgutabs` and `Vdist` is identifiable in that case).
 #'
 #'In addition to the model parameters, the standard deviation of the residual
-#'errors will be estimated. If `fitdata` includes more than one unique reference
-#'value (`length(unique(fitdata$Reference))>1`) and `pool_sigma == FALSE`, then
-#'a separate error SD will be estimated for each unique reference. These error
-#'SDs will be named following the pattern `sigma_ref_ReferenceID`, where
-#'`ReferenceID` is one unique value of `fitdata$Reference`, coerced to character
+#'errors will be estimated. If `fitdata` includes more than one unique study
+#'value (`length(unique(fitdata$Study))>1`) and `pool_sigma == FALSE`, then
+#'a separate error SD will be estimated for each unique study. These error
+#'SDs will be named following the pattern `sigma_study_StudyID`, where
+#'`StudyID` is one unique value of `fitdata$Study`, coerced to character
 #'if necessary. This reflects an assumption that all concentration vs. time
 #'studies in `fitdata` obey the same underlying PK model, but each study may
 #'have a different amount of random measurement error (analogous to
@@ -95,8 +95,8 @@
 #' stop with an error.} \item{\code{Species}}{String identifying the species
 #' being dosed. This function expects only one unique value in this column; if
 #' there are multiple values, it will stop with an error.}
-#' \item{\code{Reference}}{String identifying the reference or study for each
-#' data point. Each reference is assumed to have its own residual error standard
+#' \item{\code{Study}}{String identifying the study or study for each
+#' data point. Each study is assumed to have its own residual error standard
 #' deviation.} }
 #'
 #'@param fitdata A \code{data.frame} containing the set of concentration vs.
@@ -110,8 +110,8 @@
 #'  `modelfun = 'full'`, only `model = '1compartment'` is supported.
 #'@param pool_sigma Logical: Whether to pool all data (estimate only one error
 #'  standard deviation) or not (estimate separate error standard deviations for
-#'  each reference). Default FALSE to estimate separate error SDs for each
-#'  reference. (If `fitdata` only includes one reference, `pool_sigma` will have
+#'  each study). Default FALSE to estimate separate error SDs for each
+#'  study. (If `fitdata` only includes one study, `pool_sigma` will have
 #'  no effect, because only one error SD would be estimated in the first place.)
 #'@param rescale_time Logical: Whether to rescale time to make scale of time
 #'  constants better-behaved. If TRUE, then if maximum time is more than 72
@@ -170,27 +170,27 @@ analyze_subset <- function(fitdata,
   this.species <- unique(fitdata$Species)
   if(length(this.species) > 1) stop("analyze_subset(): More than one species in data")
 
-  if(!suppress.messages){
-    #check whether there is more than one reference or not
-    nref <- length(unique(fitdata$Reference))
-    if (nref>1) {
-      if(pool_sigma %in% FALSE){
-        refs_analyzed <- paste(sort(unique(fitdata$Reference)),
-                                            collapse =", ")
-        analysis_type <- "Joint Analysis"
-      }else{
-        refs_analyzed <- paste(sort(unique(fitdata$Reference)),
-                                            collapse =", ")
-        analysis_type <- "Pooled Analysis"
-      }
-    }else {
-      refs_analyzed <- unique(fitdata$Reference)
-      analysis_type <- "Single-Reference Analysis"
+  #check whether there is more than one study or not
+  nstudy <- length(unique(fitdata$Study))
+  if (nstudy>1) {
+    if(pool_sigma %in% FALSE){
+      studies_analyzed <- paste(sort(unique(fitdata$Study)),
+                             collapse =", ")
+      analysis_type <- "Joint Analysis"
+    }else{
+      studies_analyzed <- paste(sort(unique(fitdata$Study)),
+                             collapse =", ")
+      analysis_type <- "Pooled Analysis"
     }
+  }else{
+    studies_analyzed <- unique(fitdata$Study)
+    analysis_type <- "Single-Study Analysis"
+  }
 
-    n_subj <- range(fitdata$N_Subjects)
-    if(length(unique(n_subj))==1) n_subj <- unique(n_subj)
+  n_subj <- range(fitdata$N_Subjects)
+  if(length(unique(n_subj))==1) n_subj <- unique(n_subj)
 
+  if(!suppress.messages){
     message(paste0("Beginning analysis for:\n",
                   "Chemical = ",
                    this.dtxsid,
@@ -199,8 +199,8 @@ analyze_subset <- function(fitdata,
                    this.species,
                    "\n",
                   "Analysis Type =  ", analysis_type, "\n",
-                   "Reference IDs = ",
-                   refs_analyzed,
+                   "Study IDs = ",
+                   studies_analyzed,
                    "\n",
                    "Number of observations = ",
                    nrow(fitdata),
@@ -216,8 +216,54 @@ analyze_subset <- function(fitdata,
     )
   }
 
-  #get parameter names and
-  #determine whether to optimize each of these parameters or not
+  fitdata$Time.Hours <- fitdata$Time
+  #rescale time if so requested
+  if(rescale_time %in% TRUE){
+    last_detect_time <- max(fitdata[is.finite(fitdata$Value),
+                                    "Time.Hours"])
+
+    if(last_detect_time > (24*365*2)){
+      new_time_units <- "years"
+    }else if(last_detect_time > (24*30*2)){
+      new_time_units <- "months"
+    }else if(last_detect_time > (24*7*2)){
+      new_time_units <- "weeks"
+    }else if(last_detect_time > 24*2){
+      new_time_units <- "days"
+    }else if(last_detect_time<0.5){
+      new_time_units <- "minutes"
+    }else{
+      new_time_units = "hours"
+    }
+
+    #use lubridate to handle conversion of hours into new_time_units
+    fitdata$Time <- convert_time(x = fitdata$Time.Hours,
+                                 from = "hours",
+                                 to = new_time_units,
+                                 inverse = FALSE)
+
+    fitdata$Time.Units <- new_time_units
+
+    if(!(suppress.messages %in% TRUE) &
+       !(new_time_units %in% "hours")){
+      message(paste("Rescaling time from hours to",
+                    new_time_units, "\n",
+                    "Latest detection time = ",
+                    signif(last_detect_time, 3),
+                    "hours.",
+                    "\nOld time range: ",
+                    paste(signif(range(fitdata$Time.Hours), 3),
+                          collapse = "-"),
+                    "hours",
+                    "\nNew time range:",
+                    paste(signif(range(fitdata$Time), 3),
+                          collapse = "-"),
+                    new_time_units))
+    }
+  }
+
+  #get parameter names and units, and determine whether to optimize each of
+  #these parameters or not
   par_DF <- do.call(get_opt_params,
                     list("model" = model,
                          "fitdata" = fitdata,
@@ -261,8 +307,6 @@ analyze_subset <- function(fitdata,
     }
   }
 
-
-
  #Types of fitted param values to return
  fitted_types <- c("Fitted mean",
                    "Fitted std dev")
@@ -291,22 +335,22 @@ analyze_subset <- function(fitdata,
 
    out_DF[, fitted_types] <- NA_real_
 
-   #check whether there is more than one reference or not
-   nref <- length(unique(fitdata$Reference))
+   #check whether there is more than one study or not
+   nstudy <- length(unique(fitdata$Study))
 
-   if (nref>1) {
+   if (nstudy>1) {
      if(pool_sigma %in% FALSE){
-       out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
+       out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
                                  collapse =", ")
        out_DF$Data.Analyzed <- "Joint Analysis"
      }else{
-       out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
+       out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
                                  collapse =", ")
        out_DF$Data.Analyzed <- "Pooled Analysis"
      }
    }else {
-     out_DF$References.Analyzed <- unique(fitdata$Reference)
-     out_DF$Data.Analyzed <- "Single-Reference Analysis"
+     out_DF$Studies.Analyzed <- unique(fitdata$Study)
+     out_DF$Data.Analyzed <- "Single-Study Analysis"
    }
 
    #fill in the loglike and AIC with NA s since no fit was done
@@ -351,63 +395,7 @@ analyze_subset <- function(fitdata,
    return(out_DF)
  } #end  if (sum(par_DF$opt.par) >= nrow(fitdata))
 
- #rescale time if so requested
- if(rescale_time %in% TRUE){
-last_detect_time <- max(fitdata[is.finite(fitdata$Value),
-                                "Time"])
-   if(last_detect_time > (24*365*2)){
-     #if max time is longer than 2 years,
-     #convert to years
-     Time_new <- fitdata$Time/24/365
-     new_time_units <- "years"
-   }else if(last_detect_time > (24*30*2)){
-     #if max time is longer than 2 months,
-     #convert to months
-     Time_new <- fitdata$Time/24/30
-     new_time_units <- "months"
-   }else if(last_detect_time > (24*7*2)){
-     #if max time is longer than 2 weeks,
-    #convert to weeks
-     Time_new <- fitdata$Time/24/7
-     new_time_units <- "weeks"
-   }else if(last_detect_time > 24*2){
-     #if max time is longer than 2 days,
-     #convert to days
-     Time_new <- fitdata$Time/24
-     new_time_units <- "days"
-   }else if(last_detect_time<0.5){
-     #if max time is shorter than half an hour,
-     #convert to minutes
-     Time_new <- fitdata$Time * 60
-     new_time_units <- "minutes"
-   }else{
-     #keep time in hours
-     Time_new <- fitdata$Time
-     new_time_units = "hours"
-   }
 
-   if(!(suppress.messages %in% TRUE) &
-      !(new_time_units %in% "hours")){
-     message(paste("Rescaling time from hours to",
-     new_time_units, "\n",
-     "Latest detection time = ",
-     signif(last_detect_time, 3),
-     "hours.",
-     "\nOld time range: ",
-     paste(signif(range(fitdata$Time), 3),
-           collapse = "-"),
-     "hours",
-     "\nNew time range:",
-     paste(signif(range(Time_new), 3),
-           collapse = "-"),
-     new_time_units))
-   }
-   fitdata$Time <- Time_new
-   fitdata$Time.Units <- new_time_units
-
- }else{
-   new_time_units <- "hours"
- }
 
 #get lower bounds
  par_DF <- do.call(get_lower_bounds,
@@ -548,21 +536,21 @@ out_DF$time_units_fitted <- new_time_units
   if(fitfail){
   out_DF[, fitted_types] <- NA_real_
 
-  nref <- length(unique(fitdata$Reference))
+  nstudy <- length(unique(fitdata$Study))
 
-  if (nref>1) {
+  if (nstudy>1) {
     if(pool_sigma %in% FALSE){
-    out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
+    out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
                               collapse =", ")
     out_DF$Data.Analyzed <- "Joint Analysis"
     }else{
-      out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
+      out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
                                 collapse =", ")
       out_DF$Data.Analyzed <- "Pooled Analysis"
     }
   } else {
-    out_DF$References.Analyzed <- unique(fitdata$Reference)
-    out_DF$Data.Analyzed <- "Single-Reference Analysis"
+    out_DF$Studies.Analyzed <- unique(fitdata$Study)
+    out_DF$Data.Analyzed <- "Single-Study Analysis"
   }
 
   #fill in the loglike and AIC with NA s since no fit was done
@@ -809,21 +797,21 @@ out_DF$time_units_fitted <- new_time_units
                   all.y = TRUE,
                   all.x = FALSE)
 
-  nref <- length(unique(fitdata$Reference))
+  nstudy <- length(unique(fitdata$Study))
 
-  if (nref>1) {
+  if (nstudy>1) {
     if(pool_sigma %in% FALSE){
-      out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
+      out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
                                 collapse =", ")
       out_DF$Data.Analyzed <- "Joint Analysis"
     }else{
-      out_DF$References.Analyzed <- paste(sort(unique(fitdata$Reference)),
+      out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
                                 collapse =", ")
       out_DF$Data.Analyzed <- "Pooled Analysis"
     }
   } else {
-    out_DF$References.Analyzed <- unique(fitdata$Reference)
-    out_DF$Data.Analyzed <- "Single-Reference Analysis"
+    out_DF$Studies.Analyzed <- unique(fitdata$Study)
+    out_DF$Data.Analyzed <- "Single-Study Analysis"
   }
 
   #Add log-likelihood and AIC values

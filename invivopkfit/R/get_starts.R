@@ -339,7 +339,7 @@ if(is.null(par_DF)){
 
     rownames(par_DF) <- par_DF$param_name
 
-    #the abovemerge won't get reference-specific sigmas: handle them
+    #the abovemerge won't get study-specific sigmas: handle them
     for(this_sigma in grep(x = par_DF$param_name,
                            pattern= "sigma",
                            value = TRUE)){
@@ -350,7 +350,7 @@ if(is.null(par_DF)){
                              msg = "Default starting value",
                              par_DF = par_DF,
                              start_from = start_from_data)
-    } #end for loop over reference-specific sigmas
+    } #end for loop over study-specific sigmas
 
     #if httk 1-comp model params exist, replace the defaults with these
     #and mark the source accordingly
@@ -1194,16 +1194,16 @@ if(is.finite(kgutabs_po) &
   for(this_sigma in grep(x = par_DF$param_name,
                          pattern= "sigma",
                          value = TRUE)){
-    if(this_sigma == "sigma"){ #if only one sigma (one reference, or pooled)
+    if(this_sigma == "sigma"){ #if only one sigma (one study, or pooled)
       tmp_sigma <- sd(resid, na.rm = TRUE)
     }else{
-      #if multiple sigmas for multiple references
-      #get the reference
-      refid <- gsub(x = this_sigma,
-                    pattern = "sigma_ref_",
+      #if multiple sigmas for multiple studys
+      #get the study
+      studyid <- gsub(x = this_sigma,
+                    pattern = "sigma_study_",
                     replacement = "")
-      resid_ref <- resid[fitdata$Reference %in% refid]
-      tmp_sigma <- sd(resid_ref, na.rm = TRUE)
+      resid_study <- resid[fitdata$Study %in% studyid]
+      tmp_sigma <- sd(resid_study, na.rm = TRUE)
     }
 
     par_DF <- assign_start(param_name = this_sigma,

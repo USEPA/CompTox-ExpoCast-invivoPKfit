@@ -48,30 +48,30 @@ plot_fit <- function(DTXSID_in,
   DFsub[, ConcDose_lower := (Value - Value_SD)/Dose]
 
   #Produce a table with unique "experiments": combinations of chemical, species,
-  #reference, route, dose, and medium (blood or plasma). Get the unique time
+  #Study, route, dose, and medium (blood or plasma). Get the unique time
   #points for each "experiment."
   DF2 <- DFsub[, .(Time = sort(unique(c(0, Time)))),
             by = .(DTXSID, Species,
-                   Reference, Route,
+                   Study, Reference, Route,
                    Dose, iv, Media)]
 
-#Create a column with combined references, to match joint/pooled analyses.
-  DF2[, Reference_pooled:=paste(
-    sort(unique(Reference)),
+#Create a column with combined Studies, to match joint/pooled analyses.
+  DF2[, Study_pooled:=paste(
+    sort(unique(Study)),
     collapse = ", "
   ),
   by = .(DTXSID, Species)]
 
   #Melt to longer format. The effect will be as though we row-bound two versions
   #of DF together: one with the original single referneces, and one with
-  #comma-separated combined references.
-  DF3 <- melt(DF2, measure.vars = c("Reference", "Reference_pooled"),
-              variable.name = "Reference_type",
-              value.name = "Reference")
+  #comma-separated combined Studies.
+  DF3 <- melt(DF2, measure.vars = c("Study", "Study_pooled"),
+              variable.name = "Study_type",
+              value.name = "Study")
 
-  #Keep only the unique values of the Reference column -- there will be
-  #duplicated rows for single-reference analyses.
-  DF3 <- unique(DF3[, .(DTXSID, Species, Reference,
+  #Keep only the unique values of the Study column -- there will be
+  #duplicated rows for single-Study analyses.
+  DF3 <- unique(DF3[, .(DTXSID, Species, Study,
                         Route, Dose, iv, Media, Time)])
 
 
@@ -95,14 +95,14 @@ plot_fit <- function(DTXSID_in,
                            .(DTXSID,
                              Species,
                              Analysis_Type,
-                             References.Analyzed,
+                             Studies.Analyzed,
                              model,
                              winning)])
 #Merge `DF3` and `pk_wide` to get data.frame with experiment + models
   pred_DT <- pk_wide[DF3,
                      on = c("DTXSID" = "DTXSID",
                             "Species" = "Species",
-                            "References.Analyzed" = "Reference"),
+                            "Studies.Analyzed" = "Study"),
                      allow.cartesian = TRUE]
 
   #Now add time points for prediction.
@@ -120,7 +120,7 @@ plot_fit <- function(DTXSID_in,
   }),
           by = .(DTXSID,
                  Species,
-                 References.Analyzed,
+                 Studies.Analyzed,
                  Route,
                  Media)]
 
@@ -130,7 +130,7 @@ plot_fit <- function(DTXSID_in,
   pred_DT2 <- pred_tmp[pred_DT_time,
                       on = c("DTXSID",
                              "Species",
-                             "References.Analyzed",
+                             "Studies.Analyzed",
                              "Route",
                              "Media"),
                       allow.cartesian = TRUE]
@@ -138,7 +138,7 @@ plot_fit <- function(DTXSID_in,
   # pred_DT2 <- pred_DT[, .(Time = 10^(seq(from = log10(0.5/60),
   #                                        to = log10(Max_Time),
   #                                        length.out = n))),
-  #                     by = .(DTXSID, Species, Analysis_Type, References.Analyzed,
+  #                     by = .(DTXSID, Species, Analysis_Type, Studies.Analyzed,
   #                            model, winning, Route, Dose, iv, Media, Max_Time)]
 
   #Now evaluate modelfor each analysis & model
@@ -154,7 +154,7 @@ plot_fit <- function(DTXSID_in,
     this_group <- unique(.SD)
     pksub_tmp <- pk_fit[this_group,
                         on = c("DTXSID", "Species", "Analysis_Type",
-                               "References.Analyzed", "model")]
+                               "Studies.Analyzed", "model")]
     #get a named list of fitted model params
     par <- pksub_tmp[, `Fitted mean`]
     names(par) <- pksub_tmp[, param_name]
@@ -174,8 +174,8 @@ plot_fit <- function(DTXSID_in,
     conc_out
 
   },
-  .SDcols = c("DTXSID", "Species", "Analysis_Type", "References.Analyzed", "model"),
-  by = .(DTXSID, Species, Analysis_Type, References.Analyzed, model)]
+  .SDcols = c("DTXSID", "Species", "Analysis_Type", "Studies.Analyzed", "model"),
+  by = .(DTXSID, Species, Analysis_Type, Studies.Analyzed, model)]
 
   #get predicted conc normalized by dose
   pred_DT2[, ConcDose:=Conc/Dose]
@@ -191,7 +191,11 @@ plot_fit <- function(DTXSID_in,
   plot_title <- paste0("DTXSID = ", DTXSID_in, "\n",
                        "(", DFsub[, unique(Compound_Analyzed)], ")\n",
                        "Species = ", Species_in, "\n",
-                       "Analysis Type =", paste(Analysis_Type_in, collapse= ", "))
+                       "Analysis Type =", paste(Analysis_Type_in, collapse= ", "), "\n",
+                       "Doses = ", paste(signif(
+                         sort(unique(DFsub$Dose)),
+                         3),
+                                         collapse = ", "))
   #if plotting a joint analysis (only one winning model for this DTXSID and species),
   #add winning model to the plot title
   if(any(Analysis_Type_in %in% "Joint")){
@@ -215,13 +219,13 @@ plot_fit <- function(DTXSID_in,
 
   #now plot the rest
     #first plot points with white fill
-    p <- p + geom_point(aes(shape = Reference,
+    p <- p + geom_point(aes(shape = Study,
                    color = Dose),
                fill = "white",
                size = 4,
                stroke = 1.5) +
     #then plot points with fill, but alpha mapped to Detect
-    geom_point(aes(shape = Reference,
+    geom_point(aes(shape = Study,
                    color = Dose,
                    fill = Dose,
                    alpha = Detect),
@@ -230,15 +234,15 @@ plot_fit <- function(DTXSID_in,
     #plot lines for model predictions
     geom_line(data = predsub,
               aes(linetype = model,
-                  group = interaction(Analysis_Type, References.Analyzed, Dose, model))
+                  group = interaction(Analysis_Type, Studies.Analyzed, Dose, model))
     ) +
     facet_grid(rows = vars(Route),
                cols = vars(Media),
                scales = "free_y") +
-    scale_color_viridis_c() +
-    scale_fill_viridis_c(na.value = NA) +
+    scale_color_viridis_c(name = "Dose, mg/kg") +
+    scale_fill_viridis_c(na.value = NA, name = "Dose, mg/kg") +
     scale_shape_manual(values = 21:25) + #use only the 5 shapes where a fill can be added
-    #this limits us to visualizing only 5 references
+    #this limits us to visualizing only 5 Studies
     #but admittedly it's hard to distinguish more than 5 shapes anyway
     #if detect =FALSE, fully transparent; if detect = TRUE, fully solid
     scale_alpha_manual(values = c("Detect" = 1, "Non-Detect" = 0),

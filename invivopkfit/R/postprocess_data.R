@@ -18,7 +18,7 @@ postprocess_data <- function(PK_fit,
                                !grepl(x = param_name,
                                       pattern = "sigma")],
                       Analysis_Type + DTXSID + Species +
-                        model + References.Analyzed +
+                        model + Studies.Analyzed +
                         Routes + Media +
                        time_units_fitted +
                         AIC ~ param_name,
@@ -28,7 +28,7 @@ postprocess_data <- function(PK_fit,
                                   !grepl(x = param_name,
                                          pattern = "sigma")],
                          Analysis_Type + DTXSID + Species +
-                           model + References.Analyzed +
+                           model + Studies.Analyzed +
                            Routes + Media +
                           time_units_fitted +
                            AIC ~ param_name,
@@ -49,6 +49,9 @@ postprocess_data <- function(PK_fit,
                                      names(PK_flat_sd))
     )
 
+    PK_flat[, time_units_fitted := NULL]
+
+    PK_flat[, time_units_reported := "hours"]
     PK_out <- copy(PK_flat)
   }else if(model %in% "1compartment"){
   #for 1-compartment model:
@@ -61,7 +64,7 @@ postprocess_data <- function(PK_fit,
                              !grepl(x = param_name,
                                     pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
-                      model + References.Analyzed +
+                      model + Studies.Analyzed +
                       time_units_fitted +
                       Routes + Media +
                       AIC ~ param_name,
@@ -71,7 +74,7 @@ postprocess_data <- function(PK_fit,
                                 !grepl(x = param_name,
                                        pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
-                      model + References.Analyzed +
+                      model + Studies.Analyzed +
                       Routes + Media +
                       time_units_fitted +
                       AIC ~ param_name,
@@ -93,30 +96,21 @@ postprocess_data <- function(PK_fit,
                    )
 
  #convert time constants back to hours if necessary
- time_units <- unique(PK_1comp$time_units_fitted)
- if(!(time_units %in% "hours")){
-   time_const <- intersect(names(PK_1comp),
-                           c("kelim",
-                             "kgutabs",
-                             "kelim_sd",
-                             "kgutabs_sd")
-   )
-   if(time_units == "days"){
-     convfun <- function(x) x*24
-   }else if(time_units == "weeks"){
-     convfun <- function(x) x*(24*7)
-   }else if(time_units == "months"){
-     convfun <- function(x) x*(24*30)
-   }else if(time_units == "years"){
-     convfun <- function(x) x*(24*365)
-   }else if(time_units == "minutes"){
-     convfun <- function(x) x/60
-   }
+ time_const <- intersect(names(PK_1comp),
+                         c("kelim",
+                           "kgutabs",
+                           "kelim_sd",
+                           "kgutabs_sd"))
+if(length(time_const) > 0){
    PK_1comp[, (time_const) := lapply(.SD,
-                                     convfun),
+                                     convert_time,
+                                     from = time_units_fitted,
+                                     to = "hours",
+                                     inverse = TRUE),
             .SDcols = time_const]
- }
+}
 
+ PK_1comp[, time_units_fitted := NULL]
  PK_1comp[, time_units_reported := "hours"]
 
   PK_1comp[is.na(Fgutabs_Vdist),
@@ -156,7 +150,7 @@ postprocess_data <- function(PK_fit,
            DTXSID,
            Species,
              model,
-           References.Analyzed,
+           Studies.Analyzed,
              AIC)]
 
   PK_out <- copy(PK_1comp)
@@ -168,7 +162,7 @@ postprocess_data <- function(PK_fit,
                              !grepl(x = param_name,
                                     pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
-                      model + References.Analyzed +
+                      model + Studies.Analyzed +
                       Routes + Media +
                       time_units_fitted +
                       AIC ~ param_name,
@@ -179,7 +173,7 @@ postprocess_data <- function(PK_fit,
                                 !grepl(x = param_name,
                                        pattern = "sigma")],
                        Analysis_Type + DTXSID + Species +
-                         model + References.Analyzed +
+                         model + Studies.Analyzed +
                          Routes + Media +
                          time_units_fitted +
                          AIC ~ param_name,
@@ -202,8 +196,7 @@ postprocess_data <- function(PK_fit,
 
   #convert time constants back to hours if necessary
   #Convert units of time constants if rescale_time == TRUE
-  time_units <- unique(PK_2comp$time_units_fitted)
-  if(!(time_units %in% "hours")){
+
     time_const <- intersect(names(PK_2comp),
                             c("kelim",
                               "kgutabs",
@@ -212,25 +205,19 @@ postprocess_data <- function(PK_fit,
                               "kelim_sd",
                               "kgutabs_sd",
                               "k21_sd",
-                              "k12_sd")
-    )
-    if(time_units == "days"){
-      convfun <- function(x) x*24
-    }else if(time_units == "weeks"){
-      convfun <- function(x) x*(24*7)
-    }else if(time_units == "months"){
-      convfun <- function(x) x*(24*30)
-    }else if(time_units == "years"){
-      convfun <- function(x) x*(24*365)
-    }else if(time_units == "minutes"){
-      convfun <- function(x) x/60
-    }
-    PK_2comp[, (time_const) := lapply(.SD,
-                                      convfun),
-             .SDcols = time_const]
-  }
+                              "k12_sd"))
 
-  PK_2comp[, time_units_reported := "hours"]
+    if(length(time_const) > 0){
+      PK_2comp[, (time_const) := lapply(.SD,
+                                        convert_time,
+                                        from = time_units_fitted,
+                                        to = "hours",
+                                        inverse = TRUE),
+               .SDcols = time_const]
+    }
+
+    PK_2comp[, time_units_fitted := NULL]
+    PK_1comp[, time_units_reported := "hours"]
 
   #in case Fgutabs and V1 were fitted separately, compute Fgutabs/V1
   PK_2comp[is.na(Fgutabs_V1), Fgutabs_V1 := Fgutabs/V1]
@@ -240,8 +227,6 @@ postprocess_data <- function(PK_fit,
 
   #Total clearance divided by Fgutabs, in case only Fgutabs/V1 was available
   PK_2comp[, CLtot_Fgutabs := kelim / Fgutabs_V1]
-
-
 
   #compute A, B, alpha, beta
   #see https://www.boomer.org/c/p4/c19/c1902.php
@@ -316,7 +301,7 @@ postprocess_data <- function(PK_fit,
          DTXSID,
          Species,
          model,
-         References.Analyzed,
+         Studies.Analyzed,
          AIC)]
 
   #Cpeak for oral dose of 1 mg/kg
@@ -333,7 +318,7 @@ postprocess_data <- function(PK_fit,
                   DTXSID,
                   Species,
                   model,
-                  References.Analyzed,
+                  Studies.Analyzed,
                   AIC)]
 
   #remove temporary calculation columns

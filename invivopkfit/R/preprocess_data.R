@@ -137,7 +137,7 @@ preprocess_data <- function(data.set,
                             defaults_list =   list(
                               "Weight.Units" = "kg",
                               "Dose.Units" = "mg/kg",
-                              "Time.Units" = "h",
+                              "Time.Units" = "hours",
                               "Value.Units" = "mg/L"),
                             ratio_conc_to_dose = 1,
                             calc_loq_factor = 0.45,
@@ -506,7 +506,25 @@ preprocess_data <- function(data.set,
   }
 
   ### convert time from hours to days
-  data.set$Time.Days <- data.set$Time/24
+  data.set$Time.Days <- convert_time(data.set$Time,
+                                     from = data.set$Time.Units,
+                                     to = "days",
+                                     inverse = FALSE)
+
+  #create a Study column:
+  #Chemical + Species + Reference + Route + Media
+  if(!suppress.messages){
+    message(paste0("Creating Study column: ",
+                   "interaction of ",
+                   "Chemical + Species + Reference + Route + Media"))
+  }
+  data.set$Study <- interaction(data.set$DTXSID,
+                                data.set$Species,
+                                data.set$Reference,
+                                data.set$Route,
+                                data.set$Media,
+                                drop = TRUE,
+                                sep = "_")
 
   if(!suppress.messages){
     "Data preprocessing complete."

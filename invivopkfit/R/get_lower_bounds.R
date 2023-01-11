@@ -42,8 +42,8 @@
 #'   Ignored if `par_DF` is provided.
 #' @param pool_sigma Logical: Whether to pool all data (estimate only one error
 #'   standard deviation) or not (estimate separate error standard deviations for
-#'   each reference). Default `FALSE` to estimate separate error SDs for each
-#'   reference. (If `fitdata` only includes one reference, `pool_sigma` will
+#'   each study). Default `FALSE` to estimate separate error SDs for each
+#'   study. (If `fitdata` only includes one study, `pool_sigma` will
 #'   have no effect.) Ignored if `par_DF` is provided.
 #' @param lower_default  A `data.frame` with three variables: `param_name`,
 #'   giving the names of parameters; `lower_bound`, giving the default
