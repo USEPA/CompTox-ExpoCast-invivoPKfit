@@ -11,14 +11,50 @@ postprocess_data <- function(PK_fit,
                              model){
 
 #Do post fit calculations
-if(model %in% "1compartment"){
-  #for 1-compartment model:
-  #Calculate: total clearance; half-life;tpeak;
-  #Cpeak and Css for a dose of 1 mg/kg/day
-  #for two-comaprtment: the above plus Vss and Varea/Vbeta
 
-  #1-compartment model
-  #reshape wide (one column for each parameter)
+  if(model %in% "flat"){
+    #reshape wide (one column for each parameter)
+    PK_flat <- dcast(PK_fit[model %in% "flat" &
+                               !grepl(x = param_name,
+                                      pattern = "sigma")],
+                      Analysis_Type + DTXSID + Species +
+                        model + References.Analyzed +
+                        Routes +
+                        AIC ~ param_name,
+                      value.var = "Fitted mean")
+    #also get the SD for each fitted param
+    PK_flat_sd <- dcast(PK_fit[model %in% "flat" &
+                                  !grepl(x = param_name,
+                                         pattern = "sigma")],
+                         Analysis_Type + DTXSID + Species +
+                           model + References.Analyzed +
+                           Routes +
+                           AIC ~ param_name,
+                         value.var = "Fitted std dev")
+    #append "_sd" for these params
+    setnames(PK_flat_sd,
+             PK_fit[model %in% "flat" &
+                      !grepl(x = param_name,
+                             pattern = "sigma"), unique(param_name)],
+             PK_fit[model %in% "flat" &
+                      !grepl(x = param_name,
+                             pattern = "sigma"), paste0(unique(param_name),
+                                                        "_sd")])
+    #merge
+    PK_flat <- merge(PK_flat,
+                      PK_flat_sd,
+                      by = intersect(names(PK_flat),
+                                     names(PK_flat))
+    )
+
+    PK_out <- copy(PK_flat)
+  }else if(model %in% "1compartment"){
+  #for 1-compartment model:
+
+  #Calculate: total clearance; half-life; tpeak; Cpeak
+  #and Css for a dose of 1 mg/kg/da
+
+    #reshape wide (one column for each parameter)
   PK_1comp <- dcast(PK_fit[model %in% "1compartment" &
                              !grepl(x = param_name,
                                     pattern = "sigma")],
@@ -52,9 +88,9 @@ if(model %in% "1compartment"){
                                   names(PK_1comp_sd))
                    )
 
+  PK_1comp[is.na(Fgutabs_Vdist),
+           Fgutabs_Vdist := Fgutabs/Vdist]
 
-
-  PK_1comp[, Fgutabs_Vdist := Fgutabs/Vdist]
   #CLtot:
   #If kelim and Vdist are available, CLtot = kelim * Vdist
   PK_1comp[, CLtot := kelim * Vdist]
@@ -239,18 +275,6 @@ if(model %in% "1compartment"){
   PK_2comp[, c("alphabeta_sum",
                "alphabeta_prod") := NULL]
   PK_out <- copy(PK_2comp)
-}else if(model %in% "flat"){
-  #2-compartment model
-  PK_flat <- PK_fit[model %in% "flat" &
-                      !grepl(x = param_name,
-                             pattern = "sigma")]
-  #reshape to wide format
-  PK_flat <- dcast(PK_flat,
-                    Analysis_Type + DTXSID + Species +
-                      model + References.Analyzed +
-                      AIC ~ param_name,
-                    value.var = "Fitted mean")
-  PK_out <- copy(PK_flat)
 }
 
 return(PK_out)
