@@ -189,7 +189,7 @@ analyze_subset <- function(fitdata,
     }
 
     n_subj <- range(fitdata$N_Subjects)
-    if (all(n_subj %in% 1)) n_subj <- 1
+    if(length(unique(n_subj))==1) n_subj <- unique(n_subj)
 
     message(paste0("Beginning analysis for:\n",
                   "Chemical = ",
@@ -389,11 +389,11 @@ analyze_subset <- function(fitdata,
      message(paste("Rescaling time from hours to",
      new_time_units,
      "\nOld time range: ",
-     paste(range(fitdata$Time),
+     paste(signif(range(fitdata$Time), 3),
            collapse = "-"),
      "hours",
      "\nNew time range:",
-     paste(range(fitdata$Time_new),
+     paste(signif(range(fitdata$Time_new), 3),
            collapse = "-"),
      new_time_units))
    }
