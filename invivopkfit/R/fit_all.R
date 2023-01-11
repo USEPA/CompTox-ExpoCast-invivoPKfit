@@ -88,7 +88,6 @@
 #'
 #' @author Caroline Ring, John Wambaugh
 #' @export fit_all
-#' @importFrom PK nca.batch
 #' @import data.table
 
 fit_all <- function(data.set,
