@@ -287,7 +287,7 @@ analyze_subset <- function(fitdata,
                                           NA_real_,
                                           NA_character_)
 
-   out_DF$time_units_rescaled <- "hours"
+   out_DF$time_units_fitting <- "hours"
 
    out_DF[, fitted_types] <- NA_real_
 
@@ -353,51 +353,56 @@ analyze_subset <- function(fitdata,
 
  #rescale time if so requested
  if(rescale_time %in% TRUE){
-
-   if(max(fitdata$Time) > (24*365*2)){
+last_detect_time <- max(fitdata[is.finite(fitdata$Value),
+                                "Time"])
+   if(last_detect_time > (24*365*2)){
      #if max time is longer than 2 years,
      #convert to years
-     fitdata$Time_new <- fitdata$Time/24/365
+     Time_new <- fitdata$Time/24/365
      new_time_units <- "years"
-   }else if(max(fitdata$Time) > (24*30*2)){
+   }else if(last_detect_time > (24*30*2)){
      #if max time is longer than 2 months,
      #convert to months
-     fitdata$Time_new <- fitdata$Time/24/30
+     Time_new <- fitdata$Time/24/30
      new_time_units <- "months"
-   }else if(max(fitdata$Time) > (24*7*2)){
+   }else if(last_detect_time > (24*7*2)){
      #if max time is longer than 2 weeks,
     #convert to weeks
-     fitdata$Time_new <- fitdata$Time/24/7
+     Time_new <- fitdata$Time/24/7
      new_time_units <- "weeks"
-   }else if(max(fitdata$Time) > 24*2){
+   }else if(last_detect_time > 24*2){
      #if max time is longer than 2 days,
      #convert to days
-     fitdata$Time_new <- fitdata$Time/24
+     Time_new <- fitdata$Time/24
      new_time_units <- "days"
-   }else if(max(fitdata$Time)<0.5){
+   }else if(last_detect_time<0.5){
      #if max time is shorter than half an hour,
      #convert to minutes
-     fitdata$Time_new <- fitdata$Time * 60
+     Time_new <- fitdata$Time * 60
      new_time_units <- "minutes"
    }else{
      #keep time in hours
-     fitdata$Time_new <- fitdata$Time
+     Time_new <- fitdata$Time
      new_time_units = "hours"
    }
 
-   if(!suppress.messages){
+   if(!(suppress.messages %in% TRUE) &
+      !(new_time_units %in% "hours")){
      message(paste("Rescaling time from hours to",
-     new_time_units,
+     new_time_units, "\n",
+     "Latest detection time = ",
+     signif(last_detect_time, 3),
+     "hours.",
      "\nOld time range: ",
      paste(signif(range(fitdata$Time), 3),
            collapse = "-"),
      "hours",
      "\nNew time range:",
-     paste(signif(range(fitdata$Time_new), 3),
+     paste(signif(range(Time_new), 3),
            collapse = "-"),
      new_time_units))
    }
-   fitdata$Time <- fitdata$Time_new
+   fitdata$Time <- Time_new
    fitdata$Time.Units <- new_time_units
 
  }else{
@@ -436,7 +441,7 @@ analyze_subset <- function(fitdata,
  #There will be one row for each parameter
 out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
 #add a variable for time units
-out_DF$time_units_rescaled <- new_time_units
+out_DF$time_units_fitting <- new_time_units
 
   #From par_DF, get vectors of:
 
@@ -790,32 +795,32 @@ out_DF$time_units_rescaled <- new_time_units
   } #end if method %in% "L-BFGS-B"
 
   #Convert units of time constants if rescale_time == TRUE
-  if(rescale_time %in% TRUE){
-    if(!suppress.messages){
-      if(new_time_units != "hours"){
+  if(rescale_time %in% TRUE &
+     !(new_time_units %in% "hours")){
+    if(!(suppress.messages %in% TRUE)){
       message(paste0("Time was rescaled from hours to ",
                     new_time_units,
-                    ". Fitted time constants and SDs will be scaled back to hours"))
+                    ". Fitted time constants and their SDs will be scaled from ",
+                    "units of 1/", new_time_units,
+                    "to units of 1/hours"))
+      }
         time_const <- intersect(names(means), c("kelim",
                                                 "kgutabs",
                                                 "k12",
                                                 "k21"))
       if(new_time_units == "days"){
-        convfun <- function(x) x/24
+        convfun <- function(x) x*24
       }else if(new_time_units == "weeks"){
-        convfun <- function(x) x/(24*7)
+        convfun <- function(x) x*(24*7)
       }else if(new_time_units == "months"){
-       convfun <- function(x) x/(24*30)
+       convfun <- function(x) x*(24*30)
       }else if(new_time_units == "years"){
-    convfun <- function(x) x/(24*365)
+    convfun <- function(x) x*(24*365)
       }else if(new_time_units == "minutes"){
-       convfun <- function(x) x*60
+       convfun <- function(x) x/60
       }
-
         means[time_const] <- convfun(means[time_const])
         sds[time_const] <- convfun(sds[time_const])
-      }
-    }
   }
 
   #Produce a data frame of fitted parameters
@@ -826,7 +831,7 @@ out_DF$time_units_rescaled <- new_time_units
 
   #Merge it with the original data frame of parameters
   #keep only the ones that were actually fit
-  par_DF$time_units_rescaled <- new_time_units
+  par_DF$time_units_fitting <- new_time_units
   out_DF <- merge(par_DF,
                   fit_DF,
                   by = "param_name",
