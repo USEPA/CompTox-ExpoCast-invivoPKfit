@@ -441,13 +441,13 @@ if(is.null(par_DF)){
       Rblood2plasma_iv <- NA_real_
       Rblood2plasma_po <- NA_real_
 
-      if(has_iv){
-        if(has_plasma){
+      if(has_iv %in% TRUE){
+        if(has_plasma %in% TRUE){
           Vdist_log <- -1 * mean(iv_data[iv_data$Media %in% "plasma",
                                           "logValueDose"],
                                   na.rm = TRUE)
           Vdist <- exp(Vdist_log)
-          if(has_blood){ #if both blood and plasma IV data, estimate Rblood2plasma
+          if(has_blood %in% TRUE){ #if both blood and plasma IV data, estimate Rblood2plasma
             ymean <- mean(iv_data[iv_data$Media %in% "blood",
                                                   "logValueDose"],
                                           na.rm = TRUE)
@@ -469,13 +469,13 @@ if(is.null(par_DF)){
                                msg = "Based on average Value/Dose from IV data")
       }
 
-      if(has_po){
-        if(has_plasma){
+      if(has_po %in% TRUE){
+        if(has_plasma %in% TRUE){
         Fgutabs_Vdist_log <- mean(po_data[po_data$Media %in% "plasma",
                                                       "logValueDose"],
                                               na.rm = TRUE)
         Fgutabs_Vdist <- exp(Fgutabs_Vdist_log)
-        if(has_blood){ #if both blood and plasma IV data, estimate Rblood2plasma
+        if(has_blood %in% TRUE){ #if both blood and plasma IV data, estimate Rblood2plasma
           ymean <- mean(po_data[po_data$Media %in% "blood",
                                 "logValueDose"],
                         na.rm = TRUE)
@@ -491,7 +491,7 @@ if(is.null(par_DF)){
         }
 
         #if both oral and IV data, then use Vdist from IV to calculate Fgutabs
-        if(has_iv){
+        if(has_iv %in% TRUE){
           Fgutabs <- Fgutabs_Vdist * Vdist
           par_DF <- assign_start(param_name = "Fgutabs",
                                  param_value = Fgutabs,
@@ -507,7 +507,7 @@ if(is.null(par_DF)){
                                msg = "Based on average Value/Dose from PO data")
       }
 
-      if(has_blood & has_plasma){
+      if(has_blood %in% TRUE & has_plasma %in% TRUE){
       Rblood2plasma <- mean(c(Rblood2plasma_iv,
                               Rblood2plasma_po),
                             na.rm = TRUE)
