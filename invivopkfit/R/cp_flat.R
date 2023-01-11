@@ -93,7 +93,7 @@ cp_flat <- function(time, params, dose, iv.dose, medium) {
   #check for required params
 
 #if Fgutabs and Vdist provided, compute Fgutabs_Vdist
-  if(all(c("Fgutabs", "Vdist") %in% names(params)){
+  if(all(c("Fgutabs", "Vdist") %in% names(params))){
     params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
   }
 
