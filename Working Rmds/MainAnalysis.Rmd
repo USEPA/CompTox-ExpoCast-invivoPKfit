@@ -128,7 +128,17 @@ write.csv(PK.fit.table.flat, paste("../inst/ext/PK_fit_table_flat_",
                                     ".csv",
                                     sep=""), row.names = FALSE)
 
-rm(PK.fit.table.flat)
+post_flat <- postprocess_data(PK_fit = PK.fit.table.flat,
+                               model = "flat")
+
+write.csv(post_flat,
+          paste("../inst/ext/PK_fit_postprocess_flat_",
+                                    timestamp,
+                                    ".csv",
+                                    sep=""),
+          row.names = FALSE)
+
+rm(PK.fit.table.flat, post_flat)
 ```
 
 ## 1-compartment model
