@@ -19,7 +19,7 @@ postprocess_data <- function(PK_fit,
                                       pattern = "sigma")],
                       Analysis_Type + DTXSID + Species +
                         model + References.Analyzed +
-                        Routes +
+                        Routes + Media +
                         AIC ~ param_name,
                       value.var = "Fitted mean")
     #also get the SD for each fitted param
@@ -28,7 +28,7 @@ postprocess_data <- function(PK_fit,
                                          pattern = "sigma")],
                          Analysis_Type + DTXSID + Species +
                            model + References.Analyzed +
-                           Routes +
+                           Routes + Media +
                            AIC ~ param_name,
                          value.var = "Fitted std dev")
     #append "_sd" for these params
@@ -44,7 +44,7 @@ postprocess_data <- function(PK_fit,
     PK_flat <- merge(PK_flat,
                       PK_flat_sd,
                       by = intersect(names(PK_flat),
-                                     names(PK_flat))
+                                     names(PK_flat_sd))
     )
 
     PK_out <- copy(PK_flat)
@@ -60,7 +60,7 @@ postprocess_data <- function(PK_fit,
                                     pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed +
-                      Routes +
+                      Routes + Media +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
   #also get the SD for each fitted param
@@ -69,7 +69,7 @@ postprocess_data <- function(PK_fit,
                                        pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed +
-                      Routes +
+                      Routes + Media +
                       AIC ~ param_name,
                     value.var = "Fitted std dev")
   #append "_sd" for these params
@@ -138,7 +138,7 @@ postprocess_data <- function(PK_fit,
                                     pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed +
-                      Routes +
+                      Routes + Media +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
 
@@ -148,7 +148,7 @@ postprocess_data <- function(PK_fit,
                                        pattern = "sigma")],
                        Analysis_Type + DTXSID + Species +
                          model + References.Analyzed +
-                         Routes +
+                         Routes + Media +
                          AIC ~ param_name,
                        value.var = "Fitted std dev")
   #append "_sd" for these params
