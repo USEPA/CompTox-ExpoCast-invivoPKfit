@@ -18,7 +18,7 @@ postprocess_data <- function(PK_fit,
                                !grepl(x = param_name,
                                       pattern = "sigma")],
                       Analysis_Type + DTXSID + Species +
-                        model + Studies.Analyzed +
+                        model + References.Analyzed + Studies.Analyzed +
                         Routes + Media +
                        time_units_fitted +
                         AIC ~ param_name,
@@ -28,7 +28,7 @@ postprocess_data <- function(PK_fit,
                                   !grepl(x = param_name,
                                          pattern = "sigma")],
                          Analysis_Type + DTXSID + Species +
-                           model + Studies.Analyzed +
+                           model + References.Analyzed + Studies.Analyzed +
                            Routes + Media +
                           time_units_fitted +
                            AIC ~ param_name,
@@ -64,7 +64,7 @@ postprocess_data <- function(PK_fit,
                              !grepl(x = param_name,
                                     pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
-                      model + Studies.Analyzed +
+                      model + References.Analyzed + Studies.Analyzed +
                       time_units_fitted +
                       Routes + Media +
                       AIC ~ param_name,
@@ -74,7 +74,7 @@ postprocess_data <- function(PK_fit,
                                 !grepl(x = param_name,
                                        pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
-                      model + Studies.Analyzed +
+                      model + References.Analyzed + Studies.Analyzed +
                       Routes + Media +
                       time_units_fitted +
                       AIC ~ param_name,
@@ -162,7 +162,7 @@ if(length(time_const) > 0){
                              !grepl(x = param_name,
                                     pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
-                      model + Studies.Analyzed +
+                      model + References.Analyzed + Studies.Analyzed +
                       Routes + Media +
                       time_units_fitted +
                       AIC ~ param_name,
@@ -173,7 +173,7 @@ if(length(time_const) > 0){
                                 !grepl(x = param_name,
                                        pattern = "sigma")],
                        Analysis_Type + DTXSID + Species +
-                         model + Studies.Analyzed +
+                         model + References.Analyzed + Studies.Analyzed +
                          Routes + Media +
                          time_units_fitted +
                          AIC ~ param_name,

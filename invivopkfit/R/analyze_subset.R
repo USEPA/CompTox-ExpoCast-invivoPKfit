@@ -176,19 +176,34 @@ analyze_subset <- function(fitdata,
     if(pool_sigma %in% FALSE){
       studies_analyzed <- paste(sort(unique(fitdata$Study)),
                              collapse =", ")
+      refs_analyzed <- paste(sort(unique(fitdata$Reference)),
+                                collapse =", ")
       analysis_type <- "Joint Analysis"
     }else{
       studies_analyzed <- paste(sort(unique(fitdata$Study)),
                              collapse =", ")
+      refs_analyzed <- paste(sort(unique(fitdata$Reference)),
+                                collapse =", ")
       analysis_type <- "Pooled Analysis"
     }
   }else{
     studies_analyzed <- unique(fitdata$Study)
+    refs_analyzed <- unique(fitdata$Reference)
     analysis_type <- "Single-Study Analysis"
   }
 
   n_subj <- range(fitdata$N_Subjects)
   if(length(unique(n_subj))==1) n_subj <- unique(n_subj)
+
+  n_routes <- paste("iv: ",
+                  sum(fitdata$Route %in% "iv"),
+                  "; po: ",
+                  sum(fitdata$Route %in% "po"))
+
+  n_media <- paste("blood: ",
+                   sum(fitdata$Media %in% "blood"),
+                   "; plasma: ",
+                   sum(fitdata$Media %in% "plasma"))
 
   if(!suppress.messages){
     message(paste0("Beginning analysis for:\n",
@@ -199,6 +214,9 @@ analyze_subset <- function(fitdata,
                    this.species,
                    "\n",
                   "Analysis Type =  ", analysis_type, "\n",
+                  "Reference IDs = ",
+                  refs_analyzed,
+                  "\n",
                    "Study IDs = ",
                    studies_analyzed,
                    "\n",
@@ -335,23 +353,9 @@ analyze_subset <- function(fitdata,
 
    out_DF[, fitted_types] <- NA_real_
 
-   #check whether there is more than one study or not
-   nstudy <- length(unique(fitdata$Study))
-
-   if (nstudy>1) {
-     if(pool_sigma %in% FALSE){
-       out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
-                                 collapse =", ")
-       out_DF$Data.Analyzed <- "Joint Analysis"
-     }else{
-       out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
-                                 collapse =", ")
-       out_DF$Data.Analyzed <- "Pooled Analysis"
-     }
-   }else {
-     out_DF$Studies.Analyzed <- unique(fitdata$Study)
-     out_DF$Data.Analyzed <- "Single-Study Analysis"
-   }
+   out_DF$Studies.Analyzed <- studies_analyzed
+   out_DF$References.Analyzed <- refs_analyzed
+   out_DF$Data.Analyzed <- analysis_type
 
    #fill in the loglike and AIC with NA s since no fit was done
    out_DF$LogLikelihood <-  NA_real_
@@ -361,15 +365,9 @@ analyze_subset <- function(fitdata,
    out_DF$flag <- NA_character_
    #Record the unique routes in this dataset
    #Route info provides context for why some parameters were/were not estimated
-   out_DF$Routes <- paste("iv: ",
-                          sum(fitdata$Route %in% "iv"),
-                          "; po: ",
-                          sum(fitdata$Route %in% "po"))
+   out_DF$Routes <- n_routes
    #Record the unique media in this dataset
-   out_DF$Media <- paste("blood: ",
-                          sum(fitdata$Media %in% "blood"),
-                          "; plasma: ",
-                          sum(fitdata$Media %in% "plasma"))
+   out_DF$Media <- n_media
 
    #include a message about why no fit was done
    msg <- paste("For chemical ", this.dtxsid, " there were ",
@@ -536,22 +534,10 @@ out_DF$time_units_fitted <- new_time_units
   if(fitfail){
   out_DF[, fitted_types] <- NA_real_
 
-  nstudy <- length(unique(fitdata$Study))
 
-  if (nstudy>1) {
-    if(pool_sigma %in% FALSE){
-    out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
-                              collapse =", ")
-    out_DF$Data.Analyzed <- "Joint Analysis"
-    }else{
-      out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
-                                collapse =", ")
-      out_DF$Data.Analyzed <- "Pooled Analysis"
-    }
-  } else {
-    out_DF$Studies.Analyzed <- unique(fitdata$Study)
-    out_DF$Data.Analyzed <- "Single-Study Analysis"
-  }
+    out_DF$Studies.Analyzed <- studies_analyzed
+    out_DF$References.Analyzed <- refs_analyzed
+    out_DF$Data.Analyzed <- analysis_type
 
   #fill in the loglike and AIC with NA s since no fit was done
   out_DF$LogLikelihood <-  NA_real_
@@ -561,15 +547,9 @@ out_DF$time_units_fitted <- new_time_units
   out_DF$flag <- NA_character_
   #Record the unique routes in this dataset
   #Route info provides context for why some parameters were/were not estimated
-  out_DF$Routes <- paste("iv: ",
-                         sum(fitdata$Route %in% "iv"),
-                         "; po: ",
-                         sum(fitdata$Route %in% "po"))
+  out_DF$Routes <- n_routes
   #Record the unique media in this dataset
-  out_DF$Media <- paste("blood: ",
-                        sum(fitdata$Media %in% "blood"),
-                        "; plasma: ",
-                        sum(fitdata$Media %in% "plasma"))
+  out_DF$Media <- n_media
 
   #include a message about why no fit was done
   msg <- paste("Optimization failed. Error message from optimx():",
@@ -797,22 +777,9 @@ out_DF$time_units_fitted <- new_time_units
                   all.y = TRUE,
                   all.x = FALSE)
 
-  nstudy <- length(unique(fitdata$Study))
-
-  if (nstudy>1) {
-    if(pool_sigma %in% FALSE){
-      out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
-                                collapse =", ")
-      out_DF$Data.Analyzed <- "Joint Analysis"
-    }else{
-      out_DF$Studies.Analyzed <- paste(sort(unique(fitdata$Study)),
-                                collapse =", ")
-      out_DF$Data.Analyzed <- "Pooled Analysis"
-    }
-  } else {
-    out_DF$Studies.Analyzed <- unique(fitdata$Study)
-    out_DF$Data.Analyzed <- "Single-Study Analysis"
-  }
+    out_DF$Studies.Analyzed <- studies_analyzed
+    out_DF$References.Analyzed <- refs_analyzed
+    out_DF$Data.Analyzed <- analysis_type
 
   #Add log-likelihood and AIC values
 
@@ -867,15 +834,9 @@ out_DF$time_units_fitted <- new_time_units
 
   #Record the unique routes in this dataset
   #Route info provides context for why some parameters were/were not estimated
-  out_DF$Routes <- paste("iv: ",
-                         sum(fitdata$Route %in% "iv"),
-                         "; po: ",
-                         sum(fitdata$Route %in% "po"))
+  out_DF$Routes <- n_routes
   #Record the unique media in this dataset
-  out_DF$Media <- paste("blood: ",
-                        sum(fitdata$Media %in% "blood"),
-                        "; plasma: ",
-                        sum(fitdata$Media %in% "plasma"))
+  out_DF$Media <- n_media
   out_DF$message <- "Optimization successful."
 
 #Keep information about optimization
