@@ -421,10 +421,8 @@ if(is.null(par_DF)){
     tmpdat <- subset(tmpdat,
                      is.finite(Value))
 
-    #normalize concentration by dose
-    tmpdat$ValueDose <- tmpdat$Value/tmpdat$Dose
     #log transform Value/Dose
-    tmpdat$logValueDose <- log(tmpdat$ValueDose)
+    tmpdat$logValueDose <- log(tmpdat$Value_Dose)
 
     #Split into IV and oral datasets
     iv_data <- tmpdat[tmpdat$Route %in% "iv", ] #will be empty if no IV data
@@ -761,7 +759,7 @@ if(is.finite(kgutabs_po) &
   pred_late <- exp(log(A_Dose_po) - kelim_po * po_early$Time)
   #residuals: late predictions - early observations
   #because late predictions should be > early observations
-  resid_early <- pred_late - po_early$ValueDose
+  resid_early <- pred_late - po_early$Value_Dose
   #log-transform residuals
   suppressWarnings(po_early$logresid <- log(resid_early))
   #drop any NA log residuals
@@ -899,7 +897,7 @@ if(is.finite(kgutabs_po) &
         #regression) (because late-phase predictions should be less than
         #early-phase observations)
         pred_late <- exp(log(B_Dose_iv) + -beta_iv * iv_early$Time)
-        resid_early <- iv_early$ValueDose - pred_late
+        resid_early <- iv_early$Value_Dose - pred_late
         suppressWarnings(iv_early$logresid <-  log(resid_early))
         #drop any NA residuals
         iv_early <- subset(iv_early, is.finite(logresid))
@@ -1018,7 +1016,7 @@ if(is.finite(kgutabs_po) &
         #regression) (because late-phase predictions should be less than
         #early-phase observations)
         pred_late_po <- exp(log(B_Dose_po) + -beta_po * po_early$Time)
-        resid_early_po <- po_early$ValueDose - pred_late_po
+        resid_early_po <- po_early$Value_Dose - pred_late_po
         suppressWarnings(po_early$logresid <- log(resid_early_po))
       #drop any NA log residuals
         po_early <- subset(po_early,
@@ -1049,7 +1047,7 @@ if(is.finite(kgutabs_po) &
         early_pred <- exp(log(A_Dose_po) + -alpha_po * po_abs$Time)
 
         #predictions should be > observations now, so reverse sign to calc resids
-        po_abs$resid <- (late_pred + early_pred) - po_abs$ValueDose
+        po_abs$resid <- (late_pred + early_pred) - po_abs$Value_Dose
         suppressWarnings(po_abs$logresid <- log(po_abs$resid))
 
         #drop NA residuals
