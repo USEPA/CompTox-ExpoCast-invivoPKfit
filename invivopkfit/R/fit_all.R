@@ -237,6 +237,8 @@ if(!suppress.messages){
                                                    "Species",
                                                    "Study")]
 
+      PK.fit.separate[, Study := NULL]
+
 
       if(!suppress.messages){
         message("Analyzing data by chemical and species, pooling all studies...")
@@ -264,7 +266,13 @@ if(!suppress.messages){
                            use.names = TRUE,
                            fill = TRUE,
                            idcol = "Analysis_Type")
-    } else PK.fit.bind <- PK.fit.joint
+    } else {
+      PK.fit.bind <- rbindlist(list("Joint" = PK.fit.joint
+      ),
+      use.names = TRUE,
+      fill = TRUE,
+      idcol = "Analysis_Type")
+    }
 
     #record which model was fit to data and whether it was full or analytical
     PK.fit.bind[, model := model]

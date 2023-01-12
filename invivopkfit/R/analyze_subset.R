@@ -187,8 +187,8 @@ analyze_subset <- function(fitdata,
       analysis_type <- "Pooled Analysis"
     }
   }else{
-    studies_analyzed <- unique(fitdata$Study)
-    refs_analyzed <- unique(fitdata$Reference)
+    studies_analyzed <- paste(unique(fitdata$Study))
+    refs_analyzed <- paste(unique(fitdata$Reference))
     analysis_type <- "Single-Study Analysis"
   }
 
