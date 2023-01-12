@@ -92,6 +92,7 @@ cvt <- preprocess_data(data.set = cvt_data,
                        media_keep = c("blood", "plasma"),
                        impute_loq = TRUE,
                        impute_sd = TRUE,
+                       study_def = c("DTXSID", "Species", "Reference", "Route", "Media"),
                        suppress.messages = FALSE)
 
 #save pre-processed data

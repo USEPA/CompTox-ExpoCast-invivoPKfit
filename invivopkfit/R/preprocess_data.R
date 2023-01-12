@@ -76,6 +76,10 @@
 #'   leave them alone.
 #' @param impute_sd Logical: TRUE to impute values for missing sample SDs for
 #'   multi-subject observations; FALSE to leave them alone
+#' @param study_def A character vector specifying the variables (new names)
+#'   whose unique combinations define individual "studies" (where each "study"
+#'   will have its own error SD in the fitting process). Default is `c("DTXSID",
+#'   "Species", "Reference", "Route", "Media")`.
 #' @param suppress.messages Logical: Whether to suppress verbose messages.
 #'   Default FALSE, to be verbose.
 #' @return A `data.table` containing the cleaned, harmonized data, ready for
@@ -145,6 +149,7 @@ preprocess_data <- function(data.set,
                             media_keep = c("blood", "plasma"),
                             impute_loq = TRUE,
                             impute_sd = TRUE,
+                            study_def = c("DTXSID", "Species", "Reference", "Route", "Media"),
                             suppress.messages = FALSE){
 
 
@@ -512,19 +517,19 @@ preprocess_data <- function(data.set,
                                      inverse = FALSE)
 
   #create a Study column:
-  #Chemical + Species + Reference + Route + Media
+  #unique combinations of variables specified in study_def
   if(!suppress.messages){
     message(paste0("Creating Study column: ",
-                   "interaction of ",
-                   "Chemical + Species + Reference + Route + Media"))
+                   "unique combinations of ",
+                   paste(study_def, collapse = ", ")))
   }
-  data.set$Study <- interaction(data.set$DTXSID,
-                                data.set$Species,
-                                data.set$Reference,
-                                data.set$Route,
-                                data.set$Media,
-                                drop = TRUE,
-                                sep = "_")
+  data.set$Study <- do.call(
+    what = interaction,
+    args = c(data.set[study_def],
+      list(drop = TRUE,
+           sep = "_"))
+  )
+
 
   #Create a Conc column that is the greater of Value and LOQ, with NAs removed
   data.set$Conc <- pmax(data.set$Value,

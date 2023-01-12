@@ -52,6 +52,11 @@
 #' @param impute_sd Used only if `preprocess == TRUE`. As for
 #'   [preprocess_data()]. Logical: TRUE to impute values for missing sample SDs
 #'   for multi-subject observations; FALSE to leave them alone
+#' @param study_def Used only if `preprocess == TRUE`. As for
+#'   [preprocess_data()]. A character vector specifying the variables (new names)
+#'   whose unique combinations define individual "studies" (where each "study"
+#'   will have its own error SD in the fitting process). Default is `c("DTXSID",
+#'   "Species", "Reference", "Route", "Media")`.
 #' @param rescale_time As for `analyze_subset()`. Logical: TRUE to rescale time
 #'   from hours if latest detection time corresponds to days, weeks, months, or
 #'   years. FALSE to leave time in units of hours. Default TRUE.
@@ -135,6 +140,7 @@ fit_all <- function(data.set,
                     media_keep = c("blood", "plasma"),
                     impute_loq = TRUE,
                     impute_sd = TRUE,
+                    study_def = c("DTXSID", "Species", "Reference", "Route", "Media"),
 
                     fit_conc_dose = TRUE,
                     rescale_time = TRUE,
@@ -167,6 +173,7 @@ fit_all <- function(data.set,
                              media_keep = media_keep,
                              impute_loq = impute_loq,
                              impute_sd = impute_sd,
+                             study_def = study_def,
                              suppress.messages = suppress.messages)
   }
 
