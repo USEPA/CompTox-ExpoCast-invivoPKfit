@@ -4,13 +4,13 @@
 #'
 #' The log-likelihood is formulated by assuming that residuals (model-predicted
 #' concentrations minus observed concentrations) are independent and identically
-#' distributed within a given combination of chemical, species, and reference,
+#' distributed within a given combination of chemical, species, and study,
 #' obeying a zero-mean normal distribution with a chemical-, species-, and
-#' reference-specific variance.
+#' study-specific variance.
 #'
 #' # Log-likelihood equations
 #'
-#' For chemical-species combination \eqn{i} and reference \eqn{j}, define the
+#' For chemical-species combination \eqn{i} and study \eqn{j}, define the
 #' following quantities.
 #'
 #' \eqn{y_{ijk}} is the \eqn{k^{th}} observation of concentration, corresponding
@@ -18,7 +18,7 @@
 #' corresponding LOQ, \eqn{\textrm{LOQ}_{ijk}}.
 #'
 #' For multiple-subject observations, \eqn{y_{ijk}} is the \eqn{k^{th}} *sample
-#' mean* observed concentration for chemical-species combination \eqn{i} and reference \eqn{j},
+#' mean* observed concentration for chemical-species combination \eqn{i} and study \eqn{j},
 #' corresponding to dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. It represents the
 #' mean of \eqn{n_{ijk}} individual measurements. It has a corresponding sample
 #' standard deviation, \eqn{s_{ijk}}.
@@ -34,7 +34,7 @@
 #'  \deqn{\mu_{ijk} = f \left(d_{ijk}, t_{ijk};
 #' \bar{\theta}_i \right)}
 #'
-#' \eqn{\sigma_{ij}^2} is the reference- and chemical-specific residual
+#' \eqn{\sigma_{ij}^2} is the study- and chemical-specific residual
 #' variance. (It is a hyperparameter.)
 #'
 #' ## Single-subject observations above limit of quantification (detects)
@@ -87,7 +87,7 @@
 #' # Joint log-likelihood for a chemical and species
 #'
 #' The joint log-likelihood for a chemical and species is simply the sum of
-#' log-likelihoods across observations and references.
+#' log-likelihoods across observations and studys.
 #'
 #' \deqn{LL_{i} = \sum_{j=1}^{J_i} \sum_{k=1}^{K_{ij}} LL_{ijk}}
 #'
@@ -105,8 +105,8 @@
 #'   function directly, you probably want to leave `const_params = NULL` and
 #'   just supply all model parameters in `params`.)
 #' @param DF A `data.frame` of concentration-time data, for example as produced
-#'   by [preprocess_data()]. It must contain variables named `Reference`
-#'   (representing the reference ID for each observation), `Time` (representing
+#'   by [preprocess_data()]. It must contain variables named `Study`
+#'   (representing the study ID for each observation), `Time` (representing
 #'   observation time points in hours), `Dose` (representing administered dose
 #'   in mg/kg), `iv` (logical TRUE/FALSE, representing whether the administered
 #'   dose was IV), `Value` (representing observed concentrations in mg/L), `LOQ`
@@ -213,28 +213,28 @@ log_likelihood <- function(params,
     }
   }
 
-  #Match sigmas to references:
-  #get vector of sigmas, named as "sigma_ref_ReferenceID" or just "sigma"
+  #Match sigmas to studys:
+  #get vector of sigmas, named as "sigma_study_StudyID" or just "sigma"
   sigma_names <- grep(x = names(params),
                       pattern = "sigma",
                       fixed = TRUE,
                       value = TRUE)
   sigmas <- unlist(params[sigma_names])
 
-  nref <- length(sigmas)
-  if(nref > 1){
-    #get the Reference ID for each sigma, based on its name
-  refs_sigmas <- gsub(x = sigma_names,
-                      pattern = "sigma_ref_",
+  nstudy <- length(sigmas)
+  if(nstudy > 1){
+    #get the Study ID for each sigma, based on its name
+  studies_sigmas <- gsub(x = sigma_names,
+                      pattern = "sigma_study_",
                       replacement = "",
                       fixed = TRUE)
-  #match the Reference ID and assign each sigma to its corresponding reference
-  sigma_ref <- sigmas[match(DF$Reference,
-                            refs_sigmas,
+  #match the study ID and assign each sigma to its corresponding study
+  sigma_study <- sigmas[match(DF$Study,
+                            studies_sigmas,
                             nomatch = 0)]
 
-  }else if(nref == 1){ #if only one reference, the parameter is just called "sigma"
-    sigma_ref <- rep(sigmas, nrow(DF))
+  }else if(nstudy == 1){ #if only one study, the parameter is just called "sigma"
+    sigma_study <- rep(sigmas, nrow(DF))
   }else{
     stop(paste("Could not find any parameters with 'sigma' in the name.",
     "Param names are:",
@@ -243,9 +243,9 @@ log_likelihood <- function(params,
   }
 
 
-  #add sigma_ref and pred as temp columns to DF
+  #add sigma_study and pred as temp columns to DF
   #this makes logical indexing easier
-  DF$sigma_ref <- sigma_ref
+  DF$sigma_study <- sigma_study
   DF$pred <- pred
 
   #get log-likelihood for each observation
@@ -259,12 +259,12 @@ log_likelihood <- function(params,
                     #for non-detects: CDF
                     pnorm(q = DF_single_subj$LOQ,
                           mean = DF_single_subj$pred,
-                          sd = DF_single_subj$sigma_ref,
+                          sd = DF_single_subj$sigma_study,
                           log.p = TRUE),
                     #for detects: PDF
                     dnorm(x = DF_single_subj$Value,
                           mean = DF_single_subj$pred,
-                          sd = DF_single_subj$sigma_ref,
+                          sd = DF_single_subj$sigma_study,
                           log = TRUE))
   }else{
     loglike_single_subj <- 0
@@ -274,7 +274,7 @@ log_likelihood <- function(params,
   if(any(DF$N_Subjects > 1)){
   DF_multi_subj <- subset(DF, N_Subjects > 1)
   loglike_multi_subj <-  dnorm_summary(mu = DF_multi_subj$pred,
-                                            sigma = DF_multi_subj$sigma_ref,
+                                            sigma = DF_multi_subj$sigma_study,
                                             x_mean = DF_multi_subj$Value,
                                             x_sd = DF_multi_subj$Value_SD,
                                             x_N = DF_multi_subj$N_Subjects,
