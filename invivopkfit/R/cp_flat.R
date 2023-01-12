@@ -90,6 +90,10 @@ cp_flat <- function(time, params, dose, iv.dose, medium) {
   iv.dose <- rep(iv.dose, length.out = max_len)
   medium <- rep(medium, length.out = max_len)
 
+  #drop any length-0 params
+  param_length <- sapply(params, length)
+  params <- params[param_length>0]
+
   #check for required params
 
 #if Fgutabs and Vdist provided, compute Fgutabs_Vdist
@@ -126,7 +130,7 @@ cp_flat <- function(time, params, dose, iv.dose, medium) {
   }
 
   if(any(iv.dose %in% FALSE)){
-    missing_params <- setdiff(c("Fgutabs_Vdist"),
+    missing_params <- setdiff("Fgutabs_Vdist",
                               names(params))
     if(length(missing_params)>0){
       stop(paste("cp_flat(): Error: For flat PO model,",
