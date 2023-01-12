@@ -15,7 +15,7 @@
 #' | k21            | 1e-4         | Default         |
 #' | Fgutabs_Vdist  | 1e-4    | Default         |
 #' | Fgutabs_V1     | 1e-4    | Default         |
-#' | sigma          | 1e-4         | Default         |
+#' | sigma          | 1e-8         | Default         |
 #'
 #' If `Vdist_from_species == TRUE`, then this function will set a lower bound
 #' for `Vdist` or `V1` equal to 1/10 of the physiological plasma volume for the
@@ -86,7 +86,7 @@ get_lower_bounds <- function(fitdata,
                                                1e-4, #Fgutabs_Vdist
                                                1e-4, #Fgutabs_V1
                                                1e-4, #Rblood2plasma
-                                               1e-4 #sigma
+                                               1e-8 #sigma
                                                ),
                                lower_bound_msg = "Default"
                              ),
