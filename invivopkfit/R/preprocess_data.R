@@ -533,7 +533,7 @@ preprocess_data <- function(data.set,
 
   #Create a Conc column that is the greater of Value and LOQ, with NAs removed
   if(!suppress.messages){
-    message("Creating variable Conc that contains the greater of Value and LOQ",
+    message("Creating variable Conc that contains the greater of Value and LOQ"
             )
   }
   data.set$Conc <- pmax(data.set$Value,
@@ -541,11 +541,11 @@ preprocess_data <- function(data.set,
                         na.rm = TRUE)
   #Create a Detect flag
   if(!suppress.messages){
-    message("Creating variable Detect that is TRUE for detects, FALSE for non-detects",
+    message("Creating variable Detect that is TRUE for detects, FALSE for non-detects"
     )
   }
   data.set$Detect <- factor(
-    ifelse(!is.na(Value),
+    ifelse(!is.na(data.set$Value),
            "Detect",
            "Non-Detect"),
     levels = c("Detect", "Non-Detect")
