@@ -532,10 +532,18 @@ preprocess_data <- function(data.set,
 
 
   #Create a Conc column that is the greater of Value and LOQ, with NAs removed
+  if(!suppress.messages){
+    message("Creating variable Conc that contains the greater of Value and LOQ",
+            )
+  }
   data.set$Conc <- pmax(data.set$Value,
                         data.set$LOQ,
                         na.rm = TRUE)
   #Create a Detect flag
+  if(!suppress.messages){
+    message("Creating variable Detect that is TRUE for detects, FALSE for non-detects",
+    )
+  }
   data.set$Detect <- factor(
     ifelse(!is.na(Value),
            "Detect",
@@ -543,6 +551,13 @@ preprocess_data <- function(data.set,
     levels = c("Detect", "Non-Detect")
   )
   #Create dose-normalized Conc
+  if(!suppress.messages){
+    message(paste0("Creating dose-normalized concentration variables:\n",
+                   "Value_Dose = Value/Dose\n",
+                   "Value_SD_Dose = Value_SD/Dose\n",
+                   "LOQ_Dose = LOQ/Dose",
+                   "Conc_Dose = Conc/Dose"))
+  }
   data.set$Conc_Dose <- data.set$Conc/data.set$Dose
   data.set$Value_Dose <- data.set$Value/data.set$Dose
   data.set$Value_SD_Dose <- data.set$Value_SD/data.set$Dose
