@@ -243,6 +243,7 @@ get_starts <- function(par_DF = NULL,
                        model,
                        fitdata,
                        pool_sigma = FALSE,
+                       fit_conc_dose = TRUE,
                        starts_default = data.frame(
                          param_name = c("kelim",
                                         "Vdist",
@@ -1186,7 +1187,13 @@ if(is.finite(kgutabs_po) &
                        iv.dose = fitdata$Route %in% "iv",
                        medium = fitdata$Media))
 
-  resid <- pred - fitdata$Value
+  if(fit_conc_dose %in% TRUE){
+    resid <- pred/fitdata$Dose - fitdata$Value_Dose
+  }else{
+    resid <- pred - fitdata$Value
+  }
+
+
   resid[!is.finite(resid)] <- NA_real_
 
   for(this_sigma in grep(x = par_DF$param_name,

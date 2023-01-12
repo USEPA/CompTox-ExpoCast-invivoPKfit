@@ -32,14 +32,13 @@
 #'
 #'In addition to the model parameters, the standard deviation of the residual
 #'errors will be estimated. If `fitdata` includes more than one unique study
-#'value (`length(unique(fitdata$Study))>1`) and `pool_sigma == FALSE`, then
-#'a separate error SD will be estimated for each unique study. These error
-#'SDs will be named following the pattern `sigma_study_StudyID`, where
-#'`StudyID` is one unique value of `fitdata$Study`, coerced to character
-#'if necessary. This reflects an assumption that all concentration vs. time
-#'studies in `fitdata` obey the same underlying PK model, but each study may
-#'have a different amount of random measurement error (analogous to
-#'meta-regression with fixed effects).
+#'value (`length(unique(fitdata$Study))>1`) and `pool_sigma == FALSE`, then a
+#'separate error SD will be estimated for each unique study. These error SDs
+#'will be named following the pattern `sigma_study_StudyID`, where `StudyID` is
+#'one unique value of `fitdata$Study`, coerced to character if necessary. This
+#'reflects an assumption that all concentration vs. time studies in `fitdata`
+#'obey the same underlying PK model, but each study may have a different amount
+#'of random measurement error (analogous to meta-regression with fixed effects).
 #'
 #'# Parameter estimation via numerical optimization
 #'
@@ -110,9 +109,11 @@
 #'  `modelfun = 'full'`, only `model = '1compartment'` is supported.
 #'@param pool_sigma Logical: Whether to pool all data (estimate only one error
 #'  standard deviation) or not (estimate separate error standard deviations for
-#'  each study). Default FALSE to estimate separate error SDs for each
-#'  study. (If `fitdata` only includes one study, `pool_sigma` will have
-#'  no effect, because only one error SD would be estimated in the first place.)
+#'  each study). Default FALSE to estimate separate error SDs for each study.
+#'  (If `fitdata` only includes one study, `pool_sigma` will have no effect,
+#'  because only one error SD would be estimated in the first place.)
+#'@param fit_conc_dose Logical: Whether to fit dose-normalized concentrations
+#'  (TRUE) or non-dose-normalized concentrations (FALSE). Default TRUE.
 #'@param rescale_time Logical: Whether to rescale time to make scale of time
 #'  constants better-behaved. If TRUE, then if maximum time is more than 72
 #'  hours, time will be converted to days before fitting; if maximum time is
@@ -415,6 +416,7 @@ analyze_subset <- function(fitdata,
                        "model" = model,
                        "fitdata" = fitdata,
                        "pool_sigma" = pool_sigma,
+                       "fit_conc_dose" = fit_conc_dose,
                        "suppress.messages" = suppress.messages),
                      get_starts_args))
 
@@ -524,10 +526,10 @@ out_DF$time_units_fitted <- new_time_units
   if(inherits(tmp, "try-error")){
     fitfail <- TRUE
   }else{
-    fitfail <- tmp
+    fitfail <- FALSE
   }
 
-  if(fitfail){
+  if(fitfail %in% TRUE){
   out_DF[, fitted_types] <- NA_real_
 
 

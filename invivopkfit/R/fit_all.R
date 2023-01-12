@@ -57,6 +57,13 @@
 #'   whose unique combinations define individual "studies" (where each "study"
 #'   will have its own error SD in the fitting process). Default is `c("DTXSID",
 #'   "Species", "Reference", "Route", "Media")`.
+#'@param pool_sigma Logical: Whether to pool all data (estimate only one error
+#'  standard deviation) or not (estimate separate error standard deviations for
+#'  each study). Default FALSE to estimate separate error SDs for each study.
+#'  (If `fitdata` only includes one study, `pool_sigma` will have no effect,
+#'  because only one error SD would be estimated in the first place.)
+#'@param fit_conc_dose Logical: Whether to fit dose-normalized concentrations
+#'  (TRUE) or non-dose-normalized concentrations (FALSE). Default TRUE.
 #' @param rescale_time As for `analyze_subset()`. Logical: TRUE to rescale time
 #'   from hours if latest detection time corresponds to days, weeks, months, or
 #'   years. FALSE to leave time in units of hours. Default TRUE.

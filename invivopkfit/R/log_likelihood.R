@@ -120,7 +120,9 @@
 #'   solve the full ODE model numerically. "analytic" to use the analytic model
 #'   solution, "full" to use the full ODE model. Default is "analytic".
 #' @param model Character: The model to fit. Currently, only "flat",
-#'   "1compartment" or "2compartment" models are implemented.
+#'   "1compartment" or "2compartment" models are implemented.]
+#'@param fit_conc_dose Logical: Whether to fit dose-normalized concentrations
+#'  (TRUE) or non-dose-normalized concentrations (FALSE). Default TRUE.
 #' @param force_finite Logical: Whether to force the function to return a finite
 #'   log-likelihood (e.g., as required by [optimx::optimx()] with method
 #'   'L-BFGS-B'.) Default FALSE, allowing the function to return -Inf for
@@ -267,19 +269,19 @@ log_likelihood <- function(params,
     pred_ss <- DF_single$pred
   }
 
-  loglike_single_subj <- ifelse(is.na(DF_single_subj$Value),
+  loglike_single <- ifelse(is.na(DF_single$Value),
                     #for non-detects: CDF
                     pnorm(q = loq_ss,
                           mean = pred_ss,
-                          sd = DF_single_subj$sigma_study,
+                          sd = DF_single$sigma_study,
                           log.p = TRUE),
                     #for detects: PDF
                     dnorm(x = value_ss,
                           mean = pred_ss,
-                          sd = DF_single_subj$sigma_study,
+                          sd = DF_single$sigma_study,
                           log = TRUE))
   }else{
-    loglike_single_subj <- 0
+    loglike_single <- 0
   }
 
   #For multi-subject observations:
@@ -295,18 +297,18 @@ log_likelihood <- function(params,
     value_sd_mult <- DF_mult$Value_SD
     pred_mult <- DF_mult$pred
   }
-  loglike_multi_subj <-  dnorm_summary(mu = pred_mult,
-                                            sigma = DF_multi_subj$sigma_study,
+  loglike_mult <-  dnorm_summary(mu = pred_mult,
+                                            sigma = DF_mult$sigma_study,
                                             x_mean = value_mult,
                                             x_sd = value_sd_mult,
-                                            x_N = DF_multi_subj$N_Subjects,
+                                            x_N = DF_mult$N_Subjects,
                                             log = TRUE)
   }else{
-    loglike_multi_subj <- 0
+    loglike_mult <- 0
   }
 
   #sum log-likelihoods over observations
-  ll <- sum(c(loglike_single_subj, loglike_multi_subj))
+  ll <- sum(c(loglike_single, loglike_mult))
   #do *not* remove NAs, because they mean this parameter combination is impossible!
 
   #If ll isn't finite,
