@@ -2,8 +2,7 @@ plot_fit <- function(DTXSID_in,
                      Species_in,
                      Analysis_Type_in,
                      model_in = "winning", #or "all" or by name
-                     DF,
-                     pk_fit,
+                     DFsub,
                      n_interp_time = 10,
                      limit_y_axis = FALSE,
                      log10_scale_y = FALSE,
@@ -24,13 +23,24 @@ plot_fit <- function(DTXSID_in,
 
                      verbose = TRUE){
 
+  if(verbose %in% TRUE){
+    message(paste0("Plotting:\n",
+      "DTXSID = ", DTXSID_in, "\n",
+                  "Species = ", Species_in, "\n",
+                  "Analysis Type = ", Analysis_Type_in, "\n",
+                  "models = ", paste(model_in, collapse = ", ")))
+  }
+
 
   if(all(Analysis_Type_in %in% "all")){
     Analysis_Type_in <- c("Joint", "Pooled", "Separate")
   }
 
-  DFsub <- DF[DTXSID %in% DTXSID_in &
-                Species %in% Species_in]
+  if(any(model_in %in% "all")){
+    model_in <- c("flat", "1compartment", "2compartment")
+  }
+
+  DFsub <- DFsub[Analysis_Type %in% Analysis_Type_in, ]
 
   #Get concentration or LOQ
   DFsub[, Conc:=pmax(Value, LOQ, na.rm = TRUE)]
@@ -47,160 +57,220 @@ plot_fit <- function(DTXSID_in,
   DFsub[, ConcDose_upper := (Value + Value_SD)/Dose]
   DFsub[, ConcDose_lower := (Value - Value_SD)/Dose]
 
-  #Produce a table with unique "experiments": combinations of chemical, species,
-  #Study, route, dose, and medium (blood or plasma). Get the unique time
-  #points for each "experiment."
-  DF2 <- DFsub[, .(Time = sort(unique(c(0, Time)))),
-            by = .(DTXSID, Species,
-                   Study, Reference, Route,
-                   Dose, iv, Media)]
-
-#Create a column with combined Studies, to match joint/pooled analyses.
-  DF2[, Study_pooled:=paste(
-    sort(unique(Study)),
-    collapse = ", "
-  ),
-  by = .(DTXSID, Species)]
-
-  #Melt to longer format. The effect will be as though we row-bound two versions
-  #of DF together: one with the original single referneces, and one with
-  #comma-separated combined Studies.
-  DF3 <- melt(DF2, measure.vars = c("Study", "Study_pooled"),
-              variable.name = "Study_type",
-              value.name = "Study")
-
-  #Keep only the unique values of the Study column -- there will be
-  #duplicated rows for single-Study analyses.
-  DF3 <- unique(DF3[, .(DTXSID, Species, Study,
-                        Route, Dose, iv, Media, Time)])
-
-
-  #subset the fitted parameter data appropriately
-  pksub <- subset(pk_fit, DTXSID %in% DTXSID_in &
-                    Species %in% Species_in &
-                    Analysis_Type %in% Analysis_Type_in)
-
-  #if only winning model selected
-  if(all(model_in %in% "winning")){
-    pksub <- pksub[winning %in% TRUE, ]
-  }
-
-  #if specific model(s) selected by name
-  if(!all(model_in %in% c("winning", "all"))){
-    pksub <- pksub[model %in% model_in]
-  }
-
-  #  Keep only the unique analyses
-  pk_wide <- unique(pksub[,
-                           .(DTXSID,
-                             Species,
-                             Analysis_Type,
-                             Studies.Analyzed,
-                             model,
-                             winning)])
-#Merge `DF3` and `pk_wide` to get data.frame with experiment + models
-  pred_DT <- pk_wide[DF3,
-                     on = c("DTXSID" = "DTXSID",
-                            "Species" = "Species",
-                            "Studies.Analyzed" = "Study"),
-                     allow.cartesian = TRUE]
 
   #Now add time points for prediction.
   #Interpolate n_interp_time points between each existing time point.
-  pred_DT_time <- pred_DT[, .(Time = {
-    timepoints <- unique(Time)
-    time_interp <- sapply(1:(length(timepoints)-1),
-           function(i){
-             seq(from = timepoints[i],
-                 to = timepoints[i+1],
-                 length.out = n_interp_time)
-           }
-           )
-    sort(unique(time_interp))
-  }),
-          by = .(DTXSID,
-                 Species,
-                 Studies.Analyzed,
-                 Route,
-                 Media)]
-
-  pred_tmp <- unique(pred_DT[, .SD, .SDcols = setdiff(names(pred_DT),
-                                                      "Time")])
-
-  pred_DT2 <- pred_tmp[pred_DT_time,
-                      on = c("DTXSID",
-                             "Species",
-                             "Studies.Analyzed",
-                             "Route",
-                             "Media"),
-                      allow.cartesian = TRUE]
-
-  # pred_DT2 <- pred_DT[, .(Time = 10^(seq(from = log10(0.5/60),
-  #                                        to = log10(Max_Time),
-  #                                        length.out = n))),
-  #                     by = .(DTXSID, Species, Analysis_Type, Studies.Analyzed,
-  #                            model, winning, Route, Dose, iv, Media, Max_Time)]
-
-  #Now evaluate modelfor each analysis & model
-  pred_DT2[, Conc := {
-    #which model function to use
-    if(unique(model) %in% "1compartment"){
-      modfun <- "cp_1comp"
-    }else if(unique(model) %in% "2compartment"){
-      modfun <- "cp_2comp"
-    }else{
-      modfun <- "cp_flat"
+  pred_DT2 <- DFsub[, .(
+    Time = {
+      timepoints <- unique(Time)
+      time_interp <- sapply(1:(length(timepoints)-1),
+                            function(i){
+                              seq(from = timepoints[i],
+                                  to = timepoints[i+1],
+                                  length.out = n_interp_time)
+                            }
+      )
+      sort(unique(time_interp))
     }
-    this_group <- unique(.SD)
-    pksub_tmp <- pk_fit[this_group,
-                        on = c("DTXSID", "Species", "Analysis_Type",
-                               "Studies.Analyzed", "model")]
-    #get a named list of fitted model params
-    par <- pksub_tmp[, `Fitted mean`]
-    names(par) <- pksub_tmp[, param_name]
+  ),
+  by = setdiff(names(DFsub),
+               c("Time", "Value", "Value_SD", "LOQ", "N_Subjects",
+                 "Conc", "Detect",
+                 "ConcDose", "ConcDose_upper", "ConcDose_lower"))]
 
-    #remove any NA or infinite parameters
-    par <- par[is.finite(par)]
-    #convert into a list
-    par <- as.list(par)
 
-    #call model function
-    conc_out <- tryCatch(do.call(modfun,
-            args = list(params = par,
-                        time = Time,
-                        dose = Dose,
-                        iv.dose = iv)),
-            error = function(err) rep(NA_real_, .N))
-    conc_out
 
+  #Now evaluate model function for each analysis & model
+  pred_DT2[, Conc.flat := {
+    params <- as.list(unique(.SD))
+    names(params) <- gsub(names(params),
+                          pattern = ".flat",
+                          replacement = "",
+                          fixed = TRUE)
+    #drop any NA params
+    params <- params[sapply(params,
+                            is.finite)]
+    #if all params are missing, return NA;
+    #otehrwise, evaluate model
+    if(length(params)>0){
+    if(!("Rblood2plasma" %in% names(params))){
+      params$Rblood2plasma <- 1
+    }
+      cp_flat(time = Time,
+               params = params,
+               dose = Dose,
+               iv.dose = iv,
+               medium = Media)
+    }else{
+      NA_real_
+    }
+    },
+           .SDcols= c("Vdist.flat",
+                      "Fgutabs.flat",
+                      "Fgutabs_Vdist.flat",
+                      "Rblood2plasma.flat"),
+           by = .(Analysis_Type,
+                  DTXSID,
+                  Species,
+                  References.Analyzed,
+                  Studies.Analyzed)]
+
+  pred_DT2[, Conc.1compartment := {
+    params <- as.list(unique(.SD))
+    names(params) <- gsub(names(params),
+                          pattern = ".1compartment",
+                          replacement = "",
+                          fixed = TRUE)
+
+    #drop any NA params
+    params <- params[sapply(params,
+                            is.finite)]
+    #if all params are missing, return NA;
+    #otehrwise, evaluate model
+    if(length(params)>0){
+      if(!("Rblood2plasma" %in% names(params))){
+        params$Rblood2plasma <- 1
+      }
+      cp_1comp(time = Time,
+               params = params,
+               dose = Dose,
+               iv.dose = iv,
+               medium = Media)
+    }else{
+      NA_real_
+    }
   },
-  .SDcols = c("DTXSID", "Species", "Analysis_Type", "Studies.Analyzed", "model"),
-  by = .(DTXSID, Species, Analysis_Type, Studies.Analyzed, model)]
+  .SDcols= c("Vdist.1compartment",
+             "Fgutabs.1compartment",
+             "Fgutabs_Vdist.1compartment",
+             "kelim.1compartment",
+             "kgutabs.1compartment",
+             "Rblood2plasma.1compartment"),
+  by = .(Analysis_Type,
+         DTXSID,
+         Species,
+         References.Analyzed,
+         Studies.Analyzed)]
+
+  pred_DT2[, Conc.2compartment := {
+    params <- as.list(unique(.SD))
+    names(params) <- gsub(names(params),
+                          pattern = ".2compartment",
+                          replacement = "",
+                          fixed = TRUE)
+
+    #drop any NA params
+    params <- params[sapply(params,
+                            is.finite)]
+    #if all params are missing, return NA;
+    #otehrwise, evaluate model
+    if(length(params)>0){
+      if(!("Rblood2plasma" %in% names(params))){
+        params$Rblood2plasma <- 1
+      }
+    cp_2comp(time = Time,
+                    params = params,
+                    dose = Dose,
+                    iv.dose = iv,
+                    medium = Media)
+    }else{
+      NA_real_
+    }
+  },
+  .SDcols= c("V1.2compartment",
+             "Fgutabs.2compartment",
+             "Fgutabs_V1.2compartment",
+             "kelim.2compartment",
+             "kgutabs.2compartment",
+             "k12.2compartment",
+             "k21.2compartment",
+             "Rblood2plasma.2compartment"),
+  by = .(Analysis_Type,
+         DTXSID,
+         Species,
+         References.Analyzed,
+         Studies.Analyzed)]
+
+  #melt pred_DT2
+  pred_DT3 <- melt(pred_DT2,
+                   id.vars = c(idcols, "winmodel", "Time",
+                               "Route", "Dose", "iv", "Media"),
+                   measure.vars = c("Conc.flat",
+                                    "Conc.1compartment",
+                                    "Conc.2compartment"),
+                   variable.name = "model",
+                   value.name = "Conc")
+  pred_DT3[, model := gsub(x = model,
+                           pattern= "Conc.",
+                           replacement = "",
+                           fixed = TRUE)]
+
+  pred_DT3[model == winmodel, winning := TRUE]
+  pred_DT3[model != winmodel, winning := FALSE]
+
+  #keep only the model(s) specified
+  if(all(model_in %in% "winning")){
+    pred_DT3 <- pred_DT3[winning == TRUE,]
+  }else if(!(any(model_in %in% "winning"))){
+    pred_DT3 <- pred_DT3[model %in% model_in]
+  }else{ #if model_in is "winning" and something else
+    pred_DT3 <-  pred_DT3[winning == TRUE |
+                            model %in% model_in,]
+  }
+
 
   #get predicted conc normalized by dose
-  pred_DT2[, ConcDose:=Conc/Dose]
+  pred_DT3[, ConcDose:=Conc/Dose]
 
 
   #create a categorical variable for dose
   DFsub[, Dose_cat:=factor(Dose)]
 
 #rename pred_DT2 to predsub
-  predsub <- pred_DT2
+  predsub <- pred_DT3
 
   #generate plot title
-  plot_title <- paste0("DTXSID = ", DTXSID_in, "\n",
-                       "(", DFsub[, unique(Compound_Analyzed)], ")\n",
-                       "Species = ", Species_in, "\n",
-                       "Analysis Type =", paste(Analysis_Type_in, collapse= ", "), "\n",
+  plot_title <- paste0(DTXSID_in,
+                       " (", DFsub[, unique(Compound)], ")\n",
+                       "Species = ", Species_in, ", ",
                        "Doses = ", paste(signif(
                          sort(unique(DFsub$Dose)),
                          3),
-                                         collapse = ", "))
+                                         collapse = ", "), " mg/kg\n",
+  "Analysis Type = ", paste(Analysis_Type_in, collapse= ", "))
+
   #if plotting a joint analysis (only one winning model for this DTXSID and species),
   #add winning model to the plot title
   if(any(Analysis_Type_in %in% "Joint")){
-    plot_title <- paste0(plot_title, "\n",
-                         "Winning Model = ", predsub[winning %in% TRUE, unique(model)])
+    winning_model <- predsub[winning %in% TRUE, unique(model)]
+    plot_subtitle <- paste0("Winning Model = ",
+                         winning_model)
+    #get coeffs of winning model
+    par_names <- grep(x = names(DFsub),
+                pattern = paste0(".", winning_model),
+                fixed = TRUE,
+                value = TRUE)
+    par <- unique(DFsub[, .SD, .SDcols = par_names])
+    setnames(par,
+             names(par),
+             gsub(x = names(par),
+                  pattern = paste0(".", winning_model),
+                  replacement = ""))
+    par <- unlist(par)
+    #remove any NA or infinite parameters
+    par <- par[is.finite(par)]
+
+    #paste into a comma-separated list
+    par_char <- paste(
+      paste(names(par),
+            signif(par, 3),
+            sep=" = "),
+      collapse = ", ")
+
+    plot_subtitle <- paste0(plot_subtitle, "\n",
+                         par_char)
+  }else{
+    plot_subtitle <- NULL
   }
 
   #plot
@@ -218,14 +288,16 @@ plot_fit <- function(DTXSID_in,
   }
 
   #now plot the rest
+  #concentration-dose observation points:
+  #shape mapped to Reference, color to Dose, fill yes/no to Detect
     #first plot points with white fill
-    p <- p + geom_point(aes(shape = Study,
+    p <- p + geom_point(aes(shape = Reference,
                    color = Dose),
                fill = "white",
                size = 4,
                stroke = 1.5) +
     #then plot points with fill, but alpha mapped to Detect
-    geom_point(aes(shape = Study,
+    geom_point(aes(shape = Reference,
                    color = Dose,
                    fill = Dose,
                    alpha = Detect),
@@ -242,11 +314,12 @@ plot_fit <- function(DTXSID_in,
     scale_color_viridis_c(name = "Dose, mg/kg") +
     scale_fill_viridis_c(na.value = NA, name = "Dose, mg/kg") +
     scale_shape_manual(values = 21:25) + #use only the 5 shapes where a fill can be added
-    #this limits us to visualizing only 5 Studies
+    #this limits us to visualizing only 5 References
     #but admittedly it's hard to distinguish more than 5 shapes anyway
     #if detect =FALSE, fully transparent; if detect = TRUE, fully solid
     scale_alpha_manual(values = c("Detect" = 1, "Non-Detect" = 0),
-                       drop = FALSE) +
+                       drop = FALSE,
+                       name = NULL) +
     guides(alpha = guide_legend(override.aes = list(shape = 21,
                                                     color = "black",
                                                     stroke = 1,
@@ -254,10 +327,13 @@ plot_fit <- function(DTXSID_in,
                                                     alpha = 1)
     )
     ) +
-    ggtitle(plot_title) +
+    labs(title = plot_title,
+            subtitle = plot_subtitle) +
     xlab("Time, hr") +
     ylab("Concentration/Dose") +
-    theme_bw()
+    theme_bw() +
+      theme(plot.title = element_text(size = 12),
+            strip.background = element_blank())
 
 
 

@@ -19,7 +19,7 @@ postprocess_data <- function(PK_fit,
                                       pattern = "sigma")],
                       Analysis_Type + DTXSID + Species +
                         model + References.Analyzed + Studies.Analyzed +
-                        Routes + Media +
+                        N_Routes + N_Media +
                        time_units_fitted +
                         AIC ~ param_name,
                       value.var = "Fitted mean")
@@ -29,7 +29,7 @@ postprocess_data <- function(PK_fit,
                                          pattern = "sigma")],
                          Analysis_Type + DTXSID + Species +
                            model + References.Analyzed + Studies.Analyzed +
-                           Routes + Media +
+                           N_Routes + N_Media +
                           time_units_fitted +
                            AIC ~ param_name,
                          value.var = "Fitted std dev")
@@ -66,7 +66,7 @@ postprocess_data <- function(PK_fit,
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed + Studies.Analyzed +
                       time_units_fitted +
-                      Routes + Media +
+                      N_Routes + N_Media +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
   #also get the SD for each fitted param
@@ -75,7 +75,7 @@ postprocess_data <- function(PK_fit,
                                        pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed + Studies.Analyzed +
-                      Routes + Media +
+                      N_Routes + N_Media +
                       time_units_fitted +
                       AIC ~ param_name,
                     value.var = "Fitted std dev")
@@ -112,6 +112,8 @@ if(length(time_const) > 0){
 
  PK_1comp[, time_units_fitted := NULL]
  PK_1comp[, time_units_reported := "hours"]
+
+ PK_1comp[, Fgutabs_Vdist_orig := Fgutabs_Vdist]
 
   PK_1comp[is.na(Fgutabs_Vdist),
            Fgutabs_Vdist := Fgutabs/Vdist]
@@ -153,6 +155,9 @@ if(length(time_const) > 0){
            Studies.Analyzed,
              AIC)]
 
+  PK_1comp[, Fgutabs_Vdist := Fgutabs_Vdist_orig]
+  PK_1comp[, Fgutabs_Vdist_orig := NULL]
+
   PK_out <- copy(PK_1comp)
 }else if(model %in% "2compartment"){
 
@@ -163,7 +168,7 @@ if(length(time_const) > 0){
                                     pattern = "sigma")],
                     Analysis_Type + DTXSID + Species +
                       model + References.Analyzed + Studies.Analyzed +
-                      Routes + Media +
+                      N_Routes + N_Media +
                       time_units_fitted +
                       AIC ~ param_name,
                     value.var = "Fitted mean")
@@ -174,7 +179,7 @@ if(length(time_const) > 0){
                                        pattern = "sigma")],
                        Analysis_Type + DTXSID + Species +
                          model + References.Analyzed + Studies.Analyzed +
-                         Routes + Media +
+                         N_Routes + N_Media +
                          time_units_fitted +
                          AIC ~ param_name,
                        value.var = "Fitted std dev")
@@ -217,9 +222,11 @@ if(length(time_const) > 0){
     }
 
     PK_2comp[, time_units_fitted := NULL]
-    PK_1comp[, time_units_reported := "hours"]
+    PK_2comp[, time_units_reported := "hours"]
 
   #in case Fgutabs and V1 were fitted separately, compute Fgutabs/V1
+    PK_2comp[, Fgutabs_V1_orig := Fgutabs_V1]
+
   PK_2comp[is.na(Fgutabs_V1), Fgutabs_V1 := Fgutabs/V1]
 
   #Total clearance
@@ -324,6 +331,9 @@ if(length(time_const) > 0){
   #remove temporary calculation columns
   PK_2comp[, c("alphabeta_sum",
                "alphabeta_prod") := NULL]
+
+  PK_2comp[, Fgutabs_V1 := Fgutabs_V1_orig]
+  PK_2comp[, Fgutabs_V1_orig := NULL]
   PK_out <- copy(PK_2comp)
 }
 

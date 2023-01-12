@@ -172,23 +172,17 @@ analyze_subset <- function(fitdata,
 
   #check whether there is more than one study or not
   nstudy <- length(unique(fitdata$Study))
+  studies_analyzed <- paste(sort(unique(fitdata$Study)),
+                            collapse =", ")
+  refs_analyzed <- paste(sort(unique(fitdata$Reference)),
+                         collapse =", ")
   if (nstudy>1) {
     if(pool_sigma %in% FALSE){
-      studies_analyzed <- paste(sort(unique(fitdata$Study)),
-                             collapse =", ")
-      refs_analyzed <- paste(sort(unique(fitdata$Reference)),
-                                collapse =", ")
       analysis_type <- "Joint Analysis"
     }else{
-      studies_analyzed <- paste(sort(unique(fitdata$Study)),
-                             collapse =", ")
-      refs_analyzed <- paste(sort(unique(fitdata$Reference)),
-                                collapse =", ")
       analysis_type <- "Pooled Analysis"
     }
   }else{
-    studies_analyzed <- paste(unique(fitdata$Study))
-    refs_analyzed <- paste(unique(fitdata$Reference))
     analysis_type <- "Single-Study Analysis"
   }
 
@@ -365,9 +359,9 @@ analyze_subset <- function(fitdata,
    out_DF$flag <- NA_character_
    #Record the unique routes in this dataset
    #Route info provides context for why some parameters were/were not estimated
-   out_DF$Routes <- n_routes
+   out_DF$N_Routes <- n_routes
    #Record the unique media in this dataset
-   out_DF$Media <- n_media
+   out_DF$N_Media <- n_media
 
    #include a message about why no fit was done
    msg <- paste("For chemical ", this.dtxsid, " there were ",
@@ -547,9 +541,9 @@ out_DF$time_units_fitted <- new_time_units
   out_DF$flag <- NA_character_
   #Record the unique routes in this dataset
   #Route info provides context for why some parameters were/were not estimated
-  out_DF$Routes <- n_routes
+  out_DF$N_Routes <- n_routes
   #Record the unique media in this dataset
-  out_DF$Media <- n_media
+  out_DF$N_Media <- n_media
 
   #include a message about why no fit was done
   msg <- paste("Optimization failed. Error message from optimx():",
@@ -834,9 +828,9 @@ out_DF$time_units_fitted <- new_time_units
 
   #Record the unique routes in this dataset
   #Route info provides context for why some parameters were/were not estimated
-  out_DF$Routes <- n_routes
+  out_DF$N_Routes <- n_routes
   #Record the unique media in this dataset
-  out_DF$Media <- n_media
+  out_DF$N_Media <- n_media
   out_DF$message <- "Optimization successful."
 
 #Keep information about optimization

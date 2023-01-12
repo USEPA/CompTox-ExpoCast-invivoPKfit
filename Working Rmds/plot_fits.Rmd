@@ -22,14 +22,16 @@ devtools::load_all("../invivopkfit")
 Timestamp
 
 ```{r}
-timestamp <- "2023_01_06"
+timestamp <- "2023_01_11"
 ```
 
 
 Read in CvTdb data pulled in `pulling_oral_iv_data_cvtdb.Rmd`.
 
 ```{r, load_cvt, eval = TRUE}
-cvt <- fread("../inst/ext/cvt_preprocessed_2023_01_06.csv")
+cvt <- fread(paste0("../inst/ext/cvt_preprocessed_",
+timestamp,
+".csv"))
 cvt[, Reference:=as.character(Reference)]
 cvt[, Reference_orig:=as.character(Reference_orig)]
 ```
@@ -38,40 +40,149 @@ Read in the fitted model parameter values.
 
 ```{r, read_data}
 
-PK.fit.table.1comp <- fread(paste0("../inst/ext/", "PK_fit_table_1comp_", timestamp, ".csv",sep=""))
-PK.fit.table.2comp <- fread(paste0("../inst/ext/", "PK_fit_table_2comp_", timestamp, ".csv",sep=""))
-PK.fit.table.flat <- fread(paste0("../inst/ext/", "PK_fit_table_flat_", timestamp, ".csv",sep=""))
+DT_1comp <- fread(paste0("../inst/ext/", "PK_fit_postprocess_1comp_", timestamp, ".csv",sep=""))
+DT_2comp <- fread(paste0("../inst/ext/", "PK_fit_postprocess_2comp_", timestamp, ".csv",sep=""))
+DT_flat <- fread(paste0("../inst/ext/", "PK_fit_postprocess_flat_", timestamp, ".csv",sep=""))
+
+idcols <- c( "Analysis_Type",
+                                 "DTXSID",
+                                "Species",
+                                "References.Analyzed",
+                               "Studies.Analyzed",
+                               "N_Routes",
+                               "N_Media",
+              "time_units_reported")
+
+setnames(DT_1comp,
+         setdiff(names(DT_1comp),
+                 idcols),
+         paste(setdiff(names(DT_1comp),
+                 idcols),
+               "1compartment",
+               sep = "."))
+
+setnames(DT_2comp,
+         setdiff(names(DT_2comp),
+                 idcols),
+         paste(setdiff(names(DT_2comp),
+                 idcols),
+               "2compartment",
+               sep = "."))
+
+setnames(DT_flat,
+         setdiff(names(DT_flat),
+                 idcols),
+         paste(setdiff(names(DT_flat),
+                 idcols),
+               "flat",
+               sep = "."))
 
 #pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 ```
 
-Rowbind together all of the fitted parameter tables into one big one.
-```{r}
-pk_fit <- rbindlist(list("1comp" = PK.fit.table.1comp,
-                         "2comp" = PK.fit.table.2comp,
-                         "flat" = PK.fit.table.flat),
-                    use.names = TRUE,
-                    fill = TRUE)
+Merge these together. 
 
-rm(PK.fit.table.1comp,
-   PK.fit.table.2comp,
-   PK.fit.table.flat)
+```{r}
+pk_fit <- merge(DT_2comp,
+               merge(DT_flat, DT_1comp, by = idcols),
+               by = idcols)
 ```
 
 
-Get a table of the winning model for each dataset (the one with minimum AIC).
+Find the winning model for each dataset
 
 ```{r}
-tmp <- unique(pk_fit[, .(DTXSID, Species, Analysis_Type, References.Analyzed, model, AIC)])
+pk_AIC <- melt(pk_fit,
+     id.vars = idcols,
+     measure.vars = c("AIC.flat",
+                      "AIC.1compartment",
+                      "AIC.2compartment"),
+     value.name = "AIC",
+     variable.name = "model")
+
+pk_AIC[, model := gsub(x = model,
+                       pattern = "AIC.",
+                       replacement = "",
+                       fixed = TRUE)]
+
 
 #sort AIC from smallest to largest within each dataset, putting NAs last
-setorder(tmp, DTXSID, Species, Analysis_Type, References.Analyzed, AIC, na.last = TRUE)
+setorderv(pk_AIC,
+        c(idcols, "AIC"),
+         na.last = TRUE)
 #the winning model will now be listed first within each dataset (smallest AIC)
-model_win <- tmp[, .(winmodel = model[1]), by = .(DTXSID, Species, Analysis_Type, References.Analyzed)]
-pk_fit <- model_win[pk_fit, on = c("DTXSID", "Species", "Analysis_Type", "References.Analyzed")]
-pk_fit[, winning:=(model == winmodel)]
-
+model_win <- pk_AIC[,
+                    .(winmodel = model[1]),
+                    by = idcols]
+pk_fit <- model_win[pk_fit,
+                    on = idcols]
 ```
+
+Keep parameters only.
+
+```{r}
+all_params <- unlist(sapply(c("flat",
+         "1compartment",
+         "2compartment"),
+       function(model){
+         tmp <- get_model_paramnames(model)
+         return(paste(tmp,
+                      model,
+                      sep= "."))
+       }))
+
+pk_params <- pk_fit[, .SD, .SDcols = c(idcols, "winmodel", all_params)]
+
+#Ensure comma-separated lists of studies analyzed are properly sorted
+pk_params[, Studies.Analyzed := {
+  tmp <- strsplit(x = Studies.Analyzed,
+           split = ", ")
+  sapply(tmp,
+         function(x) paste(sort(x), collapse = ", "))
+}]
+
+# pk_params[is.na(Fgutabs_Vdist.flat),
+#           Fgutabs_Vdist.flat := Fgutabs.flat / Vdist.flat]
+# 
+# pk_params[is.na(Rblood2plasma.flat), Rblood2plasma.flat := 1]
+# pk_params[is.na(Rblood2plasma.1compartment), Rblood2plasma.1compartment := 1]
+# pk_params[is.na(Rblood2plasma.2compartment), Rblood2plasma.2compartment := 1]
+```
+
+Merge the parameter information with the original concentration-time info.
+
+```{r}
+cvt[, Study_pooled :=
+  paste(
+    sort(unique(Study)),
+    collapse = ", "
+  ),
+  by = .(DTXSID, Species)]
+
+  #Melt to longer format. The effect will be as though we row-bound two versions
+  #of DF together: one with the original single references, and one with
+  #comma-separated combined References. There is one column "Study_type" that
+  #contains either "Study" or "Study_pooled", and then one column "Study" that
+  #contains the studyID or the comma-separated list of study IDs.
+  cvt1 <- melt(cvt,
+              measure.vars = c("Study", "Study_pooled"),
+              variable.name = "Study_type",
+              value.name = "Study")
+
+  #There will be duplicated rows for single-study analyses, because
+  #"Study_pooled" (the comma-separated list of study IDs) is the same as "Study"
+  #(the individual study ID) for these analyses. Remove the duplicated rows.
+  cvt1 <- unique(cvt1[, .(DTXSID, Compound, Species, Study,Reference,
+                        Route, Dose, iv, Media, Time, Value, LOQ, Value_SD, N_Subjects)])
+  
+  cvt_fit <- pk_params[cvt1, 
+                    on = c("DTXSID" = "DTXSID",
+                            "Species" = "Species",
+                            "Studies.Analyzed" = "Study"),
+                     allow.cartesian = TRUE]
+```
+
+
 
 Plot concentration vs time with the best-fit params by data subset (DTXSID and species). 
 
@@ -100,23 +211,23 @@ plot_table <- unique(pk_fit[, .(DTXSID, Species)])
 
 Plot all models for the joint analysis.
 ```{r}
-
-#plot all models
-tmp <- mapply(plot_fit,
-              DTXSID_in = plot_table$DTXSID,
-                     Species_in = plot_table$Species,
-              MoreArgs = list(
-                     model_in = "all",
-                     Analysis_Type_in = "Joint",
-                     DF = cvt,
-                     pk_fit = pk_fit,
-                     n_interp_time = 10,
+cvt_fit[,
+        plot_fit(DTXSID = unique(DTXSID),
+                 Species_in = unique(Species),
+                 DFsub = .SD,
+                 model_in = "all",
+                 Analysis_Type_in = "Joint",
+                 n_interp_time = 10,
                      limit_y_axis = FALSE,
                      log10_scale_y = FALSE,
                      plot_errbars = TRUE,
                      log10_scale_time = FALSE,
-                     file_path = "../inst/ext/plots/Joint Analysis/model_all/errbars_naturaly")
-                     )
+                     file_path = "../inst/ext/plots/Joint Analysis/model_all/errbars_naturaly",
+                 verbose = TRUE),
+        by = .(DTXSID,
+               Species),
+        .SDcols = names(cvt_fit)]
+
 
 ```
 
