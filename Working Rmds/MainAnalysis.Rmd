@@ -220,4 +220,8 @@ rm(PK.fit.table.2comp, post_2comp)
 ```
 
 
+# Test case
 
+DTXSID1022265 (Alachlor) is an example of one chemical where there is only one Reference ID, but the PO and IV data are on totally different scales -- IV concentration/dose ranges from 1e-3 to 1e-1, but PO concentration/dose ranges from 1e-5 to 1e-4. Now that we are fitting on natural scale, this means that with reference-specific sigma, the curve really only fits the IV data, because sigma is so large compared to the PO data scale. This results in a too-small Fgutabs estimate that does not fit the peak very well. But with "study" specific sigma -- chemical + species + reference + route + media -- the PO sigma can be on a different order than the IV sigma, and is.
+
+Another possible thing to try is to go back to fitting on the log scale. I had switched to the natural scale because I wasn't sure how to derive the "summary" parameterization of the residual distribution for the log scale. But I could try again.
