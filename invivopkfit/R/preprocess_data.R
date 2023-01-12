@@ -526,6 +526,23 @@ preprocess_data <- function(data.set,
                                 drop = TRUE,
                                 sep = "_")
 
+  #Create a Conc column that is the greater of Value and LOQ, with NAs removed
+  data.set$Conc <- pmax(data.set$Value,
+                        data.set$LOQ,
+                        na.rm = TRUE)
+  #Create a Detect flag
+  data.set$Detect <- factor(
+    ifelse(!is.na(Value),
+           "Detect",
+           "Non-Detect"),
+    levels = c("Detect", "Non-Detect")
+  )
+  #Create dose-normalized Conc
+  data.set$Conc_Dose <- data.set$Conc/data.set$Dose
+  data.set$Value_Dose <- data.set$Value/data.set$Dose
+  data.set$Value_SD_Dose <- data.set$Value_SD/data.set$Dose
+  data.set$LOQ_Dose <- data.set$LOQ/data.set$Dose
+
   if(!suppress.messages){
     "Data preprocessing complete."
   }
