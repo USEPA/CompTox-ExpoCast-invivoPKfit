@@ -150,6 +150,7 @@ analyze_subset <- function(fitdata,
                            model,
                            modelfun,
                            pool_sigma = FALSE,
+                           fit_conc_dose = TRUE,
                            rescale_time = TRUE,
                            get_starts_args = NULL,
                            get_lower_args = NULL,
@@ -499,6 +500,7 @@ out_DF$time_units_fitted <- new_time_units
           DF = fitdata,
           modelfun = modelfun,
           model = model,
+          fit_conc_dose = fit_conc_dose,
           force_finite = (optimx_args$method %in% "L-BFGS-B"),
           negative = TRUE
         ) #end list()
@@ -590,6 +592,7 @@ out_DF$time_units_fitted <- new_time_units
                         DF = fitdata,
                         modelfun = modelfun,
                         model = model,
+                   fit_conc_dose = fit_conc_dose,
                         force_finite = (optimx_args$method %in% "L-BFGS-B"),
                    negative = TRUE)
   },
@@ -692,6 +695,7 @@ out_DF$time_units_fitted <- new_time_units
                                  DF = fitdata,
                                  modelfun = modelfun,
                                  model = model,
+                                 fit_conc_dose = fit_conc_dose,
                                  force_finite = (optimx_args$method %in% "L-BFGS-B"),
                                  negative = TRUE
                                )
@@ -720,6 +724,7 @@ out_DF$time_units_fitted <- new_time_units
                           DF = fitdata,
                           modelfun = modelfun,
                           model = model,
+                     fit_conc_dose = fit_conc_dose,
                           force_finite = (optimx_args$method %in% "L-BFGS-B"),
                      negative = TRUE)
     },

@@ -114,6 +114,8 @@ system.time(
     model = "flat",
     modelfun = "analytic",
     preprocess = FALSE,
+    fit_conc_dose = TRUE,
+    rescale_time = TRUE,
     optimx_args = list(
       "method" = "bobyqa",
       "itnmax" = 1e6,
@@ -151,6 +153,8 @@ system.time(
       model = "1compartment",
       modelfun = "analytic",
       preprocess = FALSE,
+         fit_conc_dose = TRUE,
+    rescale_time = TRUE,
       optimx_args = list(
                       "method" = "bobyqa",
                       "itnmax" = 1e6,
@@ -192,6 +196,8 @@ system.time(
       model = "2compartment",
       modelfun = "analytic",
       preprocess = FALSE,
+         fit_conc_dose = TRUE,
+    rescale_time = TRUE,
       optimx_args = list(
                       "method" = "bobyqa",
                       "itnmax" = 1e6,

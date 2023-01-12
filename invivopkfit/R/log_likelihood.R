@@ -139,6 +139,7 @@ log_likelihood <- function(params,
                            DF,
                            modelfun = "analytic",
                            model,
+                           fit_conc_dose = TRUE,
                            force_finite = FALSE,
                            negative = TRUE) {
 
@@ -247,23 +248,34 @@ log_likelihood <- function(params,
   #this makes logical indexing easier
   DF$sigma_study <- sigma_study
   DF$pred <- pred
+  DF$pred_dose <- DF$pred/DF$Dose
 
   #get log-likelihood for each observation
 
   #For single-subject observations:
   if(any(DF$N_Subjects %in% 1)){
-  DF_single_subj <- subset(DF,
+  DF_single <- subset(DF,
                            N_Subjects %in% 1)
+
+  if(fit_conc_dose %in% TRUE){
+    value_ss <- DF_single$Value_Dose
+    loq_ss <- DF_single$LOQ_Dose
+    pred_ss <- DF_single$pred_dose
+  }else{
+    value_ss <- DF_single$Value
+    loq_ss <- DF_single$LOQ
+    pred_ss <- DF_single$pred
+  }
 
   loglike_single_subj <- ifelse(is.na(DF_single_subj$Value),
                     #for non-detects: CDF
-                    pnorm(q = DF_single_subj$LOQ,
-                          mean = DF_single_subj$pred,
+                    pnorm(q = loq_ss,
+                          mean = pred_ss,
                           sd = DF_single_subj$sigma_study,
                           log.p = TRUE),
                     #for detects: PDF
-                    dnorm(x = DF_single_subj$Value,
-                          mean = DF_single_subj$pred,
+                    dnorm(x = value_ss,
+                          mean = pred_ss,
                           sd = DF_single_subj$sigma_study,
                           log = TRUE))
   }else{
@@ -272,11 +284,21 @@ log_likelihood <- function(params,
 
   #For multi-subject observations:
   if(any(DF$N_Subjects > 1)){
-  DF_multi_subj <- subset(DF, N_Subjects > 1)
-  loglike_multi_subj <-  dnorm_summary(mu = DF_multi_subj$pred,
+  DF_mult <- subset(DF, N_Subjects > 1)
+
+  if(fit_conc_dose %in% TRUE){
+    value_mult <- DF_mult$Value_Dose
+    value_sd_mult <- DF_mult$Value_SD_Dose
+    pred_mult <- DF_mult$pred_dose
+  }else{
+    value_mult <- DF_mult$Value
+    value_sd_mult <- DF_mult$Value_SD
+    pred_mult <- DF_mult$pred
+  }
+  loglike_multi_subj <-  dnorm_summary(mu = pred_mult,
                                             sigma = DF_multi_subj$sigma_study,
-                                            x_mean = DF_multi_subj$Value,
-                                            x_sd = DF_multi_subj$Value_SD,
+                                            x_mean = value_mult,
+                                            x_sd = value_sd_mult,
                                             x_N = DF_multi_subj$N_Subjects,
                                             log = TRUE)
   }else{
