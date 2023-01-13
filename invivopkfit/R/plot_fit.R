@@ -1,8 +1,72 @@
+#'Plot TK model fits
+#'
+#'Plot fitted toxicokinetic model curves with concentration vs. time data
+#'
+#'This function can plot dose-normalized data, non-dose-normalized data, can
+#'split doses into separate facets or not.
+#'@param DTXSID_in DSSTox Substance ID of chemical to be plotted.
+#'@param Species_in Species in data to be plotted
+#'@param Analysis_Type_in "Joint", "Pooled", or "Separate" (whether different
+#'  studies were fit together with separate error SDs; together with one error
+#'  SD; or separately)
+#'@param model_in Which model or models to plot fits for. Options include any or
+#'  all of "1compartment", "2compartment", and "flat"; "winning" to plot only
+#'  the winning model (whichever had lowest AIC); or "all" as a short form to
+#'  plot all three models.
+#'@param DFsub Pre-processed concentration vs. time data merged with fitted PK
+#'  parameters. (I will create a separate function to produce this)
+#'@param plot_dose_norm Logical: TRUE to plot dose-normalized concentration vs.
+#'  time data and model fits. FALSE to plot non-dose-normalized data and fits.
+#'  Default TRUE. If `plot_dose_norm == FALSE`, it's typically recommended to
+#'  use `split_dose == TRUE`, because non-dose-normalized concentrations for
+#'  different dose groups will likely be on different scales.
+#'@param split_dose Logical: TRUE to split separate dose groups into separate
+#'  plot facets. FALSE to facet only by Route and Media. If `split_dose ==
+#'  FALSE`, then dose groups will be distinguished using color.
+#'@param n_interp_time The number of time points to interpolate between each
+#'  existing time point in the data set for plotting model fits. Default is 10.
+#'@param limit_y_axis Whether to limit the scale of the y axis to only a small
+#'  distance above and below the min/max of the concentration vs. time data.
+#'  Default FALSE. (You may want to try TRUE if you are log-scaling the y axis.)
+#'@param log10_scale_y Logical: Whether to log-scale the y axis. Default FALSE.
+#'@param plot_errbars Logical: Whether to plot sample errorbars for
+#'  concentration vs. time data (when the observations have associated sample
+#'  standard deviations). Default TRUE. You may want to try FALSE if you are
+#'  log-scaling the y axis.
+#'@param log10_scale_time Logical: Whether to log-scale the x-axis (time).
+#'  Default FALSE.
+#'@param save_plot Logical: Whether to save the plot as a file. Default TRUE.
+#'@param return_plot Logical: Whether to return the plot object. Default FALSE.
+#'@param file_path Path to save file if `save_plot == TRUE`. Default
+#'  `"inst/ext/plots"`.
+#'@param file_suffix Suffix to append to the file name, if any. Default NULL for
+#'  no suffix.
+#'@param file_format File format to save the plot. Default `"pdf"`.
+#'@param ggsave_args A named list of additional arguments to `ggsave()` to use
+#'  when saving the plot. Default
+#'   ```
+#'   list(scale = 1,
+#'width = 9,
+#'height = 10,
+#'units = "in",
+#'dpi = 300,
+#'limitsize = TRUE,
+#'bg = NULL)
+#'```
+#'@param verbose Logical: Whether to print verbose messages about plotting
+#'  progress. Default TRUE.
+#'@return If `return_plot == TRUE`, a `ggplot2` object. If `return_plot ==
+#'  FALSE`, returns 0.
+#' @author Caroline Ring
+#' @export
+#'
 plot_fit <- function(DTXSID_in,
                      Species_in,
                      Analysis_Type_in,
                      model_in = "winning", #or "all" or by name
                      DFsub,
+                     plot_dose_norm = TRUE,
+                     split_dose = FALSE,
                      n_interp_time = 10,
                      limit_y_axis = FALSE,
                      log10_scale_y = FALSE,
@@ -42,27 +106,23 @@ plot_fit <- function(DTXSID_in,
 
   DFsub <- DFsub[Analysis_Type %in% Analysis_Type_in, ]
 
-  #Get concentration or LOQ
-  DFsub[, Conc:=pmax(Value, LOQ, na.rm = TRUE)]
-  #Get detection flag
-  DFsub[, Detect:=factor(
-    ifelse(!is.na(Value), "Detect", "Non-Detect"),
-    levels = c("Detect", "Non-Detect")
-    )]
+ #calculate lower and upper bounds for obs with sample SD
+  DFsub[, Conc_Dose_upper := (Value + Value_SD)/Dose]
+  DFsub[, Conc_Dose_lower := (Value - Value_SD)/Dose]
 
-  #calculate concentration normalized to dose
-  #this allows easier visualization -- all doses plotted together
-  DFsub[, ConcDose:=Conc/Dose]
+  DFsub[, Conc_upper := (Value + Value_SD)]
+  DFsub[, Conc_lower := (Value - Value_SD)]
 
-  DFsub[, ConcDose_upper := (Value + Value_SD)/Dose]
-  DFsub[, ConcDose_lower := (Value - Value_SD)/Dose]
-
+  #ensure that variable Detect is a factor with levels "Detect" and "Non-Detect"
+  DFsub[, Detect:=factor(Detect,
+                         levels = c("Detect",
+                                    "Non-Detect"))]
 
   #Now add time points for prediction.
   #Interpolate n_interp_time points between each existing time point.
   pred_DT2 <- DFsub[, .(
     Time = {
-      timepoints <- unique(Time)
+      timepoints <- sort(unique(c(0,Time)))
       time_interp <- sapply(1:(length(timepoints)-1),
                             function(i){
                               seq(from = timepoints[i],
@@ -75,8 +135,9 @@ plot_fit <- function(DTXSID_in,
   ),
   by = setdiff(names(DFsub),
                c("Time", "Value", "Value_SD", "LOQ", "N_Subjects",
-                 "Conc", "Detect",
-                 "ConcDose", "ConcDose_upper", "ConcDose_lower"))]
+                 "Conc", "Detect", "Conc_upper", "Conc_lower",
+                 "Conc_Dose", "Conc_Dose_upper", "Conc_Dose_lower",
+                 "Value_Dose", "Value_SD_Dose", "LOQ_Dose"))]
 
 
 
@@ -220,7 +281,7 @@ plot_fit <- function(DTXSID_in,
 
 
   #get predicted conc normalized by dose
-  pred_DT3[, ConcDose:=Conc/Dose]
+  pred_DT3[, Conc_Dose:=Conc/Dose]
 
 
   #create a categorical variable for dose
@@ -274,45 +335,111 @@ plot_fit <- function(DTXSID_in,
   }
 
   #plot
-  p <- ggplot(data = DFsub,
-         aes(x = Time,
-             y = ConcDose)) +
-    geom_blank()
+  if(plot_dose_norm %in% TRUE){
+    p <- ggplot(data = DFsub,
+                aes(x = Time,
+                    y = Conc_Dose)) +
+      geom_blank()
 
-  #add errorbars if so specified
-  if(plot_errbars %in% TRUE){
-    p <- p +
-      geom_errorbar(aes(ymin = ConcDose_lower,
-                        ymax = ConcDose_upper,
-                        color = Dose))
+    #add errorbars if so specified
+    if(plot_errbars %in% TRUE){
+      if(split_dose %in% FALSE){
+        p <- p +
+          geom_errorbar(aes(ymin = Conc_Dose_lower,
+                            ymax = Conc_Dose_upper,
+                            color = Dose))
+      }else{ #if split_dose == TRUE, don't map color to Dose
+        p <- p + geom_errorbar(aes(ymin = Conc_Dose_lower,
+                                 ymax = Conc_Dose_upper))
+      }
+    }
+  }else{ #if plot_dose_norm == FALSE
+    p <- ggplot(data = DFsub,
+                aes(x = Time,
+                    y = Conc)) +
+      geom_blank()
+
+    #add errorbars if so specified
+    if(plot_errbars %in% TRUE){
+      if(split_dose %in% FALSE){
+        p <- p +
+          geom_errorbar(aes(ymin = Conc_lower,
+                            ymax = Conc_upper,
+                            color = Dose))
+      }else{ #if split_dose %in% TRUE, don't map color to dose
+        p <- p +
+          geom_errorbar(aes(ymin = Conc_lower,
+                            ymax = Conc_upper))
+      }
+    }
   }
 
   #now plot the rest
-  #concentration-dose observation points:
-  #shape mapped to Reference, color to Dose, fill yes/no to Detect
-    #first plot points with white fill
-    p <- p + geom_point(aes(shape = Reference,
-                   color = Dose),
-               fill = "white",
-               size = 4,
-               stroke = 1.5) +
-    #then plot points with fill, but alpha mapped to Detect
-    geom_point(aes(shape = Reference,
-                   color = Dose,
-                   fill = Dose,
-                   alpha = Detect),
-               size = 4,
-               stroke = 1.5) +
-    #plot lines for model predictions
-    geom_line(data = predsub,
-              aes(linetype = model,
-                  group = interaction(Analysis_Type, Studies.Analyzed, Dose, model))
-    ) +
+
+
+    if(split_dose %in% FALSE){
+      #concentration-dose observation points:
+      #shape mapped to Reference, color to Dose, fill yes/no to Detect
+      #first plot points with white fill
+      p <- p + geom_point(aes(shape = Reference,
+                              color = Dose),
+                          fill = "white",
+                          size = 4,
+                          stroke = 1.5) +
+        #then plot points with fill, but alpha mapped to Detect
+        geom_point(aes(shape = Reference,
+                       color = Dose,
+                       fill = Dose,
+                       alpha = Detect),
+                   size = 4,
+                   stroke = 1.5) +
+        #plot lines for model predictions
+        geom_line(data = predsub,
+                  aes(linetype = model,
+                      group = interaction(Analysis_Type,
+                                          Studies.Analyzed,
+                                          Dose,
+                                          model))
+        )
+
+      p <- p +
     facet_grid(rows = vars(Route),
                cols = vars(Media),
-               scales = "free_y") +
-    scale_color_viridis_c(name = "Dose, mg/kg") +
-    scale_fill_viridis_c(na.value = NA, name = "Dose, mg/kg") +
+               scales = "free_y")
+
+      p <- p +
+        scale_color_viridis_c(name = "Dose, mg/kg") +
+        scale_fill_viridis_c(na.value = NA, name = "Dose, mg/kg")
+    }else{ #if split_dose == TRUE, don't map color to Dose
+      #concentration-dose observation points:
+      #shape mapped to Reference, fill yes/no to Detect
+      #first plot points with white fill
+      p <- p + geom_point(aes(shape = Reference),
+                          color = "gray50",
+                          fill = "white",
+                          size = 4,
+                          stroke = 1.5) +
+        #then plot points with fill, but alpha mapped to Detect
+        geom_point(aes(shape = Reference,
+                       alpha = Detect),
+                   color = "gray50",
+                   fill =  "gray50",
+                   size = 4,
+                   stroke = 1.5) +
+        #plot lines for model predictions
+        geom_line(data = predsub,
+                  aes(linetype = model,
+                      group = interaction(Analysis_Type,
+                                          Studies.Analyzed,
+                                          Dose,
+                                          model))
+        )
+      p <- p + facet_wrap(vars(Route, Media, Dose),
+                          labeller = "label_both",
+                          scales = "free_y")
+    }
+
+    p <- p +
     scale_shape_manual(values = 21:25) + #use only the 5 shapes where a fill can be added
     #this limits us to visualizing only 5 References
     #but admittedly it's hard to distinguish more than 5 shapes anyway
@@ -336,19 +463,31 @@ plot_fit <- function(DTXSID_in,
             strip.background = element_blank())
 
 
-
   #limit y axis scaling to go only 2x smaller than smallest observation
     if(limit_y_axis %in% TRUE){
-  new_y_min <- DFsub[, min(pmin(ConcDose,
-                                ConcDose_lower,
+      if(plot_dose_norm %in% TRUE){
+  new_y_min <- DFsub[, min(pmin(Conc_Dose,
+                                Conc_Dose_lower,
                                 na.rm = TRUE),
                             na.rm = TRUE)/2]
-  if(!is.finite(new_y_min)) new_y_min <- NA
 
-  new_y_max <- DFsub[, max(pmax(ConcDose,
-                                ConcDose_upper,
+  new_y_max <- DFsub[, max(pmax(Conc_Dose,
+                                Conc_Dose_upper,
                                 na.rm = TRUE),
                            na.rm = TRUE)*1.05]
+      }else{
+        new_y_min <- DFsub[, min(pmin(Conc,
+                                      Conc_lower,
+                                      na.rm = TRUE),
+                                 na.rm = TRUE)/2]
+
+
+        new_y_max <- DFsub[, max(pmax(Conc,
+                                      Conc_upper,
+                                      na.rm = TRUE),
+                                 na.rm = TRUE)*1.05]
+      }
+      if(!is.finite(new_y_min)) new_y_min <- NA
   if(!is.finite(new_y_max)) new_y_max <- NA
 
     p <- p +

@@ -85,6 +85,8 @@ get_upper_bounds <- function(fitdata,
                                upper_bound_msg = "Default"
                              ),
                              Fgutabs_Vdist_from_species = FALSE,
+                             sigma_from_data = TRUE,
+                             fit_conc_dose = TRUE,
                              suppress.messages = FALSE){
 
   if(is.null(par_DF)){
@@ -155,6 +157,44 @@ get_upper_bounds <- function(fitdata,
         } #end if(is.finite(plasma_vol_L))
       } #end if(any(tolower(names(phys)) %in%  species))
     } #end if if(Fgutabs_Vdist_from_species %in% TRUE)
+
+    if(sigma_from_data %in% TRUE){
+      #set an upper bound on sigma equal to the std dev of values in each study
+      #on the grounds that it really should not be worse than that
+      value_var <- ifelse(fit_conc_dose %in% TRUE, "Value_Dose", "Value")
+      sigma_names <- grep(x = par_DF$param_name,
+                          pattern = "sigma",
+                          value = TRUE)
+      if(length(sigma_names) > 1){
+        data_sd <- sapply(studies,
+                          function(x) sd(fitdata[fitdata$Study %in% x,
+                                                 value_var],
+                                         na.rm = TRUE),
+                          USE.NAMES = TRUE)
+        names(data_sd) <- paste0("sigma_study_", names(data_sd))
+        for (sigma_name in names(data_sd)){
+          if(is.finite(data_sd[sigma_name])){
+            par_DF[par_DF$param_name %in% sigma_name,
+                   "upper_bound"] <- data_sd[sigma_name]
+            par_DF[par_DF$param_name %in% sigma_name,
+                   "upper_bound_msg"] <- paste("SD of", value_var,
+                                               "for this study")
+          }
+        }
+      }else{ #if only one sigma (one study, or all studies pooled)
+        data_sd <- sd(fitdata[[value_var]], na.rm = TRUE)
+        if(is.finite(data_sd)){
+        par_DF[par_DF$param_name %in% "sigma", "upper_bound"] <- data_sd
+        par_DF[par_DF$param_name %in% sigma_name,
+               "upper_bound_msg"] <- paste("SD of", value_var,
+                                           "for all studies in this data set")
+        }
+      }
+
+
+
+
+    }
 
   #For anything not to be optimized, set its bounds to NA
   par_DF[!(par_DF$optimize_param %in% TRUE),
