@@ -352,7 +352,7 @@ analyze_subset <- function(fitdata,
    out_DF$References.Analyzed <- refs_analyzed
    out_DF$Data.Analyzed <- analysis_type
 
-   out_DF$fit_dose_norm <- fit_dose_norm
+   out_DF$fit_conc_dose <- fit_conc_dose
 
    #fill in the loglike and AIC with NA s since no fit was done
    out_DF$LogLikelihood <-  NA_real_
@@ -506,7 +506,7 @@ out_DF$time_units_fitted <- new_time_units
           modelfun = modelfun,
           model = model,
           fit_conc_dose = fit_conc_dose,
-          force_finite = (optimx_args$method %in% "L-BFGS-B"),
+          force_finite = TRUE,
           negative = TRUE
         ) #end list()
       ) #end args = c()
@@ -540,7 +540,7 @@ out_DF$time_units_fitted <- new_time_units
     out_DF$References.Analyzed <- refs_analyzed
     out_DF$Data.Analyzed <- analysis_type
 
-    out_DF$fit_dose_norm <- fit_dose_norm
+    out_DF$fit_conc_dose <- fit_conc_dose
 
   #fill in the loglike and AIC with NA s since no fit was done
   out_DF$LogLikelihood <-  NA_real_
@@ -600,7 +600,7 @@ out_DF$time_units_fitted <- new_time_units
                         modelfun = modelfun,
                         model = model,
                    fit_conc_dose = fit_conc_dose,
-                        force_finite = (optimx_args$method %in% "L-BFGS-B"),
+                        force_finite = TRUE,
                    negative = TRUE)
   },
   x = means,
@@ -703,7 +703,7 @@ out_DF$time_units_fitted <- new_time_units
                                  modelfun = modelfun,
                                  model = model,
                                  fit_conc_dose = fit_conc_dose,
-                                 force_finite = (optimx_args$method %in% "L-BFGS-B"),
+                                 force_finite = TRUE,
                                  negative = TRUE
                                )
                              )
@@ -732,7 +732,7 @@ out_DF$time_units_fitted <- new_time_units
                           modelfun = modelfun,
                           model = model,
                      fit_conc_dose = fit_conc_dose,
-                          force_finite = (optimx_args$method %in% "L-BFGS-B"),
+                          force_finite = TRUE,
                      negative = TRUE)
     },
     x = means,
@@ -787,7 +787,7 @@ out_DF$time_units_fitted <- new_time_units
     out_DF$References.Analyzed <- refs_analyzed
     out_DF$Data.Analyzed <- analysis_type
 
-    out_DF$fit_dose_norm <- fit_dose_norm
+    out_DF$fit_conc_dose <- fit_conc_dose
 
   #Add log-likelihood and AIC values
 

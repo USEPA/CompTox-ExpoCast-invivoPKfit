@@ -252,6 +252,12 @@ log_likelihood <- function(params,
   DF$pred <- pred
   DF$pred_dose <- DF$pred/DF$Dose
 
+  #if fit_conc_dose is TRUE, remove any zero-dose cases,
+  #as these will have NaN log-likelihoods
+  if(fit_conc_dose %in% TRUE){
+    DF <- subset(DF, Dose > 0)
+  }
+
   #get log-likelihood for each observation
 
   #For single-subject observations:
@@ -306,6 +312,9 @@ log_likelihood <- function(params,
   }else{
     loglike_mult <- 0
   }
+
+
+
 
   #sum log-likelihoods over observations
   ll <- sum(c(loglike_single, loglike_mult))
