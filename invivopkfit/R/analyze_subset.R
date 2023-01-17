@@ -352,6 +352,8 @@ analyze_subset <- function(fitdata,
    out_DF$References.Analyzed <- refs_analyzed
    out_DF$Data.Analyzed <- analysis_type
 
+   out_DF$fit_dose_norm <- fit_dose_norm
+
    #fill in the loglike and AIC with NA s since no fit was done
    out_DF$LogLikelihood <-  NA_real_
    out_DF$AIC <-  NA_real_
@@ -382,6 +384,7 @@ analyze_subset <- function(fitdata,
    #record control params
    out_DF[paste0("control_",
                  names(optimx_args$control))] <- optimx_args$control
+
    if(!suppress.messages){
      message(msg)
    }
@@ -536,6 +539,8 @@ out_DF$time_units_fitted <- new_time_units
     out_DF$Studies.Analyzed <- studies_analyzed
     out_DF$References.Analyzed <- refs_analyzed
     out_DF$Data.Analyzed <- analysis_type
+
+    out_DF$fit_dose_norm <- fit_dose_norm
 
   #fill in the loglike and AIC with NA s since no fit was done
   out_DF$LogLikelihood <-  NA_real_
@@ -781,6 +786,8 @@ out_DF$time_units_fitted <- new_time_units
     out_DF$Studies.Analyzed <- studies_analyzed
     out_DF$References.Analyzed <- refs_analyzed
     out_DF$Data.Analyzed <- analysis_type
+
+    out_DF$fit_dose_norm <- fit_dose_norm
 
   #Add log-likelihood and AIC values
 
