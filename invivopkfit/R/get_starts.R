@@ -1276,13 +1276,35 @@ assign_start <- function(param_name,
 
   if(!is.null(param_value)){
   if(is.finite(param_value) &
-    (param_value >= lower) %in% TRUE &
-     (param_value <= upper) %in% TRUE &
-     (param_name %in% start_from) %in% TRUE){     #if within bounds and finite, update par_DF
+     (param_name %in% start_from) %in% TRUE){
+    if((param_value >= lower) %in% TRUE &
+     (param_value <= upper) %in% TRUE){     #if within bounds and finite, update par_DF
     par_DF[par_DF$param_name %in% param_name, c("start_value",
                          "start_value_msg")] <- list(param_value,
                                                      msg)
-  } #if outside bounds or not finite, return par_DF unchanged
+     }else if((param_value >= lower) %in% FALSE){
+    #use the lower bound
+       lb <- par_DF[par_DF$param_name %in% param_name, "lower_bound"]
+       par_DF[par_DF$param_name %in% param_name,
+              c("start_value",
+                                                   "start_value_msg")] <- list(lb,
+                                                                               paste("The following estimated a value below the lower bound (",
+                                                                                     signif(param_value,3),
+                                                                               "); the lower bound was substituted. Original message:",
+                                                                                     msg))
+     }else if((param_value <= upper) %in% FALSE){
+    #use the upper bound
+       ub <- par_DF[par_DF$param_name %in% param_name, "upper_bound"]
+       par_DF[par_DF$param_name %in% param_name,
+              c("start_value",
+                "start_value_msg")] <- list(ub,
+                                            paste("The following estimated a value above the upper bound (",
+                                                  signif(param_value,3),
+                                                  "); the upper bound was substituted. Original message:",
+                                                  msg))
+  }
+    #if not finite, return par_DF unchanged
+  }
   }
 
   return(par_DF)
