@@ -436,7 +436,7 @@ plot_fit <- function(DTXSID_in,
         )
       p <- p + facet_wrap(vars(Route, Media, Dose),
                           labeller = "label_both",
-                          scales = "free_y")
+                          scales = "free")
     }
 
     p <- p +
@@ -456,8 +456,15 @@ plot_fit <- function(DTXSID_in,
     ) +
     labs(title = plot_title,
             subtitle = plot_subtitle) +
-    xlab("Time, hr") +
-    ylab("Concentration/Dose") +
+    xlab("Time, hr")
+
+    if(plot_dose_norm %in% TRUE){
+      p <- p + ylab("Concentration/Dose, (mg/kg)/(mg/L)")
+    }else{
+      p <- p + ylab("Concentration, mg/L")
+    }
+
+    p <- p  +
     theme_bw() +
       theme(plot.title = element_text(size = 12),
             strip.background = element_blank())
