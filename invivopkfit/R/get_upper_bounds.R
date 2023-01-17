@@ -162,30 +162,52 @@ get_upper_bounds <- function(fitdata,
       #set an upper bound on sigma equal to the std dev of values in each study
       #on the grounds that it really should not be worse than that
       value_var <- ifelse(fit_conc_dose %in% TRUE, "Value_Dose", "Value")
+      value_sd_var <- ifelse(fit_conc_dose %in% TRUE, "Value_SD_Dose", "Value_SD")
       sigma_names <- grep(x = par_DF$param_name,
                           pattern = "sigma",
                           value = TRUE)
-      if(length(sigma_names) > 1){
+      studies <- unique(fitdata$Study)
+      if(length(sigma_names) > 1){ #if more than one study in this data set
+#calculate each study SD, handling summary data properly
         data_sd <- sapply(studies,
-                          function(x) sd(fitdata[fitdata$Study %in% x,
-                                                 value_var],
-                                         na.rm = TRUE),
+                          function(x) {
+                            foo <- fitdata[fitdata$Study %in% x,
+                                           c(value_var,
+                                             value_sd_var,
+                                             "N_Subjects")]
+                            names(foo) <- c("group_mean",
+                                            "group_sd",
+                                            "group_N")
+                            do.call(combined_sd, args = foo)
+                            },
                           USE.NAMES = TRUE)
+#name the study SDs after the sigmas
         names(data_sd) <- paste0("sigma_study_", names(data_sd))
+        #assign each sigma
         for (sigma_name in names(data_sd)){
           if(is.finite(data_sd[sigma_name])){
             par_DF[par_DF$param_name %in% sigma_name,
                    "upper_bound"] <- data_sd[sigma_name]
             par_DF[par_DF$param_name %in% sigma_name,
                    "upper_bound_msg"] <- paste("SD of", value_var,
-                                               "for this study")
+                                               "for study",
+                                               gsub(x = sigma_name,
+                                                    pattern = "sigma_study_",
+                                                    replacement = ""))
           }
         }
       }else{ #if only one sigma (one study, or all studies pooled)
-        data_sd <- sd(fitdata[[value_var]], na.rm = TRUE)
+        foo <- fitdata[,
+                       c(value_var,
+                         value_sd_var,
+                         "N_Subjects")]
+        names(foo) <- c("group_mean",
+                        "group_sd",
+                        "group_N")
+        data_sd <- do.call(combined_sd, args = foo)
         if(is.finite(data_sd)){
         par_DF[par_DF$param_name %in% "sigma", "upper_bound"] <- data_sd
-        par_DF[par_DF$param_name %in% sigma_name,
+        par_DF[par_DF$param_name %in% "sigma",
                "upper_bound_msg"] <- paste("SD of", value_var,
                                            "for all studies in this data set")
         }
@@ -210,4 +232,117 @@ get_upper_bounds <- function(fitdata,
 
   return(par_DF)
 
+}
+
+#' Combined standard deviation
+#'
+#' Given mean, standard deviation, and N for some set of groups, calculate the
+#' combined standard deviation. Note that the groups may not overlap.
+#'
+#' @param group_mean A numeric vector of group means.
+#' @param group_sd A numeric vector of group SDs.
+#' @param group_N A numeric vector of group sizes.
+#' @param unbiased Logical. If TRUE, then `group_sd` is assumed to be the
+#'   unbiased estimator of population standard deviation (i.e. using `n-1` in
+#'   the denominator -- the way that `stats::sd()` calculates it), and the
+#'   returned combined SD is also the unbiased estimator of the combined
+#'   population SD. If FALSE, then `group_sd` is assumed to be the biased
+#'   estimator (using `n` in the denominator), and the returned value is also
+#'   the biased estimator of the combined population SD.
+#' @na.rm Logical. If TRUE (default), then any groups where mean, SD, *or* N
+#' were NA will be dropped. If FALSE, they will be retained (and the result will
+#' be NA).
+#' @return Numeric: the standard deviation of the combined population (i.e. if
+#'   all the groups were concatenated into one large group).
+#' @author Caroline Ring
+combined_sd <- function(group_mean,
+                       group_sd,
+                       group_N,
+                       unbiased = TRUE,
+                       na.rm = TRUE){
+
+  x_len <- c("group_mean" = length(group_mean),
+             "group_sd" = length(group_sd),
+             "group_N" = length(group_N))
+
+  if(any(x_len %in% 0)){
+    stop(paste0("invivopkfit::combined_sd(): ",
+                "the following arguments have zero length: ",
+                paste(names(x_len)[x_len %in% 0],
+                      collapse = ", ")
+    ))
+  }
+
+  max_len <- max(x_len)
+  which_max_len <- which.max(x_len)
+
+  bad_len <- (x_len < max_len) & (x_len != 1)
+
+
+  if(any(bad_len)){
+    warning(paste("invivopkfit::combined_sd():",
+                  "the following inputs do not have matching lengths: ",
+                  paste(paste0(names(x_len)[bad_len],
+                               " length = ",
+                               x_len[bad_len]),
+                        collapse = "\n"
+                  ),
+                  "\n They will be repeated to match the length of the longest input,",
+                  names(x_len)[which_max_len],
+                  " length = ",
+                  max_len,
+                  "."
+    ))
+  }
+
+  #repeat to match longest
+  for (i in seq_along(x_len)){
+    assign(names(x_len)[i],
+           rep( #repeat the current value of each item to match the length
+             get(names(x_len)[i]), #get the current value of each item
+             length.out = max_len)
+    )
+  }
+
+  #remove NAs if so specified
+  if(na.rm %in% TRUE){
+  which_na <- is.na(group_mean) | is.na(group_sd) | is.na(group_N)
+  group_mean <- group_mean[!which_na]
+  group_sd <- group_sd[!which_na]
+  group_N <- group_N[!which_na]
+  }
+
+  #if all N = 1, then just take regular standard deviation
+  if(all(group_N %in% 1)){
+    grand_sd <- sd(group_mean)
+
+    grand_N <- sum(group_N)
+    if(unbiased %in% FALSE){
+      #convert unbiased SD to biased SD
+      grand_sd <- grand_sd * sqrt((grand_N-1)/grand_N)
+    }
+  }else{ #if not all N = 1
+  if(unbiased %in% TRUE){
+    #convert unbiased group SDs to biased group SDs
+    group_sd <- group_sd *
+      sqrt((group_N[which_na]-1)/group_N)
+  }
+
+  grand_mean <- sum(group_N*group_mean)/sum(group_N)
+
+  grand_var <- (sum(group_N*group_sd^2) +
+      sum(group_N*(group_mean - grand_mean)^2))/
+    (sum(group_N))
+
+  grand_sd <- sqrt(grand_var) #biased
+
+
+  if(unbiased %in% TRUE){
+    grand_N <- sum(group_N)
+    #convert biased grand SD to unbiased grand SD
+grand_sd <- grand_sd * sqrt(grand_N/(grand_N - 1))
+  }
+  }
+
+  return(grand_sd)
 }
