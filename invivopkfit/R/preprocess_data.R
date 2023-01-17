@@ -490,6 +490,8 @@ preprocess_data <- function(data.set,
     data.set[is.na(data.set$N_Subjects), "N_Subjects"] <- 1
   }
 
+  #for anything with N_Subjects == 1, set Value_SD to 0
+  data.set[data.set$N_Subjects == 1, "Value_SD"] <- 0
 
   #convert time from hours to days
 
