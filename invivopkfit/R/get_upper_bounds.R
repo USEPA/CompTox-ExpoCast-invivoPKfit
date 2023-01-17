@@ -182,7 +182,7 @@ get_upper_bounds <- function(fitdata,
                             },
                           USE.NAMES = TRUE)
 #name the study SDs after the sigmas
-        names(data_sd) <- paste0("sigma_study_", names(data_sd))
+        names(data_sd) <- paste0("sigma_study_", studies)
         #assign each sigma
         for (sigma_name in names(data_sd)){
           if(is.finite(data_sd[sigma_name])){
