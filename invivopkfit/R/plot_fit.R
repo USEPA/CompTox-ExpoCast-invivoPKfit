@@ -72,6 +72,7 @@ plot_fit <- function(DTXSID_in,
                      log10_scale_y = FALSE,
                      plot_errbars = TRUE,
                      log10_scale_time = FALSE,
+                     jitter_nondetect = 0.1,
                      save_plot = TRUE,
                      return_plot = FALSE,
                      file_path = "inst/ext/plots/",
@@ -380,19 +381,43 @@ plot_fit <- function(DTXSID_in,
     if(split_dose %in% FALSE){
       #concentration-dose observation points:
       #shape mapped to Reference, color to Dose, fill yes/no to Detect
-      #first plot points with white fill
-      p <- p + geom_point(aes(shape = Reference,
+      #first plot detected points with white fill
+      p <- p +
+        geom_point(data = DFsub[Detect %in% "Detect"],
+                   aes(shape = Reference,
                               color = Dose),
                           fill = "white",
                           size = 4,
                           stroke = 1.5) +
-        #then plot points with fill, but alpha mapped to Detect
-        geom_point(aes(shape = Reference,
+        #then plot detected points with fill, but alpha mapped to Detect
+        geom_point(data = DFsub[Detect %in% "Detect"],
+                   aes(shape = Reference,
                        color = Dose,
                        fill = Dose,
                        alpha = Detect),
                    size = 4,
                    stroke = 1.5) +
+        #then plot non-detect points with white fill,
+        #and position jittered
+        geom_jitter(data = DFsub[Detect %in% "Non-Detect"],
+                    aes(shape = Reference,
+                        color = Dose),
+                    fill = "white",
+                    size = 4,
+                    stroke = 1.5,
+                    width = jitter_nondetect,
+                    height = jitter_nondetect) +
+        #then plot non-detect points with fill, but alpha mapped to Detect
+        #and position jittered
+        geom_jitter(data = DFsub[Detect %in% "Non-Detect"],
+                   aes(shape = Reference,
+                       color = Dose,
+                       fill = Dose,
+                       alpha = Detect),
+                   size = 4,
+                   stroke = 1.5,
+                   width = jitter_nondetect,
+                   height = jitter_nondetect) +
         #plot lines for model predictions
         geom_line(data = predsub,
                   aes(linetype = model,
