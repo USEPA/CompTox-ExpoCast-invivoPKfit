@@ -206,7 +206,8 @@ analyze_subset <- function(fitdata,
   if(!suppress.messages){
     message(paste0("Beginning ",
                    tolower(analysis_type),
-    "for:\n",
+    " for:\n",
+    "model = ", model, "\n",
                   this.dtxsid, " ", unique(fitdata$Compound), "\n",
                    "Species = ", this.species, "\n",
                   "Reference IDs = ",
@@ -506,7 +507,7 @@ out_DF$time_units_fitted <- new_time_units
           modelfun = modelfun,
           model = model,
           fit_conc_dose = fit_conc_dose,
-          force_finite = TRUE,
+          force_finite = (optimx_args$method %in% "L-BFGS-B"),
           negative = TRUE
         ) #end list()
       ) #end args = c()
@@ -600,7 +601,7 @@ out_DF$time_units_fitted <- new_time_units
                         modelfun = modelfun,
                         model = model,
                    fit_conc_dose = fit_conc_dose,
-                        force_finite = TRUE,
+                        force_finite = (optimx_args$method %in% "L-BFGS-B"),
                    negative = TRUE)
   },
   x = means,
@@ -703,7 +704,7 @@ out_DF$time_units_fitted <- new_time_units
                                  modelfun = modelfun,
                                  model = model,
                                  fit_conc_dose = fit_conc_dose,
-                                 force_finite = TRUE,
+                                 force_finite = (optimx_args$method %in% "L-BFGS-B"),
                                  negative = TRUE
                                )
                              )
@@ -732,7 +733,7 @@ out_DF$time_units_fitted <- new_time_units
                           modelfun = modelfun,
                           model = model,
                      fit_conc_dose = fit_conc_dose,
-                          force_finite = TRUE,
+                          force_finite = (optimx_args$method %in% "L-BFGS-B"),
                      negative = TRUE)
     },
     x = means,
