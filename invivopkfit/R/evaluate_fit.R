@@ -25,88 +25,155 @@ evaluate_fit <- function(cvt_pre,
                          fit_1comp,
                          fit_2comp,
                          fit_conc_dose = TRUE,
+                         fit_log_conc = FALSE,
                          optimx_args = list(
                            "method" = "bobyqa",
                            "itnmax" = 1e6,
                            "control" = list("kkt" = FALSE)
                          )){
 
+  #How well do we predict:
+  #tpeak?
+  #Cpeak? Dose-normalized or not?
+  #AUC at the last timepoint? Dose-normalized or not?
+  #AUC infinity? Dose-normalized or not?
+  #Average concentration? Dose-normalized or not?
+
+  #Should we evaluate these per chemical/species, per
+  #chemical/species/route/media, per chemical/species/route/media/dose? All of the above?
+
+#Calculate RMSE, R-squared of obs vs pred,
+  #and heteroscedasticity of residuals
+
+#First: calculate residuals
+
+#Get predicted concentrations & AUCs
  pred_DT <- get_all_predictions(cvt_pre =cvt_pre,
                                fit_flat = fit_flat,
                                fit_1comp = fit_1comp,
                                fit_2comp = fit_2comp,
                                fit_conc_dose = fit_conc_dose,
                                optimx_args = optimx_args)
+#Calculate residuals, RMSE, Rsquared, and Breusch-Pagan p-value for
+#heteroscedasticity
+ if(fit_conc_dose %in% TRUE){
+   if(fit_log_conc %in% TRUE){
+     pred_DT[, resid := log(Conc_Dose) - log(pred_conc/Dose)]
+     pred_DT[, log_Conc_Dose := log(Conc_Dose)]
+     resid_DT <- pred_DT[, .(RMSE = calc_rmse(group_mean = Conc_Dose,
+                                              group_sd = Conc_SD_Dose,
+                                              group_N = N_Subjects,
+                                              group_LOQ = LOQ_Dose,
+                                              group_pred = pred_conc/Dose,
+                                              log = TRUE),
+                             rsq = calc_rsq(group_mean = Conc_Dose,
+                                            group_sd = Conc_SD_Dose,
+                                            group_N = N_Subjects,
+                                            group_LOQ = LOQ_Dose,
+                                            group_pred = pred_conc/Dose,
+                                            log = TRUE),
+                             BP_pval = bp_test(varformula = resid^2 ~ log_Conc_Dose,
+                                               data = .SD)$p.value
+     ),
+     by = .(DTXSID, Species,
+            Analysis_Type, Studies.Analyzed,
+            model)]
+   }else{ #if fit_conc_dose %in% TRUE & fit_log_conc %in% FALSE
+     pred_DT[, resid := Conc_Dose - pred_conc/Dose]
+     resid_DT <- pred_DT[, .(RMSE = calc_rmse(group_mean = Conc_Dose,
+                                              group_sd = Conc_SD_Dose,
+                                              group_N = N_Subjects,
+                                              group_LOQ = LOQ_Dose,
+                                              group_pred = pred_conc/Dose,
+                                              log = FALSE),
+                             rsq = calc_rsq(group_mean = Conc_Dose,
+                                            group_sd = Conc_SD_Dose,
+                                            group_N = N_Subjects,
+                                            group_LOQ = LOQ_Dose,
+                                            group_pred = pred_conc/Dose,
+                                            log = FALSE),
+                             BP_pval = bp_test(varformula = resid^2 ~ Conc_Dose,
+                                               data = .SD)$p.value
+                             ),
+                         by = .(DTXSID, Species,
+                                Analysis_Type, Studies.Analyzed,
+                                model)]
+   }
+ }else{ #if fit_conc_dose %in% FALSE
+   if(fit_log_conc %in% TRUE){
+     pred_DT[, resid := log(Conc) - log(pred_conc)]
+     pred_DT[, log_Conc := log(Conc)]
+     resid_DT <- pred_DT[, .(RMSE = calc_rmse(group_mean = Conc,
+                                              group_sd = Conc_SD,
+                                              group_N = N_Subjects,
+                                              group_LOQ = LOQ,
+                                              group_pred = pred_conc,
+                                              log = TRUE),
+                             rsq = calc_rsq(group_mean = Conc,
+                                            group_sd = Conc_SD,
+                                            group_N = N_Subjects,
+                                            group_LOQ = LOQ,
+                                            group_pred = pred_conc,
+                                            log = TRUE),
+                             BP_pval = bp_test(varformula = resid^2 ~ log_Conc,
+                                               data = .SD)$p.value
+     ),
+     by = .(DTXSID, Species,
+            Analysis_Type, Studies.Analyzed,
+            model)]
+   }else{ #if fit_conc_dose %in% FALSE & fit_log_conc %in% FALSE
+     pred_DT[, resid := Conc - pred_conc]
+     resid_DT <- pred_DT[, .(RMSE = calc_rmse(group_mean = Conc,
+                                              group_sd = Conc_SD,
+                                              group_N = N_Subjects,
+                                              group_LOQ = LOQ,
+                                              group_pred = pred_conc,
+                                              log = FALSE),
+                             rsq = calc_rsq(group_mean = Conc,
+                                            group_sd = Conc_SD,
+                                            group_N = N_Subjects,
+                                            group_LOQ = LOQ,
+                                            group_pred = pred_conc,
+                                            log = FALSE),
+                             BP_pval = bp_test(varformula = resid^2 ~ Conc,
+                                               data = .SD)$p.value
+                             ),
+                         by = .(DTXSID, Species,
+                                Analysis_Type, Studies.Analyzed,
+                                model)]
+   }
+ }
 
- pred_DT[, resid := Conc - pred_conc]
- pred_DT[, resid_Dose := Conc_Dose - pred_conc/Dose]
 
- #calculate RMSE and R-squared by dataset, analysis, and model
-rmse_rsq <- pred_DT[Dose > 0, .(RMSE = calc_rmse(group_mean = Conc,
-                              group_sd = Conc_SD,
-                              group_N = N_Subjects,
-                              group_LOQ = LOQ,
-                             group_pred = pred_conc),
-            rsq = calc_rsq(group_mean = Conc,
-                           group_sd = Conc_SD,
-                           group_N = N_Subjects,
-                           group_LOQ = LOQ,
-                           group_pred = pred_conc),
-            RMSE_Dose = calc_rmse(group_mean = Conc_Dose,
-                                  group_sd = Conc_SD_Dose,
-                                  group_N = N_Subjects,
-                                  group_LOQ = LOQ_Dose,
-                                  group_pred = pred_conc/Dose),
-            rsq_Dose = calc_rsq(group_mean = Conc_Dose,
-                                  group_sd = Conc_SD_Dose,
-                                  group_N = N_Subjects,
-                                  group_LOQ = LOQ_Dose,
-                                  group_pred = pred_conc/Dose)),
-        by = .(DTXSID, Species, Analysis_Type, Studies.Analyzed, model)]
-
+#merge together all tables of fitted parameters
  pk_fit <- merge_fits(fit_flat = fit_flat,
                       fit_1comp = fit_1comp,
                       fit_2comp = fit_2comp)
 
- #Enumerate combinations of chemical, species, analysis type, studies analyzed,
- #and model
- fit_all <- rbindlist(list("flat" = unique(fit_flat[, .(DTXSID,
-                                                        Species,
-                                                        Analysis_Type,
-                                                        Studies.Analyzed,
-                                                        model)]),
-                           "1compartment" = unique(fit_1comp[, .(DTXSID,
-                                                                 Species,
-                                                                 Analysis_Type,
-                                                                 Studies.Analyzed,
-                                                                 model)]),
-                           "2compartment" = unique(fit_2comp[, .(DTXSID,
-                                                                 Species,
-                                                                 Analysis_Type,
-                                                                 Studies.Analyzed,
-                                                                 model)])
- ),
- use.names = TRUE,
- fill = TRUE,
- idcol = "fit_model")
+ #How big are "overall" error SDs?
 
- fit_combs <- unique(fit_all[, .(DTXSID,
+ #Get overall error SDs (pseudo-RMSE?) for various analysis types & models.
+ #This is the best-fit standard deviation for the log-likelihood, evaluated
+ #holding the PK model parameters constant.
+
+ #Enumerate combinations of chemical, species, analysis type, studies analyzed
+ fit_combs <- unique(fit_flat[, .(DTXSID,
                                  Species,
                                  Analysis_Type,
-                                 Studies.Analyzed,
-                                 model)])
+                                 Studies.Analyzed)])
+#add models to the table
+ fit_combs <- fit_combs[, .(model = c("flat",
+                                      "1compartment",
+                                      "2compartment")),
+                        by = names(fit_combs)]
+
  setnames(fit_combs,
           names(fit_combs),
           paste(names(fit_combs),
                 "in",
                 sep = "_"))
 
-  #How big are "overall" error SDs?
-
-  #Get overall error SDs (pseudo-RMSE?) for various analysis types & models.
-  #This is the best-fit standard deviation for the log-likelihood, evaluated
-  #holding the PK model parameters constant.
-  error_sd <- fit_combs[, {
+  error_sd_DT <- fit_combs[, {
     studies_list <- strsplit(Studies.Analyzed_in,
                              split = ", ")[[1]]
     #get data.table of newdata to be predicted
@@ -134,18 +201,53 @@ rmse_rsq <- pred_DT[Dose > 0, .(RMSE = calc_rmse(group_mean = Conc,
          Studies.Analyzed_in,
          model_in)]
 
+  #remove the "_in" from variable names
+  setnames(error_sd_DT,
+           names(error_sd_DT),
+           gsub(x = names(error_sd_DT),
+                pattern = "_in",
+                replacement = ""))
 
 
-  #How well do we predict:
-  #tpeak?
-  #Cpeak? Dose-normalized or not?
-  #AUC at the last timepoint? Dose-normalized or not?
-  #AUC infinity? Dose-normalized or not?
-  #Average concentration? Dose-normalized or not?
+#merge together the diagnostics
+  eval_DT <- merge(resid_DT, error_sd_DT,
+                   by = c("DTXSID",
+                          "Species",
+                          "Analysis_Type",
+                          "Studies.Analyzed",
+                          "model"))
 
-  #Should we evaluate these per chemical/species, per
-  #chemical/species/route/media, per chemical/species/route/media/dose? All of the above?
+return(eval_DT)
 
+}
 
+#' Breusch-Pagan test of heteroscedasticity
+#' Evaluate heteroscedasticity using Breusch-Pagan test
+#' The Breusch-Pagan test performs a linear regression of squared residuals on one or more explanatory variables. The test statistic is formed by the R-squared value of this regression multiplied by the number of residuals. This test statistic obeys a chi-squared distribution with S-1 degrees of freedom, where S is the number of explanatory terms (plus an intercept). The p-value of the test is given accordingly.
+#'
+#' @param varformula A formula for the variance linear model. The left-hand side of this formula must be the squared residuals.
+#' @param data A `data.frame` containing all variables referenced in `varformula`.
+#' @return A list with the following elements:
+#' - `statistic` : The test statistic
+#' - `p.value`: The p-value of the test
+#' - `r.squared`: The R-squared of the linear regression described in `varformula`
+#' - `n`: The number of observations
+#' - `df`: The chi-squared degrees of freedom
+#' @author Caroline Ring
+#' @references https://rpubs.com/cyobero/187387
 
+bp_test <- function(varformula, data){
+  bp_lm <- lm(formula = varformula,
+              data = data)
+  bp_rsq <- summary(bp_lm)$r.squared
+  n_obs <- nrow(data)
+  qval <- bp_rsq * n_obs
+  #critical value
+  n_xvar <- length(labels(terms(varformula))) + 1
+  pval <- pchisq(q = qval, df = n_xvar - 1)
+  return(list(statistic = qval,
+              p.value = pval,
+              r.squared = bp_rsq,
+              n = n_obs,
+              df = n_xvar - 1))
 }
