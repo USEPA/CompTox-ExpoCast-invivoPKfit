@@ -9,11 +9,11 @@ get_lower_bounds(
   par_DF = NULL,
   model,
   pool_sigma = FALSE,
-  lower_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
-    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), lower_bound = c(1e-12,
-    1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04),
+  lower_default = data.frame(param_name = c("kelim", "Vdist", "kgutabs", "Fgutabs", "V1",
+    "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "Rblood2plasma", "sigma"), lower_bound =
+    c(1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-08),
     lower_bound_msg = "Default"),
-  Vdist_from_species = TRUE,
+  Vdist_from_species = FALSE,
   suppress.messages = FALSE
 )
 }
@@ -34,8 +34,8 @@ Ignored if `par_DF` is provided.}
 
 \item{pool_sigma}{Logical: Whether to pool all data (estimate only one error
 standard deviation) or not (estimate separate error standard deviations for
-each reference). Default `FALSE` to estimate separate error SDs for each
-reference. (If `fitdata` only includes one reference, `pool_sigma` will
+each study). Default `FALSE` to estimate separate error SDs for each
+study. (If `fitdata` only includes one study, `pool_sigma` will
 have no effect.) Ignored if `par_DF` is provided.}
 
 \item{lower_default}{A `data.frame` with three variables: `param_name`,
@@ -63,7 +63,6 @@ The default `lower_default` `data.frame` is shown below in table format:
 
 | param_name     | lower_bound | lower_bound_msg |
 | ---------------| ----------- | --------------- |
-| A              | 1e-12           | Default         |
 | kelim          | 1e-4        | Default         |
 | Vdist          | 1e-4        | Default         |
 | kgutabs        | 1e-4        | Default         |
@@ -73,7 +72,7 @@ The default `lower_default` `data.frame` is shown below in table format:
 | k21            | 1e-4         | Default         |
 | Fgutabs_Vdist  | 1e-4    | Default         |
 | Fgutabs_V1     | 1e-4    | Default         |
-| sigma          | 1e-4         | Default         |
+| sigma          | 1e-8         | Default         |
 
 If `Vdist_from_species == TRUE`, then this function will set a lower bound
 for `Vdist` or `V1` equal to 1/10 of the physiological plasma volume for the

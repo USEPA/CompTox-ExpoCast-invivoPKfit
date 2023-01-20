@@ -9,10 +9,13 @@ get_upper_bounds(
   par_DF = NULL,
   model,
   pool_sigma = FALSE,
-  upper_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
-    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), upper_bound = c(Inf,
-    Inf, Inf, Inf, 1, Inf, Inf, Inf, 10000, 10000, Inf), upper_bound_msg = "Default"),
-  Fgutabs_Vdist_from_species = TRUE,
+  upper_default = data.frame(param_name = c("kelim", "Vdist", "kgutabs", "Fgutabs", "V1",
+    "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "Rblood2plasma", "sigma"), upper_bound =
+    c(Inf, Inf, Inf, 1, Inf, Inf, Inf, 10000, 10000, Inf, Inf), upper_bound_msg =
+    "Default"),
+  Fgutabs_Vdist_from_species = FALSE,
+  sigma_from_data = TRUE,
+  fit_conc_dose = TRUE,
   suppress.messages = FALSE
 )
 }
@@ -65,7 +68,6 @@ The default `upper_default` `data.frame` is shown below in table format:
 
 | param_name     | upper_bound | upper_bound_msg |
 | ---------------| ----------- | --------------- |
-| A              | Inf           | Default         |
 | kelim          | Inf        | Default         |
 | Vdist          | Inf        | Default         |
 | kgutabs        | Inf        | Default         |

@@ -4,25 +4,29 @@
 \alias{cp_2comp}
 \title{Analytical 2-compartment model}
 \usage{
-cp_2comp(params, time, dose, iv.dose)
+cp_2comp(params, time, dose, iv.dose, medium = "plasma")
 }
 \arguments{
 \item{params}{A named list of parameter values. See Details for requirements.}
 
 \item{time}{A numeric vector of times in hours, reflecting the time points
 when concentration is measured after the corresponding single bolus dose.
-Must be same length as `dose` and `iv.dose`, or length 1.}
+Must be same length as other arguments, or length 1.}
 
 \item{dose}{A numeric vector of doses in mg/kg, reflecting single bolus doses
-administered at time 0. Must be same length as `time` and `iv.dose`, or
+administered at time 0. Must be same length as other arguments, or
 length 1.}
 
 \item{iv.dose}{A logical vector, reflecting the route of administration of
 each single bolus dose. TRUE for single IV bolus dose; FALSE for single oral
-bolus dose. Must be same length as `time` and `dose`, or length 1.}
+bolus dose. Must be same length as other arguments, or length 1.}
+
+\item{medium}{A character vector reflecting the medium in which each resulting
+concentration is to be calculated: "blood" or "plasma". Default is "plasma".
+Must be same length as other arguments, or length 1.}
 }
 \value{
-A vector of plasma concentration values (mg/L) corresponding to each
+A vector of blood or plasma concentration values (mg/L) corresponding to each
  value in \code{time}
 }
 \description{
@@ -61,6 +65,10 @@ and some `iv.dose == FALSE`), then `V1` is required along with either
 `Fgutabs` or `Fgutabs_V1`. (If `V1` and `Fgutabs_V1` are provided, but
 `Fgutabs` is not provided, then `Fgutabs` will be calculated from `V1` and
 `Fgutabs_V1`.)
+
+#'If `any(medium %in% 'blood')`, then `params` must also include
+`Rblood2plasma`, the ratio of chemical concentration in whole blood to the
+chemical concentration in blood plasma.
 }
 \author{
 Caroline Ring, John Wambaugh

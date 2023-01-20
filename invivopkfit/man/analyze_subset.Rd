@@ -9,9 +9,11 @@ analyze_subset(
   model,
   modelfun,
   pool_sigma = FALSE,
-  get_starts_args = NULL,
-  get_lower_args = NULL,
-  get_upper_args = NULL,
+  fit_conc_dose = TRUE,
+  rescale_time = TRUE,
+  get_starts_args = list(start_from_httk = "all", start_from_data = "all"),
+  get_lower_args = list(Vdist_from_species = FALSE),
+  get_upper_args = list(Fgutabs_Vdist_from_species = FALSE, sigma_from_data = TRUE),
   optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(kkt = FALSE)),
   suppress.messages = FALSE
 )
@@ -25,33 +27,38 @@ time data to be fitted. See Details for expected variables. See also
 only "flat", "1compartment", and "2compartment" are implemented.}
 
 \item{modelfun}{Either "analytic" or "full" -- whether to fit using the
-analytic solution to the model, or the full ODE model. Presently,
-"analytic" is recommended (because the analytic solution is exact and much
-faster). For `modelfun = 'full'`, only `model = '1compartment'` is
-supported.}
+analytic solution to the model, or the full ODE model. Presently, "analytic"
+is recommended (because the analytic solution is exact and much faster). For
+`modelfun = 'full'`, only `model = '1compartment'` is supported.}
 
 \item{pool_sigma}{Logical: Whether to pool all data (estimate only one error
 standard deviation) or not (estimate separate error standard deviations for
-each reference). Default FALSE to estimate separate error SDs for each
-reference. (If `fitdata` only includes one reference, `pool_sigma` will
-have no effect, because only one error SD would be estimated in the first
-place.)}
+each study). Default FALSE to estimate separate error SDs for each study.
+(If `fitdata` only includes one study, `pool_sigma` will have no effect,
+because only one error SD would be estimated in the first place.)}
+
+\item{fit_conc_dose}{Logical: Whether to fit dose-normalized concentrations
+(TRUE) or non-dose-normalized concentrations (FALSE). Default TRUE.}
+
+\item{rescale_time}{Logical: Whether to rescale time to make scale of time
+constants better-behaved. If TRUE, then if maximum time is more than 72
+hours, time will be converted to days before fitting; if maximum time is
+more than 1440 hours, time will be converted to months before fitting.}
 
 \item{get_starts_args}{Any additional arguments to [get_starts()] (other than
 `model` and `fitdata`, which are always passed). Default NULL to accept the
 default arguments for [get_starts()].}
 
 \item{get_lower_args}{Any additional arguments to [get_lower_bounds()] (other
-than `model` and `fitdata`, which are always passed). Default NULL to
-accept the default arguments for [get_lower_bounds()].}
+than `model` and `fitdata`, which are always passed). Default NULL to accept
+the default arguments for [get_lower_bounds()].}
 
 \item{get_upper_args}{Any additional arguments to [get_upper_bounds()] (other
-than `model` and `fitdata`, which are always passed). Default NULL to
-accept the default arguments for [get_upper_bounds()].}
+than `model` and `fitdata`, which are always passed). Default NULL to accept
+the default arguments for [get_upper_bounds()].}
 
-\item{optimx_args}{A named list of additional arguments to
-  [optimx::optimx()], other than `par`, `fn`, `lower`, and `upper`. Default
-  is:
+\item{optimx_args}{A named list of additional arguments to [optimx::optimx()],
+ other than `par`, `fn`, `lower`, and `upper`. Default is:
 
    ```
     list(
@@ -59,10 +66,13 @@ accept the default arguments for [get_upper_bounds()].}
           "itnmax" = 1e6,
          "control" = list("kkt" = FALSE))
    ```
-  See documentation for [optimx::optimx()] for arguments and details. Note
-  lower and upper bounds (box constraints) will be supplied; if you want them
-  to be respected, please choose a method that allows box constraints (e.g.
-  "bobyqa" or "L-BFGS-B").}
+ Briefly:  `"method"` allows you to select an optimization algorithm.
+ `"itnmax"` controls the maximum number of iterations allowed in an attempt
+ to optimize. `"control"` is itself a named list of control parameters
+ relevant to the selected method. See documentation for [optimx::optimx()]
+ for more details and more options. Note lower and upper bounds (box
+ constraints) will be supplied; if you want them to be respected, please
+ choose a method that allows box constraints (e.g. "bobyqa" or "L-BFGS-B").}
 }
 \value{
 A `data.frame` of model-fitting results.
@@ -72,16 +82,16 @@ Fit a specified PK model to one set of concentration vs. time data and return
 a set of fitted parameter values.
 }
 \details{
-Typically this function is not called directly by the user, but is called
-from [fit_all()], the main fitting function.
+Typically this function is not called directly by the user, but is called from
+[fit_all()], the main fitting function.
 
 This function estimates one set of parameters for a specified PK model, based
 on a set of concentration vs. time data in `fitdata`. `fitdata` is typically
 data for one chemical and one species, but it may include data from more than
 one study and more than one dosing route.
 
-The parameters to be estimated are those defined in [get_opt_params()] for
-the model specified in `model` and `modelfun`:
+The parameters to be estimated are those defined in [get_opt_params()] for the
+model specified in `model` and `modelfun`:
 
  - for `model = 'flat'`, the parameter estimated is `A`
  - for `model = '1compartment'`, the parameters estimated are `Vdist`,
@@ -90,33 +100,32 @@ the model specified in `model` and `modelfun`:
 `k12`, `k21`, and possibly `kgutabs` and `Fgutabs` or `Fgutabs_Vdist`.
 
 For 1-compartment and 2-compartment models, `kgutabs` will be estimated from
-the data only if `fitdata` includes oral dosing data; otherwise it will be
-set to NA.
+the data only if `fitdata` includes oral dosing data; otherwise it will be set
+to NA.
 
-`Fgutabs` will be estimated from the data only if `fitdata` includes both
-oral and IV data. If `fitdata` includes oral data but not IV data, then
+`Fgutabs` will be estimated from the data only if `fitdata` includes both oral
+and IV data. If `fitdata` includes oral data but not IV data, then
 `Fgutabs_Vdist` (1-compartment) or `Fgutabs_V1` (2-compartment) will be
 estimated instead of `Fgutabs` and `Vdist` or `V1` (because only the ratio of
 `Fgutabs` and `Vdist` is identifiable in that case).
 
 In addition to the model parameters, the standard deviation of the residual
-errors will be estimated. If `fitdata` includes more than one unique
-reference value (`length(unique(fitdata$Reference))>1`) and `pool_sigma ==
-FALSE`, then a separate error SD will be estimated for each unique reference.
-These error SDs will be named following the pattern `sigma_ref_ReferenceID`,
-where `ReferenceID` is one unique value of `fitdata$Reference`, coerced to
-character if necessary. This reflects an assumption that all concentration
-vs. time studies in `fitdata` obey the same underlying PK model, but each
-study may have a different amount of random measurement error (analogous to
-meta-regression with fixed effects).
+errors will be estimated. If `fitdata` includes more than one unique study
+value (`length(unique(fitdata$Study))>1`) and `pool_sigma == FALSE`, then a
+separate error SD will be estimated for each unique study. These error SDs
+will be named following the pattern `sigma_study_StudyID`, where `StudyID` is
+one unique value of `fitdata$Study`, coerced to character if necessary. This
+reflects an assumption that all concentration vs. time studies in `fitdata`
+obey the same underlying PK model, but each study may have a different amount
+of random measurement error (analogous to meta-regression with fixed effects).
 
 # Parameter estimation via numerical optimization
 
 Parameters are estimated using [optimx::optimx()].
 
-The objective function to be minimized is the negative log-likelihood,
-defined in [log_likelihood()] with argument `negative = TRUE`. See
-documentation for [log_likelihood()] for details.
+The objective function to be minimized is the negative log-likelihood, defined
+in [log_likelihood()] with argument `negative = TRUE`. See documentation for
+[log_likelihood()] for details.
 
 Parameter starting values are set in [get_starts()]. Parameter lower bounds
 are set in [get_lower_bounds()]. Parameter upper bounds are set in
@@ -128,9 +137,9 @@ By default, optimization is performed using the "bobyqa" method (see
 
 Because parameter bounds are used, `optimx_args$method` should name a method
 supported in [optimx::optimx()] that supports parameter bounds (i.e., one of
-"bobyqa", "L-BFGS-B", "nlminb", "spg", "Rcgmin", "Rvmmin", "nmkb", "hjkb").
-If a different method is specified, then parameter bounds will be ignored,
-and resulting parameter estimates may be non-physical.
+"bobyqa", "L-BFGS-B", "nlminb", "spg", "Rcgmin", "Rvmmin", "nmkb", "hjkb"). If
+a different method is specified, then parameter bounds will be ignored, and
+resulting parameter estimates may be non-physical.
 
 The objective function gradient is estimated numerically.
 
@@ -150,9 +159,9 @@ attempted.
 If the square root of the inverse Hessian contains NaN, then if
 `optimx_args$method %in% 'L-BFGS-B'`, optimization is repeated with a smaller
 convergence tolerance, until either there are no more NaNs or convergence
-tolerance factor is equal to 1 (i.e. tolerance is at machine epsilon). This
-is not done if `optimx_args$method %in% 'bobyqa'` because that method does
-not use a convergence tolerance control parameter.
+tolerance factor is equal to 1 (i.e. tolerance is at machine epsilon). This is
+not done if `optimx_args$method %in% 'bobyqa'` because that method does not
+use a convergence tolerance control parameter.
 
 # Expected variables in \code{fitdata}
 
@@ -164,8 +173,8 @@ only one unique value in this column; if there are multiple values, it will
 stop with an error.} \item{\code{Species}}{String identifying the species
 being dosed. This function expects only one unique value in this column; if
 there are multiple values, it will stop with an error.}
-\item{\code{Reference}}{String identifying the reference or study for each
-data point. Each reference is assumed to have its own residual error standard
+\item{\code{Study}}{String identifying the study or study for each
+data point. Each study is assumed to have its own residual error standard
 deviation.} }
 }
 \author{

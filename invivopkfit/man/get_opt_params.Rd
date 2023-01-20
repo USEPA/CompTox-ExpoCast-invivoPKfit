@@ -17,9 +17,11 @@ get_opt_params(
 
 \item{fitdata}{`data.frame`: The set of concentration-dose-time data to be
 used to fit the model parameters, for example as produced by
-[preprocess_data()]. Requires a variable named "Route" which contains the
-dosing route, either "po" (oral dosing) or "iv" (intravenous dosing), and a
-variable named "Reference" which contains reference identifiers.}
+[preprocess_data()]. Requires a variable named `Route` which contains the
+dosing route, either "po" (oral dosing) or "iv" (intravenous dosing); a
+variable named `Media` which contains the medium in which concentration
+was measured (either "blood" or "plasma"), and a variable named `Study`
+which contains reference identifiers.}
 
 \item{param_names}{Optional: A character vector of parameter names needed by
 the model. Default NULL to automatically determine these from `model` by

@@ -9,10 +9,11 @@ get_starts(
   model,
   fitdata,
   pool_sigma = FALSE,
-  starts_default = data.frame(param_name = c("A", "kelim", "Vdist", "kgutabs", "Fgutabs",
-    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "sigma"), start_value = c(1, 0.25,
-    5.56, 2.19, 0.5, 5.56, 0.2, 0.5, 0.5/5.56, 0.51/5.56, 1), start_value_msg =
-    "Default"),
+  fit_conc_dose = TRUE,
+  starts_default = data.frame(param_name = c("kelim", "Vdist", "kgutabs", "Fgutabs",
+    "V1", "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "Rblood2plasma", "sigma"),
+    start_value = c(0.25, 5.56, 2.19, 0.5, 5.56, 0.2, 0.5, 0.5/5.56, 0.51/5.56, 1, 1),
+    start_value_msg = "Default"),
   start_from_httk = "all",
   start_from_data = "all",
   suppress.messages = FALSE
@@ -88,7 +89,6 @@ The default `starts_default` `data.frame` is shown below in table format:
 
 | param_name     | start_value | start_value_msg |
 | ---------------| ----------- | --------------- |
-| A              | 1           | Default         |
 | kelim          | 0.25        | Default         |
 | Vdist          | 5.56        | Default         |
 | kgutabs        | 2.19        | Default         |

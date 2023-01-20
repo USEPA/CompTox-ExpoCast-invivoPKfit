@@ -87,6 +87,7 @@ get_upper_bounds <- function(fitdata,
                              Fgutabs_Vdist_from_species = FALSE,
                              sigma_from_data = TRUE,
                              fit_conc_dose = TRUE,
+                             fit_log_conc = FALSE,
                              suppress.messages = FALSE){
 
   if(is.null(par_DF)){
@@ -171,14 +172,17 @@ get_upper_bounds <- function(fitdata,
 #calculate each study SD, handling summary data properly
         data_sd <- sapply(studies,
                           function(x) {
-                            foo <- fitdata[fitdata$Study %in% x,
+                            foo <- as.list(fitdata[fitdata$Study %in% x,
                                            c(value_var,
                                              value_sd_var,
-                                             "N_Subjects")]
+                                             "N_Subjects")])
                             names(foo) <- c("group_mean",
                                             "group_sd",
                                             "group_N")
-                            do.call(combined_sd, args = foo)
+                            do.call(combined_sd, args = c(foo,
+                                                          list("log" = fit_log_conc)
+                                                          )
+                                    )
                             },
                           USE.NAMES = TRUE)
 #name the study SDs after the sigmas
@@ -197,14 +201,18 @@ get_upper_bounds <- function(fitdata,
           }
         }
       }else{ #if only one sigma (one study, or all studies pooled)
-        foo <- fitdata[,
+        foo <- as.list(fitdata[,
                        c(value_var,
                          value_sd_var,
-                         "N_Subjects")]
+                         "N_Subjects")])
         names(foo) <- c("group_mean",
                         "group_sd",
                         "group_N")
-        data_sd <- do.call(combined_sd, args = foo)
+        data_sd <- do.call(combined_sd,
+                           args = c(foo,
+                                    list("log" = fit_log_conc)
+                           )
+        )
         if(is.finite(data_sd)){
         par_DF[par_DF$param_name %in% "sigma", "upper_bound"] <- data_sd
         par_DF[par_DF$param_name %in% "sigma",
@@ -249,7 +257,7 @@ get_upper_bounds <- function(fitdata,
 #'   population SD. If FALSE, then `group_sd` is assumed to be the biased
 #'   estimator (using `n` in the denominator), and the returned value is also
 #'   the biased estimator of the combined population SD.
-#' @na.rm Logical. If TRUE (default), then any groups where mean, SD, *or* N
+#' @param na.rm Logical. If TRUE (default), then any groups where mean, SD, *or* N
 #' were NA will be dropped. If FALSE, they will be retained (and the result will
 #' be NA).
 #' @return Numeric: the standard deviation of the combined population (i.e. if
@@ -259,7 +267,8 @@ combined_sd <- function(group_mean,
                        group_sd,
                        group_N,
                        unbiased = TRUE,
-                       na.rm = TRUE){
+                       na.rm = TRUE,
+                       log = FALSE){
 
   x_len <- c("group_mean" = length(group_mean),
              "group_sd" = length(group_sd),
@@ -312,6 +321,8 @@ combined_sd <- function(group_mean,
   group_N <- group_N[!which_na]
   }
 
+  grand_mean <- sum(group_N*group_mean)/sum(group_N)
+
   #if all N = 1, then just take regular standard deviation
   if(all(group_N %in% 1)){
     grand_sd <- sd(group_mean)
@@ -328,8 +339,6 @@ combined_sd <- function(group_mean,
       sqrt((group_N[which_na]-1)/group_N)
   }
 
-  grand_mean <- sum(group_N*group_mean)/sum(group_N)
-
   grand_var <- (sum(group_N*group_sd^2) +
       sum(group_N*(group_mean - grand_mean)^2))/
     (sum(group_N))
@@ -342,6 +351,11 @@ combined_sd <- function(group_mean,
     #convert biased grand SD to unbiased grand SD
 grand_sd <- grand_sd * sqrt(grand_N/(grand_N - 1))
   }
+  }
+
+  if(log %in% TRUE){
+    #convert to log-scale combined SD
+    grand_sd <- sqrt(log(1 + grand_sd^2 / grand_mean^2))
   }
 
   return(grand_sd)

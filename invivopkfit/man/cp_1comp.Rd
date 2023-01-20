@@ -4,7 +4,7 @@
 \alias{cp_1comp}
 \title{Analytical 1-compartment model}
 \usage{
-cp_1comp(params, time, dose, iv.dose)
+cp_1comp(params, time, dose, iv.dose, medium = "plasma")
 }
 \arguments{
 \item{params}{A named list of numeric parameter values. See Details for
@@ -21,10 +21,14 @@ length 1.}
 \item{iv.dose}{A logical vector, reflecting the route of administration of
 each single bolus dose. TRUE for single IV bolus dose; FALSE for single oral
 bolus dose.  Must be same length as `time` and `dose`, or length 1.}
+
+\item{medium}{A character vector reflecting the medium in which each resulting
+concentration is to be calculated: "blood" or "plasma". Default is "plasma".
+Must be same length as `time` and `dose`, or length 1.}
 }
 \value{
-A vector of plasma concentration values (mg/L) corresponding to
- `time`.
+A vector of blood or plasma concentration values (mg/L) corresponding
+ to `time`.
 }
 \description{
 Calculates plasma concentrations vs. time according to the analytical solution
@@ -59,7 +63,11 @@ If both oral and IV administration are specified (i.e., some `iv.dose == TRUE`
 and some `iv.dose == FALSE`), then `Vdist` is required along with either
 `Fgutabs` or `Fgutabs_Vdist`. (If `Vdist` and `Fgutabs_Vdist` are provided,
 but `Fgutabs` is not provided, then `Fgutabs` will be calculated from `Vdist`
-and `Fgutabs_V1`.)
+and `Fgutabs_Vdist`.)
+
+If `any(medium %in% 'blood')`, then `params` must also include
+`Rblood2plasma`, the ratio of chemical concentration in whole blood to the
+chemical concentration in blood plasma.
 }
 \author{
 Caroline Ring, John Wambaugh

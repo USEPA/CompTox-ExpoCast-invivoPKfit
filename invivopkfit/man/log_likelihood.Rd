@@ -10,6 +10,7 @@ log_likelihood(
   DF,
   modelfun = "analytic",
   model,
+  fit_conc_dose = TRUE,
   force_finite = FALSE,
   negative = TRUE
 )
@@ -28,8 +29,8 @@ function directly, you probably want to leave `const_params = NULL` and
 just supply all model parameters in `params`.)}
 
 \item{DF}{A `data.frame` of concentration-time data, for example as produced
-by [preprocess_data()]. It must contain variables named `Reference`
-(representing the reference ID for each observation), `Time` (representing
+by [preprocess_data()]. It must contain variables named `Study`
+(representing the study ID for each observation), `Time` (representing
 observation time points in hours), `Dose` (representing administered dose
 in mg/kg), `iv` (logical TRUE/FALSE, representing whether the administered
 dose was IV), `Value` (representing observed concentrations in mg/L), `LOQ`
@@ -45,7 +46,10 @@ solve the full ODE model numerically. "analytic" to use the analytic model
 solution, "full" to use the full ODE model. Default is "analytic".}
 
 \item{model}{Character: The model to fit. Currently, only "flat",
-"1compartment" or "2compartment" models are implemented.}
+"1compartment" or "2compartment" models are implemented.]}
+
+\item{fit_conc_dose}{Logical: Whether to fit dose-normalized concentrations
+(TRUE) or non-dose-normalized concentrations (FALSE). Default TRUE.}
 
 \item{force_finite}{Logical: Whether to force the function to return a finite
 log-likelihood (e.g., as required by [optimx::optimx()] with method
@@ -69,13 +73,13 @@ The log-likelihood function (probability of data given model parameters).
 \details{
 The log-likelihood is formulated by assuming that residuals (model-predicted
 concentrations minus observed concentrations) are independent and identically
-distributed within a given combination of chemical, species, and reference,
+distributed within a given combination of chemical, species, and study,
 obeying a zero-mean normal distribution with a chemical-, species-, and
-reference-specific variance.
+study-specific variance.
 
 # Log-likelihood equations
 
-For chemical-species combination \eqn{i} and reference \eqn{j}, define the
+For chemical-species combination \eqn{i} and study \eqn{j}, define the
 following quantities.
 
 \eqn{y_{ijk}} is the \eqn{k^{th}} observation of concentration, corresponding
@@ -83,7 +87,7 @@ to dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. Each observation has a
 corresponding LOQ, \eqn{\textrm{LOQ}_{ijk}}.
 
 For multiple-subject observations, \eqn{y_{ijk}} is the \eqn{k^{th}} *sample
-mean* observed concentration for chemical-species combination \eqn{i} and reference \eqn{j},
+mean* observed concentration for chemical-species combination \eqn{i} and study \eqn{j},
 corresponding to dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. It represents the
 mean of \eqn{n_{ijk}} individual measurements. It has a corresponding sample
 standard deviation, \eqn{s_{ijk}}.
@@ -99,7 +103,7 @@ evaluated at dose \eqn{d} and time \eqn{t}, with parameter vector
  \deqn{\mu_{ijk} = f \left(d_{ijk}, t_{ijk};
 \bar{\theta}_i \right)}
 
-\eqn{\sigma_{ij}^2} is the reference- and chemical-specific residual
+\eqn{\sigma_{ij}^2} is the study- and chemical-specific residual
 variance. (It is a hyperparameter.)
 
 ## Single-subject observations above limit of quantification (detects)
@@ -152,7 +156,7 @@ removed in [preprocess_data()]).
 # Joint log-likelihood for a chemical and species
 
 The joint log-likelihood for a chemical and species is simply the sum of
-log-likelihoods across observations and references.
+log-likelihoods across observations and studys.
 
 \deqn{LL_{i} = \sum_{j=1}^{J_i} \sum_{k=1}^{K_{ij}} LL_{ijk}}
 

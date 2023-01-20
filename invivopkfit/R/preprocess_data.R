@@ -552,6 +552,22 @@ preprocess_data <- function(data.set,
            "Non-Detect"),
     levels = c("Detect", "Non-Detect")
   )
+
+  #Remove zero-dose observations
+  if(!suppress.messages){
+    message("Removing observations where Dose == 0"
+    )
+  }
+  data.set <- subset(data.set,
+                     Dose > 0)
+
+  if(!suppress.messages){
+    message(paste(dim(data.set)[1], "observations of",
+                  length(unique(data.set$DTXSID)), "unique chemicals,",
+                  length(unique(data.set$Species)), "unique species, and",
+                  length(unique(data.set$Reference)), "unique references remain."))
+  }
+
   #Create dose-normalized Conc
   if(!suppress.messages){
     message(paste0("Creating dose-normalized concentration variables:\n",

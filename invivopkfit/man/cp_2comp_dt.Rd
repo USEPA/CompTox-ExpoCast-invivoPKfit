@@ -4,7 +4,7 @@
 \alias{cp_2comp_dt}
 \title{Time derivative of analytical 2-compartment model}
 \usage{
-cp_2comp_dt(params, time, dose, iv.dose)
+cp_2comp_dt(params, time, dose, iv.dose, medium)
 }
 \arguments{
 \item{params}{A named list of parameter values including the following:

@@ -152,6 +152,7 @@ analyze_subset <- function(fitdata,
                            modelfun,
                            pool_sigma = FALSE,
                            fit_conc_dose = TRUE,
+                           fit_log_conc = FALSE,
                            rescale_time = TRUE,
                            get_starts_args = list(start_from_httk = "all",
                                                   start_from_data = "all"),
@@ -208,6 +209,9 @@ analyze_subset <- function(fitdata,
                    tolower(analysis_type),
     " for:\n",
     "model = ", model, "\n",
+    "fit_conc_dose = ", fit_conc_dose, "\n",
+    "fit_log_conc = ", fit_log_conc, "\n",
+    "rescale_time = ", rescale_time, "\n",
                   this.dtxsid, " ", unique(fitdata$Compound), "\n",
                    "Species = ", this.species, "\n",
                   "Reference IDs = ",
@@ -274,6 +278,8 @@ analyze_subset <- function(fitdata,
                           collapse = "-"),
                     new_time_units))
     }
+  }else{
+    new_time_units <- "hours"
   }
 
   #get parameter names and units, and determine whether to optimize each of
@@ -354,6 +360,7 @@ analyze_subset <- function(fitdata,
    out_DF$Data.Analyzed <- analysis_type
 
    out_DF$fit_conc_dose <- fit_conc_dose
+   out_DF$fit_log_conc <- fit_log_conc
 
    #fill in the loglike and AIC with NA s since no fit was done
    out_DF$LogLikelihood <-  NA_real_
@@ -410,6 +417,7 @@ analyze_subset <- function(fitdata,
                        "fitdata" = fitdata,
                        "pool_sigma" = pool_sigma,
                        "fit_conc_dose" = fit_conc_dose,
+                       "fit_log_conc" = fit_log_conc,
                        "suppress.messages" = suppress.messages),
                      get_upper_args)
  )
@@ -421,6 +429,7 @@ analyze_subset <- function(fitdata,
                        "fitdata" = fitdata,
                        "pool_sigma" = pool_sigma,
                        "fit_conc_dose" = fit_conc_dose,
+                       "fit_log_conc" = fit_log_conc,
                        "suppress.messages" = suppress.messages),
                      get_starts_args))
 
@@ -507,6 +516,7 @@ out_DF$time_units_fitted <- new_time_units
           modelfun = modelfun,
           model = model,
           fit_conc_dose = fit_conc_dose,
+          fit_log_conc = fit_log_conc,
           force_finite = (optimx_args$method %in% "L-BFGS-B"),
           negative = TRUE
         ) #end list()
@@ -542,6 +552,7 @@ out_DF$time_units_fitted <- new_time_units
     out_DF$Data.Analyzed <- analysis_type
 
     out_DF$fit_conc_dose <- fit_conc_dose
+    out_DF$fit_log_conc <- fit_log_conc
 
   #fill in the loglike and AIC with NA s since no fit was done
   out_DF$LogLikelihood <-  NA_real_
@@ -601,6 +612,7 @@ out_DF$time_units_fitted <- new_time_units
                         modelfun = modelfun,
                         model = model,
                    fit_conc_dose = fit_conc_dose,
+                   fit_log_conc = fit_log_conc,
                         force_finite = (optimx_args$method %in% "L-BFGS-B"),
                    negative = TRUE)
   },
@@ -704,6 +716,7 @@ out_DF$time_units_fitted <- new_time_units
                                  modelfun = modelfun,
                                  model = model,
                                  fit_conc_dose = fit_conc_dose,
+                                 fit_log_conc = fit_log_conc,
                                  force_finite = (optimx_args$method %in% "L-BFGS-B"),
                                  negative = TRUE
                                )
@@ -733,6 +746,7 @@ out_DF$time_units_fitted <- new_time_units
                           modelfun = modelfun,
                           model = model,
                      fit_conc_dose = fit_conc_dose,
+                     fit_log_conc = fit_log_conc,
                           force_finite = (optimx_args$method %in% "L-BFGS-B"),
                      negative = TRUE)
     },
@@ -789,6 +803,7 @@ out_DF$time_units_fitted <- new_time_units
     out_DF$Data.Analyzed <- analysis_type
 
     out_DF$fit_conc_dose <- fit_conc_dose
+    out_DF$fit_log_conc <- fit_log_conc
 
   #Add log-likelihood and AIC values
 

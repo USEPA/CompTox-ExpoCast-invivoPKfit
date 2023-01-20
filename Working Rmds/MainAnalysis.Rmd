@@ -93,7 +93,7 @@ cvt <- preprocess_data(data.set = cvt_data,
                        impute_loq = TRUE,
                        impute_sd = TRUE,
                        study_def = c("DTXSID", "Species", "Reference", "Route", "Media"),
-                       suppress.messages = FALSE)
+                       suppress.messages = TRUE)
 
 #save pre-processed data
 write.csv(cvt,
@@ -105,130 +105,75 @@ write.csv(cvt,
 
 # Fit TK models to data
 
-## Flat model
-
-```{r, run_invivoPKfit_flat}
-
-system.time(
-  PK.fit.table.flat <- fit_all(
-    data.set = cvt,
-    model = "flat",
-    modelfun = "analytic",
-    preprocess = FALSE,
-    fit_conc_dose = TRUE,
-    rescale_time = TRUE,
-    optimx_args = list(
-      "method" = "bobyqa",
-      "itnmax" = 1e6,
-      "control" = list("kkt" = FALSE)
-    ),
-    suppress.messages = TRUE
-  )
-)
-
-write.csv(PK.fit.table.flat, paste("../inst/ext/PK_fit_table_flat_",
-                                    timestamp,
-                                    ".csv",
-                                    sep=""), row.names = FALSE)
-
-post_flat <- postprocess_data(PK_fit = PK.fit.table.flat,
-                               model = "flat")
-
-write.csv(post_flat,
-          paste("../inst/ext/PK_fit_postprocess_flat_",
-                                    timestamp,
-                                    ".csv",
-                                    sep=""),
-          row.names = FALSE)
-
-rm(PK.fit.table.flat, post_flat)
-```
-
-## 1-compartment model
-
-```{r, run_invivoPKfit_1comp}
-### do 1-Compartment fit
-system.time(
-    PK.fit.table.1comp <- fit_all(
-      data.set = cvt,
-      model = "1compartment",
-      modelfun = "analytic",
-      preprocess = FALSE,
-         fit_conc_dose = TRUE,
-    rescale_time = TRUE,
-      optimx_args = list(
-                      "method" = "bobyqa",
-                      "itnmax" = 1e6,
-                      "control" = list("kkt" = FALSE)
-                    ),
-      suppress.messages = TRUE
-  )
-)
-
-
-write.csv(PK.fit.table.1comp,
-          paste("../inst/ext/PK_fit_table_1comp_",
-                                    timestamp,
-                                    ".csv",
-                                    sep=""),
-          row.names = FALSE)
-
-post_1comp <- postprocess_data(PK_fit = PK.fit.table.1comp,
-                               model = "1compartment")
-
-write.csv(post_1comp,
-          paste("../inst/ext/PK_fit_postprocess_1comp_",
-                                    timestamp,
-                                    ".csv",
-                                    sep=""),
-          row.names = FALSE)
-
-rm(PK.fit.table.1comp, post_1comp)
-
-```
-
-## 2-compartment model
-
-```{r, run_invivoPKfit_2comp}
-### do 2-Compartment fit
-system.time(
-    PK.fit.table.2comp <- fit_all(
-      data.set = cvt,
-      model = "2compartment",
-      modelfun = "analytic",
-      preprocess = FALSE,
-         fit_conc_dose = TRUE,
-    rescale_time = TRUE,
-      optimx_args = list(
-                      "method" = "bobyqa",
-                      "itnmax" = 1e6,
-                      "control" = list("kkt" = FALSE)
-                    ),
-      suppress.messages = TRUE
-    )
-)
-
-write.csv(PK.fit.table.2comp, paste("../inst/ext/PK_fit_table_2comp_",
-                                    timestamp,
-                                    ".csv",
-                                    sep=""), row.names = FALSE)
-
-post_2comp <- postprocess_data(PK_fit = PK.fit.table.2comp,
-                               model = "2compartment")
-
-write.csv(post_2comp,
-          paste("../inst/ext/PK_fit_postprocess_2comp_",
-                                    timestamp,
-                                    ".csv",
-                                    sep=""),
-          row.names = FALSE)
-
-rm(PK.fit.table.2comp, post_2comp)
+```{r}
+for(this_rescale_time in c(FALSE, TRUE)){
+  for(this_fit_conc_dose in c(FALSE, TRUE)){
+    for(this_fit_log_conc in c(FALSE, TRUE)){
+      if(!(this_rescale_time %in% FALSE &
+           this_fit_conc_dose %in% FALSE &
+           this_fit_log_conc %in% FALSE)){ #already did the all FALSE case
+      for (this_model in c("flat",
+                           "1compartment",
+                           "2compartment")){
+        print(paste0("model = ", this_model, "\n",
+                     "fit_log_conc = ", this_fit_log_conc, "\n",
+                     "fit_conc_dose = ", this_fit_conc_dose, "\n",
+                     "rescale_time = ", this_rescale_time))
+        system.time(
+          PK.fit.table <- fit_all(
+            data.set = cvt,
+            model = this_model,
+            modelfun = "analytic",
+            preprocess = FALSE,
+            fit_conc_dose = this_fit_conc_dose,
+            fit_log_conc = this_fit_log_conc,
+            rescale_time = this_rescale_time,
+            optimx_args = list(
+              "method" = "bobyqa",
+              "itnmax" = 1e6,
+              "control" = list("kkt" = FALSE)
+            ),
+            suppress.messages = FALSE
+          )
+        )
+        
+        write.csv(PK.fit.table,
+                  paste("../inst/ext/PK_fit_table_",
+                        this_model,
+                        "_fit_log_conc_",
+                        this_fit_log_conc, "_",
+                        "_fit_conc_dose_",
+                        this_fit_conc_dose, "_",
+                        "_rescale_time_",
+                        this_rescale_time, "_",
+                        timestamp,
+                        ".csv",
+                        sep=""), row.names = FALSE)
+        
+        post_table <- postprocess_data(PK_fit = PK.fit.table,
+                                       model= this_model)
+        
+        rm(PK,fit.table)
+        
+        write.csv(post_table,
+                  paste("../inst/ext/PK_fit_postprocess_",
+                        this_model,
+                        "_fit_log_conc_",
+                        this_fit_log_conc, "_",
+                        "_fit_conc_dose_",
+                        this_fit_conc_dose, "_",
+                        "_rescale_time_",
+                        this_rescale_time, "_",
+                        timestamp,
+                        ".csv",
+                        sep=""), row.names = FALSE)
+        
+        rm(post_table)
+      } #end loop over models
+      } #end if not all FALSE
+    } #end loop over this_fit_log_conc
+  } #end loop over this_fit_conc_dose
+} #end loop over this_rescale_time
 ```
 
 
-# Test case
-
-DTXSID1022265 (Alachlor) is an example of one chemical where there is only one Reference ID, but the PO and IV data are on totally different scales -- IV concentration/dose ranges from 1e-3 to 1e-1, but PO concentration/dose ranges from 1e-5 to 1e-4. Now that we are fitting on natural scale, this means that with reference-specific sigma, the curve really only fits the IV data, because sigma is so large compared to the PO data scale. This results in a too-small Fgutabs estimate that does not fit the peak very well. But with "study" specific sigma -- chemical + species + reference + route + media -- the PO sigma can be on a different order than the IV sigma, and is.
-
-Another possible thing to try is to go back to fitting on the log scale. I had switched to the natural scale because I wasn't sure how to derive the "summary" parameterization of the residual distribution for the log scale. But I could try again.
