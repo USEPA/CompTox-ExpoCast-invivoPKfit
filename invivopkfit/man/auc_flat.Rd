@@ -4,25 +4,62 @@
 \alias{auc_flat}
 \title{AUC for flat model}
 \usage{
-auc_flat(params, time, dose, iv.dose)
+auc_flat(time, params, dose, iv.dose, medium)
 }
 \arguments{
-\item{params}{A named list of model parameter values. Must include:
-\describe{
-\item{A}{Average concentration}
-}}
+\item{time}{A numeric vector of times in hours.}
 
-\item{time}{A vector of times in hours}
+\item{params}{A named list of model parameter values. See Details for requirements.}
 
-\item{dose}{Dose in mg/kg}
+\item{dose}{A numeric vector of doses in mg/kg}
 
-\item{iv.dose}{TRUE for single IV bolus dose; FALSE for single oral dose}
+\item{iv.dose}{A logical vector: TRUE for single IV bolus dose; FALSE for
+single oral dose. Not used, but must be present for compatibility with other
+model functions.}
+
+\item{medium}{A character vector reflecting the medium in which each resulting
+concentration is to be calculated: "blood" or "plasma". Default is "plasma".
+Must be same length as other arguments, or length 1.}
 }
 \value{
-A vector of AUC values evaluated at each time point in \code{time}.
+A vector of plasma concentration values (mg/L) corresponding to
+ \code{time}.
 }
 \description{
-AUC for flat model
+Evaluates the area under the concentration-time curve for a "flat" model
+}
+\details{
+# Required parameters
+
+`params` must include the following named items:
+  \describe{
+  \item{Vdist}{Apparent volume of central compartment, L/kg BW. Or see below for
+  `Fgutabs_Vdist`}
+  }
+
+For oral administration (if any `iv.dose == FALSE`), `params` must also
+include:
+  \describe{
+  \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
+  `Fgutabs_Vdist`}
+  }
+
+For oral administration, in lieu of `Vdist` and `Fgutabs`, you may instead
+provide `Fgutabs_Vdist`, the ratio of Fgutabs to Vdist (1/L). This is an
+alternate parameterization for situations where `Fgutabs` and `Vdist` are not
+identifiable separately (i.e., when oral TK data are available, but IV data
+are not). If `Fgutabs` and `Vdist` are provided, they will override any value
+provided for `Fgutabs_Vdist`.
+
+If both oral and IV administration are specified (i.e., some `iv.dose == TRUE`
+and some `iv.dose == FALSE`), then `Vdist` is required along with either
+`Fgutabs` or `Fgutabs_Vdist`. (If `Vdist` and `Fgutabs_Vdist` are provided,
+but `Fgutabs` is not provided, then `Fgutabs` will be calculated from `Vdist`
+and `Fgutabs_Vdist`.)
+
+If `any(medium %in% 'blood')`, then `params` must also include
+`Rblood2plasma`, the ratio of chemical concentration in whole blood to the
+chemical concentration in blood plasma.
 }
 \author{
 Caroline Ring, John Wambaugh, Chris Cook

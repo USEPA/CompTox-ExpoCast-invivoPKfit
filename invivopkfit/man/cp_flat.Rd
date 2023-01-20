@@ -4,34 +4,65 @@
 \alias{cp_flat}
 \title{Flat model}
 \usage{
-cp_flat(time, params, dose, iv.dose)
+cp_flat(time, params, dose, iv.dose, medium)
 }
 \arguments{
 \item{time}{A numeric vector of times in hours.}
 
-\item{params}{A named list of model parameter values. Must include: an item
-named `A`, representing the average ratio of concentration to dose.}
+\item{params}{A named list of model parameter values. See Details for requirements.}
 
 \item{dose}{A numeric vector of doses in mg/kg}
 
 \item{iv.dose}{A logical vector: TRUE for single IV bolus dose; FALSE for
 single oral dose. Not used, but must be present for compatibility with other
 model functions.}
+
+\item{medium}{A character vector reflecting the medium in which each resulting
+concentration is to be calculated: "blood" or "plasma". Default is "plasma".
+Must be same length as other arguments, or length 1.}
 }
 \value{
 A vector of plasma concentration values (mg/L) corresponding to
  \code{time}.
 }
 \description{
-Evaluates a "flat" model for concentration vs. time: `Cp = A * dose`.
+Evaluates a "flat" model for concentration vs. time
 }
 \details{
 This function is used for model comparison: does a 1- or 2-compartment TK
 model fit the data any better than this naive "flat" model?
 
-(A note on nomenclature: Strictly speaking, in this model, concentration is
-linear with dose. It is called "flat" because we usually consider
-concentration normalized to dose, which is flat -- equal to the constant `A`.)
+# Required parameters
+
+`params` must include the following named items:
+  \describe{
+  \item{Vdist}{Apparent volume of central compartment, L/kg BW. Or see below for
+  `Fgutabs_Vdist`}
+  }
+
+For oral administration (if any `iv.dose == FALSE`), `params` must also
+include:
+  \describe{
+  \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
+  `Fgutabs_Vdist`}
+  }
+
+For oral administration, in lieu of `Vdist` and `Fgutabs`, you may instead
+provide `Fgutabs_Vdist`, the ratio of Fgutabs to Vdist (1/L). This is an
+alternate parameterization for situations where `Fgutabs` and `Vdist` are not
+identifiable separately (i.e., when oral TK data are available, but IV data
+are not). If `Fgutabs` and `Vdist` are provided, they will override any value
+provided for `Fgutabs_Vdist`.
+
+If both oral and IV administration are specified (i.e., some `iv.dose == TRUE`
+and some `iv.dose == FALSE`), then `Vdist` is required along with either
+`Fgutabs` or `Fgutabs_Vdist`. (If `Vdist` and `Fgutabs_Vdist` are provided,
+but `Fgutabs` is not provided, then `Fgutabs` will be calculated from `Vdist`
+and `Fgutabs_Vdist`.)
+
+If `any(medium %in% 'blood')`, then `params` must also include
+`Rblood2plasma`, the ratio of chemical concentration in whole blood to the
+chemical concentration in blood plasma.
 }
 \author{
 Caroline Ring, John Wambaugh, Chris Cook

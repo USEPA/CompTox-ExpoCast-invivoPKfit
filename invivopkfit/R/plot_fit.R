@@ -13,8 +13,10 @@
 #'  all of "1compartment", "2compartment", and "flat"; "winning" to plot only
 #'  the winning model (whichever had lowest AIC); or "all" as a short form to
 #'  plot all three models.
-#'@param DFsub Pre-processed concentration vs. time data merged with fitted PK
-#'  parameters. (I will create a separate function to produce this)
+#'@param obs_data A `data.table`: Observed concentration vs. time data to be
+#'  plotted, pre-processed as from [preprocess_data()]. Must have variables
+#'  `DTXSID`, `Species`, `Route`, `Media`, `iv`, `Dose`, `Time`, `Conc`,
+#'  `Detect`, `Conc_SD`.
 #'@param plot_dose_norm Logical: TRUE to plot dose-normalized concentration vs.
 #'  time data and model fits. FALSE to plot non-dose-normalized data and fits.
 #'  Default TRUE. If `plot_dose_norm == FALSE`, it's typically recommended to
@@ -57,14 +59,18 @@
 #'  progress. Default TRUE.
 #'@return If `return_plot == TRUE`, a `ggplot2` object. If `return_plot ==
 #'  FALSE`, returns 0.
-#' @author Caroline Ring
-#' @export
+#'@author Caroline Ring
+#'@export
 #'
-plot_fit <- function(DTXSID_in,
+plot_fit <- function(fit_flat,
+                     fit_1comp,
+                     fit_2comp,
+                     DTXSID_in,
                      Species_in,
                      Analysis_Type_in,
+                     Studies.Analyzed_in,
                      model_in = "winning", #or "all" or by name
-                     DFsub,
+                     obs_data,
                      plot_dose_norm = TRUE,
                      split_dose = FALSE,
                      n_interp_time = 10,
@@ -88,14 +94,9 @@ plot_fit <- function(DTXSID_in,
 
                      verbose = TRUE){
 
-  if(verbose %in% TRUE){
-    message(paste0("Plotting:\n",
-      "DTXSID = ", DTXSID_in, "\n",
-                  "Species = ", Species_in, "\n",
-                  "Analysis Type = ", Analysis_Type_in, "\n",
-                  "models = ", paste(model_in, collapse = ", ")))
-  }
-
+  pk_fit <- merge_fits(fit_flat = fit_flat,
+                       fit_1comp = fit_1comp,
+                       fit_2comp = fit_2comp)
 
   if(all(Analysis_Type_in %in% "all")){
     Analysis_Type_in <- c("Joint", "Pooled", "Separate")
@@ -105,25 +106,33 @@ plot_fit <- function(DTXSID_in,
     model_in <- c("flat", "1compartment", "2compartment")
   }
 
-  DFsub <- DFsub[Analysis_Type %in% Analysis_Type_in, ]
+  if(verbose %in% TRUE){
+    message(paste0("Plotting:\n",
+      "DTXSID = ", DTXSID_in, "\n",
+                  "Species = ", Species_in, "\n",
+                  "Analysis Type = ", paste(Analysis_Type_in, collapse = ", "), "\n",
+                  "models = ", paste(model_in, collapse = ", ")))
+  }
+
 
  #calculate lower and upper bounds for obs with sample SD
-  DFsub[, Conc_Dose_upper := (Value + Value_SD)/Dose]
-  DFsub[, Conc_Dose_lower := (Value - Value_SD)/Dose]
+  obs_data[, Conc_Dose_upper := (Value + Value_SD)/Dose]
+  obs_data[, Conc_Dose_lower := (Value - Value_SD)/Dose]
 
-  DFsub[, Conc_upper := (Value + Value_SD)]
-  DFsub[, Conc_lower := (Value - Value_SD)]
+  obs_data[, Conc_upper := (Value + Value_SD)]
+  obs_data[, Conc_lower := (Value - Value_SD)]
 
   #ensure that variable Detect is a factor with levels "Detect" and "Non-Detect"
-  DFsub[, Detect:=factor(Detect,
+  obs_data[, Detect:=factor(Detect,
                          levels = c("Detect",
                                     "Non-Detect"))]
 
-  #Now add time points for prediction.
+  #Now create interpolated time points for prediction.
   #Interpolate n_interp_time points between each existing time point.
-  pred_DT2 <- DFsub[, .(
+  #Go by DTXSID, Species, Route, Media, Dose, Subject.
+  pred_DT2 <- obs_data[, .(
     Time = {
-      timepoints <- sort(unique(c(0,Time)))
+      timepoints <- sort(unique(c(0,0,Time)))
       time_interp <- sapply(1:(length(timepoints)-1),
                             function(i){
                               seq(from = timepoints[i],
@@ -134,169 +143,80 @@ plot_fit <- function(DTXSID_in,
       sort(unique(time_interp))
     }
   ),
-  by = setdiff(names(DFsub),
-               c("Time", "Value", "Value_SD", "LOQ", "N_Subjects",
-                 "Conc", "Detect", "Conc_upper", "Conc_lower",
-                 "Conc_Dose", "Conc_Dose_upper", "Conc_Dose_lower",
-                 "Value_Dose", "Value_SD_Dose", "LOQ_Dose"))]
+  by = .(DTXSID, Compound, Species, Route, iv, Media, Study, Dose)]
 
 
+  #Now evaluate model function for pred_DT2, for each analysis & model Set up a
+  #table of all combinations of DTXSID, Species, analsis type, model, and
+  #Studies.Analyzed to be plotted
+  pk_sub <- pk_fit[DTXSID %in% DTXSID_in &
+                     Species %in% Species_in &
+                     Analysis_Type %in% Analysis_Type_in]
 
-  #Now evaluate model function for each analysis & model
-  pred_DT2[, Conc.flat := {
-    params <- as.list(unique(.SD))
-    names(params) <- gsub(names(params),
-                          pattern = ".flat",
-                          replacement = "",
-                          fixed = TRUE)
-    #drop any NA params
-    params <- params[sapply(params,
-                            is.finite)]
-    #if all params are missing, return NA;
-    #otehrwise, evaluate model
-    if(length(params)>0){
-    if(!("Rblood2plasma" %in% names(params))){
-      params$Rblood2plasma <- 1
-    }
-      cp_flat(time = Time,
-               params = params,
-               dose = Dose,
-               iv.dose = iv,
-               medium = Media)
-    }else{
-      NA_real_
-    }
-    },
-           .SDcols= c("Vdist.flat",
-                      "Fgutabs.flat",
-                      "Fgutabs_Vdist.flat",
-                      "Rblood2plasma.flat"),
-           by = .(Analysis_Type,
-                  DTXSID,
-                  Species,
-                  References.Analyzed,
-                  Studies.Analyzed)]
-
-  pred_DT2[, Conc.1compartment := {
-    params <- as.list(unique(.SD))
-    names(params) <- gsub(names(params),
-                          pattern = ".1compartment",
-                          replacement = "",
-                          fixed = TRUE)
-
-    #drop any NA params
-    params <- params[sapply(params,
-                            is.finite)]
-    #if all params are missing, return NA;
-    #otehrwise, evaluate model
-    if(length(params)>0){
-      if(!("Rblood2plasma" %in% names(params))){
-        params$Rblood2plasma <- 1
-      }
-      cp_1comp(time = Time,
-               params = params,
-               dose = Dose,
-               iv.dose = iv,
-               medium = Media)
-    }else{
-      NA_real_
-    }
-  },
-  .SDcols= c("Vdist.1compartment",
-             "Fgutabs.1compartment",
-             "Fgutabs_Vdist.1compartment",
-             "kelim.1compartment",
-             "kgutabs.1compartment",
-             "Rblood2plasma.1compartment"),
-  by = .(Analysis_Type,
-         DTXSID,
-         Species,
-         References.Analyzed,
-         Studies.Analyzed)]
-
-  pred_DT2[, Conc.2compartment := {
-    params <- as.list(unique(.SD))
-    names(params) <- gsub(names(params),
-                          pattern = ".2compartment",
-                          replacement = "",
-                          fixed = TRUE)
-
-    #drop any NA params
-    params <- params[sapply(params,
-                            is.finite)]
-    #if all params are missing, return NA;
-    #otehrwise, evaluate model
-    if(length(params)>0){
-      if(!("Rblood2plasma" %in% names(params))){
-        params$Rblood2plasma <- 1
-      }
-    cp_2comp(time = Time,
-                    params = params,
-                    dose = Dose,
-                    iv.dose = iv,
-                    medium = Media)
-    }else{
-      NA_real_
-    }
-  },
-  .SDcols= c("V1.2compartment",
-             "Fgutabs.2compartment",
-             "Fgutabs_V1.2compartment",
-             "kelim.2compartment",
-             "kgutabs.2compartment",
-             "k12.2compartment",
-             "k21.2compartment",
-             "Rblood2plasma.2compartment"),
-  by = .(Analysis_Type,
-         DTXSID,
-         Species,
-         References.Analyzed,
-         Studies.Analyzed)]
-
-  #melt pred_DT2
-  pred_DT3 <- melt(pred_DT2,
-                   id.vars = c(idcols, "winmodel", "Time",
-                               "Route", "Dose", "iv", "Media"),
-                   measure.vars = c("Conc.flat",
-                                    "Conc.1compartment",
-                                    "Conc.2compartment"),
-                   variable.name = "model",
-                   value.name = "Conc")
-  pred_DT3[, model := gsub(x = model,
-                           pattern= "Conc.",
-                           replacement = "",
-                           fixed = TRUE)]
-
-  pred_DT3[model == winmodel, winning := TRUE]
-  pred_DT3[model != winmodel, winning := FALSE]
-
-  #keep only the model(s) specified
   if(all(model_in %in% "winning")){
-    pred_DT3 <- pred_DT3[winning == TRUE,]
-  }else if(!(any(model_in %in% "winning"))){
-    pred_DT3 <- pred_DT3[model %in% model_in]
-  }else{ #if model_in is "winning" and something else
-    pred_DT3 <-  pred_DT3[winning == TRUE |
-                            model %in% model_in,]
+    tmp <- unique(pk_sub[, .(DTXSID, Species, Analysis_Type, Studies.Analyzed, winmodel)])
+    setnames(tmp,
+             "winmodel",
+             "model")
+  }else{
+  tmp <- unique(pk_sub[, .(DTXSID, Species, Analysis_Type, Studies.Analyzed)])
+  tmp <- tmp[, .(model = model_in), by = names(tmp)]
   }
 
+  setnames(tmp,
+           names(tmp),
+           paste(names(tmp), "in", sep = "_"))
+
+#Now use data.table syntax to loop over the rows of `tmp` and evaluate predictions for each one
+  pred_data <- tmp[,
+                  {
+                    studies_list <- strsplit(Studies.Analyzed_in,
+                                            split = ", ")[[1]]
+                    #get data.table of newdata to be predicted
+                    #leave out DTXSID, Species columns
+                    #since these will be added back in from fit_combs
+                    newdata <- pred_DT2[DTXSID %in% DTXSID_in &
+                                         Species %in% Species_in &
+                                         Study %in% studies_list,
+                                       .SD,
+                                       .SDcols = setdiff(names(pred_DT2),
+                                                         c("DTXSID", "Species"))]
+                    get_predictions(pk_fit = pk_fit,
+                              newdata = newdata,
+                              DTXSID_in = DTXSID_in,
+                              Species_in = Species_in,
+                              Analysis_Type_in = Analysis_Type_in,
+                              Studies.Analyzed_in = Studies.Analyzed_in,
+                              model_in = model_in)
+                  }, by = .(DTXSID_in,
+                          Species_in,
+                          Analysis_Type_in,
+                          Studies.Analyzed_in,
+                          model_in)
+  ]
+
+  setnames(pred_data,
+           "pred_conc",
+           "Conc")
+
+  setnames(pred_data,
+           names(pred_data),
+           gsub(x = names(pred_data),
+                pattern= "_in",
+                replacement = ""))
 
   #get predicted conc normalized by dose
-  pred_DT3[, Conc_Dose:=Conc/Dose]
+  pred_data[, Conc_Dose:=Conc/Dose]
 
-
-  #create a categorical variable for dose
-  DFsub[, Dose_cat:=factor(Dose)]
-
-#rename pred_DT2 to predsub
-  predsub <- pred_DT3
+  #create a categorical variable for dose in observed data
+  obs_data[, Dose_cat:=factor(Dose)]
 
   #generate plot title
   plot_title <- paste0(DTXSID_in,
-                       " (", DFsub[, unique(Compound)], ")\n",
+                       " (", obs_data[, unique(Compound)], ")\n",
                        "Species = ", Species_in, ", ",
                        "Doses = ", paste(signif(
-                         sort(unique(DFsub$Dose)),
+                         sort(unique(obs_data$Dose)),
                          3),
                                          collapse = ", "), " mg/kg\n",
   "Analysis Type = ", paste(Analysis_Type_in, collapse= ", "))
@@ -304,40 +224,50 @@ plot_fit <- function(DTXSID_in,
   #if plotting a joint analysis (only one winning model for this DTXSID and species),
   #add winning model to the plot title
   if(any(Analysis_Type_in %in% "Joint")){
-    winning_model <- predsub[winning %in% TRUE, unique(model)]
+    #get winning model for this dataset & joint analysis
+    pk_sub <- pk_fit[DTXSID %in% DTXSID_in &
+                       Species %in% Species_in &
+                       Analysis_Type %in% "Joint", ]
+    winning_model <- pk_sub[, winmodel]
     plot_subtitle <- paste0("Winning Model = ",
                          winning_model)
+if(!(grepl(x = winning_model, pattern = "None"))){
     #get coeffs of winning model
-    par_names <- grep(x = names(DFsub),
-                pattern = paste0(".", winning_model),
-                fixed = TRUE,
-                value = TRUE)
-    par <- unique(DFsub[, .SD, .SDcols = par_names])
+    #get parameter names for this model
+    param_names <- get_model_paramnames(model = winning_model)
+    #get names of appropriate columns of pk_sub -- named [param].[model]
+    param_names_dot <- paste(param_names, winning_model, sep = ".")
+    #extract the appropriate columns from pk_sub
+    par <- unique(pk_sub[, .SD, .SDcols = param_names_dot])
+    #remove the ".[model]" suffix
     setnames(par,
              names(par),
              gsub(x = names(par),
                   pattern = paste0(".", winning_model),
                   replacement = ""))
+    #convert from data.table to vector
     par <- unlist(par)
     #remove any NA or infinite parameters
     par <- par[is.finite(par)]
-
     #paste into a comma-separated list
     par_char <- paste(
       paste(names(par),
-            signif(par, 3),
+            signif(par, 3), #keep 3 sigfigs
             sep=" = "),
       collapse = ", ")
 
     plot_subtitle <- paste0(plot_subtitle, "\n",
                          par_char)
-  }else{
+  }else{ #if winning model is "None (no fit)"
+    plot_subtitle <- NULL
+  }
+  }else{ #if analysis type is not "Joint"
     plot_subtitle <- NULL
   }
 
   #plot
   if(plot_dose_norm %in% TRUE){
-    p <- ggplot(data = DFsub,
+    p <- ggplot(data = obs_data,
                 aes(x = Time,
                     y = Conc_Dose)) +
       geom_blank()
@@ -355,7 +285,7 @@ plot_fit <- function(DTXSID_in,
       }
     }
   }else{ #if plot_dose_norm == FALSE
-    p <- ggplot(data = DFsub,
+    p <- ggplot(data = obs_data,
                 aes(x = Time,
                     y = Conc)) +
       geom_blank()
@@ -383,14 +313,14 @@ plot_fit <- function(DTXSID_in,
       #shape mapped to Reference, color to Dose, fill yes/no to Detect
       #first plot detected points with white fill
       p <- p +
-        geom_point(data = DFsub[Detect %in% "Detect"],
+        geom_point(data = obs_data[Detect %in% "Detect"],
                    aes(shape = Reference,
                               color = Dose),
                           fill = "white",
                           size = 4,
                           stroke = 1.5) +
         #then plot detected points with fill, but alpha mapped to Detect
-        geom_point(data = DFsub[Detect %in% "Detect"],
+        geom_point(data = obs_data[Detect %in% "Detect"],
                    aes(shape = Reference,
                        color = Dose,
                        fill = Dose,
@@ -399,27 +329,26 @@ plot_fit <- function(DTXSID_in,
                    stroke = 1.5) +
         #then plot non-detect points with white fill,
         #and position jittered
-        geom_jitter(data = DFsub[Detect %in% "Non-Detect"],
+        geom_jitter(data = obs_data[Detect %in% "Non-Detect"],
                     aes(shape = Reference,
                         color = Dose),
                     fill = "white",
                     size = 4,
                     stroke = 1.5,
                     width = jitter_nondetect,
-                    height = jitter_nondetect) +
+                    height = 0) +
         #then plot non-detect points with fill, but alpha mapped to Detect
         #and position jittered
-        geom_jitter(data = DFsub[Detect %in% "Non-Detect"],
+        geom_jitter(data = obs_data[Detect %in% "Non-Detect"],
                    aes(shape = Reference,
                        color = Dose,
                        fill = Dose,
                        alpha = Detect),
                    size = 4,
                    stroke = 1.5,
-                   width = jitter_nondetect,
-                   height = jitter_nondetect) +
+                   width = jitter_nondetect, height = 0) +
         #plot lines for model predictions
-        geom_line(data = predsub,
+        geom_line(data = pred_data,
                   aes(linetype = model,
                       group = interaction(Analysis_Type,
                                           Studies.Analyzed,
@@ -452,7 +381,7 @@ plot_fit <- function(DTXSID_in,
                    size = 4,
                    stroke = 1.5) +
         #plot lines for model predictions
-        geom_line(data = predsub,
+        geom_line(data = pred_data,
                   aes(linetype = model,
                       group = interaction(Analysis_Type,
                                           Studies.Analyzed,
@@ -498,23 +427,23 @@ plot_fit <- function(DTXSID_in,
   #limit y axis scaling to go only 2x smaller than smallest observation
     if(limit_y_axis %in% TRUE){
       if(plot_dose_norm %in% TRUE){
-  new_y_min <- DFsub[, min(pmin(Conc_Dose,
+  new_y_min <- obs_data[, min(pmin(Conc_Dose,
                                 Conc_Dose_lower,
                                 na.rm = TRUE),
                             na.rm = TRUE)/2]
 
-  new_y_max <- DFsub[, max(pmax(Conc_Dose,
+  new_y_max <- obs_data[, max(pmax(Conc_Dose,
                                 Conc_Dose_upper,
                                 na.rm = TRUE),
                            na.rm = TRUE)*1.05]
       }else{
-        new_y_min <- DFsub[, min(pmin(Conc,
+        new_y_min <- obs_data[, min(pmin(Conc,
                                       Conc_lower,
                                       na.rm = TRUE),
                                  na.rm = TRUE)/2]
 
 
-        new_y_max <- DFsub[, max(pmax(Conc,
+        new_y_max <- obs_data[, max(pmax(Conc,
                                       Conc_upper,
                                       na.rm = TRUE),
                                  na.rm = TRUE)*1.05]

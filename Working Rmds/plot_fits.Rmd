@@ -22,7 +22,7 @@ devtools::load_all("../invivopkfit")
 Timestamp
 
 ```{r}
-timestamp <- "2023_01_13"
+timestamp <- "2023_01_17"
 ```
 
 
@@ -40,221 +40,12 @@ Read in the fitted model parameter values.
 
 ```{r, read_data}
 
-DT_1comp <- fread(paste0("../inst/ext/", "PK_fit_postprocess_1comp_", timestamp, ".csv",sep=""))
-DT_2comp <- fread(paste0("../inst/ext/", "PK_fit_postprocess_2comp_", timestamp, ".csv",sep=""))
-DT_flat <- fread(paste0("../inst/ext/", "PK_fit_postprocess_flat_", timestamp, ".csv",sep=""))
-
-idcols <- c( "Analysis_Type",
-                                 "DTXSID",
-                                "Species",
-                                "References.Analyzed",
-                               "Studies.Analyzed",
-                               "N_Routes",
-                               "N_Media",
-              "time_units_reported")
-
-setnames(DT_1comp,
-         setdiff(names(DT_1comp),
-                 idcols),
-         paste(setdiff(names(DT_1comp),
-                 idcols),
-               "1compartment",
-               sep = "."))
-
-setnames(DT_2comp,
-         setdiff(names(DT_2comp),
-                 idcols),
-         paste(setdiff(names(DT_2comp),
-                 idcols),
-               "2compartment",
-               sep = "."))
-
-setnames(DT_flat,
-         setdiff(names(DT_flat),
-                 idcols),
-         paste(setdiff(names(DT_flat),
-                 idcols),
-               "flat",
-               sep = "."))
+fit_1comp <- fread(paste0("../inst/ext/", "PK_fit_table_1comp_", timestamp, ".csv",sep=""))
+fit_2comp <- fread(paste0("../inst/ext/", "PK_fit_table_2comp_", timestamp, ".csv",sep=""))
+fit_flat <- fread(paste0("../inst/ext/", "PK_fit_table_flat_", timestamp, ".csv",sep=""))
 
 #pk_lombardo <- read_xlsx("inst/ext/Supplemental_82966_revised_corrected.xlsx")
 ```
-
-Merge these together. 
-
-```{r}
-pk_fit <- merge(DT_2comp,
-               merge(DT_flat, DT_1comp, by = idcols),
-               by = idcols)
-```
-
-
-Find the winning model for each dataset
-
-```{r}
-pk_AIC <- melt(pk_fit,
-     id.vars = idcols,
-     measure.vars = c("AIC.flat",
-                      "AIC.1compartment",
-                      "AIC.2compartment"),
-     value.name = "AIC",
-     variable.name = "model")
-
-pk_AIC[, model := gsub(x = model,
-                       pattern = "AIC.",
-                       replacement = "",
-                       fixed = TRUE)]
-
-
-#sort AIC from smallest to largest within each dataset, putting NAs last
-setorderv(pk_AIC,
-        c(idcols, "AIC"),
-         na.last = TRUE)
-#the winning model will now be listed first within each dataset (smallest AIC)
-model_win <- pk_AIC[,
-                    .(winmodel = model[1]),
-                    by = idcols]
-pk_fit <- model_win[pk_fit,
-                    on = idcols]
-```
-
-Keep parameters only -- that is, drop the calculated quantities like tpeak, Cpeak, Css, total clearance, etc.
-
-```{r}
-all_params <- unlist(sapply(c("flat",
-         "1compartment",
-         "2compartment"),
-       function(model){
-         tmp <- get_model_paramnames(model)
-         return(paste(tmp,
-                      model,
-                      sep= "."))
-       }))
-
-pk_params <- pk_fit[,
-                    .SD,
-                    .SDcols = c(idcols,
-                                "winmodel",
-                                all_params)]
-
-#Ensure comma-separated lists of studies analyzed are properly sorted
-pk_params[, Studies.Analyzed := {
-  tmp <- strsplit(x = Studies.Analyzed,
-           split = ", ")
-  sapply(tmp,
-         function(x) paste(sort(x), collapse = ", "))
-}]
-
-# pk_params[is.na(Fgutabs_Vdist.flat),
-#           Fgutabs_Vdist.flat := Fgutabs.flat / Vdist.flat]
-# 
-# pk_params[is.na(Rblood2plasma.flat), Rblood2plasma.flat := 1]
-# pk_params[is.na(Rblood2plasma.1compartment), Rblood2plasma.1compartment := 1]
-# pk_params[is.na(Rblood2plasma.2compartment), Rblood2plasma.2compartment := 1]
-```
-
-Merge the parameter information with the original concentration-time data.
-
-```{r}
-cvt[, Study_pooled :=
-  paste(
-    sort(unique(Study)),
-    collapse = ", "
-  ),
-  by = .(DTXSID, Species)]
-
-  #Melt to longer format. The effect will be as though we row-bound two versions
-  #of DF together: one with the original single references, and one with
-  #comma-separated combined References. There is one column "Study_type" that
-  #contains either "Study" or "Study_pooled", and then one column "Study" that
-  #contains the studyID or the comma-separated list of study IDs.
-cvt[, Study_orig := Study]
-  cvt1 <- melt(cvt,
-              measure.vars = c("Study", "Study_pooled"),
-              variable.name = "Study_type",
-              value.name = "Studies.Analyzed")
-
-  #There will be duplicated rows for single-study analyses, because
-  #"Study_pooled" (the comma-separated list of study IDs) is the same as "Study"
-  #(the individual study ID) for these analyses. Remove the duplicated rows.
-  cvt1 <- unique(cvt1[, .(DTXSID, Compound, Species, Studies.Analyzed, Reference,
-                        Route, Dose, iv, Media, Study_orig, Time,
-                        Value, LOQ, Value_SD, N_Subjects,
-                        Conc, Conc_Dose, Detect, Value_Dose,
-                        Value_SD_Dose, LOQ_Dose)])
-  
-  cvt_fit <- pk_params[cvt1, 
-                    on = c("DTXSID" = "DTXSID",
-                            "Species" = "Species",
-                            "Studies.Analyzed" = "Studies.Analyzed"),
-                     allow.cartesian = TRUE]
-```
-
-Also prepare a table of study-specific sigmas.
-
-```{r}
-DT_1comp <- fread(paste0("../inst/ext/", "PK_fit_table_1comp_", timestamp, ".csv",sep=""))
-DT_2comp <- fread(paste0("../inst/ext/", "PK_fit_table_2comp_", timestamp, ".csv",sep=""))
-DT_flat <- fread(paste0("../inst/ext/", "PK_fit_table_flat_", timestamp, ".csv",sep=""))
-
-idcols <- c( "Analysis_Type",
-                                 "DTXSID",
-                                "Species",
-                                "References.Analyzed",
-                               "Studies.Analyzed")
-
-DT_all <- rbindlist(list(DT_1comp, DT_2comp, DT_flat),
-                    use.names = TRUE,
-                    fill = TRUE)
-  DT_all <- DT_all[grepl(x = param_name,
-                 pattern = "sigma"),
-           .SD, .SDcols= c(idcols, "model", "param_name", "Fitted mean", "Fitted std dev")]
-  DT_melt <- dcast(DT_all,
-                   formula = Analysis_Type + DTXSID + Species + References.Analyzed + Studies.Analyzed + param_name ~ model,
-                   value.var = "Fitted mean")
-  setnames(DT_melt,
-           unique(DT_all$model),
-           paste0("sigma.", unique(DT_all$model)))
-  DT_melt[param_name %in% "sigma", sigma_studyID := Studies.Analyzed]
-  DT_melt[!(param_name %in% "sigma"), sigma_studyID := gsub(x = param_name,
-                                                            pattern = "sigma_study_",
-                                                            replacement = "",
-                                                            fixed = TRUE)]
-  DT_melt_sd <- dcast(DT_all,
-                   formula = Analysis_Type + DTXSID + Species + References.Analyzed + Studies.Analyzed + param_name ~ model,
-                   value.var = "Fitted std dev")
-   setnames(DT_melt_sd,
-           unique(DT_all$model),
-           paste0("sigma_sd.", unique(DT_all$model)))
- DT_melt_sd[param_name %in% "sigma", sigma_studyID := Studies.Analyzed]
-  DT_melt_sd[!(param_name %in% "sigma"), sigma_studyID := gsub(x = param_name,
-                                                            pattern = "sigma_study_",
-                                                            replacement = "",
-                                                            fixed = TRUE)]
-  
-  DT_melt_all <- merge(DT_melt, DT_melt_sd, by = intersect(names(DT_melt),
-                                                           names(DT_melt_sd)))
-
-```
-
-Get SD of data for each study
-
-```{r}
-cvt_sd <- cvt_fit[, .(sd_Value_Dose = sd(Value_Dose, na.rm = TRUE)),
-        by = Study_orig]
-```
-
-Merge SD of data with fitted SDs and compare
-
-```{r}
-sd_table <- cvt_sd[DT_melt_all,
-      on = c("Study_orig" = "sigma_studyID")]
-```
-
-
-
-
-
 
 Plot concentration vs time with the best-fit params by data subset (DTXSID and species). 
 
@@ -268,168 +59,129 @@ Indicate the following:
 - IV vs. oral administration
 
 
-Would also like to plot uncertainty in predictions based on uncertainty in parameter estimates.
+Plot all models together for the joint analysis.
 
-Plot versions:
-- Winning model only
-- One model at a time
-- All three models on same plot
+Produce a data.table with unique combinations of DTXSID, species, analysis type, and studies analyzed.
 
-
-Plot all models for the joint analysis.
 ```{r}
-cvt_fit[,
-        plot_fit(DTXSID = unique(DTXSID),
-                 Species_in = unique(Species),
-                 DFsub = .SD,
+plot_combos <- unique(fit_flat[Analysis_Type %in% "Joint", .(Analysis_Type,
+                                                             DTXSID,
+                                                             Species,
+                                                             Studies.Analyzed)])
+setnames(plot_combos,
+         names(plot_combos),
+         paste(names(plot_combos),
+               "in",
+               sep = "_"))
+```
+
+Loop over the following combinations of options:
+- Log-scale y and non-log-scale y
+- Dose-normalized and split-dose
+
+```{r}
+opts_DT <- as.data.table(expand.grid(log10_scale_y = c(TRUE, FALSE),
+                       split_dose = c(TRUE, FALSE)))
+opts_DT[, plot_errbars := !(log10_scale_y)]
+opts_DT[, plot_dose_norm := !(split_dose)]
+opts_DT[plot_errbars %in% TRUE & plot_dose_norm %in% TRUE,
+        file_suffix := "errbars_naturaly_dose_norm"]
+opts_DT[plot_errbars %in% TRUE & plot_dose_norm %in% TRUE,
+        file_path := "../inst/ext/plots/Joint Analysis/model_all/errbars_naturaly/dose_norm"]
+opts_DT[plot_errbars %in% FALSE & plot_dose_norm %in% TRUE,
+        file_suffix := "noerrbars_logy_dose_norm"]
+opts_DT[plot_errbars %in% FALSE & plot_dose_norm %in% TRUE,
+        file_path := "../inst/ext/plots/Joint Analysis/model_all/noerrbars_logy/dose_norm"]
+
+opts_DT[plot_errbars %in% TRUE & plot_dose_norm %in% FALSE,
+        file_suffix := "errbars_naturaly_dose_split"]
+opts_DT[plot_errbars %in% TRUE & plot_dose_norm %in% FALSE,
+        file_path := "../inst/ext/plots/Joint Analysis/model_all/errbars_naturaly/dose_split"]
+opts_DT[plot_errbars %in% FALSE & plot_dose_norm %in% FALSE,
+        file_suffix := "noerrbars_logy_dose_split"]
+opts_DT[plot_errbars %in% FALSE & plot_dose_norm %in% FALSE,
+        file_path := "../inst/ext/plots/Joint Analysis/model_all/noerrbars_logy/dose_split"]
+```
+
+Loop over options, and within each option, loop over datasets, to plot joint analysis with all models.
+```{r}
+junk <- mapply(function(plot_errbars,
+                       log10_scale_y,
+                       plot_dose_norm,
+                       split_dose,
+                       file_suffix,
+                       file_path){
+  print(file_suffix)
+DT_plot <- plot_combos[,
+                       .(plot_obj = list(
+                         {
+                          studies_list <- strsplit(Studies.Analyzed_in,
+                               split = ", ")[[1]]
+      #get data.table of newdata to be predicted
+      #leave out DTXSID, Species columns
+      #since these will be added back in from fit_combs
+      obs_data <- cvt[DTXSID %in% DTXSID_in &
+                           Species %in% Species_in &
+                           Study %in% studies_list]
+      
+      plot_fit(fit_flat = fit_flat,
+               fit_1comp = fit_1comp,
+               fit_2comp = fit_2comp,
+               DTXSID_in = DTXSID_in,
+                 Species_in = Species_in,
+                 obs_data = obs_data,
                  model_in = "all",
                  Analysis_Type_in = "Joint",
-                 plot_dose_norm = TRUE,
-                 split_dose = FALSE,
+                 plot_dose_norm = plot_dose_norm,
+                 split_dose = split_dose,
                  n_interp_time = 10,
                      limit_y_axis = FALSE,
-                     log10_scale_y = FALSE,
-                     plot_errbars = TRUE,
+                     log10_scale_y = log10_scale_y,
+                     plot_errbars = plot_errbars,
                      log10_scale_time = FALSE,
-                 file_suffix = "errbars_naturaly_dose_norm",
-                     file_path = "../inst/ext/plots/Joint Analysis/model_all/errbars_naturaly/dose_norm",
-                 verbose = TRUE),
-        by = .(DTXSID,
-               Species),
-        .SDcols = names(cvt_fit)]
+                 return_plot = TRUE,
+                 save_plot = TRUE,
+                 file_suffix = file_suffix,
+                     file_path = file_path,
+                 verbose = FALSE,
+                 ggsave_args = list(scale = 1,
+                                        width = 13.33,
+                                        height = 7.5,
+                                        units = "in",
+                                        dpi = 300,
+                                        limitsize = TRUE,
+                                        bg = NULL)
+                 )
+                       })),
+        by = .(DTXSID_in,
+               Species_in,
+               Analysis_Type_in,
+               Studies.Analyzed_in)]
 
+#save all plots as one big paginated file
+pdf(paste0(file_path,
+              "/all_plots_",
+              file_suffix,
+              ".pdf"),
+    width = 13.33,
+                                        height = 7.5)
+print(DT_plot$plot_obj)
+dev.off()
 
-```
-Do the same, but faceting by dose.
+rm(DT_plot)
 
-```{r}
-cvt_fit[,
-        plot_fit(DTXSID = unique(DTXSID),
-                 Species_in = unique(Species),
-                 DFsub = .SD,
-                 model_in = "all",
-                 Analysis_Type_in = "Joint",
-                 plot_dose_norm = FALSE,
-                 split_dose = TRUE,
-                 n_interp_time = 10,
-                     limit_y_axis = FALSE,
-                     log10_scale_y = FALSE,
-                     plot_errbars = TRUE,
-                     log10_scale_time = FALSE,
-                 file_suffix = "errbars_naturaly_dose_norm",
-                     file_path = "../inst/ext/plots/Joint Analysis/model_all/errbars_naturaly/dose_split",
-                 verbose = TRUE),
-        by = .(DTXSID,
-               Species),
-        .SDcols = names(cvt_fit)]
-
-
-```
-
-Do non-dose-faceted, but log scale.
-
-```{r}
-cvt_fit[,
-        plot_fit(DTXSID = unique(DTXSID),
-                 Species_in = unique(Species),
-                 DFsub = .SD,
-                 model_in = "all",
-                 Analysis_Type_in = "Joint",
-                 plot_dose_norm = TRUE,
-                 split_dose = FALSE,
-                 n_interp_time = 10,
-                     limit_y_axis = FALSE,
-                     log10_scale_y = TRUE,
-                     plot_errbars = FALSE,
-                     log10_scale_time = FALSE,
-                 file_suffix = "errbars_naturaly_dose_norm",
-                     file_path = "../inst/ext/plots/Joint Analysis/model_all/noerrbars_logy/dose_norm",
-                 verbose = TRUE),
-        by = .(DTXSID,
-               Species),
-        .SDcols = names(cvt_fit)]
-
-
-```
-
-Do dose-faceted, but log scale.
-
-```{r}
-cvt_fit[,
-        plot_fit(DTXSID = unique(DTXSID),
-                 Species_in = unique(Species),
-                 DFsub = .SD,
-                 model_in = "all",
-                 Analysis_Type_in = "Joint",
-                 plot_dose_norm = FALSE,
-                 split_dose = TRUE,
-                 n_interp_time = 10,
-                     limit_y_axis = FALSE,
-                     log10_scale_y = TRUE,
-                     plot_errbars = FALSE,
-                     log10_scale_time = FALSE,
-                 file_suffix = "errbars_naturaly_dose_norm",
-                     file_path = "../inst/ext/plots/Joint Analysis/model_all/noerrbars_logy/dose_split",
-                 verbose = TRUE),
-        by = .(DTXSID,
-               Species),
-        .SDcols = names(cvt_fit)]
-
+return(0)
+},
+plot_errbars = opts_DT$plot_errbars,
+                       log10_scale_y = opts_DT$log10_scale_y,
+                       plot_dose_norm = opts_DT$plot_dose_norm,
+                       split_dose = opts_DT$split_dose,
+file_suffix = opts_DT$file_suffix,
+file_path = opts_DT$file_path)
 
 ```
 
 
-```{r}
 
-#plot all models
-tmp <- mapply(plot_fit,
-              DTXSID_in = plot_table$DTXSID,
-                     Species_in = plot_table$Species,
-              MoreArgs = list(
-                     model_in = "all",
-                     Analysis_Type_in = "Joint",
-                     DF = cvt,
-                     pk_fit = pk_fit,
-                     n = 101,
-                     limit_y_axis = FALSE,
-                     log10_scale_y = TRUE,
-                     plot_errbars = FALSE,
-                     log10_scale_time = FALSE,
-                     file_path = "../inst/ext/plots/Joint Analysis/model_all/noerrbars_logy")
-                     )
-
-```
-
-
-Problem: DTXSID0022985_rat_Joint_all does not plot any model lines. Why?
-
-```{r}
-pk_fit[DTXSID %in% "DTXSID0022985"]
-```
-
-Apparently there were no detected data points?
-
-```{r}
-cvt[DTXSID %in% "DTXSID0022985", .(Reference, Value, LOQ)]
-```
-
-Hmm. Something is very weird here. I definitely see some detected points. They are all the same reference, so it isn't that a single-reference fit did not work but a joint fit did work. 
-
-Plot only the winning model
-
-```{r}
-#plot all models
-tmp <- mapply(plot_fit,
-              DTXSID_in = plot_table$DTXSID,
-                     Species_in = plot_table$Species,
-              MoreArgs = list(
-                Analysis_Type_in = c("Joint", "Separate"),
-                     model_in = "winning",
-                     fitdata = DF,
-                     pk_fit = pk_fit,
-                     file_path = "inst/ext/plots/analysis_all_model_winning/",
-                log10_scale_time = TRUE)
-                     )
-```
 
 

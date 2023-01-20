@@ -4,7 +4,7 @@
 \alias{auc_1comp}
 \title{Analytic AUC for 1-compartment model}
 \usage{
-auc_1comp(params, time, dose, iv.dose)
+auc_1comp(params, time, dose, iv.dose, medium)
 }
 \arguments{
 \item{params}{A named list of model parameter values. For either IV or oral

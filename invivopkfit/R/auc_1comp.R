@@ -29,11 +29,60 @@
 auc_1comp <- function(params,
                       time,
                       dose,
-                      iv.dose){
+                      iv.dose,
+                      medium){
+
+  #check whether lengths of time, dose, and iv.dose match
+  time_len <- length(time)
+  dose_len <- length(dose)
+  ivdose_len <- length(iv.dose)
+  medium_len <- length(medium)
+
+  len_all <- c(time_len, dose_len, ivdose_len, medium_len)
+  #Cases:
+  # All three lengths are the same -- OK
+  # Two lengths are the same and the third is 1 -- OK
+  # Two lengths are 1 and the third is not 1 -- OK
+  # Otherwise there is a problem
+  good_len <- (length(unique(len_all)) == 1) |
+    (length(unique(len_all)) == 2 &
+       sum(len_all == 1) %in% c(1, 2))
+
+  if(!good_len){
+    stop(paste0("invivopkfit::auc_1comp(): ",
+                "'time', 'dose', 'iv.dose', and 'medium'",
+                "must either be the same length or length 1.\n",
+                "'time' is length ", time_len, "\n",
+                "'dose' is length ", dose_len, "\n",
+                "'iv.dose' is length ", ivdose_len, "\n",
+                "'medium' is length ", medium_len, "\n")
+    )
+  }
+
+  #if any are length-1, repeat them to match the longest
+  max_len <- max(len_all)
+  time <- rep(time, length.out = max_len)
+  dose <- rep(dose, length.out = max_len)
+  iv.dose <- rep(iv.dose, length.out = max_len)
+  medium <- rep(medium, length.out = max_len)
 
   #compute Fgutabs/Vdist if necessary
   if(all(c("Fgutabs", "Vdist") %in% names(params))){
     params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
+  }
+
+  #if Vdist and Fgutabs_Vdist are provided, but not Fgutabs, compute Fgutabs
+  if(all(c("Vdist", "Fgutabs_Vdist") %in% names(params)) &
+     !("Fgutabs" %in% names(params))
+  ){
+    params$Fgutabs <- params$Fgutabs_Vdist * params$Vdist
+  }
+
+  #if Fgutabs and Fgutabs_Vdist provided, but not Vdist, compute Vdist
+  if(all(c("Fgutabs", "Fgutabs_Vdist") %in% names(params)) &
+     !("Vdist" %in% names(params))
+  ){
+    params$Vdist <- params$Fgutabs / params$Fgutabs_Vdist
   }
 
   #drop any length-0 params
@@ -44,7 +93,7 @@ auc_1comp <- function(params,
 
     #check for needed params
     if(!all(c("kelim", "kgutabs", "Fgutabs_Vdist") %in% names(params))){
-      stop(paste0("cp_1comp(): Error: For 1-compartment oral model, ",
+      stop(paste0("auc_1comp(): Error: For 1-compartment oral model, ",
                   "missing parameter(s): ",
                   paste(setdiff(c("kelim", "kgutabs", "Fgutabs_Vdist"),
                                 names(params)
@@ -57,12 +106,19 @@ auc_1comp <- function(params,
 
   if(any(iv.dose %in% TRUE)){
     if(!all(c("kelim", "Vdist") %in% names(params))){
-      stop(paste0("cp_1comp(): Error: For 1-compartment IV model, ",
+      stop(paste0("auc_1comp(): Error: For 1-compartment IV model, ",
                   "missing parameter(s): ",
                   paste(setdiff(c("kelim", "Vdist"), names(params)),
-                        collapse = ", "),
+                        collapse = ", ")
       )
       )
+    }
+  }
+
+  if(any(medium %in% "blood")){
+    if(!("Rblood2plasma" %in% names(params))){
+      stop(paste0("auc_1comp(): Error: For 1-compartment model ",
+                  "in blood: missing parameter Rblood2plasma"))
     }
   }
 
@@ -103,6 +159,10 @@ auc_1comp <- function(params,
     }
   }
 
+  #convert blood concentrations using Rblood2plasma
+  if(any(medium %in% "blood")){
+    auc[medium %in% "blood"] <- params$Rblood2plasma * auc[medium %in% "blood"]
+  }
 
   return(auc)
 }

@@ -4,7 +4,7 @@
 \alias{auc_2comp}
 \title{Analytical AUC for the 2-compartment model}
 \usage{
-auc_2comp(params, time, dose, iv.dose)
+auc_2comp(params, time, dose, iv.dose, medium = "plasma")
 }
 \arguments{
 \item{params}{A named list of parameter values including the following:

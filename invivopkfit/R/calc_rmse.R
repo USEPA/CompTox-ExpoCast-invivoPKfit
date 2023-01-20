@@ -5,14 +5,14 @@ calc_rmse <- function(group_mean,
                       group_LOQ){
   #If both obs and pred are below LOQ, set obs to pred.
   #This will effectively make error zero in these cases.
-  group_mean[group_mean < group_LOQ &
-               group_pred < group_LOQ] <- group_pred[group_mean < group_LOQ &
+  group_mean[group_mean <= group_LOQ &
+               group_pred <= group_LOQ] <- group_pred[group_mean < group_LOQ &
                                                        group_pred < group_LOQ]
 
   #If obs is below LOQ but pred is not, set obs to LOQ.
-  group_mean[group_mean < group_LOQ &
-             !(group_pred < group_LOQ)] <- group_LOQ[group_mean < group_LOQ &
-                                                       !(group_pred < group_LOQ)]
+  group_mean[group_mean <= group_LOQ &
+             !(group_pred <= group_LOQ)] <- group_LOQ[group_mean <= group_LOQ &
+                                                       !(group_pred <= group_LOQ)]
 #Calculate MSE.
   mse <- (1/sum(group_N)) * sum(
     (group_N - 1) * group_sd^2 +
@@ -32,13 +32,13 @@ calc_rsq <- function(group_mean,
                      group_pred){
   #If both obs and pred are below LOQ, set obs to pred.
   #This will effectively make error zero in these cases.
-  group_mean[group_mean < group_LOQ &
-               group_pred < group_LOQ] <- group_pred[group_mean < group_LOQ &
+  group_mean[group_mean <= group_LOQ &
+               group_pred <= group_LOQ] <- group_pred[group_mean < group_LOQ &
                                                        group_pred < group_LOQ]
 
   #If obs is below LOQ but pred is not, set obs to LOQ.
-  group_mean[group_mean < group_LOQ &
-               !(group_pred < group_LOQ)] <- group_LOQ[group_mean < group_LOQ &
+  group_mean[group_mean <= group_LOQ &
+               !(group_pred <= group_LOQ)] <- group_LOQ[group_mean < group_LOQ &
                                                          !(group_pred < group_LOQ)]
 
   pred_bar <- weighted.mean(group_pred, group_N)
