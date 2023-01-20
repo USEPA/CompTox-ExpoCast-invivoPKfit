@@ -19,12 +19,15 @@ preprocess_data(
     Route = "studies.administration_route_normalized", LOQ = "series.loq", Subject =
     "subjects.id", N_Subjects = "series.n_subjects_in_series", Value_SD =
     "conc_time_values.conc_sd"),
-  defaults_list = list(Weight.Units = "kg", Dose.Units = "mg/kg", Time.Units = "h",
+  defaults_list = list(Weight.Units = "kg", Dose.Units = "mg/kg", Time.Units = "hours",
     Value.Units = "mg/L"),
   ratio_conc_to_dose = 1,
   calc_loq_factor = 0.45,
   routes_keep = c("po", "iv"),
   media_keep = c("blood", "plasma"),
+  impute_loq = TRUE,
+  impute_sd = TRUE,
+  study_def = c("DTXSID", "Species", "Reference", "Route", "Media"),
   suppress.messages = FALSE
 )
 }
@@ -47,14 +50,25 @@ for each new variable, if the corresponding old variable name is NULL in
 \item{ratio_conc_to_dose}{Ratio between the mass units used to report the
 concentration data and the mass units used to report the dose. Default 1.
 For example, concentration reported in ug/L and dose reported in mg/kg/day
-would require `ratio_conc_to_dose = 0.001`, because 1 ug/1 mg = 1e-6 g
-/ 1e-3 g = 0.001.}
+would require `ratio_conc_to_dose = 0.001`, because 1 ug/1 mg = 1e-6 g /
+1e-3 g = 0.001.}
 
 \item{routes_keep}{List of routes to retain. Default `c("po", "iv")` to
 retain only oral and IV administration data.}
 
 \item{media_keep}{List of media to retain. Default `c("blood", "plasma")` to
 retain only concentrations in blood and plasma.}
+
+\item{impute_loq}{Logical: TRUE to impute values for missing LOQs; FALSE to
+leave them alone.}
+
+\item{impute_sd}{Logical: TRUE to impute values for missing sample SDs for
+multi-subject observations; FALSE to leave them alone}
+
+\item{study_def}{A character vector specifying the variables (new names)
+whose unique combinations define individual "studies" (where each "study"
+will have its own error SD in the fitting process). Default is `c("DTXSID",
+"Species", "Reference", "Route", "Media")`.}
 
 \item{suppress.messages}{Logical: Whether to suppress verbose messages.
 Default FALSE, to be verbose.}
@@ -97,7 +111,7 @@ A `data.table` containing the cleaned, harmonized data, ready for
   steps described in Details.}
   }
 
- new_name = old_name
+  new_name = old_name
 }
 \description{
 Clean data to set up for PK model fitting.
@@ -106,7 +120,8 @@ Clean data to set up for PK model fitting.
 # Preprocessing steps
 
 This function does the following things in the following order, and is
-verbose about it unless told otherwise (by setting `suppress.messages = FALSE`):
+verbose about it unless told otherwise (by setting `suppress.messages =
+FALSE`):
 
 - Renames columns to the standard names that invivoPKfit uses internally, and
 adds any missing columns. See [rename_columns()].
@@ -123,7 +138,8 @@ the extraction-source ID would be for the meta-analysis paper, but the
 reference ID would be for the original publication.)
 - Removes all observations where `DTXSID_Dosed` and `DTXSID_Analyzed` are not
 the same (i.e., keeps only data where the parent chemical is what was
-monitored). Creates new columns `Compound`, `DTXSID`, and `CAS` identifying the chemical both dosed and analyzed.
+monitored). Creates new columns `Compound`, `DTXSID`, and `CAS` identifying
+the chemical both dosed and analyzed.
 - Harmonizes routes recorded as "oral" to "po" and "intravenous" to "iv".
 - Removes all observations that have routes other than those listed in `routes_keep`.
 - Removes all observations in media other than those listed in `media_keep`.
@@ -133,13 +149,13 @@ monitored). Creates new columns `Compound`, `DTXSID`, and `CAS` identifying the 
 between the mass units for concentration and the mass units for dose).
 - For any concentrations reported as 0, substitute NA.
  - Imputes LOQ for any observations missing it, using [estimate_loq()]. LOQ
- is imputed for each unique combination of `Reference`, `DTXSID`, `Species`,
- and `Media` as `calc_loq_factor` times the minimum *detected* `Value`.s
+is imputed for each unique combination of `Reference`, `DTXSID`, `Species`,
+and `Media` as `calc_loq_factor` times the minimum *detected* `Value`.s
  - Substitutes NA for any concentration observations below LOQ (these are non-detects).
  - Removes any remaining observations where both `Value` and `LOQ` are NA.
- For example, this situation occurs for reference/chemical/species/media
- combinations where no LOQ was reported, and all concentrations were reported
- as NA, so that no LOQ could be imputed.
+For example, this situation occurs for reference/chemical/species/media
+combinations where no LOQ was reported, and all concentrations were reported
+as NA, so that no LOQ could be imputed.
 - Removes any observations with NA `Time`.
 - Adds a variable `Time.Days` where `Time` (in hours) is converted to time in days.
 }
