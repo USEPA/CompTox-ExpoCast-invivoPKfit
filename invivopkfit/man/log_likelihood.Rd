@@ -11,6 +11,7 @@ log_likelihood(
   modelfun = "analytic",
   model,
   fit_conc_dose = TRUE,
+  fit_log_conc = FALSE,
   force_finite = FALSE,
   negative = TRUE
 )
@@ -25,15 +26,15 @@ When this function is the objective function for a numerical optimizer,
 these are additional model parameters whose value is to be held constant
 while the other parameters are optimized. Default NULL (meaning that all
 model parameters are supplied in `params`). (If you are calling this
-function directly, you probably want to leave `const_params = NULL` and
-just supply all model parameters in `params`.)}
+function directly, you probably want to leave `const_params = NULL` and just
+supply all model parameters in `params`.)}
 
 \item{DF}{A `data.frame` of concentration-time data, for example as produced
 by [preprocess_data()]. It must contain variables named `Study`
 (representing the study ID for each observation), `Time` (representing
-observation time points in hours), `Dose` (representing administered dose
-in mg/kg), `iv` (logical TRUE/FALSE, representing whether the administered
-dose was IV), `Value` (representing observed concentrations in mg/L), `LOQ`
+observation time points in hours), `Dose` (representing administered dose in
+mg/kg), `iv` (logical TRUE/FALSE, representing whether the administered dose
+was IV), `Value` (representing observed concentrations in mg/L), `LOQ`
 (numeric, representing limit of quantification of each observed
 concentration  in mg/L), and `N_Subjects` (representing the number of
 subjects included in the concentration measurement). If any `N_Subjects` >
@@ -51,21 +52,25 @@ solution, "full" to use the full ODE model. Default is "analytic".}
 \item{fit_conc_dose}{Logical: Whether to fit dose-normalized concentrations
 (TRUE) or non-dose-normalized concentrations (FALSE). Default TRUE.}
 
+\item{fit_log_conc}{TRUE or FALSE (default FALSE): whether to apply log-scaling to
+the concentrations (or dose-normalized concentrations) before evaluating the
+log-likelihood.}
+
 \item{force_finite}{Logical: Whether to force the function to return a finite
 log-likelihood (e.g., as required by [optimx::optimx()] with method
 'L-BFGS-B'.) Default FALSE, allowing the function to return -Inf for
-infinitely-unlikely parameter combinations. When `force_finite == TRUE`,
-the function will replace -Inf with -999999.}
+infinitely-unlikely parameter combinations. When `force_finite == TRUE`, the
+function will replace -Inf with -999999.}
 
 \item{negative}{Logical: Whether to return the *negative* log-likelihood
-(i.e., the log-likelihood multiplied by negative 1). Default TRUE, to
-return the negative log-likelihood. This option is useful when treating the
+(i.e., the log-likelihood multiplied by negative 1). Default TRUE, to return
+the negative log-likelihood. This option is useful when treating the
 log-likelihood as an objective function to be minimized by an optimization
 algorithm.}
 }
 \value{
 A log-likelihood value for the data given the parameter values in
-  params
+ params
 }
 \description{
 The log-likelihood function (probability of data given model parameters).
@@ -87,10 +92,10 @@ to dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. Each observation has a
 corresponding LOQ, \eqn{\textrm{LOQ}_{ijk}}.
 
 For multiple-subject observations, \eqn{y_{ijk}} is the \eqn{k^{th}} *sample
-mean* observed concentration for chemical-species combination \eqn{i} and study \eqn{j},
-corresponding to dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. It represents the
-mean of \eqn{n_{ijk}} individual measurements. It has a corresponding sample
-standard deviation, \eqn{s_{ijk}}.
+mean* observed concentration for chemical-species combination \eqn{i} and
+study \eqn{j}, corresponding to dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. It
+represents the mean of \eqn{n_{ijk}} individual measurements. It has a
+corresponding sample standard deviation, \eqn{s_{ijk}}.
 
 \eqn{\bar{theta}_i} represents the vector of model parameters supplied in
 argument `params` for chemical-species combination \eqn{i}.
@@ -103,8 +108,8 @@ evaluated at dose \eqn{d} and time \eqn{t}, with parameter vector
  \deqn{\mu_{ijk} = f \left(d_{ijk}, t_{ijk};
 \bar{\theta}_i \right)}
 
-\eqn{\sigma_{ij}^2} is the study- and chemical-specific residual
-variance. (It is a hyperparameter.)
+\eqn{\sigma_{ij}^2} is the study- and chemical-specific residual variance. (It
+is a hyperparameter.)
 
 ## Single-subject observations above limit of quantification (detects)
 

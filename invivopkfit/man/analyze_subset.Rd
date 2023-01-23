@@ -10,6 +10,7 @@ analyze_subset(
   modelfun,
   pool_sigma = FALSE,
   fit_conc_dose = TRUE,
+  fit_log_conc = FALSE,
   rescale_time = TRUE,
   get_starts_args = list(start_from_httk = "all", start_from_data = "all"),
   get_lower_args = list(Vdist_from_species = FALSE),

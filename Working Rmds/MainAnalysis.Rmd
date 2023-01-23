@@ -66,7 +66,9 @@ names_list <- list(
   "LOQ" = "series.loq_normalized", #note that LOQs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
   "Subject" = "subjects.id",
   "N_Subjects" = "series.n_subjects_in_series",
-  "Value_SD" = "conc_time_values.conc_sd_normalized" #note that SDs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  "Value_SD" = "conc_time_values.conc_sd_normalized", #note that SDs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  "Study_ID" = "studies.id",
+  "Series_ID" = "series.id"
   )
 ```
 

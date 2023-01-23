@@ -1,6 +1,6 @@
 #' Postprocess fitted PK models
 #'
-#' Derive quantities such as half-life, tpeak, Cpeak, Css from fitted PK models
+#' Derive quantities such as half-life, tmax, Cmax, Css from fitted PK models
 #'
 #' @param PK_fit A data.table of fitted PK parameters, as produced by `fit_all()` or `analyze_subset()`
 #' @param model The name of the relevant model: "1compartment", "2compartment", or "flat"
@@ -21,7 +21,8 @@ postprocess_data <- function(PK_fit,
                         model + References.Analyzed + Studies.Analyzed +
                         N_Routes + N_Media +
                        time_units_fitted +
-                        AIC ~ param_name,
+                        AIC +
+                       rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
                       value.var = "Fitted mean")
     #also get the SD for each fitted param
     PK_flat_sd <- dcast(PK_fit[model %in% "flat" &
@@ -31,7 +32,8 @@ postprocess_data <- function(PK_fit,
                            model + References.Analyzed + Studies.Analyzed +
                            N_Routes + N_Media +
                           time_units_fitted +
-                           AIC ~ param_name,
+                           AIC+
+                          rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
                          value.var = "Fitted std dev")
     #append "_sd" for these params
     setnames(PK_flat_sd,
@@ -56,7 +58,7 @@ postprocess_data <- function(PK_fit,
   }else if(model %in% "1compartment"){
   #for 1-compartment model:
 
-  #Calculate: total clearance; half-life; tpeak; Cpeak
+  #Calculate: total clearance; half-life; tmax; Cmax
   #and Css for a dose of 1 mg/kg/da
 
     #reshape wide (one column for each parameter)
@@ -67,7 +69,8 @@ postprocess_data <- function(PK_fit,
                       model + References.Analyzed + Studies.Analyzed +
                       time_units_fitted +
                       N_Routes + N_Media +
-                      AIC ~ param_name,
+                      AIC+
+                      rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
                     value.var = "Fitted mean")
   #also get the SD for each fitted param
   PK_1comp_sd <- dcast(PK_fit[model %in% "1compartment" &
@@ -77,7 +80,8 @@ postprocess_data <- function(PK_fit,
                       model + References.Analyzed + Studies.Analyzed +
                       N_Routes + N_Media +
                       time_units_fitted +
-                      AIC ~ param_name,
+                      AIC+
+                      rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
                     value.var = "Fitted std dev")
   #append "_sd" for these params
   setnames(PK_1comp_sd,
@@ -126,35 +130,78 @@ if(length(time_const) > 0){
   #kelim * (Vdist/Fgutabs) = CLtot/Fgutabs
   PK_1comp[, CLtot_Fgutabs := kelim / Fgutabs_Vdist]
 
-  #Css_oral
+  #Css_for a 1 mg/kg/day oral infusion dose
   PK_1comp[, Css_oral_1mgkg := Fgutabs_Vdist * (1/(24*kelim))]
-  #if only kelim and Vdist available -- get Css for IV infusion
+
+  #Css for 1 mg/kg/day IV infusion dose (if Vdist available)
   PK_1comp[, Css_iv_1mgkg := 1/(24 * CLtot)]
 
-  #half-life, tpeak, Cpeak:
+  #half-life, tmax, Cmax:
 
   #see https://www.boomer.org/c/p4/c08/c0803.php
 
   #half-life
   PK_1comp[, halflife := log(2) / kelim]
 
-  #tpeak -- only available if kgutabs was fitted
-  PK_1comp[, tpeak_oral := log(kgutabs / kelim) / (kgutabs - kelim)]
+  #tmax -- only available if kgutabs was fitted
+  PK_1comp[, tmax_oral := log(kgutabs / kelim) / (kgutabs - kelim)]
 
-  #Cpeak for oral dose of 1 mg/kg
-  PK_1comp[!is.na(kgutabs), Cpeak_oral_1mgkg := cp_1comp(params = list("kelim" = kelim,
-                                                  "Fgutabs_Vdist" = Fgutabs_Vdist,
-                                                  "kgutabs" = kgutabs),
-                                    time = tpeak_oral,
-                                    dose = 1,
-                                    iv.dose = FALSE),
+  #Cmax for oral bolus dose of 1 mg/kg
+  PK_1comp[!is.na(kgutabs),
+           Cmax_oral_1mgkg := cp_1comp(params = list(
+             "kelim" = kelim,
+             "Fgutabs_Vdist" = Fgutabs_Vdist,
+             "kgutabs" = kgutabs
+           ),
+           time = tmax_oral,
+           dose = 1,
+           iv.dose = FALSE,
+           medium = "plasma"),
            by = .(Analysis_Type,
-           DTXSID,
-           Species,
-             model,
-           Studies.Analyzed,
-             AIC)]
+                  DTXSID,
+                  Species,
+                  model,
+                  Studies.Analyzed,
+                  AIC)]
 
+  #AUC_infinity for oral bolus dose of 1 mg/kg
+  PK_1comp[!is.na(kgutabs) & !is.na(kelim) & !is.na(Fgutabs_Vdist),
+           AUC_inf_oral_1mgkg := auc_1comp(params = list(
+             "kelim" = kelim,
+             "Fgutabs_Vdist" = Fgutabs_Vdist,
+             "kgutabs" = kgutabs
+           ),
+           time = Inf,
+           dose = 1,
+           iv.dose = FALSE,
+           medium = "plasma"),
+           by = .(Analysis_Type,
+                  DTXSID,
+                  Species,
+                  model,
+                  Studies.Analyzed,
+                  AIC)]
+
+  #AUC_infinity for IV bolus dose of 1 mg/kg
+  PK_1comp[!is.na(Vdist) & !is.na(kelim),
+           AUC_inf_IV_1mgkg := auc_1comp(params = list(
+             "kelim" = kelim,
+             "Vdist" = Vdist,
+           ),
+           time = Inf,
+           dose = 1,
+           iv.dose = TRUE,
+           medium = "plasma"),
+           by = .(Analysis_Type,
+                  DTXSID,
+                  Species,
+                  model,
+                  Studies.Analyzed,
+                  AIC)]
+
+
+  #switch back to original Fgutabs_Vdist (i.e., NA if Fgutabs and Vdist were
+  #fitted separately)
   PK_1comp[, Fgutabs_Vdist := Fgutabs_Vdist_orig]
   PK_1comp[, Fgutabs_Vdist_orig := NULL]
 
@@ -170,7 +217,8 @@ if(length(time_const) > 0){
                       model + References.Analyzed + Studies.Analyzed +
                       N_Routes + N_Media +
                       time_units_fitted +
-                      AIC ~ param_name,
+                      AIC+
+                      rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
                     value.var = "Fitted mean")
 
   #also get the SD for each fitted param
@@ -181,7 +229,8 @@ if(length(time_const) > 0){
                          model + References.Analyzed + Studies.Analyzed +
                          N_Routes + N_Media +
                          time_units_fitted +
-                         AIC ~ param_name,
+                         AIC+
+                         rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
                        value.var = "Fitted std dev")
   #append "_sd" for these params
   setnames(PK_2comp_sd,
@@ -226,7 +275,6 @@ if(length(time_const) > 0){
 
   #in case Fgutabs and V1 were fitted separately, compute Fgutabs/V1
     PK_2comp[, Fgutabs_V1_orig := Fgutabs_V1]
-
   PK_2comp[is.na(Fgutabs_V1), Fgutabs_V1 := Fgutabs/V1]
 
   #Total clearance
@@ -279,15 +327,15 @@ if(length(time_const) > 0){
   PK_2comp[, halflife_alpha := log(2) / alpha]
   PK_2comp[, halflife_abs := log(2) / kgutabs]
 
-  #tpeak for oral dose
+  #tmax for oral dose
   #I don't think it can be done analytically
   #so do it numerically
   #use uniroot() to search for zeros of time deriv of Cp vs. time
   #for each set of parameters
-  #look between 0 and what would be the 1-compartment tpeak
+  #look between 0 and what would be the 1-compartment tmax
   #extending the interval if necessary
   #if uniroot() fails, then just return NA
-  PK_2comp[!is.na(kgutabs), tpeak_oral := tryCatch(
+  PK_2comp[!is.na(kgutabs), tmax_oral := tryCatch(
     uniroot( f = function(x){
     cp_2comp_dt(params = list("kelim" = kelim,
                               "Fgutabs_V1" = Fgutabs_V1,
@@ -296,7 +344,8 @@ if(length(time_const) > 0){
                               "k21" = k21),
                 time = x,
                 dose = 1,
-                iv.dose = FALSE)
+                iv.dose = FALSE,
+                medium = "plasma")
   },
             lower = 0,
              upper = log(kgutabs / kelim) / (kgutabs - kelim),
@@ -311,16 +360,17 @@ if(length(time_const) > 0){
          Studies.Analyzed,
          AIC)]
 
-  #Cpeak for oral dose of 1 mg/kg
+  #Cmax for oral bolus dose of 1 mg/kg
   PK_2comp[!is.na(kgutabs),
-           Cpeak_oral_1mgkg := cp_2comp(params = list("kelim" = kelim,
+           Cmax_oral_1mgkg := cp_2comp(params = list("kelim" = kelim,
                                                   "Fgutabs_V1" = Fgutabs_V1,
                                                   "kgutabs" = kgutabs,
                                                   "k12" = k12,
                                                   "k21" = k21),
-                                    time = tpeak_oral,
+                                    time = tmax_oral,
                                     dose = 1,
-                                    iv.dose = FALSE),
+                                    iv.dose = FALSE,
+                                    medium = "plasma"),
            by = .(Analysis_Type,
                   DTXSID,
                   Species,
@@ -328,7 +378,41 @@ if(length(time_const) > 0){
                   Studies.Analyzed,
                   AIC)]
 
-  #remove temporary calculation columns
+  #AUC_infinity for oral bolus dose of 1 mg/kg
+  PK_2comp[!is.na(kgutabs),
+           AUC_inf_oral_1mgkg := auc_2comp(params = list("kelim" = kelim,
+                                                     "Fgutabs_V1" = Fgutabs_V1,
+                                                     "kgutabs" = kgutabs,
+                                                     "k12" = k12,
+                                                     "k21" = k21),
+                                       time = Inf,
+                                       dose = 1,
+                                       iv.dose = FALSE,
+                                       medium = "plasma"),
+           by = .(Analysis_Type,
+                  DTXSID,
+                  Species,
+                  model,
+                  Studies.Analyzed,
+                  AIC)]
+
+  PK_2comp[!is.na(kgutabs),
+           AUC_inf_iv_1mgkg := auc_2comp(params = list("kelim" = kelim,
+                                                         "V1" = V1,
+                                                         "k12" = k12,
+                                                         "k21" = k21),
+                                           time = Inf,
+                                           dose = 1,
+                                           iv.dose = TRUE,
+                                           medium = "plasma"),
+           by = .(Analysis_Type,
+                  DTXSID,
+                  Species,
+                  model,
+                  Studies.Analyzed,
+                  AIC)]
+
+  #remove temporary calculation columns (sum & product of alpha & beta)
   PK_2comp[, c("alphabeta_sum",
                "alphabeta_prod") := NULL]
 

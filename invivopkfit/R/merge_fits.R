@@ -24,7 +24,10 @@ merge_fits <- function(fit_flat,
                "Studies.Analyzed",
                "N_Routes",
                "N_Media",
-               "time_units_reported")
+               "time_units_reported",
+               "rescale_time",
+               "fit_conc_dose",
+               "fit_log_conc")
 
   #find the winning model for each dataset (minimum AIC)
 
@@ -71,7 +74,6 @@ merge_fits <- function(fit_flat,
   na_cols <- pk_fit[, sapply(.SD, function(x) all(is.na(x)))]
   na_colnames <- names(pk_fit)[na_cols]
   pk_fit[, (na_colnames) := NULL]
-
 
   return(pk_fit)
 }

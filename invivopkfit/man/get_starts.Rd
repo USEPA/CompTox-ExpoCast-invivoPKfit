@@ -16,6 +16,7 @@ get_starts(
     start_value_msg = "Default"),
   start_from_httk = "all",
   start_from_data = "all",
+  fit_log_conc = FALSE,
   suppress.messages = FALSE
 )
 }
@@ -57,12 +58,22 @@ values are within the lower and upper bounds defined by `par_DF$lower` and
 \item{start_from_data}{Character vector: The names of one or more parameters
 whose starting values are to be estimated from the data. Default value is
 `"all"`, which means that starting values for all parameters will be
-estimated from the data, so long as the `httk`-derived parameter
-values are within the lower and upper bounds defined by `par_DF$lower` and
+estimated from the data, so long as the `httk`-derived parameter values are
+within the lower and upper bounds defined by `par_DF$lower` and
 `par_DF$upper`. To suppress estimation of starting values from data, set
-`start_from_data` to NULL, NA, or a zero-length character vector. If a parameter name is in both
-`start_from_httk` and `start_from_data`, then data-derived
-starting values will override `httk` starting values for that parameter.}
+`start_from_data` to NULL, NA, or a zero-length character vector. If a
+parameter name is in both `start_from_httk` and `start_from_data`, then
+data-derived starting values will override `httk` starting values for that
+parameter.}
+
+\item{fit_log_conc}{Logical: Whether you are fitting log-transformed
+concentrations, or not. If TRUE, then `sigma` represents the log-scale
+standard devation, and a starting value for `sigma` will be determined
+using the residual error between log-scale observed and predicted
+concentrations. If FALSE (default), then `sigma` represents the
+natural-scale residual standard deviation, and a starting value for `sigma`
+will be calculated using the residual error between natural-scale predicted and observed
+concentrations.}
 
 \item{suppress.messages}{Logical: Whether to suppress printing of messages.}
 }
@@ -87,18 +98,14 @@ Model parameters are first assigned default starting values according to
 
 The default `starts_default` `data.frame` is shown below in table format:
 
-| param_name     | start_value | start_value_msg |
-| ---------------| ----------- | --------------- |
-| kelim          | 0.25        | Default         |
-| Vdist          | 5.56        | Default         |
-| kgutabs        | 2.19        | Default         |
-| Fgutabs        | 0.5         | Default         |
-| V1             | 5.56           | Default         |
-| k12            | 0.2         | Default         |
-| k21            | 0.5         | Default         |
-| Fgutabs_Vdist  | 0.5/5.56    | Default         |
-| Fgutabs_V1     | 0.5/5.56    | Default         |
-| sigma          | 1         | Default         |
+| param_name     | start_value | start_value_msg | | ---------------|
+----------- | --------------- | | kelim          | 0.25        | Default
+| | Vdist          | 5.56        | Default         | | kgutabs        | 2.19
+| Default         | | Fgutabs        | 0.5         | Default         | | V1 |
+5.56           | Default         | | k12            | 0.2         | Default |
+| k21            | 0.5         | Default         | | Fgutabs_Vdist  |
+0.5/5.56    | Default         | | Fgutabs_V1     | 0.5/5.56    | Default | |
+sigma          | 1         | Default         |
 
 
 # `httk` 1-compartment model parameterization starting values
@@ -140,8 +147,8 @@ Concentrations are normalized by Dose, then log-transformed.
 of this linear regression; `Vdist` is the intercept, exponentiated to bring
 it back to the natural scale.
 
- In case there is not enough data available in each phase to perform
- regression, the default or `httk`-derived starting values are used.
+In case there is not enough data available in each phase to perform
+regression, the default or `httk`-derived starting values are used.
 
 ### PO dosing data available
 
@@ -156,17 +163,17 @@ First, a linear regression is performed on the "late" data. The negative
 slope of the "late" linear regression gives an estimate for `kelim`. The
 intercept of the "late" regression is exponentiated and recorded as `A`.
 
-Then, the "early" data are predicted using the "late" linear
-regression, and the residuals are calculated. A second linear regression is
-performed on the "early" residuals. The negative slope of this second linear
-regression provides an estimate for `kgutabs`. Then, the intercept of the
-late regression, `A`, can be used with the estimates for `kelim` and
-`kgutabs` to calculate an estimate for `Fgutabs_Vdist`:
+Then, the "early" data are predicted using the "late" linear regression, and
+the residuals are calculated. A second linear regression is performed on the
+"early" residuals. The negative slope of this second linear regression
+provides an estimate for `kgutabs`. Then, the intercept of the late
+regression, `A`, can be used with the estimates for `kelim` and `kgutabs` to
+calculate an estimate for `Fgutabs_Vdist`:
 
 -  `Fgutabs_Vdist <- A * (kgutabs - kelim) / kgutabs`
 
- In case there is not enough data available in each phase to perform
- regression, the default or `httk`-derived starting values are used.
+In case there is not enough data available in each phase to perform
+regression, the default or `httk`-derived starting values are used.
 
 #### Both PO and IV dosing data available
 
@@ -176,8 +183,8 @@ estimate and the PO-based estimate.
 The estimates for `Vdist` (from the IV data) and `Fgutabs_Vdist` (from the PO
 data) are multiplied to produce an estimate for `Fgutabs`.
 
- In case there is not enough data available in each phase to perform
- regression, the default or `httk`-derived starting values are used.
+In case there is not enough data available in each phase to perform
+regression, the default or `httk`-derived starting values are used.
 
 ## 2-compartment model
 
@@ -197,11 +204,11 @@ First, a linear regression is performed on the "late" data. The negative
 slope of the "late" linear regression is recorded as `beta`, and the
 exponentiated intercept as `B`.
 
-Then the "early" data are predicted using the "late" linear
-regression, and the residuals are calculated. A second linear regression is
-performed on the "early" residuals. The negative slope of this second linear
-regression is recorded as `alpha`, and the exponentiated intercept as `A`.
-Then, the parameter starting values are calculated as follows (see
+Then the "early" data are predicted using the "late" linear regression, and
+the residuals are calculated. A second linear regression is performed on the
+"early" residuals. The negative slope of this second linear regression is
+recorded as `alpha`, and the exponentiated intercept as `A`. Then, the
+parameter starting values are calculated as follows (see
 https://www.boomer.org/c/p4/c19/c1902.php):
 
 -`k21 <- (A * beta + B*alpha)/(A + B)`
@@ -209,8 +216,8 @@ https://www.boomer.org/c/p4/c19/c1902.php):
 -`k12 <- alpha + beta - k21 - kel`
 -`V1 <- (alpha - k21)/(A * (alpha - beta))`
 
- In case there is not enough data available in each phase to perform
- regression, the default or `httk`-derived starting values are used.
+In case there is not enough data available in each phase to perform
+regression, the default or `httk`-derived starting values are used.
 
 ### PO dosing data available
 
@@ -232,7 +239,8 @@ and the residuals are calculated. A second linear regression is performed on
 the "early" residuals. The negative slope of this "early"-residuals linear
 regression is recorded as `alpha`, and the exponentiated intercept as `A`.
 
-Using `alpha`, `A`, `beta`, and `B`, estimates for `k21`, `kelim`, and `k12` can be made:
+Using `alpha`, `A`, `beta`, and `B`, estimates for `k21`, `kelim`, and `k12`
+can be made:
 
 - `k21 <- (A * beta + B*alpha) / (A + B)`
 - `kelim <- (alpha * beta) / k21`
@@ -250,8 +258,8 @@ Using the estimates for `k21` and `kgutabs`, along with `A`, `alpha`, and
 
  - `Fgutabs_V1 <- A * ( (kgutabs - alpha) * (beta - alpha))/( kgutabs * (k21 - alpha) )`
 
- In case there is not enough data available in each phase to perform
- regression, the default or `httk`-derived starting values are used.
+In case there is not enough data available in each phase to perform
+regression, the default or `httk`-derived starting values are used.
 
 #### Both PO and IV dosing data available
 
@@ -262,8 +270,8 @@ removed).
 The estimates for `V1` (from the IV data) and `Fgutabs_V1` (from the PO data)
 are multiplied to produce an estimate for `Fgutabs`.
 
- In case there is not enough data available in each phase to perform
- regression, the default or `httk`-derived starting values are used.
+In case there is not enough data available in each phase to perform
+regression, the default or `httk`-derived starting values are used.
 }
 \author{
 Caroline Ring, John Wambaugh, Mitchell Teague

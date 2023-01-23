@@ -16,6 +16,7 @@ get_upper_bounds(
   Fgutabs_Vdist_from_species = FALSE,
   sigma_from_data = TRUE,
   fit_conc_dose = TRUE,
+  fit_log_conc = FALSE,
   suppress.messages = FALSE
 )
 }

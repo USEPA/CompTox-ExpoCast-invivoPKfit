@@ -18,7 +18,7 @@ preprocess_data(
     "series.conc_medium_normalized", Value = "conc_time_values.conc", Value.Units = NULL,
     Route = "studies.administration_route_normalized", LOQ = "series.loq", Subject =
     "subjects.id", N_Subjects = "series.n_subjects_in_series", Value_SD =
-    "conc_time_values.conc_sd"),
+    "conc_time_values.conc_sd", Study_ID = "studies.id", Series_ID = "series.id"),
   defaults_list = list(Weight.Units = "kg", Dose.Units = "mg/kg", Time.Units = "hours",
     Value.Units = "mg/L"),
   ratio_conc_to_dose = 1,

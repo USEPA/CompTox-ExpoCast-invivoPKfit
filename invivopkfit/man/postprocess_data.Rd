@@ -15,7 +15,7 @@ postprocess_data(PK_fit, model)
 A data.table of derived quantities relevant to the model, with one row for each set of model parameters
 }
 \description{
-Derive quantities such as half-life, tpeak, Cpeak, Css from fitted PK models
+Derive quantities such as half-life, tmax, Cmax, Css from fitted PK models
 }
 \author{
 John Wambaugh, Caroline Ring

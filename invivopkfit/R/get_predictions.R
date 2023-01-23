@@ -4,9 +4,16 @@
 #' route, and medium), get predicted concentrations and AUCs.
 #'
 #' @param pk_fit A table of fitted PK parameters, as produced by
-#'   `postprocess_data()`.
-#' @param newdata A `data.table` which must contain variables named
-#'   `Time`, `Dose`, `iv`, and `Media`.
+#'   `postprocess_data()`. Must contain variables `DTXSID`, `Species`,
+#'   `Analysis_Type`, and `Studies.Analyzed`. Must also contain variables
+#'   corresponding to the parameters of the model specified in argument
+#'   `model_in`, as required for the route and media of data in `newdata` (as
+#'   given by [get_model_paramnames()]). These variables must be named as
+#'   `[param].[model]`. For example, for the 1-compartment model, if `newdata`
+#'   contains only IV-dosing data measured in plasma, then `pk_fit` must contain
+#'   variables named `kelim.1compartment` and `Vdist.1compartment`.
+#' @param newdata A `data.table` which must contain variables named `Time`,
+#'   `Dose`, `iv`, and `Media`.
 #' @param DTXSID_in The DSSTox Substance ID for which to evaluate
 #' @param Species_in The species for which to evaluate
 #' @param Analysis_Type_in The analysis type that produced the fit being
@@ -18,6 +25,8 @@
 #' @return A `data.table`, the same number of rows as `newdata`, with variables
 #'   `pred_conc` and `pred_auc` corresponding to the model-predicted
 #'   concentration and AUC.
+#' @author Caroline Ring
+#' @export
 get_predictions <- function(pk_fit,
                             newdata,
                             DTXSID_in,

@@ -1,7 +1,32 @@
-#' Evaluate goodness of fit
+#' Evaluate goodness of fit based on residuals
 #'
-#' Compute multiple metrics to evaluate how well the various TK models fit the
-#' data.
+#' Evaluate multiple metrics of goodness of fit based on residuals
+#'
+#' For each dataset (chemical and species) and each fitted model, this function
+#' first calculates the predictions and residuals, then evaluates the following:
+#'
+#' - RMSE (root mean squared error)
+#' - R-squared of observations vs. predictions
+#' - The p-value from the Breusch-Pagan test of heteroscedasticity
+#' - Estimated "overall" error standard deviation (details below)
+#'
+#' Unique fitted models are defined by unique combination of analysis type
+#' ("Joint", "Separate", or "Pooled"), studies analyzed, and model ("flat",
+#' "1compartment", or "2compartment").
+#'
+#' # Root mean squared error (RMSE)
+#'
+#' RMSE is calculated in [calc_rmse()].
+#'
+#' # Estimated overall error standard deviation
+#'
+#' The "overall" error standard deviation is the value for residual error
+#' standard deviation ("sigma") that minimizes the log-likelihood function when
+#' the TK model parameters are fixed at their fitted values. This is essentially
+#' a more rigorous RMSE, because it correctly models the likelihood of
+#' non-detect (below-LOQ) observations as the cumulative probability that the
+#' model prediction is below the reported LOQ, rather than making any
+#' substitutions for non-detects.
 #'
 #' @param cvt_pre Original concentration vs. time data, pre-processed using
 #'   `preprocess_data()`.
@@ -11,16 +36,20 @@
 #'   `fit_all()` with `model = "1compartment"`
 #' @param fit_2comp Fitting output for the 2-compartment model: the output of
 #'   `fit_all()` with `model = "2compartment"`
-#' @param fit_dose_norm Logical: Whether the model fits were done on
+#' @param fit_conc_dose Logical: Whether the model fits were done on
 #'   dose-normalized data (TRUE), or not (FALSE). This needs to be the same as
+#'   whatever you used when calling `fit_all()`, or the goodness-of-fit metrics
+#'   will be incorrect!
+#' @param fit_log_conc Logical: Whether the model fits were done on
+#'   log-transformed data (TRUE), or not (FALSE). This needs to be the same as
 #'   whatever you used when calling `fit_all()`, or the goodness-of-fit metrics
 #'   will be incorrect!
 #' @return A `data.table` of goodness-of-fit measures for each dataset, each
 #'   model, and each analysis (joint, separate, and pooled)
 #' @author Caroline Ring
 #' @export
-#' @import data.table patchwork
-evaluate_fit <- function(cvt_pre,
+#' @import data.table
+evaluate_resids <- function(cvt_pre,
                          fit_flat,
                          fit_1comp,
                          fit_2comp,
@@ -32,15 +61,6 @@ evaluate_fit <- function(cvt_pre,
                            "control" = list("kkt" = FALSE)
                          )){
 
-  #How well do we predict:
-  #tpeak?
-  #Cpeak? Dose-normalized or not?
-  #AUC at the last timepoint? Dose-normalized or not?
-  #AUC infinity? Dose-normalized or not?
-  #Average concentration? Dose-normalized or not?
-
-  #Should we evaluate these per chemical/species, per
-  #chemical/species/route/media, per chemical/species/route/media/dose? All of the above?
 
 #Calculate RMSE, R-squared of obs vs pred,
   #and heteroscedasticity of residuals

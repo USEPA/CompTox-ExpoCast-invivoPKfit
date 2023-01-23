@@ -114,29 +114,3 @@ $$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \\
 \frac{-\mu_i^2 M_i}{2 \sigma^2} $$
 
 This looks horrible, but I think it is correct.
-
-# Appendix
-
-How to use the definition of the sample variance and smaple mean to show that
-
-$$ s_i^2 = \left( \frac{1}{M_i - 1} \sum_{j=1}^{M_i}  y_{ij}^2 \right) - \frac{M_i}{M_i - 1} \bar{y}_i^2 $$
-
-Start with the definition of the sample variance
-
-$$ s_i^2 = \frac{1}{M_i - 1} \sum_{j=1}^{M_i} \left( y_{ij} - \bar{y}_i \right) ^2$$
-Expand the square
-
-$$ s_i^2 = \frac{1}{M_i - 1} \sum_{j=1}^{M_i} \left( y_{ij}^2 - 2 y_{ij} \bar{y}_i + \bar{y}_i^2 \right) $$
-
-Split apart the terms in the summation
-
-$$ s_i^2 = \frac{1}{M_i - 1} \left( \sum_{j=1}^{M_i} y_{ij}^2  - 2 \bar{y}_i  \sum_{j=1}^{M_i} y_{ij} + M_i \bar{y}_i^2 \right)$$
-In the second term, substitute from the definition of the sample mean, $\sum_{j=1}^{M_i} y_{ij} = M_i \bar{y}_i $
-
-$$ s_i^2 = \frac{1}{M_i - 1} \left( \left[ \sum_{j=1}^{M_i} y_{ij}^2 \right]  - 2 M_i \bar{y}_i^2  + M_i \bar{y}_i^2 \right) $$
-This then simplifies to
-
-$$ s_i^2 = \frac{1}{M_i - 1} \left( \left[ \sum_{j=1}^{M_i} y_{ij}^2 \right]  -  M_i \bar{y}_i^2 \right) $$
-We canthen solve for $\sum_{j=1}^{M_i} y_{ij}^2$
-
-$$ \sum_{j=1}^{M_i} y_{ij}^2 = (M_i - 1) s_i^2 + M_i \bar{y}_i^2 $$
