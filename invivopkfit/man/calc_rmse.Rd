@@ -4,37 +4,44 @@
 \alias{calc_rmse}
 \title{Calculate RMSE (root mean squared error)}
 \usage{
-calc_rmse(group_mean, group_sd, group_N, pred, group_LOQ, log = FALSE)
+calc_rmse(group_mean, group_sd, group_n, pred, group_LOQ, log = FALSE)
 }
 \arguments{
 \item{group_mean}{Numeric vector: Observed sample means for summary data, or
 observed values for non-summary data. Censored observations should *not* be
 NA; they should be substituted with some value at or below the
-corresponding LOQ. Even if `log %in% TRUE`, these should *not* be
-log-transformed.}
+corresponding LOQ (e.g. LOQ or LOQ/2). Even if `log %in% TRUE`, these
+should *not* be log-transformed. (If `log %in% TRUE`, they will be
+transformed to log-scale means internally to this function before
+calculation.)}
 
 \item{group_sd}{Numeric vector: Observed sample SDs for summary data. For
 non-summary data (individual-subject observations), the corresponding
 element of `group_sd` should be set to 0. Even if `log %in% TRUE`, these
-should *not* be log-transformed.}
+should *not* be log-transformed. (If `log %in% TRUE`, they will be
+transformed to log-scale standard deviations internally to this function
+before calculation.)}
 
-\item{group_N}{Numeric vector: Observed sample number of subjects for summary
+\item{group_n}{Numeric vector: Observed sample number of subjects for summary
 data. For non-summary data (individual-subject observations), `group_n`
 should be set to 1.}
 
 \item{pred}{Numeric vector: Model-predicted value corresponding to each
 observed value. Even if `log %in% TRUE`, these should *not* be
-log-transformed.}
+log-transformed. (If `log %in% TRUE`, they will be log-transformed
+internally to this function before calculation.)}
 
 \item{group_LOQ}{Numeric vector: Reported limit of quantification (LOQ) (i.e,
 left-censoring limit) for each observation. May contain `NA_real_`s for
 non-censored observations. Even if `log %in% TRUE`, these should *not* be
-log-transformed.}
+log-transformed. (If `log %in% TRUE`, log transformation will be handled
+internally to this function before calculation.)}
 
 \item{log}{Logical. FALSE (default) means that RMSE is computed for
-natural-scale observations and predictions. TRUE means that observations
-and predictions will be log-transformed before RMSE is calculated (see
-Details).}
+natural-scale observations and predictions -- effectively, `sqrt(mean(
+(observed - pred)^2 ))`. TRUE means that observations and predictions will
+be log-transformed before RMSE is calculated (see Details)
+-- effectively `sqrt(mean( ( log(observed) - log(pred) )^2 ))`.}
 }
 \value{
 A numeric scalar: the root mean squared error (RMSE) for this set of
@@ -58,10 +65,12 @@ data:
    }
 }
 
-In this formula, there are \eqn{G} groups (reported observations). \eqn{n_i}
-is the number of subjects for group \eqn{i}. \eqn{\bar{y}_i} is the sample
-mean for group \eqn{i}. \eqn{s_i} is the sample standard deviation for group
-\eqn{i}.\eqn{\mu_i} is the model-predicted value for group \eqn{i}.
+In this formula, there are \eqn{G} groups. (For CvTdb data, a "group" is a
+specific combination of chemical, species, route, medium, dose, and
+timepoint.) \eqn{n_i} is the number of subjects for group \eqn{i}.
+\eqn{\bar{y}_i} is the sample mean for group \eqn{i}. \eqn{s_i} is the sample
+standard deviation for group \eqn{i}.\eqn{\mu_i} is the model-predicted value
+for group \eqn{i}.
 
 \eqn{N} is the grand total of subjects:
 

@@ -1,3 +1,56 @@
+#'Estimate pooled error standard deviation with fixed parameters
+#'
+#'Given a table of model parameters (e.g. fitted using [fit_all()]), estimate
+#'the residual error standard deviation assuming residuals are iid following a
+#'zero-mean normal distribution
+#'
+#'@param pk_fit A table of fitted PK parameters, as produced by
+#'  `postprocess_data()`. Must contain variables `DTXSID`, `Species`,
+#'  `Analysis_Type`, and `Studies.Analyzed`. Must also contain variables
+#'  corresponding to the parameters of the model specified in argument
+#'  `model_in`, as required for the route and media of data in `newdata` (as
+#'  given by [get_model_paramnames()]). These variables must be named as
+#'  `[param].[model]`. For example, for the 1-compartment model, if `newdata`
+#'  contains only IV-dosing data measured in plasma, then `pk_fit` must contain
+#'  variables named `kelim.1compartment` and `Vdist.1compartment`.
+#'@param newdata A `data.table` which must contain variables named `Time`,
+#'  `Dose`, `iv`, and `Media`.
+#'@param DTXSID_in The DSSTox Substance ID for which to evaluate
+#'@param Species_in The species for which to evaluate
+#'@param Analysis_Type_in The analysis type that produced the fit being
+#'  evaluated: one of 'Joint', 'Separate', or 'Pooled'
+#'@param Studies.Analyzed_in The comma-separated string of studies included in
+#'  the fit being analyzed.
+#'@param model_in The model to evaluate: one of 'flat', '1compartment', or
+#'  '2compartment'
+#'@param optimx_args A named list of additional arguments to [optimx::optimx()],
+#'  other than `par`, `fn`, `lower`, and `upper`. Default is:
+#'
+#'    ```
+#'     list(
+#'           "method" = "bobyqa",
+#'           "itnmax" = 1e6,
+#'          "control" = list("kkt" = FALSE))
+#'    ```
+#'  Briefly:  `"method"` allows you to select an optimization algorithm.
+#'  `"itnmax"` controls the maximum number of iterations allowed in an attempt
+#'  to optimize. `"control"` is itself a named list of control parameters
+#'  relevant to the selected method. See documentation for [optimx::optimx()]
+#'  for more details and more options. Note lower and upper bounds (box
+#'  constraints) will be supplied; if you want them to be respected, please
+#'  choose a method that allows box constraints (e.g. "bobyqa" or "L-BFGS-B").
+#'
+#'@return A one-row `data.table` with a variable `sigma` reporting the estimated
+#'  residual error standard deviation, and other variables: `fevals` reporting
+#'  the number of fucntion evaluations performed as returned by
+#'  [optimx::optimx()]; `convcode` reporting the integer convergence code
+#'  returned by [optimx::optimx()]; `niter`reporting the number of iterations
+#'  performed by [optimx::optimx()]; `method` reporting the optimization method
+#'  used (as specified in input argument `optimx_args`); and variables reporting
+#'  each control parameter specified in `optimx_args`, prefixed with `control_`.
+#'  (For example, using the default value of `optimx_args`, there will be a
+#'  variable named `control_kkt` whose value will be FALSE.)
+#' @author Caroline Ring
 get_error_sd <- function(pk_fit,
                             newdata,
                             DTXSID_in,
@@ -105,7 +158,7 @@ get_error_sd <- function(pk_fit,
   if(inherits(sigma_fit, "optimx")){
   sigma_est <- stats::coef(sigma_fit)
 
-  out_DF <- data.frame("error_SD" = sigma_est)
+  out_DF <- data.frame("sigma" = sigma_est)
   #Keep information about optimization
   #number of function evals
   out_DF$fevals <- as.integer(sigma_fit$fevals)
@@ -115,7 +168,7 @@ get_error_sd <- function(pk_fit,
   out_DF$niter <- as.integer(sigma_fit$niter)
   }else{
     sigma_est <- NA_real_
-    out_DF <- data.frame("error_SD" = sigma_est)
+    out_DF <- data.frame("sigma" = sigma_est)
     #Keep information about optimization
     #number of function evals
     out_DF$fevals <- NA_integer_

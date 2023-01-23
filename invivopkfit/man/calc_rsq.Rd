@@ -4,55 +4,61 @@
 \alias{calc_rsq}
 \title{Calculate r-squared for observed vs. predicted values}
 \usage{
-calc_rsq(group_mean, group_sd, group_N, pred, log = FALSE)
+calc_rsq(group_mean, group_sd, group_n, pred, log = FALSE)
 }
 \arguments{
 \item{group_mean}{Numeric vector: Observed sample means for summary data, or
 observed values for non-summary data. Censored observations should *not* be
 NA; they should be substituted with some value at or below the
-corresponding LOQ. Even if `log %in% TRUE`, these should *not* be
-log-transformed.}
+corresponding LOQ (e.g. LOQ or LOQ/2). Even if `log %in% TRUE`, these
+should *not* be log-transformed. (If `log %in% TRUE`, they will be
+transformed to log-scale means internally to this function before
+calculation.)}
 
 \item{group_sd}{Numeric vector: Observed sample SDs for summary data. For
 non-summary data (individual-subject observations), the corresponding
 element of `group_sd` should be set to 0. Even if `log %in% TRUE`, these
-should *not* be log-transformed.}
+should *not* be log-transformed. (If `log %in% TRUE`, they will be
+transformed to log-scale standard deviations internally to this function
+before calculation.)}
 
-\item{group_N}{Numeric vector: Observed sample number of subjects for summary
+\item{group_n}{Numeric vector: Observed sample number of subjects for summary
 data. For non-summary data (individual-subject observations), `group_n`
 should be set to 1.}
 
 \item{pred}{Numeric vector: Model-predicted value corresponding to each
 observed value. Even if `log %in% TRUE`, these should *not* be
-log-transformed.}
+log-transformed. (If `log %in% TRUE`, they will be log-transformed
+internally to this function before calculation.)}
 
-\item{log}{Logical. FALSE (default) means that RMSE is computed for
-natural-scale observations and predictions. TRUE means that observations
-and predictions will be log-transformed before RMSE is calculated (see
-Details).}
+\item{log}{Logical. FALSE (default) means that R-squared is computed for
+observations vs. predictions. TRUE means that R-squared is computed for
+log(observations) vs. log(predictions) (see Details).}
 
 \item{group_LOQ}{Numeric vector: Reported limit of quantification (LOQ) (i.e,
 left-censoring limit) for each observation. May contain `NA_real_`s for
 non-censored observations. Even if `log %in% TRUE`, these should *not* be
-log-transformed.}
+log-transformed. (If `log %in% TRUE`, log transformation will be handled
+internally to this function before calculation.)}
 }
 \value{
 A numeric scalar: the R-squared value for observations vs.
   predictions.
 }
 \description{
-Calculate the square of the Pearson correlation coefficient (r) between observed
-and model-predicted values
+Calculate the square of the Pearson correlation coefficient (r) between
+observed and model-predicted values
 }
 \details{
-Calculate the square of the Pearson correlation coefficient (r) between observed
-and model-predicted values, when observed data may be left-censored (non-detect) or may be
-reported in summary form (as sample mean, sample standard deviation, and
-sample number of subjects). Additionally, handle the situation when observed
-data and predictions need to be log-transformed before RMSE is calculated.
+Calculate the square of the Pearson correlation coefficient (r) between
+observed and model-predicted values, when observed data may be left-censored
+(non-detect) or may be reported in summary form (as sample mean, sample
+standard deviation, and sample number of subjects). Additionally, handle the
+situation when observed data and predictions need to be log-transformed
+before RMSE is calculated.
 
-\eqn{r^2} is calculated according to the following
-formula, to properly handle observations reported in summary format:
+\eqn{r^2} is calculated according to the following formula, to properly
+handle observations reported in summary format:
 
 \deqn{ r^2 = \left(
 \frac{
@@ -74,10 +80,12 @@ N + \bar{y}^2
 } \right)^2
 }
 
-In this formula, there are \eqn{G} groups (reported observations). \eqn{n_i}
-is the number of subjects for group \eqn{i}. \eqn{\bar{y}_i} is the sample
-mean for group \eqn{i}. \eqn{s_i} is the sample standard deviation for group
-\eqn{i}.\eqn{\mu_i} is the model-predicted value for group \eqn{i}.
+In this formula, there are \eqn{G} groups (reported observations). (For CvTdb
+data, a "group" is a specific combination of chemical, species, route,
+medium, dose, and timepoint.) \eqn{n_i} is the number of subjects for group
+\eqn{i}. \eqn{\bar{y}_i} is the sample mean for group \eqn{i}. \eqn{s_i} is
+the sample standard deviation for group \eqn{i}.\eqn{\mu_i} is the
+model-predicted value for group \eqn{i}.
 \eqn{\bar{y}} is the grand mean of observations:
 
 \deqn{ \bar{y} = \frac{ \sum_{i=1}^G n_i \bar{y}_i }{\sum_{i=1}^G n_i} }
@@ -107,7 +115,8 @@ reported LOQ, then the observed value is (temporarily) set equal to the
 predicted value, for an effective error of zero.
 
 If the observed value is censored, and the predicted value is greater than
-the reported LOQ, the the observed value is set equal to the reported LOQ.
+the reported LOQ, the the observed value is (temporarily) set equal to the
+reported LOQ, for an effective error of (LOQ - predicted).
 
 # Log transformation
 

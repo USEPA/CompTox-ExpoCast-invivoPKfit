@@ -178,7 +178,7 @@ get_upper_bounds <- function(fitdata,
                                              "N_Subjects")])
                             names(foo) <- c("group_mean",
                                             "group_sd",
-                                            "group_N")
+                                            "group_n")
                             do.call(combined_sd, args = c(foo,
                                                           list("log" = fit_log_conc)
                                                           )
@@ -207,7 +207,7 @@ get_upper_bounds <- function(fitdata,
                          "N_Subjects")])
         names(foo) <- c("group_mean",
                         "group_sd",
-                        "group_N")
+                        "group_n")
         data_sd <- do.call(combined_sd,
                            args = c(foo,
                                     list("log" = fit_log_conc)

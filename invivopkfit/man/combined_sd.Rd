@@ -7,30 +7,39 @@
 combined_sd(
   group_mean,
   group_sd,
-  group_N,
+  group_n,
   unbiased = TRUE,
   na.rm = TRUE,
   log = FALSE
 )
 }
 \arguments{
-\item{group_mean}{A numeric vector of group means.}
+\item{group_mean}{Numeric vector: Observed sample means for summary data, or
+observed values for non-summary data. Censored observations should *not* be
+NA; they should be substituted with some value at or below the
+corresponding LOQ (e.g. LOQ or LOQ/2). Even if `log %in% TRUE`, these
+should *not* be log-transformed.}
 
-\item{group_sd}{A numeric vector of group SDs.}
+\item{group_sd}{Numeric vector: Observed sample SDs for summary data. For
+non-summary data (individual-subject observations), the corresponding
+element of `group_sd` should be set to 0. Even if `log %in% TRUE`, these
+should *not* be log-transformed.}
 
-\item{group_N}{A numeric vector of group sizes.}
+\item{group_n}{Numeric vector: Observed sample number of subjects for summary
+data. For non-summary data (individual-subject observations), `group_n`
+should be set to 1.}
 
-\item{unbiased}{Logical. If TRUE, then `group_sd` is assumed to be the
-unbiased estimator of population standard deviation (i.e. using `n-1` in
-the denominator -- the way that `stats::sd()` calculates it), and the
-returned combined SD is also the unbiased estimator of the combined
-population SD. If FALSE, then `group_sd` is assumed to be the biased
-estimator (using `n` in the denominator), and the returned value is also
-the biased estimator of the combined population SD.}
+\item{unbiased}{Logical. If TRUE (the default), then `group_sd` is assumed to
+be the unbiased estimator of population standard deviation (i.e. calculated
+using `n-1` in the denominator -- the way that `stats::sd()` calculates
+it), and the returned combined SD is also the unbiased estimator of the
+combined population SD. If FALSE, then `group_sd` is assumed to be the
+biased estimator (using `n` in the denominator), and the returned value is
+also the biased estimator of the combined population SD.}
 
-\item{na.rm}{Logical. If TRUE (default), then any groups where mean, SD, *or* N
-were NA will be dropped. If FALSE, they will be retained (and the result will
-be NA).}
+\item{na.rm}{Logical. If TRUE (default), then any groups where mean, SD, *or*
+N were NA will be dropped. If FALSE, they will be retained (and the result
+will be NA).}
 }
 \value{
 Numeric: the standard deviation of the combined population (i.e. if
