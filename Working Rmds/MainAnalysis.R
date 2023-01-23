@@ -1,0 +1,179 @@
+#' ---
+#' title: "invivoPKfit analysis of CvTdb data"
+#' author: "Christopher Cook, John Wambaugh, Caroline Ring"
+#' date: "`r format(Sys.time(), '%B %d, %Y')`"
+#' output:
+#'   html_document: default
+#'   word_document: default
+#' ---
+#' 
+## ----setup, include = FALSE--------------------------------------------------------------------------------
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(results = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+
+#' 
+## ---- include = FALSE--------------------------------------------------------------------------------------
+library(tidyverse)
+library(data.table)
+library(readxl)
+devtools::load_all("../invivopkfit")
+
+#' 
+#' # Read in CvTdb data
+#' 
+#' Read in CvTdb data that was pulled and normalized in `pulling_oral_iv_data_cvtdb.Rmd`.
+#' 
+## ---- load_cvt, eval = TRUE--------------------------------------------------------------------------------
+cvt_data <- fread("../inst/ext/cvt_data_2023_01_05.csv")
+
+#' 
+#' # Setup for data processing and model fitting
+#' 
+#' ## Timestamp
+#' Timestamp the file name with the current date and time (at the beginning of the runs) in format YYYY_MM_DD_hh_mm.
+#' 
+## ----------------------------------------------------------------------------------------------------------
+timestamp <- format(Sys.time(), "%Y_%m_%d")
+
+#' 
+#' ## Settings for pre-processing data
+#' 
+#' List of new_name = old_name to supply for preprocessing data
+#' 
+## ----------------------------------------------------------------------------------------------------------
+names_list <- list(
+  "Compound_Dosed" = "studies.test_substance_name_original",
+  "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
+  "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
+  "Compound_Analyzed" = "series.analyte_name_original",
+  "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
+  "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
+  "Reference" = "documents_reference.id",
+  "Extraction" = "documents_extraction.id",
+  "Species" = "subjects.species",
+  "Weight" ="subjects.weight_kg",
+  "Weight.Units" = NULL,
+  "Dose" = "studies.dose_level_normalized_corrected", #note that dose levels were corrected in pulling_oral_iv_data_cvtdb.Rmd
+  "Dose.Units" = NULL,
+  "Time" = "conc_time_values.time_hr",
+  "Time.Units" = NULL,
+  "Media" = "series.conc_medium_normalized",
+  "Value" = "conc_time_values.conc", #already normalized to mg/L units in CvTdb
+  "Value.Units" = NULL,
+  "Route" = "studies.administration_route_normalized",
+  "LOQ" = "series.loq_normalized", #note that LOQs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  "Subject" = "subjects.id",
+  "N_Subjects" = "series.n_subjects_in_series",
+  "Value_SD" = "conc_time_values.conc_sd_normalized" #note that SDs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  )
+
+#' 
+#' List of default values for new columns added in preprocessing data
+#' 
+## ----------------------------------------------------------------------------------------------------------
+defaults_list <- list(
+                      "Weight.Units" = "kg",
+                      "Dose.Units" = "mg/kg",
+                      "Time.Units" = "hours",
+                      "Value.Units" = "mg/L")
+
+#' 
+#' # Preprocess data
+#' 
+## ----------------------------------------------------------------------------------------------------------
+cvt <- preprocess_data(data.set = cvt_data,
+                       names_list =names_list,
+                       defaults_list =   defaults_list,
+                       ratio_conc_to_dose = 1,
+                       calc_loq_factor = 0.45,
+                       routes_keep = c("po", "iv"),
+                       media_keep = c("blood", "plasma"),
+                       impute_loq = TRUE,
+                       impute_sd = TRUE,
+                       study_def = c("DTXSID", "Species", "Reference", "Route", "Media"),
+                       suppress.messages = TRUE)
+
+#save pre-processed data
+write.csv(cvt,
+          paste0("../inst/ext/cvt_preprocessed_",
+                 timestamp,
+          ".csv"),
+          row.names = FALSE)
+
+#' 
+#' # Fit TK models to data
+#' 
+## ----------------------------------------------------------------------------------------------------------
+for(this_rescale_time in c(FALSE, TRUE)){
+  for(this_fit_conc_dose in c(FALSE, TRUE)){
+    for(this_fit_log_conc in c(FALSE, TRUE)){
+      if(!(this_rescale_time %in% FALSE &
+           this_fit_conc_dose %in% FALSE &
+           this_fit_log_conc %in% FALSE)){ #already did the all FALSE case
+      for (this_model in c("flat",
+                           "1compartment",
+                           "2compartment")){
+        print(paste0("model = ", this_model, "\n",
+                     "fit_log_conc = ", this_fit_log_conc, "\n",
+                     "fit_conc_dose = ", this_fit_conc_dose, "\n",
+                     "rescale_time = ", this_rescale_time))
+        system.time(
+          PK.fit.table <- fit_all(
+            data.set = cvt,
+            model = this_model,
+            modelfun = "analytic",
+            preprocess = FALSE,
+            fit_conc_dose = this_fit_conc_dose,
+            fit_log_conc = this_fit_log_conc,
+            rescale_time = this_rescale_time,
+            optimx_args = list(
+              "method" = "bobyqa",
+              "itnmax" = 1e6,
+              "control" = list("kkt" = FALSE)
+            ),
+            suppress.messages = FALSE
+          )
+        )
+        
+        write.csv(PK.fit.table,
+                  paste("../inst/ext/PK_fit_table_",
+                        this_model,
+                        "_fit_log_conc_",
+                        this_fit_log_conc, "_",
+                        "_fit_conc_dose_",
+                        this_fit_conc_dose, "_",
+                        "_rescale_time_",
+                        this_rescale_time, "_",
+                        timestamp,
+                        ".csv",
+                        sep=""), row.names = FALSE)
+        
+        post_table <- postprocess_data(PK_fit = PK.fit.table,
+                                       model= this_model)
+        
+        rm(PK,fit.table)
+        
+        write.csv(post_table,
+                  paste("../inst/ext/PK_fit_postprocess_",
+                        this_model,
+                        "_fit_log_conc_",
+                        this_fit_log_conc, "_",
+                        "_fit_conc_dose_",
+                        this_fit_conc_dose, "_",
+                        "_rescale_time_",
+                        this_rescale_time, "_",
+                        timestamp,
+                        ".csv",
+                        sep=""), row.names = FALSE)
+        
+        rm(post_table)
+      } #end loop over models
+      } #end if not all FALSE
+    } #end loop over this_fit_log_conc
+  } #end loop over this_fit_conc_dose
+} #end loop over this_rescale_time
+
+#' 
+#' 
