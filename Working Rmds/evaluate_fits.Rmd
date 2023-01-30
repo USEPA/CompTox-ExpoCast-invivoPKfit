@@ -86,7 +86,7 @@ defaults_list <- list(
 
 ## Preprocess data
 
-```{r}
+```{r, eval = FALSE}
 cvt <- preprocess_data(data.set = cvt_data,
                        names_list =names_list,
                        defaults_list =   defaults_list,
@@ -109,6 +109,13 @@ cvt <- preprocess_data(data.set = cvt_data,
 cvt <- as.data.table(cvt)
 rm(cvt_data)
 ```
+
+```{r}
+cvt <- fread(paste0("../inst/ext/cvt_preprocessed_",
+                 "2023_01_23",
+          ".csv"))
+```
+
 
 ```{r}
 cvt[, Conc_SD := Value_SD]
@@ -135,7 +142,7 @@ fit_opts <-
 
 # Evaluate residuals for each set of fitting options
 
-```{r}
+```{r, eval = FALSE}
 eval_DT <- fit_opts[,
                   {
                     print(
@@ -238,7 +245,7 @@ write.csv(eval_DT,
 
 Evalaute TK stats
 
-```{r}
+```{r, eval = FALSE}
 TKstats_DT <- fit_opts[,
                   {
                     print(
@@ -360,11 +367,17 @@ tk_DT[winmodel %in% "2compartment", tmax_win := tmax_oral.2compartment]
 tk_DT[winmodel %in% "2compartment", Cmax_win := Cmax_oral_1mgkg.2compartment]
 ```
 
+Keep only the Joint analyses, for the sake of simplicity. (These are the ones where multiple studies were fit together, but with a different error SD allowed for each study.)
+
 ```{r}
 tk_DT_sub <- tk_DT[Analysis_Type %in% "Joint", .(fit_conc_dose, fit_log_conc, rescale_time, DTXSID, Species, Route, Media, AUC_inf_1mgkg, tmax, Cmax_1mgkg, AUC_oral_win, AUC_iv_win, tmax_win, Cmax_win, winmodel)]
 ```
 
+# AUC comparison
 
+## AUC oral
+
+### Rescale time = FALSE
 
 ```{r}
 ggplot(tk_DT_sub[rescale_time == FALSE],
@@ -388,6 +401,8 @@ Dose-normalizing concentration before fitting doesn't seem to make a huge differ
 
 How about when time was rescaled?
 
+### Rescale time = TRUE
+
 ```{r}
 ggplot(tk_DT_sub[rescale_time == TRUE],
        aes(x = AUC_inf_1mgkg,
@@ -405,6 +420,10 @@ scale_x_log10() +
 ```
 
 Rescaling time seems to make the overpredictions worse when they happen.
+
+## AUC IV
+
+### Rescale time = FALSE
 
 ```{r}
 ggplot(tk_DT_sub[rescale_time == FALSE],
@@ -424,6 +443,8 @@ ggplot(tk_DT_sub[rescale_time == FALSE],
 
 Fitting on the log scale seems to result in a few more cases of over-predicted AUC_infinity for IV dosing. Dose-normalizing before fitting on the log scale reduces these cases.
 
+### Rescale time = TRUE
+
 ```{r}
 ggplot(tk_DT_sub[rescale_time == TRUE],
        aes(x = AUC_inf_1mgkg,
@@ -442,6 +463,9 @@ ggplot(tk_DT_sub[rescale_time == TRUE],
 
 Rescaling time seems to make the overpredictions worse on the log scale (up to 1e6, rather than 1e4 without rescaling time).
 
+## Tmax comparison
+
+### Rescale time = FALSE
 ```{r}
 ggplot(tk_DT_sub[rescale_time == FALSE],
        aes(x = tmax,
@@ -455,6 +479,7 @@ ggplot(tk_DT_sub[rescale_time == FALSE],
   ggtitle("Tmax, rescale_time = FALSE")
 ```
 
+### Rescale time = TRUE
 
 ```{r}
 ggplot(tk_DT_sub[rescale_time == TRUE],
@@ -471,6 +496,10 @@ ggplot(tk_DT_sub[rescale_time == TRUE],
 
 Note that a couple of points have appeared with tmax > 1000. These are points where the winning model was flat when time was not rescaled, but the winning model was 1- or 2-compartment when time was rescaled.
 
+## Cmax comparison
+
+### Rescale time = FALSE
+
 ```{r}
 ggplot(tk_DT_sub[rescale_time %in% FALSE],
        aes(x = Cmax_1mgkg,
@@ -485,7 +514,28 @@ ggplot(tk_DT_sub[rescale_time %in% FALSE],
   annotation_logticks()
 ```
 
-Overall, Cmax tends to be under-predicted, but fitting on the natural scale results in more cases of worse under-prediction. That surprises me. I would have thought the opposite, because there are so many cases where log-scaling seems to fit the late elimination tail at the expense of fitting the peak. What are some of those cases?
+### Rescale time = TRUE
+
+```{r}
+ggplot(tk_DT_sub[rescale_time %in% TRUE],
+       aes(x = Cmax_1mgkg,
+           y = Cmax_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10()  +
+  ggtitle("Cmax, rescale_time = FALSE") +
+  annotation_logticks()
+```
+
+Overall, Cmax tends to be under-predicted, but fitting on the natural scale results in more cases of worse under-prediction. That surprises me. I would have thought the opposite, because there are so many cases where log-scaling seems to fit the late elimination tail at the expense of fitting the peak. 
+
+
+### Examples of bad Cmax cases
+
+What are some of those cases?
 
 ```{r}
 tk_DT_sub[Cmax_win < 1e-4 & rescale_time %in% FALSE & !is.na(Cmax_1mgkg), ]
@@ -539,31 +589,94 @@ pnorm(q = 0.000738/5, mean = 8.646482e-14/5, sd = 0.0204)
 
 Yes -- that is the situation. The lower mean produces a very slightly higher probability for the non-detects.
 
-Should we place some lower limit on predicted values -- like anything less than machine epsilon gets truncated at machine epsilon?
-
-
-```{r}
-tk_DT[tmp, on = names(tmp)][winmodel =="2compartment", .(fit_conc_dose, fit_log_conc, DTXSID, Species, Route, Media, winmodel, N_Routes, Fgutabs.2compartment, Fgutabs_V1.2compartment, V1.2compartment, kelim.2compartment, kgutabs.2compartment, k12.2compartment, k21.2compartment)]
-```
-
-
-COmparing Cmax predictions:
-
-```{r}
-ggplot(tk_DT_sub[rescale_time %in% TRUE],
-       aes(x = Cmax_1mgkg,
-           y = Cmax_win)) +
-  geom_point(aes(color = winmodel)) +
-  geom_abline(intercept = 0, slope = 1) +
-  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
-             labeller = label_both) +
-  scale_x_log10() +
-  scale_y_log10()  +
-  ggtitle("Cmax, rescale_time = TRUE")
-```
+Should we place some lower limit on predicted values -- like anything less than machine epsilon gets truncated at machine epsilon? Would that make the flat model "win" in this pathological cases? I think it would do so only if the lower limit was equal to or higher than the fitted flat value, which it might not be. 
 
 # Catching pathological cases
 
-The flat model does *not* always win in pathological cases (see above).
+The flat model does *not* always win in pathological cases (see above). So that can't be our only method of catching pathological cases.
 
 We could add a way to catch cases that are missing absorption phase or elimination phase for oral dosing. If there are not at least 3 detected points before the empirical tmax, flag for missing absorption phase. Or if there are not at least 3 detected points after the empirical tmax, flag for missing elimination phase. If we're fitting a 2-compartment model, I guess it should be at least 6 detected points after the empirical tmax, in order to possibly have enough data to fit both alpha and beta.
+
+# Defining a 'study'
+
+Currently, I'm defining a "study" as DTXSID + Species + Reference + Route + Media. John thinks it should be DTXSID + Species + Reference.
+
+My argument is that the different dosing routes (oral vs. IV) might result in different levels of plasma concentration, different enough that the analytical chemistry might behave differently. Maybe even more strongly, different media are likely to have media-specific effects on analytical chemistry.
+
+I guess what we need is a proper model of error.
+
+Wambaugh et al. 2019 had it as the following, where $A$ is the observed peak area, $\hat{A}$ is a predicted peak area, $[x]$ is the actual concentration:
+
+$$ A \sim \textrm{Normal} (\mu = \hat{A}, \quad \sigma =  k_1 + k_2 [x]) $$
+
+$$ \hat{A} = \theta([x] - t) ([x] - t) m + b $$
+where $\theta(\cdot)$ is the Heaviside step function (1 when the argument is positive, 0 otherwise); $t$ is a threshold concentration; $m$ is the calibration; $b$ is the background noise.
+
+But that doesn't handle inter-study variability.
+
+I think what we have is something like this:
+
+$i$ indexes chemical/species. $j$ indexes study (whatever that ends up being). $k$ indexes group --  a unique combination of dose, time, route, and medium within study. $m$ indexes individual observations within group $k$. $x_{ijkm}$ is observed concentration. $\hat{x}_{ijk}$ is model-predicted concentration for group $k$. 
+
+The residual error between $x$ and $\hat{x}$ has several components. One component is uncertainty in analytical chemistry.
+
+Wambaugh et al. (2019) cite Rocke & Lorenzato (1995), who model analytical chemistry observed concentration $x$ as the following function of true concentration $x^{\prime}$.
+
+$$ x =  x^{\prime} e^\eta + \epsilon $$
+
+Using our subscripts, I think it would be
+
+$$ x_{ijkm} = x^{\prime}_{ijkm} e^{\eta_{ijk}} + \epsilon_{ijk} $$
+Here, there are two measurement errors, $\eta$ and $\epsilon$. Each is zero-mean normal distributed with its own standard deviation.  $\eta_{ijk} \sim \textrm{Normal}(0, \sigma_{\eta})$ and $\epsilon_{ijk} \sim \textrm{Normal}(0, \sigma_{\epsilon})$.
+
+$\epsilon$ represents background noise. $\eta$ represents concentration-dependent noise. 
+Both $\epsilon$ and $\eta$ are likely to be lab-dependent, because they are likely to be instrument- and run-dependent.  
+
+Meanwhile, the "true" concentration $x^{\prime}_{ijkm}$ also has inter-individual variability around some group-specific mean. It could be modeled as
+
+$$ x^{\prime}_{ijkm} \sim \textrm{(Log)-Normal}(\mu = \hat{x}_{ijk}, \sigma_{\textrm{indiv}}) $$
+In this case, error is chemical- and species-specific, maybe lab-population-specific.
+
+Model-predicted concentration $\hat{x}_{ijkm}$ is the best estimate of group mean "true" concentration. It is a function of the model parameters for chemical/species $i$, along with dose $d$, time $t$, dosing route $r$, and analysis media $m$, for observation $m$ within group $k$ within study $j$ within chemical/species $i$.
+
+$$ \hat{x}_{ijkm} = f(\theta_i; \quad d_{ijk}, t_{ijk}, r_{ijk}, m_{ijk}) $$
+
+
+Could we in fact try to estimate the hyperparameters $\sigma_\eta$ and $\sigma_epsilon$?
+
+
+How would we write the likelihood function?
+
+Rocke & Lorenzato (1995) say "Any combination of $\eta$ and $\epsilon$ that satisfies $\epsilon = x - \x^{\prime} e^{\eta}$ is possible" (where I have substituted my notation of $x^{\prime}$ for the "true" concentration).
+
+They write the likelihood as
+
+$$ \int_{-\infty}^{\infty} \frac{1}{2 \pi \sigma_\epsilon \sigma_\eta}
+\exp \left(
+\frac{-\eta^2}
+{2 \sigma_\eta^2}
+\right)
+\exp \left(
+\frac{-(x-x^{\prime}e^\eta)^2}
+{2 \sigma_\epsilon^2}
+\right)
+d \eta $$
+
+In their Appendix 2, they explain how they implemented the numerical integration using Gauss-Hermite quadrature. This looks complicated but I think I can figure it out (?)
+
+Is there anything we can do without going to that full extent? Does log-transforming x help with this heteroscedasticity at all? At high concentrations, the errors do become approximately log-normal.
+
+
+$$ x =  x^{\prime} e^\eta + \epsilon $$
+
+Log-transforming, we get
+
+$$ \log x = \log(x^{\prime} e^\eta + \epsilon) $$
+
+If $\epsilon$ is small compared to $x^{\prime} e^\eta$ , then this is approximately equal to
+
+$$ \log x = \eta + \log(x^{\prime}) $$
+
+But if $\epsilon$ is not small compared to $x^{\prime} e^\eta$ -- for example, if $x^{\prime}$ is near zero -- then that approximation is not good.
+
+Could we say that likelihood is log-normal for detects, and normal for non-detects? And assume two different sigmas per study -- one for detects and one for non-detects? That would be a sort of piecewise approximation for the measurement error.
