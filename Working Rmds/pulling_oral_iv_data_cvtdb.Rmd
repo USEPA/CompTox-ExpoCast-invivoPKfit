@@ -499,6 +499,7 @@ cvt_data[!is.na(conc_time_values.conc_upper_bound_original) & studies.administra
 Save the pulled CVT data with the edits/normalizations
 
 ```{r}
+this_date <- "2023_01_05"
 write.csv(cvt_data,
           paste0("../inst/ext/cvt_data_",
           this_date,

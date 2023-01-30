@@ -1,0 +1,25 @@
+---
+title: "RMSE normalized by observed conc"
+author: "Caroline Ring"
+date: "2023-01-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# MSE for individual observations
+
+$$ \textrm{MSE} = \frac{1}{N} \sum_{i=1}^G \sum_{j=1}^{N_i} \left( \frac{y_{ij} - \mu_i}{y_{ij}} \right)^2 $$
+Expand the summand
+
+$$ \textrm{MSE} =\frac{1}{N} \sum_{i=1}^G \sum_{j=1}^{N_i} \frac{y_{ij}^2 - 2 y_{ij} \mu_i + \mu_i^2}{y_{ij}^2} $$
+
+Further expand
+
+$$ \textrm{MSE} = \frac{1}{N} \sum_{i=1}^G \sum_{j=1}^{N_i} \left( 1 -  \frac{- 2\mu_i }{y_{ij}} + \frac{\mu_i^2}{y_{ij}^2} \right) $$
+$$ \textrm{MSE} = \frac{1}{N} \sum_{i=1}^G \left( N_i - 2\mu_i \sum_{j=1}^{N_i}  \frac{1}{y_{ij}} + \mu_i^2 \sum_{j=1}^{N_i} \frac{1}{y_{ij}^2}  \right) $$
+Not sure what to do with the sums of the inverse observations and inverse squared observations there. There isn't a nice relation.
+
+

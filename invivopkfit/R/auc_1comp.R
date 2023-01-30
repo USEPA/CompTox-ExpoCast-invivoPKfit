@@ -139,23 +139,23 @@ auc_1comp <- function(params,
     if(params$kelim != params$kgutabs){
       #the usual case: kelim != kgutabs
       auc[iv.dose %in% FALSE] <- -dose[iv.dose %in% FALSE]*
-        params$Fgutabs*params$kgutabs*
+        params$Fgutabs_Vdist*params$kgutabs*
         (1/params$kgutabs - 1/params$kelim)/
-        (params$Vdist*(-params$kelim + params$kgutabs)) +
+        ((-params$kelim + params$kgutabs)) +
         dose[iv.dose %in% FALSE]*
-        params$Fgutabs*params$kgutabs*
+        params$Fgutabs_Vdist*params$kgutabs*
         (exp(-time[iv.dose %in% FALSE]*params$kgutabs)/params$kgutabs -
            exp(-time[iv.dose %in% FALSE]*params$kelim)/params$kelim)/
-        (params$Vdist*(-params$kelim + params$kgutabs))
+        ((-params$kelim + params$kgutabs))
 
     }else{ #in case kelim = kgutabs, use the alternate model equation
-      auc[iv.dose %in% FALSE] <- dose[iv.dose %in% FALSE]*params$Fgutabs/
-        (params$Vdist*params$kelim) +
-        (-dose[iv.dose %in% FALSE]*params$Fgutabs*
+      auc[iv.dose %in% FALSE] <- dose[iv.dose %in% FALSE]*params$Fgutabs_Vdist/
+        (params$kelim) +
+        (-dose[iv.dose %in% FALSE]*params$Fgutabs_Vdist*
            time[iv.dose %in% FALSE]*params$kelim -
            dose[iv.dose %in% FALSE]*params$Fgutabs)*
         exp(-time[iv.dose %in% FALSE]*params$kelim)/
-        (params$Vdist*params$kelim)
+        (params$kelim)
     }
   }
 

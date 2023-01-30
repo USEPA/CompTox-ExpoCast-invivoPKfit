@@ -60,6 +60,7 @@ get_error_sd <- function(pk_fit,
                             model_in,
                          modelfun = "analytic",
                          fit_conc_dose = TRUE,
+                         fit_log_conc = FALSE,
                          optimx_args = list(
                            "method" = "bobyqa",
                            "itnmax" = 1e6,
@@ -113,12 +114,22 @@ get_error_sd <- function(pk_fit,
                                   Analysis_Type_in = Analysis_Type_in,
                                   Studies.Analyzed_in = Studies.Analyzed_in,
                                   model_in = model_in)
+
+  if(fit_log_conc %in% FALSE){
   #get residuals
   newdata_pred[Dose > 0 & Detect %in% "Detect",
                resid := Value - pred_conc]
   #get dose-normalized residuals
   newdata_pred[Dose > 0 & Detect %in% "Detect",
                resid_Dose := Value_Dose - (pred_conc/Dose)]
+  }else{
+    #get residuals
+    newdata_pred[Dose > 0 & Detect %in% "Detect",
+                 resid := log(Value) - log(pred_conc)]
+    #get dose-normalized residuals
+    newdata_pred[Dose > 0 & Detect %in% "Detect",
+                 resid_Dose := log(Value_Dose) - log(pred_conc/Dose)]
+  }
 
   #get SD of residuals
   if(fit_conc_dose %in% TRUE){
@@ -146,6 +157,7 @@ get_error_sd <- function(pk_fit,
                            modelfun = modelfun,
                            model = model_in,
                            fit_conc_dose = fit_conc_dose,
+                           fit_log_conc = fit_log_conc,
                            force_finite = (optimx_args$method %in% "L-BFGS-B"),
                            negative = TRUE
                          )

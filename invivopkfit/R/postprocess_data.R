@@ -186,7 +186,7 @@ if(length(time_const) > 0){
   PK_1comp[!is.na(Vdist) & !is.na(kelim),
            AUC_inf_IV_1mgkg := auc_1comp(params = list(
              "kelim" = kelim,
-             "Vdist" = Vdist,
+             "Vdist" = Vdist
            ),
            time = Inf,
            dose = 1,

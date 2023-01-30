@@ -28,6 +28,14 @@
 #'   `fit_all()` with `model = "1compartment"`
 #' @param fit_2comp A `data.table` of fitting output for the 2-compartment model: the output of
 #'   `fit_all()` with `model = "2compartment"`
+#' @param group_by A character vector of variables to in `cvt_pre` to group data
+#'   by. NCA stats will be computed for each group defined by a unique
+#'   combination of the values of these variables. Default is `c("DTXSID",
+#'   "Species", "Route", "Media")`. You could also use `c("DTXSID", "Species",
+#'   "Route", "Media", "Dose")` to check dose-specific parameters.
+#' @param dose_norm Logical: TRUE (the default) means to do NCA on dose-normalized
+#'   concentrations (`Conc_Dose` in `cvt_pre`), and FALSE means to do NCA on
+#'   non-dose-normalized concentrations (`Conc` in `cvt_pre`).
 #' @return A `data.table` of goodness-of-fit measures for each dataset, each
 #'   model, and each analysis (joint, separate, and pooled)
 #' @author Caroline Ring
@@ -36,7 +44,12 @@
 evaluate_tkstats <- function(cvt_pre,
                              fit_flat,
                              fit_1comp,
-                             fit_2comp){
+                             fit_2comp,
+                             group_by = c("DTXSID",
+                                          "Species",
+                                          "Route",
+                                          "Media"),
+                             dose_norm = TRUE){
 
   #get postprocessed parameter tables
   #these contain model-predicted tmax, Cmax for 1 mg/kg
@@ -45,12 +58,18 @@ evaluate_tkstats <- function(cvt_pre,
                        fit_2comp = fit_2comp)
 
 
-#get NCA TK stats
-  nca_DT <- get_tkstats(cvt_pre = cvt_pre)
+#get TK stats: tmax, Cmax, AUC
+  nca_DT <- get_tkstats(cvt_pre = cvt_pre,
+                        group_by = group_by,
+                        dose_norm = dose_norm)
 
   #Merge
-  nca_fit_DT <- nca_DT[pk_fit, on = c("DTXSID",
-                                      "Species")]
+  nca_fit_DT <- nca_DT[pk_fit,
+                       on = intersect(names(nca_DT),
+                                              names(pk_fit)),
+                       allow.cartesian = TRUE]
+
+  return(nca_fit_DT)
 
 }
 
@@ -59,6 +78,14 @@ evaluate_tkstats <- function(cvt_pre,
 #' @param cvt_pre A `data.table` of concentration vs. time data, preprocessed as
 #'   with [preprocess_data()]. Must contain variables Time, Conc_Dose, DTXSID,
 #'   Species, Route, Media, Subject, Study_ID, and Series_ID.
+#' @param group_by A character vector of variables to in `cvt_pre` to group data
+#'   by. NCA stats will be computed for each group defined by a unique
+#'   combination of the values of these variables. Default is `c("DTXSID",
+#'   "Species", "Route", "Media")`. You could also use `c("DTXSID", "Species",
+#'   "Route", "Media", "Dose")` to check dose-specific parameters.
+#' @param dose_norm Logical: TRUE (the default) means to do NCA on dose-normalized
+#'   concentrations (`Conc_Dose` in `cvt_pre`), and FALSE means to do NCA on
+#'   non-dose-normalized concentrations (`Conc` in `cvt_pre`).
 #' @return A `data.table` of non-compartmental statistics, with variables
 #'   DTXSID, Species, Route, Media, tmax (time of peak concentration),
 #'   Cmax_1mgkg (peak concentration at 1 mg/kg single bolus dose),
@@ -74,20 +101,36 @@ evaluate_tkstats <- function(cvt_pre,
 #'   administration).
 #' @author Caroline Ring
 #'
-get_tkstats <- function(cvt_pre){
+get_tkstats <- function(cvt_pre,
+                        group_by = c("DTXSID",
+                                     "Species",
+                                     "Route",
+                                     "Media"),
+                        dose_norm = TRUE){
   # observed tmax & Cmax values by chemical/species datasets that have oral data
+  if(dose_norm %in% TRUE){
   max_DT <- cvt_pre[Route %in% "po",
                     get_peak(x = Time,
                              y = Conc_Dose),
-                    by = .(DTXSID, Species, Route, Media)]
+                    by = group_by]
   setnames(max_DT,
            c("x", "y"),
            c("tmax", "Cmax_1mgkg"))
+  }else{
+    max_DT <- cvt_pre[Route %in% "po",
+                      get_peak(x = Time,
+                               y = Conc),
+                      by = group_by]
+    setnames(max_DT,
+             c("x", "y"),
+             c("tmax", "Cmax"))
+  }
 
   #observed dose-normalized AUC at last time point
   #this needs to go by Route and Media as well
-  nca_DT <- cvt_pre[, get_nca(.SD),
-                    by = .(DTXSID, Species, Route, Media),
+  nca_DT <- cvt_pre[, get_nca(obs_data = .SD,
+                              dose_norm = dose_norm),
+                    by = group_by,
                     .SDcols = names(cvt_pre)]
 
 #halflife and Vss estimates are not valid for oral data
@@ -99,10 +142,7 @@ get_tkstats <- function(cvt_pre){
   nca_DT[Route %in% "po", MTT := MRT]
   nca_DT[Route %in% "po", MRT := NA_real_]
 
-  out_DT <- merge(max_DT, nca_DT, by = c("DTXSID",
-                                         "Species",
-                                         "Route",
-                                         "Media"),
+  out_DT <- merge(max_DT, nca_DT, by = group_by,
                   all = TRUE)
 
   return(out_DT)
@@ -131,7 +171,8 @@ get_tkstats <- function(cvt_pre){
 #'   actually Clearance divided by bioavailability (Fgutabs); and MRT is
 #'   actually MTT.
 #'
-get_nca <- function(obs_data){
+get_nca <- function(obs_data,
+                    dose_norm = TRUE){
   obs_data <- copy(obs_data)
   #Ensure subject IDs go with study IDs
   obs_data[, Subject_ID := paste(Subject, Study_ID, Series_ID)]
@@ -160,18 +201,26 @@ get_nca <- function(obs_data){
   #if only one observation for each time point
 
   #create a data frame
+  if(dose_norm %in% TRUE){
   #with dose-normalized concentrations, time, and subject ID
   nca_dat <- as.data.frame(obs_data[, .(Conc_Dose, Time, Subject_ID)])
+  nca_dose <- 1
+  }else{
+    nca_dat <- as.data.frame(obs_data[, .(Conc, Time, Subject_ID)])
+    nca_dose <- unique(obs_dat$Dose)
+  }
   names(nca_dat) <- c("conc", "time", "id")
   nca_dat$group <- 1
+
   nca_est <- tryCatch(
     suppressMessages(PK::estimator(PK::nca(data = nca_dat,
-                     dose = 1,
+                     dose = nca_dose,
          design= design,
          method = "z"))[, 1]),
          error = function(err) rep(NA_real_, 7)
     )
 
+  if(dose_norm %in% TRUE){
     names(nca_est) <- c("AUC_tlast_1mgkg",
                         "AUC_inf_1mgkg",
                         "AUMC_inf_1mgkg",
@@ -179,7 +228,15 @@ get_nca <- function(obs_data){
                         "halflife",
                         "Clearance",
                         "Vss")
-
+  }else{
+    names(nca_est) <- c("AUC_tlast",
+                        "AUC_inf",
+                        "AUMC_inf",
+                        "MRT",
+                        "halflife",
+                        "Clearance",
+                        "Vss")
+  }
 
   return(as.list(nca_est))
 }

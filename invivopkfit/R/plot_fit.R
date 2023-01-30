@@ -70,6 +70,9 @@ plot_fit <- function(fit_flat,
                      Analysis_Type_in,
                      Studies.Analyzed_in,
                      model_in = "winning", #or "all" or by name
+                     fit_log_conc,
+                     fit_conc_dose,
+                     rescale_time,
                      obs_data,
                      plot_dose_norm = TRUE,
                      split_dose = FALSE,
@@ -219,7 +222,10 @@ plot_fit <- function(fit_flat,
                          sort(unique(obs_data$Dose)),
                          3),
                                          collapse = ", "), " mg/kg\n",
-  "Analysis Type = ", paste(Analysis_Type_in, collapse= ", "))
+  "Analysis Type = ", paste(Analysis_Type_in, collapse= ", "), "\n",
+  "Fitting options: ", "log-transform ", fit_log_conc,
+  "; dose-normalize ", fit_conc_dose,
+  "; rescale time ", rescale_time)
 
   #if plotting a joint analysis (only one winning model for this DTXSID and species),
   #add winning model to the plot title

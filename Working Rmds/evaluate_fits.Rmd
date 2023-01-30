@@ -1,0 +1,569 @@
+---
+title: "Evaluate fits"
+author: "Caroline Ring"
+date: "2023-01-23"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(results = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r, include = FALSE}
+library(tidyverse)
+library(data.table)
+library(readxl)
+devtools::load_all("../invivopkfit")
+```
+
+# Introduction
+
+This document contains code to evaluate the goodness-of-fit of the models fit to data in `MainAnalysis.Rmd`.
+
+# Import and preprocess CvTdb data
+
+## Import CvTdb data
+
+Read in CvTdb data that was pulled and normalized in `pulling_oral_iv_data_cvtdb.Rmd`.
+
+```{r, load_cvt, eval = TRUE}
+cvt_data <- fread("../inst/ext/cvt_data_2023_01_05.csv")
+```
+
+## Timestamp
+Timestamp the file name with the current date and time (at the beginning of the runs) in format YYYY_MM_DD_hh_mm.
+
+```{r}
+timestamp <- format(Sys.time(), "%Y_%m_%d")
+```
+
+## Settings for pre-processing data
+
+List of new_name = old_name to supply for preprocessing data
+
+```{r}
+names_list <- list(
+  "Compound_Dosed" = "studies.test_substance_name_original",
+  "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
+  "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
+  "Compound_Analyzed" = "series.analyte_name_original",
+  "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
+  "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
+  "Reference" = "documents_reference.id",
+  "Extraction" = "documents_extraction.id",
+  "Species" = "subjects.species",
+  "Weight" ="subjects.weight_kg",
+  "Weight.Units" = NULL,
+  "Dose" = "studies.dose_level_normalized_corrected", #note that dose levels were corrected in pulling_oral_iv_data_cvtdb.Rmd
+  "Dose.Units" = NULL,
+  "Time" = "conc_time_values.time_hr",
+  "Time.Units" = NULL,
+  "Media" = "series.conc_medium_normalized",
+  "Value" = "conc_time_values.conc", #already normalized to mg/L units in CvTdb
+  "Value.Units" = NULL,
+  "Route" = "studies.administration_route_normalized",
+  "LOQ" = "series.loq_normalized", #note that LOQs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  "Subject" = "subjects.id",
+  "N_Subjects" = "series.n_subjects_in_series",
+  "Value_SD" = "conc_time_values.conc_sd_normalized", #note that SDs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
+  "Study_ID" = "studies.id",
+  "Series_ID" = "series.id"
+  )
+```
+
+List of default values for new columns added in preprocessing data
+
+```{r}
+defaults_list <- list(
+                      "Weight.Units" = "kg",
+                      "Dose.Units" = "mg/kg",
+                      "Time.Units" = "hours",
+                      "Value.Units" = "mg/L")
+```
+
+## Preprocess data
+
+```{r}
+cvt <- preprocess_data(data.set = cvt_data,
+                       names_list =names_list,
+                       defaults_list =   defaults_list,
+                       ratio_conc_to_dose = 1,
+                       calc_loq_factor = 0.45,
+                       routes_keep = c("po", "iv"),
+                       media_keep = c("blood", "plasma"),
+                       impute_loq = TRUE,
+                       impute_sd = TRUE,
+                       study_def = c("DTXSID", "Species", "Reference", "Route", "Media"),
+                       suppress.messages = TRUE)
+
+#save pre-processed data
+# write.csv(cvt,
+#           paste0("../inst/ext/cvt_preprocessed_",
+#                  timestamp,
+#           ".csv"),
+#           row.names = FALSE)
+
+cvt <- as.data.table(cvt)
+rm(cvt_data)
+```
+
+```{r}
+cvt[, Conc_SD := Value_SD]
+cvt[, Conc_SD_Dose := Value_SD_Dose]
+```
+
+
+# Evaluate fits
+
+## Table of all fit options
+
+This table defines all combinations of fitting options that were tried.
+
+```{r}
+fit_opts <- 
+  as.data.table(
+    expand.grid(
+  rescale_time = c(FALSE, TRUE),
+  fit_conc_dose = c(FALSE, TRUE),
+  fit_log_conc = c(FALSE, TRUE))
+  )
+
+```
+
+# Evaluate residuals for each set of fitting options
+
+```{r}
+eval_DT <- fit_opts[,
+                  {
+                    print(
+                      paste("fit_log_conc = ",
+                        fit_log_conc,
+                        "; fit_conc_dose = ",
+                        fit_conc_dose,
+                        "; rescale_time = ",
+                        rescale_time)
+                    )
+                    
+  #get fitting outputs file names
+  fit_outputs <- dir(path = "../inst/ext",
+      pattern = paste0("PK_fit_table_",
+                       ".+",
+        "_fit_log_conc_",
+                        fit_log_conc, "_",
+                        "_fit_conc_dose_",
+                        fit_conc_dose, "_",
+                        "_rescale_time_",
+                        rescale_time, "_"
+                       ))
+  
+  fit_outputs <- paste0("../inst/ext/",
+                        fit_outputs)
+  
+  cat(paste0(paste(fit_outputs,
+              collapse = "\n"), "\n"))
+  
+  #read in fitting outputs
+  #flat model
+  fit_flat <- fread(grep(x = fit_outputs,
+                         pattern = "flat",
+                         value = TRUE))
+  #1compartment model
+  fit_1comp <- fread(grep(x = fit_outputs,
+                         pattern = "1compartment",
+                         value = TRUE))
+  #2compartment model
+   fit_2comp <- fread(grep(x = fit_outputs,
+                         pattern = "2compartment",
+                         value = TRUE))
+   
+   fit_flat[, c("fit_conc_dose",
+                "fit_log_conc",
+                "rescale_time") := .(fit_conc_dose,
+                                     fit_log_conc,
+                                     rescale_time)]
+   
+    fit_1comp[, c("fit_conc_dose",
+                "fit_log_conc",
+                "rescale_time") := .(fit_conc_dose,
+                                     fit_log_conc,
+                                     rescale_time)]
+    
+       fit_2comp[, c("fit_conc_dose",
+                "fit_log_conc",
+                "rescale_time") := .(fit_conc_dose,
+                                     fit_log_conc,
+                                     rescale_time)]
+   
+   cat("Evaluating residuals...\n")
+   
+   #evaluate residuals
+   this_eval_DT <- evaluate_resids(cvt_pre = cvt,
+                         fit_flat = fit_flat,
+                         fit_1comp = fit_1comp,
+                         fit_2comp = fit_2comp,
+                         fit_conc_dose = fit_conc_dose,
+                         fit_log_conc = fit_log_conc,
+                         optimx_args = list(
+                           "method" = "bobyqa",
+                           "itnmax" = 1e6,
+                           "control" = list("kkt" = FALSE)
+                         ),
+                         verbose = TRUE)
+   
+     write.csv(this_eval_DT,
+                  paste("../inst/ext/evaluate_residuals_",
+                        "_fit_log_conc_",
+                        fit_log_conc, "_",
+                        "fit_conc_dose_",
+                        fit_conc_dose, "_",
+                        "rescale_time_",
+                        rescale_time, "_",
+                        timestamp,
+                        ".csv",
+                        sep=""), row.names = FALSE)
+     
+     this_eval_DT
+                  },
+  by = c("fit_conc_dose", "fit_log_conc", "rescale_time")]
+
+write.csv(eval_DT,
+          paste0("../inst/ext/eval_resid_",
+          timestamp,
+          ".csv"),
+          row.names = FALSE)
+```
+
+Evalaute TK stats
+
+```{r}
+TKstats_DT <- fit_opts[,
+                  {
+                    print(
+                      paste("fit_log_conc = ",
+                        fit_log_conc,
+                        "; fit_conc_dose = ",
+                        fit_conc_dose,
+                        "; rescale_time = ",
+                        rescale_time)
+                    )
+                    
+  #get fitting outputs file names
+  fit_outputs <- dir(path = "../inst/ext",
+      pattern = paste0("PK_fit_table_",
+                       ".+",
+        "_fit_log_conc_",
+                        fit_log_conc, "_",
+                        "_fit_conc_dose_",
+                        fit_conc_dose, "_",
+                        "_rescale_time_",
+                        rescale_time, "_"
+                       ))
+  
+  fit_outputs <- paste0("../inst/ext/",
+                        fit_outputs)
+  
+  cat(paste0(paste(fit_outputs,
+              collapse = "\n"), "\n"))
+  
+  #read in fitting outputs
+  #flat model
+  fit_flat <- fread(grep(x = fit_outputs,
+                         pattern = "flat",
+                         value = TRUE))
+  #1compartment model
+  fit_1comp <- fread(grep(x = fit_outputs,
+                         pattern = "1compartment",
+                         value = TRUE))
+  #2compartment model
+   fit_2comp <- fread(grep(x = fit_outputs,
+                         pattern = "2compartment",
+                         value = TRUE))
+   
+   fit_flat[, c("fit_conc_dose",
+                "fit_log_conc",
+                "rescale_time") := .(fit_conc_dose,
+                                     fit_log_conc,
+                                     rescale_time)]
+   
+    fit_1comp[, c("fit_conc_dose",
+                "fit_log_conc",
+                "rescale_time") := .(fit_conc_dose,
+                                     fit_log_conc,
+                                     rescale_time)]
+    
+       fit_2comp[, c("fit_conc_dose",
+                "fit_log_conc",
+                "rescale_time") := .(fit_conc_dose,
+                                     fit_log_conc,
+                                     rescale_time)]
+       
+       cat("Evaluating TK statistics...\n")
+        #evaluate TK statistics & merge with postprocessed fits
+   this_TKstats_DT <- evaluate_tkstats(cvt_pre = cvt,
+                         fit_flat = fit_flat,
+                         fit_1comp = fit_1comp,
+                         fit_2comp = fit_2comp,
+                         group_by = c("DTXSID",
+                                          "Species",
+                                          "Route",
+                                          "Media"),
+                         dose_norm = TRUE)
+   
+    write.csv(this_TKstats_DT,
+                  paste("../inst/ext/evaluate_tkstats_",
+                        "_fit_log_conc_",
+                        fit_log_conc, "_",
+                        "fit_conc_dose_",
+                        fit_conc_dose, "_",
+                        "rescale_time_",
+                        rescale_time, "_",
+                        timestamp,
+                        ".csv",
+                        sep=""), row.names = FALSE)
+     
+     this_TKstats_DT
+                  },
+  by = c("fit_conc_dose", "fit_log_conc", "rescale_time")]
+
+write.csv(TKstats_DT,
+          paste0("../inst/ext/eval_TKstats_",
+          timestamp,
+          ".csv"),
+          row.names = FALSE)
+   
+```
+
+# Visualization and analysis
+
+Questions to answer: 
+
+Which combination of fitting parameters best fits AUC? tmax? Cmax? Take the winning model for each combination of fitting parameters and each data set.
+
+```{r}
+tk_DT <- fread(paste0("../inst/ext/eval_TKstats_",
+          "2023_01_26",
+          ".csv"))
+```
+
+```{r}
+tk_DT[winmodel %in% "1compartment", AUC_oral_win := AUC_inf_oral_1mgkg.1compartment]
+tk_DT[winmodel %in% "1compartment", AUC_iv_win := AUC_inf_IV_1mgkg.1compartment]
+tk_DT[winmodel %in% "1compartment", tmax_win := tmax_oral.1compartment]
+tk_DT[winmodel %in% "1compartment", Cmax_win := Cmax_oral_1mgkg.1compartment]
+
+tk_DT[winmodel %in% "2compartment", AUC_oral_win := AUC_inf_oral_1mgkg.2compartment]
+tk_DT[winmodel %in% "2compartment", AUC_iv_win := AUC_inf_iv_1mgkg.2compartment]
+tk_DT[winmodel %in% "2compartment", tmax_win := tmax_oral.2compartment]
+tk_DT[winmodel %in% "2compartment", Cmax_win := Cmax_oral_1mgkg.2compartment]
+```
+
+```{r}
+tk_DT_sub <- tk_DT[Analysis_Type %in% "Joint", .(fit_conc_dose, fit_log_conc, rescale_time, DTXSID, Species, Route, Media, AUC_inf_1mgkg, tmax, Cmax_1mgkg, AUC_oral_win, AUC_iv_win, tmax_win, Cmax_win, winmodel)]
+```
+
+
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == FALSE],
+       aes(x = AUC_inf_1mgkg,
+           y = AUC_oral_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks() +
+  xlab("Non-compartmental AUC_inf (oral)") +
+  ylab("Winning model-predicted AUC_inf (oral)") +
+  ggtitle("AUC_inf (oral), rescale_time = FALSE")
+```
+
+Fitting on the log scale seems to result in more cases of over-predicted AUC_infinity for oral dosing. 
+
+Dose-normalizing concentration before fitting doesn't seem to make a huge difference one way or another.
+
+How about when time was rescaled?
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == TRUE],
+       aes(x = AUC_inf_1mgkg,
+           y = AUC_oral_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks() +
+  xlab("Non-compartmental AUC_inf (oral)") +
+  ylab("Winning model-predicted AUC_inf (oral)") +
+  ggtitle("AUC_inf (oral), rescale_time = TRUE")
+```
+
+Rescaling time seems to make the overpredictions worse when they happen.
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == FALSE],
+       aes(x = AUC_inf_1mgkg,
+           y = AUC_iv_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks() +
+  xlab("Non-compartmental AUC_inf (IV)") +
+  ylab("Winning model-predicted AUC_inf (IV)") +
+  ggtitle("AUC_inf (IV), rescale_time = FALSE")
+```
+
+Fitting on the log scale seems to result in a few more cases of over-predicted AUC_infinity for IV dosing. Dose-normalizing before fitting on the log scale reduces these cases.
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == TRUE],
+       aes(x = AUC_inf_1mgkg,
+           y = AUC_iv_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks() +
+  xlab("Non-compartmental AUC_inf (IV)") +
+  ylab("Winning model-predicted AUC_inf (IV)") +
+  ggtitle("AUC_inf (IV), rescale_time = TRUE")
+```
+
+Rescaling time seems to make the overpredictions worse on the log scale (up to 1e6, rather than 1e4 without rescaling time).
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == FALSE],
+       aes(x = tmax,
+           y = tmax_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10() +
+  ggtitle("Tmax, rescale_time = FALSE")
+```
+
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == TRUE],
+       aes(x = tmax,
+           y = tmax_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10() +
+  ggtitle("Tmax, rescale_time = TRUE")
+```
+
+Note that a couple of points have appeared with tmax > 1000. These are points where the winning model was flat when time was not rescaled, but the winning model was 1- or 2-compartment when time was rescaled.
+
+```{r}
+ggplot(tk_DT_sub[rescale_time %in% FALSE],
+       aes(x = Cmax_1mgkg,
+           y = Cmax_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10()  +
+  ggtitle("Cmax, rescale_time = FALSE") +
+  annotation_logticks()
+```
+
+Overall, Cmax tends to be under-predicted, but fitting on the natural scale results in more cases of worse under-prediction. That surprises me. I would have thought the opposite, because there are so many cases where log-scaling seems to fit the late elimination tail at the expense of fitting the peak. What are some of those cases?
+
+```{r}
+tk_DT_sub[Cmax_win < 1e-4 & rescale_time %in% FALSE & !is.na(Cmax_1mgkg), ]
+```
+
+Look at the fitted parameters for these? 
+
+```{r}
+tmp <- tk_DT_sub[Cmax_win < 1e-4 & rescale_time %in% FALSE & !is.na(Cmax_1mgkg), .(fit_conc_dose, fit_log_conc, rescale_time, DTXSID, Species, Route, Media)]
+tmp[, Analysis_Type := "Joint"]
+```
+
+```{r}
+
+tk_DT[tmp, on = names(tmp)][winmodel =="1compartment", .(fit_conc_dose, fit_log_conc, DTXSID, Species, Route, Media, winmodel, N_Routes, Fgutabs.1compartment, Fgutabs_Vdist.1compartment, Vdist.1compartment, kelim.1compartment, kgutabs.1compartment, AIC.1compartment, AIC.flat)]
+```
+Looking at plots of the fit:
+
+DTXSID4032376 (dimethenamid) is a case where there is one very very high concentration for the oral dosing data, out of range with the others:
+
+```{r}
+cvt_sub <- cvt[DTXSID %in% "DTXSID4032376" & Species %in% "rat", .(Route, Dose, Time, Conc, Conc_Dose, Detect)]
+#sort by decreasing Conc_Dose
+setorder(cvt_sub, Route, -Conc_Dose)
+cvt_sub[Route %in% "po"]
+```
+This seems like a problem with the data itself -- as in, the "non-compartmental" Cmax is probably incorrect.
+
+DTXSID4032405 is another case where there is one very high point right at the beginning of the oral data, with nothing before it, and an awful lot of non-detects. 
+```{r}
+cvt_sub <- cvt[DTXSID %in% "DTXSID4032405" & Species %in% "rat", .(Route, Dose, Time, Conc, Conc_Dose, Detect)]
+#sort by decreasing Conc_Dose
+#setorder(cvt_sub, Route, -Conc_Dose)
+cvt_sub[Route %in% "po"]
+```
+
+
+In fact, I don't understand how the 1-compartment model actually "won" in this case. The AIC is technically lower than the flat model, but not by much, and I really don't understand how that happened. I suppose technically, because the 1-comaprtment model predicts some ridiculously tiny value like 1e-30, it makes the likelihood slightly higher for the non-detects?
+
+```{r}
+#prediction & likelihood for flat model, for a non-detect
+cp_flat(params = list(Vdist = 988, Fgutabs = 1e-4, sigma = 0.0204), time = 0.25, dose = 5, iv.dose = FALSE, medium = "plasma")
+pnorm(q = 0.000738/5, mean = 5.060729e-07/5, sd = 0.0204)
+```
+
+```{r}
+#prediction & likelihood for 1-compartment model, for a non-detect
+cp_1comp(params = list(Fgutabs = 0.9973610551, Vdist = 175.640477, kelim = 106.112252, kgutabs = 1e4), time = 0.25, dose = 5, iv.dose = FALSE, medium = "plasma")
+pnorm(q = 0.000738/5, mean = 8.646482e-14/5, sd = 0.0204)
+```
+
+Yes -- that is the situation. The lower mean produces a very slightly higher probability for the non-detects.
+
+Should we place some lower limit on predicted values -- like anything less than machine epsilon gets truncated at machine epsilon?
+
+
+```{r}
+tk_DT[tmp, on = names(tmp)][winmodel =="2compartment", .(fit_conc_dose, fit_log_conc, DTXSID, Species, Route, Media, winmodel, N_Routes, Fgutabs.2compartment, Fgutabs_V1.2compartment, V1.2compartment, kelim.2compartment, kgutabs.2compartment, k12.2compartment, k21.2compartment)]
+```
+
+
+COmparing Cmax predictions:
+
+```{r}
+ggplot(tk_DT_sub[rescale_time %in% TRUE],
+       aes(x = Cmax_1mgkg,
+           y = Cmax_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10()  +
+  ggtitle("Cmax, rescale_time = TRUE")
+```
+
+# Catching pathological cases
+
+The flat model does *not* always win in pathological cases (see above).
+
+We could add a way to catch cases that are missing absorption phase or elimination phase for oral dosing. If there are not at least 3 detected points before the empirical tmax, flag for missing absorption phase. Or if there are not at least 3 detected points after the empirical tmax, flag for missing elimination phase. If we're fitting a 2-compartment model, I guess it should be at least 6 detected points after the empirical tmax, in order to possibly have enough data to fit both alpha and beta.

@@ -30,12 +30,7 @@
 get_all_predictions <-  function(cvt_pre,
            fit_flat,
            fit_1comp,
-           fit_2comp,
-           optimx_args = list(
-             "method" = "bobyqa",
-             "itnmax" = 1e6,
-             "control" = list("kkt" = FALSE)
-           )){
+           fit_2comp){
 
     pk_fit <- merge_fits(fit_flat = fit_flat,
                          fit_1comp = fit_1comp,
