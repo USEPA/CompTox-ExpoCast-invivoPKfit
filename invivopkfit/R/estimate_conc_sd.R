@@ -86,6 +86,7 @@ estimate_conc_sd <- function(dat,
                             if(!is.finite(impute_sd)){
                               impute_sd <- NA_real_
                             }
+                            #Impute the SD only for the appropriate items
                             this_dat[(this_dat[[n_subj_col]] > 1) %in% TRUE &
                               is.na(this_dat[[sd_col]]),
                                      sd_col] <- impute_sd

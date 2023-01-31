@@ -7,7 +7,6 @@
 #'
 #' - RMSE (root mean squared error)
 #' - R-squared of observations vs. predictions
-#' - The p-value from the Breusch-Pagan test of heteroscedasticity
 #' - Estimated "overall" error standard deviation (details below)
 #'
 #' Unique fitted models are defined by unique combination of analysis type
@@ -84,7 +83,7 @@ evaluate_resids <- function(cvt_pre,
                                Studies.Analyzed,
                                model)]
 
- pred_DT[, n_detect := sum(Detect %in% "Detect"),
+ pred_DT[, n_detect := sum(Detect %in% TRUE),
          by = .(DTXSID, Species,
                                Analysis_Type,
                                Studies.Analyzed,

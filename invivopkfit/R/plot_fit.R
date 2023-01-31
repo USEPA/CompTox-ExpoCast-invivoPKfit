@@ -127,7 +127,8 @@ plot_fit <- function(fit_flat,
 
   #ensure that variable Detect is a factor with levels "Detect" and "Non-Detect"
   obs_data[, Detect:=factor(Detect,
-                         levels = c("Detect",
+                            levels = c(TRUE, FALSE),
+                         labels = c("Detect",
                                     "Non-Detect"))]
 
   #Now create interpolated time points for prediction.

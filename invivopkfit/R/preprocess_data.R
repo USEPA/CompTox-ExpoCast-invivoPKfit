@@ -548,12 +548,7 @@ preprocess_data <- function(data.set,
     message("Creating variable Detect that is TRUE for detects, FALSE for non-detects"
     )
   }
-  data.set$Detect <- factor(
-    ifelse(!is.na(data.set$Value),
-           "Detect",
-           "Non-Detect"),
-    levels = c("Detect", "Non-Detect")
-  )
+  data.set$Detect <- !is.na(data.set$Value)
 
   #Remove zero-dose observations
   if(!suppress.messages){

@@ -262,82 +262,49 @@ log_likelihood <- function(params,
     DF <- subset(DF, Dose > 0)
   }
 
-  #get log-likelihood for each observation
-
-  #For single-subject observations:
-  if(any(DF$N_Subjects %in% 1)){
-  DF_single <- subset(DF,
-                           N_Subjects %in% 1)
-
   if(fit_conc_dose %in% TRUE){
-    value_ss <- DF_single$Value_Dose
-    loq_ss <- DF_single$LOQ_Dose
-    pred_ss <- DF_single$pred_dose
+    value <- DF$Value_Dose
+    loq <- DF$LOQ_Dose
+    pred <- DF$pred_dose
   }else{
-    value_ss <- DF_single$Value
-    loq_ss <- DF_single$LOQ
-    pred_ss <- DF_single$pred
+    value <- DF$Value
+    loq <- DF$LOQ
+    pred <- DF$pred
   }
 
   if(fit_log_conc %in% TRUE){
-    value_ss <- log(value_ss)
-    loq_ss <- log(loq_ss)
-    pred_ss <- log(pred_ss)
-  }
+    value <- log(value)
+    loq <- log(loq)
+    pred <- log(pred)
 
-  loglike_single <- ifelse(is.na(DF_single$Value),
-                    #for non-detects: CDF
-                    pnorm(q = loq_ss,
-                          mean = pred_ss,
-                          sd = DF_single$sigma_study,
-                          log.p = TRUE),
-                    #for detects: PDF
-                    dnorm(x = value_ss,
-                          mean = pred_ss,
-                          sd = DF_single$sigma_study,
-                          log = TRUE))
+    ll_summary <- "dlnorm_summary"
   }else{
-    loglike_single <- 0
+    ll_summary <- "dnorm_summary"
   }
 
-  #For multi-subject observations:
-  if(any(DF$N_Subjects > 1)){
-  DF_mult <- subset(DF, N_Subjects > 1)
-
-  if(fit_conc_dose %in% TRUE){
-    value_mult <- DF_mult$Value_Dose
-    value_sd_mult <- DF_mult$Value_SD_Dose
-    pred_mult <- DF_mult$pred_dose
-  }else{
-    value_mult <- DF_mult$Value
-    value_sd_mult <- DF_mult$Value_SD
-    pred_mult <- DF_mult$pred
-  }
-
-  if(fit_log_conc %in% FALSE){
-  loglike_mult <-  dnorm_summary(mu = pred_mult,
-                                            sigma = DF_mult$sigma_study,
-                                            x_mean = value_mult,
-                                            x_sd = value_sd_mult,
-                                            x_N = DF_mult$N_Subjects,
-                                            log = TRUE)
-  }else{
-    loglike_mult <-  dlnorm_summary(mu = log(pred_mult), #predicted log-conc
-                                   sigma = DF_mult$sigma_study, #log-scale SD
-                                   x_mean = value_mult, #natural scale sample mean
-                                   x_sd = value_sd_mult, #natural scale sample SD
-                                   x_N = DF_mult$N_Subjects,
-                                   log = TRUE)
-  }
-  }else{
-    loglike_mult <- 0
-  }
-
-
-
+  #get log-likelihood for each observation
+  loglike <- ifelse(DF$N_Subjects %in% 1,
+                    ifelse(DF$Detect %in% TRUE,
+                           dnorm(x = value,
+                                 mean = pred,
+                                 sd = DF$sigma_study,
+                                 log = TRUE),
+                           pnorm(q = loq,
+                                 mean = pred,
+                                 sd = DF$sigma_study,
+                                 log.p = TRUE)
+                    ),
+                    do.call(ll_summary,
+                            list(mu = pred,
+                                 sigma = DF$sigma_study,
+                                 x_mean = value,
+                                 x_sd = value_sd,
+                                 x_N = DF$N_Subjects,
+                                 log = TRUE))
+  )
 
   #sum log-likelihoods over observations
-  ll <- sum(c(loglike_single, loglike_mult))
+  ll <- sum(loglike)
   #do *not* remove NAs, because they mean this parameter combination is impossible!
 
   #If ll isn't finite,
