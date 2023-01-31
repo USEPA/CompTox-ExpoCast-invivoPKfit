@@ -266,20 +266,25 @@ log_likelihood <- function(params,
     value <- DF$Value_Dose
     loq <- DF$LOQ_Dose
     pred <- DF$pred_dose
+    value_sd <- DF$Value_SD_Dose
   }else{
     value <- DF$Value
     loq <- DF$LOQ
     pred <- DF$pred
+    value_sd <- DF$Value_SD
   }
 
   if(fit_log_conc %in% TRUE){
+    value_natural <- value
     value <- log(value)
     loq <- log(loq)
+    pred_natural <- pred
     pred <- log(pred)
-
     ll_summary <- "dlnorm_summary"
   }else{
     ll_summary <- "dnorm_summary"
+    value_natural <- value
+    pred_natural <- pred
   }
 
   #get log-likelihood for each observation
@@ -297,7 +302,7 @@ log_likelihood <- function(params,
                     do.call(ll_summary,
                             list(mu = pred,
                                  sigma = DF$sigma_study,
-                                 x_mean = value,
+                                 x_mean = value_natural,
                                  x_sd = value_sd,
                                  x_N = DF$N_Subjects,
                                  log = TRUE))
@@ -313,7 +318,7 @@ log_likelihood <- function(params,
 
   #if model predicted any negative concentrations,
   #then these parameters are infinitely unlikely
- if(any(pred < 0)) ll <- -Inf
+ if(any(pred_natural < 0)) ll <- -Inf
 
   #If user has selected to force return of a finite value,
   #e.g. as required by optimx with method 'L-BFGS-B',
