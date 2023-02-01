@@ -1,4 +1,5 @@
 initialize_out_DF <- function(par_DF,
+                              all_data_fit = NULL,
                               msg = "",
                               fitted_types = c("Fitted mean",
                                                "Fitted std dev"),
@@ -7,8 +8,12 @@ initialize_out_DF <- function(par_DF,
                               analysis_type,
                               fit_conc_dose,
                               fit_log_conc,
+                              rescale_time,
                               n_routes,
                               n_media,
+                              tmax = NA_real_,
+                              n_abs = NA_integer_,
+                              n_elim = NA_integer_,
                               optimx_args,
                               suppress.messages = TRUE){
   out_DF <- par_DF[par_DF$optimize_param %in% TRUE, ]
@@ -28,7 +33,14 @@ initialize_out_DF <- function(par_DF,
 
   out_DF$time_units_fitted <- "hours"
 
+  if(is.null(all_data_fit)){
   out_DF[, fitted_types] <- NA_real_
+  }else{
+    #if we have values for parameters from all_data_fit, keep them
+    out_DF[["Fitted mean"]] <- unlist(all_data_fit[out_DF$param_name])
+    #but SDs will be NA
+    out_DF[["Fitted std dev"]] <- NA_real_
+  }
 
   out_DF$Studies.Analyzed <- studies_analyzed
   out_DF$References.Analyzed <- refs_analyzed
@@ -36,6 +48,7 @@ initialize_out_DF <- function(par_DF,
 
   out_DF$fit_conc_dose <- fit_conc_dose
   out_DF$fit_log_conc <- fit_log_conc
+  out_DF$rescale_time <- rescale_time
 
   #fill in the loglike and AIC with NA s since no fit was done
   out_DF$LogLikelihood <-  NA_real_
@@ -49,10 +62,21 @@ initialize_out_DF <- function(par_DF,
   #Record the unique media in this dataset
   out_DF$N_Media <- n_media
 
+  #record tmax, n_abs, n_elim
+  out_DF$tmax_oral <- tmax
+  out_DF$n_abs <- n_abs
+  out_DF$n_elim <- n_elim
+
   out_DF$message <- msg
-  out_DF$fevals <- NA_integer_
-  out_DF$convcode <- NA_integer_
-  out_DF$niter <- NA_integer_
+  if(is.null(all_data_fit)){
+  out_DF$fevals <- NA_real_
+  out_DF$convcode <- NA_real_
+  out_DF$niter <- NA_real_
+  }else{
+    out_DF$fevals <- all_data_fit$fevals
+    out_DF$convcode <- all_data_fit$convcode
+    out_DF$niter <- all_data_fit$niter
+  }
   out_DF$method <- optimx_args$method
   #record control params
   out_DF[paste0("control_",

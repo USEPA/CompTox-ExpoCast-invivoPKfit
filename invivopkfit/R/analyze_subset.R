@@ -204,6 +204,10 @@ analyze_subset <- function(fitdata,
                    "; plasma: ",
                    sum(fitdata$Media %in% "plasma"))
 
+  #Types of fitted param values to return
+  fitted_types <- c("Fitted mean",
+                    "Fitted std dev")
+
   if(!suppress.messages){
     message(paste0("Beginning ",
                    tolower(analysis_type),
@@ -234,8 +238,325 @@ analyze_subset <- function(fitdata,
     )
   }
 
+
+
+  #get parameter names and units, and determine whether to optimize each of
+  #these parameters or not
+  par_DF <- do.call(get_opt_params,
+                    list("model" = model,
+                         "fitdata" = fitdata,
+                         "pool_sigma" = pool_sigma,
+                         "suppress.messages" = suppress.messages))
+
+  n_opt <- sum(par_DF$optimize_param %in% TRUE)
+
+  #Check how many detected observations are before and after empirical tmax
+  if(any(fitdata$Route %in% "po")){
+    oral_data <- subset(fitdata, Route %in% "po")
+
+    oral_peak <- get_peak(x = oral_data$Time,
+                          y = log(oral_data[["Conc_Dose"]]))
+
+    tmax <- oral_peak$x
+    #how many detects at or before tmax?
+    timepoints_det <- unique(subset(oral_data,
+                                    Detect %in% TRUE)[["Time"]])
+    n_abs <- sum(timepoints_det <= tmax)
+    if(all(fitdata$Route %in% "po")){
+      #how many detects at or after tmax?
+      n_elim <- sum(timepoints_det >= tmax)
+    }else{
+      n_elim <- sum(subset(fitdata,
+                           Route %in% "iv")[["Detect"]])
+    }
+  }else{ #if no oral data
+    #no oral tmax
+    tmax <- NA_real_
+    n_abs <- NA_integer_
+    #check whether we can fit elimination phase:
+    #how many detects in IV data
+    n_elim <- sum(subset(fitdata,
+                         Route %in% "iv")[["Detect"]])
+  }
+
+
+
+
+  #If the number of parameters is >= the number of detected data points,
+  #then throw back everything NA with a message,
+  #because there is no point wasting time trying to fit them.
+
+  if (sum(par_DF$optimize_param) >= sum(!is.na(fitdata$Value))){
+
+    #include a message about why no fit was done
+    msg <- paste("For chemical ", this.dtxsid,
+                 "and species ", this.species,
+                 " there were ",
+                 sum(par_DF$optimize_param),
+                 " parameters to be estimated (",
+                 paste(par_DF[par_DF$optimize_param %in% TRUE, "param_name"],
+                       collapse = ", "),
+                 ") and only ",
+                 sum(!is.na(fitdata$Value)),
+                 " detected data points. Optimization aborted.",
+                 sep = "")
+
+    out_DF <- initialize_out_DF(par_DF = par_DF,
+                                msg = msg,
+                                fitted_types = fitted_types,
+                                studies_analyzed = studies_analyzed,
+                                refs_analyzed = refs_analyzed,
+                                analysis_type = analysis_type,
+                                fit_conc_dose = fit_conc_dose,
+                                fit_log_conc = fit_log_conc,
+                                rescale_time = rescale_time,
+                                n_routes = n_routes,
+                                n_media = n_media,
+                                tmax = tmax,
+                                n_abs = n_abs,
+                                n_elim = n_elim,
+                                optimx_args = optimx_args,
+                                suppress.messages = suppress.messages)
+
+    return(out_DF)
+  }
+
+  #Check whether we are trying to fit kgutabs,
+  #and if so, do we have enough absorption-phase data to do so?
+  if("kgutabs" %in% subset(par_DF, optimize_param %in% TRUE)[["param_name"]]){
+    #if not, then first try to fit IV-only; if no IV data, throw back with a message
+    if(n_abs < 2){
+      if(any(fitdata$Route %in% "iv")){ #try to fit IV-only data
+        #keep the IV data only
+        fitdata <- subset(fitdata, Route %in% "iv")
+        #get par_DF for the IV-only data
+        par_DF <- do.call(get_opt_params,
+                          list("model" = model,
+                               "fitdata" = fitdata,
+                               "pool_sigma" = pool_sigma,
+                               "suppress.messages" = suppress.messages))
+
+        #recheck whether we have enough IV data points
+        if (sum(par_DF$optimize_param) >= sum(!is.na(fitdata$Value))){
+
+          #include a message about why no fit was done
+          msg <- paste("For chemical ", this.dtxsid,
+                       " and species ", this.species,
+                       " kgutabs was to be estimated, but ",
+                       "there was insufficient absorption-phase data: ",
+                       " only ", n_abs,
+                       " (<2) timepoints with detections at or before the empirical tmax of ",
+                       signif(tmax, 3),
+                       ". There was also insufficient IV data to fit an IV-only model.",
+                       sep = "")
+
+          out_DF <- initialize_out_DF(par_DF = par_DF,
+                                      msg = msg,
+                                      fitted_types = fitted_types,
+                                      studies_analyzed = studies_analyzed,
+                                      refs_analyzed = refs_analyzed,
+                                      analysis_type = analysis_type,
+                                      fit_conc_dose = fit_conc_dose,
+                                      fit_log_conc = fit_log_conc,
+                                      rescale_time = rescale_time,
+                                      n_routes = n_routes,
+                                      n_media = n_media,
+                                      tmax = tmax,
+                                      n_abs = n_abs,
+                                      n_elim = n_elim,
+                                      optimx_args = optimx_args,
+                                      suppress.messages = suppress.messages)
+
+          return(out_DF)
+        }else{ #if we proceed with IV fit, then re-check number of studies
+          #check whether there is more than one study or not
+          msg <- paste("For chemical ", this.dtxsid,
+                       " and species ", this.species,
+                       " kgutabs was to be estimated, but ",
+                       "there was insufficient absorption-phase data: ",
+                       " only ", n_abs,
+                       " (<2) timepoints with detections at or before the empirical tmax of ",
+                       signif(tmax, 3),
+                       ". However, there is IV data. Proceeding with IV-only fit.",
+                       sep = "")
+          if(suppress.messages %in% TRUE){
+            message(msg)
+          }
+          nstudy <- length(unique(fitdata$Study))
+          studies_analyzed <- paste(sort(unique(fitdata$Study)),
+                                    collapse =", ")
+          refs_analyzed <- paste(sort(unique(fitdata$Reference)),
+                                 collapse =", ")
+          if (nstudy>1) {
+            if(pool_sigma %in% FALSE){
+              analysis_type <- "Joint Analysis"
+            }else{
+              analysis_type <- "Pooled Analysis"
+            }
+          }else{
+            analysis_type <- "Single-Study Analysis"
+          }
+
+          n_subj <- range(fitdata$N_Subjects)
+          if(length(unique(n_subj))==1) n_subj <- unique(n_subj)
+
+          n_routes <- paste("iv: ",
+                            sum(fitdata$Route %in% "iv"),
+                            "; po: ",
+                            sum(fitdata$Route %in% "po"))
+
+          n_media <- paste("blood: ",
+                           sum(fitdata$Media %in% "blood"),
+                           "; plasma: ",
+                           sum(fitdata$Media %in% "plasma"))
+
+          if(!suppress.messages){
+            message(paste0("Beginning ",
+                           tolower(analysis_type),
+                           " for:\n",
+                           "model = ", model, "\n",
+                           "fit_conc_dose = ", fit_conc_dose, "\n",
+                           "fit_log_conc = ", fit_log_conc, "\n",
+                           "rescale_time = ", rescale_time, "\n",
+                           this.dtxsid, " ", unique(fitdata$Compound), "\n",
+                           "Species = ", this.species, "\n",
+                           "Reference IDs = ",
+                           refs_analyzed,
+                           "\n",
+                           "Study IDs = ",
+                           studies_analyzed,
+                           "\n",
+                           "Number of observations = ",
+                           nrow(fitdata),
+                           " (iv: ",
+                           sum(fitdata$Route %in% "iv"),
+                           "; po: ",
+                           sum(fitdata$Route %in% "po"),
+                           ")\n",
+                           "Number of subjects per observation = ",
+                           paste(n_subj,
+                                 collapse = "-")
+            )
+            )
+          }
+        }
+
+      }else{ #if no IV data
+        #include a message about why no fit was done
+        msg <- paste("For chemical ", this.dtxsid,
+                     " and species ", this.species,
+                     " kgutabs is to be estimated, but there is insufficient absorption-phase data:",
+                     " only ", n_abs,
+                     " (<2) timepoints with detections at or before the empirical tmax of ",
+                     signif(tmax, 3),
+                     ". There is no IV data to fit an IV-only model. Optimization aborted.",
+                     sep = "")
+
+        out_DF <- initialize_out_DF(par_DF = par_DF,
+                                    msg = msg,
+                                    fitted_types = fitted_types,
+                                    studies_analyzed = studies_analyzed,
+                                    refs_analyzed = refs_analyzed,
+                                    analysis_type = analysis_type,
+                                    fit_conc_dose = fit_conc_dose,
+                                    fit_log_conc = fit_log_conc,
+                                    rescale_time = rescale_time,
+                                    n_routes = n_routes,
+                                    n_media = n_media,
+                                    tmax = tmax,
+                                    n_abs = n_abs,
+                                    n_elim = n_elim,
+                                    optimx_args = optimx_args,
+                                    suppress.messages = suppress.messages)
+        return(out_DF)
+      }
+    }
+  }
+
+  #Check whether we are trying to fit kelim,
+  #and if so, do we have enough elimination-phase data to do so?
+  if("kelim" %in% subset(par_DF, optimize_param %in% TRUE)[["param_name"]]){
+    if(all(fitdata$Route %in% "po")){
+      msg <- paste("For chemical ", this.dtxsid,
+                   "and species ", this.species,
+                   "kelim is to be estimated, but there is insufficient elimination-phase data: ",
+                   "there are only ", n_elim,
+                   " (< 3) timepoints with detections after the empirical oral tmax of ",
+                   signif(tmax, 3),
+                   ". Optimization aborted.",
+                   sep = "")
+    }else{ #if we have some IV data, do we have at least 3 detects?
+      msg <- paste("For chemical ", this.dtxsid,
+                   "and species ", this.species,
+                   "kelim is to be estimated, but there is insufficient elimination-phase data: ",
+                   n_elim,
+                   " (< 3) timepoints with detections in IV data. Optimization aborted.",
+                   sep = "")
+    }
+    #if not, then do not fit; throw back NA with a message
+    if(n_elim < 3){
+      #include a message about why no fit was done
+      out_DF <- initialize_out_DF(par_DF = par_DF,
+                                  msg = msg,
+                                  fitted_types = fitted_types,
+                                  studies_analyzed = studies_analyzed,
+                                  refs_analyzed = refs_analyzed,
+                                  analysis_type = analysis_type,
+                                  fit_conc_dose = fit_conc_dose,
+                                  fit_log_conc = fit_log_conc,
+                                  rescale_time = rescale_time,
+                                  n_routes = n_routes,
+                                  n_media = n_media,
+                                  tmax = tmax,
+                                  n_abs = n_abs,
+                                  n_elim = n_elim,
+                                  optimx_args = optimx_args,
+                                  suppress.messages = suppress.messages)
+      return(out_DF)
+    }
+  }
+
+  #Get the number of parameters to be optimized
+  n_opt <- sum(par_DF$optimize_param %in% TRUE)
+  #assign optimx::optimx() default max iterations/function evals if missing
+  #this is default from optimx code itself
+  if(is.null(optimx_args$itnmax)){
+    optimx_args$itnmax <- max(5e4,
+                              5000*round(
+                                sqrt(
+                                  n_opt+1
+                                )
+                              )
+    )
+
+
+    if(!suppress.messages){
+      message(paste("optimx_args does not include item 'itnmax'.",
+                    "Setting optimx_args$itnmax =",
+                    "max(5e4, 5000*round(sqrt(n+1)))",
+                    "where n = number of params to be optimized =",
+                    n_opt,
+                    "(This is the optimx() default)"))
+    }
+  }
+
+  #assign convergence tolerance factor if missing and relevant
+  if(optimx_args$method %in% "L-BFGS-B" &
+     is.null(optimx_args$control$factr)){
+    optimx_args$control$factr <- 1e7
+    if(!suppress.messages){
+      message(paste("Optimization method is",
+                    "L-BFGS-B",
+                    "but optimx::optimx() control argument",
+                    "'factr' was not provided;",
+                    "setting optimx_args$control$factr = 1e7"))
+    }
+  }
+
+  #Rescale time if so requested
+  #Save the original time in units of hours
   fitdata$Time.Hours <- fitdata$Time
-  #rescale time if so requested
+  #Now do the rescale
   if(rescale_time %in% TRUE){
     last_detect_time <- max(fitdata[is.finite(fitdata$Value),
                                     "Time.Hours"])
@@ -281,230 +602,6 @@ analyze_subset <- function(fitdata,
   }else{
     new_time_units <- "hours"
   }
-
-  #get parameter names and units, and determine whether to optimize each of
-  #these parameters or not
-  par_DF <- do.call(get_opt_params,
-                    list("model" = model,
-                         "fitdata" = fitdata,
-                         "pool_sigma" = pool_sigma,
-                         "suppress.messages" = suppress.messages))
-
-  n_opt <- sum(par_DF$optimize_param %in% TRUE)
-
-
-  #Types of fitted param values to return
-  fitted_types <- c("Fitted mean",
-                    "Fitted std dev")
-
-  #If the number of parameters is >= the number of detected data points,
-  #then throw back everything NA with a message,
-  #because there is no point wasting time trying to fit them.
-
-  if (sum(par_DF$optimize_param) >= sum(!is.na(fitdata$Value))){
-
-    #include a message about why no fit was done
-    msg <- paste("For chemical ", this.dtxsid,
-                 "and species ", this.species,
-                 " there were ",
-                 sum(par_DF$optimize_param),
-                 " parameters to be estimated (",
-                 paste(par_DF[par_DF$optimize_param %in% TRUE, "param_name"],
-                       collapse = ", "),
-                 ") and only ",
-                 sum(!is.na(fitdata$Value)),
-                 " detected data points. Optimization aborted.",
-                 sep = "")
-
-    out_DF <- initialize_out_DF(par_DF = par_DF,
-                                msg = msg,
-                                fitted_types = fitted_types,
-                                studies_analyzed = studies_analyzed,
-                                refs_analyzed = refs_analyzed,
-                                analysis_type = analysis_type,
-                                fit_conc_dose = fit_conc_dose,
-                                fit_log_conc = fit_log_conc,
-                                n_routes = n_routes,
-                                n_media = n_media,
-                                optimx_args = optimx_args,
-                                suppress.messages = suppress.messages)
-
-    return(out_DF)
-  }
-
-  #Check whether we are trying to fit kgutabs,
-  #and if so, do we have enough absorption-phase data to do so?
-  if("kgutabs" %in% subset(par_DF, optimize_param %in% TRUE)[["param_name"]]){
-    #find the oral peak tmax
-    oral_data <- subset(fitdata, Route %in% "po")
-
-    conc_var <- "Conc_Dose"
-    oral_peak <- get_peak(x = oral_data$Time,
-                          y = log(oral_data[[conc_var]]))
-
-    tmax <- oral_peak$x
-    #is there detected data for at least 3 time points earlier than tmax?
-    timepoints_det <- unique(subset(fitdata,
-                                    Detect %in% TRUE)[["Time"]])
-    n_abs <- sum(timepoints_det <= tmax)
-    #if not, then first try to fit IV-only; if no IV data, throw back with a message
-    if(n_abs < 3){
-      if(any(fitdata$Route %in% "iv")){ #try to fit IV-only data
-        fitdata <- subset(fitdata, Route %in% "iv")
-        #get par_DF for the IV-only data
-        par_DF <- do.call(get_opt_params,
-                          list("model" = model,
-                               "fitdata" = fitdata,
-                               "pool_sigma" = pool_sigma,
-                               "suppress.messages" = suppress.messages))
-
-        #recheck whether we have enough data points
-        if (sum(par_DF$optimize_param) >= sum(!is.na(fitdata$Value))){
-
-          #include a message about why no fit was done
-          msg <- paste("For chemical ", this.dtxsid,
-                       "and species ", this.species,
-                       "kgutabs was to be estimated, but there was insufficient absorption-phase data: ",
-                       "only ", n_abs,
-                       " timepoints with detections before the empirical tmax of ",
-                       signif(tmax, 3),
-                       ". There was also insufficient IV data to fit an IV-only model.",
-                       sep = "")
-
-          out_DF <- initialize_out_DF(par_DF = par_DF,
-                                      msg = msg,
-                                      fitted_types = fitted_types,
-                                      studies_analyzed = studies_analyzed,
-                                      refs_analyzed = refs_analyzed,
-                                      analysis_type = analysis_type,
-                                      fit_conc_dose = fit_conc_dose,
-                                      fit_log_conc = fit_log_conc,
-                                      n_routes = n_routes,
-                                      n_media = n_media,
-                                      optimx_args = optimx_args,
-                                      suppress.messages = suppress.messages)
-
-          return(out_DF)
-        }
-
-      }else{ #if no IV data
-        #include a message about why no fit was done
-        msg <- paste("For chemical ", this.dtxsid,
-                     "and species ", this.species,
-                     "kgutabs is to be estimated, but there is insufficient absorption-phase data: ",
-                     "only ", n_abs,
-                     " timepoints with detections before the empirical tmax of ",
-                     signif(tmax, 3),
-                     ". There is no IV data to fit an IV-only model. Optimization aborted.",
-                     sep = "")
-
-        out_DF <- initialize_out_DF(par_DF = par_DF,
-                                    msg = msg,
-                                    fitted_types = fitted_types,
-                                    studies_analyzed = studies_analyzed,
-                                    refs_analyzed = refs_analyzed,
-                                    analysis_type = analysis_type,
-                                    fit_conc_dose = fit_conc_dose,
-                                    fit_log_conc = fit_log_conc,
-                                    n_routes = n_routes,
-                                    n_media = n_media,
-                                    optimx_args = optimx_args,
-                                    suppress.messages = suppress.messages)
-        return(out_DF)
-      }
-    }
-  }
-
-  #Check whether we are trying to fit kelim,
-  #and if so, do we have enough elimination-phase data to do so?
-  if("kelim" %in% subset(par_DF, optimize_param %in% TRUE)[["param_name"]]){
-    if(all(fitdata$Route %in% "po")){
-      #find the oral peak tmax
-      oral_data <- subset(fitdata, Route %in% "po")
-      conc_var <- "Conc_Dose"
-      oral_peak <- get_peak(x = oral_data$Time,
-                            y = log(oral_data[[conc_var]]))
-
-      tmax_oral <- oral_peak$x
-
-      #is there detected data for at least 3 time points later than tmax?
-      timepoints_det <- unique(subset(fitdata,
-                                      Detect %in% TRUE)[["Time"]])
-      n_elim <- sum(timepoints_det >= tmax_oral)
-      msg <- paste("For chemical ", this.dtxsid,
-                   "and species ", this.species,
-                   "kelim is to be estimated, but there is insufficient elimination-phase data: ",
-                   "there are only ", n_elim,
-                   " < 3 timepoints with detections after the empirical oral tmax of ",
-                   signif(tmax, 3),
-                   ". Optimization aborted.",
-                   sep = "")
-    }else{ #if we have some IV data, do we have at least 3 detects?
-      iv_data <- subset(fitdata, Route %in% "iv")
-      n_elim <- sum(iv_data$Detect %in% TRUE)
-      msg <- paste("For chemical ", this.dtxsid,
-                   "and species ", this.species,
-                   "kelim is to be estimated, but there is insufficient elimination-phase data: ",
-                   n_elim,
-                   " < 3 timepoints with detections in IV data. Optimization aborted.",
-                   sep = "")
-    }
-    #if not, then do not fit; throw back NA with a message
-    if(n_elim < 3){
-      #include a message about why no fit was done
-      out_DF <- initialize_out_DF(par_DF = par_DF,
-                                  msg = msg,
-                                  fitted_types = fitted_types,
-                                  studies_analyzed = studies_analyzed,
-                                  refs_analyzed = refs_analyzed,
-                                  analysis_type = analysis_type,
-                                  fit_conc_dose = fit_conc_dose,
-                                  fit_log_conc = fit_log_conc,
-                                  n_routes = n_routes,
-                                  n_media = n_media,
-                                  optimx_args = optimx_args,
-                                  suppress.messages = suppress.messages)
-      return(out_DF)
-    }
-  }
-
-  #Get the number of parameters to be optimized
-  n_opt <- sum(par_DF$optimize_param %in% TRUE)
-  #assign optimx::optimx() default max iterations/function evals if missing
-  #this is default from optimx code itself
-  if(is.null(optimx_args$itnmax)){
-    optimx_args$itnmax <- max(5e4,
-                              5000*round(
-                                sqrt(
-                                  n_opt+1
-                                )
-                              )
-    )
-
-
-    if(!suppress.messages){
-      message(paste("optimx_args does not include item 'itnmax'.",
-                    "Setting optimx_args$itnmax =",
-                    "max(5e4, 5000*round(sqrt(n+1)))",
-                    "where n = number of params to be optimized =",
-                    n_opt,
-                    "(This is the optimx() default)"))
-    }
-  }
-
-  #assign convergence tolerance factor if missing and relevant
-  if(optimx_args$method %in% "L-BFGS-B" &
-     is.null(optimx_args$control$factr)){
-    optimx_args$control$factr <- 1e7
-    if(!suppress.messages){
-      message(paste("Optimization method is",
-                    "L-BFGS-B",
-                    "but optimx::optimx() control argument",
-                    "'factr' was not provided;",
-                    "setting optimx_args$control$factr = 1e7"))
-    }
-  }
-
 
 #get lower bounds
  par_DF <- do.call(get_lower_bounds,
@@ -602,6 +699,7 @@ out_DF$time_units_fitted <- new_time_units
     }
   }
 
+  #Do the fit
   all_data_fit <- tryCatch({
 
     tmp <- do.call(
@@ -632,61 +730,57 @@ out_DF$time_units_fitted <- new_time_units
     #tmp is a 1-row data.frame with one variable for each fitted param,
     #plus variables with info on fitting (number of evals, convergence code, etc.)
     #collect any messages from optimx -- in attribute "details" (another data.frame)
-    tmp$message <- attr(tmp, "details")[, "message"]
+    tmp$message <- attr(tmp, "details")[, "message"][[1]]
+    if(!("convcode" %in% names(tmp))){
+      tmp$convcode <- NA_real_
+    }
     tmp
   },
            error = function(err){
-             #just get the error message
-             err$message
+             #create "placeholder" all_data_fit data.frame
+             tmp <- vector(mode = "numeric", length = length(opt_params))
+             names(tmp) <- names(opt_params)
+             tmp <- as.list(tmp)
+             tmp[c("value", "fevals", "gevals", "niter",
+                   "convcode")] <- NA_real_
+             tmp[c("kkt1", "kkt2")] <- NA #logical
+             tmp[c("xtime")] <- NA_real_
+             #get the error message
+             tmp$message <- err$message
+             tmp
            })
 
-  #If fit failed, then return everything as NA and record the message
-  tmp <- try(any(is.na(as.vector(stats::coef(all_data_fit)))))
-  if(inherits(tmp, "try-error")){
-    fitfail <- TRUE
-  }else{
-    fitfail <- FALSE
-  }
-
-  if(fitfail %in% TRUE){
-  out_DF[, fitted_types] <- NA_real_
-
-
-    out_DF$Studies.Analyzed <- studies_analyzed
-    out_DF$References.Analyzed <- refs_analyzed
-    out_DF$Data.Analyzed <- analysis_type
-
-    out_DF$fit_conc_dose <- fit_conc_dose
-    out_DF$fit_log_conc <- fit_log_conc
-
-  #fill in the loglike and AIC with NA s since no fit was done
-  out_DF$LogLikelihood <-  NA_real_
-  out_DF$AIC <-  NA_real_
-
-
-  out_DF$flag <- NA_character_
-  #Record the unique routes in this dataset
-  #Route info provides context for why some parameters were/were not estimated
-  out_DF$N_Routes <- n_routes
-  #Record the unique media in this dataset
-  out_DF$N_Media <- n_media
+  #If fit failed, then stop
+  if(!(all_data_fit$convcode %in% 0)){
 
   #include a message about why no fit was done
-  msg <- paste("Optimization failed. Error message from optimx():",
-               all_data_fit)
-  out_DF$message <- msg
-
-  out_DF$fevals <- NA_integer_
-  out_DF$convcode <- NA_integer_
-  out_DF$niter <- NA_integer_
-  out_DF$method <- optimx_args$method
-  #record control params
-  out_DF[paste0("control_",
-                names(optimx_args$control))] <- optimx_args$control
+  msg <- paste("Optimization failed.",
+               "Convergence code =",
+               all_data_fit$convcode, ".",
+  "Error message from optimx():",
+               all_data_fit$message)
 
   if(!suppress.messages){
     message(msg)
   }
+
+  out_DF <- initialize_out_DF(par_DF = par_DF,
+                              all_data_fit = all_data_fit,
+                              msg = msg,
+                              fitted_types = fitted_types,
+                              studies_analyzed = studies_analyzed,
+                              refs_analyzed = refs_analyzed,
+                              analysis_type = analysis_type,
+                              fit_conc_dose = fit_conc_dose,
+                              fit_log_conc = fit_log_conc,
+                              rescale_time = rescale_time,
+                              n_routes = n_routes,
+                              n_media = n_media,
+                              tmax = tmax,
+                              n_abs = n_abs,
+                              n_elim = n_elim,
+                              optimx_args = optimx_args,
+                              suppress.messages = suppress.messages)
   return(out_DF)
   }
 
@@ -757,17 +851,12 @@ out_DF$time_units_fitted <- new_time_units
   #repeat optimization with smaller convergence tolerance
   #-- only if method is "L-BFGS-B" -- other methods do not use this
   if(optimx_args$method %in% "L-BFGS-B"){
-  while(any(is.nan(sds)) & optimx_args$control$factr > 1) {
+  while(any(is.nan(sds)) &
+        optimx_args$control$factr > 1 &
+        all_data_fit$convcode %in% 0) {
 
 
-    #then redo optimization
-
-    #start from fitted values
-
-    # #update the starting points in par_DF so they will be recorded
-    par_DF[match(names(means),
-                 par_DF$param_name),
-           "start_value"] <- means
+    #then redo optimization with tighter tolerance
 
     #get new starting values to use
     opt_params <- par_DF[par_DF$optimize_param %in% TRUE,
@@ -780,8 +869,7 @@ out_DF$time_units_fitted <- new_time_units
 
     if (!suppress.messages){
       message(paste0("One or more parameters has NaN standard deviation. ",
-                     "Repeating optimization with smaller convergence tolerance, ",
-                     "starting from result of previous optimization:\n",
+                     "Repeating optimization with smaller convergence tolerance:\n",
                      paste(
                        apply(
                          data.frame(Names = names(opt_params),
@@ -806,28 +894,54 @@ out_DF$time_units_fitted <- new_time_units
     }
 
 
-    all_data_fit <-  do.call(optimx::optimx,
-                             args = c(
-                               #
-                               list(par = opt_params,
-                                    fn = log_likelihood,
-                                    lower = lower_params,
-                                    upper = upper_params),
-                               #method and control
-                               optimx_args,
-                               list(
-                                 const_params = const_params,
-                                 DF = fitdata,
-                                 modelfun = modelfun,
-                                 model = model,
-                                 fit_conc_dose = fit_conc_dose,
-                                 fit_log_conc = fit_log_conc,
-                                 force_finite = (optimx_args$method %in% "L-BFGS-B"),
-                                 negative = TRUE
-                               )
-                             )
-    )
+    all_data_fit <- tryCatch({
 
+      tmp <- do.call(
+        optimx::optimx,
+        args = c(
+          #
+          list(par = opt_params,
+               fn = log_likelihood,
+               lower = lower_params,
+               upper = upper_params),
+          #method and control
+          optimx_args,
+          #... additional args to log_likelihood
+          list(
+            const_params = const_params,
+            DF = fitdata,
+            modelfun = modelfun,
+            model = model,
+            fit_conc_dose = fit_conc_dose,
+            fit_log_conc = fit_log_conc,
+            force_finite = (optimx_args$method %in% "L-BFGS-B"),
+            negative = TRUE
+          ) #end list()
+        ) #end args = c()
+      ) #end do.call
+
+      #output of optimx::optimx():
+      #tmp is a 1-row data.frame with one variable for each fitted param,
+      #plus variables with info on fitting (number of evals, convergence code, etc.)
+      #collect any messages from optimx -- in attribute "details" (another data.frame)
+      tmp$message <- attr(tmp, "details")[, "message"]
+      if(!("convcode" %in% names(tmp))){
+        tmp$convcode <- NA_real_
+      }
+      tmp
+    },
+    error = function(err){
+      tmp <- vector(mode = "numeric", length = length(opt_params))
+      names(tmp) <- names(opt_params)
+      tmp <- as.list(tmp)
+      tmp[c("value", "fevals", "gevals", "niter",
+            "convcode", "kkt1", "kkt2", "xtimes")] <- NA_real_
+      #get the error message
+      tmp$message <- err$message
+      tmp <- as.data.table(tmp)
+    }) #end tryCatch
+
+if(all_data_fit$convcode %in% 0){
     means <- as.vector(stats::coef(all_data_fit))
     names(means) <- names(opt_params)
 
@@ -884,6 +998,7 @@ out_DF$time_units_fitted <- new_time_units
                       return(tmp)
                     })
     names(sds) <- names(means)
+} #if convergence code is not 0, do not update means or sds or anything
 
   } #end while(any(is.nan(sds)) & optimx_args$control$factr > 1)
   } #end if method %in% "L-BFGS-B"
@@ -909,6 +1024,7 @@ out_DF$time_units_fitted <- new_time_units
 
     out_DF$fit_conc_dose <- fit_conc_dose
     out_DF$fit_log_conc <- fit_log_conc
+    out_DF$rescale_time <- rescale_time
 
   #Add log-likelihood and AIC values
 
@@ -966,15 +1082,20 @@ out_DF$time_units_fitted <- new_time_units
   out_DF$N_Routes <- n_routes
   #Record the unique media in this dataset
   out_DF$N_Media <- n_media
+  #record tmax, n_abs, n_elim
+  out_DF$tmax_oral <- tmax
+  out_DF$n_abs <- n_abs
+  out_DF$n_elim <- n_elim
+
   out_DF$message <- "Optimization successful."
 
 #Keep information about optimization
   #number of function evals
-  out_DF$fevals <- as.integer(all_data_fit$fevals)
+  out_DF$fevals <- all_data_fit$fevals
   #convergence code
-  out_DF$convcode <- as.integer(all_data_fit$convcode)
+  out_DF$convcode <- all_data_fit$convcode
   #number of iterations
-  out_DF$niter <- as.integer(all_data_fit$niter)
+  out_DF$niter <- all_data_fit$niter
   #optimziation method used
   out_DF$method <- optimx_args$method
   #optimx control parameters

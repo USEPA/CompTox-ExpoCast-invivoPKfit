@@ -316,16 +316,20 @@ log_likelihood <- function(params,
   #just set it to -Inf to indicate that these parameters are infinitely unlikely
   if (!is.finite(ll)) ll <- -Inf
 
+  #if model predicted any NA or Inf concentrations,
+  #then parameters are infinitely unlikely
+  if(any(!is.finite(pred_natural))) ll <- -Inf
+
   #if model predicted any negative concentrations,
   #then these parameters are infinitely unlikely
- if(any(pred_natural < 0)) ll <- -Inf
+ if(any((pred_natural < 0) %in% TRUE)) ll <- -Inf
 
   #If user has selected to force return of a finite value,
   #e.g. as required by optimx with method 'L-BFGS-B',
   #then when log-likelihood is infinitely unlikely,
   #return a large negative number instead
   if(force_finite %in% TRUE){
-  if (!is.finite(ll)) ll <- -1 * 0.5*(.Machine$double.xmax)
+  if (!is.finite(ll)) ll <- -1 * (.Machine$double.xmax)
   }
 
   #to get negative log-likelihood (e.g. for minimization)

@@ -71,17 +71,17 @@ get_upper_bounds <- function(fitdata,
                                               "Fgutabs_V1",
                                               "Rblood2plasma",
                                               "sigma"),
-                               upper_bound = c(Inf, #kelim
-                                               Inf, #Vdist
-                                               Inf, #kgutabs
+                               upper_bound = c(1e6, #kelim
+                                               1e6, #Vdist
+                                               1e6, #kgutabs
                                                1, #Fgutabs
-                                               Inf, #V1
-                                               Inf, #k12
-                                               Inf, #k21
+                                               1e6, #V1
+                                               1e6, #k12
+                                               1e6, #k21
                                                1e4, #Fgutabs_Vdist
                                                1e4, #Fgutabs_V1
-                                               Inf, #Rblood2plasma
-                                               Inf), #sigma
+                                               1e6, #Rblood2plasma
+                                               1e6), #sigma
                                upper_bound_msg = "Default"
                              ),
                              Fgutabs_Vdist_from_species = FALSE,
@@ -191,9 +191,9 @@ get_upper_bounds <- function(fitdata,
         for (sigma_name in names(data_sd)){
           if(is.finite(data_sd[sigma_name])){
             par_DF[par_DF$param_name %in% sigma_name,
-                   "upper_bound"] <- data_sd[sigma_name]
+                   "upper_bound"] <- 2*data_sd[sigma_name]
             par_DF[par_DF$param_name %in% sigma_name,
-                   "upper_bound_msg"] <- paste("SD of", value_var,
+                   "upper_bound_msg"] <- paste("2*SD of", value_var,
                                                "for study",
                                                gsub(x = sigma_name,
                                                     pattern = "sigma_study_",
@@ -214,9 +214,9 @@ get_upper_bounds <- function(fitdata,
                            )
         )
         if(is.finite(data_sd)){
-        par_DF[par_DF$param_name %in% "sigma", "upper_bound"] <- data_sd
+        par_DF[par_DF$param_name %in% "sigma", "upper_bound"] <- 2*data_sd
         par_DF[par_DF$param_name %in% "sigma",
-               "upper_bound_msg"] <- paste("SD of", value_var,
+               "upper_bound_msg"] <- paste("2*SD of", value_var,
                                            "for all studies in this data set")
         }
       }
