@@ -29,49 +29,29 @@
 #' @export
 get_predictions <- function(pk_fit,
                             newdata,
+                            model_in,
+                            fit_log_conc_in,
+                            fit_conc_dose_in,
+                            rescale_time_in,
+                            method_in,
                             DTXSID_in,
                             Species_in,
                             Analysis_Type_in,
-                            Studies.Analyzed_in,
-                            model_in){
-
+                            Studies.Analyzed_in){
+if(!grepl(x = model_in,
+          pattern = "None")){
   newdata <- copy(newdata)
-if(!(grepl(x = model_in,
-           pattern = "None"))){
-  #get appropriate subset of pk_fit
-  pk_sub <- unique(pk_fit[DTXSID %in% DTXSID_in &
-                            Species %in% Species_in &
-                            Analysis_Type %in% Analysis_Type_in &
-                            Studies.Analyzed %in% Studies.Analyzed_in, ])
-
-  #this should be a one-row subset
-  if(nrow(pk_sub)>1) {
-    stop("Selected subset of pk_fit has more than one unique row!")
-  }
-
-  #get parameter names for this model
-  param_names <- get_model_paramnames(model = model_in)
-  #get names of appropriate columns of pk_sub -- named [param].[model]
-  param_names_dot <- paste(param_names, model_in, sep = ".")
-  #extract appropriate columns of pk_sub
-  params <- pk_sub[, .SD, .SDcols = intersect(param_names_dot,
-                                              names(pk_sub))]
-  #rename to strip the ".[model]" part
-  setnames(params,
-           param_names_dot,
-           param_names,
-           skip_absent = TRUE)
-  #set Rblood2plasma to 1, if it is there and NA
-  if("Rblood2plasma" %in% names(params)){
-    if(is.na(params$Rblood2plasma)){
-      params$Rblood2plasma <- 1
-    }
-  }
-  #convert to list
-  params <- as.list(params)
-  #remove any NA params
-  params <- params[!(sapply(params,
-                            is.na))]
+  #get fitted parameters
+params <- get_fitted_params(pk_fit = pk_fit,
+                            model_in = model_in,
+                            fit_log_conc_in = fit_log_conc_in,
+                            fit_conc_dose_in = fit_conc_dose_in,
+                            rescale_time_in = rescale_time_in,
+                            method_in = method_in,
+                            DTXSID_in = DTXSID_in,
+                            Species_in = Species_in,
+                            Analysis_Type_in = Analysis_Type_in,
+                            Studies.Analyzed_in = Studies.Analyzed_in)
   #get model function
   cpfun <- get_model_function(model = model_in)
   #evaluate model function

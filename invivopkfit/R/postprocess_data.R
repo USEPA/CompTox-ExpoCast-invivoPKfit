@@ -11,29 +11,27 @@ postprocess_data <- function(PK_fit,
                              model){
 
 #Do post fit calculations
+  this_formula <-  Analysis_Type + DTXSID + Species +
+    model + References.Analyzed + Studies.Analyzed +
+    N_Routes + N_Media +
+    time_units_fitted +
+    AIC +
+    method +
+    rescale_time + fit_log_conc +
+    fit_conc_dose ~ param_name
 
   if(model %in% "flat"){
     #reshape wide (one column for each parameter)
     PK_flat <- dcast(PK_fit[model %in% "flat" &
                                !grepl(x = param_name,
                                       pattern = "sigma")],
-                      Analysis_Type + DTXSID + Species +
-                        model + References.Analyzed + Studies.Analyzed +
-                        N_Routes + N_Media +
-                       time_units_fitted +
-                        AIC +
-                       rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
+                      this_formula,
                       value.var = "Fitted mean")
     #also get the SD for each fitted param
     PK_flat_sd <- dcast(PK_fit[model %in% "flat" &
                                   !grepl(x = param_name,
                                          pattern = "sigma")],
-                         Analysis_Type + DTXSID + Species +
-                           model + References.Analyzed + Studies.Analyzed +
-                           N_Routes + N_Media +
-                          time_units_fitted +
-                           AIC+
-                          rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
+                         this_formula,
                          value.var = "Fitted std dev")
     #append "_sd" for these params
     setnames(PK_flat_sd,
@@ -65,23 +63,13 @@ postprocess_data <- function(PK_fit,
   PK_1comp <- dcast(PK_fit[model %in% "1compartment" &
                              !grepl(x = param_name,
                                     pattern = "sigma")],
-                    Analysis_Type + DTXSID + Species +
-                      model + References.Analyzed + Studies.Analyzed +
-                      time_units_fitted +
-                      N_Routes + N_Media +
-                      AIC+
-                      rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
+                    this_formula,
                     value.var = "Fitted mean")
   #also get the SD for each fitted param
   PK_1comp_sd <- dcast(PK_fit[model %in% "1compartment" &
                                 !grepl(x = param_name,
                                        pattern = "sigma")],
-                    Analysis_Type + DTXSID + Species +
-                      model + References.Analyzed + Studies.Analyzed +
-                      N_Routes + N_Media +
-                      time_units_fitted +
-                      AIC+
-                      rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
+                    this_formula,
                     value.var = "Fitted std dev")
   #append "_sd" for these params
   setnames(PK_1comp_sd,
@@ -213,24 +201,14 @@ if(length(time_const) > 0){
   PK_2comp <- dcast(PK_fit[model %in% "2compartment" &
                              !grepl(x = param_name,
                                     pattern = "sigma")],
-                    Analysis_Type + DTXSID + Species +
-                      model + References.Analyzed + Studies.Analyzed +
-                      N_Routes + N_Media +
-                      time_units_fitted +
-                      AIC+
-                      rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
+                    this_formula,
                     value.var = "Fitted mean")
 
   #also get the SD for each fitted param
   PK_2comp_sd <- dcast(PK_fit[model %in% "2compartment" &
                                 !grepl(x = param_name,
                                        pattern = "sigma")],
-                       Analysis_Type + DTXSID + Species +
-                         model + References.Analyzed + Studies.Analyzed +
-                         N_Routes + N_Media +
-                         time_units_fitted +
-                         AIC+
-                         rescale_time + fit_log_conc + fit_conc_dose ~ param_name,
+                       this_formula,
                        value.var = "Fitted std dev")
   #append "_sd" for these params
   setnames(PK_2comp_sd,
