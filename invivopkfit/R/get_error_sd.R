@@ -4,24 +4,18 @@
 #'the residual error standard deviation assuming residuals are iid following a
 #'zero-mean normal distribution
 #'
-#'@param pk_fit A table of fitted PK parameters, as produced by
-#'  `postprocess_data()`. Must contain variables `DTXSID`, `Species`,
+#'@param pk_fit_row One row from a table of fitted PK parameters, as produced by
+#'  [merge_fits()]. Must contain variables `DTXSID`, `Species`,
 #'  `Analysis_Type`, and `Studies.Analyzed`. Must also contain variables
 #'  corresponding to the parameters of the model specified in argument
-#'  `model_in`, as required for the route and media of data in `newdata` (as
+#'  `model`, as required for the route and media of data in `newdata` (as
 #'  given by [get_model_paramnames()]). These variables must be named as
 #'  `[param].[model]`. For example, for the 1-compartment model, if `newdata`
 #'  contains only IV-dosing data measured in plasma, then `pk_fit` must contain
 #'  variables named `kelim.1compartment` and `Vdist.1compartment`.
 #'@param newdata A `data.table` which must contain variables named `Time`,
 #'  `Dose`, `iv`, and `Media`.
-#'@param DTXSID_in The DSSTox Substance ID for which to evaluate
-#'@param Species_in The species for which to evaluate
-#'@param Analysis_Type_in The analysis type that produced the fit being
-#'  evaluated: one of 'Joint', 'Separate', or 'Pooled'
-#'@param Studies.Analyzed_in The comma-separated string of studies included in
-#'  the fit being analyzed.
-#'@param model_in The model to evaluate: one of 'flat', '1compartment', or
+#'@param model The model to evaluate: one of 'flat', '1compartment', or
 #'  '2compartment'
 #'@param optimx_args A named list of additional arguments to [optimx::optimx()],
 #'  other than `par`, `fn`, `lower`, and `upper`. Default is:
@@ -51,71 +45,28 @@
 #'  (For example, using the default value of `optimx_args`, there will be a
 #'  variable named `control_kkt` whose value will be FALSE.)
 #' @author Caroline Ring
-get_error_sd <- function(pk_fit,
+get_error_sd <- function(pk_fit_row,
                             newdata,
-                            DTXSID_in,
-                            Species_in,
-                            Analysis_Type_in,
-                         Studies.Analyzed_in,
-                            model_in,
+                            model,
                          modelfun = "analytic",
-                         fit_conc_dose = TRUE,
-                         fit_log_conc = FALSE,
+                         log_trans = TRUE,
+                         dose_norm = FALSE,
                          optimx_args = list(
                            "method" = "bobyqa",
                            "itnmax" = 1e6,
                            "control" = list("kkt" = FALSE)
                          )){
-
+#Make a copy of newdata so it behaves as though passed by value, not by reference
   newdata <- copy(newdata)
 
-  #get appropriate subset of pk_fit
-  pk_sub <- unique(pk_fit[DTXSID %in% DTXSID_in &
-                            Species %in% Species_in &
-                            Analysis_Type %in% Analysis_Type_in &
-                            Studies.Analyzed %in% Studies.Analyzed_in, ])
+  #To get starting value: Get SD of residuals
 
-  #this should be a one-row subset
-  if(nrow(pk_sub)>1) {
-    stop("Selected subset of pk_fit has more than one unique row!")
-  }
-
-  #get parameter names for this model
-  param_names <- get_model_paramnames(model = model_in)
-  #get appropriate columns of pk_sub -- named [param].[model]
-  param_names_dot <- paste(param_names, model_in, sep = ".")
-  #extract appropriate columns of pk_sub
-  params <- pk_sub[, .SD, .SDcols = intersect(param_names_dot,
-                                              names(pk_sub))]
-  #rename to strip the ".[model]" part
-  setnames(params,
-           param_names_dot,
-           param_names,
-           skip_absent = TRUE)
-  #set Rblood2plasma to 1, if it is there and NA
-  if("Rblood2plasma" %in% names(params)){
-    if(is.na(params$Rblood2plasma)){
-      params$Rblood2plasma <- 1
-    }
-  }
-  #convert to list
-  params <- as.list(params)
-  #remove any NA params
-  params <- params[!(sapply(params,
-                            is.na))]
-
-
-
-  #To get starting value for params: First get model-predicted concentrations
-  newdata_pred <- get_predictions(pk_fit = pk_sub,
+  #First get predictions
+  newdata[, pred := predict_conc(pk_fit = pk_fit_row,
                                   newdata = newdata,
-                                  DTXSID_in = DTXSID_in,
-                                  Species_in = Species_in,
-                                  Analysis_Type_in = Analysis_Type_in,
-                                  Studies.Analyzed_in = Studies.Analyzed_in,
-                                  model_in = model_in)
-
-  if(fit_log_conc %in% FALSE){
+                                  model = model)]
+#Then calc residuals under conditions log_trans and dose_norm
+  if(log_trans %in% FALSE){
   #get residuals
   newdata_pred[Dose > 0 & Detect %in% "Detect",
                resid := Value - pred_conc]
@@ -132,32 +83,45 @@ get_error_sd <- function(pk_fit,
   }
 
   #get SD of residuals
-  if(fit_conc_dose %in% TRUE){
+  if(dose_norm %in% TRUE){
   sd_start <- sd(newdata_pred$resid_Dose, na.rm = TRUE)
   }else{
     sd_start <- sd(newdata_pred$resid, na.rm = TRUE)
   }
 
+  #Handle the case when PO data was dropped because there were not enough data in
+  #absorption phase: in this case, "kgutabs" will NOT be in the fitted params even
+  #though PO data exist.
+  params <- get_fitted_params(pk_fit = pk_fit_row,
+                              model = model)
+  if(any(newdata$Route %in% "po") &
+     !any(names(params) %in% "kgutabs") &
+     !(model %in% "flat")){
+    if(suppress.messages %in% FALSE){
+      message("newdata contains oral data, but fit was IV-only, likely because of insufficient absorption-phase data. Optimizing pooled error SD for IV data only.")
+    }
+    #keep only IV data
+    newdata <- newdata[Route %in% "iv"]
+  }
 
-  #optimize for sigma only
-
-  #Hold model params constant & optimize only error SD
+  #Hold model params constant & optimize only a pooled sigma
   sigma_fit <- tryCatch(do.call(optimx::optimx,
                        args = c(
                          #
                          list(par = c("sigma" = sd_start),
                               fn = log_likelihood,
                               lower = c("sigma" = 1e-8),
-                              upper = c("sigma" = Inf)),
+                              upper = c("sigma" = 1e8)),
                          #method and control
                          optimx_args,
+                         #other args to log_likelihood()
                          list(
-                           const_params = params,
+                           const_params = params, #fitted model params
                            DF = newdata,
                            modelfun = modelfun,
-                           model = model_in,
-                           fit_conc_dose = fit_conc_dose,
-                           fit_log_conc = fit_log_conc,
+                           model = model,
+                           fit_conc_dose = dose_norm,
+                           fit_log_conc = log_trans,
                            force_finite = (optimx_args$method %in% "L-BFGS-B"),
                            negative = TRUE
                          )
@@ -167,27 +131,27 @@ get_error_sd <- function(pk_fit,
     return(err$message)
   })
 
+  #if fit was successful, get fitted sigma value
   if(inherits(sigma_fit, "optimx")){
   sigma_est <- stats::coef(sigma_fit)
 
   out_DF <- data.frame("sigma" = sigma_est)
   #Keep information about optimization
   #number of function evals
-  out_DF$fevals <- as.integer(sigma_fit$fevals)
+  out_DF$fevals <- sigma_fit$fevals
   #convergence code
-  out_DF$convcode <- as.integer(sigma_fit$convcode)
+  out_DF$convcode <- sigma_fit$convcode
   #number of iterations
-  out_DF$niter <- as.integer(sigma_fit$niter)
+  out_DF$niter <- sigma_fit$niter
   }else{
-    sigma_est <- NA_real_
-    out_DF <- data.frame("sigma" = sigma_est)
+    out_DF <- data.frame("sigma" = NA_real_)
     #Keep information about optimization
     #number of function evals
-    out_DF$fevals <- NA_integer_
+    out_DF$fevals <- NA_real_
     #convergence code
-    out_DF$convcode <-  NA_integer_
+    out_DF$convcode <-  NA_real_
     #number of iterations
-    out_DF$niter <-  NA_integer_
+    out_DF$niter <-  NA_real_
   }
 
   #optimziation method used

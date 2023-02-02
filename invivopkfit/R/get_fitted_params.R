@@ -49,40 +49,18 @@
 #' @author Caroline Ring
 #' @export
 #'
-get_fitted_params <- function(pk_fit,
-                              model_in,
-                              fit_log_conc_in,
-                              fit_conc_dose_in,
-                              rescale_time_in,
-                              method_in,
-                              DTXSID_in,
-                              Species_in,
-                              Analysis_Type_in,
-                              Studies.Analyzed_in){
+get_fitted_params <- function(pk_fit_row,
+                              model_in){
   if(!(grepl(x = model_in,
              pattern = "None"))){
-    #get appropriate subset of pk_fit
-    pk_sub <- unique(pk_fit[DTXSID %in% DTXSID_in &
-                              Species %in% Species_in &
-                              Analysis_Type %in% Analysis_Type_in &
-                              Studies.Analyzed %in% Studies.Analyzed_in &
-                              fit_log_conc %in% fit_log_conc_in &
-                              fit_conc_dose %in% fit_conc_dose_in &
-                              rescale_time %in% rescale_time_in &
-                              method %in% method_in, ])
-
-    #this should be a one-row subset
-    if(nrow(pk_sub)>1) {
-      stop("Selected subset of pk_fit has more than one unique row!")
-    }
 
     #get parameter names for this model
     param_names <- get_model_paramnames(model = model_in)
-    #get names of appropriate columns of pk_sub -- named [param].[model]
+    #get names of appropriate columns of pk_fit_row -- named [param].[model]
     param_names_dot <- paste(param_names, model_in, sep = ".")
-    #extract appropriate columns of pk_sub
-    params <- pk_sub[, .SD, .SDcols = intersect(param_names_dot,
-                                                names(pk_sub))]
+    #extract appropriate columns of pk_fit_row
+    params <- pk_fit_row[, .SD, .SDcols = intersect(param_names_dot,
+                                                names(pk_fit_row))]
     #rename to strip the ".[model]" part
     setnames(params,
              param_names_dot,
