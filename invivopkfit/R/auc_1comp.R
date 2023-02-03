@@ -67,7 +67,8 @@ auc_1comp <- function(params,
   medium <- rep(medium, length.out = max_len)
 
   #compute Fgutabs/Vdist if necessary
-  if(all(c("Fgutabs", "Vdist") %in% names(params))){
+  if(all(c("Fgutabs", "Vdist") %in% names(params)) &
+     !("Fgutabs_Vdist" %in% names(params))){
     params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
   }
 

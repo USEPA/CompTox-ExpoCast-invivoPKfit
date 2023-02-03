@@ -173,9 +173,11 @@ get_tkstats <- function(cvt_pre,
 #'
 get_nca <- function(obs_data,
                     dose_norm = TRUE){
-  obs_data <- copy(obs_data)
+  obs_data <- as.data.frame(obs_data)
   #Ensure subject IDs go with study IDs
-  obs_data[, Subject_ID := paste(Subject, Study_ID, Series_ID)]
+  obs_data$Subject_ID <- paste(obs_data$Subject,
+                               obs_data$Study_ID,
+                               obs_data$Series_ID)
  #First: determine whether design is "complete", "ssd", or "batch"
   #if all time points are available for all subjects, it's "complete"
   #if one measurement per subject, it's "ssd" (unless there is only one subject, in which case it's "complete")
@@ -198,15 +200,13 @@ get_nca <- function(obs_data,
     }
   }
 
-  #if only one observation for each time point
-
   #create a data frame
   if(dose_norm %in% TRUE){
   #with dose-normalized concentrations, time, and subject ID
-  nca_dat <- as.data.frame(obs_data[, .(Conc_Dose, Time, Subject_ID)])
+  nca_dat <- obs_data[c("Conc_Dose", "Time", "Subject_ID")]
   nca_dose <- 1
   }else{
-    nca_dat <- as.data.frame(obs_data[, .(Conc, Time, Subject_ID)])
+    nca_dat <- obs_data[c("Conc", "Time", "Subject_ID")]
     nca_dose <- unique(obs_dat$Dose)
   }
   names(nca_dat) <- c("conc", "time", "id")
@@ -238,7 +238,7 @@ get_nca <- function(obs_data,
                         "Vss")
   }
 
-  return(as.list(nca_est))
+  return(as.data.frame(as.list(nca_est)))
 }
 
 get_auc <- function(obs_data){

@@ -23,14 +23,13 @@ devtools::load_all("../invivopkfit")
 
 This document contains code to evaluate the goodness-of-fit of the models fit to data in `MainAnalysis.Rmd`.
 
-# Import and preprocess CvTdb data
+# Import preprocessed CvTdb data
 
-## Import CvTdb data
 
-Read in CvTdb data that was pulled and normalized in `pulling_oral_iv_data_cvtdb.Rmd`.
-
-```{r, load_cvt, eval = TRUE}
-cvt_data <- fread("../inst/ext/cvt_data_2023_01_05.csv")
+```{r}
+cvt <- fread(paste0("../inst/ext/cvt_preprocessed_",
+                 "2023_02_01",
+          ".csv"))
 ```
 
 ## Timestamp
@@ -38,88 +37,6 @@ Timestamp the file name with the current date and time (at the beginning of the 
 
 ```{r}
 timestamp <- format(Sys.time(), "%Y_%m_%d")
-```
-
-## Settings for pre-processing data
-
-List of new_name = old_name to supply for preprocessing data
-
-```{r}
-names_list <- list(
-  "Compound_Dosed" = "studies.test_substance_name_original",
-  "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
-  "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
-  "Compound_Analyzed" = "series.analyte_name_original",
-  "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
-  "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
-  "Reference" = "documents_reference.id",
-  "Extraction" = "documents_extraction.id",
-  "Species" = "subjects.species",
-  "Weight" ="subjects.weight_kg",
-  "Weight.Units" = NULL,
-  "Dose" = "studies.dose_level_normalized_corrected", #note that dose levels were corrected in pulling_oral_iv_data_cvtdb.Rmd
-  "Dose.Units" = NULL,
-  "Time" = "conc_time_values.time_hr",
-  "Time.Units" = NULL,
-  "Media" = "series.conc_medium_normalized",
-  "Value" = "conc_time_values.conc", #already normalized to mg/L units in CvTdb
-  "Value.Units" = NULL,
-  "Route" = "studies.administration_route_normalized",
-  "LOQ" = "series.loq_normalized", #note that LOQs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
-  "Subject" = "subjects.id",
-  "N_Subjects" = "series.n_subjects_in_series",
-  "Value_SD" = "conc_time_values.conc_sd_normalized", #note that SDs were normalized to mg/L units in pulling_oral_iv_data_cvtdb.Rmd
-  "Study_ID" = "studies.id",
-  "Series_ID" = "series.id"
-  )
-```
-
-List of default values for new columns added in preprocessing data
-
-```{r}
-defaults_list <- list(
-                      "Weight.Units" = "kg",
-                      "Dose.Units" = "mg/kg",
-                      "Time.Units" = "hours",
-                      "Value.Units" = "mg/L")
-```
-
-## Preprocess data
-
-```{r, eval = FALSE}
-cvt <- preprocess_data(data.set = cvt_data,
-                       names_list =names_list,
-                       defaults_list =   defaults_list,
-                       ratio_conc_to_dose = 1,
-                       calc_loq_factor = 0.45,
-                       routes_keep = c("po", "iv"),
-                       media_keep = c("blood", "plasma"),
-                       impute_loq = TRUE,
-                       impute_sd = TRUE,
-                       study_def = c("DTXSID", "Species", "Reference", "Route", "Media"),
-                       suppress.messages = TRUE)
-
-#save pre-processed data
-# write.csv(cvt,
-#           paste0("../inst/ext/cvt_preprocessed_",
-#                  timestamp,
-#           ".csv"),
-#           row.names = FALSE)
-
-cvt <- as.data.table(cvt)
-rm(cvt_data)
-```
-
-```{r}
-cvt <- fread(paste0("../inst/ext/cvt_preprocessed_",
-                 "2023_01_23",
-          ".csv"))
-```
-
-
-```{r}
-cvt[, Conc_SD := Value_SD]
-cvt[, Conc_SD_Dose := Value_SD_Dose]
 ```
 
 
@@ -135,212 +52,240 @@ fit_opts <-
     expand.grid(
   rescale_time = c(FALSE, TRUE),
   fit_conc_dose = c(FALSE, TRUE),
-  fit_log_conc = c(FALSE, TRUE))
+  fit_log_conc = c(FALSE, TRUE),
+  log_trans = c(FALSE, TRUE),
+  dose_norm = c(FALSE, TRUE),
+  method = c("bobyqa", "L-BFGS-B"),
+  model = c("flat", "1compartment", "2compartment"))
   )
-
 ```
 
-# Evaluate residuals for each set of fitting options
 
-```{r, eval = FALSE}
-eval_DT <- fit_opts[,
-                  {
-                    print(
-                      paste("fit_log_conc = ",
-                        fit_log_conc,
-                        "; fit_conc_dose = ",
-                        fit_conc_dose,
-                        "; rescale_time = ",
-                        rescale_time)
-                    )
-                    
-  #get fitting outputs file names
+# pkfit object
+
+One "fitted model" is defined by the following information:
+
+* Dataset used for fitting: A subset of `cvt` defined by the following information: 
+    + DTXSID
+    + Species
+    + Studies.Analyzed
+    + routes analyzed (that last one in the case when there was not enough oral absorption-phase data to fit kgutabs, but there was IV data, so we fit the IV data only)
+* Analysis Type (error model): 
+    + Joint: one set of params across all studies, but separate error SDs for each study
+    + Separate: separate params & error SDs for each study
+    + Pooled: one set of params & one error SD across all studies
+* TK model:
+    + flat
+    + 1-compartment
+    + 2-compartment
+* Transformations applied to the data before fitting:
+    + log transformation (fit_log_conc TRUE or FALSE)
+    + dose-normalization (fit_conc_dose TRUE or FALSE)
+    + rescaling time when study spanned days, weeks, months, or years (rescale_time TRUE or FALSE)
+* Fitted model parameters
+    + Name
+    + Starting values
+    + Lower & upper bounds
+    + Fitted mean
+    + Fitted standard deviation
+* Information from `optimx`
+    + Algorithm used
+    + Control parameters used
+    + Convergence code
+    + Number of function evaluations
+    + Message
+    
+We can make this into an R object, essentially just a list with all of this information. Call it an object of class `pkfit` that inherits from class `list`.
+
+Then we can write methods to do things like predict, residuals, coeffs, get TK summary stats, etc. etc.
+
+We can also write a "plot" method to plot concentration vs. time with the fitted curve.
+
+## A pkanalysis object
+
+One "analysis" is a set of three "fit" objects: one for each of the three models, for the same dataset, analysis type, and fitting options. We can call this an object of class `pkanalysis`. Duplicated information (e.g. dataset) will be stored only once.
+
+Methods for a `pkanalysis` object include getting the winning model, and calculating the "p-value" for each model compared to the flat model (exp(AIC_model - AIC_flat)/2). 
+
+We can also get predictions, coeffs, resids, etc. but these will always return a list of 3 items, one for each model.
+
+The "plot" method for a `pkanalysis` object plots concentration vs. time with all three fitted curves, or with only the winning fitted curve.
+
+## Creating fitted objects from tables of fitted parameters & of pre-processed data
+
+It would be unwieldy to save lots of R objects for each fit, especially since the fitted dataset would be the same for many fits. Instead, we have saved the fit output data as a table. To get the fitted dataset, we have to index into the appropriate pre-processed version of CvT, taking the appropriate subset of DTXSID, Species, studies analyzed, and routes analyzed.
+
+We can write a method `pkfit()` to take one row of a fit output data table, and the full CvT pre-processed table, and produce a `pkfit` object.
+
+# Evaluate residuals for each fit
+
+```{r}
+verbose <- FALSE
+timestamp <- "2023_02_01"
+resids_all <- fit_opts[,
+         {
+           #Read in fits
+        #get fitting outputs file names
   fit_outputs <- dir(path = "../inst/ext",
       pattern = paste0("PK_fit_table_",
-                       ".+",
+                       model,
         "_fit_log_conc_",
-                        fit_log_conc, "_",
-                        "_fit_conc_dose_",
-                        fit_conc_dose, "_",
-                        "_rescale_time_",
-                        rescale_time, "_"
-                       ))
-  
-  fit_outputs <- paste0("../inst/ext/",
-                        fit_outputs)
-  
-  cat(paste0(paste(fit_outputs,
-              collapse = "\n"), "\n"))
-  
-  #read in fitting outputs
-  #flat model
-  fit_flat <- fread(grep(x = fit_outputs,
-                         pattern = "flat",
-                         value = TRUE))
-  #1compartment model
-  fit_1comp <- fread(grep(x = fit_outputs,
-                         pattern = "1compartment",
-                         value = TRUE))
-  #2compartment model
-   fit_2comp <- fread(grep(x = fit_outputs,
-                         pattern = "2compartment",
-                         value = TRUE))
-   
-   fit_flat[, c("fit_conc_dose",
-                "fit_log_conc",
-                "rescale_time") := .(fit_conc_dose,
-                                     fit_log_conc,
-                                     rescale_time)]
-   
-    fit_1comp[, c("fit_conc_dose",
-                "fit_log_conc",
-                "rescale_time") := .(fit_conc_dose,
-                                     fit_log_conc,
-                                     rescale_time)]
-    
-       fit_2comp[, c("fit_conc_dose",
-                "fit_log_conc",
-                "rescale_time") := .(fit_conc_dose,
-                                     fit_log_conc,
-                                     rescale_time)]
-   
-   cat("Evaluating residuals...\n")
-   
-   #evaluate residuals
-   this_eval_DT <- evaluate_resids(cvt_pre = cvt,
-                         fit_flat = fit_flat,
-                         fit_1comp = fit_1comp,
-                         fit_2comp = fit_2comp,
-                         fit_conc_dose = fit_conc_dose,
-                         fit_log_conc = fit_log_conc,
-                         optimx_args = list(
-                           "method" = "bobyqa",
-                           "itnmax" = 1e6,
-                           "control" = list("kkt" = FALSE)
-                         ),
-                         verbose = TRUE)
-   
-     write.csv(this_eval_DT,
-                  paste("../inst/ext/evaluate_residuals_",
-                        "_fit_log_conc_",
                         fit_log_conc, "_",
                         "fit_conc_dose_",
                         fit_conc_dose, "_",
                         "rescale_time_",
                         rescale_time, "_",
-                        timestamp,
-                        ".csv",
-                        sep=""), row.names = FALSE)
-     
-     this_eval_DT
-                  },
-  by = c("fit_conc_dose", "fit_log_conc", "rescale_time")]
-
-write.csv(eval_DT,
-          paste0("../inst/ext/eval_resid_",
-          timestamp,
-          ".csv"),
-          row.names = FALSE)
-```
-
-Evalaute TK stats
-
-```{r, eval = FALSE}
-TKstats_DT <- fit_opts[,
-                  {
-                    print(
-                      paste("fit_log_conc = ",
-                        fit_log_conc,
-                        "; fit_conc_dose = ",
-                        fit_conc_dose,
-                        "; rescale_time = ",
-                        rescale_time)
-                    )
-                    
-  #get fitting outputs file names
-  fit_outputs <- dir(path = "../inst/ext",
-      pattern = paste0("PK_fit_table_",
-                       ".+",
-        "_fit_log_conc_",
-                        fit_log_conc, "_",
-                        "_fit_conc_dose_",
-                        fit_conc_dose, "_",
-                        "_rescale_time_",
-                        rescale_time, "_"
+        "method_", method,
+        "_", timestamp
                        ))
   
+
   fit_outputs <- paste0("../inst/ext/",
                         fit_outputs)
-  
+  if(verbose %in% TRUE){
   cat(paste0(paste(fit_outputs,
               collapse = "\n"), "\n"))
+  }
   
-  #read in fitting outputs
-  #flat model
-  fit_flat <- fread(grep(x = fit_outputs,
-                         pattern = "flat",
+  #read in fitting output table for this model
+  fit <- fread(grep(x = fit_outputs,
+                         pattern = model,
                          value = TRUE))
-  #1compartment model
-  fit_1comp <- fread(grep(x = fit_outputs,
-                         pattern = "1compartment",
-                         value = TRUE))
-  #2compartment model
-   fit_2comp <- fread(grep(x = fit_outputs,
-                         pattern = "2compartment",
-                         value = TRUE))
-   
-   fit_flat[, c("fit_conc_dose",
-                "fit_log_conc",
-                "rescale_time") := .(fit_conc_dose,
-                                     fit_log_conc,
-                                     rescale_time)]
-   
-    fit_1comp[, c("fit_conc_dose",
-                "fit_log_conc",
-                "rescale_time") := .(fit_conc_dose,
-                                     fit_log_conc,
-                                     rescale_time)]
+  
+  #now: go by DTXSID, Species, Analysis Type.
+  fit[, {
+    if(verbose %in% TRUE){
+    cat(paste("DTXSID = ", DTXSID, "\n",
+              "Species = ", Species, "\n",
+              "Analysis Type = ", Analysis_Type, "\n",
+              "Studies Analyzed = ", Studies.Analyzed, "\n"))
+    }
+    obj <- pkfit(fit = .SD,
+                    dat = cvt)
+    rmse <- rmse.pkfit(obj,
+                       log_trans = log_trans,
+                       dose_norm = dose_norm)
+    rsq <- rsq.pkfit(obj,
+                       log_trans = log_trans,
+                       dose_norm = dose_norm)
+    # error_sd <- overall_error_sd.pkfit(obj,
+    #                    log_trans = log_trans,
+    #                    dose_norm = dose_norm)
     
-       fit_2comp[, c("fit_conc_dose",
-                "fit_log_conc",
-                "rescale_time") := .(fit_conc_dose,
-                                     fit_log_conc,
-                                     rescale_time)]
-       
-       cat("Evaluating TK statistics...\n")
-        #evaluate TK statistics & merge with postprocessed fits
-   this_TKstats_DT <- evaluate_tkstats(cvt_pre = cvt,
-                         fit_flat = fit_flat,
-                         fit_1comp = fit_1comp,
-                         fit_2comp = fit_2comp,
-                         group_by = c("DTXSID",
-                                          "Species",
-                                          "Route",
-                                          "Media"),
-                         dose_norm = TRUE)
-   
-    write.csv(this_TKstats_DT,
-                  paste("../inst/ext/evaluate_tkstats_",
-                        "_fit_log_conc_",
-                        fit_log_conc, "_",
-                        "fit_conc_dose_",
-                        fit_conc_dose, "_",
-                        "rescale_time_",
-                        rescale_time, "_",
-                        timestamp,
-                        ".csv",
-                        sep=""), row.names = FALSE)
-     
-     this_TKstats_DT
-                  },
-  by = c("fit_conc_dose", "fit_log_conc", "rescale_time")]
+    #calculate residuals
+    frac_resids <- frac_resids.pkfit(obj,
+                           dose_norm = dose_norm,
+                           log_trans = log_trans)
+    #normalize residuals by 
+    list("RMSE" = rmse,
+         "rsq" = rsq,
+         # "error_sd" = error_sd,
+         "frac_resids.mean" = mean(frac_resids),
+         "frac_resids.median" = median(frac_resids),
+         "frac_resids.min" = min(frac_resids),
+         "frac_resids.max" = max(frac_resids))
+  },
+  by = .(DTXSID, Species, Analysis_Type, Studies.Analyzed, LogLikelihood, AIC),
+  .SDcols = names(fit)]
+         },
+  by = .(rescale_time,
+         fit_conc_dose,
+         fit_log_conc,
+         log_trans,
+         dose_norm,
+         method,
+         model)]
+```
 
-write.csv(TKstats_DT,
-          paste0("../inst/ext/eval_TKstats_",
-          timestamp,
-          ".csv"),
-          row.names = FALSE)
-   
+Evaluate TK stats.
+
+This one will go a little bit differently. We'll loop over only the fitting options; then within that loop, we'll loop over a list of the possible models, and get the TK stats for each of those models. Then we'll rowbind the resulting list of three data.tables together. It needs to be done this way because the table of TK stats has different variable names depending on the model, so `data.table` can't row-bind them together directly inside the square brackets.
+
+
+```{r}
+fit_opts2 <- unique(fit_opts[, .(rescale_time,
+         fit_conc_dose,
+         fit_log_conc,
+         method)])
+
+model_list <- c("flat",
+                "1compartment",
+                "2compartment")
+
+out_DT_list <- sapply(model_list,
+                      function(this_model){
+                        fit_opts2[,
+                                  {
+                                    #Read in fits
+                                    #get fitting outputs file names
+                                    fit_outputs <- dir(path = "../inst/ext",
+                                                       pattern = paste0("PK_fit_table_",
+                                                                        this_model,
+                                                                        "_fit_log_conc_",
+                                                                        fit_log_conc, "_",
+                                                                        "fit_conc_dose_",
+                                                                        fit_conc_dose, "_",
+                                                                        "rescale_time_",
+                                                                        rescale_time, "_",
+                                                                        "method_", method,
+                                                                        "_", timestamp
+                                                       ))
+                                    
+                                    
+                                    fit_outputs <- paste0("../inst/ext/",
+                                                          fit_outputs)
+                                    
+                                    if(verbose %in% TRUE){
+                                      cat(paste0(paste(fit_outputs,
+                                                       collapse = "\n"), "\n"))
+                                    }
+                                    
+                                    #read in fitting output table for this model
+                                    fit <- fread(grep(x = fit_outputs,
+                                                      pattern = this_model,
+                                                      value = TRUE))
+                                    
+                                    fit[, {
+                                      if(verbose %in% TRUE){
+                                        cat(paste("DTXSID = ", DTXSID, "\n",
+                                                  "Species = ", Species, "\n",
+                                                  "Analysis Type = ", Analysis_Type, "\n",
+                                                  "Studies Analyzed = ", Studies.Analyzed, "\n"))
+                                      }
+                                      #create a 'pkfit' object
+                                      obj <- pkfit(fit = .SD,
+                                                      dat = cvt)
+                                      #calculate the TK stats for this object
+                                      tk <- calc_TK_stats.pkfit(obj)
+                                      nca <- as.data.frame(
+                                        nca.pkfit(obj,
+                                                  dose_norm = TRUE)
+                                      )
+                                      cbind(tk, nca)
+                                    },
+                                    by = .(DTXSID,
+                                           Species,
+                                           Analysis_Type,
+                                           Studies.Analyzed,
+                                           LogLikelihood,
+                                           AIC),
+                                    .SDcols = names(fit)
+                                    ]
+                                  },
+                                  by = .(fit_log_conc,
+                                         fit_conc_dose,
+                                         rescale_time,
+                                         method),
+                                  .SDcols = names(fit_opts2)
+                        ]
+                      },
+                      simplify = FALSE,
+                      USE.NAMES = TRUE)
+                      
+ out_DT <- rbindlist(out_DT_list,
+                     use.names = TRUE,
+                     fill = TRUE,
+                     idcol = "model")
 ```
 
 # Visualization and analysis
@@ -349,29 +294,45 @@ Questions to answer:
 
 Which combination of fitting parameters best fits AUC? tmax? Cmax? Take the winning model for each combination of fitting parameters and each data set.
 
-```{r}
-tk_DT <- fread(paste0("../inst/ext/eval_TKstats_",
-          "2023_01_26",
-          ".csv"))
-```
-
-```{r}
-tk_DT[winmodel %in% "1compartment", AUC_oral_win := AUC_inf_oral_1mgkg.1compartment]
-tk_DT[winmodel %in% "1compartment", AUC_iv_win := AUC_inf_IV_1mgkg.1compartment]
-tk_DT[winmodel %in% "1compartment", tmax_win := tmax_oral.1compartment]
-tk_DT[winmodel %in% "1compartment", Cmax_win := Cmax_oral_1mgkg.1compartment]
-
-tk_DT[winmodel %in% "2compartment", AUC_oral_win := AUC_inf_oral_1mgkg.2compartment]
-tk_DT[winmodel %in% "2compartment", AUC_iv_win := AUC_inf_iv_1mgkg.2compartment]
-tk_DT[winmodel %in% "2compartment", tmax_win := tmax_oral.2compartment]
-tk_DT[winmodel %in% "2compartment", Cmax_win := Cmax_oral_1mgkg.2compartment]
-```
-
 Keep only the Joint analyses, for the sake of simplicity. (These are the ones where multiple studies were fit together, but with a different error SD allowed for each study.)
 
 ```{r}
-tk_DT_sub <- tk_DT[Analysis_Type %in% "Joint", .(fit_conc_dose, fit_log_conc, rescale_time, DTXSID, Species, Route, Media, AUC_inf_1mgkg, tmax, Cmax_1mgkg, AUC_oral_win, AUC_iv_win, tmax_win, Cmax_win, winmodel)]
+tk_DT_sub <- out_DT[Analysis_Type %in% "Joint", ]
 ```
+
+Get the winning model and the p-value vs. flat model.
+
+```{r}
+setorder(tk_DT_sub,
+         method,
+         rescale_time,
+         fit_conc_dose,
+         fit_log_conc,
+         DTXSID,
+         Species,
+         Studies.Analyzed,
+         AIC)
+
+tk_DT_sub[, winmodel := model[1],
+          by = .(method,
+         rescale_time,
+         fit_conc_dose,
+         fit_log_conc,
+         DTXSID,
+         Species,
+         Studies.Analyzed)]
+
+#p-value vs. flat model
+tk_DT_sub[, AIC_flat := AIC[model %in% "flat"], by = .(method,
+         rescale_time,
+         fit_conc_dose,
+         fit_log_conc,
+         DTXSID,
+         Species,
+         Studies.Analyzed)]
+tk_DT_sub[, rel_like_of_flat := exp((AIC - AIC_flat)/2)]
+```
+
 
 # AUC comparison
 
@@ -380,9 +341,11 @@ tk_DT_sub <- tk_DT[Analysis_Type %in% "Joint", .(fit_conc_dose, fit_log_conc, re
 ### Rescale time = FALSE
 
 ```{r}
-ggplot(tk_DT_sub[rescale_time == FALSE],
-       aes(x = AUC_inf_1mgkg,
-           y = AUC_oral_win)) +
+ggplot(tk_DT_sub[rescale_time == FALSE &
+                   model == winmodel &
+                   method %in% "bobyqa"],
+       aes(x = nca.oral.AUC_inf_1mgkg,
+           y = AUC_inf_oral_1mgkg)) +
   geom_point(aes(color = winmodel)) +
   geom_abline(intercept = 0, slope = 1) +
   facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
@@ -404,9 +367,11 @@ How about when time was rescaled?
 ### Rescale time = TRUE
 
 ```{r}
-ggplot(tk_DT_sub[rescale_time == TRUE],
-       aes(x = AUC_inf_1mgkg,
-           y = AUC_oral_win)) +
+ggplot(tk_DT_sub[rescale_time == TRUE &
+                   model == winmodel &
+                   method %in% "bobyqa"],
+       aes(x = nca.oral.AUC_inf_1mgkg,
+           y = AUC_inf_oral_1mgkg)) +
   geom_point(aes(color = winmodel)) +
   geom_abline(intercept = 0, slope = 1) +
   facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
@@ -421,17 +386,33 @@ scale_x_log10() +
 
 Rescaling time seems to make the overpredictions worse when they happen.
 
+What are some examples when model-preidcted AUC is very big?
+
+```{r}
+tk_DT_sub[rescale_time == TRUE &
+                   model == winmodel &
+                   method %in% "bobyqa" &
+            AUC_inf_oral_1mgkg > 1e5 &
+            fit_log_conc %in% TRUE &
+            fit_conc_dose %in% FALSE,
+          .(DTXSID, Species, model, rel_like_of_flat)]
+```
+
+
 ## AUC IV
 
 ### Rescale time = FALSE
 
 ```{r}
-ggplot(tk_DT_sub[rescale_time == FALSE],
-       aes(x = AUC_inf_1mgkg,
-           y = AUC_iv_win)) +
+ggplot(tk_DT_sub[rescale_time == FALSE &
+                   model == winmodel &
+                   method %in% "bobyqa"],
+       aes(x = nca.iv.AUC_tlast_1mgkg,
+           y = AUC_inf_iv_1mgkg)) +
   geom_point(aes(color = winmodel)) +
   geom_abline(intercept = 0, slope = 1) +
-  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+  facet_grid(rows = vars(fit_conc_dose),
+             cols = vars(fit_log_conc),
              labeller = label_both) +
   scale_x_log10() +
   scale_y_log10() +
