@@ -15,6 +15,10 @@
 pkfit <- function(fit, dat){
   fit <- as.data.frame(fit)
   dat <- as.data.frame(dat)
+
+  #get the analysis type
+  pkfit_analysis_type <- unique(fit$Analysis_Type)
+
   #get the data info
   pkfit_dat_info <- as.list(unique(fit[c("DTXSID",
                                   "Species",
@@ -22,7 +26,7 @@ pkfit <- function(fit, dat){
   #get a list of studies analyzed
   pkfit_dat_info$Studies_Analyzed <- strsplit(unique(fit$Studies.Analyzed),
                                               split = ", ")[[1]]
-  #get a comma-sep list of routes analyzed
+  #get a list of routes analyzed
   tmp <- strsplit(
     strsplit(unique(fit$N_Routes),
                                   split = " ; ")[[1]],
@@ -40,6 +44,7 @@ pkfit <- function(fit, dat){
   if(!("Conc_SD" %in% names(pkfit_dat)) &
      "Value_SD" %in% names(pkfit_dat)){
     pkfit_dat$Conc_SD <- pkfit_dat$Value_SD
+    pkfit_dat$Conc_SD_Dose <- pkfit_dat$Conc_SD/pkfit_dat$Dose
   }
 
   #grab the data transformation info
@@ -99,6 +104,7 @@ pkfit <- function(fit, dat){
   obj <- list("data" = pkfit_dat,
               "data_info" = pkfit_dat_info,
               "data_trans" = pkfit_trans,
+              "analysis_type" = pkfit_analysis_type,
               "model_info" = pkfit_model,
               "fit_params" = pkfit_params,
               "fit_gof" = pkfit_gof,
@@ -123,6 +129,7 @@ is.pkfit <- function(obj){
   expected_names <- c("data",
                      "data_info",
                      "data_trans",
+                     "analysis_type",
                      "model_info",
                      "fit_params",
                      "fit_gof",
@@ -132,6 +139,7 @@ is.pkfit <- function(obj){
   expected_classes <- c("data" = "data.frame",
                         "data_info" = "list",
                         "data_trans" = "data.frame",
+                        "analysis_type" = "character",
                         "model_info" = "list",
                         "fit_params" = "data.frame",
                         "fit_gof" = "data.frame",
@@ -159,6 +167,12 @@ is.pkfit <- function(obj){
 }
 
 #' Extract fitted parameter values as a list
+#'
+#' This function differs from [coefficients.pkfit()] only in that it returns a
+#' named *list* of fitted model coefficients, rather than a named *vector*. This
+#' difference arises because the model functions (e.g. [cp_flat()],
+#' [cp_1comp()], [cp_2comp()]) require a named *list* of parameters, so it is
+#' convenient to have a method to access the fitted coefficients in list form.
 #'
 #' @param obj A `pkfit` object
 #' @return A named list of the fitted parameter values
@@ -192,10 +206,34 @@ get_params.pkfit <- function(obj){
   return(params)
 }
 
+#' Get coefficients of a `pkfit` object
+#'
+#' @param obj A fitted `pkfit` object
+#' @return A named numeric vector of the fitted model coefficients
+#' @export
+#' @author Caroline Ring
+coef.pkfit <- function(obj){
+  params <- get_params.pkfit(obj)
+  return(unlist(params))
+}
+
+#' Get coefficients of a `pkfit` object
+#'
+#' Alias for [coef.pkfit()]
+#'
+#' @param obj A fitted `pkfit` object
+#' @return A named numeric vector of the fitted model coefficients
+#' @export
+#' @author Caroline Ring
+coefficients.pkfit <- function(obj){
+  coef.pkfit(obj)
+}
+
 #' Extract fitted parameter standard deviations as a list
 #'
 #' @param obj A `pkfit` object
-#' @return A named list of the fitted parameter standard deviations
+#' @return A named list of the fitted parameter standard deviations. The names
+#'   are the parameter names with "_sd" appended.
 #' @export
 #' @author Caroline Ring
 get_params_sd.pkfit <- function(obj){
@@ -231,22 +269,31 @@ if(length(params)>0){
   return(params)
 }
 
-#' Get predictions for a pkfit object
-#' @param obj The pkfit object for which to return predictions
+#' Get predicted concentrations for a `pkfit` object
+
+#' @param obj The `pkfit` object for which to return predicted concentrations
 #' @param newdata Optional: A `data.frame` of new data for which to make
 #'   predictions. Default NULL, to use the fitted data (`obj$data`). If
 #'   `newdata` is provided, it must be a `data.frame` containing variables named
 #'   `Time` (in hours), `Dose` (in mg/kg), `iv` (TRUE for IV administration,
 #'   FALSE for oral administration), and `Media` ("blood" or "plasma").
+#' @param what Character: "conc" to predict concentrations, "auc" to predict AUC
+#'   (area under the concentration-time curve). Not case sensitive.
 #' @return A numeric vector of predicted concentrations with length equal to
-#'   `nrows(obj$data)`
+#'   `nrows(newdata)`
 #' @export
 #' @author Caroline Ring
 predict.pkfit <- function(obj,
-                          newdata = NULL){
+                          newdata = NULL,
+                          what = "conc"){
   #get the model function to be evaluated
+  if(tolower(what) %in% "conc"){
     modelfun <- get_model_function(model = obj$model_info$model,
                                    model.type = obj$model$model.type)
+  }else if(tolower(what) %in% "auc"){
+    modelfun <- get_model_auc_function(model = obj$model_info$model,
+                                   model.type = obj$model$model.type)
+  }
     #get the params
    params <- get_params.pkfit(obj)
 
@@ -269,6 +316,17 @@ predict.pkfit <- function(obj,
                                       nrow(newdata)))
     return(preds)
 
+}
+
+#' Extract fitted values from a `pkfit` object
+#'
+#' @param obj The pkfit object for which to extract the fitted values
+#' @return A numeric vector of fitted values with length equal to
+#'   `nrow(obj$data)`
+#' @export
+#' @author Caroline Ring
+fitted.pkfit <- function(obj){
+  predict.pkfit(obj)
 }
 
 #' Get residuals from a `pkfit` object
@@ -298,18 +356,19 @@ predict.pkfit <- function(obj,
 #'   residuals (and before any log transformation); FALSE otherwise. Default
 #'   NULL, to apply the transformation used for fitting
 #'   (`obj$data_trans$fit_conc_dose`). If `TRUE`, then both observations and
-#'   predictions will be divided by dose before proceeding.
+#'   predictions will be divided by dose before any log-transformation is done.
 #' @param log_trans Optional: TRUE to compute log-scale residuals (log(obs) -
 #'   log(pred)); FALSE to compute natural-scale residuals (obs - pred). Default
 #'   NULL, to apply the transformation used for fitting (
 #'   `obj$data_trans$fit_log_conc`).
-#' @param match_nondetect Logical. If TRUE (the default), then when an observed value was
-#'   non-detect and the corresponding model-predicted value is below the
-#'   reported LOQ, then the corresponding residual is reported as 0. If FALSE,
-#'   then non-detect observed values will be treated like any other, using
-#'   whatever substitution is already present in variable `Conc` of `newdata`.
-#' @return Numeric: A vector of residuals for the specified `pkfit`
-#'   object, data, and residual transformations.
+#' @param match_nondetect Logical. If TRUE (the default), then when an observed
+#'   value was non-detect and the corresponding model-predicted value is below
+#'   the reported LOQ, then the corresponding residual is reported as 0. If
+#'   FALSE, then non-detect observed values will be treated like any other,
+#'   using whatever substitution is already present in variable `Conc` of
+#'   `newdata`.
+#' @return Numeric: A vector of residuals for the specified `pkfit` object,
+#'   data, and residual transformations.
 #' @export
 #' @author Caroline Ring
 
@@ -360,7 +419,13 @@ if(log_trans %in% TRUE){
   }
 
   if(match_nondetect %in% TRUE){
-    #set preds == obs
+    if(!("LOQ" %in% names(newdata))){
+      newdata$LOQ <- 0
+    }
+    if(!("Detect" %in% names(newdata))){
+      newdata$Detect <- TRUE
+    }
+    #set preds == obs if both are < LOQ
     preds <- ifelse(newdata$Detect %in% FALSE &
                       preds_orig < newdata$LOQ,
                     obs,
@@ -1037,7 +1102,6 @@ frac_resids.pkfit <- function(obj,
                               newdata = NULL,
                               dose_norm = NULL,
                               log_trans = NULL,
-                              optimx_args = NULL,
                               match_nondetect = TRUE){
 
   info_trans <- transform_obs_preds.pkfit(obj = obj,
@@ -1052,7 +1116,7 @@ frac_resids.pkfit <- function(obj,
   return(frac_resids)
 }
 
-#' Hlper function to transform observations and predictions
+#' Helper function to transform observations and predictions
 #'
 #' @param obj A `pkfit` object
 #' @param newdata Optional: A `data.frame` of new data for which to make
@@ -1091,13 +1155,11 @@ frac_resids.pkfit <- function(obj,
 #'   if`newdata` does not have a variable `N_Subjects`) and "preds" containing
 #'   the predictions. Observations, observed SDs, and predictions are
 #'   transformed according to `dose_norm` and `log_trans`.
-#' @export
 #' @author Caroline Ring
 transform_obs_preds.pkfit <- function(obj,
                                newdata = NULL,
                                dose_norm = NULL,
                                log_trans = NULL,
-                               optimx_args = NULL,
                                match_nondetect = TRUE){
   if(is.null(newdata)){
     newdata <- obj$data
@@ -1161,17 +1223,55 @@ transform_obs_preds.pkfit <- function(obj,
               "preds" = preds))
 }
 
+#'Non-compartmental analysis
+#'
+#'Do non-compartmental analysis of the data associated with a `pkfit` object.
+#'
+#'This function calls [PK::nca()] to calculate the following quantities:
+#'
+#'For intravenous (IV) bolus administration:
+#'
+#' * `nca.iv.AUC_tlast`: AUC (area under concentration-time curve) evaluated at the last reported time point
+#' * `nca.iv.AUC_inf`: AUC evaluated at time t = \eqn{\infty}
+#' * `nca.iv.AUMC_inf`: AUMC (area under the first moment curve, i.e. under the AUC vs. time curve) evaluated at time \eqn{t = \infty}
+#' * `nca.iv.MRT`: MRT (mean residence time)
+#' * `nca.iv.halflife`: Half-life
+#' * `nca.iv.Clearance`: Clearance
+#' * Vss: apparent volume of distribution at steady-state.
+#'
+#'For oral bolus administration:
+#'
+#' * `nca.oral.AUC_tlast`: AUC (area under concentration-time curve) evaluated at the last reported time point
+#' * `nca.oral.AUC_inf`: AUC evaluated at time \eqn{t = \infty}
+#' * `nca.oral.AUMC_inf`: AUMC (area under the first moment curve, i.e. under the AUC vs. time curve) evaluated at time \eqn{t = \infty}
+#' * `nca.oral.MTT`: MTT (mean transit time), the sum of MRT and mean absorption time (MAT)
+#'
+#'If `obj$data` only contains data for one of those routes, the NCA quantities
+#'for the "missing" route will be returned, but filled with `NA_real_.`
+#'
+#'Additionally, for oral bolus administration, the following quantities are
+#'estimated using [get_peak()]:
+#'
+#' * `nca.oral.tmax`: the time at which peak concentration occurs
+#' * `nca.oral.Cmax`: the peak concentration
+#'
+#'If `dose_norm == TRUE`, then all data are dose-normalized before computing NCA
+#'quantities. This means that all dose-dependent NCA quantities reflect an
+#'estimate for a 1 mg/kg dose.
+#'
+#' If `dose_norm == FALSE`, then all quantities are calculated separately for each dose.
+#'
+#' @param obj A `pkfit` object containing concentration-time data in the element `obj$data`.
+#' @param dose_norm Whether to dose-normalize data before performing NCA. Default TRUE.
+#' @return A `data.frame` with variables as listed in Details.
 nca.pkfit <- function(obj,
-                      dose_norm = TRUE){
-  if(dose_norm %in% TRUE){
-    nca_names <- c("AUC_tlast_1mgkg",
-                        "AUC_inf_1mgkg",
-                        "AUMC_inf_1mgkg",
-                        "MRT",
-                        "halflife",
-                        "Clearance",
-                        "Vss")
-  }else{
+                      newdata = NULL,
+                    dose_norm = TRUE){
+
+  if(is.null(newdata)){
+    newdata <- obj$data
+  }
+
     nca_names <- c("AUC_tlast",
                         "AUC_inf",
                         "AUMC_inf",
@@ -1179,48 +1279,728 @@ nca.pkfit <- function(obj,
                         "halflife",
                         "Clearance",
                         "Vss")
-  }
 
-   if("iv" %in% obj$data$Route){
-    nca_iv <- get_nca(obs = subset(obj$data,
-                                    Route %in% "iv"),
+   if("iv" %in% newdata$Route){
+     iv_data <- subset(newdata,
+                       Route %in% "iv")
+     if(dose_norm %in% TRUE){
+    nca_iv <- do_nca(obs = iv_data,
             dose_norm = dose_norm)
+     }else{
+       #do NCA separately for each dose
+       dose_list <- split(iv_data,
+                          iv_data$Dose)
+       nca_iv <- do.call(rbind,
+                         sapply(dose_list,
+                        function(this_data){
+                          this_nca <- do_nca(obs = this_data,
+                                 dose_norm = FALSE)
+                          this_nca <- cbind(Dose = this_data$Dose)
+                          this_nca
+                        })
+       )
+     }
     names(nca_iv) <- paste0("nca.iv.",
                              names(nca_iv))
-   }else{
+   }else{ #if no IV data, fill with NAs
      nca_iv <- data.frame(as.list(rep(NA_real_,
                                       length(nca_names))))
      names(nca_iv) <- paste0("nca.iv.",
                              nca_names)
    }
 
-  if("po" %in% obj$data$Route){
-    nca_oral <- get_nca(obs = subset(obj$data,
-                                   Route %in% "po"),
+  if("po" %in% newdata$Route){
+    oral_data <- subset(newdata,
+                        Route %in% "po")
+    if(dose_norm %in% TRUE){
+    nca_oral <- get_nca(obs = oral_data,
                       dose_norm = dose_norm)
+    nca_oral <- cbind("nca.oral.Dose" = 1,
+                      nca_oral)
+    max_df <- as.data.frame(
+      get_peak(x = oral_data$Time,
+               y = oral_data$Conc/oral_data$Dose)
+    )
+    names(max_df) <- c("tmax",
+                         "Cmax")
+    max_df <- cbind("Dose" = 1,
+                      max_df)
+    }else{
+      #do NCA separately for each dose
+      dose_list <- split(oral_data,
+                         oral_data$Dose)
+      nca_oral <- do.call(rbind,
+                        sapply(dose_list,
+                               function(this_data){
+                                 this_nca <- do_nca(obs = this_data,
+                                                    dose_norm = FALSE)
+                                 this_nca <- cbind(Dose = this_data$Dose)
+                                 this_nca
+                               })
+      )
+      max_df <- do.call(rbind,
+                          sapply(dose_list,
+                                 function(this_data){
+                                   max_list <- as.data.frame(
+                                     get_peak(x = this_data$Time,
+                                              y = this_data$Conc/this_data$Dose)
+                                   )
+                                   names(max_list) <- c("tmax",
+                                                        "Cmax")
+                                   max_list <- cbind("Dose" = this_data$Dose,
+                                                     max_list)
+                                   max_list
+                                 }
+                          )
+      )
+    }
     names(nca_oral) <- paste0("nca.oral.",
                             names(nca_oral))
+
+    nca_oral <- merge(nca_oral,
+                      max_list,
+                      by = "Dose")
   }else{
     nca_oral <- data.frame(as.list(rep(NA_real_,
-                                     length(nca_names))))
+                                     length(nca_names) + 2)))
     names(nca_oral) <- paste0("nca.oral.",
-                            nca_names)
+                            c("Dose",
+                              nca_names,
+                              c("tmax",
+                                "Cmax")
+                              )
+                            )
   }
+
+  names(nca_oral)[match(c("nca.oral.Clearance",
+                          "nca.oral.MRT"))] <- c("nca.oral.Clearance_Fgutabs",
+                                                 "nca.oral.MTT")
+  #remove oral halflife and Vss estimates because they are not valid
+  nca_oral[c("nca.oral.halflife",
+             "nca.oral.Vss")] <- NULL
 
     nca_out <- cbind(nca_iv,
                      nca_oral)
     return(nca_out)
 }
 
+#' Plot data and fit for a `pkfit` object.
+#'
+#' @param obj The `pkfit` object containing the fit to be plotted.
+#' @param newdata Optional: A new concentration vs. time data set to plot,
+#'   instead of `obj$data`.
+#' @param dose_norm Optional: TRUE to plot dose-normalized concentrations; FALSE
+#'   to plot non-dose normalized concentrations. Default NULL, to use the
+#'   transformation applied during the fit (`obj$data_trans$fit_conc_dose`.)
+#' @param log_trans Optional: TRUE to apply log10-scaling to the y axis
+#'   (concentration or dose-normalized concentration). FALSE to leave the y axis
+#'   on the natural scale. Default NULL, to use the transformation applied
+#'   during the fit (`obj$data_trans$fit_log_conc`.)
+#' @param n_interp_time Number of time points to interpolate between each unique
+#'   time point in the data, in order to plot a smoother curve for the model
+#'   fit. Default 10.
+#' @return A `ggplot2` plot object.
 plot.pkfit <- function(obj,
                        newdata = NULL,
                        dose_norm = NULL,
-                       log_trans = NULL){
+                       log_trans = NULL,
+                       n_interp_time = 10){
  if(is.null(newdata)){
    newdata <- obj$data
  }
 
+  if(is.null(dose_norm)){
+    dose_norm <- obj$data_trans$fit_conc_dose
+  }
+
+  if(is.null(log_trans)){
+    log_trans <- obj$data_trans$fit_log_conc
+  }
 
 
+pred_DF <- get_predDF.pkfit(obj = obj,
+                            newdata = newdata,
+                            dose_norm = dose_norm,
+                            n_interp_time = n_interp_time)
 
+ #generate plot title
+ plot_title <- paste0(obj$data_info$DTXSID,
+                      " (", unique(obj$data$Compound), ")\n",
+                      "Species = ", obj$data_info$Species, ", ",
+                      "Doses = ", paste(signif(
+                        sort(unique(obj$data$Dose)),
+                        3),
+                        collapse = ", "), " mg/kg\n",
+                      "Analysis Type = ", obj$analysis_type, "\n",
+                      "Fitting options: ",
+                      "log-transform ",
+                      obj$data_trans$fit_log_conc,
+                      "; dose-normalize ",
+                      obj$data_trans$fit_conc_dose,
+                      "; rescale time ",
+                      obj$data_trans$rescale_time)
+
+ #generate plot subtitles
+
+ #get coeffs of model
+ par <- coef.pkfit(obj)
+ #paste into a comma-separated list
+ par_char <- paste(
+   paste(names(par),
+         signif(par, 3), #keep 3 sigfigs
+         sep=" = "),
+   collapse = ", ")
+
+ plot_subtitle <- paste0("Model = ",
+                        obj$model_info$model)
+ plot_subtitle <- paste0(plot_subtitle, "\n",
+                         par_char)
+
+ #plot concentration vs. time data
+ p <- plot_data.pkfit(obj = obj,
+                      newdata = newdata,
+                      dose_norm = dose_norm,
+                      log_trans = log_trans)
+#add the model-fit curve(s)
+ p <- p + geom_line(pred_DF) +
+   #replace the existing title with the new title/subtitle
+   labs(title = plot_title,
+        subtitle = plot_subtitle) +
+ return(p)
+}
+
+#' Plot concentration vs. time data without model fit.
+#'
+#' @param obj A `pkfit` object
+#' @param newdata Optional: A new set of concentration vs. time data to plot,
+#'   different from `obj$data`. Default NULL to plot the data in `obj$data`.
+plot_data.pkfit <- function(obj,
+                            newdata = NULL,
+                            fit_conc_dose = NULL,
+                            fit_log_conc = NULL){
+  if(is.null(newdata)){
+    newdata <- obj$data
+  }
+
+  if(is.null(dose_norm)){
+    dose_norm <- obj$data_trans$fit_conc_dose
+  }
+
+  if(is.null(log_trans)){
+    log_trans <- obj$data_trans$fit_log_conc
+  }
+
+  #set the Detect column to a factor
+  if(!("Detect" %in% names(newdata))){
+    newdata$Detect <- TRUE
+  }
+  newdata$Detect <- factor(newdata$Detect,
+                           levels = c(TRUE, FALSE),
+                           labels = c("Detect", "Non-Detect"))
+
+  if(!("Conc_SD" %in% names(newdata))){
+    newdata$Conc_SD <- 0
+  }
+
+  #create generic named columsn for plotting, containing either dose-normalized or
+  #non-dose-normalized concentrations, depending on `dose_norm`
+  if(dose_norm %in% TRUE){
+    newdata$conc_plot <- newdata$Conc_Dose
+    newdata$conc_sd_plot <- newdata$Conc_SD_Dose
+  }else{
+    newdata$conc_plot <- newdata$Conc
+    newdata$conc_sd_plot <- newdata$Conc_SD
+  }
+
+
+  #generate plot title
+  plot_title <- paste0(obj$data_info$DTXSID,
+                       " (", unique(obj$data$Compound), ")\n",
+                       "Species = ", obj$data_info$Species, ", ",
+                       "Doses = ", paste(signif(
+                         sort(unique(obj$data$Dose)),
+                         3),
+                         collapse = ", "), " mg/kg\n")
+  #now plot
+  p <- ggplot(newdata,
+              aes(x = Time,
+                  y = conc_plot)) +
+    geom_blank()
+
+  if(log_trans %in% FALSE){ #plot error bars
+    if(dose_norm %in% TRUE){  #map colors to dose
+      p <- p +
+        geom_errorbar(aes(ymin = conc_plot - conc_sd_plot,
+                          ymax = conc_plot + conc_sd_plot,
+                          color = Dose))
+    }else{   #do not map color to dose
+      p <- p +
+        geom_errorbar(aes(ymin = conc_plot - conc_sd_plot,
+                          ymax = conc_plot + conc_sd_plot))
+    }
+  } #end if(log_trans %in% FALSE)
+
+  if(dose_norm %in% TRUE){ #mapping color to dose
+    #concentration-dose observation points:
+    #shape mapped to Reference, color to Dose, fill yes/no to Detect
+    #first plot detected points with white fill
+    p <- p +
+      #plot detected points with white fill
+      geom_point(data = newdata[Detect %in% "Detect"],
+                 aes(shape = Reference,
+                     color = Dose),
+                 fill = "white",
+                 size = 4,
+                 stroke = 1.5) +
+      #plot detected points with fill mapped to dose, but alpha mapped to Detect
+      geom_point(data = newdata[Detect %in% "Detect"],
+                 aes(shape = Reference,
+                     color = Dose,
+                     fill = Dose,
+                     alpha = Detect),
+                 size = 4,
+                 stroke = 1.5) +
+      #then plot non-detect points with white fill,
+      #and position jittered
+      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
+                  aes(shape = Reference,
+                      color = Dose),
+                  fill = "white",
+                  size = 4,
+                  stroke = 1.5,
+                  width = jitter_nondetect,
+                  height = 0) +
+      #then plot non-detect points with fill, but alpha mapped to Detect
+      #and position jittered
+      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
+                  aes(shape = Reference,
+                      color = Dose,
+                      fill = Dose,
+                      alpha = Detect),
+                  size = 4,
+                  stroke = 1.5,
+                  width = jitter_nondetect, height = 0)
+
+    p <- p +
+      facet_grid(rows = vars(Route),
+                 cols = vars(Media),
+                 scales = "free_y")
+
+    p <- p +
+      scale_color_viridis_c(name = "Dose, mg/kg") +
+      scale_fill_viridis_c(na.value = NA, name = "Dose, mg/kg")
+
+  }else{ #if dose_norm %in% FALSE, don't map color to dose
+    #concentration-dose observation points:
+    #shape mapped to Reference, fill yes/no to Detect
+    #first plot detected points with white fill
+    p <- p +
+      #plot detected points with white fill
+      geom_point(data = newdata[Detect %in% "Detect"],
+                 aes(shape = Reference),
+                 color = "gray50",
+                 fill = "white",
+                 size = 4,
+                 stroke = 1.5) +
+      #plot detected points with alpha mapped to Detect
+      geom_point(data = newdata[Detect %in% "Detect"],
+                 aes(shape = Reference,
+                     alpha = Detect),
+                 color = "gray50",
+                 fill = "gray50",
+                 size = 4,
+                 stroke = 1.5) +
+      #then plot non-detect points with white fill,
+      #and position jittered
+      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
+                  aes(shape = Reference),
+                  color = "gray50",
+                  fill = "white",
+                  size = 4,
+                  stroke = 1.5,
+                  width = jitter_nondetect,
+                  height = 0) +
+      #then plot non-detect points with fill, but alpha mapped to Detect
+      #and position jittered
+      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
+                  aes(shape = Reference,
+                      alpha = Detect),
+                  color = "gray50",
+                  fill = "gray50",
+                  size = 4,
+                  stroke = 1.5,
+                  width = jitter_nondetect, height = 0)
+
+    #do facet_wrap by combinations of route, media, dose
+    p <- p + facet_wrap(vars(Route, Media, Dose),
+                        labeller = "label_both",
+                        scales = "free")
+  } #end check if dose_norm %in% TRUE/FALSE
+
+  p <- p +
+    scale_shape_manual(values = 21:25) + #use only the 5 shapes where a fill can be added
+    #this limits us to visualizing only 5 References
+    #but admittedly it's hard to distinguish more than 5 shapes anyway
+    #if detect =FALSE, fully transparent; if detect = TRUE, fully solid
+    scale_alpha_manual(values = c("Detect" = 1,
+                                  "Non-Detect" = 0),
+                       drop = FALSE,
+                       name = NULL) +
+    guides(alpha = guide_legend(override.aes = list(shape = 21,
+                                                    color = "black",
+                                                    stroke = 1,
+                                                    fill = c("black", NA),
+                                                    alpha = 1)
+    )
+    ) +
+    labs(title = plot_title) +
+    xlab("Time, hr")
+
+  if(dose_norm %in% TRUE){
+    p <- p + ylab("Concentration/Dose, (mg/kg)/(mg/L)")
+  }else{
+    p <- p + ylab("Concentration, mg/L")
+  }
+
+  p <- p  +
+    theme_bw() +
+    theme(plot.title = element_text(size = 12),
+          strip.background = element_blank())
+  #log-scale y axis if so specified
+  if(log_trans %in% TRUE){
+    p <- p + scale_y_log10() + annotation_logticks(sides = "l")
+  }
+
+  return(p)
+
+}
+
+#' Produce a summary data.frame for a `pkfit` fitted object.
+#'
+#' @param obj The `pkfit` object to summarize.
+#' @param dose_norm Optional: TRUE to calculate metrics using dose-normalized
+#'   residuals, FALSE to calculate metrics using non-dose-normalized residuals.
+#'   Default NULL to use the transformation applied during the fit
+#'   (`obj$data_trans$fit_conc_dose`).
+#' @param log_trans Optional: TRUE to calculate metrics using log-scale
+#'   residuals, FALSE to calculate metrics using natural-scale residuals.
+#'   Default NULL to use the transformation applied during the fit
+#'   (`obj$data_trans$fit_log_conc`).
+#' @return A named list with the following items:
+#' * "data_info": A `data.frame` of `obj$data_info`
+#' * "data_trans": A `data.frame` of `obj$data_trans`
+#' * "resid_trans": A `data.frame` of `dose_norm` and `log_trans`, in case they are different from `obj$data_trans`
+#' * "gof": A `data.frame` of goodness-of-fit metrics with one row and three variables: `AIC` (the Akaike Information Criterion), `BIC` (the Bayesian Information Criterion), and `LogLikelihood`.
+#' * "resids": A `data.frame` of metrics calculated on residuals, including RMSE, r-squared, overall error standard deviation, and summary statistics on fractional residuals (mean, min, max, and quantiles).
+#' * "params": A `data.frame` of fitted model parameters, with one row and as many variables as there are model parameters.
+#' * "params_sd": A `data.frame` of fitted model parameter standard deviations, with one row and as many variables as there are model parameters.
+#' * "tk_stats": A `data.frame` of predicted toxicokinetic statistics as from [calc_TK_stats.pkfit()] (excluding the fitted parameters and SDs). Two additional quantities are added, `AUC_tlast_oral_1mgkg` and `AUC_tlast_iv_1mgkg`, which predict AUC at the latest time point in the data for oral administration and IV administration; they will be NA if `obj$data` contains no oral data or no IV data (respectively). respectively).
+#' * "nca_stats": A `data.frame` of non-compartmental estimates of toxicokinetic statistics, as from [nca.pkfit()].
+#' @export
+#' @author Caroline Ring
+summary.pkfit <- function(obj,
+                          dose_norm = NULL,
+                          log_trans = NULL,
+                          match_nondetect = TRUE){
+  if(is.null(dose_norm)){
+    dose_norm <- obj$data_trans$fit_conc_dose
+  }
+
+  if(is.null(log_trans)){
+    log_trans <- obj$data_trans$fit_log_conc
+  }
+
+ rmse <- rmse.pkfit(obj = obj,
+                    dose_norm =  dose_norm,
+                    log_trans = log_trans)
+
+ rsq <- rsq.pkfit(obj = obj,
+                  dose_norm =  dose_norm,
+                  log_trans = log_trans,
+                  match_nondetect = match_nondetect)
+ overall_err_sd <- overall_error_sd.pkfit(obj = obj,
+                                          dose_norm =  dose_norm,
+                                          log_trans = log_trans,
+                                          match_nondetect = match_nondetect)
+ frac_resid <- frac_resids.pkfit(obj = obj,
+                                dose_norm =  dose_norm,
+                                log_trans = log_trans,
+                                match_nondetect = match_nondetect)
+
+ tk_stats <- calc_TK_stats.pkfit(obj = obj)
+
+if(any(obj$data$Route %in% "po")){
+  newdata <- subset(obj$data, Route %in% "po")
+  AUC_tlast_oral_1mgkg <- predict.pkfit(obj = obj,
+                                        newdata = data.frame(Time = max(newdata$Time),
+                                                             Dose = 1,
+                                                             iv = FALSE,
+                                                             Media = "plasma"))
+}else{
+  AUC_tlast_oral_1mgkg <- NA_real_
+}
+
+ if(any(obj$data$Route %in% "iv")){
+   newdata <- subset(obj$data, Route %in% "iv")
+   AUC_tlast_iv_1mgkg <- predict.pkfit(obj = obj,
+                                         newdata = data.frame(Time = max(newdata$Time),
+                                                              Dose = 1,
+                                                              iv = TRUE,
+                                                              Media = "plasma"))
+ }else{
+   AUC_tlast_iv_1mgkg <- NA_real_
+ }
+
+ tk_stats$AUC_tlast_oral_1mgkg <- AUC_tlast_oral_1mgkg
+ tk_stats$AUC_tlast_iv_1mgkg <- AUC_tlast_iv_1mgkg
+
+ params <- as.data.frame(get_params.pkfit(obj))
+ params_sd <- as.data.frame(get_params_sd.pkfit(obj))
+ #remove parameters from tk_stats
+ tk_stats <- tk_stats[setdiff(names(tk_stats),
+                              c(names(params),
+                                names(params_sd)
+                                )
+                              )
+                      ]
+
+ nca_stats <- nca.pkfit(obj = obj,
+                        dose_norm = TRUE)
+
+#Return a list of data.frames
+
+ frac_resid_q <- as.list(quantile(frac_resid,
+                          probs = c(0.01,0.05,0.1,
+                                    0.25,0.5,0.75,
+                                    0.9,0.95,0.99)))
+ names(frac_resid_q) <- paste0("frac_resid.P",
+                              100*c(0.01,0.05,0.1,
+                                    0.25,0.5,0.75,
+                                    0.9,0.95,0.99))
+
+ out_list <- list(
+   "data_info" = as.data.frame(obj$data_info),
+   "data_trans" = as.data.frame(obj$data_trans),
+   "resid_trans" = data.frame("dose_norm" = dose_norm,
+                              "log_trans" = log_trans),
+   "gof" = data.frame(
+     AIC = AIC.pkfit(obj = obj,
+                     newdata = NULL,
+                     dose_norm = dose_norm,
+                     log_trans = log_trans),
+     BIC = BIC.pkfit(obj = obj,
+                     newdata = NULL,
+                     dose_norm = dose_norm,
+                     log_trans = log_trans),
+     LogLikelihood = loglike.pkfit(obj = obj,
+                                   newdata = NULL,
+                                   dose_norm = dose_norm,
+                                   log_trans = log_trans)
+   ),
+   "resids" = as.data.frame(c(
+     list(
+       "RMSE" = rmse,
+       "rsq" = rsq,
+       "frac_resid.mean" = mean(frac_resid),
+       "frac_resid.median" = median(frac_resid),
+       "frac_resid.min" = min(frac_resid),
+       "frac_resid.max" = max(frac_resid)
+     ),
+     frac_resid.q)),
+   "params" = params,
+   "params_sd" = params_sd,
+   "tkstats" = tk_stats,
+   "nca" = nca_stats
+ )
+
+ return(out_list)
+}
+
+AIC.pkfit <- function(obj,
+                      newdata = NULL,
+                      dose_norm = NULL,
+                      log_trans = NULL){
+#if no new data and no new data transformations,
+  #just grab the fitted AIC
+  if(is.null(newdata) &
+     (is.null(dose_norm) &
+      is.null(log_trans)) |
+     (dose_norm %in% obj$data_trans$fit_conc_dose &
+      log_trans %in% obj$data_trans$fit_log_conc)){
+  AIC <- obj$fit_gof[["AIC"]]
+  }else{
+    #if new data and/or new data transformations, recalculate AIC
+    if(is.null(newdata)){
+      newdata <- obj$data
+    }
+    if(is.null(dose_norm)){
+      dose_norm <- obj$data_trans$fit_conc_dose
+    }
+    if(is.null(log_trans)){
+      log_trans <- obj$data_trans$fit_log_conc
+    }
+    params <- get_params.pkfit(obj)
+    #evaluate log-likelihood
+    loglike <- log_likelihood(params = params,
+                              const_params = NULL,
+                              DF = newdata,
+                              fit_conc_dose = dose_norm,
+                              fit_log_conc = log_trans,
+                              force_finite = FALSE,
+                              negative = FALSE)
+    #calculate AIC
+    AIC <- 2 * length(params) - 2 * loglike
+  }
+return(AIC)
+}
+
+loglike.pkfit <- function(obj,
+                          newdata = NULL,
+                          dose_norm = NULL,
+                          log_trans = NULL){
+  #if no new data and no new data transformations,
+  #just grab the fitted log-likelihood
+  if(is.null(newdata) &
+     (is.null(dose_norm) &
+      is.null(log_trans)) |
+     (dose_norm %in% obj$data_trans$fit_conc_dose &
+      log_trans %in% obj$data_trans$fit_log_conc)){
+   loglike <- obj$fit_gof[["LogLikelihood"]]
+  }else{
+    #if new data and/or new data transformations, recalculate AIC
+    if(is.null(newdata)){
+      newdata <- obj$data
+    }
+    if(is.null(dose_norm)){
+      dose_norm <- obj$data_trans$fit_conc_dose
+    }
+    if(is.null(log_trans)){
+      log_trans <- obj$data_trans$fit_log_conc
+    }
+    params <- get_params.pkfit(obj)
+    #evaluate log-likelihood
+    loglike <- log_likelihood(params = params,
+                              const_params = NULL,
+                              DF = newdata,
+                              fit_conc_dose = dose_norm,
+                              fit_log_conc = log_trans,
+                              force_finite = FALSE,
+                              negative = FALSE)
+  }
+return(loglike)
+}
+
+#' Helper function for plotting curve fits to data
+#'
+#' Produce a data.frame of curve fits
+#'
+#' Create a data.frame that interpolates between time points of concentration
+#' vs. time data, and gets model-predicted concentration for each combination of
+#' route, medium, and (if `dose_norm == FALSE`), dose.
+#'
+#' @param obj
+#' @return  A `data.frame` with variables `Time`, `Dose`, `Route`, `Medium`, and `Conc`,
+get_predDF.pkfit <- function(obj,
+                             newdata = NULL,
+                             dose_norm = NULL,
+                             n_interp_time = 10){
+  if(is.null(newdata)){
+    newdata <- obj$data
+  }
+
+  if(is.null(dose_norm)){
+    dose_norm <- obj$data_trans$fit_conc_dose
+  }
+
+  #produce interpolated time points: n_interp_time points between every existing
+  #time point
+  timepoints <- sort(unique(c(0,newdata$Time)))
+  time_interp <- sapply(1:(length(timepoints)-1),
+                        function(i){
+                          seq(from = timepoints[i],
+                              to = timepoints[i+1],
+                              length.out = n_interp_time)
+                        }
+  )
+
+  #now repeat the time points for each unique combination of Study, Route,
+  #Media, Dose in the data
+  if(dose_norm %in% FALSE){
+    #if not plotting dose-normalized,
+    #make predictions for each dose in newdata
+    combos <- unique(newdata[c("Route",
+                               "iv",
+                               "Media",
+                               "Dose")])
+  }else{
+    #if plotting dose-normalized:
+    #just make predictions for a dose of 1 mg/kg/day
+    combos <- unique(newdata[c("Route",
+                               "iv",
+                               "Media")])
+    combos$Dose <- 1
+  }
+
+  pred_DF <- combos[rep(seq_len(nrow(combos)),
+                        each = length(timepoints))]
+  pred_DF$Time <- rep(timepoints, nrow(combos))
+
+  #now make the predictions
+  pred_DF$Conc <- predict.pkfit(obj, newdata = pred_DF)
+
+  #get predicted conc normalized by dose
+  pred_DF$Conc_Dose<- pred_DF$Conc/pred_DF$Dose
+
+
+  #create generic named columns for plotting, containing either dose-normalized or
+  #non-dose-normalized concentrations, depending on `dose_norm`
+  if(dose_norm %in% TRUE){
+    pred_DF$conc_plot <- pred_DF$Conc/pred_DF$Dose
+  }else{
+    pred_DF$conc_plot <- pred_DF$Conc
+  }
+
+  return(pred_DF)
+}
+
+BIC.pkfit <- function(obj,
+                      newdata = NULL,
+                      dose_norm = NULL,
+                      log_trans = NULL){
+  #if no new data and no new data transformations,
+  #just grab the fitted BIC
+  if(is.null(newdata) &
+     (is.null(dose_norm) &
+      is.null(log_trans)) |
+     (dose_norm %in% obj$data_trans$fit_conc_dose &
+      log_trans %in% obj$data_trans$fit_log_conc)){
+    k <- length(coef.pkfit(obj))
+    n <- nrow(obj$data)
+    BIC <- obj$fit_gof[["AIC"]] + k * log(n) - 2*k
+  }else{
+    #if new data and/or new data transformations, recalculate BIC
+    if(is.null(newdata)){
+      newdata <- obj$data
+    }
+    if(is.null(dose_norm)){
+      dose_norm <- obj$data_trans$fit_conc_dose
+    }
+    if(is.null(log_trans)){
+      log_trans <- obj$data_trans$fit_log_conc
+    }
+    params <- get_params.pkfit(obj)
+    #evaluate log-likelihood
+    loglike <- log_likelihood(params = params,
+                              const_params = NULL,
+                              DF = newdata,
+                              fit_conc_dose = dose_norm,
+                              fit_log_conc = log_trans,
+                              force_finite = FALSE,
+                              negative = FALSE)
+    #calculate BIC
+    BIC <- length(params) *
+      log(nrow(newdata)) -
+      2 * loglike
+  }
+  return(BIC)
 }
