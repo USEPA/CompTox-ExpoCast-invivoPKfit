@@ -30,10 +30,35 @@ convert_time <- function(x,
     y <- 1/x
   }else{y <- x}
 
+  period_units <- c("seconds", "minutes", "hours", "days",
+                    "weeks", "months", "years")
+  if(to %in% period_units){
   y_new <- as.numeric(
    lubridate::duration(num = y,
                        units = from),
    to)
+  }else{
+    if(to %in% "decades"){
+      y_new <- as.numeric(
+        lubridate::duration(num = y,
+                            units = from),
+        "years")/10
+    }else if(to %in% "centuries"){
+      y_new <- as.numeric(
+        lubridate::duration(num = y,
+                            units = from),
+        "years")/100
+    }else{
+      y_new <- NA_real_
+      message(paste("invivopkfit::convert_time(): Allowable values for 'to' are",
+                    paste(c(period_units,
+                            "decades",
+                            "centuries"),
+                          collapse = ", "),
+                    ", but 'to' =", to,
+                    ". Returning NA_real_ for converted times."))
+    }
+  }
 
   if(inverse %in% TRUE){
     yout <- 1/y_new

@@ -1,5 +1,12 @@
 #' Create a `pkfit` object
 #'
+#'
+pkfit <- function(data = NULL,
+                  data_info = )
+
+
+#' Create a `pkfit` object from data
+#'
 #' Given a single-row data.frame of fit outputs and a data.frame of data,
 #' produce an object of class `pkfit`
 #'
@@ -12,7 +19,7 @@
 #'   `fit_control`.
 #' @export
 #' @author Caroline Ring
-pkfit <- function(fit, dat){
+as.pkfit <- function(fit, dat){
   fit <- as.data.frame(fit)
   dat <- as.data.frame(dat)
 
@@ -70,8 +77,6 @@ pkfit <- function(fit, dat){
                          "start_value_msg",
                          "Fitted mean",
                          "Fitted std dev")]
-
-  #
 
   #grab the goodness of fit metrics (AIC and log-likelihood)
   pkfit_gof <- unique(fit[c("AIC",
@@ -1223,166 +1228,7 @@ transform_obs_preds.pkfit <- function(obj,
               "preds" = preds))
 }
 
-#'Non-compartmental analysis
-#'
-#'Do non-compartmental analysis of the data associated with a `pkfit` object.
-#'
-#'This function calls [PK::nca()] to calculate the following quantities:
-#'
-#'For intravenous (IV) bolus administration:
-#'
-#' * `nca.iv.AUC_tlast`: AUC (area under concentration-time curve) evaluated at the last reported time point
-#' * `nca.iv.AUC_inf`: AUC evaluated at time t = \eqn{\infty}
-#' * `nca.iv.AUMC_inf`: AUMC (area under the first moment curve, i.e. under the AUC vs. time curve) evaluated at time \eqn{t = \infty}
-#' * `nca.iv.MRT`: MRT (mean residence time)
-#' * `nca.iv.halflife`: Half-life
-#' * `nca.iv.Clearance`: Clearance
-#' * Vss: apparent volume of distribution at steady-state.
-#'
-#'For oral bolus administration:
-#'
-#' * `nca.oral.AUC_tlast`: AUC (area under concentration-time curve) evaluated at the last reported time point
-#' * `nca.oral.AUC_inf`: AUC evaluated at time \eqn{t = \infty}
-#' * `nca.oral.AUMC_inf`: AUMC (area under the first moment curve, i.e. under the AUC vs. time curve) evaluated at time \eqn{t = \infty}
-#' * `nca.oral.MTT`: MTT (mean transit time), the sum of MRT and mean absorption time (MAT)
-#'
-#'If `obj$data` only contains data for one of those routes, the NCA quantities
-#'for the "missing" route will be returned, but filled with `NA_real_.`
-#'
-#'Additionally, for oral bolus administration, the following quantities are
-#'estimated using [get_peak()]:
-#'
-#' * `nca.oral.tmax`: the time at which peak concentration occurs
-#' * `nca.oral.Cmax`: the peak concentration
-#'
-#'If `dose_norm == TRUE`, then all data are dose-normalized before computing NCA
-#'quantities. This means that all dose-dependent NCA quantities reflect an
-#'estimate for a 1 mg/kg dose.
-#'
-#' If `dose_norm == FALSE`, then all quantities are calculated separately for each dose.
-#'
-#' @param obj A `pkfit` object containing concentration-time data in the element `obj$data`.
-#' @param dose_norm Whether to dose-normalize data before performing NCA. Default TRUE.
-#' @return A `data.frame` with variables as listed in Details.
-nca.pkfit <- function(obj,
-                      newdata = NULL,
-                    dose_norm = TRUE){
 
-  if(is.null(newdata)){
-    newdata <- obj$data
-  }
-
-    nca_names <- c("AUC_tlast",
-                        "AUC_inf",
-                        "AUMC_inf",
-                        "MRT",
-                        "halflife",
-                        "Clearance",
-                        "Vss")
-
-   if("iv" %in% newdata$Route){
-     iv_data <- subset(newdata,
-                       Route %in% "iv")
-     if(dose_norm %in% TRUE){
-    nca_iv <- do_nca(obs = iv_data,
-            dose_norm = dose_norm)
-     }else{
-       #do NCA separately for each dose
-       dose_list <- split(iv_data,
-                          iv_data$Dose)
-       nca_iv <- do.call(rbind,
-                         sapply(dose_list,
-                        function(this_data){
-                          this_nca <- do_nca(obs = this_data,
-                                 dose_norm = FALSE)
-                          this_nca <- cbind(Dose = this_data$Dose)
-                          this_nca
-                        })
-       )
-     }
-    names(nca_iv) <- paste0("nca.iv.",
-                             names(nca_iv))
-   }else{ #if no IV data, fill with NAs
-     nca_iv <- data.frame(as.list(rep(NA_real_,
-                                      length(nca_names))))
-     names(nca_iv) <- paste0("nca.iv.",
-                             nca_names)
-   }
-
-  if("po" %in% newdata$Route){
-    oral_data <- subset(newdata,
-                        Route %in% "po")
-    if(dose_norm %in% TRUE){
-    nca_oral <- get_nca(obs = oral_data,
-                      dose_norm = dose_norm)
-    nca_oral <- cbind("nca.oral.Dose" = 1,
-                      nca_oral)
-    max_df <- as.data.frame(
-      get_peak(x = oral_data$Time,
-               y = oral_data$Conc/oral_data$Dose)
-    )
-    names(max_df) <- c("tmax",
-                         "Cmax")
-    max_df <- cbind("Dose" = 1,
-                      max_df)
-    }else{
-      #do NCA separately for each dose
-      dose_list <- split(oral_data,
-                         oral_data$Dose)
-      nca_oral <- do.call(rbind,
-                        sapply(dose_list,
-                               function(this_data){
-                                 this_nca <- do_nca(obs = this_data,
-                                                    dose_norm = FALSE)
-                                 this_nca <- cbind(Dose = this_data$Dose)
-                                 this_nca
-                               })
-      )
-      max_df <- do.call(rbind,
-                          sapply(dose_list,
-                                 function(this_data){
-                                   max_list <- as.data.frame(
-                                     get_peak(x = this_data$Time,
-                                              y = this_data$Conc/this_data$Dose)
-                                   )
-                                   names(max_list) <- c("tmax",
-                                                        "Cmax")
-                                   max_list <- cbind("Dose" = this_data$Dose,
-                                                     max_list)
-                                   max_list
-                                 }
-                          )
-      )
-    }
-    names(nca_oral) <- paste0("nca.oral.",
-                            names(nca_oral))
-
-    nca_oral <- merge(nca_oral,
-                      max_list,
-                      by = "Dose")
-  }else{
-    nca_oral <- data.frame(as.list(rep(NA_real_,
-                                     length(nca_names) + 2)))
-    names(nca_oral) <- paste0("nca.oral.",
-                            c("Dose",
-                              nca_names,
-                              c("tmax",
-                                "Cmax")
-                              )
-                            )
-  }
-
-  names(nca_oral)[match(c("nca.oral.Clearance",
-                          "nca.oral.MRT"))] <- c("nca.oral.Clearance_Fgutabs",
-                                                 "nca.oral.MTT")
-  #remove oral halflife and Vss estimates because they are not valid
-  nca_oral[c("nca.oral.halflife",
-             "nca.oral.Vss")] <- NULL
-
-    nca_out <- cbind(nca_iv,
-                     nca_oral)
-    return(nca_out)
-}
 
 #' Plot data and fit for a `pkfit` object.
 #'
@@ -1392,7 +1238,7 @@ nca.pkfit <- function(obj,
 #' @param dose_norm Optional: TRUE to plot dose-normalized concentrations; FALSE
 #'   to plot non-dose normalized concentrations. Default NULL, to use the
 #'   transformation applied during the fit (`obj$data_trans$fit_conc_dose`.)
-#' @param log_trans Optional: TRUE to apply log10-scaling to the y axis
+#' @param plot_log10_conc Optional: TRUE to apply log10-scaling to the y axis
 #'   (concentration or dose-normalized concentration). FALSE to leave the y axis
 #'   on the natural scale. Default NULL, to use the transformation applied
 #'   during the fit (`obj$data_trans$fit_log_conc`.)
@@ -1402,25 +1248,25 @@ nca.pkfit <- function(obj,
 #' @return A `ggplot2` plot object.
 plot.pkfit <- function(obj,
                        newdata = NULL,
-                       dose_norm = NULL,
-                       log_trans = NULL,
+                       plot_dose_norm = NULL,
+                       plot_log10_conc = NULL,
                        n_interp_time = 10){
  if(is.null(newdata)){
    newdata <- obj$data
  }
 
   if(is.null(dose_norm)){
-    dose_norm <- obj$data_trans$fit_conc_dose
+    plot_dose_norm <- obj$data_trans$fit_conc_dose
   }
 
-  if(is.null(log_trans)){
-    log_trans <- obj$data_trans$fit_log_conc
+  if(is.null(plot_log10_conc)){
+    plot_log10_conc <- obj$data_trans$fit_log_conc
   }
 
 
 pred_DF <- get_predDF.pkfit(obj = obj,
                             newdata = newdata,
-                            dose_norm = dose_norm,
+                            dose_norm = plot_dose_norm,
                             n_interp_time = n_interp_time)
 
  #generate plot title
@@ -1457,222 +1303,19 @@ pred_DF <- get_predDF.pkfit(obj = obj,
                          par_char)
 
  #plot concentration vs. time data
- p <- plot_data.pkfit(obj = obj,
+
+ #note that any pkfit object is also a pkdata
+ #object, so we can just call plot.pkdata()
+ p <- plot.pkdata(obj = obj,
                       newdata = newdata,
-                      dose_norm = dose_norm,
-                      log_trans = log_trans)
+                      plot_dose_norm = plot_dose_norm,
+                      plot_log10_conc = plot_log10_conc)
 #add the model-fit curve(s)
  p <- p + geom_line(pred_DF) +
    #replace the existing title with the new title/subtitle
    labs(title = plot_title,
         subtitle = plot_subtitle) +
  return(p)
-}
-
-#' Plot concentration vs. time data without model fit.
-#'
-#' @param obj A `pkfit` object
-#' @param newdata Optional: A new set of concentration vs. time data to plot,
-#'   different from `obj$data`. Default NULL to plot the data in `obj$data`.
-plot_data.pkfit <- function(obj,
-                            newdata = NULL,
-                            fit_conc_dose = NULL,
-                            fit_log_conc = NULL){
-  if(is.null(newdata)){
-    newdata <- obj$data
-  }
-
-  if(is.null(dose_norm)){
-    dose_norm <- obj$data_trans$fit_conc_dose
-  }
-
-  if(is.null(log_trans)){
-    log_trans <- obj$data_trans$fit_log_conc
-  }
-
-  #set the Detect column to a factor
-  if(!("Detect" %in% names(newdata))){
-    newdata$Detect <- TRUE
-  }
-  newdata$Detect <- factor(newdata$Detect,
-                           levels = c(TRUE, FALSE),
-                           labels = c("Detect", "Non-Detect"))
-
-  if(!("Conc_SD" %in% names(newdata))){
-    newdata$Conc_SD <- 0
-  }
-
-  #create generic named columsn for plotting, containing either dose-normalized or
-  #non-dose-normalized concentrations, depending on `dose_norm`
-  if(dose_norm %in% TRUE){
-    newdata$conc_plot <- newdata$Conc_Dose
-    newdata$conc_sd_plot <- newdata$Conc_SD_Dose
-  }else{
-    newdata$conc_plot <- newdata$Conc
-    newdata$conc_sd_plot <- newdata$Conc_SD
-  }
-
-
-  #generate plot title
-  plot_title <- paste0(obj$data_info$DTXSID,
-                       " (", unique(obj$data$Compound), ")\n",
-                       "Species = ", obj$data_info$Species, ", ",
-                       "Doses = ", paste(signif(
-                         sort(unique(obj$data$Dose)),
-                         3),
-                         collapse = ", "), " mg/kg\n")
-  #now plot
-  p <- ggplot(newdata,
-              aes(x = Time,
-                  y = conc_plot)) +
-    geom_blank()
-
-  if(log_trans %in% FALSE){ #plot error bars
-    if(dose_norm %in% TRUE){  #map colors to dose
-      p <- p +
-        geom_errorbar(aes(ymin = conc_plot - conc_sd_plot,
-                          ymax = conc_plot + conc_sd_plot,
-                          color = Dose))
-    }else{   #do not map color to dose
-      p <- p +
-        geom_errorbar(aes(ymin = conc_plot - conc_sd_plot,
-                          ymax = conc_plot + conc_sd_plot))
-    }
-  } #end if(log_trans %in% FALSE)
-
-  if(dose_norm %in% TRUE){ #mapping color to dose
-    #concentration-dose observation points:
-    #shape mapped to Reference, color to Dose, fill yes/no to Detect
-    #first plot detected points with white fill
-    p <- p +
-      #plot detected points with white fill
-      geom_point(data = newdata[Detect %in% "Detect"],
-                 aes(shape = Reference,
-                     color = Dose),
-                 fill = "white",
-                 size = 4,
-                 stroke = 1.5) +
-      #plot detected points with fill mapped to dose, but alpha mapped to Detect
-      geom_point(data = newdata[Detect %in% "Detect"],
-                 aes(shape = Reference,
-                     color = Dose,
-                     fill = Dose,
-                     alpha = Detect),
-                 size = 4,
-                 stroke = 1.5) +
-      #then plot non-detect points with white fill,
-      #and position jittered
-      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
-                  aes(shape = Reference,
-                      color = Dose),
-                  fill = "white",
-                  size = 4,
-                  stroke = 1.5,
-                  width = jitter_nondetect,
-                  height = 0) +
-      #then plot non-detect points with fill, but alpha mapped to Detect
-      #and position jittered
-      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
-                  aes(shape = Reference,
-                      color = Dose,
-                      fill = Dose,
-                      alpha = Detect),
-                  size = 4,
-                  stroke = 1.5,
-                  width = jitter_nondetect, height = 0)
-
-    p <- p +
-      facet_grid(rows = vars(Route),
-                 cols = vars(Media),
-                 scales = "free_y")
-
-    p <- p +
-      scale_color_viridis_c(name = "Dose, mg/kg") +
-      scale_fill_viridis_c(na.value = NA, name = "Dose, mg/kg")
-
-  }else{ #if dose_norm %in% FALSE, don't map color to dose
-    #concentration-dose observation points:
-    #shape mapped to Reference, fill yes/no to Detect
-    #first plot detected points with white fill
-    p <- p +
-      #plot detected points with white fill
-      geom_point(data = newdata[Detect %in% "Detect"],
-                 aes(shape = Reference),
-                 color = "gray50",
-                 fill = "white",
-                 size = 4,
-                 stroke = 1.5) +
-      #plot detected points with alpha mapped to Detect
-      geom_point(data = newdata[Detect %in% "Detect"],
-                 aes(shape = Reference,
-                     alpha = Detect),
-                 color = "gray50",
-                 fill = "gray50",
-                 size = 4,
-                 stroke = 1.5) +
-      #then plot non-detect points with white fill,
-      #and position jittered
-      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
-                  aes(shape = Reference),
-                  color = "gray50",
-                  fill = "white",
-                  size = 4,
-                  stroke = 1.5,
-                  width = jitter_nondetect,
-                  height = 0) +
-      #then plot non-detect points with fill, but alpha mapped to Detect
-      #and position jittered
-      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
-                  aes(shape = Reference,
-                      alpha = Detect),
-                  color = "gray50",
-                  fill = "gray50",
-                  size = 4,
-                  stroke = 1.5,
-                  width = jitter_nondetect, height = 0)
-
-    #do facet_wrap by combinations of route, media, dose
-    p <- p + facet_wrap(vars(Route, Media, Dose),
-                        labeller = "label_both",
-                        scales = "free")
-  } #end check if dose_norm %in% TRUE/FALSE
-
-  p <- p +
-    scale_shape_manual(values = 21:25) + #use only the 5 shapes where a fill can be added
-    #this limits us to visualizing only 5 References
-    #but admittedly it's hard to distinguish more than 5 shapes anyway
-    #if detect =FALSE, fully transparent; if detect = TRUE, fully solid
-    scale_alpha_manual(values = c("Detect" = 1,
-                                  "Non-Detect" = 0),
-                       drop = FALSE,
-                       name = NULL) +
-    guides(alpha = guide_legend(override.aes = list(shape = 21,
-                                                    color = "black",
-                                                    stroke = 1,
-                                                    fill = c("black", NA),
-                                                    alpha = 1)
-    )
-    ) +
-    labs(title = plot_title) +
-    xlab("Time, hr")
-
-  if(dose_norm %in% TRUE){
-    p <- p + ylab("Concentration/Dose, (mg/kg)/(mg/L)")
-  }else{
-    p <- p + ylab("Concentration, mg/L")
-  }
-
-  p <- p  +
-    theme_bw() +
-    theme(plot.title = element_text(size = 12),
-          strip.background = element_blank())
-  #log-scale y axis if so specified
-  if(log_trans %in% TRUE){
-    p <- p + scale_y_log10() + annotation_logticks(sides = "l")
-  }
-
-  return(p)
-
 }
 
 #' Produce a summary data.frame for a `pkfit` fitted object.

@@ -1,0 +1,161 @@
+Pipeline:
+
+Clean data (currently in preprocess_data)
+Do we still want to do this for all cvt data at once, or do it on a single 'dataset'?
+I think still for all cvt data at once
+- Select needed columns of cvt data
+- Rename selected columns
+- Coerce columns to expected class (numeric or character)
+- If Reference is NA, set it the same as Extraction.
+- Subset to only data where the dosed and analyzed chemical are the same -- i.e., measuring concentration of parent chemical.
+- Add just "DTXSID", "Compound", "CAS" columns to reflect dosed & analyzed chemical
+- Coerce route names, 'oral' and 'intravenous', to 'po' and 'iv'
+- subset to keep only routes in specified list (currently "po" and "iv")
+- set TRUE/FALSE flag for IV administration
+- subset to keep only media in specified list (currently "blood" and "plasma")
+- set Species and Compound to lowercase
+-   normalize 'Value' by ratio_conc_to_dose: this makes the mass units of Value and Dose the same --
+e.g. mg/L and mg/kg/day
+- Impute LOQ if it is missing, as calc_loq_factor * minimum detected Value for each unique combination of Reference, DTXSID, Media, and Species
+- Convert 'Value' values of less than LOQ to NA
+- Remove any remaining cases where both Value and LOQ are NA
+- Impute missing SDs for multi-subject data points as minimum non-missing SD by Reference, DTXSID, Media, and Species (or as mean, if all SDs are missing for a group)
+- Remove any remaining multi-subject observations where SD is NA
+- Remove any remaining multi-subject observations where Value is NA
+- For any cases where N_Subjects is NA, impute N_Subjects = 1
+- for anything with N_Subjects == 1, set Value_SD to 0
+- remove any NA time values
+- convert time from hours to days
+- create a Study column: unique combinations of variables specified in study_def
+- Create a Conc column that is the greater of Value and LOQ
+- Create a Detect flag
+- Remove zero-dose observations
+- Create dose-normalized concentration variables
+
+Need to select data sets for modeling in 2 ways
+1. Group by DTXSID & Species
+2. Group by DTXSID, Species, & Study
+
+# For a single data set:
+## Check data:
+  - Single DTXSID
+  - Single Species
+  - Single study or multiple studies
+  - Detects & nondetects by route and media
+  - Check how many detects/nondetects observations are before empirical oral tmax (absorption phase)
+  - Check how many detects/nondetects observations are either after empirical oral tmax, or by IV route (elimination phase)
+## Do NCA
+
+Select a model to fit: flat, 1-compartment, or 2-compartment
+
+# For a single data set & model:
+## Model setup
+- get model parameter names and units, and determine whether to optimize each of these parameters or not
+- determine whether there are enough observations to proceed, and set a flag if not:
+  - enough total detected observations (more than the number of params to be estimated)
+  - enough absorption phase detections if kgutabs to be estimated
+  - enough elimination phase detections if kelim to be estimated
+- Rescale time if so requested
+- Get model parameter lower bounds (possibly with user settings) -- this could be a named vector. Retain user settings
+- Get model paramete upper bounds (possibly with user settings) -- this could be a named vector. Retain user settings
+- Get model parameter starting values (possibly with user settings) -- this could be a named vector. Retain user settings
+
+## Fit model
+- Optimizer: minimize log-likelihood
+- If fit failed, then stop: return empty fit object with message explaining failure
+- Get MLE fit params
+- Get SDs of MLE fit params by calculating Hessian
+- Return data.frame of fitted parameters
+- Return fit info (number of function evaluations, number of iterations, convergence code)
+
+## Re-fit model:
+- If there was insufficient oral absorption-phase data to fit kgutabs, check whether there is sufficient IV-only data to fit an IV-only model
+  -If so, create a new subset of the data for IV only, and re-fit. Add a flag stating this was an IV-only re-fit because there was not enough oral absorption phase data to fit an oral model.
+
+## Postprocess fitted params
+- Rescale time constants back to units of hours
+- Compute derived TK quantities like Cmean, Cmax, Css, Clearance, Halflife
+- Propagate parameter uncertainty through to derived TK quantities??
+
+## Plot data & fit
+
+## Evaluate fit via residuals analysis
+
+S3 objects:
+
+"pkdata" object: a single dataset to be fitted.
+
+Should the results of data analysis be stored as attributes of the object?
+
+"pksetup" object: A single dataset & single model to be fitted. Including the parameters to be fitted, their bounds, and their starting values.
+
+"pkfit" object: A fitted model.
+
+Does this scheme make sense? It seems wrong to have analysis steps as part of the process of *creating* an object.
+
+Could we use a ggplot2-like grammar for modeling?
+
+something like
+
+my_pkfit <- pkfit(data = dataset) + model_1comp() + dose_norm() + log_trans() + rescale_time()
+
+or even we could use "aesthetics" like:
+
+pkfit(data = dataset,
+aes(time = Time,
+conc = Conc,
+loq = LOQ,
+detect = Detect)
+)
+
+or even we could have commands like
++ scale_time(units = "auto")
++ scale_time(units = "hours") (default)
++ scale_time(units = "days") (or other specific time unit if user happens to want that)
++ scale_conc(normalize = "dose", trans = "log10")
++ scale_conc(normalize = "identity", trans = "identity") (default)
+
+Then `my_pkfit` would be an *unevaluated* pkfit object -- having just the set of instructions of steps to perform. User could specify those steps in any order, and internally, they will be placed in the correct order
+
+To do just the setup for the fit (getting bounds & starting values), do
+setup(my_pkfit)
+
+To actually evaluate the fit, do
+fit(my_pkfit)
+
+To get the post-processed values, do like
+halflife(my_pkfit)
+cmax(my_pkfit)
+tmax(my_pkfit)
+
+We could even add an option to  "facet" fits, like
+
+my_pkfit <- pkfit(data = cvt) #passing in all cvt data
++ model_1comp() +
+dose_norm() +
+log_trans() +
+rescale_time() +
+facet_fit(~ DTXSID + Species, errors = "joint")
+
+or
++ facet_fit(~ DTXSID + Species + Study, errors = "separate")
+
+or
++ facet_fit( ~ DTXSID + Species, errors = "pooled")
+
+
+To plot the fit, do
+plot(my_pkfit)
+
+To get residuals from the fit, do
+resids(my_pkfit)
+
+
+where arguments to model_1comp() could include things like
+* lower_default: a named list of default lower bound values
+* upper_default: a named list of default upper bound values
+* start_default: a named list of default starting values
+* const_param: named list of parameters to be held constant
+
+
+
