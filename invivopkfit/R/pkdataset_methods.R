@@ -1,4 +1,5 @@
 
+
 #' Initialize a `pkdata` object
 #'
 #' Initialize a `pkdata` object
@@ -39,57 +40,11 @@ pkdata <- function(data = data.frame(DTXSID = character(),
                                     )
 ){
   # construct the pkdata object
+
+  #convert data to a data frame
   dat <- as.data.frame(data)
 
-  #add any missing columns
-  dat_default <- data.frame(DTXSID = NA_character_,
-                            Compound = NA_character_,
-                            CAS = NA_character_,
-                            Species = NA_character_,
-                            Reference = NA_character_,
-                            Study = NA_character_,
-                            Subject = NA_integer_,
-                            N_Subjects = NA_integer_,
-                            Route = NA_character_,
-                            Dose = NA_real_,
-                            Time = NA_real_,
-                            Media = NA_character_,
-                            Value = NA_real_,
-                            Value_SD = NA_real_,
-                            LOQ = NA_real_
-  )
-  missing_cols <- setdiff(names(dat_default),
-                          names(dat))
-
-  if(length(missing_cols)>0){
-  dat <- cbind(dat,
-               dat_default[missing_cols])
-  }
-
-
-  #create detect column if not there already
- if(!("Detect" %in% names(dat))){
-   dat$Detect <- !is.na(dat$Value)
- }
-
-  #create Conc column if not there already
-  if(!("Conc" %in% names(dat))){
-    dat$Conc <- pmax(dat$Value, dat$LOQ, na.rm = TRUE)
-  }
-
-  #get SDs if not there already
-  if(!("Conc_SD" %in% names(dat)) &
-     "Value_SD" %in% names(dat)){
-    dat$Conc_SD <- dat$Value_SD
-
-  }
-
-  #create dose-normalized variables
-  dat$Conc_Dose <- dat$Conc/dat$Dose
-  dat$Value_Dose <- dat$Value/dat$Dose
-  dat$Value_SD_Dose <- dat$Value_SD/dat$Dose
-  dat$LOQ_Dose <- dat$LOQ/dat$Dose
-  dat$Conc_SD_Dose <- dat$Conc_SD/dat$Dose
+  dat <- initialize_pkdata(dat)
 
   #get the data info
   #unique DTXSID, Species, References, Studies, Routes
@@ -567,4 +522,58 @@ plot_data.pkdata <- function(obj,
 
   return(p)
 
+}
+
+initialize_pkdata <- function(data){
+  #add any missing columns
+
+  #default: required columns
+  dat_default <- data.frame(DTXSID = NA_character_,
+                            Compound = NA_character_,
+                            CAS = NA_character_,
+                            Species = NA_character_,
+                            Reference = NA_character_,
+                            Study = NA_character_,
+                            Subject = NA_integer_,
+                            N_Subjects = NA_integer_,
+                            Route = NA_character_,
+                            Dose = NA_real_,
+                            Time = NA_real_,
+                            Media = NA_character_,
+                            Value = NA_real_,
+                            Value_SD = NA_real_,
+                            LOQ = NA_real_)
+
+  missing_cols <- setdiff(names(dat_default),
+                          names(dat))
+
+  if(length(missing_cols)>0){
+    dat <- cbind(dat,
+                 dat_default[missing_cols])
+  }
+
+
+  #create detect column if not there already
+  if(!("Detect" %in% names(dat))){
+    dat$Detect <- !is.na(dat$Value)
+  }
+
+  #create Conc column if not there already
+  if(!("Conc" %in% names(dat))){
+    dat$Conc <- pmax(dat$Value, dat$LOQ, na.rm = TRUE)
+  }
+
+  #get SDs if not there already
+  if(!("Conc_SD" %in% names(dat)) &
+     "Value_SD" %in% names(dat)){
+    dat$Conc_SD <- dat$Value_SD
+
+  }
+
+  #create dose-normalized variables
+  dat$Conc_Dose <- dat$Conc/dat$Dose
+  dat$Value_Dose <- dat$Value/dat$Dose
+  dat$Value_SD_Dose <- dat$Value_SD/dat$Dose
+  dat$LOQ_Dose <- dat$LOQ/dat$Dose
+  dat$Conc_SD_Dose <- dat$Conc_SD/dat$Dose
 }

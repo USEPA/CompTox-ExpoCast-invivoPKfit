@@ -12,7 +12,7 @@
 #' The LOQ is assumed to vary from reference to reference, as each study would
 #' have different mass spectrometry equipment and methods. LOQ also is assumed
 #' to vary by medium (e.g. blood or plasma), as preparation of samples may be
-#' different.
+#' different for different media.
 #'
 #' For each unique combination of reference, chemical, species, and medium, the
 #' LOQ is estimated by multiplying the lowest detected concentration (the
