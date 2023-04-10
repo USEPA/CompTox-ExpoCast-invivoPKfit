@@ -17,12 +17,6 @@
 #' | Fgutabs_V1     | 1e-4    | Default         |
 #' | sigma          | 1e-8         | Default         |
 #'
-#' If `Vdist_from_species == TRUE`, then this function will set a lower bound
-#' for `Vdist` or `V1` equal to 1/10 of the physiological plasma volume for the
-#' species represented in `fitdata`. The physiological plasma volume is taken
-#' from [httk::physiology.data], and represents the average plasma volume (mL/kg
-#' body weight) multiplied by the average body weight (kg), converted from mL to
-#' L by dividing by 1000.
 #'
 #' Any parameters which will not be estimated from data (based on either the
 #' variable `optimize_param` in `par_DF` if `par_DF` is provided, or the output
@@ -50,10 +44,6 @@
 #'   lower-bound values for each parameter; and `lower_bound_msg`, giving a
 #'   message about the default lower bound values. See Details for default
 #'   value.
-#'@param  Vdist_from_species Logical: TRUE to estimate the lower bound
-#'   of `Vdist` or `V1` as 1/10 of species-specific physiological plasma
-#'   volume. FALSE to use the lower bound for `Vdist` or `V1`
-#'   specified in `lower_default`.
 #' @return A `data.frame`: the same as `parDF` with additional variables `lower_bound`
 #'   (numeric, containing the lower bound for each parameter) and
 #'   `lower_bound_msg` (character, containing a brief message explaining how the
@@ -90,7 +80,6 @@ get_lower_bounds <- function(fitdata,
                                                ),
                                lower_bound_msg = "Default"
                              ),
-                             Vdist_from_species = FALSE,
                              suppress.messages = FALSE
                              ){
   if(is.null(par_DF)){
@@ -122,42 +111,6 @@ get_lower_bounds <- function(fitdata,
            ]
 #set rownames to param names
   rownames(par_DF) <- par_DF$param_name
-
-  if(Vdist_from_species %in% TRUE &
-     model %in% c("1compartment", "2compartment")){
-    #For Vdist or V1: Set the theoretical lower bound to something on the order of
-    #the species-specific total plasma volume, pulled from httk physiology.data
-    phys <- httk::physiology.data
-    species <- unique(tolower(fitdata$Species)) #there should be only one species
-    #if httk::physiology.data has data on this species:
-    if(any(tolower(names(phys)) %in%  species)){
-      #get the column number corresponding to this species
-      species_col <- which(tolower(names(phys)) %in%
-                             species)
-      #pull the average plasma volume in mL/kg
-      plasma_vol_mL_kg <- phys[phys$Parameter %in% "Plasma Volume",
-                               species_col]
-      #pull the average body weight in kg
-      body_wt_kg <- phys[phys$Parameter %in% "Average BW",
-                         species_col]
-      #convert mL/kg to L plasma
-      plasma_vol_L <- plasma_vol_mL_kg * body_wt_kg * 1e-3
-      #assuming this gives us a valid answer:
-      if(is.finite(plasma_vol_L)){
-        #assign 1/10 of this value as theoretical lower bound on Vdist
-        par_DF[par_DF$param_name %in%
-                 c("Vdist", "V1"),
-               "lower_bound"] <- plasma_vol_L/10
-        #add message explaining lower bound & source
-        par_DF[par_DF$param_name %in%
-                 c("Vdist", "V1"),
-               "lower_bound_msg"] <- paste0("0.1 * ",
-                                            "average total plasma volume for species (",
-                                            signif(plasma_vol_L, digits = 3),
-                                            " L), from httk::physiology.data")
-      } #end if(is.finite(plasma_vol_L))
-    } #end if(any(tolower(names(phys)) %in%  species))
-  } #end if if(Vdist_from_species %in% TRUE)
 
   #For anything not to be optimized, set its bounds to NA
   #because the bounds will not be used
