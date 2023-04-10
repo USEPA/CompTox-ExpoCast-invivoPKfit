@@ -45,7 +45,7 @@
 #' - Adds a variable `Time.Days` where `Time` (in hours) is converted to time in days.
 #'
 #'
-#' @param data.set A `data.frame` of concentration-time data. Preferably
+#' @param data A `data.frame` of concentration-time data. Preferably
 #'   `pkdataset_nheerlcleaned` or `pkdataset_nheerlorig`.
 #' @param model Which general model should be fit for each chemical. Presently,
 #'   only "1compartment" and "2compartment" are implemented.
@@ -113,45 +113,40 @@
 #'
 #'   new_name = old_name
 
-preprocess_data <- function(data.set,
-                            names_list =list(
-                              "Compound_Dosed" = "studies.test_substance_name_original",
-                              "DTXSID_Dosed" = "chemicals_dosed.dsstox_substance_id",
-                              "CAS_Dosed" = "chemicals_dosed.dsstox_casrn",
-                              "Compound_Analyzed" = "series.analyte_name_original",
-                              "DTXSID_Analyzed" = "chemicals_analyzed.dsstox_substance_id",
-                              "CAS_Analyzed" = "chemicals_analyzed.dsstox_casrn",
-                              "Reference" = "documents_reference.id",
-                              "Extraction" = "documents_extraction.id",
-                              "Species" = "subjects.species",
-                              "Weight" ="subjects.weight_kg",
-                              "Weight.Units" = NULL,
-                              "Dose" = "studies.dose_level_normalized",
-                              "Dose.Units" = NULL,
-                              "Time" = "conc_time_values.time_hr",
-                              "Time.Units" = NULL,
-                              "Media" = "series.conc_medium_normalized",
-                              "Value" = "conc_time_values.conc",
-                              "Value.Units" = NULL,
-                              "Route" = "studies.administration_route_normalized",
-                              "LOQ" = "series.loq",
-                              "Subject" = "subjects.id",
-                              "N_Subjects" = "series.n_subjects_in_series",
-                              "Value_SD" = "conc_time_values.conc_sd",
-                              "Study_ID" = "studies.id",
-                              "Series_ID" = "series.id"),
-                            defaults_list =   list(
-                              "Weight.Units" = "kg",
-                              "Dose.Units" = "mg/kg",
-                              "Time.Units" = "hours",
-                              "Value.Units" = "mg/L"),
+preprocess_data <- function(data,
+                            mapping = ggplot2::aes(
+                              Compound_Dosed = studies.test_substance_name_original,
+                              DTXSID_Dosed = chemicals_dosed.dsstox_substance_id,
+                              CAS_Dosed = chemicals_dosed.dsstox_casrn,
+                              Compound_Analyzed = series.analyte_name_original,
+                              DTXSID_Analyzed = chemicals_analyzed.dsstox_substance_id,
+                              CAS_Analyzed = chemicals_analyzed.dsstox_casrn,
+                              Reference = documents_reference.id,
+                              Extraction = documents_extraction.id,
+                              Species = subjects.species,
+                              Weight =subjects.weight_kg,
+                              Weight.Units = "kg",
+                              Dose = studies.dose_level_normalized_corrected,
+                              Dose.Units = "mg/kg",
+                              Time = conc_time_values.time_hr,
+                              Time.Units = "hours",
+                              Media = series.conc_medium_normalized,
+                              Value = conc_time_values.conc,
+                              Value_SD = conc_time_values.conc_sd_normalized,
+                              Value.Units = "mg/L",
+                              Route = studies.administration_route_normalized,
+                              LOQ = series.loq_normalized,
+                              Subject = subjects.id,
+                              N_Subjects = series.n_subjects_in_series,
+                              Study_ID = studies.id,
+                              Series_ID = series.id
+                            ),
                             ratio_conc_to_dose = 1,
                             calc_loq_factor = 0.45,
                             routes_keep = c("po", "iv"),
                             media_keep = c("blood", "plasma"),
                             impute_loq = TRUE,
                             impute_sd = TRUE,
-                            study_def = c("DTXSID", "Species", "Reference", "Route", "Media"),
                             suppress.messages = FALSE){
 
 
@@ -159,112 +154,114 @@ preprocess_data <- function(data.set,
     message("Renaming data columns...")
   }
   #rename columns
-  data.set <- rename_columns(data.set = data.set,
-                             names_list = names_list,
-                             defaults_list = defaults_list)
+  data <- as.data.frame(sapply(mapping,
+                               function(x) rlang::eval_tidy(x, data),
+                               simplify = FALSE,
+                               USE.NAMES = TRUE)
+                        )
 
   if(!suppress.messages){
   ### display messages describing loaded data
-  message(paste(nrow(data.set), "concentration vs. time observations loaded.\n"))
-  message(paste(length(unique(data.set$DTXSID_Analyzed)), "unique analytes,",
-            length(unique(data.set$Species)), "unique species, and",
-            length(unique(data.set$Reference)), "unique references."))
+  message(paste(nrow(data), "concentration vs. time observations loaded.\n"))
+  message(paste(length(unique(data$DTXSID_Analyzed)), "unique analytes,",
+            length(unique(data$Species)), "unique species, and",
+            length(unique(data$Reference)), "unique references."))
   }
 
-  data.set$Value_orig <- data.set$Value
+  data$Value_orig <- data$Value
 
   ### Coerce all 'Value' values to be numeric and say so
-  if (!is.numeric(data.set$Value))
+  if (!is.numeric(data$Value))
   {
-    value_num <- as.numeric(data.set$Value)
-    old_na <- sum(is.na(data.set$Value) | !nzchar(data.set$Value))
+    value_num <- as.numeric(data$Value)
+    old_na <- sum(is.na(data$Value) | !nzchar(data$Value))
     new_na <- sum(is.na(value_num))
     if(!suppress.messages){
       message(paste0("Column \"Value\" converted from ",
-                     class(data.set$Value),
+                     class(data$Value),
                     " to numeric. ",
                      "Pre-conversion NAs and blanks: ",
                      old_na,
                      ". Post-conversion NAs: ",
                      new_na, "."))
     }
-    data.set$Value <- value_num
+    data$Value <- value_num
     rm(value_num, old_na, new_na)
   }
 
   ### coerce 'Dose' values to numeric and say so
-  data.set$Dose_orig <- data.set$Dose
-  if (!is.numeric(data.set$Dose))
+  data$Dose_orig <- data$Dose
+  if (!is.numeric(data$Dose))
   {
-    dose_num <- as.numeric(data.set$Dose)
-    old_na <- sum(is.na(data.set$Dose) | !nzchar(data.set$Dose))
+    dose_num <- as.numeric(data$Dose)
+    old_na <- sum(is.na(data$Dose) | !nzchar(data$Dose))
     new_na <- sum(is.na(dose_num))
     if(!suppress.messages){
       message(paste0("Column \"Dose\" converted from ",
-                     class(data.set$Dose),
+                     class(data$Dose),
       " to numeric. ",
                      "Pre-conversion NAs and blanks: ",
                      old_na,
                      ". Post-conversion NAs: ",
                      new_na, "."))
     }
-    data.set$Dose <- dose_num
+    data$Dose <- dose_num
     rm(dose_num, old_na, new_na)
   }
 
   ### coerce 'Time' values to numeric and say so
-  data.set$Time_orig <- data.set$Time
-  if (!is.numeric(data.set$Time))
+  data$Time_orig <- data$Time
+  if (!is.numeric(data$Time))
   {
-    time_num <- as.numeric(data.set$Time)
-    old_na <- sum(is.na(data.set$Time) | !nzchar(data.set$Time))
+    time_num <- as.numeric(data$Time)
+    old_na <- sum(is.na(data$Time) | !nzchar(data$Time))
     new_na <- sum(is.na(time_num))
     if(!suppress.messages){
       message(paste0("Column \"Time\" converted from ",
-                     class(data.set$TIme),
+                     class(data$TIme),
                      " to numeric. ",
                      "Pre-conversion NAs and blanks: ",
                      old_na,
                      ". Post-conversion NAs: ",
                      new_na, "."))
     }
-    data.set$Time <- time_num
+    data$Time <- time_num
     rm(time_num, old_na, new_na)
   }
 
 
   ### Coerce all 'Reference' values to be character, and say so
-  data.set$Reference_orig <- data.set$Reference
-  if(!is.character(data.set$Reference)){
+  data$Reference_orig <- data$Reference
+  if(!is.character(data$Reference)){
     if(!suppress.messages){
       message(paste0("Column \"Reference\" converted from ",
-                     class(data.set$Reference),
+                     class(data$Reference),
                      " to character."))
     }
-    data.set$Reference <- as.character(data.set$Reference)
+    data$Reference <- as.character(data$Reference)
 
   }
 
   ### Coerce all 'Extraction' values to be character, and say so
-  if(!is.character(data.set$Extraction)){
+  if(!is.character(data$Extraction)){
     if(!suppress.messages){
       message(paste0("Column \"Extraction\" converted from ",
-                     class(data.set$Extraction),
+                     class(data$Extraction),
                      " to character."))
     }
-    data.set$Extraction <- as.character(data.set$Extraction)
+    data$Extraction <- as.character(data$Extraction)
 
   }
 
   #If Reference is NA, set it the same as Extraction.
-  data.set$Reference_orig <- data.set$Reference
-  data.set[is.na(data.set$Reference),
-           "Reference"] <- data.set[is.na(data.set$Reference),
+  data$Reference_orig <- data$Reference
+  data[is.na(data$Reference),
+           "Reference"] <- data[is.na(data$Reference),
                                     "Extraction"]
 
   #Subset to only data where the dosed and analyzed chemical are the same --
   #i.e., measuring concentration of parent chemical.
-  analyte_dosed_match <- (data.set$DTXSID_Dosed == data.set$DTXSID_Analyzed) %in% TRUE
+  analyte_dosed_match <- (data$DTXSID_Dosed == data$DTXSID_Analyzed) %in% TRUE
   if(any(!analyte_dosed_match)){
   if(!suppress.messages){
     message(paste("Restricting to observations where dosed DTXSID == analyzed DTXSID eliminates",
@@ -272,7 +269,7 @@ preprocess_data <- function(data.set,
                   "observations.")
     )
   }
-  data.set <- subset(data.set,
+  data <- subset(data,
                      analyte_dosed_match)
   }
 
@@ -280,97 +277,97 @@ preprocess_data <- function(data.set,
   if(!suppress.messages){
     message("Creating columns DTXSID, Compound, and CAS, containing the dosed & analyzed chemical identifiers.")
   }
-  data.set$DTXSID <- data.set$DTXSID_Analyzed
-  data.set$Compound <- data.set$Compound_Analyzed
-  data.set$CAS <- data.set$CAS_Analyzed
+  data$DTXSID <- data$DTXSID_Analyzed
+  data$Compound <- data$Compound_Analyzed
+  data$CAS <- data$CAS_Analyzed
 
   if(!suppress.messages){
-    message(paste(dim(data.set)[1], "observations of",
-                  length(unique(data.set$DTXSID)), "unique chemicals,",
-                  length(unique(data.set$Species)), "unique species, and",
-                  length(unique(data.set$Reference)), "unique references remain."))
+    message(paste(dim(data)[1], "observations of",
+                  length(unique(data$DTXSID)), "unique chemicals,",
+                  length(unique(data$Species)), "unique species, and",
+                  length(unique(data$Reference)), "unique references remain."))
   }
 
   # Right now code only recognizes "po" and "iv" as routes:
   ### coerce route names, 'oral' and 'intravenous', to 'po' and 'iv'
-  data.set[data.set$Route %in% "oral", "Route"] <- "po"
-  data.set[data.set$Route %in% "intravenous", "Route"] <- "iv"
+  data[data$Route %in% "oral", "Route"] <- "po"
+  data[data$Route %in% "intravenous", "Route"] <- "iv"
 
-  if(any(!(data.set$Route %in% routes_keep))){
+  if(any(!(data$Route %in% routes_keep))){
     if(!suppress.messages){
       message(paste("Restricting to routes in",
                     paste(routes_keep, collapse = ", "),
       "eliminates",
-                    sum(!(data.set$Route %in% routes_keep)), "observations."))
+                    sum(!(data$Route %in% routes_keep)), "observations."))
     }
 
     ### subset to data of routes in routes_keep only
-    data.set <- data.set[data.set$Route %in% routes_keep, ]
+    data <- data[data$Route %in% routes_keep, ]
     if(!suppress.messages){
-      message(paste(dim(data.set)[1], "observations of",
-                    length(unique(data.set$DTXSID)), "unique chemicals,",
-                    length(unique(data.set$Species)), "unique species, and",
-                    length(unique(data.set$Reference)), "unique references remain."))
+      message(paste(dim(data)[1], "observations of",
+                    length(unique(data$DTXSID)), "unique chemicals,",
+                    length(unique(data$Species)), "unique species, and",
+                    length(unique(data$Reference)), "unique references remain."))
     }
   }
 
   #Subset to only media in media_keep
 
-  if(any(!(data.set$Media %in% media_keep))){
+  if(any(!(data$Media %in% media_keep))){
     if(!suppress.messages){
       message(paste("Restricting to media in",
                     paste(media_keep, collapse = ", "),
                     "eliminates",
-                    sum(!(data.set$Media %in% media_keep)), "observations."))
+                    sum(!(data$Media %in% media_keep)), "observations."))
     }
 
     ### subset to data of with media in media_keep
-    data.set <- data.set[data.set$Media %in% media_keep, ]
+    data <- data[data$Media %in% media_keep, ]
     if(!suppress.messages){
-      message(paste(dim(data.set)[1], "observations of",
-                    length(unique(data.set$DTXSID)), "unique chemicals,",
-                    length(unique(data.set$Species)), "unique species, and",
-                    length(unique(data.set$Reference)), "unique references remain."))
+      message(paste(dim(data)[1], "observations of",
+                    length(unique(data$DTXSID)), "unique chemicals,",
+                    length(unique(data$Species)), "unique species, and",
+                    length(unique(data$Reference)), "unique references remain."))
     }
   }
 
   #set TRUE/FALSE flag for IV administration
-  data.set$iv <- data.set$Route %in% "iv"
+  data$iv <- data$Route %in% "iv"
 
   # Harmonize the compound names:
   ### make all compound names completely lower-case
-  data.set$Compound <- tolower(data.set$Compound)
+  data$Compound <- tolower(data$Compound)
 
   ### do the same thing for species
-  data.set$Species <- tolower(data.set$Species)
+  data$Species <- tolower(data$Species)
 
   ### normalize 'Value' by ratio_conc_to_dose
   ### this makes the mass units of Value and Dose the same --
   ### e.g. mg/L and mg/kg/day
-  data.set$Value <- data.set$Value * ratio_conc_to_dose
+  data$Value <- data$Value * ratio_conc_to_dose
   # do the same for LOQ and SD
-  data.set$LOQ <- data.set$LOQ * ratio_conc_to_dose
-  data.set$Value_SD <- data.set$Value_SD * ratio_conc_to_dose
+  data$LOQ <- data$LOQ * ratio_conc_to_dose
+  data$Value_SD <- data$Value_SD * ratio_conc_to_dose
 
   # #Set any 0 concentrations to NA
   # if(!suppress.messages){
   #   message(paste0("Converting 'Value' values of 0 to NA.\n",
-  #                  sum(data.set$Value %in% 0),
+  #                  sum(data$Value %in% 0),
   #                  " values will be converted."))
   # }
-  # data.set[data.set$Value %in% 0, "Value"] <- NA_real_
+  # data[data$Value %in% 0, "Value"] <- NA_real_
 
   if(impute_loq %in% TRUE){
   # Impute LOQ if it is missing
-  if(any(is.na(data.set$LOQ))){
-    data.set$LOQ_orig <- data.set$LOQ
+  if(any(is.na(data$LOQ))){
+    data$LOQ_orig <- data$LOQ
     if(!suppress.messages){
       message(paste0("Estimating missing LOQs as ",
                      calc_loq_factor,
                      "* minimum detected Value for each unique combination of ",
                      "Reference, DTXSID, Media, and Species"))
     }
-    data.set <- estimate_loq(dat = data.set,
+    data <- estimate_loq(dat = data,
                              reference_col = "Reference",
                              chem_col = "DTXSID",
                              media_col = "Media",
@@ -382,39 +379,39 @@ preprocess_data <- function(data.set,
 
   if(!suppress.messages){
     message(paste0("Converting 'Value' values of less than LOQ to NA.\n",
-                   sum((data.set$Value <  data.set$LOQ) %in% TRUE),
+                   sum((data$Value <  data$LOQ) %in% TRUE),
                    " values will be converted."))
   }
-  data.set[(data.set$Value < data.set$LOQ) %in% TRUE, "Value"] <- NA_real_
+  data[(data$Value < data$LOQ) %in% TRUE, "Value"] <- NA_real_
 
   } #end if impute_loq %in% TRUE
 
   #Remove any remaining cases where both Value and LOQ are NA
-  if(any(is.na(data.set$Value) & is.na(data.set$LOQ))){
+  if(any(is.na(data$Value) & is.na(data$LOQ))){
     if(!suppress.messages){
       message(paste0("Removing observations where both Value and LOQ were NA.\n",
-                     sum(is.na(data.set$Value) & is.na(data.set$LOQ)),
+                     sum(is.na(data$Value) & is.na(data$LOQ)),
                      " observations will be removed."))
     }
-    data.set <- subset(data.set,
-                       !(is.na(data.set$Value) & is.na(data.set$LOQ)))
+    data <- subset(data,
+                       !(is.na(data$Value) & is.na(data$LOQ)))
 
     if(!suppress.messages){
-      message(paste(dim(data.set)[1], "observations of",
-                    length(unique(data.set$DTXSID)), "unique chemicals,",
-                    length(unique(data.set$Species)), "unique species, and",
-                    length(unique(data.set$Reference)), "unique references remain."))
+      message(paste(dim(data)[1], "observations of",
+                    length(unique(data$DTXSID)), "unique chemicals,",
+                    length(unique(data$Species)), "unique species, and",
+                    length(unique(data$Reference)), "unique references remain."))
     }
   }
 
   if(impute_sd %in% TRUE){
   #Impute missing SDs
-  if(any((data.set$N_Subjects >1) %in% TRUE & is.na(data.set$Value_SD))){
-    data.set$Value_SD_orig <- data.set$Value_SD
+  if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value_SD))){
+    data$Value_SD_orig <- data$Value_SD
     if(!suppress.messages){
       n_sd_est <- sum(
-        (data.set$N_Subjects >1) %in% TRUE &
-          is.na(data.set$Value_SD)
+        (data$N_Subjects >1) %in% TRUE &
+          is.na(data$Value_SD)
       )
       message(paste0("Estimating missing concentration SDs for multi-subject data points as ",
                      "minimum non-missing SD for each unique combination of ",
@@ -423,7 +420,7 @@ preprocess_data <- function(data.set,
                      "SD will be imputed equal to mean. ",
                      n_sd_est, " missing SDs will be estimated."))
     }
-  data.set <- estimate_conc_sd(dat = data.set,
+  data <- estimate_conc_sd(dat = data,
                            reference_col = "Reference",
                            chem_col = "DTXSID",
                            media_col = "Media",
@@ -436,133 +433,111 @@ preprocess_data <- function(data.set,
 
   #Remove any remaining multi-subject observations where SD is NA
   #(with imputing SD = Mean as a fallback, this will only be cases where Value was NA)
-  if(any((data.set$N_Subjects >1) %in% TRUE & is.na(data.set$Value_SD))){
+  if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value_SD))){
     if(!suppress.messages){
       message(paste0("Removing observations with N_Subjects > 1 where reported SD is NA.\n",
-                     sum((data.set$N_Subjects >1) %in% TRUE &
-                           is.na(data.set$Value_SD)),
+                     sum((data$N_Subjects >1) %in% TRUE &
+                           is.na(data$Value_SD)),
                      " observations will be removed."))
     }
-    data.set <- subset(data.set,
+    data <- subset(data,
                        !((N_Subjects >1) %in% TRUE & is.na(Value_SD))
     )
 
     if(!suppress.messages){
-      message(paste(dim(data.set)[1], "observations of",
-                    length(unique(data.set$DTXSID)), "unique chemicals,",
-                    length(unique(data.set$Species)), "unique species, and",
-                    length(unique(data.set$Reference)), "unique references remain."))
+      message(paste(dim(data)[1], "observations of",
+                    length(unique(data$DTXSID)), "unique chemicals,",
+                    length(unique(data$Species)), "unique species, and",
+                    length(unique(data$Reference)), "unique references remain."))
     }
   }
 
   #Remove any remaining multi-subject observations where Value is NA
-  if(any((data.set$N_Subjects >1) %in% TRUE & is.na(data.set$Value))){
+  if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value))){
     if(!suppress.messages){
       message(paste0("Removing observations with N_Subjects > 1 where reported Value is NA.\n",
-                     sum((data.set$N_Subjects >1) %in% TRUE &
-                           is.na(data.set$Value)),
+                     sum((data$N_Subjects >1) %in% TRUE &
+                           is.na(data$Value)),
                      " observations will be removed."))
     }
-    data.set <- subset(data.set,
+    data <- subset(data,
                        !((N_Subjects >1) %in% TRUE & is.na(Value))
     )
 
     if(!suppress.messages){
-      message(paste(dim(data.set)[1], "observations of",
-                    length(unique(data.set$DTXSID)), "unique chemicals,",
-                    length(unique(data.set$Species)), "unique species, and",
-                    length(unique(data.set$Reference)), "unique references remain."))
+      message(paste(dim(data)[1], "observations of",
+                    length(unique(data$DTXSID)), "unique chemicals,",
+                    length(unique(data$Species)), "unique species, and",
+                    length(unique(data$Reference)), "unique references remain."))
     }
   }
 
 
 # For any cases where N_Subjects is NA, impute N_Subjects = 1
-  if(any(is.na(data.set$N_Subjects))){
-    data.set$N_Subjects_orig <- data.set$N_Subjects
+  if(any(is.na(data$N_Subjects))){
+    data$N_Subjects_orig <- data$N_Subjects
     if(!suppress.messages){
       message(
         paste0(
           "N_Subjects is NA for ",
-          sum(is.na(data.set$N_Subjects)),
+          sum(is.na(data$N_Subjects)),
           " observations. It will be assumed = 1."
         )
       )
     }
 
-    data.set[is.na(data.set$N_Subjects), "N_Subjects"] <- 1
+    data[is.na(data$N_Subjects), "N_Subjects"] <- 1
   }
 
   #for anything with N_Subjects == 1, set Value_SD to 0
-  data.set[data.set$N_Subjects == 1, "Value_SD"] <- 0
+  data[data$N_Subjects == 1, "Value_SD"] <- 0
 
-  #convert time from hours to days
-
-  #first remove any NA time values
-  if(any(is.na(data.set$Time))){
+  #Remove any NA time values
+  if(any(is.na(data$Time))){
   if(!suppress.messages){
     message(paste0("Removing observations with NA time values.\n",
-            sum(is.na(data.set$Time)),
+            sum(is.na(data$Time)),
             " observations will be removed."))
   }
-  data.set <- subset(data.set, !is.na(Time))
+  data <- subset(data, !is.na(Time))
 
   if(!suppress.messages){
-    message(paste(dim(data.set)[1], "observations of",
-                  length(unique(data.set$DTXSID)), "unique chemicals,",
-                  length(unique(data.set$Species)), "unique species, and",
-                  length(unique(data.set$Reference)), "unique references remain."))
+    message(paste(dim(data)[1], "observations of",
+                  length(unique(data$DTXSID)), "unique chemicals,",
+                  length(unique(data$Species)), "unique species, and",
+                  length(unique(data$Reference)), "unique references remain."))
   }
   }
-
-  ### convert time from hours to days
-  data.set$Time.Days <- convert_time(data.set$Time,
-                                     from = data.set$Time.Units,
-                                     to = "days",
-                                     inverse = FALSE)
-
-  #create a Study column:
-  #unique combinations of variables specified in study_def
-  if(!suppress.messages){
-    message(paste0("Creating Study column: ",
-                   "unique combinations of ",
-                   paste(study_def, collapse = ", ")))
-  }
-  data.set$Study <- do.call(
-    what = interaction,
-    args = c(data.set[study_def],
-      list(drop = TRUE,
-           sep = "_"))
-  )
-
 
   #Create a Conc column that is the greater of Value and LOQ, with NAs removed
   if(!suppress.messages){
     message("Creating variable Conc that contains the greater of Value and LOQ"
             )
   }
-  data.set$Conc <- pmax(data.set$Value,
-                        data.set$LOQ,
+  data$Conc <- pmax(data$Value,
+                        data$LOQ,
                         na.rm = TRUE)
+  data$Conc_SD <- data$Value_SD
   #Create a Detect flag
   if(!suppress.messages){
     message("Creating variable Detect that is TRUE for detects, FALSE for non-detects"
     )
   }
-  data.set$Detect <- !is.na(data.set$Value)
+  data$Detect <- !is.na(data$Value)
 
   #Remove zero-dose observations
   if(!suppress.messages){
     message("Removing observations where Dose == 0"
     )
   }
-  data.set <- subset(data.set,
+  data <- subset(data,
                      Dose > 0)
 
   if(!suppress.messages){
-    message(paste(dim(data.set)[1], "observations of",
-                  length(unique(data.set$DTXSID)), "unique chemicals,",
-                  length(unique(data.set$Species)), "unique species, and",
-                  length(unique(data.set$Reference)), "unique references remain."))
+    message(paste(dim(data)[1], "observations of",
+                  length(unique(data$DTXSID)), "unique chemicals,",
+                  length(unique(data$Species)), "unique species, and",
+                  length(unique(data$Reference)), "unique references remain."))
   }
 
   #Create dose-normalized Conc
@@ -573,14 +548,16 @@ preprocess_data <- function(data.set,
                    "LOQ_Dose = LOQ/Dose",
                    "Conc_Dose = Conc/Dose"))
   }
-  data.set$Conc_Dose <- data.set$Conc/data.set$Dose
-  data.set$Value_Dose <- data.set$Value/data.set$Dose
-  data.set$Value_SD_Dose <- data.set$Value_SD/data.set$Dose
-  data.set$LOQ_Dose <- data.set$LOQ/data.set$Dose
+  data$Conc_Dose <- data$Conc/data$Dose
+  data$Value_Dose <- data$Value/data$Dose
+  data$Value_SD_Dose <- data$Value_SD/data$Dose
+  data$LOQ_Dose <- data$LOQ/data$Dose
+  data$Conc_SD_Dose <- data$Conc_SD/data$Dose
+
 
   if(!suppress.messages){
     "Data preprocessing complete."
   }
 
-  return(data.set)
+  return(data)
 }
