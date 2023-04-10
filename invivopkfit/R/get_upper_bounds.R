@@ -44,12 +44,6 @@
 #'   upper-bound values for each parameter; and `upper_bound_msg`, giving a
 #'   message about the default upper bound values. See Details for default
 #'   value.
-#' @param Fgutabs_Vdist_from_species Logical: TRUE to estimate the upper bound
-#'   of `Fgutabs_Vdist` or `Fgutabs_V1` using the upper bound of `Fgutabs`
-#'   specified in `upper_default`, divided by a species-specific lower bound on
-#'   the volume of distribution, based on species-specific physiological plasma
-#'   volumes. FALSE to use the upper bound for `Fgutabs_Vdist` or `Fgutabs_V1`
-#'   specified in `upper_default`.
 #' @return A data.frame: `parDF` with additional variables `upper_bound`
 #'   (numeric, containing the upper bound for each parameter) and
 #'   `upper_bound_msg` (character, containing a brief message explaining how the
@@ -84,7 +78,6 @@ get_upper_bounds <- function(fitdata,
                                                1e6), #sigma
                                upper_bound_msg = "Default"
                              ),
-                             Fgutabs_Vdist_from_species = FALSE,
                              sigma_from_data = TRUE,
                              fit_conc_dose = TRUE,
                              fit_log_conc = FALSE,
@@ -117,47 +110,6 @@ get_upper_bounds <- function(fitdata,
                  pattern = "sigma"),
            "upper_bound_msg"] <- upper_default[upper_default$param_name %in% "sigma",
                                                "upper_bound_msg"]
-
-    if(Fgutabs_Vdist_from_species %in% TRUE &
-       model %in% c("1compartment", "2compartment")){
-      #For Vdist or V1: Set the theoretical lower bound to something on the order of
-      #the species-specific total plasma volume, pulled from httk physiology.data
-      phys <- httk::physiology.data
-      species <- unique(tolower(fitdata$Species)) #there should be only one species
-      #if httk::physiology.data has data on this species:
-      if(any(tolower(names(phys)) %in%  species)){
-        #get the column number corresponding to this species
-        species_col <- which(tolower(names(phys)) %in%
-                               species)
-        #pull the average plasma volume in mL/kg
-        plasma_vol_mL_kg <- phys[phys$Parameter %in% "Plasma Volume",
-                                 species_col]
-        #pull the average body weight in kg
-        body_wt_kg <- phys[phys$Parameter %in% "Average BW",
-                           species_col]
-        #convert mL/kg to L plasma
-        plasma_vol_L <- plasma_vol_mL_kg * body_wt_kg * 1e-3
-        Vdist_lower <- plasma_vol_L/10
-        Fgutabs_upper <- par_DF[par_DF$param_name %in% "Fgutabs",
-                                "upper_bound"]
-        #assuming this gives us a valid answer:
-        if(is.finite(Vdist_lower)){
-          #theoretical upper bound on Fgutabs/Vdist is 1/Vdist_lower
-          par_DF[par_DF$param_name %in%
-                   c("Fgutabs_Vdist", "Fgutabs_V1"),
-                 "upper_bound"] <- Fgutabs_upper/Vdist_lower
-          #add message explaining lower bound & source
-          par_DF[par_DF$param_name %in%
-                   c("Fgutabs_Vdist", "Fgutabs_V1"),
-                 "upper_bound_msg"] <- paste0("[Upper bound of Fgutabs,",
-                                              signif(Fgutabs_upper, digits = 3),
-                 "]/ [lower bound of Vdist, 0.1 * ",
-                                              "average total plasma volume for species (",
-                                              signif(plasma_vol_L, digits = 3),
-                                              " L), from httk::physiology.data]")
-        } #end if(is.finite(plasma_vol_L))
-      } #end if(any(tolower(names(phys)) %in%  species))
-    } #end if if(Fgutabs_Vdist_from_species %in% TRUE)
 
     if(sigma_from_data %in% TRUE){
       #set an upper bound on sigma equal to the std dev of values in each study
