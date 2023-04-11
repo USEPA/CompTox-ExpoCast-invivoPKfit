@@ -2,45 +2,57 @@
 #'
 #' Normalize and/or transform concentration data
 #'
-#' @param obj A `pk` object
 #' @param normalize A normalization to apply to concentrations. Built-in options
-#'   are `"identity"` (the default; i.e., divide by 1) and `"dose_normalize"` (i.e.,
-#'   divide each concentration value by its corresponding dose; see [dose_normalize()]). May also be the
-#'   name of a function. If no function is found by the provided name
-#'   in the calling environment, then [scale_conc.pk()] will attempt to
-#'   interpret it as a transformation from the `scales` package. For example, if
-#'   you provide `"boxcox"`, it will be interpreted as [scales::boxcox_trans()].
+#'   are `"identity"` (the default; i.e., divide by 1) and `"dose_normalize"`
+#'   (i.e., divide each concentration value by its corresponding dose; see
+#'   [dose_normalize()]). May also be the name of a function. If no function is
+#'   found by the provided name in the calling environment, then
+#'   [scale_conc.pk()] will attempt to interpret it as a transformation from the
+#'   `scales` package. For example, if you provide `"boxcox"`, it will be
+#'   interpreted as [scales::boxcox_trans()].
 #' @param trans A transformation to apply to concentrations. Will be applied
 #'   *after* the normalization. Default is `"identity"` (no transformation). You
 #'   can supply the name of your own function. If no function by that name is
 #'   found, then this function will try to interpret it as one of the
 #'   transformations in the `scales` package.
-scale_conc.pk <- function(obj,
-                       normalize = "identity",
+#' @return An object of class `pk_scales`: A named list with element `variable =
+#'   "conc"` (denoting the variable to be scaled) and `options = list(normalize
+#'   = normalize, trans = trans)` (denoting the `normalize` and `trans`
+#'   arguments supplied to [scale_conc()]). See [pk_add.pk_scales()].
+#' @export
+#' @author Caroline Ring
+scale_conc <- function(normalize = "identity",
                        trans = "identity"){
-obj$scales$conc$normalize <- normalize
-obj$scales$conc$trans <- trans
+  scale_conc <- list(variable = "conc")
+  scale_conc$options <- list("normalize" = normalize,
+                             "trans" = trans)
+  class(scale_conc) <- c(class(scale_conc), "pkproto", "pk_scales")
 
-return(obj)
+return(scale_conc)
 }
 
 #' Scale times
 #'
 #' Transform time data
 #'
-#' @param obj A `pk` object
-#' @param trans A transformation to apply to time data -- *i.e.*, new units to use
-#'   for time. Default is `"identity"` (no transformation, leave time in the
-#'   original units). Another useful option is `"auto"`, to
-#'   automatically select new time units based on the time of the last detected
-#'   observation. You may also specify any time units understood by
-#'   `lubridate::duration()`, i.e. "seconds", "hours", "days", "weeks",
-#'   "months", "years", "milliseconds", "microseconds", "nanoseconds", and/or
-#'   "picoseconds".
+#' @param trans A transformation to apply to time data -- *i.e.*, new units to
+#'   use for time. Default is `"identity"` (no transformation, leave time in the
+#'   original units). Another useful option is `"auto"`, to automatically select
+#'   new time units based on the time of the last detected observation. You may
+#'   also specify any time units understood by `lubridate::duration()`, i.e.
+#'   "seconds", "hours", "days", "weeks", "months", "years", "milliseconds",
+#'   "microseconds", "nanoseconds", and/or "picoseconds".
+#' @return An object of class `pk_scales`: A named list with two elements
+#'   `variable = "time"` (denoting the variable to be scaled) and `options =
+#'   list(trans = trans)` (denoting the `normalize` and `trans` arguments
+#'   supplied to [scale_time()]). See [pk_add.pk_scales()].
 scale_time.pk <- function(obj,
                           trans = "identity"){
-  obj$scales$time$trans <- trans
-  return(obj)
+  scale_time <- list(variable = "time")
+  scale_time$options <- list("trans" = trans)
+  class(scale_time) <- c(class(scale_time), "pkproto", "pk_scales")
+
+  return(scale_time)
 }
 
 #' Dose-normalize concentration data
