@@ -1,67 +1,107 @@
-
-
-#' Initialize a `pkdata` object
+#' Print a pk object
 #'
-#' Initialize a `pkdata` object
+#' Prints the default output of a PK object.
 #'
-#' A `pkdata` object is a list with elements `data` and `data_info`. `data` is a
-#' `data.frame` consisting of a set of concentration vs. time observations to
-#' which a single curve will be fitted. `data_info` is a list that provides
-#' summary information about the data: DTXSID, Species, routes analyzed, media
-#' analyzed, references analyzed, studies analyzed (if "Study" is defined
-#' differently from "Reference").
+#' A `pk` object is just a list of data and fitting options. In order to
+#' actually perform the optimization and fit the model, you need to call one of
+#' the methods to do that -- including [print.pk()], [summarize.pk()],
+#' [fit.pk()]. If you just type in a set of instructions like `pk(data =
+#' my_data) + stat_model(model = c("flat", "1comp", "2comp")` and hit
+#' Enter/Return, then by default R will call the [print.pk()] method. (This is
+#' true no matter what you type at the R command line and hit enter -- R will
+#' call the appropriate `print` method for an object of that class, or
+#' [print.default()] if it can't find a class-specific print method.) Therefore,
+#' [print_pk()] does the following:
 #'
-#' The input `data.frame` should contain data for only one `DTXSID` and
-#' `Species`. It may contain data for multiple `Route` and/or `Media` values,
-#' which can be fitted simultaneously. It may contain data from multiple
-#' `Reference` IDs (in the case where a joint or pooled analysis is desired), or
-#' from only one `Reference` ID (in the case where a separate analysis is
-#' desired for one reference at a time).
+#' - Pre-processes the data
+#' - Does initial data checking and summary (e.g., number of observations by route, media, detect/nondetect)
+#' - Determines parameters to be optimized for each specified model, based on the data
+#' - Checks data to see whether the selected parameters may be identifiable (e.g., are there more observations than there are parameters to be estimated?)
+#' - Determines bounds and starting values for each parameter to be optimized
+#' - Performs optimization to estimate parameter values and uncertainties
+#' - Adds the optimization results to the `pk` object
+#' - Prints the `pk` object
+#' - Returns the `pk` object invisibly
 #'
-#' @param data A `data.frame` -- see Details for required variables. The default
-#'   is an empty data frame.
-#' @return An object of class `pkdata`
+#' @param obj A `pk` object
+#' @return Invisibly: The `pk` object with added elements containing the optimization results
+#' @author Caroline Ring
+print.pk <- function(obj){
+  #Data: Preprocess and summarize
+  obj <- build_data(obj)
 
-pkdata <- function(data = data.frame(DTXSID = character(),
-                                        Compound = character(),
-                                        CAS = character(),
-                                        Species = character(),
-                                        Reference = character(),
-                                        Study = character(),
-                                        Subject = integer(),
-                                        N_Subjects = integer(),
-                                        Route = character(),
-                                     Dose = numeric(),
-                                     Time = numeric(),
-                                     Media = character(),
-                                     Value = numeric(),
-                                     Value_SD = numeric(),
-                                     LOQ = numeric()
-                                    )
-){
-  # construct the pkdata object
 
-  #convert data to a data frame
-  dat <- as.data.frame(data)
+}
 
-  dat <- initialize_pkdata(dat)
+#' Build data set for fitting
+#'
+#' @param obj A `pk` object
+#' @return The same `pk` object, with added elements `data` (containing the
+#'   cleaned, gap-filled data) and `data_info` (containing summary information
+#'   about the data, e.g. number of observations by route, media,
+#'   detect/nondetect; empirical tmax, time of peak concentration for oral data;
+#'   number of observations before and after empirical tmax)
+build_data.pk <- function(obj){
+
+  if(!is.null(obj$data_original)){
+    #coerce to data.frame (in case it is a tibble or data.table or whatever)
+    data_original <- as.data.frame(obj$data_original)
+
+    #Preprocess data -- mapping old to new column names, doing imputations
+    data <- preprocess_data(data = obj$data_original,
+                            mapping = obj$data_settings$mapping,
+                            ratio_conc_to_dose = ratio_conc_to_dose,
+                            calc_loq_factor = calc_loq_factor,
+                            routes_keep = routes_keep,
+                            media_keep = media_keep,
+                            impute_loq = impute_loq,
+                            impute_sd = impute_sd,
+                            suppress.messages = suppress.messages)
+  }
+
+  #define expected "default" empty data frame
+  data_default <- data.frame(DTXSID = character(),
+                             Species = character(),
+                             Reference = character(),
+                             Study = character(),
+                             Subject = character(),
+                             N_Subjects = numeric(),
+                             Route = character(),
+                             Dose = numeric(),
+                             Time = numeric(),
+                             Media = character(),
+                             Value = numeric(),
+                             Value_SD = numeric(),
+                             LOQ = numeric()
+  )
+
+  #add any missing columns
+  missing_cols <- setdiff(names(data_default),
+                          names(data))
+  for(this_col in missing_cols){
+    #fill the missing column with NAs of the specified type
+    #the following is a trick to make NAs of the same type as the column.
+    data[[this_col]] <- rep(c(data_default[[this_col]][0], NA),
+                            length(data[[this_col]]))
+  }
+
 
   #get the data info
   #unique DTXSID, Species, References, Studies, Routes
-  dat_info <- as.list(unique(dat[c("DTXSID",
-                                          "Species")]))
+  dat_info <- as.list(unique(data[c("DTXSID",
+                                   "Species")]))
 
-  dat_info$References_Analyzed <- sort(unique(dat$Reference))
+  dat_info$References_Analyzed <- sort(unique(data$Reference))
   #get a list of studies analyzed
-  dat_info$Studies_Analyzed <- sort(unique(dat$Study))
+  dat_info$Studies_Analyzed <- sort(unique(data$Study))
   #get a list of routes analyzed
-  dat_info$Routes_Analyzed <- sort(unique(dat$Route))
+  dat_info$Routes_Analyzed <- sort(unique(data$Route))
   #get the number of detects and non-detects by route and medium
-  dat_info$n_dat <- aggregate(x = dat$Detect,
-                              by = dat[c("Route", "Media")],
+  dat_info$n_dat <- aggregate(x = data$Detect,
+                              by = data[c("Route", "Media")],
                               FUN = function(Detect){
                                 c("Detect" = sum(Detect %in% TRUE),
-                                      "NonDetect" = sum(Detect %in% FALSE))
+                                  "NonDetect" = sum(Detect %in% FALSE))
                               })
   names(dat_info$n_dat) <- gsub(x = names(dat_info$n_dat),
                                 pattern = "Detect.",
@@ -69,8 +109,8 @@ pkdata <- function(data = data.frame(DTXSID = character(),
                                 fixed = TRUE)
 
   #get empirical tmax
-  if(any(dat$Route %in% "po")){
-    oral_data <- subset(dat, Route %in% "po")
+  if(any(data$Route %in% "po")){
+    oral_data <- subset(data, Route %in% "po")
 
     oral_peak <- get_peak(x = oral_data$Time,
                           y = log(oral_data[["Conc_Dose"]]))
@@ -84,86 +124,87 @@ pkdata <- function(data = data.frame(DTXSID = character(),
 
   #absorption and elimination phase points
   #get the number of detects & nondetects before empirical tmax
-  dat_info$n_phase <- aggregate(x = dat$Detect,
-                              by = list("Phase" = factor(dat$Time <= dat_info$tmax_oral,
-                                          levels = c(TRUE, FALSE),
-                                          labels = c("absorption", "elimination"))),
-                              FUN = function(Detect){
-                                c("Detect" = sum(Detect %in% TRUE),
-                                  "NonDetect" = sum(Detect %in% FALSE))
-                              }
+  dat_info$n_phase <- aggregate(x = data$Detect,
+                                by = list("Phase" = factor(data$Time <= dat_info$tmax_oral,
+                                                           levels = c(TRUE, FALSE),
+                                                           labels = c("absorption", "elimination"))),
+                                FUN = function(Detect){
+                                  c("Detect" = sum(Detect %in% TRUE),
+                                    "NonDetect" = sum(Detect %in% FALSE))
+                                }
   )
   names(dat_info$n_phase) <- gsub(x = names(dat_info$n_phase),
-                                pattern = "Detect.",
-                                replacement = "",
-                                fixed = TRUE)
+                                  pattern = "Detect.",
+                                  replacement = "",
+                                  fixed = TRUE)
 
   #get time of last detected observation
-  dat_info$last_detect_time <- max(dat[dat$Detect %in% TRUE, "Time"])
+  dat_info$last_detect_time <- max(data[data$Detect %in% TRUE, "Time"])
 
   #get time of last observation
-  dat_info$last_time <- max(dat$Time)
+  dat_info$last_time <- max(data$Time)
 
-  # construct the pkdata object
-  obj <- list("data" = dat,
-              "data_info" = dat_info,
-  )
-
-  class(obj) <- c(class(obj), "pkdata")
+  # add data & data info to object
+  obj$data <- data
+  obj$data_info <- dat_info
 
   return(obj)
 
 }
 
-#' Coerce an object to class `pkdata`
+#' Do pre-fit calculations and checks
 #'
-#' Given any object that can be coerced to a `data.frame`, convert it to an object of class [pkdata()].
-#'
-#' @param x The object to coerce to class `pkdata`
-#' @return An object of class `pkdata`. This is a `list` with named elements
-#'   `data`, `data_info`.
-#' @export
-#' @author Caroline Ring
-
-as.pkdata.default <- function(x){
-  pkdata(as.data.frame(x))
-}
-
-#' Check whether an object is of class `pkdata`
-#'
-#' @param obj The object whose class is to be tested
-#' @return TRUE if the object conforms to expectations for class
-#'   `pkdata`, FALSE if it does not
-#' @export
-#' @author Caroline Ring
-is.pkdata <- function(obj){
-  expected_names <- c("data",
-                      "data_info")
-  expected_classes <- c("data" = "data.frame",
-                        "data_info" = "list")
-
-  check <- inherits(obj, "pkdata") &
-    all(expected_names %in% names(obj))
-
-  #if we're OK so far, check whether each named element inherits from the
-  #expected class
-  if(check %in% TRUE){
-    check <- check &
-      all(
-        sapply(expected_names,
-               function(x){
-                 inherits(obj[[x]],
-                          expected_classes[x])
-               })
+#' @param obj A `pk` object
+#' @return The same `pk` object, but with additional elements added to each item in `models`, containing the results of pre-fit calculations and checks for each model.
+do_prefit.pk <- function(obj){
+  #for each model to be fitted:
+  for (this_model in names(obj$models)){
+  #parameters
+  obj[[this_model]]$par_DF <- get_params(obj)
+  #checks
+  obj[[this_model]]$check_n_detect <- check_n_detect(obj)
+  obj[[this_model]]$check_n_abs <- check_n_abs(obj)
+  obj[[this_model]]$check_n_elim <- check_n_elim(obj)
+  #overall fit status and reason
+  obj[[this_model]]$status <- ifelse(
+    obj[[this_model]]$check_n_detect$status %in% "abort",
+    "abort",
+    ifelse(
+      obj[[this_model]]$check_n_abs$status %in% "abort",
+      "abort",
+      ifelse(
+        obj[[this_model]]$check_n_elim$status %in% "abort",
+        "abort",
+        "continue"
       )
+    )
+  )
+
+  obj[[this_model]]$status_reason <- ifelse(
+    obj[[this_model]]$check_n_detect$status %in% "abort",
+    "Fewer detected observations than parameters to optimize",
+    ifelse(
+      obj[[this_model]]$check_n_abs$status %in% "abort",
+      "Fewer than 3 detected observations during absorption phase; cannot optimize kgutabs",
+      ifelse(
+        obj[[this_model]]$check_n_elim$status %in% "abort",
+        "Fewer than 3 detected observations during elimination phase; cannot optimize kelim",
+        "Sufficient observations to optimize all requested parameters"
+      )
+    )
+  )
   }
 
-  return(check)
+  #get bounds & starting values for parameter optimization
+  obj[[this_model]]$par_DF <- get_bounds_starts(obj)
+
+  return(obj)
+
 }
 
 #'Non-compartmental analysis
 #'
-#'Do non-compartmental analysis of a `pkdata` object.
+#'Do non-compartmental analysis of a `pk` object.
 #'
 #'This function calls [PK::nca()] to calculate the following quantities:
 #'
@@ -199,12 +240,12 @@ is.pkdata <- function(obj){
 #'
 #' If `dose_norm == FALSE`, then all quantities are calculated separately for each dose.
 #'
-#' @param obj A `pkdata` object containing concentration-time data in the element `obj$data`.
+#' @param obj A `pk` object containing concentration-time data in the element `obj$data`.
 #' @param dose_norm Whether to dose-normalize data before performing NCA. Default TRUE.
 #' @return A `data.frame` with variables as listed in Details.
-nca.pkdata <- function(obj,
-                      newdata = NULL,
-                      dose_norm = TRUE){
+nca.pk <- function(obj,
+                   newdata = NULL,
+                   dose_norm = TRUE){
 
   if(is.null(newdata)){
     newdata <- obj$data
@@ -324,16 +365,16 @@ nca.pkdata <- function(obj,
 
 #' Plot concentration vs. time data.
 #'
-#' @param obj A [pkdata()] object with concentration-time data in element `obj$data`.
+#' @param obj A [pk()] object with concentration-time data in element `obj$data`.
 #' @param newdata Optional: A new set of concentration vs. time data to plot,
 #'   different from `obj$data`. Default `NULL` to plot the data in `obj$data`.
 #' @return A [ggplot2::ggplot()] plot object.
 #' @export
 #' @author Caroline Ring
-plot_data.pkdata <- function(obj,
-                            newdata = NULL,
-                            plot_dose_norm = TRUE,
-                            plot_log10_conc = FALSE){
+plot_data.pk <- function(obj,
+                         newdata = NULL,
+                         plot_dose_norm = TRUE,
+                         plot_log10_conc = FALSE){
   if(is.null(newdata)){
     newdata <- obj$data
   }
@@ -524,56 +565,4 @@ plot_data.pkdata <- function(obj,
 
 }
 
-initialize_pkdata <- function(data){
-  #add any missing columns
 
-  #default: required columns
-  dat_default <- data.frame(DTXSID = NA_character_,
-                            Compound = NA_character_,
-                            CAS = NA_character_,
-                            Species = NA_character_,
-                            Reference = NA_character_,
-                            Study = NA_character_,
-                            Subject = NA_integer_,
-                            N_Subjects = NA_integer_,
-                            Route = NA_character_,
-                            Dose = NA_real_,
-                            Time = NA_real_,
-                            Media = NA_character_,
-                            Value = NA_real_,
-                            Value_SD = NA_real_,
-                            LOQ = NA_real_)
-
-  missing_cols <- setdiff(names(dat_default),
-                          names(dat))
-
-  if(length(missing_cols)>0){
-    dat <- cbind(dat,
-                 dat_default[missing_cols])
-  }
-
-
-  #create detect column if not there already
-  if(!("Detect" %in% names(dat))){
-    dat$Detect <- !is.na(dat$Value)
-  }
-
-  #create Conc column if not there already
-  if(!("Conc" %in% names(dat))){
-    dat$Conc <- pmax(dat$Value, dat$LOQ, na.rm = TRUE)
-  }
-
-  #get SDs if not there already
-  if(!("Conc_SD" %in% names(dat)) &
-     "Value_SD" %in% names(dat)){
-    dat$Conc_SD <- dat$Value_SD
-
-  }
-
-  #create dose-normalized variables
-  dat$Conc_Dose <- dat$Conc/dat$Dose
-  dat$Value_Dose <- dat$Value/dat$Dose
-  dat$Value_SD_Dose <- dat$Value_SD/dat$Dose
-  dat$LOQ_Dose <- dat$LOQ/dat$Dose
-  dat$Conc_SD_Dose <- dat$Conc_SD/dat$Dose
-}
