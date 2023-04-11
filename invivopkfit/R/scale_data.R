@@ -15,17 +15,21 @@
 #'   can supply the name of your own function. If no function by that name is
 #'   found, then this function will try to interpret it as one of the
 #'   transformations in the `scales` package.
-#' @return An object of class `pk_scales`: A named list with element `variable =
-#'   "conc"` (denoting the variable to be scaled) and `options = list(normalize
-#'   = normalize, trans = trans)` (denoting the `normalize` and `trans`
-#'   arguments supplied to [scale_conc()]). See [pk_add.pk_scales()].
+#' @param ... Other arguments (not currently used)
+#' @return An object of class `pk_scales`: A named list with element `name =
+#'   "conc"` (denoting the variable to be scaled) and `value = list(normalize =
+#'   normalize, trans = trans, ...)` (denoting the arguments supplied to
+#'   [scale_conc()]). See [pk_add.pk_scales()].
 #' @export
 #' @author Caroline Ring
 scale_conc <- function(normalize = "identity",
-                       trans = "identity"){
-  scale_conc <- list(variable = "conc")
-  scale_conc$options <- list("normalize" = normalize,
-                             "trans" = trans)
+                       trans = "identity",
+                       ...){
+  scale_conc <- list(name = "conc")
+  #get arguments and values
+  argg <- c(as.list(environment()), list(...))
+  scale_conc$value <- argg
+  #set class
   class(scale_conc) <- c(class(scale_conc), "pkproto", "pk_scales")
 
 return(scale_conc)
@@ -42,14 +46,18 @@ return(scale_conc)
 #'   also specify any time units understood by `lubridate::duration()`, i.e.
 #'   "seconds", "hours", "days", "weeks", "months", "years", "milliseconds",
 #'   "microseconds", "nanoseconds", and/or "picoseconds".
-#' @return An object of class `pk_scales`: A named list with two elements
-#'   `variable = "time"` (denoting the variable to be scaled) and `options =
-#'   list(trans = trans)` (denoting the `normalize` and `trans` arguments
-#'   supplied to [scale_time()]). See [pk_add.pk_scales()].
-scale_time.pk <- function(obj,
-                          trans = "identity"){
-  scale_time <- list(variable = "time")
-  scale_time$options <- list("trans" = trans)
+#' @param ... Other arguments (not currently used)
+#' @return An object of class `pk_scales`: A named list with two elements `name
+#'   = "time"` (denoting the variable to be scaled) and `value = list(trans =
+#'   trans, ...)` (denoting the arguments supplied to [scale_time()]). See
+#'   [pk_add.pk_scales()].
+scale_time.pk <- function(trans = "identity",
+                          ...){
+  scale_time <- list(name = "time")
+  #get arguments and values
+  argg <- c(as.list(environment()), list(...))
+  scale_time$value <- argg
+  #set class
   class(scale_time) <- c(class(scale_time), "pkproto", "pk_scales")
 
   return(scale_time)

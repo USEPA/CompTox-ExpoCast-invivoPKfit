@@ -304,7 +304,8 @@ add_pk <- function(pk_obj, object, objectname) {
 #' @return The `pk` object, modified by adding the scale.
 #' @author Caroline Ring
 pk_add.pk_scales <- function(object, pk_obj, objectname){
-pk_obj$scales[[objectname]] <- object
+pk_obj$scales[[object$name]] <- object$value
+return(pk_obj)
 }
 
 #' Add a `pk_settings` object.
@@ -316,7 +317,8 @@ pk_obj$scales[[objectname]] <- object
 #' @return The `pk` object, modified by adding the scale.
 #' @author Caroline Ring
 pk_add.pk_settings <- function(object, pk_obj, objectname){
-
+pk_obj$settings[[object$name]] <- object$value
+return(pk_obj)
 }
 
 
