@@ -1,9 +1,29 @@
+#' Setup data method generic
+#'
+#' For `pk` objects, see [setup_data.pk()].
+#'
+#' @param x An object.
 setup_data <- function(x){
   UseMethod("setup_data", x)
 }
 
+setup_data.default <- function(x){
+  stop(paste("No 'setup_data' method exists for object of class",
+       class(x)))
+}
+
+#' Non-compartmental data method generic
+#'
+#' For `pk` objects, see [nca.pk()]
+#'
+#' @param x An object.
 nca <- function(x){
   UseMethod("nca", x)
+}
+
+nca.default <- function(x){
+  stop(paste("No 'nca' method exists for object of class",
+             class(x)))
 }
 
 plot <- function(x){
@@ -12,10 +32,6 @@ plot <- function(x){
 
 plot_data <- function(x){
   UseMethod("plot_data", x)
-}
-
-setup_fit <- function(x){
-  UseMethod("setup_fit", x)
 }
 
 fit <- function(x){
