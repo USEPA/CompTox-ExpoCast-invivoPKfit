@@ -21,12 +21,7 @@ For connection to CvTdb:
 
 Connect to EPA VPN.
 
-Set environment variables for the user name, password, host, and dbname that will be used to connect. In Windows 10, go to the search bar in the menu and type "environment variables." A menu item should pop up that says "Edit the system environment variables." Click it. A window should pop up. On tab "Advanced " (where you should be already), there is a button "Environment Variables" in the lower right. Click it. Under "User variables for [YOURNAME]", the top window, click the "New" button. Add a variable and value and click "OK". Repeat clicking the "New" button and adding variables. I added the following system environment variables:
-
-cvt_user = app_cvtdb
-cvt_password = Svg=ZDZkzxX7R=+J
-cvt_host = ccte-postgres-res.dmap-prod.aws.epa.gov
-cvt_dbname = res_cvtdb
+Set environment variables for the user name, password, host, and dbname that will be used to connect. In Windows 10, go to the search bar in the menu and type "environment variables." A menu item should pop up that says "Edit the system environment variables." Click it. A window should pop up. On tab "Advanced " (where you should be already), there is a button "Environment Variables" in the lower right. Click it. Under "User variables for [YOURNAME]", the top window, click the "New" button. Add a variable and value and click "OK". Repeat clicking the "New" button and adding variables. 
 
 Doing it this way allows me to not hardcode the password.
 
