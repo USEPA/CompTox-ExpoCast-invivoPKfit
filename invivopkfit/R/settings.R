@@ -17,14 +17,13 @@ settings_data.pk <- function(ratio_conc_to_dose = 1,
                              impute_loq = TRUE,
                              impute_sd = TRUE,
                              suppress.messages = FALSE){
-settings_data <- list(name = "data_settings")
 #get arguments and values
 argg <- c(as.list(environment()), list(...))
-settings_data$value <- argg
+this_settings_data <- argg
 #set class
-class(settings_data) <- c(class(settings_data), "pkproto", "pk_settings")
+class(this_settings_data) <- c(class(this_settings_data), "pkproto", "pk_data_settings")
 
-return(settings_data)
+return(this_settings_data)
 }
 
 #' `optimx` optimizer settings
@@ -40,12 +39,11 @@ settings_optimx.pk <- function(method = "bobyqa",
                                itnmax = 1e6,
                                hessian = FALSE,
                                control = list(kkt = FALSE)){
-  settings_optimx <- list(name = "optimx_settings")
   #get arguments and values
   argg <- c(as.list(environment()), list(...))
-  settings_optimx$value <- argg
+  this_settings_optimx <- argg
   #set class
-  class(settings_optimx) <- c(class(settings_optimx), "pkproto", "pk_settings")
+  class(this_settings_optimx) <- c(class(this_settings_optimx), "pkproto", "pk_optimx_settings")
 
-  return(settings_optimx)
+  return(this_settings_optimx)
 }
