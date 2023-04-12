@@ -17,7 +17,7 @@ settings_data.pk <- function(ratio_conc_to_dose = 1,
                              impute_loq = TRUE,
                              impute_sd = TRUE,
                              suppress.messages = FALSE){
-settings_data <- list(name = "data")
+settings_data <- list(name = "data_settings")
 #get arguments and values
 argg <- c(as.list(environment()), list(...))
 settings_data$value <- argg
@@ -29,12 +29,18 @@ return(settings_data)
 
 #' `optimx` optimizer settings
 #'
-#'
+#' @param method The name(s) of optimization methods to be used. See
+#'   [optimx::optimx()] for options. Default is `"bobyqa"`.
+#' @param itnmax The maximum number of iterations; as in [optimx::optimx()].
+#' @param hessian Whether to compute the Hessian at the final set of parameters; as in [optimx::optimx()].
+#' @param control A list of control parameters for the optimizer; see [optimx::optimx()] for options and details.
+#' @return An object of class `pk_settings`.
+#' @author Caroline Ring
 settings_optimx.pk <- function(method = "bobyqa",
                                itnmax = 1e6,
                                hessian = FALSE,
                                control = list(kkt = FALSE)){
-  settings_optimx <- list(name = "optimx")
+  settings_optimx <- list(name = "optimx_settings")
   #get arguments and values
   argg <- c(as.list(environment()), list(...))
   settings_optimx$value <- argg
