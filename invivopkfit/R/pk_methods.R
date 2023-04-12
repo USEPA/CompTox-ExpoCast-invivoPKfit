@@ -93,7 +93,7 @@
 #' - Model fitting: [fit.pk()]
 #' - Model comparison: [model_compare.pk()]
 #'
-#' The `pk` object
+#'The `pk` object
 #'
 #'# Mappings
 #'
@@ -119,7 +119,7 @@
 #'"`invivopkfit` aesthetic" variables are as follows:
 #'
 #'
-#' - `DTXSID`: A `character` variable containing the chemical's DSSTox ID. All rows of `data` should have the same value for `DTXSID`.
+#' - `Chemical`: A `character` variable containing the chemical identifier. All rows of `data` should have the same value for `Chemical`.
 #' - `Species`: A `character` variable containing the name of the species for which the data was measured.  All rows of `data` should have the same value for `Species`.
 #' - `Reference`: A `character` variable containing a unique identifier for the data reference (e.g., a single publication).
 #' - `Subject`: A `character` variable containing a unique identifier for the subject associated with each observation (an individual animal or group of animals).
@@ -137,22 +137,24 @@
 #' - `LOQ`: A `numeric` variable giving the limit of quantification applicable to this tissue concentration in units of mg/L, if available.
 #' - `Value.Units`: A `character` variable giving the units of `Value`, `Value_SD`, and `LOQ`.
 #'
-#'You may additionally include mappings to other variables, which will appear in
+#'You may additionally include mappings to other variable names of your choice, which will appear in
 #'the `pk` object in `pk$data` after the analysis is done. The following
-#'variable names are reserved for internal use:
+#'variable names are reserved for internal use (i.e., they are automatically assigned by [preprocess_data()]:
 #'
-#' -
+#' - `Conc`: This is assigned as the greater of `Value` and `LOQ`.
+#' - `Detect`: This is a logical variable, `TRUE` if `Conc > LOQ` and `FALSE` otherwise.
+#' - `iv`: This is a logical variable, `TRUE` if `Route %in% 'iv'` and `FALSE` otherwise.
 #'
 #'As with usual calls to [ggplot2::aes()], you should provide the variable names
-#'without quoting them. For example, use `ggplot2::aes(DTXSID = my_dtxsid)`. Do
-#'*not* use `ggplot2::aes("DTXSID" = "my_dtxsid")`.
+#'without quoting them. For example, use `ggplot2::aes(Chemical = my_chem)`. Do
+#'*not* use `ggplot2::aes("Chemical" = "my_chem")`.
 #'
 #'Also, as with usual calls to [ggplot2::aes()], you may also specify that any
 #'of the "`invivopkfit` aesthetic" variables should be mapped to a constant
 #'value, rather than to a variable in `data`. For example, imagine that you
 #'don't have a column in `data` that encodes the units of body weight, but you
 #'know that all body weights are provided in units of kilograms. You could
-#'specify `mapping = ggplot2::aes(DTXSID = my_dtxsid, Species = my_species,
+#'specify `mapping = ggplot2::aes(Chemical = my_dtxsid, Species = my_species,
 #'Weight = my_weight, Weight.Units = "kg")` to map `Weight.Units` to a fixed
 #'value of "kg".
 #'
@@ -160,16 +162,16 @@
 #'expressions that use variable names in `data`. For example, if the
 #'species-name variable in `data` sometimes says "rat", sometimes "Rat",
 #'sometimes "RAT", you might want to harmonize the capitalization. You can do
-#'that easily by specifying `mapping = ggplot2::aes(DTXSID = my_dtxsid, Species
+#'that easily by specifying `mapping = ggplot2::aes(Chemical = my_dtxsid, Species
 #'= tolower(my_species)`.
 #'
 #'# Data
 #'
-#'`data` should contain data for only one `DTXSID` and one `Species`. It may
+#'`data` should contain data for only one `Chemical` and one `Species`. It may
 #'contain data for multiple `Route` and/or `Media` values, which can be fitted
-#'simultaneously. It may contain data from multiple `Study` IDs (in the case
-#'where a joint or pooled analysis is desired), or from only one `Study` ID (in
-#'the case where a separate analysis is desired for one reference at a time).
+#'simultaneously. However, `Route` values should be either `"po"` (oral bolus
+#'administration) or `"iv"` (IV bolus administration), and `Media` values should be
+#'either `"blood"` or `"plasma"`.
 #'
 #'# Data settings
 #'
@@ -240,31 +242,23 @@
 
 pk <- function(data = NULL,
                mapping = ggplot2::aes(
-                 Compound_Dosed = studies.test_substance_name_original,
-                 DTXSID_Dosed = chemicals_dosed.dsstox_substance_id,
-                 CAS_Dosed = chemicals_dosed.dsstox_casrn,
-                 Compound_Analyzed = series.analyte_name_original,
-                 DTXSID_Analyzed = chemicals_analyzed.dsstox_substance_id,
-                 CAS_Analyzed = chemicals_analyzed.dsstox_casrn,
-                 Reference = documents_reference.id,
-                 Extraction = documents_extraction.id,
-                 Species = subjects.species,
-                 Weight =subjects.weight_kg,
-                 Weight.Units = "kg",
-                 Dose = studies.dose_level_normalized_corrected,
-                 Dose.Units = "mg/kg",
-                 Time = conc_time_values.time_hr,
-                 Time.Units = "hours",
-                 Media = series.conc_medium_normalized,
-                 Value = conc_time_values.conc,
-                 Value_SD = conc_time_values.conc_sd_normalized,
-                 Value.Units = "mg/L",
-                 Route = studies.administration_route_normalized,
-                 LOQ = series.loq_normalized,
-                 Subject = subjects.id,
-                 N_Subjects = series.n_subjects_in_series,
-                 Study_ID = studies.id,
-                 Series_ID = series.id
+                Chemical = Chemical,
+                Species = Species,
+                Reference = Reference,
+                Media = Media,
+                Route = Route,
+                Dose = Dose,
+                Dose.Units = "mg/kg",
+                Subject = Subject,
+                N_Subjects = N_Subjects,
+                Weight = Weight,
+                Weight.Units = "kg",
+                Time = Time,
+                Time.Units = "hours",
+                Value = Value,
+                Value_SD = value_SD,
+                LOQ = LOQ,
+                Value.Units = "mg/L"
                ),
                data_settings = list(
                  ratio_conc_to_dose = 1,
@@ -301,6 +295,7 @@ pk <- function(data = NULL,
                                    names(data_settings))
   data_settings[missing_data_settings] <- data_settings_default[missing_data_settings]
 
+
   #fill in any non-specified scales with their defaults
   scales_default <- list(conc = list(normalize = "identity",
                    trans = "identity"),
@@ -333,10 +328,12 @@ pk <- function(data = NULL,
 
 #Create the initial pk object
   obj <- list("data_original" = data,
-              "data_settings" = c(list(mapping = mapping),
+              "data_settings" = c(list(mapping = mapping,
+                                       error_group = error_group),
                                     data_settings),
               "scales" = scales,
-              "optimx_settings" = optimx_settings
+              "optimx_settings" = optimx_settings,
+              "status" = 1L
               )
 #nd assign it class pk
   class(obj) <- c(class(obj), "pk")
@@ -402,35 +399,1019 @@ add_pk <- function(pk_obj, object, objectname) {
 #' @author Caroline Ring
 pk_add.pk_scales <- function(object, pk_obj, objectname){
 pk_obj$scales[[object$name]] <- object$value
+if(pk_obj$status > 1L){
+  #with new scaling, everything will change starting from data pre-processing
+  pk_obj$status <- 1L
+}
+
 return(pk_obj)
 }
 
-#' Add a `pk_settings` object.
+#' Add a `pk_data_settings` object.
 #'
-#' @param object The `pk_settings` object to be added.
-#' @param pk_obj The `pk` object to which the `pk_settings` object will be added.
-#' @param objectname The name of the `pk_scales` object.
+#' @param object The `pk_data_settings` object to be added.
+#' @param pk_obj The `pk` object to which the `pk_data_settings` object will be added.
+#' @param objectname The name of the `pk_data_settings` object.
 #'
-#' @return The `pk` object, modified by adding the scale.
+#' @return The `pk` object, modified by adding the settings.
 #' @author Caroline Ring
-pk_add.pk_settings <- function(object, pk_obj, objectname){
-pk_obj$settings[[object$name]] <- object$value
+pk_add.pk_data_settings <- function(object, pk_obj, objectname){
+
+  #New data_settings will *replace* existing ones
+  if(!is.null(pk_obj$data_settings)){
+    message(paste0(objectname,
+                   ": data_settings already present; new data_settings will replace the existing one")
+    )
+  }
+
+pk_obj$data_settings <- object
+if(pk_obj$status > 1L){
+  #with new data pre-processing settings, everything will change starting from
+  #data pre-processing
+  pk_obj$status <- 1L
+}
 return(pk_obj)
 }
 
+#' Add a `pk_optimx_settings` object.
+#'
+#' @param object The `pk_optimx_settings` object to be added.
+#' @param pk_obj The `pk` object to which the `pk_optimx_settings` object will be added.
+#' @param objectname The name of the `pk_optimx_settings` object.
+#'
+#' @return The `pk` object, modified by adding the settings.
+#' @author Caroline Ring
+pk_add.pk_optimx_settings <- function(object, pk_obj, objectname){
 
-pk_add.pk_stat <- function(object, pk_obj, objectname){
+  #New optimx_settings will *replace* existing ones
+  if(!is.null(pk_obj$optimx_settings)){
+    message(paste0(objectname,
+                   ": optimx_settings already present; new optimx_settings will replace the existing one")
+    )
+  }
+
+  pk_obj$optimx_settings <- object
+  if(pk_obj$status > 3L){
+    #with new optimizer settings, data pre=processing and model pre-fitting
+    #should not change, but model fitting will change
+    message(paste0(objectname,
+                   ": New optimx_settings resets status to level 2 (data preprocessing complete); model pre-fit (level 3) and model fit (level 4) will need to be re-done")
+    )
+    pk_obj$status <- 3L
+  }
+  return(pk_obj)
+}
+
+
+#' Add a `pk_stat_model` object.
+#'
+#' @param object The `pk_stat_model` object to be added.
+#' @param pk_obj The `pk` object to which the `pk_stat_model` object will be added.
+#' @param objectname The name of the `pk_stat_model` object.
+#'
+#' @return The `pk` object, modified by adding the `stat_model`.
+#' @author Caroline Ring
+pk_add.pk_stat_model <- function(object, pk_obj, objectname){
+  #New stat_models will *replace* existing ones by the same name
+  for(this_model in names(object)){
+    if(!is.null(pk_obj$stat_model[[this_model]])){
+      message(paste0(objectname,
+                     ": stat_model for",
+                     this_model,
+                     "already present; new stat_model will replace the existing one")
+      )
+    }
+    pk_obj$stat_model[[this_model]] <- object$this_model
+  }
+  if(pk_obj$status > 2L){
+    message(paste0(objectname,
+                   ": New stat_model resets status to level 2 (data preprocessing complete); model pre-fit (level 3) and model fit (level 4) will need to be re-done")
+    )
+    pk_obj$status <- 2L #data pre-processing won't change with addition of new model, but model pre-fit and fit will change
+  }
+
+  return(pk_obj)
+}
+
+#' Add a `pk_stat_error_model` object.
+#'
+#' @param object The `pk_stat_error_model` object to be added.
+#' @param pk_obj The `pk` object to which the `pk_stat_error_model` object will be added.
+#' @param objectname The name of the `pk_stat_error_model` object.
+#'
+#' @return The `pk` object, modified by adding the `stat_error_model`.
+#' @author Caroline Ring
+pk_add.pk_stat_error_model <- function(object, pk_obj, objectname){
+
+  if(!is.null(pk_obj$stat_error_model)){
+    message(paste0(objectname,
+                   ": stat_error_model already present; new stat_error_model will replace the existing one")
+    )
+  }
+
+    pk_obj$stat_error_model <- object
+
+    #data pre-processing won't change with addition of a new error model, but
+    #model pre-fit and fit will change
+  if(pk_obj$status > 2L){
+    message(paste0(objectname,
+                    ": New stat_error_model resets status to level 2 (data preprocessing complete); model pre-fit (level 3) and model fit (level 4) will need to be re-done")
+    )
+    pk_obj$status <- 2L
+  }
+
+  return(pk_obj)
+}
+
+#'
+#' Prints the default output of a PK object.
+#'
+#' A `pk` object is just a list of data and fitting options. In order to
+#' actually perform the optimization and fit the model, you need to call one of
+#' the methods to do that -- including [print.pk()], [summarize.pk()],
+#' [fit.pk()]. If you just type in a set of instructions like `pk(data =
+#' my_data) + stat_model(model = c("flat", "1comp", "2comp")` and hit
+#' Enter/Return, then by default R will call the [print.pk()] method. (This is
+#' true no matter what you type at the R command line and hit enter -- R will
+#' call the appropriate `print` method for an object of that class, or
+#' [print.default()] if it can't find a class-specific print method.) Therefore,
+#' [print_pk()] does the following:
+#'
+#' - Pre-processes the data
+#' - Does initial data checking and summary (e.g., number of observations by route, media, detect/nondetect)
+#' - Determines parameters to be optimized for each specified model, based on the data
+#' - Checks data to see whether the selected parameters may be identifiable (e.g., are there more observations than there are parameters to be estimated?)
+#' - Determines bounds and starting values for each parameter to be optimized
+#' - Performs optimization to estimate parameter values and uncertainties
+#' - Adds the optimization results to the `pk` object
+#' - Prints the `pk` object
+#' - Returns the `pk` object invisibly
+#'
+#' @param obj A `pk` object
+#' @return Invisibly: The `pk` object with added elements containing the optimization results
+#' @author Caroline Ring
+print.pk <- function(obj){
+  #Data: Preprocess and summarize
+  obj <- build_data(obj)
+
 
 }
 
-pk_add.pk_stat_nca <- function(object, pk_obj, objectname){
+#' Pre-process data
+#'
+#'
+#'
+#' @param obj A `pk` object
+#' @return The same `pk` object, with added elements `data` (containing the
+#'   cleaned, gap-filled data) and `data_info` (containing summary information
+#'   about the data, e.g. number of observations by route, media,
+#'   detect/nondetect; empirical tmax, time of peak concentration for oral data;
+#'   number of observations before and after empirical tmax)
+preprocess_data.pk <- function(obj){
+
+  if(!is.null(obj$data_original)){
+    #coerce to data.frame (in case it is a tibble or data.table or whatever)
+    data_original <- as.data.frame(obj$data_original)
+
+    #rename variables
+    data <- as.data.frame(sapply(obj$data_settings$mapping,
+                                 function(x) rlang::eval_tidy(x, data),
+                                 simplify = FALSE,
+                                 USE.NAMES = TRUE)
+    )
+    #ensure that all required variables exist
+    #define expected "default" empty data frame
+    data_default <- data.frame(Chemical = character(),
+                               Species = character(),
+                               Reference = character(),
+                               Study = character(),
+                               Subject = character(),
+                               N_Subjects = numeric(),
+                               Route = character(),
+                               Dose = numeric(),
+                               Time = numeric(),
+                               Media = character(),
+                               Value = numeric(),
+                               Value_SD = numeric(),
+                               LOQ = numeric()
+    )
+
+    #add any missing columns
+    missing_cols <- setdiff(names(data_default),
+                            names(data))
+    for(this_col in missing_cols){
+      #fill the missing column with NAs of the specified type
+      #the following is a trick to make NAs of the same type as the column.
+      data[[this_col]] <- rep(c(data_default[[this_col]][0], NA),
+                              length(data[[this_col]]))
+    }
+
+    if(!obj$data_settings$suppress.messages){
+      ### display messages describing loaded data
+      message(paste(nrow(data), "concentration vs. time observations loaded.\n"))
+      message(paste(length(unique(data$DTXSID_Analyzed)), "unique analytes,",
+                    length(unique(data$Species)), "unique species, and",
+                    length(unique(data$Reference)), "unique references."))
+    }
+
+
+    ### Coerce all 'Value' values to be numeric and say so
+    if (!is.numeric(data$Value))
+    {
+      value_num <- as.numeric(data$Value)
+      old_na <- sum(is.na(data$Value) | !nzchar(data$Value))
+      new_na <- sum(is.na(value_num))
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Column \"Value\" converted from ",
+                       class(data$Value),
+                       " to numeric. ",
+                       "Pre-conversion NAs and blanks: ",
+                       old_na,
+                       ". Post-conversion NAs: ",
+                       new_na, "."))
+      }
+      data$Value <- value_num
+      rm(value_num, old_na, new_na)
+    }
+
+    ### coerce 'Dose' values to numeric and say so
+    if (!is.numeric(data$Dose))
+    {
+      dose_num <- as.numeric(data$Dose)
+      old_na <- sum(is.na(data$Dose) | !nzchar(data$Dose))
+      new_na <- sum(is.na(dose_num))
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Column \"Dose\" converted from ",
+                       class(data$Dose),
+                       " to numeric. ",
+                       "Pre-conversion NAs and blanks: ",
+                       old_na,
+                       ". Post-conversion NAs: ",
+                       new_na, "."))
+      }
+      data$Dose <- dose_num
+      rm(dose_num, old_na, new_na)
+    }
+
+    ### coerce 'Time' values to numeric and say so
+    if (!is.numeric(data$Time))
+    {
+      time_num <- as.numeric(data$Time)
+      old_na <- sum(is.na(data$Time) | !nzchar(data$Time))
+      new_na <- sum(is.na(time_num))
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Column \"Time\" converted from ",
+                       class(data$TIme),
+                       " to numeric. ",
+                       "Pre-conversion NAs and blanks: ",
+                       old_na,
+                       ". Post-conversion NAs: ",
+                       new_na, "."))
+      }
+      data$Time <- time_num
+      rm(time_num, old_na, new_na)
+    }
+
+
+    ### Coerce all 'Reference' values to be character, and say so
+    if(!is.character(data$Reference)){
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Column \"Reference\" converted from ",
+                       class(data$Reference),
+                       " to character."))
+      }
+      data$Reference <- as.character(data$Reference)
+
+    }
+
+    ### Coerce to lowercase
+    data$Species <- tolower(data$Species)
+    data$Route <- tolower(data$Route)
+    data$Media <- tolower(data$Media)
+
+    # Normalizations
+
+    ## Normalize 'Value', `LOQ`, and `SD` by ratio_conc_to_dose.
+
+    if(!obj$data_settings$suppress.messages){
+      message(paste0("Variables Value, LOQ, and Value_SD multiplied by ratio_conc_to_dose = ",
+                    obj$data_settings$ratio_conc_to_dose))
+    }
+    ## This makes the mass units of concentration and Dose the same --e.g. mg/L and
+    ## mg/kg/day
+    data$Value <- data$Value * obj$data_settings$ratio_conc_to_dose
+    data$LOQ <- data$LOQ * obj$data_settings$ratio_conc_to_dose
+    data$Value_SD <- data$Value_SD * obj$data_settings$ratio_conc_to_dose
+
+    # Impute LOQ
+    data$LOQ_orig <- data$LOQ
+    if(obj$data_settings$impute_loq %in% TRUE){
+      if(any(is.na(data$LOQ))){
+        if(!obj$data_settings$suppress.messages){
+          message(paste0("Estimating missing LOQs as ",
+                         obj$data_settings$calc_loq_factor,
+                         "* minimum detected Value for each unique combination of ",
+                         "Reference, Chemical, Media, and Species"))
+        }
+        data <- estimate_loq(dat = data,
+                             reference_col = "Reference",
+                             chem_col = "Chemical",
+                             media_col = "Media",
+                             species_col = "Species",
+                             value_col = "Value",
+                             loq_col = "LOQ",
+                             calc_loq_factor = obj$data_settings$calc_loq_factor)
+      }
+
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Converting 'Value' values of less than LOQ to NA.\n",
+                       sum((data$Value <  data$LOQ) %in% TRUE),
+                       " values will be converted."))
+      }
+      data[(data$Value < data$LOQ) %in% TRUE, "Value"] <- NA_real_
+
+    } #end if impute_loq %in% TRUE
+
+    #Remove any remaining cases where both Value and LOQ are NA
+    if(any(is.na(data$Value) & is.na(data$LOQ))){
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Removing observations where both Value and LOQ were NA.\n",
+                       sum(is.na(data$Value) & is.na(data$LOQ)),
+                       " observations will be removed."))
+      }
+      data <- subset(data,
+                     !(is.na(data$Value) & is.na(data$LOQ)))
+
+      if(!obj$data_settings$suppress.messages){
+        message(paste(dim(data)[1], "observations of",
+                      length(unique(data$Chemical)), "unique chemicals,",
+                      length(unique(data$Species)), "unique species, and",
+                      length(unique(data$Reference)), "unique references remain."))
+      }
+    }
+
+    # Impute missing SDs
+
+    data$Value_SD_orig <- data$Value_SD
+    if(obj$data_settings$impute_sd %in% TRUE){
+      if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value_SD))){
+        if(!obj$data_settings$suppress.messages){
+          n_sd_est <- sum(
+            (data$N_Subjects >1) %in% TRUE &
+              is.na(data$Value_SD)
+          )
+          message(paste0("Estimating missing concentration SDs for multi-subject data points as ",
+                         "minimum non-missing SD for each unique combination of ",
+                         "Reference, Chemical, Media, and Species.",
+                         "If all SDs are missing for such a unique combination, ",
+                         "SD will be imputed equal to mean. ",
+                         n_sd_est, " missing SDs will be estimated."))
+        }
+        data <- estimate_conc_sd(dat = data,
+                                 reference_col = "Reference",
+                                 chem_col = "Chemical",
+                                 media_col = "Media",
+                                 species_col = "Species",
+                                 value_col = "Value",
+                                 sd_col = "Value_SD",
+                                 n_subj_col = "N_Subjects")
+      }
+    }#end if impute_sd %in% TRUE
+
+    #Remove any remaining multi-subject observations where SD is NA
+    #(with imputing SD = Mean as a fallback, this will only be cases where Value was NA)
+    if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value_SD))){
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Removing observations with N_Subjects > 1 where reported SD is NA.\n",
+                       sum((data$N_Subjects >1) %in% TRUE &
+                             is.na(data$Value_SD)),
+                       " observations will be removed."))
+      }
+      data <- subset(data,
+                     !((N_Subjects >1) %in% TRUE & is.na(Value_SD))
+      )
+
+      if(!obj$data_settings$suppress.messages){
+        message(paste(dim(data)[1], "observations of",
+                      length(unique(data$Chemical)), "unique chemicals,",
+                      length(unique(data$Species)), "unique species, and",
+                      length(unique(data$Reference)), "unique references remain."))
+      }
+    }
+
+    #Remove any remaining multi-subject observations where Value is NA
+    if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value))){
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Removing observations with N_Subjects > 1 where reported Value is NA.\n",
+                       sum((data$N_Subjects >1) %in% TRUE &
+                             is.na(data$Value)),
+                       " observations will be removed."))
+      }
+      data <- subset(data,
+                     !((N_Subjects >1) %in% TRUE & is.na(Value))
+      )
+
+      if(!obj$data_settings$suppress.messages){
+        message(paste(dim(data)[1], "observations of",
+                      length(unique(data$Chemical)), "unique chemicals,",
+                      length(unique(data$Species)), "unique species, and",
+                      length(unique(data$Reference)), "unique references remain."))
+      }
+    }
+
+
+    # For any cases where N_Subjects is NA, impute N_Subjects = 1
+    if(any(is.na(data$N_Subjects))){
+      data$N_Subjects_orig <- data$N_Subjects
+      if(!obj$data_settings$suppress.messages){
+        message(
+          paste0(
+            "N_Subjects is NA for ",
+            sum(is.na(data$N_Subjects)),
+            " observations. It will be assumed = 1."
+          )
+        )
+      }
+
+      data[is.na(data$N_Subjects), "N_Subjects"] <- 1
+    }
+
+    #for anything with N_Subjects == 1, set Value_SD to 0
+    data[data$N_Subjects == 1, "Value_SD"] <- 0
+
+    #Remove any NA time values
+    if(any(is.na(data$Time))){
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Removing observations with NA time values.\n",
+                       sum(is.na(data$Time)),
+                       " observations will be removed."))
+      }
+      data <- subset(data, !is.na(Time))
+
+      if(!obj$data_settings$suppress.messages){
+        message(paste(dim(data)[1], "observations of",
+                      length(unique(data$Chemical)), "unique chemicals,",
+                      length(unique(data$Species)), "unique species, and",
+                      length(unique(data$Reference)), "unique references remain."))
+      }
+    }
+
+
+
+  } #end if is.null(data_original)
+
+
+
+
+  #get the data info
+  #unique Chemical, Species, References, Studies, Routes
+  dat_info <- as.list(unique(data[c("Chemical",
+                                    "Species")]))
+
+  dat_info$References_Analyzed <- sort(unique(data$Reference))
+  #get a list of studies analyzed
+  dat_info$Studies_Analyzed <- sort(unique(data$Study))
+  #get a list of routes analyzed
+  dat_info$Routes_Analyzed <- sort(unique(data$Route))
+  if(!(all(dat_info$Routes_Analyzed %in% obj$data_settings$routes_keep))){
+    warning(paste("Data includes the following routes:",
+                  dat_info$Routes_Analyzed,
+                  "Only routes 'po' and 'iv' are currently understood by invivopkfit.",
+                  "Please filter data to oral and intravenous route only, and harmonize route identifiers to 'po' and 'iv'.",
+                  sep = "\n"))
+  }
+
+  #get a list of media analyzed
+  dat_info$Media_Analyzed <- sort(unique(data$Media))
+  if(!(all(dat_info$Media_Analyzed %in% obj$data_settings$media_keep))){
+    warning(paste("Data includes the following media:",
+                  dat_info$Media_Analyzed,
+                  "Only media 'blood' and 'plasma' are currently understood by invivopkfit.",
+                  "Please filter data to blood and plasma only, and harmonize media identifiers to 'blood' and 'plasma'.",
+                  sep = "\n"))
+  }
+
+  #get the number of detects and non-detects by route and medium
+  dat_info$n_dat <- aggregate(x = data$Detect,
+                              by = data[c("Route", "Media")],
+                              FUN = function(Detect){
+                                c("Detect" = sum(Detect %in% TRUE),
+                                  "NonDetect" = sum(Detect %in% FALSE))
+                              })
+  names(dat_info$n_dat) <- gsub(x = names(dat_info$n_dat),
+                                pattern = "Detect.",
+                                replacement = "",
+                                fixed = TRUE)
+
+  #get empirical tmax
+  if(any(data$Route %in% "po")){
+    oral_data <- subset(data, Route %in% "po")
+
+    oral_peak <- get_peak(x = oral_data$Time,
+                          y = log(oral_data[["Conc_Dose"]]))
+
+    dat_info$tmax_oral <- oral_peak$x
+
+
+  }else{
+    dat_info$tmax_oral <- NA_real_
+  }
+
+  #absorption and elimination phase points
+  #get the number of detects & nondetects before empirical tmax
+  dat_info$n_phase <- aggregate(x = data$Detect,
+                                by = list("Phase" = factor(data$Time <= dat_info$tmax_oral,
+                                                           levels = c(TRUE, FALSE),
+                                                           labels = c("absorption", "elimination"))),
+                                FUN = function(Detect){
+                                  c("Detect" = sum(Detect %in% TRUE),
+                                    "NonDetect" = sum(Detect %in% FALSE))
+                                }
+  )
+  names(dat_info$n_phase) <- gsub(x = names(dat_info$n_phase),
+                                  pattern = "Detect.",
+                                  replacement = "",
+                                  fixed = TRUE)
+
+  #get time of last detected observation
+  dat_info$last_detect_time <- max(data[data$Detect %in% TRUE, "Time"])
+
+  #get time of last observation
+  dat_info$last_time <- max(data$Time)
+
+  # add data & data info to object
+  obj$data <- data
+  obj$data_info <- dat_info
+  obj$status <- 2 #preprocessing complete
+
+  return(obj)
 
 }
 
-pk_add.pk_gof_rmse <- function(object, pk_obj, objectname){
+#' Do pre-fit calculations and checks
+#'
+#' @param obj A `pk` object
+#' @return The same `pk` object, but with additional elements added to each item in `models`, containing the results of pre-fit calculations and checks for each model.
+prefit.pk <- function(obj){
+  #if preprocessing not already done, do it
+  if(obj$status < 1){
+    obj <- preprocess_data(obj)
+  }
+
+  #for each model to be fitted:
+  for (this_model in names(obj$models)){
+    #parameters
+    obj$models[[this_model]]$par_DF <- get_params(obj)
+    #checks
+    obj$models[[this_model]]$check_n_detect <- check_n_detect(obj)
+    obj$models[[this_model]]$check_n_abs <- check_n_abs(obj)
+    obj$models[[this_model]]$check_n_elim <- check_n_elim(obj)
+    #overall fit status and reason
+    obj$models[[this_model]]$status <- ifelse(
+      obj$models[[this_model]]$check_n_detect$status %in% "abort",
+      "abort",
+      ifelse(
+        obj$models[[this_model]]$check_n_abs$status %in% "abort",
+        "abort",
+        ifelse(
+          obj$models[[this_model]]$check_n_elim$status %in% "abort",
+          "abort",
+          "continue"
+        )
+      )
+    )
+
+    obj$models[[this_model]]$status_reason <- ifelse(
+      obj$models[[this_model]]$check_n_detect$status %in% "abort",
+      "Fewer detected observations than parameters to optimize",
+      ifelse(
+        obj$models[[this_model]]$check_n_abs$status %in% "abort",
+        "Fewer than 3 detected observations during absorption phase; cannot optimize kgutabs",
+        ifelse(
+          obj$models[[this_model]]$check_n_elim$status %in% "abort",
+          "Fewer than 3 detected observations during elimination phase; cannot optimize kelim",
+          "Sufficient observations to optimize all requested parameters"
+        )
+      )
+    )
+  }
+
+  #get bounds & starting values for parameter optimization
+  obj$models[[this_model]]$par_DF <- get_bounds_starts(obj)
+
+  obj$status <- 3 #prefit complete
+
+  return(obj)
 
 }
 
-pk_add.gof_r2 <- function(object, pk_obj, objectname){
+#' Fit PK model(s) for a `pk` object
+#'
+#'
+fit.pk <- function(obj){
+
+
+  obj$status <- 4 #fitting complete
+  return(obj)
+}
+
+#' Check status of a `pk` object
+#'
+#' Check status of a `pk` object
+#'
+#' `pk` objects have integer statuses reflecting what stage of the analysis
+#' process they are at.
+#'
+#' 1. Object has been initialized
+#' 2. Data pre-processing complete
+#' 3. Model pre-fitting complete 4
+#' . Model fitting complete
+#'
+#' If a `pk` object of status 2 or greater has its instructions modified with
+#' `+`, then its status will be reset to 1, indicating that any analysis results
+#' contained in the object are now outdated and all steps of the analysis need
+#' to be re-run.
+#'
+#' This function allows the user to check the status of a `pk` object.
+#'
+#' A message will be printed listing the analysis steps that have been completed
+#' for this `pk` object, and the integer status will be returned.
+#'
+#' @param obj A `pk` object
+#' @return The status of the `pk` object as an integer.
+get_status.pk <- function(obj){
+  steps <- c("1. Object has been initialized",
+             "2. Data pre-processing complete",
+             "3. Model pre-fitting complete",
+             "4. Model fitting complete")
+  message(paste(steps[seq(1, obj$status)],
+                collapse = "/n"))
+  return(obj$status)
+}
+
+#'Non-compartmental analysis
+#'
+#'Do non-compartmental analysis of a `pk` object.
+#'
+#'This function calls [PK::nca()] to calculate the following quantities:
+#'
+#'For intravenous (IV) bolus administration:
+#'
+#' * `nca.iv.AUC_tlast`: AUC (area under concentration-time curve) evaluated at the last reported time point
+#' * `nca.iv.AUC_inf`: AUC evaluated at time t = \eqn{\infty}
+#' * `nca.iv.AUMC_inf`: AUMC (area under the first moment curve, i.e. under the AUC vs. time curve) evaluated at time \eqn{t = \infty}
+#' * `nca.iv.MRT`: MRT (mean residence time)
+#' * `nca.iv.halflife`: Half-life
+#' * `nca.iv.Clearance`: Clearance
+#' * Vss: apparent volume of distribution at steady-state.
+#'
+#'For oral bolus administration:
+#'
+#' * `nca.oral.AUC_tlast`: AUC (area under concentration-time curve) evaluated at the last reported time point
+#' * `nca.oral.AUC_inf`: AUC evaluated at time \eqn{t = \infty}
+#' * `nca.oral.AUMC_inf`: AUMC (area under the first moment curve, i.e. under the AUC vs. time curve) evaluated at time \eqn{t = \infty}
+#' * `nca.oral.MTT`: MTT (mean transit time), the sum of MRT and mean absorption time (MAT)
+#'
+#'If `obj$data` only contains data for one of those routes, the NCA quantities
+#'for the "missing" route will be returned, but filled with `NA_real_.`
+#'
+#'Additionally, for oral bolus administration, the following quantities are
+#'estimated using [get_peak()]:
+#'
+#' * `nca.oral.tmax`: the time at which peak concentration occurs
+#' * `nca.oral.Cmax`: the peak concentration
+#'
+#'If `dose_norm == TRUE`, then all data are dose-normalized before computing NCA
+#'quantities. This means that all dose-dependent NCA quantities reflect an
+#'estimate for a 1 mg/kg dose.
+#'
+#' If `dose_norm == FALSE`, then all quantities are calculated separately for each dose.
+#'
+#' @param obj A `pk` object containing concentration-time data in the element `obj$data`.
+#' @param dose_norm Whether to dose-normalize data before performing NCA. Default TRUE.
+#' @return A `data.frame` with variables as listed in Details.
+nca.pk <- function(obj,
+                   newdata = NULL,
+                   dose_norm = TRUE){
+
+  if(is.null(newdata)){
+    newdata <- obj$data
+  }
+
+  nca_names <- c("AUC_tlast",
+                 "AUC_inf",
+                 "AUMC_inf",
+                 "MRT",
+                 "halflife",
+                 "Clearance",
+                 "Vss")
+
+  if("iv" %in% newdata$Route){
+    iv_data <- subset(newdata,
+                      Route %in% "iv")
+    if(dose_norm %in% TRUE){
+      nca_iv <- do_nca(obs = iv_data,
+                       dose_norm = dose_norm)
+    }else{
+      #do NCA separately for each dose
+      dose_list <- split(iv_data,
+                         iv_data$Dose)
+      nca_iv <- do.call(rbind,
+                        sapply(dose_list,
+                               function(this_data){
+                                 this_nca <- do_nca(obs = this_data,
+                                                    dose_norm = FALSE)
+                                 this_nca <- cbind(Dose = this_data$Dose)
+                                 this_nca
+                               })
+      )
+    }
+    names(nca_iv) <- paste0("nca.iv.",
+                            names(nca_iv))
+  }else{ #if no IV data, fill with NAs
+    nca_iv <- data.frame(as.list(rep(NA_real_,
+                                     length(nca_names))))
+    names(nca_iv) <- paste0("nca.iv.",
+                            nca_names)
+  }
+
+  if("po" %in% newdata$Route){
+    oral_data <- subset(newdata,
+                        Route %in% "po")
+    if(dose_norm %in% TRUE){
+      nca_oral <- get_nca(obs = oral_data,
+                          dose_norm = dose_norm)
+      nca_oral <- cbind("nca.oral.Dose" = 1,
+                        nca_oral)
+      max_df <- as.data.frame(
+        get_peak(x = oral_data$Time,
+                 y = oral_data$Conc/oral_data$Dose)
+      )
+      names(max_df) <- c("tmax",
+                         "Cmax")
+      max_df <- cbind("Dose" = 1,
+                      max_df)
+    }else{
+      #do NCA separately for each dose
+      dose_list <- split(oral_data,
+                         oral_data$Dose)
+      nca_oral <- do.call(rbind,
+                          sapply(dose_list,
+                                 function(this_data){
+                                   this_nca <- do_nca(obs = this_data,
+                                                      dose_norm = FALSE)
+                                   this_nca <- cbind(Dose = this_data$Dose)
+                                   this_nca
+                                 })
+      )
+      max_df <- do.call(rbind,
+                        sapply(dose_list,
+                               function(this_data){
+                                 max_list <- as.data.frame(
+                                   get_peak(x = this_data$Time,
+                                            y = this_data$Conc/this_data$Dose)
+                                 )
+                                 names(max_list) <- c("tmax",
+                                                      "Cmax")
+                                 max_list <- cbind("Dose" = this_data$Dose,
+                                                   max_list)
+                                 max_list
+                               }
+                        )
+      )
+    }
+    names(nca_oral) <- paste0("nca.oral.",
+                              names(nca_oral))
+
+    nca_oral <- merge(nca_oral,
+                      max_list,
+                      by = "Dose")
+  }else{
+    nca_oral <- data.frame(as.list(rep(NA_real_,
+                                       length(nca_names) + 2)))
+    names(nca_oral) <- paste0("nca.oral.",
+                              c("Dose",
+                                nca_names,
+                                c("tmax",
+                                  "Cmax")
+                              )
+    )
+  }
+
+  names(nca_oral)[match(c("nca.oral.Clearance",
+                          "nca.oral.MRT"))] <- c("nca.oral.Clearance_Fgutabs",
+                                                 "nca.oral.MTT")
+  #remove oral halflife and Vss estimates because they are not valid
+  nca_oral[c("nca.oral.halflife",
+             "nca.oral.Vss")] <- NULL
+
+  nca_out <- cbind(nca_iv,
+                   nca_oral)
+  return(nca_out)
+}
+
+#' Plot concentration vs. time data.
+#'
+#' @param obj A [pk()] object with concentration-time data in element `obj$data`.
+#' @param newdata Optional: A new set of concentration vs. time data to plot,
+#'   different from `obj$data`. Default `NULL` to plot the data in `obj$data`.
+#' @return A [ggplot2::ggplot()] plot object.
+#' @export
+#' @author Caroline Ring
+plot_data.pk <- function(obj,
+                         newdata = NULL,
+                         plot_dose_norm = TRUE,
+                         plot_log10_conc = FALSE){
+  if(is.null(newdata)){
+    newdata <- obj$data
+  }
+
+  #set the Detect column to a factor with levels "Detect" and "Non-Detect"
+  if(!("Detect" %in% names(newdata))){
+    newdata$Detect <- TRUE
+  }
+
+  newdata$Detect <- factor(newdata$Detect,
+                           levels = c(TRUE, FALSE),
+                           labels = c("Detect", "Non-Detect"))
+
+  if(!("Conc_SD" %in% names(newdata))){
+    newdata$Conc_SD <- 0
+  }
+
+  #create generic named columsn for plotting, containing either dose-normalized or
+  #non-dose-normalized concentrations, depending on `plot_dose_norm`
+  if(plot_dose_norm %in% TRUE){
+    newdata$conc_plot <- newdata$Conc_Dose
+    newdata$conc_sd_plot <- newdata$Conc_SD_Dose
+  }else{
+    newdata$conc_plot <- newdata$Conc
+    newdata$conc_sd_plot <- newdata$Conc_SD
+  }
+
+
+  #generate plot title
+  plot_title <- paste0(obj$data_info$Chemical,
+                       " (", unique(obj$data$Compound), ")\n",
+                       "Species = ", obj$data_info$Species, ", ",
+                       "Doses = ", paste(signif(
+                         sort(unique(obj$data$Dose)),
+                         3),
+                         collapse = ", "), " mg/kg\n")
+  #now plot
+  p <- ggplot(newdata,
+              aes(x = Time,
+                  y = conc_plot)) +
+    geom_blank()
+
+  if(plot_log10_conc %in% FALSE){ #plot error bars
+    if(plot_dose_norm %in% TRUE){  #map colors to dose
+      p <- p +
+        geom_errorbar(aes(ymin = conc_plot - conc_sd_plot,
+                          ymax = conc_plot + conc_sd_plot,
+                          color = Dose))
+    }else{   #do not map color to dose
+      p <- p +
+        geom_errorbar(aes(ymin = conc_plot - conc_sd_plot,
+                          ymax = conc_plot + conc_sd_plot))
+    }
+  } #end if(plot_log10_conc %in% FALSE)
+
+  if(plot_dose_norm %in% TRUE){ #mapping color to dose
+    #concentration-dose observation points:
+    #shape mapped to Reference, color to Dose, fill yes/no to Detect
+    #first plot detected points with white fill
+    p <- p +
+      #plot detected points with white fill
+      geom_point(data = newdata[Detect %in% "Detect"],
+                 aes(shape = Reference,
+                     color = Dose),
+                 fill = "white",
+                 size = 4,
+                 stroke = 1.5) +
+      #plot detected points with fill mapped to dose, but alpha mapped to Detect
+      geom_point(data = newdata[Detect %in% "Detect"],
+                 aes(shape = Reference,
+                     color = Dose,
+                     fill = Dose,
+                     alpha = Detect),
+                 size = 4,
+                 stroke = 1.5) +
+      #then plot non-detect points with white fill,
+      #and position jittered
+      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
+                  aes(shape = Reference,
+                      color = Dose),
+                  fill = "white",
+                  size = 4,
+                  stroke = 1.5,
+                  width = jitter_nondetect,
+                  height = 0) +
+      #then plot non-detect points with fill, but alpha mapped to Detect
+      #and position jittered
+      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
+                  aes(shape = Reference,
+                      color = Dose,
+                      fill = Dose,
+                      alpha = Detect),
+                  size = 4,
+                  stroke = 1.5,
+                  width = jitter_nondetect, height = 0)
+
+    p <- p +
+      facet_grid(rows = vars(Route),
+                 cols = vars(Media),
+                 scales = "free_y")
+
+    p <- p +
+      scale_color_viridis_c(name = "Dose, mg/kg") +
+      scale_fill_viridis_c(na.value = NA, name = "Dose, mg/kg")
+
+  }else{ #if plot_dose_norm %in% FALSE, don't map color to dose
+    #concentration-dose observation points:
+    #shape mapped to Reference, fill yes/no to Detect
+    #first plot detected points with white fill
+    p <- p +
+      #plot detected points with white fill
+      geom_point(data = newdata[Detect %in% "Detect"],
+                 aes(shape = Reference),
+                 color = "gray50",
+                 fill = "white",
+                 size = 4,
+                 stroke = 1.5) +
+      #plot detected points with alpha mapped to Detect
+      geom_point(data = newdata[Detect %in% "Detect"],
+                 aes(shape = Reference,
+                     alpha = Detect),
+                 color = "gray50",
+                 fill = "gray50",
+                 size = 4,
+                 stroke = 1.5) +
+      #then plot non-detect points with white fill,
+      #and position jittered
+      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
+                  aes(shape = Reference),
+                  color = "gray50",
+                  fill = "white",
+                  size = 4,
+                  stroke = 1.5,
+                  width = jitter_nondetect,
+                  height = 0) +
+      #then plot non-detect points with fill, but alpha mapped to Detect
+      #and position jittered
+      geom_jitter(data = newdata[Detect %in% "Non-Detect"],
+                  aes(shape = Reference,
+                      alpha = Detect),
+                  color = "gray50",
+                  fill = "gray50",
+                  size = 4,
+                  stroke = 1.5,
+                  width = jitter_nondetect, height = 0)
+
+    #do facet_wrap by combinations of route, media, dose
+    p <- p + facet_wrap(vars(Route, Media, Dose),
+                        labeller = "label_both",
+                        scales = "free")
+  } #end check if plot_dose_norm %in% TRUE/FALSE
+
+  p <- p +
+    scale_shape_manual(values = 21:25) + #use only the 5 shapes where a fill can be added
+    #this limits us to visualizing only 5 References
+    #but admittedly it's hard to distinguish more than 5 shapes anyway
+    #if detect =FALSE, fully transparent; if detect = TRUE, fully solid
+    scale_alpha_manual(values = c("Detect" = 1,
+                                  "Non-Detect" = 0),
+                       drop = FALSE,
+                       name = NULL) +
+    guides(alpha = guide_legend(override.aes = list(shape = 21,
+                                                    color = "black",
+                                                    stroke = 1,
+                                                    fill = c("black", NA),
+                                                    alpha = 1)
+    )
+    ) +
+    labs(title = plot_title) +
+    xlab("Time, hr")
+
+  if(plot_dose_norm %in% TRUE){
+    p <- p + ylab("Concentration/Dose, (mg/kg)/(mg/L)")
+  }else{
+    p <- p + ylab("Concentration, mg/L")
+  }
+
+  p <- p  +
+    theme_bw() +
+    theme(plot.title = element_text(size = 12),
+          strip.background = element_blank())
+  #log-scale y axis if so specified
+  if(plot_log10_conc %in% TRUE){
+    p <- p + scale_y_log10() + annotation_logticks(sides = "l")
+  }
+
+  return(p)
 
 }
+
+
+
+
