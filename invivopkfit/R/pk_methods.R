@@ -1,31 +1,122 @@
 #'Create a new `pk` object
 #'
 #'
-#'[pk()] initializes a new `pk` object. It can be used to declare the input data
-#'frame for a PK analysis.
+#'[pk()] initializes a new `pk` object.
 #'
 #'
-#'[pk()] is used to construct the initial `pk` object for analysis, i.e., to
-#'provide the concentration-dose-time data to be fitted. It is almost always
-#'followed by `+` to add steps to the workflow.
+#'[pk()] is used to construct the initial `pk` object for analysis. It is almost
+#'always followed by `+` to add steps to the workflow. For example, you could
+#'use `pk(my_data) + stat_model(model = '1comp')` to set up for fitting a
+#'1-compartment model.
 #'
-#'For example, you could use `pk(my_data) + stat_model(model = '1comp')` to set
-#'up and fit a 1-compartment model.
+#'# The `pk` object
+#'
+#'A `pk` object consists of a set of concentration-dose-time data to be fitted,
+#'and sets of instructions for steps in the analysis workflow:
+#'
+#'- settings for how to pre-process the data (harmonizing variable names, imputing missing data, calculating derived variables)
+#'- scalings/transformations to be applied to the data
+#'- settings for the numerical optimization algorithm to be used to fit any model
+#'- optionally: which PK model(s) should be fitted to this dataset. (You do not have to fit any PK model if you don't want to; you can instead just set up the `pk` object with data, and do non-compartmental analysis on it.)
+#'
+#'The most basic `pk` object is a named list with the following elements:
+#'
+#' - `data_orig`: The original data set, supplied as [pk()] argument `data`
+#' - `data_settings`: Instructions for data pre-processing (a named list of arguments to [preprocess_data()]), supplied in [pk()] arguments `mapping` and `data_settings`
+#' - `scales`: Instructions for data scaling and/or transformation (a list with elements named for each data variable with scaling/transformations, where each element contains the scaling/transformation to apply to the corresponding variable)
+#' - `optimx_settings`: Instructions for the numerical optimizer (a named list of arguments to [optimx::optimx()]), supplied in [pk()] argument `optimx_settings`
+#' - `status`: What stage of the analysis has been applied to this object so far? It starts out at `initialized`
+#'
+#'No data processing, model fitting, or any other analysis is done until you
+#'explicitly request. Until then, the `pk` object remains just a set of data and
+#'instructions. This allows you to specify the instructions for each analysis
+#'step without regard for the actual order of the analysis steps, and to
+#'overwrite previous instructions, without having to re-do the model fitting
+#'each time you add or change a set of instructions. This is particularly useful
+#'if you are working in interactive mode at the R console.
+#'
+#'For example, you might write at the console
+#'
+#'`my_pk <- pk(my_data) + stat_model(model = "1comp") + data_settings(impute_loq
+#'= TRUE)`
+#'
+#'This is OK even though `data_settings` provides instructions for data
+#'pre-processing, a step that comes *before* model fitting. Internally, the `pk`
+#'object will put the instructions in the right order.
+#'
+#'You might then realize that you also want to fit a 2-compartment model to the
+#'same data set. You can simply write
+#'
+#'`my_pk <- my_pk + stat_model(model = "2comp")`
+#'
+#'Then you might realize that you actually wanted to dose-normalize the
+#'concentration data before fitting the models. You can do that simply by
+#'writing
+#'
+#'`my_pk <- my_pk + scale_conc(normalize = "dose")`
+#'
+#'
+#'Now, you are pretty sure that is the final set of instructions. You can
+#'actually do the fit as follows:
+#'
+#'`my_pk <- fit(my_pk)`
+#'
+#'Now, the following steps will occur:
+#'
+#' - Data pre-processing, as instructed by [data_settings()]
+#' - Data scaling and transformation,as instructed by [scale_conc()] and/or [scale_time()]: Here, concentrations will be dose-normalized
+#' - Model pre-fitting
+#'      - Automatic determination of whether to fit oral model, IV model, or both, depending on whether oral and IV data are available.
+#'      - Automatic checks on whether data are sufficient to proceed with model fitting (e.g., are there more observations than parameters to be estimated?)
+#'      - Automatic determination of parameter bounds
+#'      - Automatic determination of parameter starting guesses
+#' - Model fitting, as instructed by [stat_model()]
+#'     - Numerical optimization by maximizing the log-likelihood function
+#'     - Calculation of uncertainty in the optimized parameter values using an approximation to the Hessian (the matrix of second derivatives)
+#'     - Calculation of Akaike Information Criterion and Bayesian Information Criterion for the fitted model
+#' - Model comparison (if more than one model has been fitted), by choosing the model with the lowest AIC value
+#'
+#'`my_pk` will be modified to contain the results of each of these steps:
+#'
+#' - the pre-processed, scaled/transformed data (in `my_pk$data`)
+#' - for each fitted model: (named elements in `my_pk$models`)
+#'     - the parameter bounds and starting guesses (in `my_pk$model$[model name]$parDF`)
+#'     - a named vector of the estimated coefficients (in `my_pk$model$[model name]$coefficients`)
+#'     - A numerical vector of the residuals for the fitted model (observed - predicted concentrations). If any scaling/transformation was applied, the residuals will be in the transformed units.
+#'     - AIC and BIC (in `my_pk$model$[model name]$AIC` and `my_pk$model$[model name]$BIC`))
+#' - the winning model by lowest AIC (if more than one model was fitted)
+#'
+#'You may do these steps one at a time if you wish, using the following methods:
+#'
+#' - Data pre-processing, including scaling/transformation: [preprocess.pk()]
+#' - Model pre-fitting: [prefit.pk()]
+#' - Model fitting: [fit.pk()]
+#' - Model comparison: [model_compare.pk()]
+#'
+#' The `pk` object
 #'
 #'# Mappings
 #'
 #'Your input data can have any variable names you like. However, internally,
 #'`invivopkfit` needs to use a set of "standard", harmonized variable names
 #'(e.g., it refers to the variable containing measured tissue concentrations as
-#'`Conc`). The `mapping` argument sets up a mapping between the variable names
-#'in `data`, and the internal harmonized variable names used by `invivopkfit`.
+#'`Conc`; the variable containing observed time points as `Time`; and the
+#'variable containing administered doses as `Dose`). In effect, `invivopkfit`
+#'needs to rename the input data, and produce a new `data.frame` that uses these
+#'internal harmonized variable names.
+#'
+#'In order to know which variable names in the input data correspond to each of
+#'the internal harmonized variable names, we need to set up a mapping between
+#'the internal harmonized variable names and the original variable names.
 #'
 #'The simplest, most flexible way to set up this mapping is by (ab)using a call
-#'to [ggplot2::aes()]. Usually, you would use [ggplot2::aes()] to set up
-#'mappings to aesthetic variables for plotting: `x`, `y`, `color`, `size`,
-#'`shape`, and so on. Here, instead, we are setting up mappings to `invivopkfit`
-#'variables used in model fitting. These "`invivopkfit` aesthetic" variables are
-#'as follows:
+#'to [ggplot2::aes()]. In the context of [ggplot2::ggplot2-package()], you would
+#'use [ggplot2::aes()] to set up mappings to `ggplot2`'s "aesthetics", internal
+#'harmonized variable names which it uses for plotting: *e.g.*, `x`, `y`,
+#'`color`, `size`, `shape`, and so on. In the context of
+#'[invivopkfit-package()], we are setting up mappings to `invivopkfit`'s
+#'internal harmonized variable names which it uses in model fitting. These
+#'"`invivopkfit` aesthetic" variables are as follows:
 #'
 #'
 #' - `DTXSID`: A `character` variable containing the chemical's DSSTox ID. All rows of `data` should have the same value for `DTXSID`.
@@ -45,6 +136,12 @@
 #' - `Value_SD`: A `numeric` variable giving the standard deviation of the tissue concentration in units of mg/L, if available and relevant. If `N_Subjects > 1`, `Value_SD` is assumed to represent the standard deviation of tissue concentrations for this group of subjects. If `N_Subjects == 1`, then `Value_SD` may be `NA_real_`.
 #' - `LOQ`: A `numeric` variable giving the limit of quantification applicable to this tissue concentration in units of mg/L, if available.
 #' - `Value.Units`: A `character` variable giving the units of `Value`, `Value_SD`, and `LOQ`.
+#'
+#'You may additionally include mappings to other variables, which will appear in
+#'the `pk` object in `pk$data` after the analysis is done. The following
+#'variable names are reserved for internal use:
+#'
+#' -
 #'
 #'As with usual calls to [ggplot2::aes()], you should provide the variable names
 #'without quoting them. For example, use `ggplot2::aes(DTXSID = my_dtxsid)`. Do
@@ -322,7 +419,7 @@ return(pk_obj)
 }
 
 
-pk_add.pk_stat_model <- function(object, pk_obj, objectname){
+pk_add.pk_stat <- function(object, pk_obj, objectname){
 
 }
 
