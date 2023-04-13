@@ -606,14 +606,74 @@ preprocess_data.pk <- function(obj){
                               length(data[[this_col]]))
     }
 
-    if(!obj$data_settings$suppress.messages){
-      ### display messages describing loaded data
-      message(paste(nrow(data), "concentration vs. time observations loaded.\n"))
-      message(paste(length(unique(data$DTXSID_Analyzed)), "unique analytes,",
-                    length(unique(data$Species)), "unique species, and",
-                    length(unique(data$Reference)), "unique references."))
+    #Check to make sure the data include only one Chemical and Species. Stop
+    #with an error otherwise.
+    chems <- unique(data$Chemical)
+    species <- unique(data$Species)
+
+    nchem <- length(chems)
+    nspecies <- length(species)
+
+    if(!(nchem %in% 1 & nspecies %in% 1)){
+      stop(paste("preprocess_data.pk(): data contains multiple chemicals and/or multiple species.",
+           "Unique chemicals in this data:",
+           paste(chems, collapse = "; "),
+           "Unique Species in this data:",
+           paste(species, collapse = "; "),
+           sep = "\n"))
     }
 
+    #Check to make sure the data include only route_keep and media_keep
+    routes <- unique(data$Route)
+    media <- unique(data$Media)
+
+    if( !(all(routes %in% obj$data_settings$routes_keep) &
+          all(media %in% obj$data_settings$media_keep)) ){
+      stop(paste("preprocess_data.pk(): data contains unsupported media and/or routes.",
+                 paste("Supported media:", paste(obj$data_settings$media_keep, collapse = "; ")),
+                 paste("Media in data:", paste(media, collapse = "; ")),
+                 paste("Supported routes:", paste(obj$data_settings$routes_keep, collapse = "; ")),
+                 paste("Routes in data:", paste(routes, collapse = "; ")),
+                 sep = "\n"))
+    }
+
+
+    #Check to make sure there is only one value for each set of units
+    time_units <- unique(data$Time.Units)
+    value_units <- unique(data$Value.Units)
+    weight_units <- unique(data$Weight.Units)
+    dose_units <- unique(data$Dose.Units)
+
+    if(any(sapply(list(time_units,
+                       value_units,
+                       weight_units,
+                       dose_units),
+                  function(x) length(x) > 1)
+    )){
+      stop(paste("preprocess_data.pk(): data contains multiple units for one or more variables.",
+                 paste("Time units:", paste(time_units, collapse = "; "), sep = " ",),
+                 paste("Concentration units:", paste(value_units, collapse = "; "), sep = " "),
+                 paste("Weight units:", paste(weight_units, collapse = "; "), sep = " "),
+                 paste("Dose units:", paste(dose_units, collapse = "; "), sep = " "),
+                 sep = "\n"))
+    }
+
+    # If data has passed all these initial checks, then proceed with pre-processing
+
+    if(!obj$data_settings$suppress.messages){
+      ### display messages describing loaded data
+      message(
+        paste(
+          paste(nrow(data),
+                "concentration vs. time observations loaded."),
+          paste("Chemical:", chems),
+          paste("Species:", species),
+          paste("Routes:", routes),
+          paste("Media:", media),
+          sep = "/n"
+        )
+      )
+    }
 
     ### Coerce all 'Value' values to be numeric and say so
     if (!is.numeric(data$Value))
@@ -672,19 +732,7 @@ preprocess_data.pk <- function(obj){
       rm(time_num, old_na, new_na)
     }
 
-
-    ### Coerce all 'Reference' values to be character, and say so
-    if(!is.character(data$Reference)){
-      if(!obj$data_settings$suppress.messages){
-        message(paste0("Column \"Reference\" converted from ",
-                       class(data$Reference),
-                       " to character."))
-      }
-      data$Reference <- as.character(data$Reference)
-
-    }
-
-    ### Coerce to lowercase
+    ### Coerce Species, Route, and Media to lowercase
     data$Species <- tolower(data$Species)
     data$Route <- tolower(data$Route)
     data$Media <- tolower(data$Media)
@@ -756,6 +804,7 @@ preprocess_data.pk <- function(obj){
     if(obj$data_settings$impute_sd %in% TRUE){
       if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value_SD))){
         if(!obj$data_settings$suppress.messages){
+          #number of SDs to be estimated
           n_sd_est <- sum(
             (data$N_Subjects >1) %in% TRUE &
               is.na(data$Value_SD)
@@ -850,20 +899,63 @@ preprocess_data.pk <- function(obj){
 
       if(!obj$data_settings$suppress.messages){
         message(paste(dim(data)[1], "observations of",
-                      length(unique(data$Chemical)), "unique chemicals,",
-                      length(unique(data$Species)), "unique species, and",
                       length(unique(data$Reference)), "unique references remain."))
       }
     }
 
+  } #end if is.null(data)
+
+  #apply time transformation
+  data$Time_orig <- data$Time
+  data$Time.Units_orig <- data$Time.Units
+
+  #first, default to identity transformation if none is specified
+  if(is.null(obj$scales$time$new_units)){
+    obj$scales$time$new_units <- "identity"
+  }
 
 
-  } #end if is.null(data_original)
+ #apply transformation function
+  from_units <- unique(data$Time.Units)
+  to_units <- ifelse(obj$scales$time$new_units %in% "identity",
+                     from_units,
+                     obj$scales$time$new_units)
 
+  if(obj$scales$time$new_units %in% "auto"){
+    to_units <- auto_units(y = data$Time,
+                     from = from_units)
+  }
+  data$Time <- tryCatch(convert_time(x = data$Time,
+                                     from = from_units,
+                                     to = to_units,
+                                     inverse = FALSE),
+                        error = function(err){
+                          warning(paste("invivopkfit::preprocess_data.pk():",
+                                  "Error in transforming time using convert_time():",
+                                  err$message))
+                          return(NA_real_)
+                        })
+  data$Time.Units <- to_units
 
+  #apply concentration transformation
 
+  #if not specified, treat as identity
+  if(is.null(obj$scales$conc$expr)){
+    obj$scales$conc$expr <- rlang::quo(.conc)
+  }
 
-  #get the data info
+  #apply conc transformation
+  data$Conc <- rlang::eval_tidy(obj$scales$conc$expr,
+                         data = cbind(data,
+                                      data.frame(.conc = data$Conc)
+                                      ))
+
+  data$Conc_SD <- rlang::eval_tidy(obj$scales$conc$expr,
+                                data = cbind(data,
+                                             data.frame(.conc = data$Conc_SD)
+                                ))
+
+  #get the summary data info
   #unique Chemical, Species, References, Studies, Routes
   dat_info <- as.list(unique(data[c("Chemical",
                                     "Species")]))
@@ -873,26 +965,12 @@ preprocess_data.pk <- function(obj){
   dat_info$Studies_Analyzed <- sort(unique(data$Study))
   #get a list of routes analyzed
   dat_info$Routes_Analyzed <- sort(unique(data$Route))
-  if(!(all(dat_info$Routes_Analyzed %in% obj$data_settings$routes_keep))){
-    warning(paste("Data includes the following routes:",
-                  dat_info$Routes_Analyzed,
-                  "Only routes 'po' and 'iv' are currently understood by invivopkfit.",
-                  "Please filter data to oral and intravenous route only, and harmonize route identifiers to 'po' and 'iv'.",
-                  sep = "\n"))
-  }
 
   #get a list of media analyzed
   dat_info$Media_Analyzed <- sort(unique(data$Media))
-  if(!(all(dat_info$Media_Analyzed %in% obj$data_settings$media_keep))){
-    warning(paste("Data includes the following media:",
-                  dat_info$Media_Analyzed,
-                  "Only media 'blood' and 'plasma' are currently understood by invivopkfit.",
-                  "Please filter data to blood and plasma only, and harmonize media identifiers to 'blood' and 'plasma'.",
-                  sep = "\n"))
-  }
 
   #get the number of detects and non-detects by route and medium
-  dat_info$n_dat <- aggregate(x = data$Detect,
+  dat_info$n_dat <- aggregate(x = list(Detect = data$Detect),
                               by = data[c("Route", "Media")],
                               FUN = function(Detect){
                                 c("Detect" = sum(Detect %in% TRUE),
@@ -912,26 +990,40 @@ preprocess_data.pk <- function(obj){
 
     dat_info$tmax_oral <- oral_peak$x
 
+    #absorption and elimination phase points
+    #get the number of detects & nondetects before empirical tmax
+    dat_info$n_phase_oral <- aggregate(x = list(Detect = oral_data$Detect),
+                                  by = list("Phase" = factor(oral_data$Time <= dat_info$tmax_oral,
+                                                             levels = c(TRUE, FALSE),
+                                                             labels = c("absorption", "elimination"))),
+                                  FUN = function(Detect){
+                                    c("Detect" = sum(Detect %in% TRUE),
+                                      "NonDetect" = sum(Detect %in% FALSE))
+                                  }
+    )
+    names(dat_info$n_phase_oral) <- gsub(x = names(dat_info$n_phase_oral),
+                                    pattern = "Detect.",
+                                    replacement = "",
+                                    fixed = TRUE)
 
   }else{
+    #no oral data, so fill tmax_oral and n_phase with NAs
     dat_info$tmax_oral <- NA_real_
-  }
+    dat_info$n_phase <- aggregate(x = list(Detect = NA),
+                                  by = list("Phase" = factor(NA,
+                                                             levels = c(TRUE, FALSE),
+                                                             labels = c("absorption", "elimination"))),
+                                  FUN = function(Detect){
+                                    c("Detect" = sum(Detect %in% TRUE),
+                                      "NonDetect" = sum(Detect %in% FALSE))
+                                  },
+                                  drop = FALSE)
 
-  #absorption and elimination phase points
-  #get the number of detects & nondetects before empirical tmax
-  dat_info$n_phase <- aggregate(x = data$Detect,
-                                by = list("Phase" = factor(data$Time <= dat_info$tmax_oral,
-                                                           levels = c(TRUE, FALSE),
-                                                           labels = c("absorption", "elimination"))),
-                                FUN = function(Detect){
-                                  c("Detect" = sum(Detect %in% TRUE),
-                                    "NonDetect" = sum(Detect %in% FALSE))
-                                }
-  )
-  names(dat_info$n_phase) <- gsub(x = names(dat_info$n_phase),
-                                  pattern = "Detect.",
-                                  replacement = "",
-                                  fixed = TRUE)
+    names(dat_info$n_phase_oral) <- gsub(x = names(dat_info$n_phase_oral),
+                                         pattern = "Detect.",
+                                         replacement = "",
+                                         fixed = TRUE)
+  }
 
   #get time of last detected observation
   dat_info$last_detect_time <- max(data[data$Detect %in% TRUE, "Time"])

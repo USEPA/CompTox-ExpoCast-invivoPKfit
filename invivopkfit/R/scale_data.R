@@ -1,32 +1,61 @@
-#' Scale concentrations
+#'Scale concentrations
 #'
-#' Normalize and/or transform concentration data
+#'Normalize and/or transform concentration data
 #'
-#' @param normalize A normalization to apply to concentrations. Built-in options
-#'   are `"identity"` (the default; i.e., divide by 1) and `"dose_normalize"`
-#'   (i.e., divide each concentration value by its corresponding dose; see
-#'   [dose_normalize()]). May also be the name of a function. If no function is
-#'   found by the provided name in the calling environment, then
-#'   [scale_conc.pk()] will attempt to interpret it as a transformation from the
-#'   `scales` package. For example, if you provide `"boxcox"`, it will be
-#'   interpreted as [scales::boxcox_trans()].
-#' @param trans A transformation to apply to concentrations. Will be applied
-#'   *after* the normalization. Default is `"identity"` (no transformation). You
-#'   can supply the name of your own function. If no function by that name is
-#'   found, then this function will try to interpret it as one of the
-#'   transformations in the `scales` package.
-#' @param ... Other arguments (not currently used)
-#' @return An object of class `pk_scales`: A named list with element `name =
-#'   "conc"` (denoting the variable to be scaled) and `value = list(normalize =
-#'   normalize, trans = trans, ...)` (denoting the arguments supplied to
-#'   [scale_conc()]). See [pk_add.pk_scales()].
-#' @export
-#' @author Caroline Ring
-scale_conc <- function(normalize = "identity",
-                       trans = "identity",
+#'# Requirements for `expr` `expr` should be an expression (unquoted) --
+#'effectively, the "right hand side" of a formula that will produce the
+#'transformed concentration variable. This expression may refer to any of the
+#'harmonized `invivopkfit` variable names (see [pk()] for a list), except that
+#'the concentration variable to be transformed should be replaced with the
+#'placeholder name `.conc`. For example, to apply dose-normalization (i.e., new
+#'concentration = old concentration / dose), you would supply
+#'
+#'`expr = .conc/Dose`
+#'
+#'To apply a log10 transformation (i.e., new concentration = log10(old
+#'concentration)), you would supply
+#'
+#'`expr = log10(.conc)`
+#'
+#'
+#'The reason for using the `.conc` placeholder is that this formula will be
+#'applied to five different concentration variables in the harmonized data
+#'(`Value`, `Value_SD`, `LOQ`, `Conc`, and `Conc_SD`), and (during curve
+#'fitting) will also be applied to model-predicted concentrations.
+#'
+#'The expression may additionally refer to variables defined in the global
+#'environment, or the environment where you are calling this function. Variables
+#'will be looked for in the harmonized `invivopkfit` data frame first, and if
+#'not found there, will be looked for in the environment. This means if you have
+#'a variable in your global environment that is named the same thing as one of
+#'the `invivopkfit` harmonized variables, you should rename your variable before
+#'trying to refer to it in `expr`.
+#'
+#'For example, if you write at the R command line
+#' ```
+#' b <- 5
+#' my_pk <- pk(data = my_df) + scale_conc(expr = .conc/b) + stat_model(model = "1comp")
+#' my_pk <- fit(my_pk)
+#'```
+#'Then all concentrations will be divided by 5, which you will be able to see by
+#'examining `my_pk$data`.
+#'
+#'
+#'@param expr An expression to compute normalized and/or transformed
+#'  concentration data. See Details for requirements.
+#'@param ... Other arguments (not currently used)
+#'@return An object of class `pk_scales`: A named list with element `name =
+#'  "conc"` (denoting the variable to be scaled) and `value = list("expr" =
+#'  rlang::enquo(expr), ...)` (denoting the arguments supplied to [scale_conc()]). See
+#'  [pk_add.pk_scales()].
+#'@export
+#'@author Caroline Ring
+scale_conc <- function(expr = .,
                        ...){
   scale_conc <- list(name = "conc")
-  #get arguments and values
+  #enquote expr
+  scale_conc$expr <- rlang::enquo(expr)
+  #get any other arguments and values
   argg <- c(as.list(environment()), list(...))
   scale_conc$value <- argg
   #set class
@@ -39,19 +68,20 @@ return(scale_conc)
 #'
 #' Transform time data
 #'
-#' @param trans A transformation to apply to time data -- *i.e.*, new units to
-#'   use for time. Default is `"identity"` (no transformation, leave time in the
-#'   original units). Another useful option is `"auto"`, to automatically select
-#'   new time units based on the time of the last detected observation. You may
-#'   also specify any time units understood by `lubridate::duration()`, i.e.
-#'   "seconds", "hours", "days", "weeks", "months", "years", "milliseconds",
-#'   "microseconds", "nanoseconds", and/or "picoseconds".
+#' @param new_units New units to use for time. Default is `"identity"` (leave
+#'   time in the original units). Another useful option is `"auto"`, to
+#'   automatically select new time units based on the time of the last detected
+#'   observation. You may also specify any time units understood by
+#'   `lubridate::duration()`, i.e., `"seconds"`, `"hours"`, `"days"`, `"weeks"`,
+#'   `"months"`, `"years"`, `"milliseconds"`, `"microseconds"`, `"nanoseconds"`,
+#'   and/or `"picoseconds"`. You may only specify one new unit (e.g., `new_units
+#'   = c("days", "weeks")` is not valid).
 #' @param ... Other arguments (not currently used)
 #' @return An object of class `pk_scales`: A named list with two elements `name
-#'   = "time"` (denoting the variable to be scaled) and `value = list(trans =
-#'   trans, ...)` (denoting the arguments supplied to [scale_time()]). See
+#'   = "time"` (denoting the variable to be scaled) and `value = list("new_units" =
+#'   new_units, ...)` (denoting the arguments supplied to [scale_time()]). See
 #'   [pk_add.pk_scales()].
-scale_time.pk <- function(trans = "identity",
+scale_time.pk <- function(new_units = "identity",
                           ...){
   scale_time <- list(name = "time")
   #get arguments and values
@@ -61,21 +91,6 @@ scale_time.pk <- function(trans = "identity",
   class(scale_time) <- c(class(scale_time), "pkproto", "pk_scales")
 
   return(scale_time)
-}
-
-#' Dose-normalize concentration data
-#'
-#' Apply dose normalization to concentration data.
-#'
-#' Dose normalization simply divides a tissue concentration (mg/L) by the
-#' corresponding administered dose (mg/kg).
-#'
-#' @param conc A numeric vector of concentrations
-#' @param dose The corresponding numeric vector of doses
-#' @return A numeric vector, `conc/dose`
-#' @author Caroline Ring
-dose_normalize <- function(conc, dose){
-  conc/dose
 }
 
 
