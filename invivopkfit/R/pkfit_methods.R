@@ -1,8 +1,7 @@
 #' Create a `pkfit` object
 #'
 #'
-pkfit <- function(data = NULL,
-                  data_info = )
+pkfit <- function(data = NULL)
 
 
 #' Create a `pkfit` object from data
