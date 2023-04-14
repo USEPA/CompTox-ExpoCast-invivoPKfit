@@ -44,99 +44,123 @@
 #' @param data The data set to be fitted (e.g. the result of
 #'   [preprocess_data()])
 #'@return A `data.frame`with the following variables:
-#' - `param_names`: Names of the model parameters
+#' - `param_name`: Names of the model parameters
 #' - `param_units`: Units of the model parameters
 #' - `opt_params`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
 #' - `use_params`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
 #'@author Caroline Ring
 
-get_params_1comp <- function(data){
+get_params_1comp <- function(data,
+                             lower_bound = c(kelim = 1e-4, #kelim
+                                             Vdist = 1e-4, #Vdist
+                                             Fgutabs = 1e-4, #Fgutabs
+                                             kgutabs = 1e-4, #kgutabs
+                                             Fgutabs_Vdist = 1e-4, #Fgutabs_Vdist
+                                             Rblood2plasma = 1e-4), #Rblood2plasma
+
+                             upper_bound = c(kelim = 1e6, #kelim
+                                             Vdist = 1e6, #Vdist
+                                             Fgutabs = 1, #Fgutabs
+                                            kgutabs = 1e6, #kgutabs
+                                             Fgutabs_Vdist = 1e4, #Fgutabs_Vdist
+                                             Rblood2plasma = 1e6), #Rblood2plasma
+param_units = ggplot2::aes(kelim = paste0("1/", #kelim
+                                  unique(Time.Units)),
+                           Vdist = paste0("(", #Vdist
+                                  unique(Dose.Units),
+                                  ")",
+                                  "/",
+                                  "(",
+                                  unique(Value.Units),
+                                  ")"),
+                           Fgutabs = "unitless fraction", #Fgutabs
+                           kgutabs = paste0("1/", #kgutabs
+                                  unique(Time.Units)),
+                           Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
+                                  unique(Value.Units),
+                                  ")",
+                                  "/",
+                                  "(",
+                                  unique(Dose.Units),
+                                  ")"),
+                           Rblood2plasma = "unitless ratio")
+                             ){
   #param names
-  param_names <- c("kelim",
+  param_name <- c("kelim",
                    "Vdist",
                    "Fgutabs",
                    "kgutabs",
                    "Fgutabs_Vdist",
                    "Rblood2plasma")
- #param units
-  param_units <- c(paste0("1/", #kelim
-                           unique(data$Time.Units)),
-                    paste0("(", #Vdist
-                           unique(data$Dose.Units),
-                           ")",
-                           "/",
-                           "(",
-                           unique(data$Value.Units),
-                           ")"),
-                    "unitless fraction", #Fgutabs
-                    paste0("1/", #kgutabs
-                           unique(data$Time.Units)),
-                    paste0("(", #Fgutabs_Vdist
-                           unique(data$Value.Units),
-                           ")",
-                           "/",
-                           "(",
-                           unique(data$Dose.Units),
-                           ")"),
-                    "unitless ratio" #Rblood2plasma
-                   )
 
-  lower_bound = c(1e-4, #kelim
-                  1e-4, #Vdist
-                  1e-4, #Fgutabs
-                  1e-4, #kgutabs
-                  1e-4, #Fgutabs_Vdist
-                  1e-4) #Rblood2plasma
+  lower_bound_default = c(kelim = 1e-4, #kelim
+                  Vdist = 1e-4, #Vdist
+                  Fgutabs = 1e-4, #Fgutabs
+                  kgutabs = 1e-4, #kgutabs
+                  Fgutabs_Vdist = 1e-4, #Fgutabs_Vdist
+                  Rblood2plasma = 1e-4) #Rblood2plasma
 
-  upper_bound = c(1e6, #kelim
-                  1e6, #Vdist
-                  1, #Fgutabs
-                  1e6, #kgutabs
-                  1e4, #Fgutabs_Vdist
-                  1e6) #Rblood2plasma
+  lower_bound_missing <- setdiff(names(lower_bound_default),
+                                 names(lower_bound))
+  lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
 
-  opt_params <- rep(TRUE, length(param_names))
+  upper_bound_default = c(kelim = 1e6, #kelim
+                  Vdist = 1e6, #Vdist
+                  Fgutabs = 1, #Fgutabs
+                  kgutabs = 1e6, #kgutabs
+                  Fgutabs_Vdist = 1e4, #Fgutabs_Vdist
+                  Rblood2plasma = 1e6)
 
-  use_params <- rep(TRUE, length(param_names))
+  upper_bound_missing <- setdiff(names(upper_bound_default),
+                                 names(upper_bound))
+  upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
+
+
+  opt_params <- rep(TRUE, length(param_name))
+
+  use_params <- rep(TRUE, length(param_name))
 
 
 if(!("po" %in% data$Route)){
   #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_Vdist,
   #and they won't be used.
-  opt_params[param_names %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
-  use_params[param_names %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
+  opt_params[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
+  use_params[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
 }else{ #if yes oral data:
   if("iv" %in% data$Route){
     #if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
-    opt_params[param_names %in% c("Fgutabs_Vdist")] <- FALSE
-    use_params[param_names %in% c("Fgutabs_Vdist")] <- FALSE
+    opt_params[param_name %in% c("Fgutabs_Vdist")] <- FALSE
+    use_params[param_name %in% c("Fgutabs_Vdist")] <- FALSE
   }else{
     #if oral ONLY:
     #cannot fit Fgutabs and Vdist separately, so turn them off.
-    opt_params[param_names %in% c("Fgutabs", "Vdist")] <- FALSE
-    use_params[param_names %in% c("Fgutabs", "Vdist")] <- FALSE
+    opt_params[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
+    use_params[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
   }
 }
 
   #if both "blood" and "plasma" are not in data,
   #then Rblood2plasma will not be optimized
   if(!(all(c("blood", "plasma") %in% data$Media))){
-    opt_params[param_names %in% "Rblood2plasma"] <- FALSE
+    opt_params[param_name %in% "Rblood2plasma"] <- FALSE
   }
 
   #if no medium is "blood" then Rblood2plasma will not be used at all
   if(!("blood" %in% data$Media)){
-    use_params[param_names %in% "Rblood2plasma"] <- FALSE
+    use_params[param_name %in% "Rblood2plasma"] <- FALSE
     #otherwise, if blood-only data, Rblood2plasma will be used, but held constant at 1
   }
 
-  par_DF <- data.frame("param_names" = param_names,
+  par_DF <- data.frame("param_name" = param_name,
                        "param_units" = param_units,
                        "opt_params" = opt_params,
                        "use_params" = use_params,
                        "lower_bound" = lower_bound,
                        "upper_bound" = upper_bound)
 
+  # now get starting values
+  par_DF <-get_starts_1comp(data = data,
+                            par_DF = par_DF)
 
 
   return(par_DF)

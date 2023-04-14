@@ -897,6 +897,23 @@ preprocess_data.pk <- function(obj){
       }
       data <- subset(data, !is.na(Time))
 
+
+
+      if(!obj$data_settings$suppress.messages){
+        message(paste(dim(data)[1], "observations of",
+                      length(unique(data$Reference)), "unique references remain."))
+      }
+    }
+
+    #Remove any Dose = 0 observations
+    if(any(data$Dose <= .Machine$double.eps)){
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Removing observations with 0 dose values.\n",
+                       sum(data$Dose <= .Machine$double.eps),
+                       " observations will be removed."))
+      }
+      data <- subset(data, data$Dose > .Machine$double.eps)
+
       if(!obj$data_settings$suppress.messages){
         message(paste(dim(data)[1], "observations of",
                       length(unique(data$Reference)), "unique references remain."))
@@ -1089,7 +1106,12 @@ prefit.pk <- function(obj){
   }
 
   #get bounds & starting values for parameter optimization
-  obj$models[[this_model]]$par_DF <- get_bounds_starts(obj)
+  get_params_fun <- obj$models[[this_model]]$get_params_fun
+  get_params_args <- obj$models[[this_model]]$get_params_args
+
+  obj$models[[this_model]]$par_DF <- do.call(get_params_fun,
+                                             args = c(obj["data"],
+                                                      get_params_args))
 
   obj$status <- 3 #prefit complete
 
