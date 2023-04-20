@@ -98,7 +98,11 @@ pk_model <- function(name,
   return(this_model)
 }
 
-#'Error model
+#' Error model
+#'
+#' Define an error model.
+#'
+#' The error model defines
 #'
 #'
 #'@param error_model One of "FE" (the default) or "pooled". "FE" stands for

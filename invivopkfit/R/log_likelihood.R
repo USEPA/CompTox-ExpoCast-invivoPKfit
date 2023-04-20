@@ -142,10 +142,7 @@
 log_likelihood <- function(params,
                            const_params = NULL,
                            DF,
-                           modelfun = "analytic",
-                           model,
-                           fit_conc_dose = TRUE,
-                           fit_log_conc = FALSE,
+                          mfun,
                            force_finite = FALSE,
                            negative = TRUE) {
 
@@ -161,13 +158,6 @@ log_likelihood <- function(params,
   #get predicted plasma concentration vs. time for the current parameter
   #values, by dose and route
 
-  if(modelfun %in% "analytic"){
-  mfun <- switch(model,
-                 '1compartment' = cp_1comp,
-                 '2compartment' = cp_2comp,
-                 'flat' = cp_flat)
-
-  #get predicted plasma concentration
   pred <- do.call(mfun,
           args = list(params = model.params,
                       time = DF$Time, #in hours
@@ -175,50 +165,6 @@ log_likelihood <- function(params,
                       iv.dose = DF$iv,
                       medium = DF$Media
                       ))
-
-  }else{ #evaluate full model
-    if(!(model %in% "1compartment")){
-      stop(paste0("modelfun = 'analytic' specfied with model = '",
-                  model,
-                  ". Full ODE model only implemented for 1-compartment model"))
-    }else{
-      #for each dose and route, eval httk::solve_1comp
-      df_list <- split(DF, DF[c("Dose", "iv")])
-      predlist <- lapply(df_list,
-             function(this_df){
-               these_times <- sort(unique(this_df$Time))
-               this_tstep <- 1/min(diff(these_times))
-               tmp <-  httk::solve_1comp(parameters=model.params,
-                                          times=this_df$Time,
-                                          dose=unique(this_df$Dose),
-                                          days=ceiling(max(this_df$Time)/24),
-                                          tsteps = round(this_tstep),
-                                          output.units = 'mg/L',
-                                          initial.value=0,
-                                          iv.dose = unique(this_df$iv),
-                                          suppress.messages=TRUE)
-               tmpdf <- data.frame(Ccomp = tmp[, 'Ccompartment'],
-                                   Time = tmp[, "time"],
-                                   Dose = unique(this_df$Dose),
-                                   iv = unique(this_df$iv))
-             })
-      #bind list of data.frames into one big one
-      pred_df <- Reduce(f = rbind, x = predlist)
-
-      #add a tmp variable encoding row ordering in DF
-      DF$rowid <- 1:.N
-
-      #merge with DF
-      pred_merge <- merge(DF, pred_df, by = c("Time", "Dose", "iv"))
-
-      #sort rows in the same order as DF
-      pred_merge <- pred_merge[order(pred_merge$rowid), ]
-
-      #extract predicted plasma concentrations
-      pred <- pred_merge$Ccomp
-
-    }
-  }
 
   #Match sigmas to studys:
   #get vector of sigmas, named as "sigma_study_StudyID" or just "sigma"

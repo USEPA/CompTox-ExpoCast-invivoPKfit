@@ -1060,7 +1060,9 @@ preprocess_data.pk <- function(obj){
 #' Do pre-fit calculations and checks
 #'
 #' @param obj A `pk` object
-#' @return The same `pk` object, but with additional elements added to each item in `models`, containing the results of pre-fit calculations and checks for each model.
+#' @return The same `pk` object, but with additional elements added to each item
+#'   in `models`, containing the results of pre-fit calculations and checks for
+#'   each model.
 prefit.pk <- function(obj){
   #if preprocessing not already done, do it
   if(obj$status < 1){
@@ -1124,6 +1126,99 @@ prefit.pk <- function(obj){
 #'
 fit.pk <- function(obj){
 
+  #For each model:
+  for (this_model in names(obj$models)){
+
+  #Extract par_DF to get which params to optimize, bounds, and starting values
+  par_DF <- obj$models[[this_model]]$par_DF
+
+  #params to be optimized with their starting points
+  opt_params <- par_DF[par_DF$optimize_param %in% TRUE,
+                       "start_value"]
+  names(opt_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+                              "param_name"]
+
+  #param lower bounds (only on params to be optimized)
+  lower_params <- par_DF[par_DF$optimize_param %in% TRUE,
+                         "lower_bound"]
+  names(lower_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+                                "param_name"]
+
+  #param upper bounds (only on params to be optimized)
+  upper_params <- par_DF[par_DF$optimize_param %in% TRUE,
+                         "upper_bound"]
+  names(upper_params) <- par_DF[par_DF$optimize_param %in% TRUE,
+                                "param_name"]
+
+  #get params to be held constant, if any
+  if(any(par_DF$optimize_param %in% FALSE &
+         par_DF$use_param %in% TRUE)){
+    const_params <- par_DF[par_DF$optimize_param %in% FALSE &
+                             par_DF$use_param %in% TRUE,
+                           "start_value"]
+
+    names(const_params) <- par_DF[par_DF$optimize_param %in% FALSE &
+                                    par_DF$use_param %in% TRUE,
+                                  "param_name"]
+  }else{
+    const_params <- NULL
+  }
+
+  #Now call optimx::optimx() and do the fit
+  all_data_fit <- tryCatch({
+
+    tmp <- do.call(
+      optimx::optimx,
+      args = c(
+        #
+        list(par = opt_params,
+             fn = log_likelihood,
+             lower = lower_params,
+             upper = upper_params),
+        #method and control
+        optimx_args,
+        #... additional args to log_likelihood
+        list(
+          const_params = const_params,
+          DF = fitdata,
+          modelfun = modelfun,
+          model = model,
+          fit_conc_dose = fit_conc_dose,
+          fit_log_conc = fit_log_conc,
+          force_finite = (optimx_args$method %in% "L-BFGS-B"),
+          negative = TRUE
+        ) #end list()
+      ) #end args = c()
+    ) #end do.call
+
+    #output of optimx::optimx():
+    #tmp is a 1-row data.frame with one variable for each fitted param,
+    #plus variables with info on fitting (number of evals, convergence code, etc.)
+    #collect any messages from optimx -- in attribute "details" (another data.frame)
+    tmp$message <- attr(tmp, "details")[, "message"][[1]]
+    if(!("convcode" %in% names(tmp))){
+      tmp$convcode <- NA_real_
+    }
+    tmp
+  },
+  error = function(err){
+    #create "placeholder" all_data_fit data.frame
+    tmp <- vector(mode = "numeric", length = length(opt_params))
+    names(tmp) <- names(opt_params)
+    tmp <- as.list(tmp)
+    tmp[c("value", "fevals", "gevals", "niter",
+          "convcode")] <- NA_real_
+    tmp[c("kkt1", "kkt2")] <- NA #logical
+    tmp[c("xtime")] <- NA_real_
+    #get the error message
+    tmp$message <- err$message
+    tmp
+  })
+
+  #If fit failed, then stop
+  if(!(all_data_fit$convcode %in% 0)){
+  }
+  }
 
   obj$status <- 4 #fitting complete
   return(obj)
