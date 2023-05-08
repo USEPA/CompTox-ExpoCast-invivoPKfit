@@ -11,9 +11,8 @@ get_upper_bounds(
   pool_sigma = FALSE,
   upper_default = data.frame(param_name = c("kelim", "Vdist", "kgutabs", "Fgutabs", "V1",
     "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "Rblood2plasma", "sigma"), upper_bound =
-    c(Inf, Inf, Inf, 1, Inf, Inf, Inf, 10000, 10000, Inf, Inf), upper_bound_msg =
-    "Default"),
-  Fgutabs_Vdist_from_species = FALSE,
+    c(1e+06, 1e+06, 1e+06, 1, 1e+06, 1e+06, 1e+06, 10000, 10000, 1e+06, 1e+06),
+    upper_bound_msg = "Default"),
   sigma_from_data = TRUE,
   fit_conc_dose = TRUE,
   fit_log_conc = FALSE,
@@ -46,13 +45,6 @@ giving the names of parameters; `upper_bound`, giving the default
 upper-bound values for each parameter; and `upper_bound_msg`, giving a
 message about the default upper bound values. See Details for default
 value.}
-
-\item{Fgutabs_Vdist_from_species}{Logical: TRUE to estimate the upper bound
-of `Fgutabs_Vdist` or `Fgutabs_V1` using the upper bound of `Fgutabs`
-specified in `upper_default`, divided by a species-specific lower bound on
-the volume of distribution, based on species-specific physiological plasma
-volumes. FALSE to use the upper bound for `Fgutabs_Vdist` or `Fgutabs_V1`
-specified in `upper_default`.}
 }
 \value{
 A data.frame: `parDF` with additional variables `upper_bound`

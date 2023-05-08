@@ -13,7 +13,6 @@ get_lower_bounds(
     "k12", "k21", "Fgutabs_Vdist", "Fgutabs_V1", "Rblood2plasma", "sigma"), lower_bound =
     c(1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-04, 1e-08),
     lower_bound_msg = "Default"),
-  Vdist_from_species = FALSE,
   suppress.messages = FALSE
 )
 }
@@ -43,11 +42,6 @@ giving the names of parameters; `lower_bound`, giving the default
 lower-bound values for each parameter; and `lower_bound_msg`, giving a
 message about the default lower bound values. See Details for default
 value.}
-
-\item{Vdist_from_species}{Logical: TRUE to estimate the lower bound
-of `Vdist` or `V1` as 1/10 of species-specific physiological plasma
-volume. FALSE to use the lower bound for `Vdist` or `V1`
-specified in `lower_default`.}
 }
 \value{
 A `data.frame`: the same as `parDF` with additional variables `lower_bound`
@@ -74,12 +68,6 @@ The default `lower_default` `data.frame` is shown below in table format:
 | Fgutabs_V1     | 1e-4    | Default         |
 | sigma          | 1e-8         | Default         |
 
-If `Vdist_from_species == TRUE`, then this function will set a lower bound
-for `Vdist` or `V1` equal to 1/10 of the physiological plasma volume for the
-species represented in `fitdata`. The physiological plasma volume is taken
-from [httk::physiology.data], and represents the average plasma volume (mL/kg
-body weight) multiplied by the average body weight (kg), converted from mL to
-L by dividing by 1000.
 
 Any parameters which will not be estimated from data (based on either the
 variable `optimize_param` in `par_DF` if `par_DF` is provided, or the output

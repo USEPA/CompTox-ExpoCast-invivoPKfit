@@ -15,10 +15,10 @@ get_elbow(x, y, ...)
 [stats::approx()] if it is used.}
 }
 \value{
-A list with two named numeric scalar elements, `x` and `y`. `x` contains the `x` value
-  at the elbow point. `y` contains the `y` value at the elbow point. The
-  elbow point is *not* necessarily one of the input data points; it may be
-  interpolated.
+A list with two named numeric scalar elements, `x` and `y`. `x`
+  contains the `x` value at the elbow point. `y` contains the `y` value at
+  the elbow point. The elbow point is *not* necessarily one of the input data
+  points; it may be interpolated.
 }
 \description{
 Given a set of data specified as two vectors of `x` and `y` values, find an
@@ -27,8 +27,9 @@ elbow point.
 \details{
 This is a helper function for [get_starts()] to find elbow points.
 
-Given a set of (x,y) data points, an "elbow point" is qualitatively defined
-as the (x,y) point where the slope changes.
+Given a set of (x,y) data points, an "elbow point" can be defined by drawing
+a line connecting the points for minimum and maximum x, and then finding the
+x value of the observation where the distance to that line is greatest.
 
 [get_starts()] uses elbow points as a way to automate separation of
 concentration-time data into different kinetic phases in order to calculate
@@ -38,27 +39,6 @@ early and late elimination phases will be separated by an elbow point. This
 helper function finds the elbow points. (When this function is called from
 [get_starts()], `x` will be a vector of time values, and `y` will be a vector
 of log-transformed dose-normalized concentration values.)
-
-If there are at least four unique `x` values whose corresponding `y` values
-are finite, [get_elbow()] calls [akmedoids::elbow_point()].
-
-If there are fewer than four but more than one unique `x` values whose
-corresponding `y` values are finite, or if [akmedoids::elbow_point()] fails
-with an error or returns an elbow point whose `x` or `y` value is non-finite,
-then the elbow point `x` value will be selected using the helper function
-[get_middle()] as the middle `x` point (halfway between the minimum and
-maximum `x` values), and the elbow `y`-value will be interpolated at that
-middle `x` point using [stats::approx()]. This is an arbitrary choice, not
-meaningful if the goal is to locate an actual elbow point, but a useful
-default when the goal is to split TK data into two phases.
-
-If there is only one unique `x` value whose corresponding `y` values are
-finite, then the elbow point `x` value will be selected as that one unique
-`x` value, and the elbow point `y` value will be selected as the median of
-the finite `y` values corresponding to that unique `x` value. Again, this is
-an arbitrary choice, not meaningful if the goal is to locate an actual elbow
-point, but a useful default when the goal is to split TK data into two
-phases.
 }
 \author{
 Caroline Ring

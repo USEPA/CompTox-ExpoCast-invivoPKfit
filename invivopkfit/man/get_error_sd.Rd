@@ -5,24 +5,21 @@
 \title{Estimate pooled error standard deviation with fixed parameters}
 \usage{
 get_error_sd(
-  pk_fit,
+  pk_fit_row,
   newdata,
-  DTXSID_in,
-  Species_in,
-  Analysis_Type_in,
-  Studies.Analyzed_in,
-  model_in,
+  model,
   modelfun = "analytic",
-  fit_conc_dose = TRUE,
+  log_trans = TRUE,
+  dose_norm = FALSE,
   optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(kkt = FALSE))
 )
 }
 \arguments{
-\item{pk_fit}{A table of fitted PK parameters, as produced by
-`postprocess_data()`. Must contain variables `DTXSID`, `Species`,
+\item{pk_fit_row}{One row from a table of fitted PK parameters, as produced by
+[merge_fits()]. Must contain variables `DTXSID`, `Species`,
 `Analysis_Type`, and `Studies.Analyzed`. Must also contain variables
 corresponding to the parameters of the model specified in argument
-`model_in`, as required for the route and media of data in `newdata` (as
+`model`, as required for the route and media of data in `newdata` (as
 given by [get_model_paramnames()]). These variables must be named as
 `[param].[model]`. For example, for the 1-compartment model, if `newdata`
 contains only IV-dosing data measured in plasma, then `pk_fit` must contain
@@ -31,17 +28,7 @@ variables named `kelim.1compartment` and `Vdist.1compartment`.}
 \item{newdata}{A `data.table` which must contain variables named `Time`,
 `Dose`, `iv`, and `Media`.}
 
-\item{DTXSID_in}{The DSSTox Substance ID for which to evaluate}
-
-\item{Species_in}{The species for which to evaluate}
-
-\item{Analysis_Type_in}{The analysis type that produced the fit being
-evaluated: one of 'Joint', 'Separate', or 'Pooled'}
-
-\item{Studies.Analyzed_in}{The comma-separated string of studies included in
-the fit being analyzed.}
-
-\item{model_in}{The model to evaluate: one of 'flat', '1compartment', or
+\item{model}{The model to evaluate: one of 'flat', '1compartment', or
 '2compartment'}
 
 \item{optimx_args}{A named list of additional arguments to [optimx::optimx()],

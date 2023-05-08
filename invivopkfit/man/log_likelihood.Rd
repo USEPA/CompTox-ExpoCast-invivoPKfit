@@ -8,10 +8,7 @@ log_likelihood(
   params,
   const_params = NULL,
   DF,
-  modelfun = "analytic",
-  model,
-  fit_conc_dose = TRUE,
-  fit_log_conc = FALSE,
+  mfun,
   force_finite = FALSE,
   negative = TRUE
 )
@@ -42,6 +39,18 @@ subjects included in the concentration measurement). If any `N_Subjects` >
 sample standard deviation for multiple-subject observations (where `Value`
 represents the sample mean of multiple measurements).}
 
+\item{force_finite}{Logical: Whether to force the function to return a finite
+log-likelihood (e.g., as required by [optimx::optimx()] with method
+'L-BFGS-B'.) Default FALSE, allowing the function to return -Inf for
+infinitely-unlikely parameter combinations. When `force_finite == TRUE`, the
+function will replace -Inf with -999999.}
+
+\item{negative}{Logical: Whether to return the *negative* log-likelihood
+(i.e., the log-likelihood multiplied by negative 1). Default TRUE, to return
+the negative log-likelihood. This option is useful when treating the
+log-likelihood as an objective function to be minimized by an optimization
+algorithm.}
+
 \item{modelfun}{Character: whether to use the analytic TK model solution or
 solve the full ODE model numerically. "analytic" to use the analytic model
 solution, "full" to use the full ODE model. Default is "analytic".}
@@ -55,18 +64,6 @@ solution, "full" to use the full ODE model. Default is "analytic".}
 \item{fit_log_conc}{TRUE or FALSE (default FALSE): whether to apply log-scaling to
 the concentrations (or dose-normalized concentrations) before evaluating the
 log-likelihood.}
-
-\item{force_finite}{Logical: Whether to force the function to return a finite
-log-likelihood (e.g., as required by [optimx::optimx()] with method
-'L-BFGS-B'.) Default FALSE, allowing the function to return -Inf for
-infinitely-unlikely parameter combinations. When `force_finite == TRUE`, the
-function will replace -Inf with -999999.}
-
-\item{negative}{Logical: Whether to return the *negative* log-likelihood
-(i.e., the log-likelihood multiplied by negative 1). Default TRUE, to return
-the negative log-likelihood. This option is useful when treating the
-log-likelihood as an objective function to be minimized by an optimization
-algorithm.}
 }
 \value{
 A log-likelihood value for the data given the parameter values in

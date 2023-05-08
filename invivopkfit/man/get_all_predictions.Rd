@@ -4,13 +4,7 @@
 \alias{get_all_predictions}
 \title{Make predictions for all model fits}
 \usage{
-get_all_predictions(
-  cvt_pre,
-  fit_flat,
-  fit_1comp,
-  fit_2comp,
-  optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(kkt = FALSE))
-)
+get_all_predictions(cvt_pre, fit_flat, fit_1comp, fit_2comp)
 }
 \arguments{
 \item{cvt_pre}{Original concentration vs. time data, pre-processed using

@@ -15,9 +15,12 @@ understood by `lubridate::duration()`, i.e. "seconds", "hours", "days",
 and/or "picoseconds". Default value is "hours".}
 
 \item{to}{Character vector: `x` will be converted to these units. Must be
-units understood by `lubridate::duration()`, i.e. "seconds", "hours",
-"days", "weeks", "months", "years", "milliseconds", "microseconds",
-"nanoseconds", and/or "picoseconds". Default value is "hours".}
+either "auto", or units understood by `lubridate::duration()`, i.e.
+"seconds", "hours", "days", "weeks", "months", "years", "milliseconds",
+"microseconds", "nanoseconds", and/or "picoseconds". Default value is
+"hours". If "auto", then units will be automatically chosen that make the
+midpoint of `x` (or its inverse, if `inverse = TRUE`) as close to 10 as
+possible.}
 
 \item{inverse}{Logical: TRUE if `x` is in units of *inverse* time (e.g.
 1/hour, 1/day); FALSE if `x` is in units of time (e.g. hours, days).

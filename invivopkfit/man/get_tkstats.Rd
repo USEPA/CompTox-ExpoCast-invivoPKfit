@@ -4,12 +4,26 @@
 \alias{get_tkstats}
 \title{Get non-compartmental TK statistics from observed data}
 \usage{
-get_tkstats(cvt_pre)
+get_tkstats(
+  cvt_pre,
+  group_by = c("DTXSID", "Species", "Route", "Media"),
+  dose_norm = TRUE
+)
 }
 \arguments{
 \item{cvt_pre}{A `data.table` of concentration vs. time data, preprocessed as
 with [preprocess_data()]. Must contain variables Time, Conc_Dose, DTXSID,
 Species, Route, Media, Subject, Study_ID, and Series_ID.}
+
+\item{group_by}{A character vector of variables to in `cvt_pre` to group data
+by. NCA stats will be computed for each group defined by a unique
+combination of the values of these variables. Default is `c("DTXSID",
+"Species", "Route", "Media")`. You could also use `c("DTXSID", "Species",
+"Route", "Media", "Dose")` to check dose-specific parameters.}
+
+\item{dose_norm}{Logical: TRUE (the default) means to do NCA on dose-normalized
+concentrations (`Conc_Dose` in `cvt_pre`), and FALSE means to do NCA on
+non-dose-normalized concentrations (`Conc` in `cvt_pre`).}
 }
 \value{
 A `data.table` of non-compartmental statistics, with variables

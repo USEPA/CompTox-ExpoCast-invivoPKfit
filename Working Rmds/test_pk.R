@@ -47,3 +47,5 @@ my_pk <- pk(data = cvt_sub,
                                                    TRUE),
                                    Conc_SD = conc_time_values.conc_sd_normalized)
                                    )
+
+my_pk <- preprocess_data(my_pk)

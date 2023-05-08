@@ -4,7 +4,7 @@
 \alias{calc_rsq}
 \title{Calculate r-squared for observed vs. predicted values}
 \usage{
-calc_rsq(group_mean, group_sd, group_n, pred, log = FALSE)
+calc_rsq(group_mean, group_sd, group_n, pred, group_LOQ, log = FALSE)
 }
 \arguments{
 \item{group_mean}{Numeric vector: Observed sample means for summary data, or
@@ -31,15 +31,15 @@ observed value. Even if `log %in% TRUE`, these should *not* be
 log-transformed. (If `log %in% TRUE`, they will be log-transformed
 internally to this function before calculation.)}
 
-\item{log}{Logical. FALSE (default) means that R-squared is computed for
-observations vs. predictions. TRUE means that R-squared is computed for
-log(observations) vs. log(predictions) (see Details).}
-
 \item{group_LOQ}{Numeric vector: Reported limit of quantification (LOQ) (i.e,
 left-censoring limit) for each observation. May contain `NA_real_`s for
 non-censored observations. Even if `log %in% TRUE`, these should *not* be
 log-transformed. (If `log %in% TRUE`, log transformation will be handled
 internally to this function before calculation.)}
+
+\item{log}{Logical. FALSE (default) means that R-squared is computed for
+observations vs. predictions. TRUE means that R-squared is computed for
+log(observations) vs. log(predictions) (see Details).}
 }
 \value{
 A numeric scalar: the R-squared value for observations vs.

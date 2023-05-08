@@ -4,16 +4,19 @@
 \alias{get_model_function}
 \title{Get model function}
 \usage{
-get_model_function(model)
+get_model_function(model, model.type)
 }
 \arguments{
 \item{model}{The name of a model. One of 'flat', '1compartment', or
 '2compartment'.}
+
+\item{model.type}{"analytic" or "full". Default "analytic" to use the
+analytic model solution. "full" to solve the ODE numerically.}
 }
 \value{
-The function corresponding to `model`: `cp_flat()` for 'flat',
-  `cp_1comp()` for '1compartment', `cp_2comp()` for '2compartment'. Returned
-  as a function object, not as a character string.
+Character: The name of the function corresponding to `model`:
+  `cp_flat()` for 'flat', `cp_1comp()` for '1compartment', `cp_2comp()` for
+  '2compartment'.
 }
 \description{
 Get the function that predicts concentration for a given model name

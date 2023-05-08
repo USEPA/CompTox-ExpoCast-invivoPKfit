@@ -6,36 +6,19 @@
 \usage{
 evaluate_resids(
   cvt_pre,
-  fit_flat,
-  fit_1comp,
-  fit_2comp,
-  fit_conc_dose = TRUE,
-  fit_log_conc = FALSE,
-  optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(kkt = FALSE))
+  pk_fit_row,
+  optimx_args = list(method = "bobyqa", itnmax = 1e+06, control = list(kkt = FALSE)),
+  verbose = TRUE
 )
 }
 \arguments{
-\item{cvt_pre}{Original concentration vs. time data, pre-processed using
-`preprocess_data()`.}
+\item{cvt_pre}{Concentration vs. time data for which to evaluate residuals.
+Should be a subset of the table produced by [preprocess_data()], containing
+data for the DTXSID and species corresponding to `pk_fit_row`.}
 
-\item{fit_flat}{Fitting output for the flat model: the output of `fit_all()`
-with `model = "flat"`}
-
-\item{fit_1comp}{Fitting output for the 1-compartment model: the output of
-`fit_all()` with `model = "1compartment"`}
-
-\item{fit_2comp}{Fitting output for the 2-compartment model: the output of
-`fit_all()` with `model = "2compartment"`}
-
-\item{fit_conc_dose}{Logical: Whether the model fits were done on
-dose-normalized data (TRUE), or not (FALSE). This needs to be the same as
-whatever you used when calling `fit_all()`, or the goodness-of-fit metrics
-will be incorrect!}
-
-\item{fit_log_conc}{Logical: Whether the model fits were done on
-log-transformed data (TRUE), or not (FALSE). This needs to be the same as
-whatever you used when calling `fit_all()`, or the goodness-of-fit metrics
-will be incorrect!}
+\item{pk_fit_row}{One row of post-processed fitting output, as produced by
+[merge_fits()]. This corresponds to one DTXSID, species, analysis type, and
+one set of fitting options.}
 }
 \value{
 A `data.table` of goodness-of-fit measures for each dataset, each
@@ -50,7 +33,6 @@ first calculates the predictions and residuals, then evaluates the following:
 
 - RMSE (root mean squared error)
 - R-squared of observations vs. predictions
-- The p-value from the Breusch-Pagan test of heteroscedasticity
 - Estimated "overall" error standard deviation (details below)
 
 Unique fitted models are defined by unique combination of analysis type

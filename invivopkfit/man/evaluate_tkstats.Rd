@@ -4,7 +4,14 @@
 \alias{evaluate_tkstats}
 \title{Evaluate model predictions of toxicokinetic (TK) summary statistics}
 \usage{
-evaluate_tkstats(cvt_pre, fit_flat, fit_1comp, fit_2comp)
+evaluate_tkstats(
+  cvt_pre,
+  fit_flat,
+  fit_1comp,
+  fit_2comp,
+  group_by = c("DTXSID", "Species", "Route", "Media"),
+  dose_norm = TRUE
+)
 }
 \arguments{
 \item{fit_flat}{A `data.table` of fitting output for the flat model: the output of `fit_all()`
@@ -15,6 +22,16 @@ with `model = "flat"`}
 
 \item{fit_2comp}{A `data.table` of fitting output for the 2-compartment model: the output of
 `fit_all()` with `model = "2compartment"`}
+
+\item{group_by}{A character vector of variables to in `cvt_pre` to group data
+by. NCA stats will be computed for each group defined by a unique
+combination of the values of these variables. Default is `c("DTXSID",
+"Species", "Route", "Media")`. You could also use `c("DTXSID", "Species",
+"Route", "Media", "Dose")` to check dose-specific parameters.}
+
+\item{dose_norm}{Logical: TRUE (the default) means to do NCA on dose-normalized
+concentrations (`Conc_Dose` in `cvt_pre`), and FALSE means to do NCA on
+non-dose-normalized concentrations (`Conc` in `cvt_pre`).}
 
 \item{obs_data}{A `data.table` of observed concentration vs. time data, e.g.
 as produced by [preprocess_data()]. Must include variables `Time`, `Dose`,
