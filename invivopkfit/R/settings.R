@@ -1,22 +1,25 @@
 #' Data preprocessing settings
 #'
-#' @param ratio_conc_to_dose
-#' @param calc_loq_factor
+
 #' @param routes_keep
 #' @param media_keep
 #' @param impute_loq
+#' @param loq_group
+#' @param calc_loq_factor
 #' @param impute_sd
 #' @param suppress.messages
 #'
-#' @return An object of class `pk_settings`.
+#' @return An object of class `pk_data_settings`.
 #' @author Caroline Ring
-settings_data.pk <- function(ratio_conc_to_dose = 1,
-                             calc_loq_factor = 0.45,
-                             routes_keep = c("po", "iv"),
+settings_data <- function(routes_keep = c("oral", "iv"),
                              media_keep = c("blood", "plasma"),
                              impute_loq = TRUE,
+                          loq_group = vars(Chemical, Species, Reference, Media),
+                          calc_loq_factor = 0.45,
                              impute_sd = TRUE,
-                             suppress.messages = FALSE){
+                          sd_group = vars(Chemical, Species, Reference, Media),
+                             suppress.messages = FALSE,
+                          ...){
 #get arguments and values
 argg <- c(as.list(environment()), list(...))
 this_settings_data <- argg
@@ -35,10 +38,11 @@ return(this_settings_data)
 #' @param control A list of control parameters for the optimizer; see [optimx::optimx()] for options and details.
 #' @return An object of class `pk_settings`.
 #' @author Caroline Ring
-settings_optimx.pk <- function(method = "bobyqa",
+settings_optimx <- function(method = "bobyqa",
                                itnmax = 1e6,
                                hessian = FALSE,
-                               control = list(kkt = FALSE)){
+                               control = list(kkt = FALSE),
+                            ...){
   #get arguments and values
   argg <- c(as.list(environment()), list(...))
   this_settings_optimx <- argg

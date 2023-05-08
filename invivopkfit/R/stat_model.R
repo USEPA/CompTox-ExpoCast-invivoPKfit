@@ -3,7 +3,7 @@
 #' @param model The name(s) of models to be fitted. These should be the names of objects of class `pk_model`. Built-in options are `"flat"`,
 #'   `"1comp"`, and `"2comp"`. You may add your own model by using [pk_model()].
 
-stat_model.pk <- function(model = c("flat", "1comp", "2comp"),
+stat_model <- function(model = c("flat", "1comp", "2comp"),
                       ...){
   this_stat_model <- list()
   #pull pk_model objects by each name
@@ -11,15 +11,13 @@ for(this_model in model){
   this_stat_model[[this_model]] <- list()
   #check whether an object exists by this name
   if(exists(this_model)){
-    this_model_obj <- eval(parse(text = this_model))
+    this_model_obj <- get(this_model)
     #Check whether this is an object of class `pk_model`
     if(inherits(this_model_obj, "pk_model")){
       #if so, add it to the list
       this_stat_model[[this_model]] <- this_model_obj
     }
   }
-
-  return(this_stat_model)
 }
 
   #set class
@@ -65,9 +63,8 @@ for(this_model in model){
 #' - `upper_bound`: Numerical. Upper bounds for each parameter. May be `Inf` if no upper bound. If `opt_param` or `use_param` is FALSE, then the corresponding `upper_bound` will be ignored (because the parameter is not being estimated from the data).
 #' - `start`: Numerical. Starting values for estimating each parameter. If `optimize_param` is FALSE and `use_param` is TRUE, then the parameter will be held constant at the corresponding value in `start`. If `use_param` is FALSE, then the corresponding `start` will be ignored.
 #'
-#' See [get_params_flat()], [get_params_1comp()], [get_params_2comp()] for examples.
-#'
-#'
+#'See [get_params_flat()], [get_params_1comp()], [get_params_2comp()] for
+#'examples.
 #'
 #'@param name Character: The name of the model
 #'@param params Character vector: Parameter names of the model
@@ -75,13 +72,18 @@ for(this_model in model){
 #'  Details for requirements.
 #'@param auc_fun Name of the function to predict AUC (area under the
 #'  concentration-time curve). See Details for requirements.
-#'@param params_fun Name of the function that produces the `data.frame` of parameter info (see Details)
-#' @param conc_fun_args Any additional arguments to `conc_fun` other than those listed in Details. Default NULL.
-#' @param auc_fun_args Any additional arguments to `auc_fun` other those those listed in Details. Default NULL.
-#' @param params_fun_args Any additional arguments to `params_fun` other than `data` (see Details). Default NULL.
-#' @return An object of class `pk_model`. Effectively, a named list containing all of the arguments provided to this function.
-#' @author Caroline Ring
-#' @export
+#'@param params_fun Name of the function that produces the `data.frame` of
+#'  parameter info (see Details)
+#'@param conc_fun_args Any additional arguments to `conc_fun` other than those
+#'  listed in Details. Default NULL.
+#'@param auc_fun_args Any additional arguments to `auc_fun` other those those
+#'  listed in Details. Default NULL.
+#'@param params_fun_args Any additional arguments to `params_fun` other than
+#'  `data` (see Details). Default NULL.
+#'@return An object of class `pk_model`. Effectively, a named list containing
+#'  all of the arguments provided to this function.
+#'@author Caroline Ring
+#'@export
 pk_model <- function(name,
                      params,
                      conc_fun,
@@ -89,7 +91,8 @@ pk_model <- function(name,
                      params_fun,
                      conc_fun_args = NULL,
                      auc_fun_args = NULL,
-                     params_fun_args = NULL){
+                     params_fun_args = NULL,
+                     ...){
   #get arguments and values as a list
   argg <- c(as.list(environment()), list(...))
   this_model <- argg
@@ -98,35 +101,25 @@ pk_model <- function(name,
   return(this_model)
 }
 
-#' Error model
+#'Error model
 #'
-#' Define an error model.
-#'
-#' The error model defines
+#'Define an error model.
 #'
 #'
-#'@param error_model One of "FE" (the default) or "pooled". "FE" stands for
-#'  "fixed-effects" and means that there is only one set of model parameters,
-#'  but each group defined in `error_group` will have its own error variance
-#'  around the estimated concentration-time curve. "pooled" means that all data
-#'  is assumed to share the same error variance. If `error_model ='pooled'` then
-#'  `error_group` will be ignored.
 #'@param error_group Defined using [ggplot2::vars()]: A set of harmonized
 #'  variables whose unique combinations define a group with its own error
-#'  variance. If `error_group`is chosen such that all data are in the same group
-#'  (i.e. there is only one group), then the effective error model will be the
-#'  same regardless of `error_model`.
+#'  variance. These variables refer to the `data` element of the `pk` object to
+#'  which `stat_error_model()` is added.
 #'@param ... Additional arguments. Not currently used.
 #'@return An object of class `pk_stat_error_model`: A named list of all the
 #'  arguments to `stat_error_model`.
 #'@author Caroline Ring
 #'@export
-stat_error_model <- function(error_model ="FE",
-                             error_group = vars(Chemical, Species, Reference, Media),
+stat_error_model <- function(error_group = vars(Chemical, Species, Reference, Media),
                              ...){
   #get arguments and values as a list
   argg <- c(as.list(environment()), list(...))
   this_error_model <- argg
-  class(this_error_model) <- c(class(this_model), "pk_stat_error_model")
+  class(this_error_model) <- c(class(this_error_model), "pkproto", "pk_stat_error_model")
   return(this_error_model)
 }

@@ -57,3 +57,11 @@ plot_analysis <- function(x){
 get_summary <- function(x){
   UseMethod("get_summary", x)
 }
+
+pk_add <- function(object, pk_obj, objectname){
+  UseMethod("pk_add")
+}
+
+preprocess_data <- function(x){
+  UseMethod("preprocess_data")
+}

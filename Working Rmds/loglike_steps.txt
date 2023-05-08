@@ -1,0 +1,40 @@
+loglikelihood steps
+
+1. Get current values of model parameters
+2. For each observation in dataset, evaluate model with current set of parameters. This gives you the model-predicted concentrations.
+3. Transform the model-predicted concentrations to match however the observed concentrations have been transformed.
+4. Get the current value(s) of sigma parameter(s)
+5. Assign the appropriate sigma to each observation (i.e. the sigma that matches that observation's error group -- its unique combination of DTXSID + Species + Media, or DTXSID + Species + Reference + Media, or whatever it is)
+6. For each observation, evaluate (the log of) either:
+  6a. If N_Subjects = 1: A normal distribution, with mean = (transformed) model prediction and sigma = that observation's sigma, evaluated at the (transformed) observed concentration
+  6b. If N_Subjects > 1:
+    6b(i). If log transformation has not been applied: A summary normal distribution, with mean = model prediction and sigma = that observation's sigma, evaluated at the (transformed) observed concentration and the (transformed) observed concentration sample SD
+    6b(i). If log transformation has been applied: The summary normal distribution modified to deal with the log transformation (because you can't just log transform the SD and leave it at that)
+7. Sum the total log-likelihood across observations
+8. Return
+
+So the arguments that need to be passed are:
+
+1. Observed data: concentration, dose, time, media, route
+2. Names and current values of model parameters
+3. Concentration transformation
+4. Names (group IDs) and current values of sigma parameters
+5. Sigma group IDs for each observed data point
+
+We also need some way to auto-detect whether a log transformation has been applied to concentrations. Either that or we need to figure out a way to handle the log transformation up front.
+
+Or, we could tell the user to specify what log-likelihood function applies to each observation, and whether concentration should be back-transformed somehow? Or should transformations only be done within the user-supplied log-like function? But we still want to capture transformations explicitly in the workflow specification. And we still want to know about transformations for the sake of plotting. But also transformations done for plotting could be different from transformations done for fitting.
+
+OK, so, we could automatically still apply log scaling to the observed concentration mean and SD. Then we could auto-detect whether log transformation has been applied, and whether this is a multi-subject observation. We could still pass the transformed observed mean and SD, but then back-transform them (un-log them) within the log-likelihood function for those observations.
+
+The trouble then becomes, how do we auto-detect whether a log transformation has been applied? Right now, scale_conc() just takes any user-supplied expression. This could involve a log scaling and/or any other function.
+
+Instead, maybe I should implement scale_conc() to take a strictly limited set of options -- i.e. log_trans TRUE/FALSE, dose_norm TRUE/FALSE, ratio_conc_to_dose = number -- and then have it construct the expression itself. That way I could know whether a log transformation was applied, and also know/control in what order it was applied (i.e. apply log transformation after dose normalization, if both were applied).
+
+I liked the idea of allowing people to do arbitrary transformations but that's not really feasible when it comes to the multi-subject data points, because of the standard deviations. Because f(SD(x)) is not the same as SD(f(x)), and we can't just ignore that.
+
+Unless -- could my derivation for a log transformation be generalized to any transformation? I suppose I could find out. It would probably have to be at least continuous and monotonic, but I think those are reasonable restrictions.
+
+UPdate 5/5/2023:
+
+No, it's a gigantic pain. I'm just going to re-code it to lock down the options.

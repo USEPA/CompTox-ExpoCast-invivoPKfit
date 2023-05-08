@@ -1,6 +1,5 @@
 #'Create a new `pk` object
 #'
-#'
 #'[pk()] initializes a new `pk` object.
 #'
 #'
@@ -23,12 +22,12 @@
 #'
 #' - `data_orig`: The original data set, supplied as [pk()] argument `data`
 #' - `data_settings`: Instructions for data pre-processing (a named list of arguments to [preprocess_data()]), supplied in [pk()] arguments `mapping` and `data_settings`
-#' - `scales`: Instructions for data scaling and/or transformation (a list with elements named for each data variable with scaling/transformations, where each element contains the scaling/transformation to apply to the corresponding variable)
-#' - `optimx_settings`: Instructions for the numerical optimizer (a named list of arguments to [optimx::optimx()]), supplied in [pk()] argument `optimx_settings`
-#' - `status`: What stage of the analysis has been applied to this object so far? It starts out at `initialized`
+#' - `scales`: Instructions for data scaling and/or transformation. A list with elements named `conc` and `time`, where each element contains the scaling/transformation to apply to the corresponding variable. See [scale_conc()] and [scale_time()].
+#' - `optimx_settings`: Instructions for the numerical optimizer: a named list of arguments to [optimx::optimx()]. See [settings_optimx()].
+#' - `status`: What stage of the analysis has been applied to this object so far? Options are 1 (meaning the workflow has been set up), 2 (meaning data has been pre-processed), 3 (meaning that pre-fitting is complete), or 4 (meaning that fitting is complete).
 #'
 #'No data processing, model fitting, or any other analysis is done until you
-#'explicitly request. Until then, the `pk` object remains just a set of data and
+#'explicitly request it. Until then, the `pk` object remains just a set of data and
 #'instructions. This allows you to specify the instructions for each analysis
 #'step without regard for the actual order of the analysis steps, and to
 #'overwrite previous instructions, without having to re-do the model fitting
@@ -225,12 +224,6 @@
 #'  provide a fixed/constant value for a `new_variable` rather than taking its
 #'  value from a variable in `data`, simply supply that fixed/constant value in
 #'  the `old_variable` position.
-#'@param data_settings A named list of settings for the data preprocessing. See
-#'  Details for options and defaults.
-#'@param scales A named list of scales (normalization and/or transformations) to
-#'  use for concentration and time data. See Details for options and defaults.
-#'@param optimx_settings A named list of settings for the optimizer. See Details
-#'  for options and defaults.
 #'@return An object of class `pk`. The initial `pk` object is a list with
 #'  elements `data_orig`, `data_settings`, `scales` and `optimx_settings`.
 #'  `data_orig` is the original data set to be fitted, as supplied in the
@@ -259,85 +252,34 @@ pk <- function(data = NULL,
                 Value_SD = value_SD,
                 LOQ = LOQ,
                 Value.Units = "mg/L"
-               ),
-               data_settings = list(
-                 ratio_conc_to_dose = 1,
-               calc_loq_factor = 0.45,
-               routes_keep = c("po", "iv"),
-               media_keep = c("blood", "plasma"),
-               impute_loq = TRUE,
-               impute_sd = TRUE,
-               suppress.messages = FALSE
-               ),
-               scales = list(conc = list(normalize = "identity",
-                                           trans = "identity"),
-                               time = list(trans = "identity")),
-               optimx_settings = list(
-                 method = "bobyqa",
-               itnmax = 1e6,
-               hessian = FALSE,
-               control = list(kkt = FALSE)
                )
                ){
 
-  #fill in any non-specified data settings with their defaults
-  data_settings_default <- list(
-    ratio_conc_to_dose = 1,
-    calc_loq_factor = 0.45,
-    routes_keep = c("po", "iv"),
-    media_keep = c("blood", "plasma"),
-    impute_loq = TRUE,
-    impute_sd = TRUE,
-    suppress.messages = FALSE
-  )
-
-  missing_data_settings <- setdiff(names(data_settings_default),
-                                   names(data_settings))
-  data_settings[missing_data_settings] <- data_settings_default[missing_data_settings]
-
-
-  #fill in any non-specified scales with their defaults
-  scales_default <- list(conc = list(normalize = "identity",
-                   trans = "identity"),
-       time = list(trans = "identity"))
-
-  missing_scales <- setdiff(names(scales_default),
-                            names(scales))
-  scales[missing_scales] <- scales_default[missing_scales]
-#check for missing scales_conc
-  missing_scales_conc <- setdiff(names(scales_default$conc),
-                                 names(scales$conc))
-  scales$conc[missing_scales_conc] <- scales_default$conc[missing_scales_conc]
-#check for missing scales_time
-  missing_scales_time <- setdiff(names(scales_default$time),
-                                 names(scales$time))
-  scales$time[missing_scales_time] <- scales_default$time[missing_scales_time]
-
-
-  #fill in any non-specified optimx settings with their defaults
-  optimx_settings_default = list(
-    method = "bobyqa",
-    itnmax = 1e6,
-    hessian = FALSE,
-    control = list(kkt = FALSE)
-  )
-
-  missing_optimx_settings <- setdiff(names(optimx_settings_default),
-                                   names(optimx_settings))
-  optimx_settings[missing_optimx_settings] <- optimx_settings_default[missing_optimx_settings]
-
 #Create the initial pk object
   obj <- list("data_original" = data,
-              "data_settings" = c(list(mapping = mapping,
-                                       error_group = error_group),
-                                    data_settings),
-              "scales" = scales,
-              "optimx_settings" = optimx_settings,
+              "mapping" = mapping,
               "status" = 1L
               )
+
 #nd assign it class pk
-  class(obj) <- c(class(obj), "pk")
-#return it
+  class(obj) <- c("pk", class(obj))
+
+# Add default data settings
+  obj <- obj + settings_data()
+
+  #Add default scalings for conc and time
+  obj <- obj + scale_conc() + scale_time()
+
+  #Add default stats
+  obj <-obj + stat_model()
+
+  #Add default error model
+  obj <- obj + stat_error_model()
+
+  #Add default optimx settings
+  obj <- obj + settings_optimx()
+
+#return the initialized pk object
   return(obj)
 
 }
@@ -354,6 +296,13 @@ is.pk <- function(obj){
 }
 
 
+#' Add a pkproto object to a pk object
+#'
+#' @param e1 A pk pbject
+#' @param e2 A pkproto object
+#' @return The pk object, modified by adding the pkproto object
+#'@export
+#' @author Caroline Ring
 "+.pk" <- function(e1, e2) {
   if (missing(e2)) {
     cli::cli_abort(c(
@@ -389,13 +338,13 @@ add_pk <- function(pk_obj, object, objectname) {
   p
 }
 
-#' Add a `pk_scales` object.
+#' Add a `pk_scales` object to a `pk` object.
 #'
 #' @param object The `pk_scales` object to be added.
 #' @param pk_obj The `pk` object to which the `pk_scales` object will be added.
 #' @param objectname The name of the `pk_scales` object.
 #'
-#' @return The `pk` object, modified by adding the scale.
+#' @return The `pk` object, modified by the `pk_scales` object.
 #' @author Caroline Ring
 pk_add.pk_scales <- function(object, pk_obj, objectname){
 pk_obj$scales[[object$name]] <- object$value
@@ -413,7 +362,7 @@ return(pk_obj)
 #' @param pk_obj The `pk` object to which the `pk_data_settings` object will be added.
 #' @param objectname The name of the `pk_data_settings` object.
 #'
-#' @return The `pk` object, modified by adding the settings.
+#' @return The `pk` object, modified by the `pk_data_settings` object.
 #' @author Caroline Ring
 pk_add.pk_data_settings <- function(object, pk_obj, objectname){
 
@@ -523,8 +472,10 @@ pk_add.pk_stat_error_model <- function(object, pk_obj, objectname){
   return(pk_obj)
 }
 
+
+#' Print a PK object
 #'
-#' Prints the default output of a PK object.
+#' Print a
 #'
 #' A `pk` object is just a list of data and fitting options. In order to
 #' actually perform the optimization and fit the model, you need to call one of
@@ -551,9 +502,9 @@ pk_add.pk_stat_error_model <- function(object, pk_obj, objectname){
 #' @return Invisibly: The `pk` object with added elements containing the optimization results
 #' @author Caroline Ring
 print.pk <- function(obj){
-  #Data: Preprocess and summarize
-  obj <- build_data(obj)
-
+ obj <- preprocess_data(obj)
+ obj <- prefit(obj)
+ obj <- fit(obj)
 
 }
 
@@ -574,8 +525,8 @@ preprocess_data.pk <- function(obj){
     data_original <- as.data.frame(obj$data_original)
 
     #rename variables
-    data <- as.data.frame(sapply(obj$data_settings$mapping,
-                                 function(x) rlang::eval_tidy(x, data),
+    data <- as.data.frame(sapply(obj$mapping,
+                                 function(x) rlang::eval_tidy(x, data_original),
                                  simplify = FALSE,
                                  USE.NAMES = TRUE)
     )
@@ -584,7 +535,6 @@ preprocess_data.pk <- function(obj){
     data_default <- data.frame(Chemical = character(),
                                Species = character(),
                                Reference = character(),
-                               Study = character(),
                                Subject = character(),
                                N_Subjects = numeric(),
                                Route = character(),
@@ -670,7 +620,7 @@ preprocess_data.pk <- function(obj){
           paste("Species:", species),
           paste("Routes:", routes),
           paste("Media:", media),
-          sep = "/n"
+          sep = "\n"
         )
       )
     }
@@ -737,19 +687,12 @@ preprocess_data.pk <- function(obj){
     data$Route <- tolower(data$Route)
     data$Media <- tolower(data$Media)
 
-    # Normalizations
-
-    ## Normalize 'Value', `LOQ`, and `SD` by ratio_conc_to_dose.
-
-    if(!obj$data_settings$suppress.messages){
-      message(paste0("Variables Value, LOQ, and Value_SD multiplied by ratio_conc_to_dose = ",
-                    obj$data_settings$ratio_conc_to_dose))
-    }
-    ## This makes the mass units of concentration and Dose the same --e.g. mg/L and
-    ## mg/kg/day
-    data$Value <- data$Value * obj$data_settings$ratio_conc_to_dose
-    data$LOQ <- data$LOQ * obj$data_settings$ratio_conc_to_dose
-    data$Value_SD <- data$Value_SD * obj$data_settings$ratio_conc_to_dose
+    #Coerce any non-positive Value to NA
+    data[(data$Value<=0) %in% TRUE, "Value"] <- NA_real_
+    #Coerce any non-positive LOQ to NA
+    data[(data$LOQ<=0) %in% TRUE, "LOQ"] <- NA_real_
+    #Coerce any non-positive Value_SD to NA
+    data[(data$Value_SD<=0) %in% TRUE, "Value_SD"] <- NA_real_
 
     # Impute LOQ
     data$LOQ_orig <- data$LOQ
@@ -761,14 +704,17 @@ preprocess_data.pk <- function(obj){
                          "* minimum detected Value for each unique combination of ",
                          "Reference, Chemical, Media, and Species"))
         }
-        data <- estimate_loq(dat = data,
-                             reference_col = "Reference",
-                             chem_col = "Chemical",
-                             media_col = "Media",
-                             species_col = "Species",
-                             value_col = "Value",
-                             loq_col = "LOQ",
-                             calc_loq_factor = obj$data_settings$calc_loq_factor)
+        data <- do.call(dplyr::group_by,
+                        args =c(list(data),
+                                obj$data_settings$loq_group)) %>%
+          dplyr::mutate(LOQ_orig = LOQ,
+                 LOQ = dplyr::if_else(is.na(LOQ_orig),
+                               min(LOQ_orig, na.rm = TRUE) *
+                                 obj$data_settings$calc_loq_factor,
+                               LOQ_orig)
+                 ) %>%
+          dplyr::ungroup() %>%
+          as.data.frame()
       }
 
       if(!obj$data_settings$suppress.messages){
@@ -798,8 +744,26 @@ preprocess_data.pk <- function(obj){
       }
     }
 
-    # Impute missing SDs
+    # For any cases where N_Subjects is NA, impute N_Subjects = 1
+    if(any(is.na(data$N_Subjects))){
+      data$N_Subjects_orig <- data$N_Subjects
+      if(!obj$data_settings$suppress.messages){
+        message(
+          paste0(
+            "N_Subjects is NA for ",
+            sum(is.na(data$N_Subjects)),
+            " observations. It will be assumed = 1."
+          )
+        )
+      }
 
+      data[is.na(data$N_Subjects), "N_Subjects"] <- 1
+    }
+
+    #for anything with N_Subjects == 1, set Value_SD to 0
+    data[data$N_Subjects == 1, "Value_SD"] <- 0
+
+    # Impute missing SDs
     data$Value_SD_orig <- data$Value_SD
     if(obj$data_settings$impute_sd %in% TRUE){
       if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value_SD))){
@@ -810,20 +774,24 @@ preprocess_data.pk <- function(obj){
               is.na(data$Value_SD)
           )
           message(paste0("Estimating missing concentration SDs for multi-subject data points as ",
-                         "minimum non-missing SD for each unique combination of ",
-                         "Reference, Chemical, Media, and Species.",
+                         "minimum non-missing SD for each unique combination of variables in",
+                         "obj$data_settings$sd_group.",
                          "If all SDs are missing for such a unique combination, ",
                          "SD will be imputed equal to mean. ",
                          n_sd_est, " missing SDs will be estimated."))
         }
-        data <- estimate_conc_sd(dat = data,
-                                 reference_col = "Reference",
-                                 chem_col = "Chemical",
-                                 media_col = "Media",
-                                 species_col = "Species",
-                                 value_col = "Value",
-                                 sd_col = "Value_SD",
-                                 n_subj_col = "N_Subjects")
+        data <- do.call(dplyr::group_by,
+                        args = c(list(data),
+                                 obj$data_settings$sd_group)) %>%
+          dplyr::mutate(Value_SD_orig = Value_SD,
+                 Value_SD = dplyr::if_else(is.na(Value_SD_orig) &
+                                      N_Subjects > 1,
+                                    dplyr::if_else(sum(!is.na(Value_SD_orig))==0,
+                                            Value,
+                                            min(Value_SD_orig, na.rm = TRUE)),
+                               Value_SD_orig)
+          ) %>% dplyr::ungroup() %>%
+          as.data.frame()
       }
     }#end if impute_sd %in% TRUE
 
@@ -868,26 +836,6 @@ preprocess_data.pk <- function(obj){
       }
     }
 
-
-    # For any cases where N_Subjects is NA, impute N_Subjects = 1
-    if(any(is.na(data$N_Subjects))){
-      data$N_Subjects_orig <- data$N_Subjects
-      if(!obj$data_settings$suppress.messages){
-        message(
-          paste0(
-            "N_Subjects is NA for ",
-            sum(is.na(data$N_Subjects)),
-            " observations. It will be assumed = 1."
-          )
-        )
-      }
-
-      data[is.na(data$N_Subjects), "N_Subjects"] <- 1
-    }
-
-    #for anything with N_Subjects == 1, set Value_SD to 0
-    data[data$N_Subjects == 1, "Value_SD"] <- 0
-
     #Remove any NA time values
     if(any(is.na(data$Time))){
       if(!obj$data_settings$suppress.messages){
@@ -896,8 +844,6 @@ preprocess_data.pk <- function(obj){
                        " observations will be removed."))
       }
       data <- subset(data, !is.na(Time))
-
-
 
       if(!obj$data_settings$suppress.messages){
         message(paste(dim(data)[1], "observations of",
@@ -908,7 +854,7 @@ preprocess_data.pk <- function(obj){
     #Remove any Dose = 0 observations
     if(any(data$Dose <= .Machine$double.eps)){
       if(!obj$data_settings$suppress.messages){
-        message(paste0("Removing observations with 0 dose values.\n",
+        message(paste0("Removing observations with Dose == 0.\n",
                        sum(data$Dose <= .Machine$double.eps),
                        " observations will be removed."))
       }
@@ -932,7 +878,6 @@ preprocess_data.pk <- function(obj){
   }
 
 
- #apply transformation function
   from_units <- unique(data$Time.Units)
   to_units <- ifelse(obj$scales$time$new_units %in% "identity",
                      from_units,
@@ -954,19 +899,19 @@ preprocess_data.pk <- function(obj){
                         })
   data$Time.Units <- to_units
 
-  #apply concentration transformation
-
-  #if not specified, treat as identity
-  if(is.null(obj$scales$conc$expr)){
-    obj$scales$conc$expr <- rlang::quo(.conc)
-  }
+  #apply concentration transformation.
+  #
+  #.conc is a placeholder that refers to any concentration variable (Conc,
+  #value, Value_SD, Conc_SD, LOQ).
 
   #apply conc transformation
-  data$Conc <- rlang::eval_tidy(obj$scales$conc$expr,
+  #use tidy evaluation: Specify an expression to evaluate in the context of a data.frame
+  #Transform Conc (this is either the measured value or the LOQ, depending on Detect)
+  data$Conc <- rlang::eval_tidy(expr = obj$scales$conc$expr,
                          data = cbind(data,
                                       data.frame(.conc = data$Conc)
                                       ))
-
+  #Transform Conc_SD
   data$Conc_SD <- rlang::eval_tidy(obj$scales$conc$expr,
                                 data = cbind(data,
                                              data.frame(.conc = data$Conc_SD)
@@ -998,50 +943,6 @@ preprocess_data.pk <- function(obj){
                                 replacement = "",
                                 fixed = TRUE)
 
-  #get empirical tmax
-  if(any(data$Route %in% "po")){
-    oral_data <- subset(data, Route %in% "po")
-
-    oral_peak <- get_peak(x = oral_data$Time,
-                          y = log(oral_data[["Conc_Dose"]]))
-
-    dat_info$tmax_oral <- oral_peak$x
-
-    #absorption and elimination phase points
-    #get the number of detects & nondetects before empirical tmax
-    dat_info$n_phase_oral <- aggregate(x = list(Detect = oral_data$Detect),
-                                  by = list("Phase" = factor(oral_data$Time <= dat_info$tmax_oral,
-                                                             levels = c(TRUE, FALSE),
-                                                             labels = c("absorption", "elimination"))),
-                                  FUN = function(Detect){
-                                    c("Detect" = sum(Detect %in% TRUE),
-                                      "NonDetect" = sum(Detect %in% FALSE))
-                                  }
-    )
-    names(dat_info$n_phase_oral) <- gsub(x = names(dat_info$n_phase_oral),
-                                    pattern = "Detect.",
-                                    replacement = "",
-                                    fixed = TRUE)
-
-  }else{
-    #no oral data, so fill tmax_oral and n_phase with NAs
-    dat_info$tmax_oral <- NA_real_
-    dat_info$n_phase <- aggregate(x = list(Detect = NA),
-                                  by = list("Phase" = factor(NA,
-                                                             levels = c(TRUE, FALSE),
-                                                             labels = c("absorption", "elimination"))),
-                                  FUN = function(Detect){
-                                    c("Detect" = sum(Detect %in% TRUE),
-                                      "NonDetect" = sum(Detect %in% FALSE))
-                                  },
-                                  drop = FALSE)
-
-    names(dat_info$n_phase_oral) <- gsub(x = names(dat_info$n_phase_oral),
-                                         pattern = "Detect.",
-                                         replacement = "",
-                                         fixed = TRUE)
-  }
-
   #get time of last detected observation
   dat_info$last_detect_time <- max(data[data$Detect %in% TRUE, "Time"])
 
@@ -1069,51 +970,37 @@ prefit.pk <- function(obj){
     obj <- preprocess_data(obj)
   }
 
+  #get the error model, which defines the number of sigmas that will need to be optimized
+error_model <- obj$stat_error_model
+#count the number of unique combinations of vars
+unique_groups <- unique(rlang::eval_tidy(expr = error_model$error_group,
+                                         data = obj$data))
+
+
   #for each model to be fitted:
-  for (this_model in names(obj$models)){
-    #parameters
-    obj$models[[this_model]]$par_DF <- get_params(obj)
-    #checks
-    obj$models[[this_model]]$check_n_detect <- check_n_detect(obj)
-    obj$models[[this_model]]$check_n_abs <- check_n_abs(obj)
-    obj$models[[this_model]]$check_n_elim <- check_n_elim(obj)
-    #overall fit status and reason
-    obj$models[[this_model]]$status <- ifelse(
-      obj$models[[this_model]]$check_n_detect$status %in% "abort",
+  for (this_model in names(obj$stat_model)){
+    #get parameters to be optimized, bounds, and starting points
+    #by evaluating params_fun for this stat_model
+    obj$stat_model[[this_model]]$par_DF <- do.call(obj$stat_model[[this_model]]$params_fun,
+                                                   args = c(list(obj$data),
+                                                            obj$stat_model[[this_model]]$params_fun_args))
+    #check whether there are enough observations to optimize the requested parameters
+    #number of parameters to optimize
+    n_par <- sum(obj$stat_model[[this_model]]$par_DF$optimize_param)
+    #number of detected observations
+    n_detect <- sum(obj$data$Detect)
+    obj$stat_model[[this_model]]$status <- ifelse(
+      n_detect > n_par,
       "abort",
-      ifelse(
-        obj$models[[this_model]]$check_n_abs$status %in% "abort",
-        "abort",
-        ifelse(
-          obj$models[[this_model]]$check_n_elim$status %in% "abort",
-          "abort",
-          "continue"
-        )
-      )
+     "continue"
     )
 
-    obj$models[[this_model]]$status_reason <- ifelse(
-      obj$models[[this_model]]$check_n_detect$status %in% "abort",
-      "Fewer detected observations than parameters to optimize",
-      ifelse(
-        obj$models[[this_model]]$check_n_abs$status %in% "abort",
-        "Fewer than 3 detected observations during absorption phase; cannot optimize kgutabs",
-        ifelse(
-          obj$models[[this_model]]$check_n_elim$status %in% "abort",
-          "Fewer than 3 detected observations during elimination phase; cannot optimize kelim",
-          "Sufficient observations to optimize all requested parameters"
-        )
-      )
+    obj$stat_model[[this_model]]$status_reason <- ifelse(
+      n_detect <= n_par,
+      "Number of detects is less than or equal to number of parameters to optimize",
+       "Number of detects is greater than number of parameters to optimize"
     )
   }
-
-  #get bounds & starting values for parameter optimization
-  get_params_fun <- obj$models[[this_model]]$get_params_fun
-  get_params_args <- obj$models[[this_model]]$get_params_args
-
-  obj$models[[this_model]]$par_DF <- do.call(get_params_fun,
-                                             args = c(obj["data"],
-                                                      get_params_args))
 
   obj$status <- 3 #prefit complete
 
@@ -1127,10 +1014,11 @@ prefit.pk <- function(obj){
 fit.pk <- function(obj){
 
   #For each model:
-  for (this_model in names(obj$models)){
+  for (this_model in names(obj$stat_model)){
 
-  #Extract par_DF to get which params to optimize, bounds, and starting values
-  par_DF <- obj$models[[this_model]]$par_DF
+    if(obj$stat_model[[this_model]]$status %in% "continue"){
+  #Pull par_DF to get which params to optimize, bounds, and starting values
+  par_DF <- obj$stat_model[[this_model]]$par_DF
 
   #params to be optimized with their starting points
   opt_params <- par_DF[par_DF$optimize_param %in% TRUE,
@@ -1203,7 +1091,8 @@ fit.pk <- function(obj){
   },
   error = function(err){
     #create "placeholder" all_data_fit data.frame
-    tmp <- vector(mode = "numeric", length = length(opt_params))
+    #return NA for all "fitted" params
+    tmp <- rep(NA_real_, length(opt_params))
     names(tmp) <- names(opt_params)
     tmp <- as.list(tmp)
     tmp[c("value", "fevals", "gevals", "niter",
@@ -1214,11 +1103,22 @@ fit.pk <- function(obj){
     tmp$message <- err$message
     tmp
   })
+    }else{ #if status for this model was "abort", then abort fit and return empty placeholder
+      tmp <- rep(NA_real_, length(opt_params))
+      names(tmp) <- names(opt_params)
+      tmp <- as.list(tmp)
+      tmp[c("value", "fevals", "gevals", "niter",
+            "convcode")] <- NA_real_
+      tmp[c("kkt1", "kkt2")] <- NA #logical
+      tmp[c("xtime")] <- NA_real_
+      #get the error message
+      tmp$message <- err$message
+      all_data_fit <- tmp
+    }
 
-  #If fit failed, then stop
-  if(!(all_data_fit$convcode %in% 0)){
-  }
-  }
+    #Save the fitting results for this model
+    obj$stat_model[[this_model]]$fit <- all_data_fit
+  } #end loop over models
 
   obj$status <- 4 #fitting complete
   return(obj)
@@ -1348,7 +1248,7 @@ nca.pk <- function(obj,
     oral_data <- subset(newdata,
                         Route %in% "po")
     if(dose_norm %in% TRUE){
-      nca_oral <- get_nca(obs = oral_data,
+      nca_oral <- do_nca(obs = oral_data,
                           dose_norm = dose_norm)
       nca_oral <- cbind("nca.oral.Dose" = 1,
                         nca_oral)
@@ -1621,6 +1521,67 @@ plot_data.pk <- function(obj,
 
 }
 
+#' Rescale time
+#'
+#' If requested, rescale time from hours to some more convenient unit.
+#'
+#' Time is rescaled based upon the time of the last detected observation in units of hours.
+#'
+#'  | Range of Last Detect Time in Hours | New Time Units | Range of New Last Detect Time |
+#'  | ----------- | -------------- |
+#'  | \\[0, 0.5) | minutes | \\[0, 30) |
+#'  | \\[0.5, 24) | hours | \\[0.5, 24) |
+#'  | \\[24, 720) | days | \\[1, 30) |
+#'  | \\[720, 8766) | months | \\[0.99, 12) |
+#'  | \\[8766, 87660) | years | \\[1, 10) |
+#'  | \\[87660, 876600) | decades | \\[1, 10) |
+#'  | \\[876600, Inf) | centuries | \\[1, Inf) |
+#'
+#'  (At present, no data in CvT requires decades or centuries)
+#
+#' @param obj A [pk()] object.
+#' @return The `data` element of the object, but modified: the original
+#'   time (in hours) is now in variable `Time.Hours`; rescaled time is in
+#'   `Time`; units of rescaled time are in `Time.Units`.
+#' @author Caroline Ring
+rescale_time.pk <- function(obj){
+  #Rescale time if so requested
+  #Save the original time in units of hours
+  obj$data$Time.Hours <- obj$data$Time
+  #Now do the rescale
+  if(obj$data_trans$rescale_time %in% TRUE){
+    last_detect_time <- obj$data_info$last_detect_time
 
+    new_time_units <- cut(last_detect_time,
+                          breaks = c(0,
+                                     0.5,
+                                     24,
+                                     720,
+                                     8766,
+                                     87660,
+                                     876600,
+                                     Inf),
+                          labels = c("minutes",
+                                     "hours",
+                                     "days",
+                                     "months",
+                                     "years",
+                                     "decades",
+                                     "centuries"),
+                          right = FALSE)
+
+    obj$data$Time <- convert_time(x = obj$data$Time.Hours,
+                                  from = "hours",
+                                  to = new_time_units,
+                                  inverse = FALSE)
+
+  }else{
+    new_time_units <- "hours"
+  }
+
+  obj$data$Time.Units <- new_time_units
+
+  return(obj$data)
+}
 
 
