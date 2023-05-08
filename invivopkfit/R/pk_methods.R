@@ -512,13 +512,6 @@ print.pk <- function(obj){
 str(obj)
 }
 
-#' Test pk S3 methods
-#'
-#' @export
-test.pk <- function(obj){
-  str(obj)
-}
-
 #' Pre-process data
 #'
 #' S3 method for `pk` objects to preprocess data
@@ -537,7 +530,14 @@ test.pk <- function(obj){
 #' @import magrittr
 preprocess_data.pk <- function(obj){
 
-  if(!is.null(obj$data_original)){
+  if(is.null(obj$data_original)){
+    message("Original data is NULL")
+    obj$data <- NULL
+    obj$data_info <- NULL
+    obj$status <- 2
+    return(obj)
+  }else{
+
     #coerce to data.frame (in case it is a tibble or data.table or whatever)
     data_original <- as.data.frame(obj$data_original)
 
@@ -883,8 +883,6 @@ preprocess_data.pk <- function(obj){
       }
     }
 
-  } #end if is.null(obj$data_original)
-
   #apply time transformation
   data$Time_orig <- data$Time
   data$Time.Units_orig <- data$Time.Units
@@ -972,7 +970,7 @@ preprocess_data.pk <- function(obj){
   obj$status <- 2 #preprocessing complete
 
   return(obj)
-
+}
 }
 
 #' Do pre-fit calculations and checks
