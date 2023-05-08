@@ -262,7 +262,7 @@ pk <- function(data = NULL,
               )
 
 #nd assign it class pk
-  class(obj) <- c("pk", class(obj))
+  class(obj) <-append(class(obj), "pk")
 
 # Add default data settings
   obj <- obj + settings_data()
@@ -331,6 +331,7 @@ is.pk <- function(obj){
 #'@param objectname The name of the `pkproto` object to be added
 #'
 #'@return The `pk` object modified by the addition.
+#' @export
 add_pk <- function(pk_obj, object, objectname) {
   if (is.null(object)) return(pk_obj)
 
@@ -346,6 +347,7 @@ add_pk <- function(pk_obj, object, objectname) {
 #'
 #' @return The `pk` object, modified by the `pk_scales` object.
 #' @author Caroline Ring
+#' @export
 pk_add.pk_scales <- function(object, pk_obj, objectname){
 pk_obj$scales[[object$name]] <- object$value
 if(pk_obj$status > 1L){
@@ -364,6 +366,7 @@ return(pk_obj)
 #'
 #' @return The `pk` object, modified by the `pk_data_settings` object.
 #' @author Caroline Ring
+#' @export
 pk_add.pk_data_settings <- function(object, pk_obj, objectname){
 
   #New data_settings will *replace* existing ones
@@ -390,6 +393,7 @@ return(pk_obj)
 #'
 #' @return The `pk` object, modified by adding the settings.
 #' @author Caroline Ring
+#' @export
 pk_add.pk_optimx_settings <- function(object, pk_obj, objectname){
 
   #New optimx_settings will *replace* existing ones
@@ -420,6 +424,7 @@ pk_add.pk_optimx_settings <- function(object, pk_obj, objectname){
 #'
 #' @return The `pk` object, modified by adding the `stat_model`.
 #' @author Caroline Ring
+#' @export
 pk_add.pk_stat_model <- function(object, pk_obj, objectname){
   #New stat_models will *replace* existing ones by the same name
   for(this_model in names(object)){
@@ -450,6 +455,7 @@ pk_add.pk_stat_model <- function(object, pk_obj, objectname){
 #'
 #' @return The `pk` object, modified by adding the `stat_error_model`.
 #' @author Caroline Ring
+#' @export
 pk_add.pk_stat_error_model <- function(object, pk_obj, objectname){
 
   if(!is.null(pk_obj$stat_error_model)){
@@ -501,16 +507,23 @@ pk_add.pk_stat_error_model <- function(object, pk_obj, objectname){
 #' @param obj A `pk` object
 #' @return Invisibly: The `pk` object with added elements containing the optimization results
 #' @author Caroline Ring
+#' @export
 print.pk <- function(obj){
- obj <- preprocess_data(obj)
- obj <- prefit(obj)
- obj <- fit(obj)
+str(obj)
+}
 
+#' Test pk S3 methods
+#'
+#' @export
+test.pk <- function(obj){
+  str(obj)
 }
 
 #' Pre-process data
 #'
+#' S3 method for `pk` objects to preprocess data
 #'
+#' This is the `preprocess_data` S3 method for objects of class `pk`.
 #'
 #' @param obj A `pk` object
 #' @return The same `pk` object, with added elements `data` (containing the
@@ -518,6 +531,10 @@ print.pk <- function(obj){
 #'   about the data, e.g. number of observations by route, media,
 #'   detect/nondetect; empirical tmax, time of peak concentration for oral data;
 #'   number of observations before and after empirical tmax)
+#' @author Caroline Ring
+#' @export
+#' @import dplyr
+#' @import magrittr
 preprocess_data.pk <- function(obj){
 
   if(!is.null(obj$data_original)){
@@ -866,7 +883,7 @@ preprocess_data.pk <- function(obj){
       }
     }
 
-  } #end if is.null(data)
+  } #end if is.null(obj$data_original)
 
   #apply time transformation
   data$Time_orig <- data$Time

@@ -1,67 +1,44 @@
-#' Setup data method generic
+#' Add pkproto object
 #'
-#' For `pk` objects, see [setup_data.pk()].
-#'
-#' @param x An object.
-setup_data <- function(x){
-  UseMethod("setup_data", x)
-}
-
-setup_data.default <- function(x){
-  stop(paste("No 'setup_data' method exists for object of class",
-       class(x)))
-}
-
-#' Non-compartmental data method generic
-#'
-#' For `pk` objects, see [nca.pk()]
-#'
-#' @param x An object.
-nca <- function(x){
-  UseMethod("nca", x)
-}
-
-nca.default <- function(x){
-  stop(paste("No 'nca' method exists for object of class",
-             class(x)))
-}
-
-plot <- function(x){
-  UseMethod("plot", x)
-}
-
-plot_data <- function(x){
-  UseMethod("plot_data", x)
-}
-
-fit <- function(x){
-  UseMethod("fit", x)
-}
-
-plot_fit <- function(x){
-  UseMethod("plot_fit", x)
-}
-
-setup_analysis <- function(x){
-  UseMethod("setup_analysis", x)
-}
-
-analyze <- function(x){
-  UseMethod("analyze", x)
-}
-
-plot_analysis <- function(x){
-  UseMethod("plot_analysis", x)
-}
-
-get_summary <- function(x){
-  UseMethod("get_summary", x)
-}
-
+#' @export
 pk_add <- function(object, pk_obj, objectname){
   UseMethod("pk_add")
 }
 
+#' Add pkproto object default method
+#'
+#' @export
+pk_add.default <- function(object, pk_obj, objectname){
+  stop(paste("No 'preprocess_data' method exists for object of class",
+            object))
+}
+
+#' Preprocess data `pk` method
+#'
+#' @export
 preprocess_data <- function(x){
-  UseMethod("preprocess_data")
+  UseMethod("preprocess_data", x)
+}
+
+#'Test `pk` method
+#'
+#' @export
+test <- function(x){
+  UseMethod("test", x)
+}
+
+#' Preprocess_data default method
+#'
+#' @export
+preprocess_data.default <- function(x){
+  stop(paste("No 'preprocess_data' method exists for object of class",
+             paste(class(x), collapse = ", ")))
+}
+
+#' Test default method
+#'
+#' @export
+test.default <- function(x){
+  stop(paste("No 'test' method exists for object of class",
+             paste(class(x), collapse = ", ")))
 }
