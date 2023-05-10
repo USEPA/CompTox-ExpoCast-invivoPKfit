@@ -24,11 +24,6 @@ returned for all of the models in `obj$stat_model`.}
 for which to make predictions and calculate RMSEs. If NULL (the default),
 RMSEs will be returned for all of the models in
 `obj$optimx_settings$method`.}
-
-\item{type}{Either `"conc"` (the default) or `"auc"`. `type = "conc"`
-predicts concentrations; `type = "auc"` predicts area under the
-concentration-time curve (AUC). Currently, only `type = "conc"` is
-implemented.}
 }
 \value{
 A named list of numeric vectors. There is one list element named for
@@ -45,14 +40,14 @@ A named list of numeric vectors. There is one list element named for
 Extract root mean squared error of a fitted `pk` object
 }
 \details{
-RMSE is calculated using the following formula, to properly handle summary
-data:
+# Formula for RMSE RMSE is calculated using the following formula, to
+properly handle summary data:
 
 \deqn{
 \sqrt{
 \frac{1}{N}
  \sum_{i=1}^G \left( (n_i - 1) s_i^2 +
-  n_i ^2 - 2 n_i \bar{y}_i \mu_i + \mu_i^2 \right)
+  n_i \bar{y}_i ^2 - 2 n_i \bar{y}_i \mu_i + \mu_i^2 \right)
    }
 }
 
@@ -60,9 +55,9 @@ In this formula, there are \eqn{G} observations, each of which may be for one
 subject or for multiple subjects.
 
 - \eqn{n_i} is the number of subjects for observation \eqn{i}.
-- \eqn{\bar{y}_i} is the sample mean concentration for observation \eqn{i}.
-- \eqn{s_i} is the sample standard deviation of concentrations for observation \eqn{i}.
-- \eqn{\mu_i} is the model-predicted concentration for observation \eqn{i}.
+- \eqn{\bar{y}_i} is the sample mean concentration for observation \eqn{i}, with no transformations applied.
+- \eqn{s_i} is the sample standard deviation of concentrations for observation \eqn{i}, with no transformations applied.
+- \eqn{\mu_i} is the model-predicted concentration for observation \eqn{i}, with no transformations applied.
 
 \eqn{N} is the grand total of subjects across observations:
 
@@ -84,6 +79,15 @@ If the observed value is censored, and the predicted value is greater than
 the reported LOQ, the the observed value is treated as the reported LOQ (so
 that the effective error is the difference between the LOQ and the predicted
 value).
+
+# Transformations
+
+RMSE is calculated using *un-transformed* concentrations and predictions.
+Compare this to the behavior of [logLik.pk()], [AIC.pk()], and [BIC.pk()],
+which all calculate the log-likelihood using *transformed* observations and
+predictions. The goal is for the log-likelihood-based functions to reflect
+the log-likelihood function that was actually used to fit the model, whereas
+RMSE reflects the average error in predicting concentrations.
 }
 \author{
 Caroline Ring

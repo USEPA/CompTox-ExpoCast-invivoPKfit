@@ -2,14 +2,14 @@
 #'
 #' Extract root mean squared error of a fitted `pk` object
 #'
-#' RMSE is calculated using the following formula, to properly handle summary
-#' data:
+#' # Formula for RMSE RMSE is calculated using the following formula, to
+#' properly handle summary data:
 #'
 #' \deqn{
 #' \sqrt{
 #' \frac{1}{N}
 #'  \sum_{i=1}^G \left( (n_i - 1) s_i^2 +
-#'   n_i ^2 - 2 n_i \bar{y}_i \mu_i + \mu_i^2 \right)
+#'   n_i \bar{y}_i ^2 - 2 n_i \bar{y}_i \mu_i + \mu_i^2 \right)
 #'    }
 #' }
 #'
@@ -17,9 +17,9 @@
 #' subject or for multiple subjects.
 #'
 #' - \eqn{n_i} is the number of subjects for observation \eqn{i}.
-#' - \eqn{\bar{y}_i} is the sample mean concentration for observation \eqn{i}.
-#' - \eqn{s_i} is the sample standard deviation of concentrations for observation \eqn{i}.
-#' - \eqn{\mu_i} is the model-predicted concentration for observation \eqn{i}.
+#' - \eqn{\bar{y}_i} is the sample mean concentration for observation \eqn{i}, with no transformations applied.
+#' - \eqn{s_i} is the sample standard deviation of concentrations for observation \eqn{i}, with no transformations applied.
+#' - \eqn{\mu_i} is the model-predicted concentration for observation \eqn{i}, with no transformations applied.
 #'
 #' \eqn{N} is the grand total of subjects across observations:
 #'
@@ -42,6 +42,15 @@
 #' that the effective error is the difference between the LOQ and the predicted
 #' value).
 #'
+#' # Transformations
+#'
+#' RMSE is calculated using *un-transformed* concentrations and predictions.
+#' Compare this to the behavior of [logLik.pk()], [AIC.pk()], and [BIC.pk()],
+#' which all calculate the log-likelihood using *transformed* observations and
+#' predictions. The goal is for the log-likelihood-based functions to reflect
+#' the log-likelihood function that was actually used to fit the model, whereas
+#' RMSE reflects the average error in predicting concentrations.
+#'
 #' @param obj A `pk` object
 #' @param newdata Optional: A `data.frame` with new data for which to make
 #'   predictions and compute RMSsE. If NULL (the default), then RMSEs will be
@@ -56,10 +65,6 @@
 #'   for which to make predictions and calculate RMSEs. If NULL (the default),
 #'   RMSEs will be returned for all of the models in
 #'   `obj$optimx_settings$method`.
-#' @param type Either `"conc"` (the default) or `"auc"`. `type = "conc"`
-#'   predicts concentrations; `type = "auc"` predicts area under the
-#'   concentration-time curve (AUC). Currently, only `type = "conc"` is
-#'   implemented.
 #' @return A named list of numeric vectors. There is one list element named for
 #'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
 #'   fitted to the data. Each list element is a numeric vector with as many
@@ -87,32 +92,16 @@ rmse.pk <- function(obj,
                       method = method,
                       type = "conc")
 
-  n_subj <- newdata$N_Subjects
-  obs <- newdata$Conc
- obs_sd <- newdata$Conc_SD
-  n_tot <- sum(newdata$N_Subjects)
-  detect <- newdata$Detect
-
 
   sapply(preds,
          function(this_pred){
-           apply(this_pred,
+           apply(this_pred, #loop over columns of this_pred, each one is a method
                  2,
-                 function(x) {
-                   x <- ifelse(detect %in% FALSE &
-                                 x < obs,
-                               obs, #will be LOQ for detect == FALSE
-                               x)
-
-                   sqrt(
-                     sum(
-                       (n_subj -1) * obs_sd^2 +
-                         n_subj^2 -
-                         2 * n_subj*obs*x +
-                         x^2
-                     )/n_tot
-                   )
-                 }
+                 function(x) calc_rmse(pred = x,
+                                       obs = newdata$Conc,
+                                       obs_sd = newdata$Conc_SD,
+                                       n_subj = newdata$N_Subjects,
+                                       detect = newdata$Detect)
            )
          },
          simplify = FALSE,

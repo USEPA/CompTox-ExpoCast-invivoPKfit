@@ -4,9 +4,20 @@
 \alias{calc_rmse}
 \title{Calculate RMSE (root mean squared error)}
 \usage{
-calc_rmse(group_mean, group_sd, group_n, pred, group_LOQ, log = FALSE)
+calc_rmse(pred, obs, obs_sd, n_subj, detect, log = FALSE)
 }
 \arguments{
+\item{pred}{Numeric vector: Model-predicted value corresponding to each
+observed value. Even if `log %in% TRUE`, these should *not* be
+log-transformed. (If `log %in% TRUE`, they will be log-transformed
+internally to this function before calculation.)}
+
+\item{log}{Logical. FALSE (default) means that RMSE is computed for
+natural-scale observations and predictions -- effectively, `sqrt(mean(
+(observed - pred)^2 ))`. TRUE means that observations and predictions will
+be log-transformed before RMSE is calculated (see Details)
+-- effectively `sqrt(mean( ( log(observed) - log(pred) )^2 ))`.}
+
 \item{group_mean}{Numeric vector: Observed sample means for summary data, or
 observed values for non-summary data. Censored observations should *not* be
 NA; they should be substituted with some value at or below the
@@ -26,22 +37,11 @@ before calculation.)}
 data. For non-summary data (individual-subject observations), `group_n`
 should be set to 1.}
 
-\item{pred}{Numeric vector: Model-predicted value corresponding to each
-observed value. Even if `log %in% TRUE`, these should *not* be
-log-transformed. (If `log %in% TRUE`, they will be log-transformed
-internally to this function before calculation.)}
-
 \item{group_LOQ}{Numeric vector: Reported limit of quantification (LOQ) (i.e,
 left-censoring limit) for each observation. May contain `NA_real_`s for
 non-censored observations. Even if `log %in% TRUE`, these should *not* be
 log-transformed. (If `log %in% TRUE`, log transformation will be handled
 internally to this function before calculation.)}
-
-\item{log}{Logical. FALSE (default) means that RMSE is computed for
-natural-scale observations and predictions -- effectively, `sqrt(mean(
-(observed - pred)^2 ))`. TRUE means that observations and predictions will
-be log-transformed before RMSE is calculated (see Details)
--- effectively `sqrt(mean( ( log(observed) - log(pred) )^2 ))`.}
 }
 \value{
 A numeric scalar: the root mean squared error (RMSE) for this set of

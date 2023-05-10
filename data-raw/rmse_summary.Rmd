@@ -1,0 +1,60 @@
+---
+title: "Untitled"
+author: "Caroline Ring"
+date: "2023-05-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# MSE for individual observations
+
+$$ \textrm{MSE} = \frac{1}{N} \sum_{i=1}^G \sum_{j=1}^{N_i} \left( y_{ij} - \mu_i \right)^2 $$
+Expand the summand
+
+$$ \textrm{MSE} = \frac{1}{N} \sum_{i=1}^G \sum_{j=1}^{N_i}  y_{ij}^2 - 2 y_{ij}\mu_i   + \mu_i^2 $$
+Break appart the inner summation
+
+
+$$ \textrm{MSE} = \frac{1}{N} \sum_{i=1}^G \left(
+\sum_{j=1}^{N_i}  y_{ij}^2 -
+2\mu_i \sum_{j=1}^{N_i} y_{ij}  +
+N_i \mu_i^2 \right) $$
+
+
+
+The definition of the sample variance is
+
+$$ s_i^2 = \frac{1}{N_i - 1} \sum_{j=1}^{N_i} \left( y_{ij} - \bar{y}_{i} \right)^2 $$
+which becomes
+
+$$ s_i^2 = \frac{1}{N_i - 1} \sum_{j=1}^{N_i} \left( y_{ij}^2  - 2 y_{ij} \bar{y}_{i} + \bar{y}_{i}^2 \right) $$
+which becomes
+
+$$ s_i^2 = \frac{1}{N_i - 1} \left( \sum_{j=1}^{N_i} y_{ij}^2  - 2 \bar{y}_{i} \sum_{j=1}^{N_i} y_{ij}  + N_i \bar{y}_{i}^2 \right) $$
+and using the definition of the sample mean,
+
+$$ \bar{y}_i = \frac{1}{N_i} \sum_{j=1}^{N_i} y_{ij} $$
+
+which means that
+
+$$ \sum_{j=1}^{N_i} y_{ij} = N_i \bar{y}_i $$
+then we can write the sample variance as
+
+$$ s_i^2 = \frac{1}{N_i - 1} \left( \sum_{j=1}^{N_i} y_{ij}^2  - 2 N_i \bar{y}_i^2  + N_i \bar{y}_{i}^2 \right) $$
+
+which simplifies to
+
+$$ s_i^2 = \frac{1}{N_i - 1} \left( \sum_{j=1}^{N_i} y_{ij}^2  -  N_i \bar{y}_i^2  \right) $$
+which means that
+
+$$ \sum_{j=1}^{N_i} y_{ij}^2 = (N_i - 1) s_i^2 + N_i \bar{y}_i^2 $$
+
+which we can substitute back into the equation for the MSE
+
+$$ \textrm{MSE} = \frac{1}{N} \sum_{i=1}^G \left(
+(N_i - 1) s_i^2 + N_i \bar{y}_i^2 -
+2\mu_i N_i \bar{y}_i  +
+N_i \mu_i^2 \right) $$

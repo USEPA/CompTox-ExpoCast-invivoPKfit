@@ -94,44 +94,37 @@
 #' @return A numeric scalar: the root mean squared error (RMSE) for this set of
 #'   observations and predictions.
 #' @author Caroline Ring
-calc_rmse <- function(group_mean,
-                      group_sd,
-                      group_n,
-                      pred,
-                      group_LOQ,
+calc_rmse <- function(pred,
+                      obs,
+                      obs_sd,
+                      n_subj,
+                      detect,
                       log = FALSE){
-  #If both obs and pred are below LOQ, set obs to pred.
+  #If both obs and pred are below LOQ, set pred to obs
   #This will effectively make error zero in these cases.
-  if(any((group_mean <= group_LOQ &
-          pred <= group_LOQ) %in% TRUE)){
-    group_mean[(group_mean <= group_LOQ &
-                  pred <= group_LOQ) %in% TRUE] <- pred[(group_mean <= group_LOQ &
-                                                           pred <= group_LOQ) %in% TRUE]
-  }
+  pred <- ifelse(detect %in% FALSE &
+                   (pred <= obs) %in% TRUE,
+                 obs,
+                 pred)
 
-  #If obs is below LOQ but pred is not, set obs to LOQ.
-  if(any((group_mean <= group_LOQ &
-          !(pred <= group_LOQ)) %in% TRUE)){
-    group_mean[(group_mean <= group_LOQ &
-                  !(pred <= group_LOQ)) %in% TRUE] <- group_LOQ[(group_mean <= group_LOQ &
-                                                                   !(pred <= group_LOQ)) %in% TRUE]
-  }
   #Convert to log-scale if necessary
   if(log %in% TRUE){
-    tmplist <- convert_summary_to_log(sample_mean = group_mean,
-                                      sample_SD = group_sd)
-    group_mean <- tmplist$logmean
-    group_sd <- tmplist$logSD
+    tmplist <- convert_summary_to_log(sample_mean = obs,
+                                      sample_SD = obs_sd)
+    obs <- tmplist$logmean
+    obs_sd <- tmplist$logSD
     pred <- log(pred)
   }
 
 #Calculate MSE.
   #If log = TRUE, this is mean(( log(observed) - log(pred) )^2)
   #If log = FALSE, this is mean((observed - pred)^2)
-  mse <- (1/sum(group_n)) * sum(
-    (group_n - 1) * group_sd^2 + group_n * group_mean^2 +
-      -2 * pred * group_n * group_mean  +
-      group_n * pred^2
+  mse <- (1/sum(n_subj)) *
+    sum(
+    (n_subj - 1) * obs_sd^2 +
+      n_subj * obs^2  +
+      -2 * pred * n_subj * obs  +
+      n_subj * pred^2
   )
 
   #RMSE is just sqrt of MSE
