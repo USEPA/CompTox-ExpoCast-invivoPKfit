@@ -502,8 +502,16 @@ cvt <- cvt_data[studies.administration_route_normalized %in% c("oral", "iv") &
 getwd()
 ```
 
+Filter out any variables that are all-NA.
 
-Save the pulled CVT data with the edits/normalizations, andf also save the current date.
+```{r}
+all_na <- cvt[, sapply(.SD, function(x) all(is.na(x)))]
+na_vars <- names(all_na)[all_na %in% TRUE]
+cvt[, (na_vars) := NULL]
+```
+
+
+Save the pulled CVT data with the edits/normalizations, and also save the current date.
 
 ```{r}
 cvt_date <- Sys.Date()
