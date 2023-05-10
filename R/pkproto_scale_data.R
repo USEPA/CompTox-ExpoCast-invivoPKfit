@@ -90,7 +90,7 @@ scale_conc <- function(dose_norm = FALSE,
 
   #enquote expr
   scale_conc$value$expr <- rlang::new_quosure(expr = expr,
-                                              env = caller_env())
+                                              env = rlang::caller_env())
   #this qusoure will have environment "global"
 
   #get any other arguments and values
