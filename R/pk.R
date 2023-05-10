@@ -314,11 +314,15 @@ pk <- function(data = NULL,
   missing_aes <- setdiff(names(mapping_default), names(mapping))
   if(!(length(missing_aes)==0)){
     mapping[missing_aes] <- mapping_default[missing_aes]
-    warning(paste("'mapping' is missing the following required harmonized variables:",
-                  paste(missing_aes,
-                        collapse = "\n"),
-                  "These missing required variables will be added according to the following mapping:",
-                  ggplot2:::print.uneval(mapping_default[missing_aes]),
+    missing_mapping <- sapply(mapping_default[missing_aes],
+                              rlang::as_label)
+    missing_map_names <- missing_aes
+    missing_map_print <- paste(
+      paste(missing_map_names, missing_mapping, sep = " = "),
+      collapse = "\n"
+    )
+    warning(paste("'mapping' is missing the following required harmonized variables, which will be added according to the following mapping:",
+                 missing_map_print,
                   sep = "\n"))
   }
 
