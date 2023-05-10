@@ -2,10 +2,13 @@
 % Please edit documentation in R/pk_method_dispatch.R
 \name{preprocess_data}
 \alias{preprocess_data}
-\title{Preprocess data}
+\title{Preprocess data generic}
 \usage{
 preprocess_data(x, ...)
 }
 \description{
-Preprocess data
+Preprocess data generic
+}
+\seealso{
+[preprocess_data.pk()] for the `preprocess_data` method for class [pk()]
 }

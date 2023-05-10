@@ -2,10 +2,26 @@
 % Please edit documentation in R/pk_method_dispatch.R
 \name{pk_add}
 \alias{pk_add}
-\title{Add pkproto object}
+\title{Add a `pkproto` object to a `pk` object}
 \usage{
-pk_add(object, pk_obj, objectname)
+pk_add(pkproto_obj, pk_obj, objectname)
+}
+\arguments{
+\item{pkproto_obj}{The `pkproto` object to be added}
+
+\item{pk_obj}{The `pk` object to which the `pkproto` object is to be added}
+
+\item{objectname}{The object name}
 }
 \description{
-Add pkproto object
+This is the S3 generic method.
+}
+\seealso{
+[pk_add.pk_scales()] for the method for adding `pk_scales` objects
+  (from [scale_conc()] and [scale_time()]); [pk_add.pk_data_settings()] for
+  the method for adding `pk_data_settings` objects (from [settings_data()]);
+  [pk_add.pk_optimx_settings()] for the method for adding
+  `pk_optimx_settings` objects (from [settings_optimx()]);
+  [pk_add.pk_stat_model()] for the method for adding `pk_stat_model` objects
+  (from `stat_model()`)
 }

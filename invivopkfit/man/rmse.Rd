@@ -7,5 +7,8 @@
 rmse(x)
 }
 \description{
-Root mean squared error (RMSE)
+This is the S3 method generic for `rmse`.
+}
+\seealso{
+[rmse.pk()] for the `rmse` method for class [pk()]
 }

@@ -10,5 +10,8 @@ coef_sd(obj, ...)
 \item{obj}{An object}
 }
 \description{
-Coefficient standard deviations
+This is the S3 method generic for `coef_sd`.
+}
+\seealso{
+[coef_sd.pk()] for the `coef_sd` method for class [pk()]
 }

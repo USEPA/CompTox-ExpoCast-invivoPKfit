@@ -7,5 +7,8 @@
 fit(x, ...)
 }
 \description{
-Fitting
+This is the S3 generic method for `fit`.
+}
+\seealso{
+[fit.pk()] for the `fit` method for class [pk()]
 }

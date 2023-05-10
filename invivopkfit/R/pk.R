@@ -1,0 +1,353 @@
+#'Create a new `pk` object
+#'
+#'[pk()] initializes a new `pk` object.
+#'
+#'
+#'[pk()] is used to construct the initial `pk` object for analysis. It is almost
+#'always followed by `+` to add steps to the workflow. For example, you could
+#'use `pk(my_data) + stat_model(model = '1comp')` to set up for fitting a
+#'1-compartment model.
+#'
+#'# The `pk` object
+#'
+#'A `pk` object consists of a set of concentration-dose-time data to be fitted,
+#'and sets of instructions for steps in the analysis workflow:
+#'
+#'- settings for how to pre-process the data (harmonizing variable names, imputing missing data, calculating derived variables)
+#'- scalings/transformations to be applied to the data
+#'- settings for the numerical optimization algorithm to be used to fit any model
+#'- optionally: which PK model(s) should be fitted to this dataset. (You do not have to fit any PK model if you don't want to; you can instead just set up the `pk` object with data, and do non-compartmental analysis on it.)
+#'
+#'The most basic `pk` object, as created by [pk()] when it is called without anything else added to it, is a named list with the following elements:
+#'
+#' - `data_orig`: The original data set, supplied as [pk()] argument `data`
+#' - `mapping`: A mapping of original variable names to harmonized variable names, supplied in [pk()] argument `mapping`
+#' - `data_settings`: Instructions for data pre-processing (a named list of arguments to [preprocess_data()]), supplied in [pk()] arguments `mapping` and `data_settings`
+#' - `scales`: Instructions for data scaling and/or transformation. A list with elements named `conc` and `time`, where each element contains the scaling/transformation to apply to the corresponding variable. See [scale_conc()] and [scale_time()].
+#'     - `scales$conc`: A named list with elements `ratio_conc_dose`, `dose_norm`, `log10_trans`, and `expr`. See [scale_conc()]. When you call [pk()] by itself, [scale_conc()] is automatically called with its default arguments. To change the concentration scaling, use ` + scale_conc(...)` and specify your desired new arguments.
+#'         - `scales$conc$ratio_conc_dose`: The ratio of mass units of observed concentrations to mass units of administered doses. Usually this is 1, but if (for example) observed concentrations are in ng/L and administered doses are in mg/kg, then `ratio_conc_to_dose = 1e-6` to scale observed concentrations to units of mg/L to match the administered dose mass units.
+#'         - `scales$conc$dose_norm`: TRUE to divide each observed concentration (after scaling by `ratio_conc_dose`) by its corresponding administered dose; FALSE not to.
+#'         - `scales$conc$log10_trans`: TRUE to apply [log10()] transformation to each observed concentration (after scaling by `ratio_conc_dose` and performing any requested dose-normalization); FALSE to not apply [log10()] transformation.
+#'         -`scales$conc$expr`: A [rlang::quosure] containing an R expression that provides the "recipe" for applying the concentration transformations to any concentration variable. The quosure is automatically created using the arguments to [scale_conc()]; you as the user do not have to worry about it.
+#'    -`scales$time`: A named list with one element, `new_units`. See [scale_time()]. When you call [pk()] by itself, [scale_time()] is automatically called with its default arguments. To change the time scaling, use `+ scale_time(new_units = ...)` and specify your desired new units.
+#'        -`scales$time$new_units`: The new units into which time values should be transformed. By default, this is `"identity"`, meaning that time will not be transformed.
+#' - `stat_error_model`: A named list with one element, `error_group`.
+#' - `stat_model`: By default, this is NULL, indicating that no model will be fit to the data. When you add one or more models using ` + stat_model(model = ...)`, this element will become a named list, with one element for each model to be fit. The element for each model is the `pk_model` object corresponding to the named model. See, for example, the built-in `pk_model` objects [flat], [1comp], [2comp]
+#' - `optimx_settings`: Instructions for the numerical optimizer: a named list of arguments to [optimx::optimx()]. See [settings_optimx()].
+#' - `status`: What stage of the analysis has been applied to this object so far? Options are 1 (meaning the workflow has been set up), 2 (meaning data has been pre-processed), 3 (meaning that pre-fitting is complete), or 4 (meaning that fitting is complete).
+#'
+#'
+#'No data processing, model fitting, or any other analysis is done until you
+#'explicitly request it. Until then, the `pk` object remains just a set of data and
+#'instructions. This allows you to specify the instructions for each analysis
+#'step without regard for the actual order of the analysis steps, and to
+#'overwrite previous instructions, without having to re-do the model fitting
+#'each time you add or change a set of instructions. This is particularly useful
+#'if you are working in interactive mode at the R console.
+#'
+#'For example, you might write at the console
+#'
+#'```
+#' my_pk <- pk(my_data) + stat_model(model = "1comp") + data_settings(impute_loq = TRUE)
+#'```
+#'
+#'This is OK even though `data_settings` provides instructions for data
+#'pre-processing, a step that comes *before* model fitting. Internally, the `pk`
+#'object will put the instructions in the right order.
+#'
+#'You might then realize that you also want to fit a 2-compartment model to the
+#'same data set. You can simply write
+#'
+#' ```
+#'my_pk <- my_pk + stat_model(model = "2comp")
+#' ```
+#'
+#'Then you might realize that you actually wanted to dose-normalize the
+#'concentration data before fitting the models. You can do that simply by
+#'writing
+#'
+#'`my_pk <- my_pk + scale_conc(normalize = "dose")`
+#'
+#'
+#'Now, you are pretty sure that is the final set of instructions. You can
+#'actually do the fit as follows:
+#'
+#'`my_pk <- fit(my_pk)`
+#'
+#'Now, the following steps will occur:
+#'
+#' - Data pre-processing, using [preprocess_data.pk()]
+#'     - Rename variables to use the harmonized variable names expected by [invivopkfit], using the variable-name mapping in `my_pk$mapping`
+#'     - Filter data to keep only certain routes and media, as instructed by `my_pk$data_settings$routes_keep` and `my_pk$data_settings$media_keep`
+#'     - Imputation of missing LOQs, as instructed by `my_pk$data_settings$impute_loq` and `my_pk$data_settings$loq_group`
+#'     - Imputation of missing SDs, as instructed by `my_pk$data_settings$impute_sd` and `my_pk$data_settings$sd_group`
+#'     - Scaling and transformation of concentration data (concentrations, LOQs, and concentration SDs), as instructed by `my_pk$scales$conc`
+#'     - Scaling of time data, as instructed by `my_pk$scales$time`
+#' - Model pre-fitting, using [prefit.pk()]
+#'     - For each model listed in `my_pk$stat_model`:
+#'      - Automatic determination of whether to fit oral model, IV model, or both, depending on whether oral and IV data are available.
+#'      - Automatic checks on whether data are sufficient to proceed with model fitting (e.g., are there more observations than parameters to be estimated?)
+#'      - Automatic determination of the number of residual error standard deviations to be estimated (as instructed by `my_pk$stat_error_model$error_group`)
+#'      - Automatic determination of which residual error SD corresponds to each observation
+#'      - Automatic determination of parameter bounds
+#'      - Automatic determination of parameter starting guesses
+#' - Model fitting, using [fit.pk()]
+#'     - For each model listed in `my_pk$stat_model`:
+#'         - Numerical optimization of model parameters using [optimx::optimx()], as instructed by `my_pk$optimx_settings`
+#'             - Optimization is performed by maximizing the log-likelihood function [log_likelihood()] for the data with all transformations applied
+#'         - Calculation of uncertainty in the optimized parameter values using an approximation to the Hessian (the matrix of second derivatives) evaluated at the maximum-likelihood set of parameters
+#'
+#'`my_pk` will be modified to contain the results of each of these steps:
+#'
+
+
+#'
+#'You may do these steps one at a time if you wish, using the following methods:
+#'
+#' - Data pre-processing, including scaling/transformation: [preprocess.pk()]. The `my_pk` object will be modified as follows:
+#'     - The pre-processed data, in a new element `my_pk$data`
+#'     - Summary information about the pre-processed data, in a new element `my_pk$data_info`
+#' - Model pre-fitting: [prefit.pk()]. The `my_pk` object will be modified as follows:
+#'     - A data.frame of residual error SD hyperparameter names, units, bounds, and starting guesses, in a new element `my_pk$stat_error_model$sigma_DF`
+#'     - The name of the residual error SD hyperparameter corresponding to each observation, in a new element `my_pk$stat_error_model$data_sigma_group`
+#'     - For each fitted model (in the corresponding named element in `my_pk$stat_model`):
+#'         - A `data.frame` of the parameter names, units, bounds, and starting guesses, in a new element `my_pk$stat_model[[model_name]]$parDF`
+#'         - Whether to proceed with the fit, in `my_pk$stat_model[[model_name]]$status` (either `"continue"` or `"abort"`)
+#'         - The reason for proceeding or aborting the fit, in in `my_pk$stat_model[[model_name]]$status_reason` (e.g., insufficient detected observations to estimate the required number of parameters and hyperparameters)
+#' - Model fitting: [fit.pk()]. The `my_pk` object will be modified as follwos:
+#'     - For each fitted model (in the corresponding named element in `my_pk$stat_model`):
+#'     - The output of optimization, in `my_pk$stat_model[[model_name]]$fit`. If optimization failed or was not performed, this element will contain a string giving the relevant error message.
+#'
+#'The `pk` object
+#'
+#'# Mappings
+#'
+#'Your input data can have any variable names you like. However, internally,
+#'`invivopkfit` needs to use a set of "standard", harmonized variable names
+#'(e.g., it refers to the variable containing measured tissue concentrations as
+#'`Conc`; the variable containing observed time points as `Time`; and the
+#'variable containing administered doses as `Dose`). In effect, `invivopkfit`
+#'needs to rename the input data, and produce a new `data.frame` that uses these
+#'internal harmonized variable names.
+#'
+#'In order to know which variable names in the input data correspond to each of
+#'the internal harmonized variable names, we need to set up a mapping between
+#'the internal harmonized variable names and the original variable names.
+#'
+#'The simplest, most flexible way to set up this mapping is by (ab)using a call
+#'to [ggplot2::aes()]. In the context of [ggplot2::ggplot2-package()], you would
+#'use [ggplot2::aes()] to set up mappings to `ggplot2`'s "aesthetics", internal
+#'harmonized variable names which it uses for plotting: *e.g.*, `x`, `y`,
+#'`color`, `size`, `shape`, and so on. In the context of
+#'[invivopkfit-package()], we are setting up mappings to `invivopkfit`'s
+#'internal harmonized variable names which it uses in model fitting. These
+#'"`invivopkfit` aesthetic" variables are as follows:
+#'
+#' - `Chemical`: A `character` variable containing the chemical identifier. All rows of `data` should have the same value for `Chemical`.
+#' - `Species`: A `character` variable containing the name of the species for which the data was measured.  All rows of `data` should have the same value for `Species`.
+#' - `Reference`: A `character` variable containing a unique identifier for the data reference (e.g., a single publication).
+#' - `Subject`: A `character` variable containing a unique identifier for the subject associated with each observation (an individual animal or group of animals).
+#' - `N_Subjects`: A `numeric` variable; an integer giving the number of individual animals represented by this observation. (Some data sets report tissue concentrations for individual animals, in which case `N_Subjects` will be 1; others report average tissue concentrations for groups of multiple animals, in which case `N_Subjects` will be greater than 1.)
+#' - `Weight`: A `numeric` variable giving the subject's body weight.
+#' - `Weight.Units`: A `character` variable giving the units of body weight.
+#' - `Route`: A `character` variable denoting the route of administration. Either `po` (oral) or `iv` (intravenous). Other routes are not currently supported.
+#' - `Dose`: A `numeric` variable giving the dose administered.
+#' - `Dose.Units`: A `character` variable giving the units of the administered doses.
+#' - `Time`: A `numeric` variable giving the time of tissue collection.
+#' - `Time.Units`: A `numeric` variable giving the units of `Time`.
+#' - `Media`: A `character` variable giving the tissue that was analyzed. Either `blood` or `plasma`. Other tissues are not currently supported.
+#' - `Value`: A `numeric` variable giving the tissue concentration in units of mg/L. If `N_Subjects > 1`, `Value` is assumed to represent the mean tissue concentration for this group of subjects. If the tissue concentration was below the limit of quantification (LOQ), this value may be `NA_real_`.
+#' - `Value_SD`: A `numeric` variable giving the standard deviation of the tissue concentration in units of mg/L, if available and relevant. If `N_Subjects > 1`, `Value_SD` is assumed to represent the standard deviation of tissue concentrations for this group of subjects. If `N_Subjects == 1`, then `Value_SD` may be `NA_real_`.
+#' - `LOQ`: A `numeric` variable giving the limit of quantification applicable to this tissue concentration in units of mg/L, if available.
+#' - `Value.Units`: A `character` variable giving the units of `Value`, `Value_SD`, and `LOQ`.
+#'
+#'You may additionally include mappings to other variable names of your choice,
+#'which will appear in the `pk` object in `pk$data` after the analysis is done.
+#'
+#'As with usual calls to [ggplot2::aes()], you should provide the variable names
+#'without quoting them. For example, use `ggplot2::aes(Chemical = my_chem)`. Do
+#'*not* use `ggplot2::aes("Chemical" = "my_chem")`.
+#'
+#'Also, as with usual calls to [ggplot2::aes()], you may also specify that any
+#'of the "`invivopkfit` aesthetic" variables should be mapped to a constant
+#'value, rather than to a variable in `data`. For example, imagine that you
+#'don't have a column in `data` that encodes the units of body weight, but you
+#'know that all body weights are provided in units of kilograms. You could
+#'specify `mapping = ggplot2::aes(Chemical = my_dtxsid, Species = my_species,
+#'Weight = my_weight, Weight.Units = "kg")` to map `Weight.Units` to a fixed
+#'value of "kg".
+#'
+#'Finally, as with usual calls to [ggplot2::aes()], you may specify mappings as
+#'expressions that use variable names in `data`. For example, if the
+#'species-name variable in `data` sometimes says "rat", sometimes "Rat",
+#'sometimes "RAT", you might want to harmonize the capitalization. You can do
+#'that easily by specifying `mapping = ggplot2::aes(Chemical = my_dtxsid,
+#'Species = tolower(my_species)`.
+#'
+#'The following "aesthetics" variable names are reserved for internal use (i.e.,
+#'they are automatically assigned by [preprocess_data.pk()], and should *not* be
+#'included in `mapping`:
+#'
+#' - `Conc`: This is assigned as the greater of `Value` and `LOQ`, with NAs removed.
+#' - `Conc_SD`: This is set equal to `Value_SD`.
+#' - `Detect`: This is a logical variable, `TRUE` if `Conc > LOQ` and `FALSE` otherwise.
+#' - `Conc_trans`: This is `Conc` with all scalings and transformations applied as specified in `+ scale_conc()`.
+#' - `Conc_SD_trans`: This is `Conc_SD` with all scalings and transformations applied as specified in `+ scale_conc()`.
+#' - `Conc_trans.Units`: Automatically-derived from `Conc.Units` with any scalings and transformations applied. If dose normalization is requested, then `Dose.Units` is also used to automatically derive the resulting `Conc_trans.Units`. For example, if both dose-normalization and [log10()] transformation are requested, and `Conc.Units = 'mg/L'` and `Dose.Units = 'mg/kg`, then `Conc_trans.Units = log10((mg/L)/(mg/kg))`.
+#' - `Time_trans`: This is `Time` with any rescaling specified in `+ scale_time()`.
+#' - `Time_trans.Units`: The new units of time after any rescaling (e.g. `hours`, `days`, `weeks`,...)
+#'
+#'If you do assign any of these reserved variable names in `mapping`, your
+#'mapping will be ignored for those reserved variable names. WARNING: If you
+#'have any variables with these reserved names in your original data, those
+#'original variables will be dropped by [preprocess_data.pk()].
+#'
+#'The default value of `mapping` is the following (which refers to original
+#'variable names in the built-in dataset [cvt]):
+#'
+#' ```
+#' ggplot2::aes(
+#' Chemical = chemicals_analyzed.dsstox_substance_id,
+#' DTXSID = chemicals_analyzed.dsstox_substance_id,
+#' Chemical_Name = chemicals_analyzed.preferred_name,
+#' CASRN = chemicals_analyzed.dsstox_casrn,
+#' Species = subjects.species,
+#' Reference = as.character(ifelse(is.na(documents_reference.id),
+#'                                 documents_extraction.id,
+#'                                 documents_reference.id)),
+#' Media = series.conc_medium_normalized,
+#' Route = studies.administration_route_normalized,
+#' Dose = studies.dose_level_normalized,
+#' Dose.Units = "mg/kg",
+#' Subject = subjects.id,
+#' N_Subjects =  series.n_subjects_in_series,
+#' Weight = subjects.weight_kg,
+#' Weight.Units = "kg",
+#' Time = conc_time_values.time_hr,
+#' Time.Units = "hours",
+#' Value = conc_time_values.conc,
+#' Value.Units = "mg/L",
+#' LOQ = series.loq_normalized,
+#' Value_SD  = conc_time_values.conc_sd_normalized
+#' )
+#' ```
+#'
+#'# Data
+#'
+#'`data` should contain data for only one `Chemical` and one `Species`. It may
+#'contain data for multiple `Route`,`Media`, and/or `Reference` values. However,
+#'`Route` values should be either `"oral"` (oral bolus administration) or `"iv"`
+#'(IV bolus administration), and `Media` values should be either `"blood"` or
+#'`"plasma"`.
+#'
+#'
+#'@param data A `data.frame`. The default is an empty data frame.
+#'@param mapping A mapping set up by (ab)using [ggplot2::aes()]. Call is of form
+#'  `ggplot2::aes(new_variable = old_variable)` `new_variable` represents the
+#'  harmonized variable name that will be used within `invivopkfit`;
+#'  `old_variable` represents the variable name in `data`. If you want to
+#'  provide a fixed/constant value for a `new_variable` rather than taking its
+#'  value from a variable in `data`, simply supply that fixed/constant value in
+#'  the `old_variable` position.
+#'@return An object of class `pk`. The initial `pk` object is a list with
+#'  elements `data_orig`, `data_settings`, `scales` and `optimx_settings`.
+#'  `data_orig` is the original data set to be fitted, as supplied in the
+#'  argument `data`. `data_settings` is a named list containing all the other
+#'  input arguments: these provide settings that will be used when the data is
+#'  pre-processed before fitting.
+#'@author Caroline Ring
+#'@export
+
+pk <- function(data = NULL,
+               mapping = aes(Chemical = chemicals_analyzed.dsstox_substance_id,
+                             DTXSID = chemicals_analyzed.dsstox_substance_id,
+                             Chemical_Name = chemicals_analyzed.preferred_name,
+                             CASRN = chemicals_analyzed.dsstox_casrn,
+                             Species = subjects.species,
+                             Reference = as.character(
+                               ifelse(
+                                 is.na(
+                                   documents_reference.id
+                                 ),
+                                 documents_extraction.id,
+                                 documents_reference.id
+                               )
+                             ),
+                             Media = series.conc_medium_normalized,
+                             Route = studies.administration_route_normalized,
+                             Dose = studies.dose_level_normalized,
+                             Dose.Units = "mg/kg",
+                             Subject = subjects.id,
+                             N_Subjects =  series.n_subjects_in_series,
+                             Weight = subjects.weight_kg,
+                             Weight.Units = "kg",
+                             Time = conc_time_values.time_hr,
+                             Time.Units = "hours",
+                             Value = conc_time_values.conc,
+                             Value.Units = "mg/L",
+                             LOQ = series.loq_normalized,
+                             Value_SD  = conc_time_values.conc_sd_normalized
+               )
+){
+
+  #Check to ensure the mapping contains all required harmonized column names
+  mapping_default <- ggplot2::aes(
+    Chemical = NA_character_,
+    Species = NA_character_,
+    Reference = NA_character_,
+    Media = NA_character_,
+    Route = NA_character_,
+    Dose = NA_real_,
+    Dose.Units = "mg/kg",
+    Subject = NA_character_,
+    N_Subjects = NA_real_,
+    Weight = NA_real_,
+    Weight.Units = "kg",
+    Time = NA_real_,
+    Time.Units = "hours",
+    Value = NA_real_,
+    Value_SD = NA_real_,
+    LOQ = NA_real_,
+    Value.Units = "mg/L"
+  )
+
+  missing_aes <- setdiff(names(mapping_default), names(mapping))
+  if(!(length(missing_aes)==0)){
+    mapping[missing_aes] <- mapping_default[missing_aes]
+    warning(paste("'mapping' is missing the following required harmonized variables:",
+                  paste(missing_aes,
+                        collapse = "\n"),
+                  "These missing required variables will be added according to the following mapping:",
+                  ggplot2:::print.uneval(mapping_default[missing_aes]),
+                  sep = "\n"))
+  }
+
+
+  #Create the initial pk object
+  obj <- list("data_original" = data,
+              "mapping" = mapping,
+              "status" = 1L
+  )
+
+  #nd assign it class pk
+  class(obj) <-append(class(obj), "pk")
+
+  # Add default data settings
+  obj <- obj + settings_data()
+
+  #Add default scalings for conc and time
+  obj <- obj + scale_conc() + scale_time()
+
+  #Add NULL stat_model
+  obj$stat_model <- NULL
+
+  #Add default error model
+  obj <- obj + stat_error_model()
+
+  #Add default optimx settings
+  obj <- obj + settings_optimx()
+
+  #return the initialized pk object
+  return(obj)
+
+}
