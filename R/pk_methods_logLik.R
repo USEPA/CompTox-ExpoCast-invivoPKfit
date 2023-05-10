@@ -9,9 +9,10 @@
 #'   log-likelihood. If NULL (the default), then log-likelihoods will be
 #'   computed for the data in `obj$data`. `newdata` is required to contain at
 #'   least the following variables: `Time`, `Dose`, `Route`,`Media`, `Conc`,
-#'   `Detect`, `Conc_SD`, `N_Subjects`. Before log-likelihood is calculated, `Time` will be
-#'   transformed according to the transformation in `obj$scales$time` and `Conc`
-#'   will be transformed according to the transformation in `obj$scales$conc`.
+#'   `Detect`, `Conc_SD`, `N_Subjects`. Before log-likelihood is calculated,
+#'   `Time` will be transformed according to the transformation in
+#'   `obj$scales$time` and `Conc` will be transformed according to the
+#'   transformation in `obj$scales$conc`.
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   calculate log-likelihood. If NULL (the default), log-likelihoods will be
 #'   returned for all of the models in `obj$stat_model`.
