@@ -120,9 +120,9 @@ return(scale_conc)
 #'   [pk_add.pk_scales()].
 scale_time <- function(new_units = "identity",
                           ...){
-  scale_time <- list(name = "time")
   #get arguments and values
   argg <- c(as.list(environment()), list(...))
+  scale_time <- list(name = "time")
   scale_time$value <- argg
   #set class
   class(scale_time) <- c(class(scale_time), "pkproto", "pk_scales")
