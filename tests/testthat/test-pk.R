@@ -16,7 +16,7 @@ test_that("pk object has the expected default mapping",
                             chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
               )
             )
-            expect_equivalent(my_pk$mapping,
+            expect_equal(my_pk$mapping,
                               ggplot2::aes(Chemical = chemicals_analyzed.dsstox_substance_id,
                                            DTXSID = chemicals_analyzed.dsstox_substance_id,
                                            Chemical_Name = chemicals_analyzed.preferred_name,
@@ -45,19 +45,32 @@ test_that("pk object has the expected default mapping",
                                            Value.Units = "mg/L",
                                            LOQ = series.loq_normalized,
                                            Value_SD  = conc_time_values.conc_sd_normalized
-                              ))
+                              ),
+                         ignore_attr = TRUE)
           })
 
 test_that("creating a pk object with a mapping missing all required variables throws the expected warning",
           {
             expect_warning(
               pk(
-            data = subset(cvt,
-                          chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
-            ),
-            mapping = NULL
+                data = subset(cvt,
+                              chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
+                ),
+                mapping = NULL
               )
             )
+          }
+)
+
+test_that("A newly-created pk object has the expected status of 1",
+          {
+            my_pk <- pk(
+              data = subset(cvt,
+                            chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
+              )
+            )
+            expect_equal(my_pk$status, 1L)
+
           }
           )
 

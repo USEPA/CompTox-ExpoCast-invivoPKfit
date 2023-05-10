@@ -14,9 +14,13 @@ Depends:
     R (>= 2.10)
 Imports: akmedoids, data.table, PK, MASS, numDeriv, optimx, pracma, scales,
         ggplot2, RColorBrewer, rmarkdown, dplyr, magrittr, tidyr, rlang
-Suggests: knitr, stringr
+Suggests: 
+    knitr,
+    stringr,
+    testthat (>= 3.0.0)
 RoxygenNote: 7.2.2
 VignetteBuilder: knitr
 NeedsCompilation: no
 Encoding: UTF-8
 Packaged: 2018-07-27 14:45:05 UTC; jwambaug
+Config/testthat/edition: 3
