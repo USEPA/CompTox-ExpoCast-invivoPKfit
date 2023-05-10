@@ -208,6 +208,25 @@ preprocess_data.pk <- function(obj){
       rm(time_num, old_na, new_na)
     }
 
+    ### coerce 'N_Subjects' values to numeric and say so
+    if (!is.numeric(data$N_Subjects))
+    {
+      N_Subjects_num <- as.numeric(data$N_Subjects)
+      old_na <- sum(is.na(data$N_Subjects) | !nzchar(data$N_Subjects))
+      new_na <- sum(is.na(N_Subjects_num))
+      if(!obj$data_settings$suppress.messages){
+        message(paste0("Column \"N_Subjects\" converted from ",
+                       class(data$N_Subjects),
+                       " to numeric. ",
+                       "Pre-conversion NAs and blanks: ",
+                       old_na,
+                       ". Post-conversion NAs: ",
+                       new_na, "."))
+      }
+      data$N_Subjects <- N_Subjects_num
+      rm(N_Subjects_num, old_na, new_na)
+    }
+
     ### Coerce Species, Route, and Media to lowercase
     if(!obj$data_settings$suppress.messages){
       message(paste("Species, Route, and Media",
