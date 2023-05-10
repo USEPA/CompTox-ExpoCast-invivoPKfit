@@ -209,7 +209,6 @@
 #' ggplot2::aes(
 #' Chemical = chemicals_analyzed.dsstox_substance_id,
 #' DTXSID = chemicals_analyzed.dsstox_substance_id,
-#' Chemical_Name = chemicals_analyzed.preferred_name,
 #' CASRN = chemicals_analyzed.dsstox_casrn,
 #' Species = subjects.species,
 #' Reference = as.character(ifelse(is.na(documents_reference.id),
@@ -261,7 +260,6 @@
 pk <- function(data = NULL,
                mapping = ggplot2::aes(Chemical = chemicals_analyzed.dsstox_substance_id,
                              DTXSID = chemicals_analyzed.dsstox_substance_id,
-                             Chemical_Name = chemicals_analyzed.preferred_name,
                              CASRN = chemicals_analyzed.dsstox_casrn,
                              Species = subjects.species,
                              Reference = as.character(
@@ -334,7 +332,7 @@ pk <- function(data = NULL,
   )
 
   #nd assign it class pk
-  class(obj) <-append(class(obj), "pk")
+  class(obj) <- append(class(obj), "pk")
 
   # Add default data settings
   obj <- obj + settings_data()
