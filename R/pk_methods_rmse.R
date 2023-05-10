@@ -90,7 +90,8 @@ rmse.pk <- function(obj,
   n_subj <- newdata$N_Subjects
   obs <- newdata$Conc
  obs_sd <- newdata$Conc_SD
-  n_tot <- sum(n_subj)
+  n_tot <- sum(newdata$N_Subjects)
+  detect <- newdata$Detect
 
 
   sapply(preds,
@@ -98,7 +99,7 @@ rmse.pk <- function(obj,
            apply(this_pred,
                  2,
                  function(x) {
-                   x <- ifelse(newdata$Detect %in% FALSE &
+                   x <- ifelse(detect %in% FALSE &
                                  x < obs,
                                obs, #will be LOQ for detect == FALSE
                                x)
@@ -106,7 +107,7 @@ rmse.pk <- function(obj,
                    sqrt(
                      sum(
                        (n_subj -1) * obs_sd^2 +
-                         n_subj * obs^2 -
+                         n_subj^2 -
                          2 * n_subj*obs*x +
                          x^2
                      )/n_tot
