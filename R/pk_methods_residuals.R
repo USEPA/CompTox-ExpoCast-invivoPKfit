@@ -2,15 +2,22 @@
 #'
 #' Extract residuals from a fitted `pk` object.
 #'
-#' Residuals are `observed - predicted`.
+#' Residuals are `obs - pred` in general, where `obs` is the observed
+#' concentration value and `pred` is the predicted concentration value.
+#'
+#' For non-detect observations, residual is zero if `pred` is also below the
+#' LOQ. Otherwise, the residual is the difference between the LOQ and `pred`.
+#'
 #'
 #' @param obj A `pk` object
 #' @param newdata Optional: A `data.frame` with new data for which to make
 #'   predictions and compute residuals. If NULL (the default), then residuals
 #'   will be computed for the data in `obj$data`. `newdata` is required to
-#'   contain at least the following variables: `Time`, `Dose`, `Route`, and
-#'   `Media`. `Time` will be transformed according to the transformation in
-#'   `obj$scales$time` before residuals are calculated.
+#'   contain at least the following variables: `Time`, `Dose`, `Route`, `Media`,
+#'   `Conc`, `Detect`, `N_Subjects`, `Conc_SD`. `Time` will be transformed
+#'   according to the transformation in `obj$scales$time`. Residuals will be
+#'   calculated on un-transformed concentration data (i.e., ignoring any
+#'   scalings or transformations in `obj$scales$conc`).
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   make predictions and calculate residuals. If NULL (the default), residuals
 #'   will be returned for all of the models in `obj$stat_model`.
@@ -37,11 +44,8 @@
 residuals.pk <- function(obj,
                          newdata = NULL,
                          model = NULL,
-                         method = NULL,
-                         type = "conc"){
-  if(!(type %in% "conc")) stop(paste("Error in residuals.pk():",
-                                     "only type = 'conc' is currently implemented;",
-                                     "residuals for type = 'auc' are not available yet"))
+                         method = NULL){
+
   if(is.null(model)) model <- names(obj$stat_model)
   if(is.null(method)) method <- obj$optimx_settings$method
   if(is.null(newdata)) newdata <- obj$data
@@ -50,15 +54,21 @@ residuals.pk <- function(obj,
                    newdata = newdata,
                    model = model,
                    method = method,
-                   type = type)
+                   type = "conc")
 
-  obs <- ifelse(type %in% "conc",
-                obj$data$Conc,
-                NA_real_)
+  obs <- newdata$Conc
 
   sapply(preds,
          function(this_pred){
-           obs - this_pred
+           apply(this_pred,
+                 2,
+                 function(x){
+                   ifelse(newdata$Detect %in% FALSE &
+                            x <= obs,
+                          0,
+                          obs - x)
+                 }
+           )
          },
          simplify = FALSE,
          USE.NAMES = TRUE)

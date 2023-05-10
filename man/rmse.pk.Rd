@@ -4,7 +4,7 @@
 \alias{rmse.pk}
 \title{Root mean squared error}
 \usage{
-\method{rmse}{pk}(obj, newdata = NULL, model = NULL, method = NULL, type = "conc")
+\method{rmse}{pk}(obj, newdata = NULL, model = NULL, method = NULL)
 }
 \arguments{
 \item{obj}{A `pk` object}
@@ -36,14 +36,54 @@ A named list of numeric vectors. There is one list element named for
   fitted to the data. Each list element is a numeric vector with as many
   elements as there were [optimx::optimx()] methods (specified in
   [settings_optimx()]). The vector names are the method names.  Each vector
-  element contains the root mean squared error (`sqrt(mean(observed -
-  predicted)^2)`) of the model fitted by the corresponding method, using the
-  data in `newdata`. These RMSEs are concentrations in the same units as
-  `obj$data$Conc.Units`; any concentration transformations (in
-  `obj$scale$conc`) are *not* applied.
+  element contains the root mean squared error of the model fitted by the
+  corresponding method, using the data in `newdata`. These RMSEs are
+  concentrations in the same units as `obj$data$Conc.Units`; any
+  concentration transformations (in `obj$scale$conc`) are *not* applied.
 }
 \description{
 Extract root mean squared error of a fitted `pk` object
+}
+\details{
+RMSE is calculated using the following formula, to properly handle summary
+data:
+
+\deqn{
+\sqrt{
+\frac{1}{N}
+ \sum_{i=1}^G \left( (n_i - 1) s_i^2 +
+  n_i ^2 - 2 n_i \bar{y}_i \mu_i + \mu_i^2 \right)
+   }
+}
+
+In this formula, there are \eqn{G} observations, each of which may be for one
+subject or for multiple subjects.
+
+- \eqn{n_i} is the number of subjects for observation \eqn{i}.
+- \eqn{\bar{y}_i} is the sample mean concentration for observation \eqn{i}.
+- \eqn{s_i} is the sample standard deviation of concentrations for observation \eqn{i}.
+- \eqn{\mu_i} is the model-predicted concentration for observation \eqn{i}.
+
+\eqn{N} is the grand total of subjects across observations:
+
+\deqn{N = \sum_{i=1}^G n_i}
+
+For the non-summary case (\eqn{N} single-subject observations, with all
+\eqn{n_i = 1}, \eqn{s_i = 0}, and \eqn{\bar{y}_i = y_i}), this formula
+reduces to the familiar RMSE formula
+
+\deqn{\sqrt{\frac{1}{N} \sum_{i=1}^N (y_i - \mu_i)^2}}
+
+# Left-censored data
+
+If the observed value is censored, and the predicted value is less than the
+reported LOQ, then the predicted value is (temporarily) set equal to the LOQ,
+for an effective error of zero.
+
+If the observed value is censored, and the predicted value is greater than
+the reported LOQ, the the observed value is treated as the reported LOQ (so
+that the effective error is the difference between the LOQ and the predicted
+value).
 }
 \author{
 Caroline Ring

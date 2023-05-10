@@ -4,7 +4,7 @@
 \alias{residuals.pk}
 \title{Get residuals}
 \usage{
-\method{residuals}{pk}(obj, newdata = NULL, model = NULL, method = NULL, type = "conc")
+\method{residuals}{pk}(obj, newdata = NULL, model = NULL, method = NULL)
 }
 \arguments{
 \item{obj}{A `pk` object}
@@ -12,9 +12,11 @@
 \item{newdata}{Optional: A `data.frame` with new data for which to make
 predictions and compute residuals. If NULL (the default), then residuals
 will be computed for the data in `obj$data`. `newdata` is required to
-contain at least the following variables: `Time`, `Dose`, `Route`, and
-`Media`. `Time` will be transformed according to the transformation in
-`obj$scales$time` before residuals are calculated.}
+contain at least the following variables: `Time`, `Dose`, `Route`, `Media`,
+`Conc`, `Detect`, `N_Subjects`, `Conc_SD`. `Time` will be transformed
+according to the transformation in `obj$scales$time`. Residuals will be
+calculated on un-transformed concentration data (i.e., ignoring any
+scalings or transformations in `obj$scales$conc`).}
 
 \item{model}{Optional: Specify one or more of the fitted models for which to
 make predictions and calculate residuals. If NULL (the default), residuals
@@ -46,7 +48,11 @@ A named list of numeric matrices. There is one list element named for
 Extract residuals from a fitted `pk` object.
 }
 \details{
-Residuals are `observed - predicted`.
+Residuals are `obs - pred` in general, where `obs` is the observed
+concentration value and `pred` is the predicted concentration value.
+
+For non-detect observations, residual is zero if `pred` is also below the
+LOQ. Otherwise, the residual is the difference between the LOQ and `pred`.
 }
 \author{
 Caroline Ring
