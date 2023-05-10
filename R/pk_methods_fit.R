@@ -6,6 +6,17 @@
 #' @export
 #' @author Caroline Ring
 fit.pk <- function(obj){
+  #check status
+  #do preprocessing if necessary
+  if(obj$status == 1){
+    obj <- preprocess_data(obj)
+  }
+
+  #do prefitting if necessary
+  if(obj$status == 2){
+    obj <- prefit(obj)
+  }
+
   suppress.messages <- obj$data_settings$suppress.messages
   #For each model:
   for (this_model in names(obj$stat_model)){

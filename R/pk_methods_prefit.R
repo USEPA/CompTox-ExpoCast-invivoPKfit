@@ -8,7 +8,7 @@
 #' @author Caroline Ring
 prefit.pk <- function(obj){
   #if preprocessing not already done, do it
-  if(obj$status < 1){
+  if(obj$status == 1){
     obj <- preprocess_data(obj)
   }
 
