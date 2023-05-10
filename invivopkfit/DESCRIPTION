@@ -13,7 +13,7 @@ Depends:
     httk,
     R (>= 2.10)
 Imports: akmedoids, data.table, PK, MASS, numDeriv, optimx, pracma, scales,
-        ggplot2, RColorBrewer, rmarkdown, dplyr, magrittr, tidyr
+        ggplot2, RColorBrewer, rmarkdown, dplyr, magrittr, tidyr, rlang
 Suggests: knitr, stringr
 RoxygenNote: 7.2.2
 VignetteBuilder: knitr
