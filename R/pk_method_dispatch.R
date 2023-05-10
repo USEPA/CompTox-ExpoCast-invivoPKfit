@@ -146,3 +146,20 @@ coef_sd.default <- function(obj, ...){
 get_status <- function(obj, ...){
   UseMethod("get_status", obj)
 }
+
+#' Fold error
+#'
+#' This is the S3 method generic for `fold_errors`.
+#' @export
+#' @seealso [fold_errors.pk()] for the `fold_errors` method for class [pk()]
+fold_errors <- function(x){
+  UseMethod("fold_errors", x)
+}
+
+#' Fold_error default method
+#'
+#' @export
+fold_errors.default <- function(x, ...){
+  stop(paste("No 'fold_errors' method exists for object of class",
+             paste(class(x), collapse = ", ")))
+}
