@@ -100,64 +100,6 @@ fit.pk <- function(obj){
       #Save the fitting results for this model
       obj$stat_model[[this_model]]$fit <- optimx_out
 
-      #loop over rows of optimx_out (i.e. over optimx methods), if any
-      if(!is.null(nrow(optimx_out))){
-        #For each row in optimx output, evaluate Hessian and attempt to invert
-        for (i in 1:nrow(optimx_out)){
-          this_method <- rownames(optimx_out)[i]
-          #Get SDs from Hessian evaluated at the fit parameters
-          npar <- attr(optimx_out, "npar")
-
-          fit_par <- unlist(optimx_out[i, 1:npar])
-          #Calculate Hessian using function from numDeriv
-          numhess <- numDeriv::hessian(func = function(x){
-            log_likelihood(x,
-                           const_params = const_params,
-                           fitdata = fitdata,
-                           data_sigma_group = obj$stat_error_model$data_sigma_group,
-                           modelfun = obj$stat_model[[this_model]]$conc_fun,
-                           scales_conc = obj$scales$conc,
-                           negative = TRUE,
-                           force_finite = TRUE)
-          },
-          x = fit_par,
-          method = 'Richardson')
-
-          #try inverting Hessian to get SDs
-          sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
-                          error = function(err){
-                            #if hessian can't be inverted
-                            if (!suppress.messages) {
-                              message(paste0("Hessian can't be inverted, ",
-                                             "using pseudovariance matrix ",
-                                             "to estimate parameter uncertainty."))
-                            }
-                            #pseudovariance matrix
-                            #see http://gking.harvard.edu/files/help.pdf
-                            suppressWarnings(tmp <- tryCatch(
-                              diag(chol(MASS::ginv(numhess),
-                                        pivot = TRUE)) ^ (1/2),
-                              error = function(err){
-                                if (!suppress.messages) {
-                                  message(paste0("Pseudovariance matrix failed,",
-                                                 " returning NAs"))
-                                }
-                                rep(NA_real_, nrow(numhess))
-                              }
-                            )
-                            )
-                            return(tmp)
-                          })
-          names(sds) <- names(optimx_out)[1:npar]
-
-          obj$stat_model[[this_model]]$fit_hessian[[this_method]] <- numhess
-          obj$stat_model[[this_model]]$fit_sds[[this_method]] <- sds
-
-          #  #calculate also: log-likelihood, AIC, BIC
-          # obj$stat_model[[this_model]]$fit_AIC[[this_method]] <-
-          #   obj$stat_model[[this_model]]$fit_BIC[[this_method]] <-
-        } #end loop over rows of optimx_out
-      } #end check that there *were* any rows of optimx_out
     }else{ #if status for this model was "abort", then abort fit and return NULL
       obj$stat_model[[this_model]]$fit <- "Fit aborted because status %in% 'abort'"
     }
