@@ -1,23 +1,44 @@
 #' Data preprocessing settings
 #'
-
-#' @param routes_keep
-#' @param media_keep
-#' @param impute_loq
-#' @param loq_group
-#' @param calc_loq_factor
-#' @param impute_sd
-#' @param suppress.messages
+#' @param routes_keep Character: A list of routes to keep. Data will be filtered
+#'   so that the harmonized variable `Route` includes only values in
+#'   `routes_keep`. Default is `c("oral", "iv")`.
+#' @param media_keep Character: A list of media to keep. Data will be filtered
+#'   so that the harmonized variable name `Media` includes only values in
+#'   `media_keep`. Default is `c("blood", "plasma")`.
+#' @param impute_loq TRUE or FALSE: Whether to impute missing LOQ values.
+#' @param loq_group A list of variables, specified using a call to
+#'   [dplyr::vars()]. These should be harmonized variable names. Unique
+#'   combinations of these variables define groups of data. Within each group,
+#'   any missing LOQ values will be imputed as the minimum detected Value in the
+#'   group, multiplied by `calc_loq_factor`. Default is `dplyr::vars(Chemical,
+#'   Species, Reference, Media)`.
+#' @param calc_loq_factor  A numeric factor used for imputing missing LOQ.
+#'   Within each group defined in `loq_group`, any missing LOQ values will be
+#'   imputed as the minimum detected Value in the group, multiplied by
+#'   `calc_loq_factor`. Default 0.45.
+#' @param impute_sd TRUE or FALSE: Whether to impute missing SD values.
+#' @param sd_group A list of variables, specified using a call to
+#'   [dplyr::vars()]. These should be harmonized variable names. Unique
+#'   combinations of these variables define groups of data. Within each group,
+#'   any missing SD values will be imputed as the minimum non-missing SD value
+#'   in the group. Default is `dplyr::vars(Chemical, Species, Reference,
+#'   Media)`.
+#' @param suppress.messages TRUE or FALSE: Whether to suppress verbose messages.
+#'   Default FALSE.
+#' @param ... Any additional arguments. Currently ignored.
 #'
-#' @return An object of class `pk_data_settings`.
+#' @return An object of class `pk_data_settings`. This is a named list of the
+#'   arguments provided to this function and their values.
 #' @author Caroline Ring
+#' @export
 settings_data <- function(routes_keep = c("oral", "iv"),
                              media_keep = c("blood", "plasma"),
                              impute_loq = TRUE,
-                          loq_group = vars(Chemical, Species, Reference, Media),
+                          loq_group = dplyr::vars(Chemical, Species, Reference, Media),
                           calc_loq_factor = 0.45,
                              impute_sd = TRUE,
-                          sd_group = vars(Chemical, Species, Reference, Media),
+                          sd_group = dplyr::vars(Chemical, Species, Reference, Media),
                              suppress.messages = FALSE,
                           ...){
 #get arguments and values
@@ -38,7 +59,7 @@ return(this_settings_data)
 #' @param control A list of control parameters for the optimizer; see [optimx::optimx()] for options and details.
 #' @return An object of class `pk_settings`.
 #' @author Caroline Ring
-settings_optimx <- function(method = "bobyqa",
+settings_optimx <- function(method = c("bobyqa", "L-BFGS-B"),
                                itnmax = 1e6,
                                hessian = FALSE,
                                control = list(kkt = FALSE),

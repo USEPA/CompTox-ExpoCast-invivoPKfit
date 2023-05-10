@@ -4,29 +4,29 @@
 \alias{cp_2comp}
 \title{Analytical 2-compartment model}
 \usage{
-cp_2comp(params, time, dose, iv.dose, medium = "plasma")
+cp_2comp(params, time, dose, route, medium = "plasma")
 }
 \arguments{
 \item{params}{A named list of parameter values. See Details for requirements.}
 
-\item{time}{A numeric vector of times in hours, reflecting the time points
+\item{time}{A numeric vector of times, reflecting the time points
 when concentration is measured after the corresponding single bolus dose.
 Must be same length as other arguments, or length 1.}
 
-\item{dose}{A numeric vector of doses in mg/kg, reflecting single bolus doses
+\item{dose}{A numeric vector of doses, reflecting single bolus doses
 administered at time 0. Must be same length as other arguments, or
 length 1.}
 
-\item{iv.dose}{A logical vector, reflecting the route of administration of
-each single bolus dose. TRUE for single IV bolus dose; FALSE for single oral
-bolus dose. Must be same length as other arguments, or length 1.}
+\item{route}{A character vector, reflecting the route of administration of
+each single bolus dose: `'oral'` or `'iv'`.  Must be same length as `time`
+and `dose`, or length 1.}
 
 \item{medium}{A character vector reflecting the medium in which each resulting
 concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 Must be same length as other arguments, or length 1.}
 }
 \value{
-A vector of blood or plasma concentration values (mg/L) corresponding to each
+A vector of blood or plasma concentration values (mass chemical/volume media) corresponding to each
  value in \code{time}
 }
 \description{
@@ -37,31 +37,31 @@ Calculates plasma concentration according to the analytical solution for the
 `params` must include the following named list elements:
   \describe{
   \item{k12}{Rate at which compound moves from central to peripheral
-  compartment, 1/h.}
+  compartment, 1/time.}
   \item{k21}{Rate at which compound moves from peripheral to central
-  compartment, 1/h.}
-  \item{kelim}{Elimination rate, 1/h.}
-  \item{V1}{Apparent volume of central compartment, L/kg BW. Or see below for
+  compartment, 1/time.}
+  \item{kelim}{Elimination rate, 1/time.}
+  \item{V1}{Apparent volume of central compartment, volume/unit BW. Or see below for
   `Fgutabs_V1`}
   }
 
-For oral administration (any `iv.dose == FALSE`), `params` must also include
+For oral administration (any `route %in% "oral"`), `params` must also include
 the following named list items:
   \describe{
   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
   `Fgutabs_V1`}
-  \item{kgutabs}{Rate of absorption from gut, 1/h.}
+  \item{kgutabs}{Rate of absorption from gut, 1/time.}
   }
 
 For oral administration, in lieu of `V1` and `Fgutabs`, you may instead
-provide `Fgutabs_V1`, the ratio of Fgutabs to V1 (1/L). This is an alternate
+provide `Fgutabs_V1`, the ratio of Fgutabs to V1 (1/volume). This is an alternate
 parameterization for situations where `Fgutabs` and `V1` are not identifiable
 separately (i.e. when oral TK data are available, but IV data are not). If
 `Fgutabs` and `V1` are provided, they will override any value also provided
 for `Fgutabs_V1`.
 
-If both oral and IV administration are specified (i.e., some `iv.dose == TRUE`
-and some `iv.dose == FALSE`), then `V1` is required along with either
+If both oral and IV administration are specified (i.e., some `route %in% "iv"`
+and some `route %in% "oral"`), then `V1` is required along with either
 `Fgutabs` or `Fgutabs_V1`. (If `V1` and `Fgutabs_V1` are provided, but
 `Fgutabs` is not provided, then `Fgutabs` will be calculated from `V1` and
 `Fgutabs_V1`.)

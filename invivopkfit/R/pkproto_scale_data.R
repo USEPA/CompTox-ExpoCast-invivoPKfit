@@ -63,15 +63,17 @@ scale_conc <- function(dose_norm = FALSE,
                      value = list(
                       "ratio_conc_dose" = ratio_conc_dose,
                      "dose_norm" = dose_norm,
-                     "log1o_trans" = log10_trans)
+                     "log10_trans" = log10_trans)
   )
 
   #Set up expression
   expr <- quote(.conc)
   #add ratio_conc_dose normalization step to expression
+  if(!(ratio_conc_dose %in% 1)){
   expr <- substitute(x/ratio_conc_dose,
                      list(x = expr,
                           ratio_conc_dose = ratio_conc_dose))
+  }
 
   if(dose_norm %in% TRUE){
     #add dose normalization step to expression
@@ -87,7 +89,8 @@ scale_conc <- function(dose_norm = FALSE,
   }
 
   #enquote expr
-  scale_conc$value$expr <- rlang::enquo(expr)
+  scale_conc$value$expr <- rlang::new_quosure(expr = expr,
+                                              env = caller_env())
   #this qusoure will have environment "global"
 
   #get any other arguments and values

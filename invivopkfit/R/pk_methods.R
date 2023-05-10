@@ -255,6 +255,39 @@ pk <- function(data = NULL,
                )
                ){
 
+  #Check to ensure the mapping contains all required harmonized column names
+  mapping_default <- ggplot2::aes(
+    Chemical = NA_character_,
+    Species = NA_character_,
+    Reference = NA_character_,
+    Media = NA_character_,
+    Route = NA_character_,
+    Dose = NA_real_,
+    Dose.Units = "mg/kg",
+    Subject = NA_character_,
+    N_Subjects = NA_real_,
+    Weight = NA_real_,
+    Weight.Units = "kg",
+    Time = NA_real_,
+    Time.Units = "hours",
+    Value = NA_real_,
+    Value_SD = NA_real_,
+    LOQ = NA_real_,
+    Value.Units = "mg/L"
+  )
+
+  missing_aes <- setdiff(names(mapping_default), names(mapping))
+  if(!(length(missing_aes)==0)){
+    mapping[missing_aes] <- mapping_default[missing_aes]
+    warning(paste("'mapping' is missing the following required harmonized variables:",
+            paste(missing_aes,
+                  collapse = "\n"),
+            "These missing required variables will be added according to the following mapping:",
+            ggplot2:::print.uneval(mapping_default[missing_aes]),
+            sep = "\n"))
+  }
+
+
 #Create the initial pk object
   obj <- list("data_original" = data,
               "mapping" = mapping,
@@ -271,7 +304,7 @@ pk <- function(data = NULL,
   obj <- obj + scale_conc() + scale_time()
 
   #Add default stats
-  obj <-obj + stat_model()
+  #obj <-obj + stat_model()
 
   #Add default error model
   obj <- obj + stat_error_model()
@@ -435,11 +468,11 @@ pk_add.pk_stat_model <- function(object, pk_obj, objectname){
                      "already present; new stat_model will replace the existing one")
       )
     }
-    pk_obj$stat_model[[this_model]] <- object$this_model
+    pk_obj$stat_model[[this_model]] <- object[[this_model]]
   }
   if(pk_obj$status > 2L){
     message(paste0(objectname,
-                   ": New stat_model resets status to level 2 (data preprocessing complete); model pre-fit (level 3) and model fit (level 4) will need to be re-done")
+                   ": New stat_model resets status to level 2 (data preprocessing complete);\nmodel pre-fit (level 3)  (prefit()) and model fit (level 4) (fit()) will need to be re-done")
     )
     pk_obj$status <- 2L #data pre-processing won't change with addition of new model, but model pre-fit and fit will change
   }
@@ -525,9 +558,8 @@ str(obj)
 #'   detect/nondetect; empirical tmax, time of peak concentration for oral data;
 #'   number of observations before and after empirical tmax)
 #' @author Caroline Ring
+#' @importFrom magrittr `%>%`
 #' @export
-#' @import dplyr
-#' @import magrittr
 preprocess_data.pk <- function(obj){
 
   if(is.null(obj$data_original)){
@@ -541,37 +573,12 @@ preprocess_data.pk <- function(obj){
     #coerce to data.frame (in case it is a tibble or data.table or whatever)
     data_original <- as.data.frame(obj$data_original)
 
-    #rename variables
+    #rename variables using the mapping
     data <- as.data.frame(sapply(obj$mapping,
                                  function(x) rlang::eval_tidy(x, data_original),
                                  simplify = FALSE,
                                  USE.NAMES = TRUE)
     )
-    #ensure that all required variables exist
-    #define expected "default" empty data frame
-    data_default <- data.frame(Chemical = character(),
-                               Species = character(),
-                               Reference = character(),
-                               Subject = character(),
-                               N_Subjects = numeric(),
-                               Route = character(),
-                               Dose = numeric(),
-                               Time = numeric(),
-                               Media = character(),
-                               Value = numeric(),
-                               Value_SD = numeric(),
-                               LOQ = numeric()
-    )
-
-    #add any missing columns
-    missing_cols <- setdiff(names(data_default),
-                            names(data))
-    for(this_col in missing_cols){
-      #fill the missing column with NAs of the specified type
-      #the following is a trick to make NAs of the same type as the column.
-      data[[this_col]] <- rep(c(data_default[[this_col]][0], NA),
-                              length(data[[this_col]]))
-    }
 
     #Check to make sure the data include only one Chemical and Species. Stop
     #with an error otherwise.
@@ -633,7 +640,7 @@ preprocess_data.pk <- function(obj){
         paste(
           paste(nrow(data),
                 "concentration vs. time observations loaded."),
-          paste("Chemical:", chems),
+          paste("Chemicals:", chems),
           paste("Species:", species),
           paste("Routes:", routes),
           paste("Media:", media),
@@ -704,7 +711,7 @@ preprocess_data.pk <- function(obj){
     data$Route <- tolower(data$Route)
     data$Media <- tolower(data$Media)
 
-    #Coerce any non-positive Value to NA
+    #Coerce any non-positive Value, LOQ, or Value_SD to NA
     data[(data$Value<=0) %in% TRUE, "Value"] <- NA_real_
     #Coerce any non-positive LOQ to NA
     data[(data$LOQ<=0) %in% TRUE, "LOQ"] <- NA_real_
@@ -719,7 +726,12 @@ preprocess_data.pk <- function(obj){
           message(paste0("Estimating missing LOQs as ",
                          obj$data_settings$calc_loq_factor,
                          "* minimum detected Value for each unique combination of ",
-                         "Reference, Chemical, Media, and Species"))
+                         paste(
+                           sapply(obj$data_settings$loq_group,
+                               as_label),
+                           collapse = " + ")
+                         )
+          )
         }
         data <- do.call(dplyr::group_by,
                         args =c(list(data),
@@ -734,14 +746,14 @@ preprocess_data.pk <- function(obj){
           as.data.frame()
       }
 
-      if(!obj$data_settings$suppress.messages){
-        message(paste0("Converting 'Value' values of less than LOQ to NA.\n",
-                       sum((data$Value <  data$LOQ) %in% TRUE),
-                       " values will be converted."))
-      }
-      data[(data$Value < data$LOQ) %in% TRUE, "Value"] <- NA_real_
-
     } #end if impute_loq %in% TRUE
+
+    if(!obj$data_settings$suppress.messages){
+      message(paste0("Converting 'Value' values of less than LOQ to NA.\n",
+                     sum((data$Value <  data$LOQ) %in% TRUE),
+                     " values will be converted."))
+    }
+    data[(data$Value < data$LOQ) %in% TRUE, "Value"] <- NA_real_
 
     #Remove any remaining cases where both Value and LOQ are NA
     if(any(is.na(data$Value) & is.na(data$LOQ))){
@@ -792,8 +804,11 @@ preprocess_data.pk <- function(obj){
           )
           message(paste0("Estimating missing concentration SDs for multi-subject data points as ",
                          "minimum non-missing SD for each unique combination of variables in",
-                         "obj$data_settings$sd_group.",
-                         "If all SDs are missing for such a unique combination, ",
+                         paste(
+                           sapply(obj$data_settings$sd_group,
+                                  as_label),
+                           collapse = " + "),
+                         ". If all SDs are missing for such a unique combination, ",
                          "SD will be imputed equal to mean. ",
                          n_sd_est, " missing SDs will be estimated."))
         }
@@ -803,13 +818,14 @@ preprocess_data.pk <- function(obj){
           dplyr::mutate(Value_SD_orig = Value_SD,
                  Value_SD = dplyr::if_else(is.na(Value_SD_orig) &
                                       N_Subjects > 1,
-                                    dplyr::if_else(sum(!is.na(Value_SD_orig))==0,
-                                            Value,
+                                    dplyr::if_else(all(is.na(Value_SD_orig)),
+                                            mean(Value, na.rm = TRUE),
                                             min(Value_SD_orig, na.rm = TRUE)),
                                Value_SD_orig)
           ) %>% dplyr::ungroup() %>%
           as.data.frame()
       }
+
     }#end if impute_sd %in% TRUE
 
     #Remove any remaining multi-subject observations where SD is NA
@@ -898,11 +914,20 @@ preprocess_data.pk <- function(obj){
                      from_units,
                      obj$scales$time$new_units)
 
+
+
   if(obj$scales$time$new_units %in% "auto"){
     to_units <- auto_units(y = data$Time,
                      from = from_units)
   }
-  data$Time <- tryCatch(convert_time(x = data$Time,
+
+  if(!obj$data_settings$suppress.messages){
+    message(paste("Converting time from",
+                  from_units,
+                  "to",
+                  to_units))
+  }
+  data$Time_trans <- tryCatch(convert_time(x = data$Time,
                                      from = from_units,
                                      to = to_units,
                                      inverse = FALSE),
@@ -912,7 +937,39 @@ preprocess_data.pk <- function(obj){
                                   err$message))
                           return(NA_real_)
                         })
-  data$Time.Units <- to_units
+  data$Time_trans.Units <- to_units
+
+  #If Conc and Detect do not already exist, create them
+  if(!("Conc" %in% names(data))){
+    if(!obj$data_settings$suppress.messages){
+      message(paste("Harmonized variable `Conc` does not already exist.",
+                    "It will be created as",
+                    "`pmax(Value, LOQ, na.rm = TRUE)`."))
+    }
+    data$Conc <- pmax(data$Value, data$LOQ, na.rm = TRUE)
+  }
+
+  if(!("Detect" %in% names(data))){
+    if(!obj$data_settings$suppress.messages){
+      message(paste("Harmonized variable `Detect` does not already exist.",
+                    "It will be created as",
+                    "`is.na(Value)`."))
+    }
+    data$Detect <- !is.na(data$Value)
+  }
+
+  if(!("Conc_SD" %in% names(data))){
+    if(!obj$data_settings$suppress.messages){
+      message(paste("Harmonized variable `Conc_SD` does not already exist.",
+                    "It will be created as",
+                    "`ifelse(data$Detect,
+                        data$Value_SD,
+                        NA_real_)"))
+    }
+    data$Conc_SD <- data$Value_SD
+  }
+
+  data$Conc.Units <- data$Value.Units
 
   #apply concentration transformation.
   #
@@ -922,15 +979,34 @@ preprocess_data.pk <- function(obj){
   #apply conc transformation
   #use tidy evaluation: Specify an expression to evaluate in the context of a data.frame
   #Transform Conc (this is either the measured value or the LOQ, depending on Detect)
-  data$Conc <- rlang::eval_tidy(expr = obj$scales$conc$expr,
+  #If no conc transformation specified, assume identity
+  if(is.null(obj$scales$conc$expr)){
+    obj$scales$conc$ratio_conc_dose <- 1
+    obj$scales$conc$dose_norm <- FALSE
+    obj$scales$conc$log10_trans <- FALSE
+    obj$scales$conc$expr <- rlang::new_quosure(quote(.conc),
+                                               env = caller_env())
+  }
+
+  if(!obj$data_settings$suppress.messages){
+    message(paste("Applying transformations to concentration variables:",
+                  rlang::as_label(obj$scales$conc$expr)))
+  }
+
+  data$Conc_trans <- rlang::eval_tidy(expr = obj$scales$conc$expr,
                          data = cbind(data,
                                       data.frame(.conc = data$Conc)
                                       ))
   #Transform Conc_SD
-  data$Conc_SD <- rlang::eval_tidy(obj$scales$conc$expr,
+  data$Conc_SD_trans <- rlang::eval_tidy(obj$scales$conc$expr,
                                 data = cbind(data,
                                              data.frame(.conc = data$Conc_SD)
                                 ))
+  #Record new conc units
+  data$Conc_trans.Units <- gsub(x = rlang::as_label(obj$scales$conc$expr),
+                          pattern = ".conc",
+                          replacement = unique(data$Value.Units),
+                          fixed = TRUE)
 
   #get the summary data info
   #unique Chemical, Species, References, Studies, Routes
@@ -959,7 +1035,11 @@ preprocess_data.pk <- function(obj){
                                 fixed = TRUE)
 
   #get time of last detected observation
+  if(any(data$Detect %in% TRUE)){
   dat_info$last_detect_time <- max(data[data$Detect %in% TRUE, "Time"])
+  }else{
+    dat_info$last_detect_time <- 0
+  }
 
   #get time of last observation
   dat_info$last_time <- max(data$Time)
@@ -967,6 +1047,7 @@ preprocess_data.pk <- function(obj){
   # add data & data info to object
   obj$data <- data
   obj$data_info <- dat_info
+
   obj$status <- 2 #preprocessing complete
 
   return(obj)
@@ -979,19 +1060,60 @@ preprocess_data.pk <- function(obj){
 #' @return The same `pk` object, but with additional elements added to each item
 #'   in `models`, containing the results of pre-fit calculations and checks for
 #'   each model.
+#' @export
+#' @author Caroline Ring
 prefit.pk <- function(obj){
   #if preprocessing not already done, do it
   if(obj$status < 1){
     obj <- preprocess_data(obj)
   }
 
-  #get the error model, which defines the number of sigmas that will need to be optimized
-error_model <- obj$stat_error_model
-#count the number of unique combinations of vars
-unique_groups <- unique(rlang::eval_tidy(expr = error_model$error_group,
+  #get the error model obj$stat_error_model, which defines the number of sigmas that will need to be optimized
+#count the number of unique combinations of vars in obj$stat_error_model$error_group
+unique_groups <- unique(rlang::eval_tidy(expr = obj$stat_error_model$error_group,
                                          data = obj$data))
+n_sigma <- nrow(unique_groups)
 
+obj$stat_error_model$n_sigma <- n_sigma
 
+#Assign a factor variable denoting sigma group to each observation in obj$data
+#This tells us which sigma applies to which observation
+obj$stat_error_model$data_sigma_group <- interaction(
+  lapply(
+    obj$stat_error_model$error_group,
+    function(x){
+      rlang::eval_tidy(x, data = obj$data)
+    }
+  )
+)
+
+#get bounds and starting points for each error sigma to be fitted
+sigma_DF <- data.frame(param_name = paste("sigma",
+                                          levels(obj$stat_error_model$data_sigma_group),
+                                          sep = "_"),
+                       param_units = unique(obj$data$Conc_trans.Units),
+                       optimize_param = TRUE,
+                       use_param = TRUE,
+                       lower_bound = .Machine$double.eps)
+
+#get upper bound: standard deviation of the transformed concentration
+#(Conc_trans) in each group
+sigma_DF$upper_bound <- tapply(X = obj$data$Conc_trans,
+               INDEX = obj$stat_error_model$data_sigma_group,
+               FUN = sd,
+               na.rm = TRUE,
+               simplify = TRUE)
+
+#get starting value for sigma: say, 0.5 of the upper bound
+sigma_DF$start <- 0.5*sigma_DF$upper_bound
+
+#assign rownames to sigma_DF
+rownames(sigma_DF) <- sigma_DF$param_name
+
+#assign sigma_DF to the `pk` object
+obj$stat_error_model$sigma_DF <- sigma_DF
+
+n_sigma <- nrow(sigma_DF)
   #for each model to be fitted:
   for (this_model in names(obj$stat_model)){
     #get parameters to be optimized, bounds, and starting points
@@ -999,22 +1121,33 @@ unique_groups <- unique(rlang::eval_tidy(expr = error_model$error_group,
     obj$stat_model[[this_model]]$par_DF <- do.call(obj$stat_model[[this_model]]$params_fun,
                                                    args = c(list(obj$data),
                                                             obj$stat_model[[this_model]]$params_fun_args))
-    #check whether there are enough observations to optimize the requested parameters
+    #check whether there are enough observations to optimize the requested parameters plus sigmas
     #number of parameters to optimize
     n_par <- sum(obj$stat_model[[this_model]]$par_DF$optimize_param)
     #number of detected observations
     n_detect <- sum(obj$data$Detect)
     obj$stat_model[[this_model]]$status <- ifelse(
-      n_detect > n_par,
+      n_detect <= (n_par + n_sigma),
       "abort",
      "continue"
     )
 
     obj$stat_model[[this_model]]$status_reason <- ifelse(
-      n_detect <= n_par,
-      "Number of detects is less than or equal to number of parameters to optimize",
-       "Number of detects is greater than number of parameters to optimize"
+      n_detect <= (n_par + n_sigma),
+      paste0("Number of detects (",
+             n_detect,
+             ") is less than or equal to number of parameters to optimize (",
+             n_par, ") plus number of error SDs to optimize (",
+             n_sigma,
+             ")"),
+      paste0("Number of detects (",
+             n_detect,
+             ") is greater than number of parameters to optimize (",
+             n_par, ") plus number of error SDs to optimize (",
+             n_sigma,
+             ")")
     )
+
   }
 
   obj$status <- 3 #prefit complete
@@ -1025,19 +1158,30 @@ unique_groups <- unique(rlang::eval_tidy(expr = error_model$error_group,
 
 #' Fit PK model(s) for a `pk` object
 #'
-#'
+#' @param obj A [pk] object.
+#' @return The same [pk] object, with element `fit` added to each `$stat_model`
+#'   element, reflecting the fitted parameters for the corresponding model.
+#' @export
+#' @author Caroline Ring
 fit.pk <- function(obj){
-
+suppress.messages <- obj$data_settings$suppress.messages
   #For each model:
   for (this_model in names(obj$stat_model)){
 
     if(obj$stat_model[[this_model]]$status %in% "continue"){
+
   #Pull par_DF to get which params to optimize, bounds, and starting values
   par_DF <- obj$stat_model[[this_model]]$par_DF
+  #Do the same for sigma_DF (the data frame of error SDs)
+  sigma_DF <- obj$stat_error_model$sigma_DF
 
-  #params to be optimized with their starting points
+  #Rowbind par_DF and sigma_DF
+  par_DF <- rbind(par_DF,
+                  sigma_DF)
+
+  #get params to be optimized with their starting points
   opt_params <- par_DF[par_DF$optimize_param %in% TRUE,
-                       "start_value"]
+                       "start"]
   names(opt_params) <- par_DF[par_DF$optimize_param %in% TRUE,
                               "param_name"]
 
@@ -1058,7 +1202,7 @@ fit.pk <- function(obj){
          par_DF$use_param %in% TRUE)){
     const_params <- par_DF[par_DF$optimize_param %in% FALSE &
                              par_DF$use_param %in% TRUE,
-                           "start_value"]
+                           "start"]
 
     names(const_params) <- par_DF[par_DF$optimize_param %in% FALSE &
                                     par_DF$use_param %in% TRUE,
@@ -1067,10 +1211,11 @@ fit.pk <- function(obj){
     const_params <- NULL
   }
 
+  fitdata <- obj$data
   #Now call optimx::optimx() and do the fit
-  all_data_fit <- tryCatch({
+  optimx_out <- tryCatch({
 
-    tmp <- do.call(
+    do.call(
       optimx::optimx,
       args = c(
         #
@@ -1079,65 +1224,785 @@ fit.pk <- function(obj){
              lower = lower_params,
              upper = upper_params),
         #method and control
-        optimx_args,
+        obj$optimx_settings,
         #... additional args to log_likelihood
         list(
           const_params = const_params,
-          DF = fitdata,
-          modelfun = modelfun,
-          model = model,
-          fit_conc_dose = fit_conc_dose,
-          fit_log_conc = fit_log_conc,
-          force_finite = (optimx_args$method %in% "L-BFGS-B"),
-          negative = TRUE
+          fitdata = fitdata,
+          data_sigma_group = obj$stat_error_model$data_sigma_group,
+          modelfun = obj$stat_model[[this_model]]$conc_fun,
+          scales_conc = obj$scales$conc,
+          negative = TRUE,
+          force_finite = TRUE
         ) #end list()
       ) #end args = c()
     ) #end do.call
 
-    #output of optimx::optimx():
-    #tmp is a 1-row data.frame with one variable for each fitted param,
-    #plus variables with info on fitting (number of evals, convergence code, etc.)
-    #collect any messages from optimx -- in attribute "details" (another data.frame)
-    tmp$message <- attr(tmp, "details")[, "message"][[1]]
-    if(!("convcode" %in% names(tmp))){
-      tmp$convcode <- NA_real_
-    }
-    tmp
   },
   error = function(err){
-    #create "placeholder" all_data_fit data.frame
-    #return NA for all "fitted" params
-    tmp <- rep(NA_real_, length(opt_params))
-    names(tmp) <- names(opt_params)
-    tmp <- as.list(tmp)
-    tmp[c("value", "fevals", "gevals", "niter",
-          "convcode")] <- NA_real_
-    tmp[c("kkt1", "kkt2")] <- NA #logical
-    tmp[c("xtime")] <- NA_real_
-    #get the error message
-    tmp$message <- err$message
-    tmp
+    return(paste0("Error from optimx::optimx(): ",
+                  err$message))
   })
-    }else{ #if status for this model was "abort", then abort fit and return empty placeholder
-      tmp <- rep(NA_real_, length(opt_params))
-      names(tmp) <- names(opt_params)
-      tmp <- as.list(tmp)
-      tmp[c("value", "fevals", "gevals", "niter",
-            "convcode")] <- NA_real_
-      tmp[c("kkt1", "kkt2")] <- NA #logical
-      tmp[c("xtime")] <- NA_real_
-      #get the error message
-      tmp$message <- err$message
-      all_data_fit <- tmp
-    }
 
-    #Save the fitting results for this model
-    obj$stat_model[[this_model]]$fit <- all_data_fit
+  #Save the fitting results for this model
+  obj$stat_model[[this_model]]$fit <- optimx_out
+
+  #loop over rows of optimx_out (i.e. over optimx methods), if any
+  if(!is.null(nrow(optimx_out))){
+  #For each row in optimx output, evaluate Hessian and attempt to invert
+   for (i in 1:nrow(optimx_out)){
+     this_method <- rownames(optimx_out)[i]
+     #Get SDs from Hessian evaluated at the fit parameters
+     npar <- attr(optimx_out, "npar")
+
+     fit_par <- unlist(optimx_out[i, 1:npar])
+     #Calculate Hessian using function from numDeriv
+     numhess <- numDeriv::hessian(func = function(x){
+       log_likelihood(x,
+                      const_params = const_params,
+                      fitdata = fitdata,
+                      data_sigma_group = obj$stat_error_model$data_sigma_group,
+                      modelfun = obj$stat_model[[this_model]]$conc_fun,
+                      scales_conc = obj$scales$conc,
+                      negative = TRUE,
+                      force_finite = TRUE)
+     },
+     x = fit_par,
+     method = 'Richardson')
+
+     #try inverting Hessian to get SDs
+     sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
+                     error = function(err){
+                       #if hessian can't be inverted
+                       if (!suppress.messages) {
+                         message(paste0("Hessian can't be inverted, ",
+                                        "using pseudovariance matrix ",
+                                        "to estimate parameter uncertainty."))
+                       }
+                       #pseudovariance matrix
+                       #see http://gking.harvard.edu/files/help.pdf
+                       suppressWarnings(tmp <- tryCatch(
+                         diag(chol(MASS::ginv(numhess),
+                                   pivot = TRUE)) ^ (1/2),
+                         error = function(err){
+                           if (!suppress.messages) {
+                             message(paste0("Pseudovariance matrix failed,",
+                                            " returning NAs"))
+                           }
+                           rep(NA_real_, nrow(numhess))
+                         }
+                       )
+                       )
+                       return(tmp)
+                     })
+     names(sds) <- names(optimx_out)[1:npar]
+
+     obj$stat_model[[this_model]]$fit_hessian[[this_method]] <- numhess
+     obj$stat_model[[this_model]]$fit_sds[[this_method]] <- sds
+
+    #  #calculate also: log-likelihood, AIC, BIC
+    # obj$stat_model[[this_model]]$fit_AIC[[this_method]] <-
+    #   obj$stat_model[[this_model]]$fit_BIC[[this_method]] <-
+   } #end loop over rows of optimx_out
+  } #end check that there *were* any rows of optimx_out
+}else{ #if status for this model was "abort", then abort fit and return NULL
+    obj$stat_model[[this_model]]$fit <- "Fit aborted because status %in% 'abort'"
+    }
   } #end loop over models
 
   obj$status <- 4 #fitting complete
   return(obj)
 }
+
+#' Get coefficients
+#'
+#' Extract coefficients from a fitted `pk` object
+#'
+#' @param obj A [pk] object
+#' @param model Optional: Specify one or more of the fitted models whose
+#'   coefficients to return. If NULL (the default), coefficients will be returned for all of
+#'   the models in `obj$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   whose coefficients to return. If NULL (the default), coefficients will be returned for
+#'   all of the models in `obj$optimx_settings$method`.
+#' @return A named list of numeric matrixes. There is one list element named for
+#'   each model in `model`. Each list element is a matrix with as many
+#'   rows as items in `method`. The row names are the method names. The matrix column names are
+#'   the names of the fitted parameters, including any error standard deviation
+#'   hyperparameters (whose names begin with "sigma").
+#' @export
+#' @author Caroline Ring
+coef.pk <- function(obj,
+                    model = NULL,
+                    method = NULL){
+  if(is.null(model)) model <- names(obj$stat_model)
+  if(is.null(method)) method <- obj$optimx_settings$method
+
+  sapply(obj$stat_model[model],
+         function(this_model){
+           npar <- attr(this_model$fit, "npar")
+           fit_par <- this_model$fit[method, 1:npar]
+
+           #Add any "constant" params
+           if(any(this_model$par_DF$optimize_param %in% FALSE &
+                  this_model$par_DF$use_param %in% TRUE)){
+           const_parDF <- subset(this_model$par_DF,
+                               optimize_param %in% FALSE &
+                                 use_param %in% TRUE)[c("param_name",
+                                                        "start")]
+           const_par <- const_parDF[["start"]]
+           names(const_par) <- const_parDF[["param_name"]]
+           const_par <- do.call(rbind,
+                                replicate(nrow(fit_par),
+                                          const_par,
+                                          simplify = FALSE))
+           fit_par <- as.matrix(cbind(fit_par, const_par))
+
+           #to be implemented: return fit SDs as well as fit values??
+           # fit_sd <- do.call(rbind,
+           #                   this_model$fit_sds[method])
+          #  const_sd <- rep(NA_real_, length(const_par))
+          #  names(const_sd) <- names(const_par)
+          # fit_sd <- cbind(fit_sd, const_sd)
+          #  rownames(fit_sd) <- paste(rownames(fit_sd),
+          #                            "fit_sd",
+          #                            sep = ".")
+
+           # fit_mat <- rbind(fit_par,
+           #                  fit_sd)
+           fit_mat <- fit_par
+           }
+           return(fit_mat)
+         },
+         USE.NAMES = TRUE,
+         simplify = FALSE)
+}
+
+#' Get coefficient standard deviations
+#'
+#' Extract coefficient standard deviations from a fitted `pk` object
+#'
+#' @param obj A [pk] object
+#' @param model Optional: Specify one or more of the fitted models whose
+#'   coefficients to return. If NULL (the default), coefficients will be returned for all of
+#'   the models in `obj$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   whose coefficients to return. If NULL (the default), coefficients will be returned for
+#'   all of the models in `obj$optimx_settings$method`.
+#' @return A named list of numeric matrixes. There is one list element named for
+#'   each model in `model`. Each list element is a matrix with as many
+#'   rows as items in `method`. The row names are the method names. The matrix column names are
+#'   the names of the fitted parameters, including any error standard deviation
+#'   hyperparameters (whose names begin with "sigma").
+#' @export
+#' @author Caroline Ring
+coef_sd.pk <- function(obj,
+                    model = NULL,
+                    method = NULL){
+  if(is.null(model)) model <- names(obj$stat_model)
+  if(is.null(method)) method <- obj$optimx_settings$method
+
+  sapply(obj$stat_model[model],
+         function(this_model){
+           npar <- attr(this_model$fit, "npar")
+           fit_par <- this_model$fit[method, 1:npar]
+
+           #Add any "constant" params
+           if(any(this_model$par_DF$optimize_param %in% FALSE &
+                  this_model$par_DF$use_param %in% TRUE)){
+             const_parDF <- subset(this_model$par_DF,
+                                   optimize_param %in% FALSE &
+                                     use_param %in% TRUE)[c("param_name",
+                                                            "start")]
+             const_par <- const_parDF[["start"]]
+             names(const_par) <- const_parDF[["param_name"]]
+             const_par <- do.call(rbind,
+                                  replicate(nrow(fit_par),
+                                            const_par,
+                                            simplify = FALSE))
+             fit_par <- as.matrix(cbind(fit_par, const_par))
+             #print(const_par)
+
+             fit_sd <- do.call(rbind,
+                               this_model$fit_sds[method])
+
+              const_sd <- rep(NA_real_, length(const_par))
+              names(const_sd) <- const_parDF[["param_name"]]
+              # print(fit_sd)
+              # print(const_sd)
+              const_sd <- matrix(data = NA_real_,
+                                 nrow = nrow(fit_sd),
+                                 ncol = ncol(const_par))
+              colnames(const_sd) <- colnames(const_par)
+             fit_sd <- cbind(fit_sd, const_sd)
+
+
+             fit_mat <- fit_sd
+           }
+           return(fit_mat)
+         },
+         USE.NAMES = TRUE,
+         simplify = FALSE)
+}
+
+#' Get predictions
+#'
+#' Extract predictions from a fitted `pk` object.
+#'
+#' @param obj A [pk] object.
+#' @param newdata Optional: A `data.frame` with new data for which to make
+#'   predictions. If NULL (the default), then predictions will be made for the
+#'   data in `obj$data`. `newdata` is required to contain at least the following
+#'   variables: `Time`, `Dose`, `Route`, and `Media`. `Time` will be transformed
+#'   according to the transformation in `obj$scales$time` before predictions are
+#'   made.
+#' @param model Optional: Specify one or more of the fitted models for which to
+#'   make predictions. If NULL (the default), predictions will be returned for
+#'   all of the models in `obj$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   for which to make predictions. If NULL (the default), predictions will be
+#'   returned for all of the models in `obj$optimx_settings$method`.
+#' @param type Either `"conc"` (the default) or `"auc"`. `type = "conc"`
+#'   predicts concentrations; `type = "auc"` predicts area under the
+#'   concentration-time curve (AUC).
+#' @return A named list of numeric matrixes. There is one list element named for
+#'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
+#'   fitted to the data. Each list element is a matrix with the same number of
+#'   rows as the data in `obj$data` (corresponding to the rows in `obj$data`),
+#'   and as many columns as there were [optimx::optimx()] methods (specified in
+#'   [settings_optimx()]). The column names are the method names. Each column
+#'   contains the predictions of the model fitted by the corresponding method.
+#'   These predictions are concentrations in the same units as
+#'   `obj$data$Conc.Units`; any concentration transformations (in
+#'   `obj$scale$conc`) are *not* applied.
+#' @export
+#' @author Caroline Ring
+predict.pk <- function(obj,
+                       newdata = NULL,
+                       model = NULL,
+                       method = NULL,
+                       type = "conc"
+                       ){
+
+  if(is.null(model)) model <- names(obj$stat_model)
+  if(is.null(method)) method <- obj$optimx_settings$method
+
+  coefs <- coef(obj = obj,
+                model = model,
+                method = method)
+
+  if(is.null(newdata)) newdata <- obj$data
+  if(!("Time_trans" %in% names(newdata))){
+    #transform time if needed
+    #first, default to identity transformation if none is specified
+    if(is.null(obj$scales$time$new_units)){
+      obj$scales$time$new_units <- "identity"
+    }
+
+    from_units <- unique(newdata$Time.Units)
+    to_units <- ifelse(obj$scales$time$new_units %in% "identity",
+                       from_units,
+                       obj$scales$time$new_units)
+
+
+    if(obj$scales$time$new_units %in% "auto"){
+      to_units <- auto_units(y = newdata$Time,
+                             from = from_units)
+    }
+    if(!obj$data_settings$suppress.messages){
+      message(paste("Converting time from",
+                    from_units,
+                    "to",
+                    to_units))
+    }
+    newdata$Time_trans <- tryCatch(convert_time(x = newdata$Time,
+                                             from = from_units,
+                                             to = to_units,
+                                             inverse = FALSE),
+                                error = function(err){
+                                  warning(paste("invivopkfit::predict.pk():",
+                                                "Error in transforming time in `newdata` using convert_time():",
+                                                err$message))
+                                  return(NA_real_)
+                                })
+  }
+
+
+  #loop over models
+  sapply(model,
+         function(this_model){
+           this_coef_mat <- coefs[[this_model]]
+          apply(this_coef_mat,
+                1,
+                function(this_coef_row){
+                  #get coefficients
+                  this_coef <- as.list(this_coef_row)
+                  #get model function to be evaluated
+                  this_model_fun <- ifelse(type %in% "conc",
+                                           obj$stat_model[[this_model]]$conc_fun,
+                                           ifelse(type %in% "auc",
+                                                  obj$stat_model[[this_model]]$auc_fun,
+                                                  NULL)
+                  )
+
+                  #evaluate model function
+                  preds <- do.call(this_model_fun,
+                          args = list(params = this_coef,
+                                   dose = newdata$Dose,
+                                   time = newdata$Time_trans,
+                                   route = newdata$Route,
+                                   medium = newdata$Media))
+
+                })
+         },
+         simplify = FALSE,
+         USE.NAMES = TRUE)
+}
+
+#' Get residuals
+#'
+#' Extract residuals from a fitted `pk` object.
+#'
+#' Residuals are `observed - predicted`.
+#'
+#' @param obj A `pk` object
+#' @param newdata Optional: A `data.frame` with new data for which to make
+#'   predictions and compute residuals. If NULL (the default), then residuals
+#'   will be computed for the data in `obj$data`. `newdata` is required to
+#'   contain at least the following variables: `Time`, `Dose`, `Route`, and
+#'   `Media`. `Time` will be transformed according to the transformation in
+#'   `obj$scales$time` before residuals are calculated.
+#' @param model Optional: Specify one or more of the fitted models for which to
+#'   make predictions and calculate residuals. If NULL (the default), residuals
+#'   will be returned for all of the models in `obj$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   for which to make predictions and calculate residuals. If NULL (the
+#'   default), residuals will be returned for all of the models in
+#'   `obj$optimx_settings$method`.
+#' @param type Either `"conc"` (the default) or `"auc"`. `type = "conc"`
+#'   predicts concentrations; `type = "auc"` predicts area under the
+#'   concentration-time curve (AUC). Currently, only `type = "conc"` is
+#'   implemented.
+#' @return A named list of numeric matrices. There is one list element named for
+#'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
+#'   fitted to the data. Each list element is a matrix with the same number of
+#'   rows as the data in `obj$data` (corresponding to the rows in `obj$data`),
+#'   and as many columns as there were [optimx::optimx()] methods (specified in
+#'   [settings_optimx()]). The column names are the method names.  Each column
+#'   contains the residuals (observed - predicted) of the model fitted by the
+#'   corresponding method. These residuals are concentrations in the same units
+#'   as `obj$data$Conc.Units`; any concentration transformations (in
+#'   `obj$scale$conc`) are *not* applied.
+#' @export
+#' @author Caroline Ring
+residuals.pk <- function(obj,
+                         newdata = NULL,
+                         model = NULL,
+                         method = NULL,
+                         type = "conc"){
+  if(!(type %in% "conc")) stop(paste("Error in residuals.pk():",
+                                     "only type = 'conc' is currently implemented;",
+                                     "residuals for type = 'auc' are not available yet"))
+  if(is.null(model)) model <- names(obj$stat_model)
+  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(newdata)) newdata <- obj$data
+
+  preds <- predict(obj,
+                   newdata = newdata,
+                   model = model,
+                   method = method,
+                   type = type)
+
+  obs <- ifelse(type %in% "conc",
+                obj$data$Conc,
+                NA_real_)
+
+  sapply(preds,
+         function(this_pred){
+            obs - this_pred
+         },
+         simplify = FALSE,
+         USE.NAMES = TRUE)
+}
+
+#' Root mean squared error
+#'
+#' Extract root mean squared error of a fitted `pk` object
+#'
+#' @param obj A `pk` object
+#' @param newdata Optional: A `data.frame` with new data for which to make
+#'   predictions and compute RMSsE. If NULL (the default), then RMSEs will be
+#'   computed for the data in `obj$data`. `newdata` is required to contain at
+#'   least the following variables: `Time`, `Dose`, `Route`, and `Media`. `Time`
+#'   will be transformed according to the transformation in `obj$scales$time`
+#'   before RMSEs are calculated.
+#' @param model Optional: Specify one or more of the fitted models for which to
+#'   make predictions and calculate RMSEs. If NULL (the default), RMSEs will be
+#'   returned for all of the models in `obj$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   for which to make predictions and calculate RMSEs. If NULL (the default),
+#'   RMSEs will be returned for all of the models in
+#'   `obj$optimx_settings$method`.
+#' @param type Either `"conc"` (the default) or `"auc"`. `type = "conc"`
+#'   predicts concentrations; `type = "auc"` predicts area under the
+#'   concentration-time curve (AUC). Currently, only `type = "conc"` is
+#'   implemented.
+#' @return A named list of numeric vectors. There is one list element named for
+#'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
+#'   fitted to the data. Each list element is a numeric vector with as many
+#'   elements as there were [optimx::optimx()] methods (specified in
+#'   [settings_optimx()]). The vector names are the method names.  Each vector
+#'   element contains the root mean squared error (`sqrt(mean(observed -
+#'   predicted)^2)`) of the model fitted by the corresponding method, using the
+#'   data in `newdata`. These RMSEs are concentrations in the same units as
+#'   `obj$data$Conc.Units`; any concentration transformations (in
+#'   `obj$scale$conc`) are *not* applied.
+#' @export
+#' @author Caroline Ring
+rmse.pk <- function(obj,
+                    newdata = NULL,
+                    model = NULL,
+                    method = NULL,
+                    type = "conc"){
+  if(!(type %in% "conc")) stop(paste("Error in residuals.pk():",
+                                     "only type = 'conc' is currently implemented;",
+                                     "residuals for type = 'auc' are not available yet"))
+  if(is.null(model)) model <- names(obj$stat_model)
+  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(newdata)) newdata <- obj$data
+
+resids <- residuals(obj,
+                    newdata = newdata,
+                    model = model,
+                    method = method,
+                    type = type)
+
+sapply(resids,
+       function(this_resid){
+         apply(this_resid,
+               2,
+               function(x) sqrt(mean(x*x)))
+       },
+       simplify = FALSE,
+       USE.NAMES = TRUE)
+}
+
+#' Log-likelihood
+#'
+#' Extract log-likelihood(s) from a fitted `pk` object
+#'
+#' For details on how the log-likelihood is calculated, see [log_likelihood()].
+#'
+#' @param obj A `pk` object
+#' @param newdata Optional: A `data.frame` with new data for which to compute
+#'   log-likelihood. If NULL (the default), then log-likelihoods will be
+#'   computed for the data in `obj$data`. `newdata` is required to contain at
+#'   least the following variables: `Time`, `Dose`, `Route`,`Media`, `Conc`,
+#'   `Detect`, `Conc_SD`, `N_Subjects`. Before log-likelihood is calculated, `Time` will be
+#'   transformed according to the transformation in `obj$scales$time` and `Conc`
+#'   will be transformed according to the transformation in `obj$scales$conc`.
+#' @param model Optional: Specify one or more of the fitted models for which to
+#'   calculate log-likelihood. If NULL (the default), log-likelihoods will be
+#'   returned for all of the models in `obj$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   for which to calculate log-likelihoods. If NULL (the default),
+#'   log-likelihoods will be returned for all of the models in
+#'   `obj$optimx_settings$method`.
+#' @return A named list of numeric vectors. There is one list element named for
+#'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
+#'   fitted to the data. Each list element is a numeric vector with as many
+#'   elements as there were [optimx::optimx()] methods (specified in
+#'   [settings_optimx()]). The vector names are the method names.  Each vector
+#'   element contains the log-likelihood of the model fitted by the
+#'   corresponding method, calculated for the data in `newdata` if any has been
+#'   specified, or for the data in `obj$data` if `newdata` is `NULL`.
+#' @export
+#' @importFrom stats logLik
+#' @author Caroline Ring
+logLik.pk <- function(obj,
+                      newdata = NULL,
+                      model = NULL,
+                      method = NULL,
+                      negative = FALSE,
+                      force_finite = FALSE){
+  if(is.null(model)) model <- names(obj$stat_model)
+  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(newdata)) newdata <- obj$data
+
+    #transform time needed
+    #first, default to identity transformation if none is specified
+    if(is.null(obj$scales$time$new_units)){
+      obj$scales$time$new_units <- "identity"
+    }
+
+    from_units <- unique(newdata$Time.Units)
+    to_units <- ifelse(obj$scales$time$new_units %in% "identity",
+                       from_units,
+                       obj$scales$time$new_units)
+
+
+    if(obj$scales$time$new_units %in% "auto"){
+      to_units <- auto_units(y = newdata$Time,
+                             from = from_units)
+    }
+
+    newdata$Time_trans <- tryCatch(convert_time(x = newdata$Time,
+                                                from = from_units,
+                                                to = to_units,
+                                                inverse = FALSE),
+                                   error = function(err){
+                                     warning(paste("invivopkfit::logLik.pk():",
+                                                   "Error in transforming time in `newdata` using convert_time():",
+                                                   err$message))
+                                     return(NA_real_)
+                                   })
+
+  #Apply concentration transformation
+    newdata$Conc_trans <- rlang::eval_tidy(obj$scales$conc$expr,
+                                           data = cbind(newdata,
+                                                        data.frame(".conc" = newdata$Conc)))
+    newdata$Conc_SD_trans <- rlang::eval_tidy(obj$scales$conc$expr,
+                                           data = cbind(newdata,
+                                                        data.frame(".conc" = newdata$Conc_SD)))
+
+  sapply(model, function(this_model){
+      #if there is newdata, then we have to evaluate the log-likelihood
+      #get model parameters
+      coefs <- coef(obj = obj,
+                    model = this_model,
+                    method = method)[[1]] #we have to put [[1]] because for one model,coef.pk() returns a one-element list
+      #for each row of model parameters, evaluate log-likelihood
+      ll <- apply(coefs,
+                  1,
+                  function(this_coef_row){
+                    log_likelihood(par = as.list(this_coef_row),
+                                   fitdata = newdata,
+                                   data_sigma_group = obj$stat_error_model$data_sigma_group,
+                                   modelfun = obj$stat_model[[this_model]]$conc_fun,
+                                   scales_conc = obj$scales$conc,
+                                   negative = negative,
+                                   force_finite = force_finite)
+                  })
+      #set attribute "df", the number of parameters optimized for this model
+      attr(ll, which = "df") <- attr(obj$stat_model[[this_model]]$fit, "npar")
+      #set attributes "nobs", the number of observations in `newdata`
+      attr(ll, which = "nobs") <- nrow(newdata)
+      ll
+    },
+    simplify = FALSE,
+    USE.NAMES = TRUE)
+
+}
+
+#' Akaike information criterion
+#'
+#' Get the Akaike information criterion (AIC) for a fitted `pk` object
+#'
+#' The AIC is calculated from the log-likelihood (LL) as follows:
+#' \deqn{\textrm{AIC} = -2\textrm{LL} + k n_{par}}
+#'
+#' where \eqn{n_{par}} is the number of parameters in the fitted model, and
+#' \eqn{k = 2} for the standard AIC.
+#'
+#' @param obj A `pk` object
+#' @param newdata Optional: A `data.frame` with new data for which to compute
+#'   log-likelihood. If NULL (the default), then log-likelihoods will be
+#'   computed for the data in `obj$data`. `newdata` is required to contain at
+#'   least the following variables: `Time`, `Dose`, `Route`,`Media`, `Conc`,
+#'   `Detect`, `N_Subjects`. Before log-likelihood is calculated, `Time` will be
+#'   transformed according to the transformation in `obj$scales$time` and `Conc`
+#'   will be transformed according to the transformation in `obj$scales$conc`.
+#' @param model Optional: Specify one or more of the fitted models for which to
+#'   calculate log-likelihood. If NULL (the default), log-likelihoods will be
+#'   returned for all of the models in `obj$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   for which to make predictions and calculate AICs. If NULL (the default),
+#'   log-likelihoods will be returned for all of the models in
+#'   `obj$optimx_settings$method`.
+#' @return A named list of numeric vectors. There is one list element
+#'   named for each model in `obj`'s [stat_model()] element, i.e. each PK model
+#'   that was fitted to the data. Each list element is a numeric vector with as
+#'   many elements as there were [optimx::optimx()] methods (specified in
+#'   [settings_optimx()]). The vector names are the method names.  Each vector
+#'   element contains the AIC of the model fitted by the corresponding method,
+#'   using the data in `newdata`.
+#' @seealso [BIC.pk(0)], [logLik.pk()]
+#' @importFrom stats AIC
+#' @export
+#' @author Caroline Ring
+AIC.pk <- function(obj,
+                   newdata = NULL,
+                   model = NULL,
+                   method = NULL,
+                   k = 2){
+  if(is.null(model)) model <- names(obj$stat_model)
+  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(newdata)) newdata <- obj$data
+ #get log-likliehoods
+  ll <- logLik(obj = obj,
+               newdata = newdata,
+               model = model,
+               method = method,
+               negative = FALSE,
+               force_finite = FALSE)
+  #get number of parameters (excluding any constant, non-optimized parameters)
+ AIC <- sapply(model,
+                function(this_model){
+                  npar <- attr(ll[[this_model]], "df")
+                  -2*ll[[this_model]] + k* npar
+                },
+                simplify = FALSE,
+                USE.NAMES = TRUE)
+return(AIC)
+}
+
+#' Bayesian information criterion
+#'
+#' Get the Bayesian information criterion (AIC) for a fitted `pk` object
+#'
+#' The BIC is calculated from the log-likelihood (LL) as follows:
+#' \deqn{\textrm{BIC} = -2\textrm{LL} + \log(n_{obs}) n_{par}}
+#'
+#' where \eqn{n_{par}} is the number of parameters in the fitted model.
+#'
+#' Note that the BIC is just the AIC with \eqn{k = \(n_{obs})}.
+#'
+#' @param obj A `pk` object
+#' @param newdata Optional: A `data.frame` with new data for which to compute
+#'   log-likelihood. If NULL (the default), then BICs will be
+#'   computed for the data in `obj$data`. `newdata` is required to contain at
+#'   least the following variables: `Time`, `Dose`, `Route`,`Media`, `Conc`,
+#'   `Detect`, `N_Subjects`. Before log-likelihood is calculated, `Time` will be
+#'   transformed according to the transformation in `obj$scales$time` and `Conc`
+#'   will be transformed according to the transformation in `obj$scales$conc`.
+#' @param model Optional: Specify one or more of the fitted models for which to
+#'   calculate BIC. If NULL (the default), log-likelihoods will be
+#'   returned for all of the models in `obj$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   for which to calculate BICs. If NULL (the default),
+#'   log-likelihoods will be returned for all of the methods in
+#'   `obj$optimx_settings$method`.
+#' @return A named list of numeric vectors. There is one list element
+#'   named for each model in `obj`'s [stat_model()] element, i.e. each PK model
+#'   that was fitted to the data. Each list element is a numeric vector with as
+#'   many elements as there were [optimx::optimx()] methods (specified in
+#'   [settings_optimx()]). The vector names are the method names.  Each vector
+#'   element contains the BIC of the model fitted by the corresponding method,
+#'   using the data in `newdata`.
+#' @seealso [AIC.pk(0)], [logLik.pk()]
+#' @importFrom stats BIC
+#' @export
+#' @author Caroline Ring
+BIC.pk <- function(obj,
+                   newdata = NULL,
+                   model = NULL,
+                   method = NULL){
+  if(is.null(model)) model <- names(obj$stat_model)
+  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(newdata)) newdata <- obj$data
+
+ BIC <- AIC(obj = obj,
+            newdata = newdata,
+            model = model,
+            method = method,
+            k = log(nrow(newdata)))
+  return(BIC)
+}
+
+#' Print summary of a `pk` object
+#'
+#' This summary includes summary information about the data; about any data
+#' transformations applied; about the models being fitted; about the error model
+#' being applied; and any fitting results, if the `pk` object has been fitted.
+#' It also includes TK quantities calculated from the fitted model parameters,
+#' e.g. halflife; clearance; tmax; Cmax; AUC; Css.
+#'
+#' @param obj A [pk] object.
+#' @return A `data.frame` consisting of a summary table of fitting options and results.
+#' @export
+#' @author Caroline Ring
+#'
+summary.pk <- function(obj){
+  suppress.messages <- obj$data_settings$suppress.messages
+  #get model coefficients
+  coefs <- coef(obj)
+  #get coefficient SDs
+  coef_sds <- coef_sd(obj)
+  #transpose
+  coefs <- lapply(coefs, t)
+  coef_sds <- lapply(coef_sds, t)
+
+
+
+  #For each model:
+  outDF_list <- sapply(names(obj$stat_model),
+         function(this_model){
+           this_coef <- coefs[[this_model]]
+           this_sd <- coef_sds[[this_model]]
+    #loop over optimx methods (rownames of this_fit)
+   outDF_model_list <- sapply(colnames(this_coef),
+          function(this_method){
+            #grab par_DF (with bounds & starting values)
+            this_outDF <- obj$stat_model[[this_model]]$par_DF
+            this_outDF$model <- this_model
+            #for this method
+            this_outDF$method <- this_method
+            #pull fitted values
+
+            this_outDF$fitted_value <- sapply(this_outDF$param_name,
+                                              function(x) {
+                                                ifelse(x %in% rownames(this_coef),
+                                                       this_coef[x, this_method],
+                                                       NA_real_)
+                                              },
+                                              simplify = TRUE,
+                                              USE.NAMES = TRUE)
+
+            this_outDF$fitted_sd <- sapply(this_outDF$param_name,
+                                           function(x) {
+                                             ifelse(x %in% rownames(this_sd),
+                                                    this_sd[x, this_method],
+                                                    NA_real_)
+                                           },
+                                           simplify = TRUE,
+                                           USE.NAMES = TRUE)
+
+            #get RMSE
+            this_outDF$rmse <- rmse.pk(obj = obj,
+                                    newdata = NULL,
+                                    model = this_model,
+                                    method = this_method,
+                                    type = "conc")
+
+            return(this_outDF)
+    },
+    simplify = FALSE,
+    USE.NAMES = TRUE)
+
+   outDF_model <- do.call(rbind, outDF_model_list)
+   return(outDF_model)
+  },
+  simplify = FALSE,
+  USE.NAMES = TRUE)
+
+  outDF <- do.call(rbind, outDF_list)
+
+  #add the error grouping
+  outDF$error_group <- paste0("~",
+                              paste(
+    sapply(obj$stat_error_model$error_group,
+                              rlang::as_label),
+    collapse = "+")
+  )
+
+  #add the data transformations
+
+  #add the rmse
+
+
+return(outDF)
+}
+
 
 #' Check status of a `pk` object
 #'

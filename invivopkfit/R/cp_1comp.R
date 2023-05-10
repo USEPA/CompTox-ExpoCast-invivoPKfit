@@ -8,28 +8,28 @@
 #'
 #'`params` must include the following named items:
 #'   \describe{
-#'   \item{kelim}{Elimination rate, 1/h.}
-#'   \item{Vdist}{Apparent volume of central compartment, L/kg BW. Or see below for
+#'   \item{kelim}{Elimination rate, 1/time.}
+#'   \item{Vdist}{Apparent volume of central compartment, volume/unit BW. Or see below for
 #'   `Fgutabs_Vdist`}
 #'   }
 #'
-#'For oral administration (if any `iv.dose == FALSE`), `params` must also
+#'For oral administration (if any `route %in% "oral"`), `params` must also
 #'include:
 #'   \describe{
 #'   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
 #'   `Fgutabs_Vdist`}
-#'   \item{kgutabs}{Rate of absorption from gut, 1/h.}
+#'   \item{kgutabs}{Rate of absorption from gut, 1/time.}
 #'   }
 #'
 #'For oral administration, in lieu of `Vdist` and `Fgutabs`, you may instead
-#'provide `Fgutabs_Vdist`, the ratio of Fgutabs to Vdist (1/L). This is an
+#'provide `Fgutabs_Vdist`, the ratio of Fgutabs to Vdist (1/volume). This is an
 #'alternate parameterization for situations where `Fgutabs` and `Vdist` are not
 #'identifiable separately (i.e., when oral TK data are available, but IV data
 #'are not). If `Fgutabs` and `Vdist` are provided, they will override any value
 #'provided for `Fgutabs_Vdist`.
 #'
-#'If both oral and IV administration are specified (i.e., some `iv.dose == TRUE`
-#'and some `iv.dose == FALSE`), then `Vdist` is required along with either
+#'If both oral and IV administration are specified (i.e., some `route %in% "iv"`
+#'and some `route %in% "oral"`), then `Vdist` is required along with either
 #'`Fgutabs` or `Fgutabs_Vdist`. (If `Vdist` and `Fgutabs_Vdist` are provided,
 #'but `Fgutabs` is not provided, then `Fgutabs` will be calculated from `Vdist`
 #'and `Fgutabs_Vdist`.)
@@ -40,15 +40,15 @@
 #'
 #'@param params A named list of numeric parameter values. See Details for
 #'  requirements.
-#'@param time A numeric vector of times in hours, reflecting the time point when
+#'@param time A numeric vector of times, reflecting the time point when
 #'  concentration is measured after the corresponding single bolus dose. Must be
 #'  same length as `dose` and `iv.dose`, or length 1.
-#'@param dose A numeric vector of doses in mg/kg, reflecting single bolus doses
+#'@param dose A numeric vector of doses, reflecting single bolus doses
 #'  administered at time 0. Must be same length as `time` and `iv.dose`, or
 #'  length 1.
-#'@param iv.dose A logical vector, reflecting the route of administration of
-#'  each single bolus dose. TRUE for single IV bolus dose; FALSE for single oral
-#'  bolus dose.  Must be same length as `time` and `dose`, or length 1.
+#'@param route A character vector, reflecting the route of administration of
+#'  each single bolus dose: `'oral'` or `'iv'`.  Must be same length as `time`
+#'  and `dose`, or length 1.
 #'@param medium A character vector reflecting the medium in which each resulting
 #'  concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 #'  Must be same length as `time` and `dose`, or length 1.
@@ -59,15 +59,15 @@
 #'@author Caroline Ring, John Wambaugh
 #'
 #'@export cp_1comp
-cp_1comp <- function(params, time, dose, iv.dose, medium = 'plasma'){
+cp_1comp <- function(params, time, dose, route, medium = 'plasma'){
 
-  #check whether lengths of time, dose, and iv.dose match
+  #check whether lengths of time, dose, and route match
   time_len <- length(time)
   dose_len <- length(dose)
-  ivdose_len <- length(iv.dose)
+  route_len <- length(route)
   medium_len <- length(medium)
 
-  len_all <- c(time_len, dose_len, ivdose_len, medium_len)
+  len_all <- c(time_len, dose_len, route_len, medium_len)
   #Cases:
   # All three lengths are the same -- OK
   # Two lengths are the same and the third is 1 -- OK
@@ -83,7 +83,7 @@ cp_1comp <- function(params, time, dose, iv.dose, medium = 'plasma'){
                 "must either be the same length or length 1.\n",
                 "'time' is length ", time_len, "\n",
                 "'dose' is length ", dose_len, "\n",
-                "'iv.dose' is length ", ivdose_len, "\n",
+                "'route' is length ", route_len, "\n",
                 "'medium' is length ", medium_len, "\n")
     )
   }
@@ -92,7 +92,7 @@ cp_1comp <- function(params, time, dose, iv.dose, medium = 'plasma'){
   max_len <- max(len_all)
   time <- rep(time, length.out = max_len)
   dose <- rep(dose, length.out = max_len)
-  iv.dose <- rep(iv.dose, length.out = max_len)
+  route <- rep(route, length.out = max_len)
   medium <- rep(medium, length.out = max_len)
 
   #compute Fgutabs/Vdist if necessary
@@ -118,7 +118,7 @@ cp_1comp <- function(params, time, dose, iv.dose, medium = 'plasma'){
   param_length <- sapply(params, length)
   params <- params[param_length>0]
 
-  if(any(iv.dose %in% FALSE)){
+  if(any(route %in% "oral")){
 
     #check for needed params
     if(!all(c("kelim", "kgutabs", "Fgutabs_Vdist") %in% names(params))){
@@ -133,7 +133,7 @@ cp_1comp <- function(params, time, dose, iv.dose, medium = 'plasma'){
     }
   }
 
-  if(any(iv.dose %in% TRUE)){
+  if(any(route %in% "iv")){
     if(!all(c("kelim", "Vdist") %in% names(params))){
       stop(paste0("cp_1comp(): Error: For 1-compartment IV model, ",
                   "missing parameter(s): ",
@@ -154,30 +154,30 @@ cp_1comp <- function(params, time, dose, iv.dose, medium = 'plasma'){
   cp <- vector(mode = "numeric", length = max_len)
 
   #IV model\
-  if(any(iv.dose %in% TRUE)){
-  cp[iv.dose %in% TRUE] <- dose[iv.dose %in% TRUE]*
+  if(any(route %in% "iv")){
+  cp[route %in% "iv"] <- dose[route %in% "iv"]*
     exp(-params$kelim *
-          time[iv.dose %in% TRUE])/
+          time[route %in% "iv"])/
     params$Vdist
   }
 
   #Oral model
-  if(any(iv.dose %in% FALSE)){
+  if(any(route %in% "oral")){
 
     if(params$kelim != params$kgutabs){
       #the usual case: kelim != kgutabs
-      cp[iv.dose %in% FALSE] <- (params$Fgutabs_Vdist *
-                                   dose[iv.dose %in% FALSE] *
+      cp[route %in% "oral"] <- (params$Fgutabs_Vdist *
+                                   dose[route %in% "oral"] *
                                    params$kgutabs)/
         (params$kgutabs - params$kelim) *
-        (exp(-params$kelim * time[iv.dose %in% FALSE]) -
-           exp(-params$kgutabs* time[iv.dose %in% FALSE]))
+        (exp(-params$kelim * time[route %in% "oral"]) -
+           exp(-params$kgutabs* time[route %in% "oral"]))
 
     }else{ #in case kelim = kgutabs, use the alternate model equation
-      cp[iv.dose %in% FALSE] <- params$Fgutabs_Vdist *
-        dose[iv.dose %in% FALSE] * params$kelim *
-        time[iv.dose %in% FALSE] *
-        exp(-params$kelim * time[iv.dose %in% FALSE])
+      cp[route %in% "oral"] <- params$Fgutabs_Vdist *
+        dose[route %in% "oral"] * params$kelim *
+        time[route %in% "oral"] *
+        exp(-params$kelim * time[route %in% "oral"])
     }
   }
 

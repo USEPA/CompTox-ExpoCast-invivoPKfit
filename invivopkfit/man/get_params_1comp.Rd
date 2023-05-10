@@ -10,10 +10,10 @@ get_params_1comp(
     Fgutabs_Vdist = 1e-04, Rblood2plasma = 1e-04),
   upper_bound = c(kelim = 1e+06, Vdist = 1e+06, Fgutabs = 1, kgutabs = 1e+06,
     Fgutabs_Vdist = 10000, Rblood2plasma = 1e+06),
-  param_units = ggplot2::aes(kelim = paste0("1/", unique(Time.Units)), Vdist =
-    paste0("(", unique(Dose.Units), ")", "/", "(", unique(Value.Units), ")"), Fgutabs =
-    "unitless fraction", kgutabs = paste0("1/", unique(Time.Units)), Fgutabs_Vdist =
-    paste0("(", unique(Value.Units), ")", "/", "(", unique(Dose.Units), ")"),
+  param_units = ggplot2::aes(kelim = paste0("1/", unique(Time_trans.Units)), Vdist =
+    paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units), ")"), Fgutabs =
+    "unitless fraction", kgutabs = paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist
+    = paste0("(", unique(Conc.Units), ")", "/", "(", unique(Dose.Units), ")"),
     Rblood2plasma = "unitless ratio")
 )
 }
@@ -25,8 +25,8 @@ get_params_1comp(
 A `data.frame`with the following variables:
 - `param_name`: Names of the model parameters
 - `param_units`: Units of the model parameters
-- `opt_params`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-- `use_params`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+- `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+- `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
 }
 \description{
 Get parameters for 1-compartment model and determine whether each is to be

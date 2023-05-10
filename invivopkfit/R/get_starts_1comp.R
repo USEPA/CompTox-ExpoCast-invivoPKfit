@@ -8,7 +8,7 @@ get_starts_1comp <- function(data,
   Fgutabs <- NA_real_
   Rblood2plasma <- 1
 
-  # Get starting values from data
+  # Get starting Concs from data
 
   #Work only with detects for these rough estimates
   tmpdat <- subset(data,
@@ -18,7 +18,7 @@ get_starts_1comp <- function(data,
   ivdat <- subset(tmpdat,
                   Route %in% "iv")
   podat <- subset(tmpdat,
-                  Route %in% "po")
+                  Route %in% "oral")
 
   # Quick and dirty:
   #IV data estimates, if IV data exist
@@ -31,7 +31,7 @@ if(nrow(ivdat)>0){
   #Vdist: extrapolate back from conc at min time at a slope of -kelim to get the intercept
   #then Vdist = 1/intercept
   C_tmin <- with(subset(ivdat, Time == min(Time)),
-                 median(log10(Value/Dose)))
+                 median(log10(Conc/Dose)))
   A_log10 <- C_tmin + kelim*min(ivdat$Time)
   Vdist <- 1/(10^A_log10)
 }
@@ -40,7 +40,7 @@ if(nrow(ivdat)>0){
     #if PO data exist, then we can get ka and Fgutabs/Vdist
     #get peak time
     tCmax <- get_peak(x = podat$Time,
-                      y = log10(podat$Value/podat$Dose))
+                      y = log10(podat$Conc/podat$Dose))
     tmax <- tCmax[[1]]
     Cmax <- tCmax[[2]]
 
@@ -51,7 +51,7 @@ if(nrow(ivdat)>0){
     #if no IV data, then calculate kelim from oral data
     if(nrow(ivdat)==0){
       #and assume that midpoint of time is one half-life, so kelim = 0.693/(midpoint of time).
-      halflife <- mean(range(ivdat$Time))
+      halflife <- mean(range(podat$Time))
       kelim <- 0.693/halflife
     }
 

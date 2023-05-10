@@ -5,65 +5,48 @@
 \title{Log-likelihood}
 \usage{
 log_likelihood(
-  params,
+  par,
   const_params = NULL,
-  DF,
-  mfun,
-  force_finite = FALSE,
-  negative = TRUE
+  fitdata = NULL,
+  data_sigma_group = NULL,
+  modelfun = NULL,
+  scales_conc = NULL,
+  negative = TRUE,
+  force_finite = FALSE
 )
 }
 \arguments{
-\item{params}{A named vector of log-scaled parameter values. When this
-function is the objective function for a numerical optimizer, these are the
-parameters to be optimized.}
+\item{par}{A named list of parameters and their values that are being
+optimized.}
 
-\item{const_params}{A named vector of additional log-scaled parameter values.
-When this function is the objective function for a numerical optimizer,
-these are additional model parameters whose value is to be held constant
-while the other parameters are optimized. Default NULL (meaning that all
-model parameters are supplied in `params`). (If you are calling this
-function directly, you probably want to leave `const_params = NULL` and just
-supply all model parameters in `params`.)}
+\item{const_params}{Optional: A named list of parameters and their values that
+are being held constant.}
 
-\item{DF}{A `data.frame` of concentration-time data, for example as produced
-by [preprocess_data()]. It must contain variables named `Study`
-(representing the study ID for each observation), `Time` (representing
-observation time points in hours), `Dose` (representing administered dose in
-mg/kg), `iv` (logical TRUE/FALSE, representing whether the administered dose
-was IV), `Value` (representing observed concentrations in mg/L), `LOQ`
-(numeric, representing limit of quantification of each observed
-concentration  in mg/L), and `N_Subjects` (representing the number of
-subjects included in the concentration measurement). If any `N_Subjects` >
-1, then `DF` must also include a variable `Value_SD`, representing the
-sample standard deviation for multiple-subject observations (where `Value`
-represents the sample mean of multiple measurements).}
+\item{fitdata}{A `data.frame` of data with harmonized variable names, with transformations applied.
+Required: `Time_trans`, `Dose`, `Conc`, `Detect`, `N_Subjects`, `Conc_SD`,
+`Conc_trans`, `Conc_SD_trans`.}
 
-\item{force_finite}{Logical: Whether to force the function to return a finite
-log-likelihood (e.g., as required by [optimx::optimx()] with method
-'L-BFGS-B'.) Default FALSE, allowing the function to return -Inf for
-infinitely-unlikely parameter combinations. When `force_finite == TRUE`, the
-function will replace -Inf with -999999.}
+\item{data_sigma_group}{A `factor` vector which could be a new variable in
+`fitdata`, giving the error group for each row in `fitdata`.}
+
+\item{modelfun}{Character or function: The name of the function that produces
+concentration predictions for the model being evaluated.}
+
+\item{scales_conc}{As from a [pk] object, element `$scales$conc` (see
+[scale_conc()] for how to specify. A list specifying the
+scaling/transformation of concentrations, with elements named
+`ratio_conc_dose`, `dose_norm`, `log10_trans`, `expr`.}
 
 \item{negative}{Logical: Whether to return the *negative* log-likelihood
-(i.e., the log-likelihood multiplied by negative 1). Default TRUE, to return
-the negative log-likelihood. This option is useful when treating the
-log-likelihood as an objective function to be minimized by an optimization
-algorithm.}
+(i.e., the log-likelihood multiplied by negative 1). Default TRUE, to
+multiply the log-likelihood by negative 1 before returning it. This option
+is useful when treating the log-likelihood as an objective function to be
+*minimized* by an optimization algorithm.}
 
-\item{modelfun}{Character: whether to use the analytic TK model solution or
-solve the full ODE model numerically. "analytic" to use the analytic model
-solution, "full" to use the full ODE model. Default is "analytic".}
-
-\item{model}{Character: The model to fit. Currently, only "flat",
-"1compartment" or "2compartment" models are implemented.]}
-
-\item{fit_conc_dose}{Logical: Whether to fit dose-normalized concentrations
-(TRUE) or non-dose-normalized concentrations (FALSE). Default TRUE.}
-
-\item{fit_log_conc}{TRUE or FALSE (default FALSE): whether to apply log-scaling to
-the concentrations (or dose-normalized concentrations) before evaluating the
-log-likelihood.}
+\item{force_finite}{Logical: Whether to force return of a finite value (e.g.
+as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If
+TRUE, then if the log-likelihood works out to be non-finite, then it will be
+replaced with `.Machine$double.xmax`.}
 }
 \value{
 A log-likelihood value for the data given the parameter values in
@@ -73,26 +56,29 @@ A log-likelihood value for the data given the parameter values in
 The log-likelihood function (probability of data given model parameters).
 }
 \details{
-The log-likelihood is formulated by assuming that residuals (model-predicted
-concentrations minus observed concentrations) are independent and identically
-distributed within a given combination of chemical, species, and study,
-obeying a zero-mean normal distribution with a chemical-, species-, and
-study-specific variance.
+The log-likelihood is formulated by assuming that residuals (transformed
+model-predicted concentrations minus transformed observed concentrations) are
+independent, and that groups of residuals obey zero-mean normal distributions
+where each group may have a separate error variance. Error groups are defined
+as unique combinations of variables in the harmonized data, by a command such
+as `pk(data = ...) + stat_error_model(error_group = vars(...)`.
 
 # Log-likelihood equations
 
 For chemical-species combination \eqn{i} and study \eqn{j}, define the
 following quantities.
 
-\eqn{y_{ijk}} is the \eqn{k^{th}} observation of concentration, corresponding
-to dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. Each observation has a
+\eqn{y_{ijk}} is the \eqn{k^{th}} observation of concentration (which may be
+transformed, e.g. dose-normalized and/or log10-transformed), corresponding to
+dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. Each observation has a
 corresponding LOQ, \eqn{\textrm{LOQ}_{ijk}}.
 
 For multiple-subject observations, \eqn{y_{ijk}} is the \eqn{k^{th}} *sample
 mean* observed concentration for chemical-species combination \eqn{i} and
 study \eqn{j}, corresponding to dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. It
 represents the mean of \eqn{n_{ijk}} individual measurements. It has a
-corresponding sample standard deviation, \eqn{s_{ijk}}.
+corresponding sample standard deviation, \eqn{s_{ijk}}. In the harmonized
+data,  \eqn{s_{ijk}} is contained in variable `Conc_SD`.
 
 \eqn{\bar{theta}_i} represents the vector of model parameters supplied in
 argument `params` for chemical-species combination \eqn{i}.
@@ -164,4 +150,7 @@ log-likelihoods across observations and studys.
 
 This is the overall probability of the observed data, given the model and
 parameters.
+}
+\author{
+Caroline Ring
 }

@@ -4,7 +4,7 @@
 \alias{prefit.pk}
 \title{Do pre-fit calculations and checks}
 \usage{
-prefit.pk(obj)
+\method{prefit}{pk}(obj)
 }
 \arguments{
 \item{obj}{A `pk` object}
@@ -16,4 +16,7 @@ The same `pk` object, but with additional elements added to each item
 }
 \description{
 Do pre-fit calculations and checks
+}
+\author{
+Caroline Ring
 }

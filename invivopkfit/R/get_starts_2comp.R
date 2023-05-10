@@ -10,7 +10,7 @@ get_starts_2comp <- function(data,
   Fgutabs <- NA_real_
   Rblood2plasma <- 1
 
-  # Get starting values from data
+  # Get starting Concs from data
 
   #Work only with detects for these rough estimates
   tmpdat <- subset(data,
@@ -20,14 +20,14 @@ get_starts_2comp <- function(data,
   ivdat <- subset(tmpdat,
                   Route %in% "iv")
   podat <- subset(tmpdat,
-                  Route %in% "po")
+                  Route %in% "oral")
 
   # Quick and dirty:
   #IV data estimates, if IV data exist
 if(nrow(ivdat)>0){
 #get "elbow"
  elbow_time <- get_elbow(x = ivdat$Time,
-                         y = log10(ivdat$Value/ivdat$Dose))
+                         y = log10(ivdat$Conc/ivdat$Dose))
 #split into late and early phases at elbow
  late_iv <- subset(ivdat, Time >= elbow_time)
  early_iv <- subset(ivdat, Time <= elbow_time)
@@ -39,19 +39,19 @@ if(nrow(ivdat)>0){
   halflife <- mean(range(ivdat$Time))
   kelim <- 0.693/halflife
 
-  #Vdist: extrapolate back from conc at min time at a slope of -kelim to get the intercept
-  #then Vdist = 1/intercept
+  #V1: extrapolate back from conc at min time at a slope of -kelim to get the intercept
+  #then V1 = 1/intercept
   C_tmin <- with(subset(ivdat, Time == min(Time)),
-                 median(Value/Dose))
+                 median(Conc/Dose))
   A <- C_tmin + kelim*min(ivdat$Time)
   V1 <- 1/A
 }
 
   if(nrow(podat)>0){
-    #if PO data exist, then we can get ka and Fgutabs/Vdist
+    #if PO data exist, then we can get ka and Fgutabs/V1
     #get peak time
     tCmax <- get_peak(x = podat$Time,
-                      y = podat$Value/podat$Dose)
+                      y = podat$Conc/podat$Dose)
     tmax <- tCmax[[1]]
     Cmax <- tCmax[[2]]
 
@@ -62,7 +62,7 @@ if(nrow(ivdat)>0){
     #if no IV data, then calculate kelim from oral data
     if(nrow(ivdat)==0){
       #and assume that midpoint of time is one half-life, so kelim = 0.693/(midpoint of time).
-      halflife <- mean(range(ivdat$Time))
+      halflife <- mean(range(podat$Time))
       kelim <- 0.693/halflife
     }
 
@@ -70,15 +70,21 @@ if(nrow(ivdat)>0){
     Fgutabs_V1 <- (Cmax + kelim*tmax)*(kgutabs - kelim)/(kgutabs)
 
     if(nrow(ivdat)>0){
-      #if we had IV data, then we had a Vdist estimate, so we can estimate Fgutabs too
-      Fgutabs <- Fgutabs_Vdist * Vdist
+      #if we had IV data, then we had a V1 estimate, so we can estimate Fgutabs too
+      Fgutabs <- Fgutabs_V1 * V1
     }
   }
 
+  #arbitrary until I implement the rest of this
+  k21 <- 0.1
+  k12 <- 0.5
+
   starts <- c("kelim" = kelim,
               "kgutabs" = kgutabs,
-              "Vdist" = Vdist,
-              "Fgutabs_Vdist" = Fgutabs_Vdist,
+              "k12" = k12,
+              "k21" = k21,
+              "V1" = V1,
+              "Fgutabs_V1" = Fgutabs_V1,
               "Fgutabs" = Fgutabs,
               "Rblood2plasma" = Rblood2plasma)
 

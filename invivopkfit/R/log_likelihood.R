@@ -2,26 +2,29 @@
 #'
 #'The log-likelihood function (probability of data given model parameters).
 #'
-#'The log-likelihood is formulated by assuming that residuals (model-predicted
-#'concentrations minus observed concentrations) are independent and identically
-#'distributed within a given combination of chemical, species, and study,
-#'obeying a zero-mean normal distribution with a chemical-, species-, and
-#'study-specific variance.
+#'The log-likelihood is formulated by assuming that residuals (transformed
+#'model-predicted concentrations minus transformed observed concentrations) are
+#'independent, and that groups of residuals obey zero-mean normal distributions
+#'where each group may have a separate error variance. Error groups are defined
+#'as unique combinations of variables in the harmonized data, by a command such
+#'as `pk(data = ...) + stat_error_model(error_group = vars(...)`.
 #'
 #'# Log-likelihood equations
 #'
 #'For chemical-species combination \eqn{i} and study \eqn{j}, define the
 #'following quantities.
 #'
-#'\eqn{y_{ijk}} is the \eqn{k^{th}} observation of concentration, corresponding
-#'to dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. Each observation has a
+#'\eqn{y_{ijk}} is the \eqn{k^{th}} observation of concentration (which may be
+#'transformed, e.g. dose-normalized and/or log10-transformed), corresponding to
+#'dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. Each observation has a
 #'corresponding LOQ, \eqn{\textrm{LOQ}_{ijk}}.
 #'
 #'For multiple-subject observations, \eqn{y_{ijk}} is the \eqn{k^{th}} *sample
 #'mean* observed concentration for chemical-species combination \eqn{i} and
 #'study \eqn{j}, corresponding to dose \eqn{d_{ijk}} and time \eqn{t_{ijk}}. It
 #'represents the mean of \eqn{n_{ijk}} individual measurements. It has a
-#'corresponding sample standard deviation, \eqn{s_{ijk}}.
+#'corresponding sample standard deviation, \eqn{s_{ijk}}. In the harmonized
+#'data,  \eqn{s_{ijk}} is contained in variable `Conc_SD`.
 #'
 #'\eqn{\bar{theta}_i} represents the vector of model parameters supplied in
 #'argument `params` for chemical-species combination \eqn{i}.
@@ -94,100 +97,70 @@
 #'This is the overall probability of the observed data, given the model and
 #'parameters.
 #'
-#'@param params A named vector of log-scaled parameter values. When this
-#'  function is the objective function for a numerical optimizer, these are the
-#'  parameters to be optimized.
-#'@param const_params A named vector of additional log-scaled parameter values.
-#'  When this function is the objective function for a numerical optimizer,
-#'  these are additional model parameters whose value is to be held constant
-#'  while the other parameters are optimized. Default NULL (meaning that all
-#'  model parameters are supplied in `params`). (If you are calling this
-#'  function directly, you probably want to leave `const_params = NULL` and just
-#'  supply all model parameters in `params`.)
-#'@param DF A `data.frame` of concentration-time data, for example as produced
-#'  by [preprocess_data()]. It must contain variables named `Study`
-#'  (representing the study ID for each observation), `Time` (representing
-#'  observation time points in hours), `Dose` (representing administered dose in
-#'  mg/kg), `iv` (logical TRUE/FALSE, representing whether the administered dose
-#'  was IV), `Value` (representing observed concentrations in mg/L), `LOQ`
-#'  (numeric, representing limit of quantification of each observed
-#'  concentration  in mg/L), and `N_Subjects` (representing the number of
-#'  subjects included in the concentration measurement). If any `N_Subjects` >
-#'  1, then `DF` must also include a variable `Value_SD`, representing the
-#'  sample standard deviation for multiple-subject observations (where `Value`
-#'  represents the sample mean of multiple measurements).
-#'@param modelfun Character: whether to use the analytic TK model solution or
-#'  solve the full ODE model numerically. "analytic" to use the analytic model
-#'  solution, "full" to use the full ODE model. Default is "analytic".
-#'@param model Character: The model to fit. Currently, only "flat",
-#'  "1compartment" or "2compartment" models are implemented.]
-#'@param fit_conc_dose Logical: Whether to fit dose-normalized concentrations
-#'  (TRUE) or non-dose-normalized concentrations (FALSE). Default TRUE.
-#'@param fit_log_conc TRUE or FALSE (default FALSE): whether to apply log-scaling to
-#'  the concentrations (or dose-normalized concentrations) before evaluating the
-#'  log-likelihood.
-#'@param force_finite Logical: Whether to force the function to return a finite
-#'  log-likelihood (e.g., as required by [optimx::optimx()] with method
-#'  'L-BFGS-B'.) Default FALSE, allowing the function to return -Inf for
-#'  infinitely-unlikely parameter combinations. When `force_finite == TRUE`, the
-#'  function will replace -Inf with -999999.
+#'@param par A named list of parameters and their values that are being
+#'  optimized.
+#'@param const_params Optional: A named list of parameters and their values that
+#'  are being held constant.
+#'@param fitdata A `data.frame` of data with harmonized variable names, with transformations applied.
+#'  Required: `Time_trans`, `Dose`, `Conc`, `Detect`, `N_Subjects`, `Conc_SD`,
+#'  `Conc_trans`, `Conc_SD_trans`.
+#'@param data_sigma_group A `factor` vector which could be a new variable in
+#'  `fitdata`, giving the error group for each row in `fitdata`.
+#'@param modelfun Character or function: The name of the function that produces
+#'  concentration predictions for the model being evaluated.
+#'@param scales_conc As from a [pk] object, element `$scales$conc` (see
+#'  [scale_conc()] for how to specify. A list specifying the
+#'  scaling/transformation of concentrations, with elements named
+#'  `ratio_conc_dose`, `dose_norm`, `log10_trans`, `expr`.
+#'@param force_finite Logical: Whether to force return of a finite value (e.g.
+#'  as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If
+#'  TRUE, then if the log-likelihood works out to be non-finite, then it will be
+#'  replaced with `.Machine$double.xmax`.
 #'@param negative Logical: Whether to return the *negative* log-likelihood
-#'  (i.e., the log-likelihood multiplied by negative 1). Default TRUE, to return
-#'  the negative log-likelihood. This option is useful when treating the
-#'  log-likelihood as an objective function to be minimized by an optimization
-#'  algorithm.
-#'
+#'  (i.e., the log-likelihood multiplied by negative 1). Default TRUE, to
+#'  multiply the log-likelihood by negative 1 before returning it. This option
+#'  is useful when treating the log-likelihood as an objective function to be
+#'  *minimized* by an optimization algorithm.
 #'@return A log-likelihood value for the data given the parameter values in
 #'  params
-log_likelihood <- function(params,
+#' @export
+#' @author Caroline Ring
+log_likelihood <- function(par,
                            const_params = NULL,
-                           DF,
-                          mfun,
-                           force_finite = FALSE,
-                           negative = TRUE) {
+                           fitdata = NULL,
+                           data_sigma_group = NULL,
+                           modelfun = NULL,
+                           scales_conc = NULL,
+                           negative = TRUE,
+                           force_finite = FALSE) {
 
   #combine parameters to be optimized and held constant,
   #and convert into a list, since that is what model functions expect
-  params <- as.list(c(params, const_params))
+  params <- as.list(c(par, const_params))
 
   #Extract parameters whose names do not match 'sigma'
   #(that is, all the actual model parameters)
   model.params <- params[!grepl(x = names(params),
                                 pattern = "sigma")]
 
-  #get predicted plasma concentration vs. time for the current parameter
+
+  #get un-transformed predicted plasma concentration vs. time for the current parameter
   #values, by dose and route
 
-  pred <- do.call(mfun,
+  pred <- do.call(modelfun,
           args = list(params = model.params,
-                      time = DF$Time, #in hours
-                      dose = DF$Dose,
-                      iv.dose = DF$iv,
-                      medium = DF$Media
+                      time = fitdata$Time_trans,
+                      dose = fitdata$Dose,
+                      route = fitdata$Route,
+                      medium = fitdata$Media
                       ))
 
-  #Match sigmas to studys:
-  #get vector of sigmas, named as "sigma_study_StudyID" or just "sigma"
-  sigma_names <- grep(x = names(params),
-                      pattern = "sigma",
-                      fixed = TRUE,
-                      value = TRUE)
-  sigmas <- unlist(params[sigma_names])
-
-  nstudy <- length(sigmas)
-  if(nstudy > 1){
-    #get the Study ID for each sigma, based on its name
-  studies_sigmas <- gsub(x = sigma_names,
-                      pattern = "sigma_study_",
-                      replacement = "",
-                      fixed = TRUE)
+if(any(grepl(x = names(params),
+             pattern= "sigma"))){
+  sigma.params <- params[grepl(x = names(params),
+                               pattern = "sigma")]
   #match the study ID and assign each sigma to its corresponding study
-  sigma_study <- sigmas[match(DF$Study,
-                            studies_sigmas,
-                            nomatch = 0)]
-
-  }else if(nstudy == 1){ #if only one study, the parameter is just called "sigma"
-    sigma_study <- rep(sigmas, nrow(DF))
+  sigma_study <- unlist(sigma.params[paste0("sigma_", data_sigma_group)])
   }else{
     stop(paste("Could not find any parameters with 'sigma' in the name.",
     "Param names are:",
@@ -198,59 +171,45 @@ log_likelihood <- function(params,
 
   #add sigma_study and pred as temp columns to DF
   #this makes logical indexing easier
-  DF$sigma_study <- sigma_study
-  DF$pred <- pred
-  DF$pred_dose <- DF$pred/DF$Dose
+  fitdata$sigma_study <- sigma_study
+  fitdata$pred <- pred
+  #transform predictions the same way as concentrations
+  fitdata$pred_trans <- rlang::eval_tidy(scales_conc$expr,
+                                         data = cbind(fitdata,
+                                                      data.frame(".conc" = pred))
+  )
 
-  #if fit_conc_dose is TRUE, remove any zero-dose cases,
-  #as these will have NaN log-likelihoods
-  if(fit_conc_dose %in% TRUE){
-    DF <- subset(DF, Dose > 0)
-  }
 
-  if(fit_conc_dose %in% TRUE){
-    value <- DF$Value_Dose
-    loq <- DF$LOQ_Dose
-    pred <- DF$pred_dose
-    value_sd <- DF$Value_SD_Dose
-  }else{
-    value <- DF$Value
-    loq <- DF$LOQ
-    pred <- DF$pred
-    value_sd <- DF$Value_SD
-  }
-
-  if(fit_log_conc %in% TRUE){
-    value_natural <- value
-    value <- log(value)
-    loq <- log(loq)
-    pred_natural <- pred
-    pred <- log(pred)
+  if(scales_conc$log10_trans %in% TRUE){
     ll_summary <- "dlnorm_summary"
-  }else{
+    #maintain other transformations such as dose-scaling,
+    #but undo log10 transformation
+    conc_natural <- 10^(fitdata$Conc_trans)
+    conc_sd_natural <- 10^(fitdata$Conc_SD_trans)
+  }else{ #if log10 transformation has *not* been applied
     ll_summary <- "dnorm_summary"
-    value_natural <- value
-    pred_natural <- pred
+    conc_natural <- fitdata$Conc_trans
+    conc_sd_natural <- fitdata$Conc_SD_trans
   }
 
   #get log-likelihood for each observation
-  loglike <- ifelse(DF$N_Subjects %in% 1,
-                    ifelse(DF$Detect %in% TRUE,
-                           dnorm(x = value,
-                                 mean = pred,
-                                 sd = DF$sigma_study,
+  loglike <- ifelse(fitdata$N_Subjects %in% 1,
+                    ifelse(fitdata$Detect %in% TRUE,
+                           dnorm(x = fitdata$Conc_trans,
+                                 mean = fitdata$pred_trans,
+                                 sd = fitdata$sigma_study,
                                  log = TRUE),
-                           pnorm(q = loq,
-                                 mean = pred,
-                                 sd = DF$sigma_study,
+                           pnorm(q = fitdata$Conc_trans,
+                                 mean = fitdata$pred_trans,
+                                 sd = fitdata$sigma_study,
                                  log.p = TRUE)
                     ),
                     do.call(ll_summary,
-                            list(mu = pred,
-                                 sigma = DF$sigma_study,
-                                 x_mean = value_natural,
-                                 x_sd = value_sd,
-                                 x_N = DF$N_Subjects,
+                            list(mu = fitdata$pred_trans,
+                                 sigma = fitdata$sigma_study,
+                                 x_mean = conc_natural,
+                                 x_sd = conc_sd_natural,
+                                 x_N = fitdata$N_Subjects,
                                  log = TRUE))
   )
 
@@ -264,11 +223,11 @@ log_likelihood <- function(params,
 
   #if model predicted any NA or Inf concentrations,
   #then parameters are infinitely unlikely
-  if(any(!is.finite(pred_natural))) ll <- -Inf
+  if(any(!is.finite(pred))) ll <- -Inf
 
   #if model predicted any negative concentrations,
   #then these parameters are infinitely unlikely
- if(any((pred_natural < 0) %in% TRUE)) ll <- -Inf
+ if(any((pred < 0) %in% TRUE)) ll <- -Inf
 
   #If user has selected to force return of a finite value,
   #e.g. as required by optimx with method 'L-BFGS-B',

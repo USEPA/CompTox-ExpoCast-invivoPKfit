@@ -46,8 +46,8 @@
 #'@return A `data.frame`with the following variables:
 #' - `param_name`: Names of the model parameters
 #' - `param_units`: Units of the model parameters
-#' - `opt_params`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-#' - `use_params`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+#' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
 #'@author Caroline Ring
 
 get_params_1comp <- function(data,
@@ -65,19 +65,19 @@ get_params_1comp <- function(data,
                                              Fgutabs_Vdist = 1e4, #Fgutabs_Vdist
                                              Rblood2plasma = 1e6), #Rblood2plasma
 param_units = ggplot2::aes(kelim = paste0("1/", #kelim
-                                  unique(Time.Units)),
+                                  unique(Time_trans.Units)),
                            Vdist = paste0("(", #Vdist
                                   unique(Dose.Units),
                                   ")",
                                   "/",
                                   "(",
-                                  unique(Value.Units),
+                                  unique(Conc.Units),
                                   ")"),
                            Fgutabs = "unitless fraction", #Fgutabs
                            kgutabs = paste0("1/", #kgutabs
-                                  unique(Time.Units)),
+                                  unique(Time_trans.Units)),
                            Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
-                                  unique(Value.Units),
+                                  unique(Conc.Units),
                                   ")",
                                   "/",
                                   "(",
@@ -116,50 +116,57 @@ param_units = ggplot2::aes(kelim = paste0("1/", #kelim
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
 
 
-  opt_params <- rep(TRUE, length(param_name))
+  optimize_param <- rep(TRUE, length(param_name))
 
-  use_params <- rep(TRUE, length(param_name))
+  use_param <- rep(TRUE, length(param_name))
 
 
-if(!("po" %in% data$Route)){
+if(!("oral" %in% data$Route)){
   #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_Vdist,
   #and they won't be used.
-  opt_params[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
-  use_params[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
+  optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
+  use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
 }else{ #if yes oral data:
   if("iv" %in% data$Route){
     #if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
-    opt_params[param_name %in% c("Fgutabs_Vdist")] <- FALSE
-    use_params[param_name %in% c("Fgutabs_Vdist")] <- FALSE
+    optimize_param[param_name %in% c("Fgutabs_Vdist")] <- FALSE
+    use_param[param_name %in% c("Fgutabs_Vdist")] <- FALSE
   }else{
     #if oral ONLY:
     #cannot fit Fgutabs and Vdist separately, so turn them off.
-    opt_params[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
-    use_params[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
+    optimize_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
+    use_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
   }
 }
 
   #if both "blood" and "plasma" are not in data,
   #then Rblood2plasma will not be optimized
   if(!(all(c("blood", "plasma") %in% data$Media))){
-    opt_params[param_name %in% "Rblood2plasma"] <- FALSE
+    optimize_param[param_name %in% "Rblood2plasma"] <- FALSE
   }
 
   #if no medium is "blood" then Rblood2plasma will not be used at all
   if(!("blood" %in% data$Media)){
-    use_params[param_name %in% "Rblood2plasma"] <- FALSE
+    use_param[param_name %in% "Rblood2plasma"] <- FALSE
     #otherwise, if blood-only data, Rblood2plasma will be used, but held constant at 1
   }
 
+  param_units_vect <- sapply(param_units,
+                           function(x) rlang::eval_tidy(x,
+                                     data = data),
+                           simplify = TRUE,
+                           USE.NAMES = TRUE)
+  param_units_vect <- param_units_vect[param_name]
+
   par_DF <- data.frame("param_name" = param_name,
-                       "param_units" = param_units,
-                       "opt_params" = opt_params,
-                       "use_params" = use_params,
+                       "param_units" = param_units_vect,
+                       "optimize_param" = optimize_param,
+                       "use_param" = use_param,
                        "lower_bound" = lower_bound,
                        "upper_bound" = upper_bound)
 
   # now get starting values
-  par_DF <-get_starts_1comp(data = data,
+  par_DF <-  get_starts_1comp(data = data,
                             par_DF = par_DF)
 
 

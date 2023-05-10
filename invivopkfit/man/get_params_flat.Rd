@@ -4,17 +4,27 @@
 \alias{get_params_flat}
 \title{Get parameters to be optimized for flat model}
 \usage{
-get_params_flat(data)
+get_params_flat(
+  data,
+  lower_bound = c(Vdist = 1e-04, Fgutabs = 1e-04, Fgutabs_Vdist = 1e-04, Rblood2plasma =
+    1e-04),
+  upper_bound = c(Vdist = 1e+06, Fgutabs = 1, Fgutabs_Vdist = 10000, Rblood2plasma =
+    1e+06),
+  param_units = ggplot2::aes(Vdist = paste0("(", unique(Dose.Units), ")", "/", "(",
+    unique(Conc.Units), ")"), Fgutabs = "unitless fraction", Fgutabs_Vdist = paste0("(",
+    unique(Conc.Units), ")", "/", "(", unique(Dose.Units), ")"), Rblood2plasma =
+    "unitless ratio")
+)
 }
 \arguments{
 \item{data}{The data set to be fitted, with harmonized variable names (e.g. the result of [preprocess_data()]).}
 }
 \value{
 A `data.frame`with the following variables:
-- `param_names`: Names of the model parameters
+- `param_name`: Names of the model parameters
 - `param_units`: Units of the model parameters
-- `opt_params`: TRUE if each parameter is to be estimated from the data; FALSE otherrwise
-- `use_params`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+- `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherrwise
+- `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
 }
 \description{
 The full set of model parameters for the flat model includes

@@ -4,25 +4,29 @@
 \alias{cp_flat}
 \title{Flat model}
 \usage{
-cp_flat(time, params, dose, iv.dose, medium)
+cp_flat(params, time, dose, route, medium)
 }
 \arguments{
-\item{time}{A numeric vector of times in hours.}
+\item{params}{A named list of parameter values. See Details for requirements.}
 
-\item{params}{A named list of model parameter values. See Details for requirements.}
+\item{time}{A numeric vector of times, reflecting the time points
+when concentration is measured after the corresponding single bolus dose.
+Must be same length as other arguments, or length 1.}
 
-\item{dose}{A numeric vector of doses in mg/kg}
+\item{dose}{A numeric vector of doses, reflecting single bolus doses
+administered at time 0. Must be same length as other arguments, or
+length 1.}
 
-\item{iv.dose}{A logical vector: TRUE for single IV bolus dose; FALSE for
-single oral dose. Not used, but must be present for compatibility with other
-model functions.}
+\item{route}{A character vector, reflecting the route of administration of
+each single bolus dose: `'oral'` or `'iv'`.  Must be same length as `time`
+and `dose`, or length 1.}
 
 \item{medium}{A character vector reflecting the medium in which each resulting
 concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 Must be same length as other arguments, or length 1.}
 }
 \value{
-A vector of plasma concentration values (mg/L) corresponding to
+A vector of plasma concentration values (mass chemical/volume) corresponding to
  \code{time}.
 }
 \description{
@@ -36,11 +40,11 @@ model fit the data any better than this naive "flat" model?
 
 `params` must include the following named items:
   \describe{
-  \item{Vdist}{Apparent volume of central compartment, L/kg BW. Or see below for
+  \item{Vdist}{Apparent volume of central compartment, volume/unit BW. Or see below for
   `Fgutabs_Vdist`}
   }
 
-For oral administration (if any `iv.dose == FALSE`), `params` must also
+For oral administration (if any `route %in% "oral"`), `params` must also
 include:
   \describe{
   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
@@ -48,14 +52,14 @@ include:
   }
 
 For oral administration, in lieu of `Vdist` and `Fgutabs`, you may instead
-provide `Fgutabs_Vdist`, the ratio of Fgutabs to Vdist (1/L). This is an
+provide `Fgutabs_Vdist`, the ratio of Fgutabs to Vdist (1/volume). This is an
 alternate parameterization for situations where `Fgutabs` and `Vdist` are not
 identifiable separately (i.e., when oral TK data are available, but IV data
 are not). If `Fgutabs` and `Vdist` are provided, they will override any value
 provided for `Fgutabs_Vdist`.
 
-If both oral and IV administration are specified (i.e., some `iv.dose == TRUE`
-and some `iv.dose == FALSE`), then `Vdist` is required along with either
+If both oral and IV administration are specified (i.e., some `route %in% "iv"`
+and some `route %in% "oral"`), then `Vdist` is required along with either
 `Fgutabs` or `Fgutabs_Vdist`. (If `Vdist` and `Fgutabs_Vdist` are provided,
 but `Fgutabs` is not provided, then `Fgutabs` will be calculated from `Vdist`
 and `Fgutabs_Vdist`.)

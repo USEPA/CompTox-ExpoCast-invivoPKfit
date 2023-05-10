@@ -4,17 +4,29 @@
 \alias{get_params_2comp}
 \title{Get parameters for 2-compartment model}
 \usage{
-get_params_2comp(data)
+get_params_2comp(
+  data,
+  lower_bound = c(kelim = 1e-04, V1 = 1e-04, k21 = 1e-04, k21 = 1e-04, Fgutabs = 1e-04,
+    kgutabs = 1e-04, Fgutabs_V1 = 1e-04, Rblood2plasma = 1e-04),
+  upper_bound = c(kelim = 1e+06, V1 = 1e+06, k21 = 1e+06, k12 = 1e+06, Fgutabs = 1,
+    kgutabs = 1e+06, Fgutabs_v1 = 10000, Rblood2plasma = 1e+06),
+  param_units = ggplot2::aes(kelim = paste0("1/", unique(Time_trans.Units)), V1 =
+    paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units), ")"), k21 =
+    paste0("1/", unique(Time_trans.Units)), k12 = paste0("1/", unique(Time_trans.Units)),
+    Fgutabs = "unitless fraction", kgutabs = paste0("1/", unique(Time_trans.Units)),
+    Fgutabs_V1 = paste0("(", unique(Conc.Units), ")", "/", "(", unique(Dose.Units), ")"),
+    Rblood2plasma = "unitless ratio")
+)
 }
 \arguments{
 \item{data}{The data set to be fitted, with harmonized variable names (e.g. the result of [preprocess_data()]).}
 }
 \value{
 A `data.frame`with the following variables:
-- `param_names`: Names of the model parameters
+- `param_name`: Names of the model parameters
 - `param_units`: Units of the model parameters
-- `opt_params`: TRUE if each parameter is to be estimated from the data; FALSE otherrwise
-- `use_params`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+- `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherrwise
+- `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
 }
 \description{
 Get parameters for 2-compartment model and determine whether each is to be

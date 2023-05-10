@@ -4,8 +4,18 @@
 \alias{fit.pk}
 \title{Fit PK model(s) for a `pk` object}
 \usage{
-fit.pk(obj)
+\method{fit}{pk}(obj)
+}
+\arguments{
+\item{obj}{A [pk] object.}
+}
+\value{
+The same [pk] object, with element `fit` added to each `$stat_model`
+  element, reflecting the fitted parameters for the corresponding model.
 }
 \description{
 Fit PK model(s) for a `pk` object
+}
+\author{
+Caroline Ring
 }

@@ -5,7 +5,7 @@
 \title{`optimx` optimizer settings}
 \usage{
 settings_optimx(
-  method = "bobyqa",
+  method = c("bobyqa", "L-BFGS-B"),
   itnmax = 1e+06,
   hessian = FALSE,
   control = list(kkt = FALSE),

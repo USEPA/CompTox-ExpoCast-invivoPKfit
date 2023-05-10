@@ -2,7 +2,7 @@ devtools::load_all("invivopkfit")
 
 #' 1-compartment model object.
 `1comp` <- pk_model(name = "1comp",
-                    params = c("kelim", "Vdist", "Fgutabs", "kgutabs", "Rblood2plasma"),
+                    params = c("kelim", "Vdist", "Fgutabs", "kgutabs", "Fgutabs_Vdist", "Rblood2plasma"),
                     conc_fun = "cp_1comp",
                     auc_fun = "auc_1comp",
                     params_fun = "get_params_1comp",
@@ -11,7 +11,7 @@ devtools::load_all("invivopkfit")
                     params_fun_args = NULL)
 
 `2comp` <- pk_model(name = "2comp",
-                    params = c("kelim", "k12", "k21", "V1", "Fgutabs", "kgutabs", "Rblood2plasma"),
+                    params = c("kelim", "k12", "k21", "V1", "Fgutabs", "kgutabs", "Fgutabs_k1", "Rblood2plasma"),
                     conc_fun = "cp_2comp",
                     auc_fun = "auc_2comp",
                     params_fun = "get_params_2comp",
@@ -20,7 +20,7 @@ devtools::load_all("invivopkfit")
                     params_fun_args = NULL)
 
 `flat` <- pk_model(name = "flat",
-                    params = c("Vdist", "Fgutabs", "Rblood2plasma"),
+                    params = c("Vdist", "Fgutabs", "Fgutabs_Vdist", "Rblood2plasma"),
                     conc_fun = "cp_flat",
                     auc_fun = "auc_flat",
                     params_fun = "get_params_flat",
