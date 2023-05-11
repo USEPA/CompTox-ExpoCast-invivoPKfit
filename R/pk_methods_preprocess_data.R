@@ -26,10 +26,10 @@
 preprocess_data.pk <- function(obj){
 
   objname <- deparse(substitute(obj))
-  if(status >= status_preprocess){
+  if(obj$status >= status_preprocess){
     warning(paste0(objname,
                   " current status is ",
-                  status,
+                  obj$status,
                   ". preprocess_data() will reset its status to ",
                   status_preprocess,
                   ". Any results from later workflow stages will be lost."))
@@ -296,9 +296,9 @@ preprocess_data.pk <- function(obj){
                       "Values will be replaced with NA."))
       }
     }
-    data$Value <- ifelse((data$Value > data$LOQ) %in% TRUE,
-                         data$Value,
-                         NA_real_)
+    data$Value <- ifelse((data$Value <= data$LOQ) %in% TRUE,
+                         NA_real_,
+                         data$Value)
 
     # Impute LOQ:
     # as calc_loq_factor * minimum non-NA value in each loq_group
@@ -320,7 +320,7 @@ preprocess_data.pk <- function(obj){
                         args =c(list(data),
                                 obj$data_settings$loq_group)) %>%
           dplyr::mutate(LOQ_orig = LOQ,
-                        LOQ = dplyr::if_else(is.na(LOQ_orig),
+                        LOQ = ifelse(is.na(LOQ_orig),
                                              min(Value[Value > 0], na.rm = TRUE) *
                                                obj$data_settings$calc_loq_factor,
                                              LOQ_orig)
@@ -411,9 +411,9 @@ preprocess_data.pk <- function(obj){
                         args = c(list(data),
                                  obj$data_settings$sd_group)) %>%
           dplyr::mutate(Value_SD_orig = Value_SD,
-                        Value_SD = dplyr::if_else(is.na(Value_SD_orig) &
+                        Value_SD = ifelse(is.na(Value_SD_orig) &
                                                     N_Subjects > 1,
-                                                  dplyr::if_else(all(is.na(Value_SD_orig)),
+                                                  ifelse(all(is.na(Value_SD_orig)),
                                                                  mean(Value[Value>0], na.rm = TRUE),
                                                                  min(Value_SD_orig, na.rm = TRUE)),
                                                   Value_SD_orig)
