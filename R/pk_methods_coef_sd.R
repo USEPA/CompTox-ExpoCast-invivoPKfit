@@ -19,6 +19,14 @@
 coef_sd.pk <- function(obj,
                        model = NULL,
                        method = NULL){
+
+  #ensure that the model has been fitted
+  check <- check_required_status(obj = obj,
+                                 required_status = 4)
+  if(!(check %in% TRUE)){
+    stop(attr(check, "msg"))
+  }
+
   if(is.null(model)) model <- names(obj$stat_model)
   if(is.null(method)) method <- obj$optimx_settings$method
 

@@ -147,6 +147,14 @@ get_status <- function(obj, ...){
   UseMethod("get_status", obj)
 }
 
+#' Default method for getting status
+#'
+#' @export
+get_status.default <- function(obj){
+  stop(paste("No 'get_status' method exists for object of class",
+             paste(class(x), collapse = ", ")))
+}
+
 #' Fold error
 #'
 #' This is the S3 method generic for `fold_errors`.
@@ -161,5 +169,24 @@ fold_errors <- function(x){
 #' @export
 fold_errors.default <- function(x, ...){
   stop(paste("No 'fold_errors' method exists for object of class",
+             paste(class(x), collapse = ", ")))
+}
+
+#' Check required status
+#'
+#' This is the S3 method generic.
+#'
+#' @param obj An object.
+#' @seealso [check_required_status.pk()] for the method for class [pk()]
+#' @export
+check_required_status <- function(obj, ...){
+  UseMethod("check_required_status", obj)
+}
+
+#' Default method for checking required status
+#'
+#' @export
+check_required_status.default <- function(obj){
+  stop(paste("No 'check_required_status' method exists for object of class",
              paste(class(x), collapse = ", ")))
 }

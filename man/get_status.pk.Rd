@@ -34,3 +34,6 @@ This function allows the user to check the status of a `pk` object.
 A message will be printed listing the analysis steps that have been completed
 for this `pk` object, and the integer status will be returned.
 }
+\author{
+Caroline Ring
+}

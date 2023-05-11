@@ -40,6 +40,9 @@ A named list of numeric matrices. There is one list element named for
 \description{
 Calculate fold errors for a fitted `pk` object.
 }
+\details{
+Here, fold error is defined as `observed/predicted`.
+}
 \author{
 Caroline Ring
 }

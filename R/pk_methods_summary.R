@@ -12,6 +12,13 @@
 #' @author Caroline Ring
 #'
 summary.pk <- function(obj){
+  #ensure that the model has been fitted
+  check <- check_required_status(obj = obj,
+                                 required_status = 4)
+  if(!(check %in% TRUE)){
+    stop(attr(check, "msg"))
+  }
+
   suppress.messages <- obj$data_settings$suppress.messages
   #get model coefficients
   coefs <- coef(obj)

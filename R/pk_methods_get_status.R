@@ -22,12 +22,20 @@
 #'
 #' @param obj A `pk` object
 #' @return The status of the `pk` object as an integer.
+#' @export
+#' @author Caroline Ring
 get_status.pk <- function(obj){
-  steps <- c("1. Object has been initialized",
-             "2. Data pre-processing complete",
-             "3. Model pre-fitting complete",
-             "4. Model fitting complete")
-  message(paste(steps[seq(1, obj$status)],
-                collapse = "/n"))
+  objname <- deparse(substitute(obj))
+  steps <- c("1/4. Object has been initialized",
+             "2/4. Data pre-processing complete",
+             "3/4. Model pre-fitting complete",
+             "4/4. Model fitting complete")
+  msg <- paste(
+    paste0("Status of pk object ", objname, ":"),
+    paste(steps[seq(1, obj$status)],
+          collapse = "\n"),
+    sep  = "\n"
+  )
+  message(msg)
   return(obj$status)
 }
