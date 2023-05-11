@@ -49,13 +49,15 @@ data_info.pk <- function(obj){
 
   #get time of last detected observation
   if(any(data$Detect %in% TRUE)){
-    dat_info$last_detect_time <- max(data[data$Detect %in% TRUE, "Time"])
+    dat_info$last_detect_time <- max(data[data$Detect %in% TRUE, "Time_trans"])
   }else{
     dat_info$last_detect_time <- 0
   }
+  attr(dat_info$last_detect_time, "units") <- unique(data$Time_trans.Units)
 
   #get time of last observation
-  dat_info$last_time <- max(data$Time)
+  dat_info$last_time <- max(data$Time_trans)
+  attr(dat_info$last_time, "units") <- unique(data$Time_trans.Units)
 
   #do NCA
   dat_info$nca <- do.call(dplyr::group_by,
