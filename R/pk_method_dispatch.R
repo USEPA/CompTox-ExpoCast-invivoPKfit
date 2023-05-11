@@ -66,6 +66,22 @@ preprocess_data.default <- function(x, ...){
              paste(class(x), collapse = ", ")))
 }
 
+#' data_info generic
+#'
+#' @export
+#' @seealso [data_info.pk()] for the `data_info` method for class [pk()]
+data_info <- function(x, ...){
+  UseMethod("data_info", x)
+}
+
+#' data_info default method
+#'
+#' @export
+data_info.default <- function(x, ...){
+  stop(paste("No 'data_info' method exists for object of class",
+             paste(class(x), collapse = ", ")))
+}
+
 #' Prefitting
 #'
 #' @export

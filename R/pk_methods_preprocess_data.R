@@ -540,14 +540,35 @@ preprocess_data.pk <- function(obj){
     }
     data$Time_trans.Units <- to_units
 
+
+
+    #Scale concentration by ratio_conc_dose
+
+    if(is.null(obj$scales$conc$expr)){
+      obj$scales$conc$ratio_conc_dose <- 1
+    }
+
+    ratio_conc_dose <- obj$scales$conc$ratio_conc_dose
+
+    if(!obj$data_settings$suppress.messages){
+      if(!(ratio_conc_dose %in% 1)){
+      message(paste("Concentrations, LOQs, and concentration SDs are being scaled by",
+                    "ratio_conc_dose = ",
+                    ratio_conc_dose))
+      }
+    }
+
+
 if("Conc" %in% names(data)){
       if(!obj$data_settings$suppress.messages){
         message(paste("Harmonized variable `Conc` already exists in data!.",
                       "It will be overwritten as",
-                      "`pmax(Value, LOQ, na.rm = TRUE)`."))
+                      "`pmax(Value/ratio_conc_dose, LOQ/ratio_conc_dose, na.rm = TRUE)`."))
       }
 }
-      data$Conc <- pmax(data$Value, data$LOQ, na.rm = TRUE)
+      data$Conc <- pmax(data$Value/ratio_conc_dose,
+                        data$LOQ/ratio_conc_dose,
+                        na.rm = TRUE)
 
     if("Detect" %in% names(data)){
       if(!obj$data_settings$suppress.messages){
@@ -563,20 +584,25 @@ if("Conc" %in% names(data)){
         message(paste("Harmonized variable `Conc_SD` already exists in data!",
                       "It will be overwritten as",
                       "`ifelse(data$Detect,
-                        data$Value_SD,
+                        data$Value_SD/ratio_conc_dose,
                         NA_real_)"))
       }
     }
-      data$Conc_SD <- data$Value_SD
+      data$Conc_SD <- data$Value_SD/ratio_conc_dose
 
       if("Conc.Units" %in% names(data)){
         if(!obj$data_settings$suppress.messages){
           message(paste("Harmonized variable `Conc.Units` already exists in data!",
                         "It will be overwritten as",
-                       "Value.Units"))
+                       "Value.Units/ratio_conc_dose"))
         }
       }
-    data$Conc.Units <- data$Value.Units
+
+    data$Conc.Units <- ifelse(ratio_conc_dose == 1,
+                              data$Value.Units,
+                              paste0(data$Value.Units,
+                                    "/",
+                                    ratio_conc_dose))
 
     #apply concentration transformation.
     #
@@ -588,7 +614,7 @@ if("Conc" %in% names(data)){
     #Transform Conc (this is either the measured value or the LOQ, depending on Detect)
     #If no conc transformation specified, assume identity
     if(is.null(obj$scales$conc$expr)){
-      obj$scales$conc$ratio_conc_dose <- 1
+      #obj$scales$conc$ratio_conc_dose <- 1
       obj$scales$conc$dose_norm <- FALSE
       obj$scales$conc$log10_trans <- FALSE
       obj$scales$conc$expr <- rlang::new_quosure(quote(.conc),
@@ -597,7 +623,7 @@ if("Conc" %in% names(data)){
 
     if(!obj$data_settings$suppress.messages){
       message(paste("Applying transformations to concentration variables:",
-                    paste0("ratio_conc_dose = ", obj$scales$conc$ratio_conc_dose),
+                    #paste0("ratio_conc_dose = ", obj$scales$conc$ratio_conc_dose),
                     paste0("dose_norm = ", obj$scales$conc$dose_norm),
                     paste0("log10_trans = ", obj$scales$conc$log10_trans),
                     sep = "\n"))
@@ -625,11 +651,16 @@ if("Conc" %in% names(data)){
     data$Conc_trans.Units <- gsub(
       x = gsub(x = rlang::as_label(obj$scales$conc$expr),
                                   pattern = ".conc",
-                                  replacement = paste0("(", unique(data$Value.Units), ")"),
+                                  replacement = paste0("(", unique(data$Conc.Units), ")"),
                                   fixed = TRUE),
       pattern = "Dose",
       replacement = paste0("(", unique(data$Dose.Units), ")"),
       fixed = TRUE)
+
+    #If Subject ID is not included, then assign it as NA
+    if(!("Subject_ID" %in% data)){
+      data$Subject_ID <- NA_integer_
+    }
 
 
 

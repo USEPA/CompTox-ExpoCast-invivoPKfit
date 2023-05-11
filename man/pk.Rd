@@ -11,12 +11,12 @@ pk(
     Species = subjects.species, Reference =
     as.character(ifelse(is.na(documents_reference.id), documents_extraction.id,
     documents_reference.id)), Media = series.conc_medium_normalized, Route =
-    studies.administration_route_normalized, Dose = studies.dose_level_normalized,
-    Dose.Units = "mg/kg", Subject = subjects.id, N_Subjects =
-    series.n_subjects_in_series, 
-     Weight = subjects.weight_kg, Weight.Units = "kg",
-    Time = conc_time_values.time_hr, Time.Units = "hours", Value = conc_time_values.conc,
-    Value.Units = "mg/L", LOQ = series.loq_normalized, Value_SD =
+    studies.administration_route_normalized, Dose =
+    studies.dose_level_normalized_corrected, Dose.Units = "mg/kg", Subject = subjects.id,
+    N_Subjects = series.n_subjects_in_series, 
+     Weight = subjects.weight_kg,
+    Weight.Units = "kg", Time = conc_time_values.time_hr, Time.Units = "hours", Value =
+    conc_time_values.conc, Value.Units = "mg/L", LOQ = series.loq_normalized, Value_SD =
     conc_time_values.conc_sd_normalized)
 )
 }

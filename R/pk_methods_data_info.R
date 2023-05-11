@@ -1,6 +1,12 @@
+#' Get summary data info and NCA
+#'
+#' @param obj An object of class [pk()]
+#' @export
+#' @author Caroline Ring
 data_info.pk <- function(obj){
   #check status
   objname <- deparse(substitute(obj))
+  status <- obj$status
   if(status >= status_data_info){
     warning(paste0(objname,
                    " current status is ",
@@ -51,10 +57,38 @@ data_info.pk <- function(obj){
   #get time of last observation
   dat_info$last_time <- max(data$Time)
 
+  #do NCA
+  dat_info$nca <- do.call(dplyr::group_by,
+                          args =c(list(data),
+                                  obj$data_settings$nca_group)) %>%
+    dplyr::summarise(calc_nca(time = Time_trans,
+                              dose = Dose,
+                              conc = Conc,
+                              detect = Detect,
+                              n_subj = N_Subjects,
+                              subject_id = Subject_ID)) %>%
+    as.data.frame()
+
+  # #add units for each NCA param
+  dat_info$nca[1:2, "param_units"] <- paste(unique(data$Conc.Units),
+                                            "*",
+                                            unique(data$Time_trans.Units))
+  dat_info$nca[3, "param_units"] <- paste(unique(data$Conc.Units),
+                                            "*",
+                                            unique(data$Time_trans.Units),
+                                          "*",
+                                          unique(data$Time_trans.Units))
+  dat_info$nca[c(4:5,8), "param_units"] <-  unique(data$Time_trans.Units)
+  dat_info$nca[6, "param_units"] <- paste0("1/",
+                                           unique(data$Time_trans.Units))
+  dat_info$nca[7, "param_units"] <- paste0(unique(data$Conc.Units),
+                                           "/",
+                                           unique(data$Dose.Units))
+  dat_info$nca[9, "param_units"] <- unique(data$Conc.Units)
   #save data summary info
   obj$data_info <- dat_info
 
-  #do NCA
+  obj$status <- status_data_info #data summarization complete
 
-  obj$status <- 3 #data summarization complete
+  return(obj)
 }

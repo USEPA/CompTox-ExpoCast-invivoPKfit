@@ -68,12 +68,12 @@ scale_conc <- function(dose_norm = FALSE,
 
   #Set up expression
   expr <- quote(.conc)
-  #add ratio_conc_dose normalization step to expression
-  if(!(ratio_conc_dose %in% 1)){
-  expr <- substitute(x/ratio_conc_dose,
-                     list(x = expr,
-                          ratio_conc_dose = ratio_conc_dose))
-  }
+  # #add ratio_conc_dose normalization step to expression
+  # if(!(ratio_conc_dose %in% 1)){
+  # expr <- substitute(x/ratio_conc_dose,
+  #                    list(x = expr,
+  #                         ratio_conc_dose = ratio_conc_dose))
+  # }
 
   if(dose_norm %in% TRUE){
     #add dose normalization step to expression
