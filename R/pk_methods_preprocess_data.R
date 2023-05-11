@@ -404,7 +404,7 @@ preprocess_data.pk <- function(obj){
                                   as_label),
                            collapse = " + "),
                          ". If all SDs are missing in a group, ",
-                         "SD will be imputed equal to the mean non-NA, non-zero Value in that group. ",
+                         "SD for each observation will be imputed as 30% of the observed mean concentration. ",
                          n_sd_est, " missing SDs will be estimated."))
         }
         data <- do.call(dplyr::group_by,
@@ -413,8 +413,8 @@ preprocess_data.pk <- function(obj){
           dplyr::mutate(Value_SD_orig = Value_SD,
                         Value_SD = ifelse(is.na(Value_SD_orig) &
                                                     N_Subjects > 1,
-                                                  ifelse(all(is.na(Value_SD_orig)),
-                                                                 mean(Value[Value>0], na.rm = TRUE),
+                                                  ifelse(rep(all(is.na(Value_SD_orig)), dplyr::n()),
+                                                                 0.3 * Value,
                                                                  min(Value_SD_orig, na.rm = TRUE)),
                                                   Value_SD_orig)
           ) %>%
@@ -425,7 +425,7 @@ preprocess_data.pk <- function(obj){
     }#end if impute_sd %in% TRUE
 
     #Remove any remaining multi-subject observations where SD is NA
-    #(with imputing SD = Mean as a fallback, this will only be cases where Value was NA)
+    #(with imputing SD = 0.3*Value as a fallback, this will only be cases where Value was NA)
     if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value_SD))){
       if(!obj$data_settings$suppress.messages){
         message(paste0("Removing remaining observations with N_Subjects > 1 where reported SD is NA. ",
