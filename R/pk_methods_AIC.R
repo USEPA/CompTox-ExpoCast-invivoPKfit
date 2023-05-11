@@ -41,7 +41,7 @@ AIC.pk <- function(obj,
                    k = 2){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
-                                 required_status = 4)
+                                 required_status = 5)
   if(!(check %in% TRUE)){
     stop(attr(check, "msg"))
   }

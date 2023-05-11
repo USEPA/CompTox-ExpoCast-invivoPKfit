@@ -328,7 +328,7 @@ pk <- function(data = NULL,
   #Create the initial pk object
   obj <- list("data_original" = data,
               "mapping" = mapping,
-              "status" = 1L
+              "status" = status_init
   )
 
   #nd assign it class pk

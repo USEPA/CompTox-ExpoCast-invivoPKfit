@@ -25,11 +25,21 @@
 #' @export
 preprocess_data.pk <- function(obj){
 
+  objname <- deparse(substitute(obj))
+  if(status >= status_preprocess){
+    warning(paste0(objname,
+                  " current status is ",
+                  status,
+                  ". preprocess_data() will reset its status to ",
+                  status_preprocess,
+                  ". Any results from later workflow stages will be lost."))
+  }
+
   if(is.null(obj$data_original)){
     message("Original data is NULL")
     obj$data <- NULL
     obj$data_info <- NULL
-    obj$status <- 2
+    obj$status <- status_preprocess
     return(obj)
   }else{
 
@@ -621,47 +631,13 @@ if("Conc" %in% names(data)){
       replacement = paste0("(", unique(data$Dose.Units), ")"),
       fixed = TRUE)
 
-    #get the summary data info
-    #unique Chemical, Species, References, Studies, Routes
-    dat_info <- as.list(unique(data[c("Chemical",
-                                      "Species")]))
 
-    dat_info$References_Analyzed <- sort(unique(data$Reference))
-    #get a list of studies analyzed
-    dat_info$Studies_Analyzed <- sort(unique(data$Study))
-    #get a list of routes analyzed
-    dat_info$Routes_Analyzed <- sort(unique(data$Route))
-
-    #get a list of media analyzed
-    dat_info$Media_Analyzed <- sort(unique(data$Media))
-
-    #get the number of detects and non-detects by route and medium
-    dat_info$n_dat <- aggregate(x = list(Detect = data$Detect),
-                                by = data[c("Route", "Media")],
-                                FUN = function(Detect){
-                                  c("Detect" = sum(Detect %in% TRUE),
-                                    "NonDetect" = sum(Detect %in% FALSE))
-                                })
-    names(dat_info$n_dat) <- gsub(x = names(dat_info$n_dat),
-                                  pattern = "Detect.",
-                                  replacement = "",
-                                  fixed = TRUE)
-
-    #get time of last detected observation
-    if(any(data$Detect %in% TRUE)){
-      dat_info$last_detect_time <- max(data[data$Detect %in% TRUE, "Time"])
-    }else{
-      dat_info$last_detect_time <- 0
-    }
-
-    #get time of last observation
-    dat_info$last_time <- max(data$Time)
 
     # add data & data info to object
     obj$data <- data
-    obj$data_info <- dat_info
 
-    obj$status <- 2 #preprocessing complete
+
+    obj$status <- status_preprocess #preprocessing complete
 
     return(obj)
   }

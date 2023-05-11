@@ -40,7 +40,7 @@ logLik.pk <- function(obj,
 
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
-                                 required_status = 4)
+                                 required_status = status_fit)
   if(!(check %in% TRUE)){
     stop(attr(check, "msg"))
   }

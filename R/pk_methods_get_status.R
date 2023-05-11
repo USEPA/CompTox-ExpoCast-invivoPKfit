@@ -26,10 +26,11 @@
 #' @author Caroline Ring
 get_status.pk <- function(obj){
   objname <- deparse(substitute(obj))
-  steps <- c("1/4. Object has been initialized",
-             "2/4. Data pre-processing complete",
-             "3/4. Model pre-fitting complete",
-             "4/4. Model fitting complete")
+  steps <- c("1/5. Object has been initialized",
+             "2/5. Data pre-processing complete",
+             "3/5. Data information summary and NCA complete",
+             "4/5. Model pre-fitting complete",
+             "5/5. Model fitting complete")
   msg <- paste(
     paste0("Status of pk object ", objname, ":"),
     paste(steps[seq(1, obj$status)],

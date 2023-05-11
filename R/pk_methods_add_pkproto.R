@@ -52,9 +52,17 @@ add_pk <- function(pk_obj, object, objectname) {
 #' @export
 pk_add.pk_scales <- function(object, pk_obj, objectname){
   pk_obj$scales[[object$name]] <- object$value
-  if(pk_obj$status > 1L){
+  if(pk_obj$status > (status_preprocess - 1)){
     #with new scaling, everything will change starting from data pre-processing
-    pk_obj$status <- 1L
+    #with new data pre-processing settings, everything will change starting from
+    #data pre-processing
+    pk_obj$status <- status_preprocess - 1
+    message(paste0(objectname,
+                   ": Modifying data scaling resets status to level ",
+                   status_preprocess - 1,
+                   "; all later stages of the workflow will need to be re-done")
+    )
+    pk_obj$status <- status_preprocess - 1
   }
 
   return(pk_obj)
@@ -79,12 +87,14 @@ pk_add.pk_data_settings <- function(object, pk_obj, objectname){
   }
 
   pk_obj$data_settings <- object
-  if(pk_obj$status > 1L){
+  if(pk_obj$status > (status_preprocess - 1)){
     #with new data pre-processing settings, everything will change starting from
     #data pre-processing
-    pk_obj$status <- 1L
+    pk_obj$status <- status_preprocess - 1
     message(paste0(objectname,
-                   ": Modifying data_settings resets status to level 1; data pre-processing (level 2), model pre-fit (level 3), and model fit (level 4) will need to be re-done")
+                   ": Modifying data_settings resets status to level ",
+                   status_preprocess - 1,
+                   "; all later stages of the workflow will need to be re-done")
     )
   }
   return(pk_obj)
@@ -109,11 +119,13 @@ pk_add.pk_optimx_settings <- function(object, pk_obj, objectname){
   }
 
   pk_obj$optimx_settings <- object
-  if(pk_obj$status > 3L){
+  if(pk_obj$status > (status_prefit - 1)){
     #with new optimizer settings, data pre=processing and model pre-fitting
     #should not change, but model fitting will change
     message(paste0(objectname,
-                   ": Modifying optimx_settings resets status to level 2 (data preprocessing complete); model pre-fit (level 3) and model fit (level 4) will need to be re-done")
+                   ": Modifying optimx_settings resets status to level ",
+                   (status_prefit - 1),
+                  "; all later stages of the workflow will need to be re-done")
     )
     pk_obj$status <- 3L
   }
@@ -142,11 +154,13 @@ pk_add.pk_stat_model <- function(object, pk_obj, objectname){
     }
     pk_obj$stat_model[[this_model]] <- object[[this_model]]
   }
-  if(pk_obj$status > 2L){
+  if(pk_obj$status > (status_prefit - 1)){
     message(paste0(objectname,
-                   ": Modifying stat_model resets status to level 2 (data preprocessing complete);\nmodel pre-fit (level 3)  (prefit()) and model fit (level 4) (fit()) will need to be re-done")
+                   ": Modifying stat_model resets status to level",
+                   status_prefit - 1,
+                   "; all later stages of the workflow will need to be re-done")
     )
-    pk_obj$status <- 2L #data pre-processing won't change with addition of new model, but model pre-fit and fit will change
+    pk_obj$status <- (status_prefit - 1) #data pre-processing won't change with addition of new model, but model pre-fit and fit will change
   }
 
   return(pk_obj)
@@ -173,14 +187,14 @@ pk_add.pk_stat_error_model <- function(object, pk_obj, objectname){
 
   #data pre-processing won't change with addition of a new error model, but
   #model pre-fit and fit will change
-  if(pk_obj$status > 2L){
+  if(pk_obj$status > (status_prefit - 1)){
     message(paste0(objectname,
-                   ": Modifying stat_error_model resets status to level 2 (data preprocessing complete); model pre-fit (level 3) and model fit (level 4) will need to be re-done")
-    )
-    pk_obj$status <- 2L
+                   ": Modifying stat_error_model resets status to level ",
+                   status_prefit - 1,
+                   "; all later stages of the workflow will need to be re-done"))
+    pk_obj$status <-  status_prefit - 1
   }
 
   return(pk_obj)
 }
-
 

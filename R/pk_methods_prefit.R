@@ -7,9 +7,24 @@
 #' @export
 #' @author Caroline Ring
 prefit.pk <- function(obj){
+
+  objname <- deparse(substitute(obj))
+  if(status >= status_prefit){
+    warning(paste0(objname,
+                   " current status is ",
+                   status,
+                   ". prefit() will reset its status to ",
+                   status_prefit,
+                   ". Any results from later workflow stages will be lost."))
+  }
+
   #if preprocessing not already done, do it
-  if(obj$status == 1){
+  if(obj$status < status_preprocess){
     obj <- preprocess_data(obj)
+  }
+
+  if(obj$status < status_data_info){
+    obj <- data_info(obj)
   }
 
   #get the error model obj$stat_error_model, which defines the number of sigmas that will need to be optimized
@@ -94,7 +109,7 @@ prefit.pk <- function(obj){
 
   }
 
-  obj$status <- 3 #prefit complete
+  obj$status <- status_prefit #prefit complete
 
   return(obj)
 

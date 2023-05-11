@@ -20,12 +20,13 @@ check_required_status.pk <- function(obj,
                                    required_status){
   objname <- deparse(substitute(obj))
   status <- obj$status
-  if(status > 4) status <- 5
-  steps <- c("1/4. Object has been initialized (pk())",
-             "2/4. Data pre-processing complete (preprocess_data())",
-             "3/4. Model pre-fitting complete (prefit())",
-             "4/4. Model fitting complete (fit())",
-             "status > 4 (not implemented)")
+  if(status > status_fit) status <- status_fit + 1
+  steps <- c("1/5. Object has been initialized",
+             "2/5. Data pre-processing complete",
+             "3/5. Data information summary and NCA complete",
+             "4/5. Model pre-fitting complete",
+             "5/5. Model fitting complete",
+             "status > 5. not implemented")
 if(status < required_status){
 msg <- paste(
     paste(objname, "current status is below required status."),

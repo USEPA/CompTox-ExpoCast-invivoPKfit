@@ -7,15 +7,29 @@
 #' @author Caroline Ring
 fit.pk <- function(obj){
   #check status
-  #do preprocessing if necessary
-  if(obj$status == 1){
+  objname <- deparse(substitute(obj))
+  if(status >= status_fit){
+    warning(paste0(objname,
+                   " current status is ",
+                   status,
+                   ". fit() will reset its status to ",
+                   status_fit,
+                   ". Any results from later workflow stages will be lost."))
+  }
+
+  #if preprocessing not already done, do it
+  if(obj$status < status_preprocess){
     obj <- preprocess_data(obj)
   }
 
-  #do prefitting if necessary
-  if(obj$status == 2){
+  if(obj$status < status_data_info){
+    obj <- data_info(obj)
+  }
+
+  if(obj$status < status_prefit){
     obj <- prefit(obj)
   }
+
 
   suppress.messages <- obj$data_settings$suppress.messages
   #For each model:
@@ -105,6 +119,6 @@ fit.pk <- function(obj){
     }
   } #end loop over models
 
-  obj$status <- 4 #fitting complete
+  obj$status <- status_fit #fitting complete
   return(obj)
 }
