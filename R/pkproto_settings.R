@@ -39,6 +39,7 @@ settings_data <- function(routes_keep = c("oral", "iv"),
                           calc_loq_factor = 0.45,
                              impute_sd = TRUE,
                           sd_group = dplyr::vars(Chemical, Species, Reference, Media),
+                          nca_group = dplyr::vars(Chemical, Species, Reference, Route, Media, Dose),
                              suppress.messages = FALSE,
                           ...){
 #get arguments and values
