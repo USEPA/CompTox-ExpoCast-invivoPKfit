@@ -4,7 +4,20 @@
 \alias{plot.pk}
 \title{Plot a [pk()] object.}
 \usage{
-\method{plot}{pk}(obj, newdata = NULL, model = NULL, method = NULL)
+\method{plot}{pk}(
+  obj,
+  newdata = NULL,
+  model = NULL,
+  method = NULL,
+  plot_data_aes = ggplot2::aes(x = Time_trans, y = Conc/Dose, ymin = Conc/Dose -
+    Conc_SD/Dose, ymax = Conc/Dose + Conc_SD/Dose, shape = Reference, fill = Detect),
+  plot_fit_aes = ggplot2::aes(x = Time_trans, y = Conc/Dose, linetype =
+    interaction(model, method)),
+  facet_fun = "facet_grid",
+  facet_fun_args = list(rows = ggplot2::vars(Route), cols = ggplot2::vars(Media), scales
+    = "free_y", labeller = "label_both"),
+  n_interp = 10
+)
 }
 \arguments{
 \item{obj}{A [pk()] object}
@@ -21,6 +34,29 @@ plotted for these models. Default `NULL` to plot fits for all models in
 \item{method}{Character: One or more of the [optimx::optimx()] methods used.
 Default `NULL` to plot fits for all methods in
 `obj$optimx_settings$method`.}
+
+\item{plot_data_aes}{Aesthetic mapping for the plot layer that visualizes the
+data.}
+
+\item{plot_fit_aes}{Aesthetic mapping for the plot layer that visualizes the
+fits.}
+
+\item{facet_fun}{The name of the `ggplot2` faceting function to use:
+[ggplot2::facet_grid()], [ggplot2::facet_wrap()], or `NULL` to do no
+faceting. Default `"facet_grid"`.}
+
+\item{facet_fun_args}{A named list of arguments to the faceting function in `facet_fun`. Default:
+```
+list(rows = ggplot2::vars(Route),
+cols= ggplot2::vars(Media),
+scales = "free_y",
+labeller = "label_both")
+```}
+
+\item{n_interp}{For plotting: the number of time points to interpolate between each observed time point. Default 10.}
+}
+\value{
+A [ggplot2::ggplot()]-class plot object.
 }
 \description{
 Plot data and model fits from a [pk()] object.
