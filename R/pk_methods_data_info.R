@@ -63,7 +63,8 @@ data_info.pk <- function(obj){
   dat_info$nca <- do.call(dplyr::group_by,
                           args =c(list(data),
                                   obj$data_settings$nca_group)) %>%
-    dplyr::summarise(calc_nca(time = Time_trans,
+    dplyr::summarise(tlast = max(Time_trans),
+                     calc_nca(time = Time_trans,
                               dose = Dose,
                               conc = Conc,
                               detect = Detect,
@@ -72,21 +73,30 @@ data_info.pk <- function(obj){
     as.data.frame()
 
   # #add units for each NCA param
-  dat_info$nca[1:2, "param_units"] <- paste(unique(data$Conc.Units),
+  dat_info$nca[dat_info$nca$param_name %in% c("AUC to tlast",
+                                              "AUC to infinity"),
+               "param_units"] <- paste(unique(data$Conc.Units),
                                             "*",
                                             unique(data$Time_trans.Units))
-  dat_info$nca[3, "param_units"] <- paste(unique(data$Conc.Units),
+  dat_info$nca[dat_info$nca$param_name %in% "AUMC to infinity",
+               "param_units"] <- paste(unique(data$Conc.Units),
                                             "*",
                                             unique(data$Time_trans.Units),
                                           "*",
                                           unique(data$Time_trans.Units))
-  dat_info$nca[c(4:5,8), "param_units"] <-  unique(data$Time_trans.Units)
-  dat_info$nca[6, "param_units"] <- paste0("1/",
+  dat_info$nca[dat_info$nca$param_name %in% c("Mean residence time",
+                                              "non-compartmental half-life",
+                                              "tmax"),
+               "param_units"] <-  unique(data$Time_trans.Units)
+  dat_info$nca[dat_info$nca$param_name %in% "Clearance",
+               "param_units"] <- paste0("1/",
                                            unique(data$Time_trans.Units))
-  dat_info$nca[7, "param_units"] <- paste0(unique(data$Conc.Units),
+  dat_info$nca[dat_info$nca$param_name %in% "Volume of distribution at steady state",
+               "param_units"] <- paste0(unique(data$Conc.Units),
                                            "/",
                                            unique(data$Dose.Units))
-  dat_info$nca[9, "param_units"] <- unique(data$Conc.Units)
+  dat_info$nca[dat_info$nca$param_name %in% "Cmax",
+               "param_units"] <- unique(data$Conc.Units)
   #save data summary info
   obj$data_info <- dat_info
 
