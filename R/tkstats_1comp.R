@@ -76,7 +76,7 @@ tkstats_1comp <- function(pars,
   pars[missing_pars] <- NA_real_
 
   kelim <- pars["kelim"]
-  Fgutabs <- kelim["Fgutabs"]
+  Fgutabs <- pars["Fgutabs"]
   Vdist <- pars["Vdist"]
   Fgutabs_Vdist <- pars["Fgutabs_Vdist"]
   kgutabs <- pars["kgutabs"]
@@ -113,6 +113,8 @@ tkstats_1comp <- function(pars,
 
   Cmax <- cp_1comp(params = list(
     "kelim" = kelim,
+    "Vdist" = Vdist,
+    "Fgutabs" = Fgutabs,
     "Fgutabs_Vdist" = Fgutabs_Vdist,
     "kgutabs" = kgutabs,
     "Rblood2plasma" = Rblood2plasma
@@ -124,6 +126,8 @@ tkstats_1comp <- function(pars,
 
   AUC_inf <- auc_1comp(params = list(
     "kelim" = kelim,
+    "Vdist" = Vdist,
+    "Fgutabs" = Fgutabs,
     "Fgutabs_Vdist" = Fgutabs_Vdist,
     "kgutabs" = kgutabs,
     "Rblood2plasma" = Rblood2plasma
@@ -135,6 +139,8 @@ tkstats_1comp <- function(pars,
 
   # AUC_tlast <- auc_1comp(params = list(
   #   "kelim" = kelim,
+  # "Vdist" = Vdist,
+  # "Fgutabs" = Fgutabs,
   #   "Fgutabs_Vdist" = Fgutabs_Vdist,
   #   "kgutabs" = kgutabs,
   #   "Rblood2plasma" = Rblood2plasma
@@ -150,7 +156,7 @@ tkstats_1comp <- function(pars,
                                    "halflife",
                                    "tmax",
                                    "Cmax",
-                                   "AUC_infinity",
+                                   "AUC_infinity"
                                    # "AUC_tlast"
                                    ),
                     param_value = c(CLtot,
@@ -159,7 +165,7 @@ tkstats_1comp <- function(pars,
                                     halflife,
                                     tmax,
                                     Cmax,
-                                    AUC_inf,
+                                    AUC_inf
                                     # AUC_tlast
                                     )))
 

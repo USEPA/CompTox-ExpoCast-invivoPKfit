@@ -102,7 +102,8 @@ tkstats_all <- sapply(model,
          tkstats_list <- sapply(method,
                 function(this_method){
                   #pull the set of coefficients for this method
-                  coef_row <- this_coef[this_method, ]
+                  #convert from one row of a data.frame to a named vector
+                  coef_row <- unlist(this_coef[this_method, ])
                   #get the unique combinations of refrence, route, media, dose from obj$data_info$nca
                   tkstats_this_method <- do.call(dplyr::group_by, #use do.call() because the grouping is a *list* of quosures
                           c(list(newdata),
@@ -116,7 +117,6 @@ tkstats_all <- sapply(model,
                                      route = unique(Route),
                                      medium = unique(Media),
                                      dose = unique(Dose),
-                                     tlast = unique(tlast),
                                      time.units = unique(obj$data$Time_trans.Units)
                                 ),
                                 this_tkstats_args

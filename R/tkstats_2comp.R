@@ -80,7 +80,7 @@ tkstats_2comp <- function(pars,
   pars[missing_pars] <- NA_real_
 
   kelim <- pars["kelim"]
-  Fgutabs <- kelim["Fgutabs"]
+  Fgutabs <- pars["Fgutabs"]
   V1 <- pars["V1"]
   Fgutabs_V1 <- pars["Fgutabs_V1"]
   kgutabs <- pars["kgutabs"]
@@ -142,6 +142,8 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
                  tryCatch(
                    uniroot( f = function(x){
                      cp_2comp_dt(params = list("kelim" = kelim,
+                                               "V1" = V1,
+                                               "Fgutabs" = Fgutabs,
                                                "Fgutabs_V1" = Fgutabs_V1,
                                                "kgutabs" = kgutabs,
                                                "k12" = k12,
@@ -164,6 +166,8 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
     "kelim" = kelim,
     "k12" = k12,
     "k21" = k21,
+    "V1" = V1,
+    "Fgutabs" = Fgutabs,
     "Fgutabs_V1" = Fgutabs_V1,
     "kgutabs" = kgutabs,
     "Rblood2plasma" = Rblood2plasma
@@ -175,7 +179,9 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
 
   AUC_inf <- auc_2comp(params = list(
     "kelim" = kelim,
+    "V1" = V1,
     "Fgutabs_V1" = Fgutabs_V1,
+    "Fgutabs" = Fgutabs,
     "kgutabs" = kgutabs,
     "k12" = k12,
     "k21" = k21,
@@ -188,6 +194,8 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
 
   # AUC_tlast <- auc_2comp(params = list(
   #   "kelim" = kelim,
+  # "V1" = V1,
+  # "Fgutabs" = Fgutabs,
   #   "Fgutabs_V1" = Fgutabs_V1,
   #   "kgutabs" = kgutabs,
   #   "k12" = k12,
@@ -218,7 +226,7 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
                     param_value = c(CLtot,
                                     CLtot_Fgutabs,
                                     Css_1mgkgday,
-                                    halflife,
+                                    halflife_terminal,
                                     tmax,
                                     Cmax,
                                     AUC_inf,
@@ -233,5 +241,4 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
                                     Vss_Fgutabs)
                     )
          )
-
 }
