@@ -46,9 +46,9 @@ get_elbow <- function(x, y, ...){
                           function(this_x) median(y[x==this_x])
   )
 
-  pred <- slope * times + intercept
+  pred <- slope * x + intercept
   resid <- med_y - pred
-  elbow_x <- times[which.max(abs(resid))]
+  elbow_x <- x[which.max(abs(resid))]
 
   return(elbow_x)
 }
