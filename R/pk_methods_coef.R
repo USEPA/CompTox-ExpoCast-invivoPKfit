@@ -29,9 +29,11 @@ coef.pk <- function(obj,
   if(is.null(model)) model <- names(obj$stat_model)
   if(is.null(method)) method <- obj$optimx_settings$method
 
-  sapply(obj$stat_model[model],
-         function(this_model){
+  sapply(model,
+         function(this_modelname){
+           this_model <- obj$stat_model[[this_modelname]]
            npar <- attr(this_model$fit, "npar")
+           if(!is.null(npar)){
            fit_par <- this_model$fit[method, 1:npar]
 
            #Add any "constant" params
@@ -48,6 +50,23 @@ coef.pk <- function(obj,
                                             const_par,
                                             simplify = FALSE))
              fit_par <- as.matrix(cbind(fit_par, const_par))
+           }
+           }else{
+             fit_par <- matrix(data = NA_real_,
+                               ncol = sum(this_model$par_DF$use_param) +
+                                 sum(obj$stat_error_model$sigma_DF$use_param),
+                               nrow = length(method))
+             rownames(fit_par) <- method
+             colnames(fit_par) <- c(
+               this_model$par_DF[
+                 this_model$par_DF$use_param %in% TRUE,
+                 "param_name"
+               ],
+               obj$stat_error_model$sigma_DF[
+                 obj$stat_error_model$sigma_DF$use_param %in% TRUE,
+                 "param_name"
+               ]
+             )
            }
            return(fit_par)
          },

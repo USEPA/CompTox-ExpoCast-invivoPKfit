@@ -9,6 +9,7 @@
 prefit.pk <- function(obj){
 
   objname <- deparse(substitute(obj))
+  status <- obj$status
   if(status >= status_prefit){
     warning(paste0(objname,
                    " current status is ",

@@ -8,6 +8,7 @@
 fit.pk <- function(obj){
   #check status
   objname <- deparse(substitute(obj))
+  status <- obj$status
   if(status >= status_fit){
     warning(paste0(objname,
                    " current status is ",
