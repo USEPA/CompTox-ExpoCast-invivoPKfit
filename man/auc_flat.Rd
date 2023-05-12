@@ -4,7 +4,7 @@
 \alias{auc_flat}
 \title{AUC for flat model}
 \usage{
-auc_flat(time, params, dose, iv.dose, medium)
+auc_flat(time, params, dose, route, medium)
 }
 \arguments{
 \item{time}{A numeric vector of times in hours.}
@@ -13,7 +13,7 @@ auc_flat(time, params, dose, iv.dose, medium)
 
 \item{dose}{A numeric vector of doses in mg/kg}
 
-\item{iv.dose}{A logical vector: TRUE for single IV bolus dose; FALSE for
+\item{route}{A logical vector: TRUE for single IV bolus dose; FALSE for
 single oral dose. Not used, but must be present for compatibility with other
 model functions.}
 
@@ -37,7 +37,7 @@ Evaluates the area under the concentration-time curve for a "flat" model
   `Fgutabs_Vdist`}
   }
 
-For oral administration (if any `iv.dose == FALSE`), `params` must also
+For oral administration (if any `route %in% "oral"`), `params` must also
 include:
   \describe{
   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
@@ -51,8 +51,8 @@ identifiable separately (i.e., when oral TK data are available, but IV data
 are not). If `Fgutabs` and `Vdist` are provided, they will override any value
 provided for `Fgutabs_Vdist`.
 
-If both oral and IV administration are specified (i.e., some `iv.dose == TRUE`
-and some `iv.dose == FALSE`), then `Vdist` is required along with either
+If both oral and IV administration are specified (i.e., some `route %in% "iv"`
+and some `route %in% "oral"`), then `Vdist` is required along with either
 `Fgutabs` or `Fgutabs_Vdist`. (If `Vdist` and `Fgutabs_Vdist` are provided,
 but `Fgutabs` is not provided, then `Fgutabs` will be calculated from `Vdist`
 and `Fgutabs_Vdist`.)

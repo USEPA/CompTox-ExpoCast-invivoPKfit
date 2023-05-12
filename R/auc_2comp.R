@@ -15,7 +15,7 @@
 #'   "Fgutabs_V1"}
 #'   }
 #'
-#'   For oral administration (\code{iv.dose} FALSE), \code{params} must also
+#'   For oral administration (\code{route} FALSE), \code{params} must also
 #'   include:
 #'   \describe{
 #'   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
@@ -32,20 +32,20 @@
 #'
 #' @param time A numeric vector of time values, in hours
 #' @param dose A numeric vector of doses in mg/kg
-#' @param iv.dose A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose
+#' @param route A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose
 #'@return A vector of plasma AUC values, evaluated at each time point in `time`.
 #' @export auc_2comp
 #' @author Caroline Ring, John Wambaugh
-auc_2comp <- function(params, time, dose, iv.dose, medium = "plasma")
+auc_2comp <- function(params, time, dose, route, medium = "plasma")
 {
 
-  #check whether lengths of time, dose, and iv.dose match
+  #check whether lengths of time, dose, and route match
   time_len <- length(time)
   dose_len <- length(dose)
-  ivdose_len <- length(iv.dose)
+  route_len <- length(route)
   medium_len <- length(medium)
 
-  len_all <- c(time_len, dose_len, ivdose_len, medium_len)
+  len_all <- c(time_len, dose_len, route_len, medium_len)
   #Cases:
   # All three lengths are the same -- OK
   # Two lengths are the same and the third is 1 -- OK
@@ -57,11 +57,11 @@ auc_2comp <- function(params, time, dose, iv.dose, medium = "plasma")
 
   if(!good_len){
     stop(paste0("invivopkfit::auc_2comp(): ",
-                "'time', 'dose', 'iv.dose', and 'medium'",
+                "'time', 'dose', 'route', and 'medium'",
                 "must either be the same length or length 1.\n",
                 "'time' is length ", time_len, "\n",
                 "'dose' is length ", dose_len, "\n",
-                "'iv.dose' is length ", ivdose_len, "\n",
+                "'route' is length ", route_len, "\n",
                 "'medium' is length ", medium_len, "\n")
     )
   }
@@ -70,7 +70,7 @@ auc_2comp <- function(params, time, dose, iv.dose, medium = "plasma")
   max_len <- max(len_all)
   time <- rep(time, length.out = max_len)
   dose <- rep(dose, length.out = max_len)
-  iv.dose <- rep(iv.dose, length.out = max_len)
+  route <- rep(route, length.out = max_len)
   medium <- rep(medium, length.out = max_len)
 
   if(all(c("Fgutabs", "V1") %in% names(params))){
@@ -97,7 +97,7 @@ auc_2comp <- function(params, time, dose, iv.dose, medium = "plasma")
 
   #check for any missing parameters
   #required params for oral dose
-  if(any(iv.dose %in% FALSE)){
+  if(any(route %in% "oral")){
     missing_params <- setdiff(c("kelim",
                                 "k21",
                                 "k12",
@@ -112,7 +112,7 @@ auc_2comp <- function(params, time, dose, iv.dose, medium = "plasma")
   }
 
   #required params for IV dose
-  if(any(iv.dose %in% TRUE)){
+  if(any(route %in% "iv")){
     missing_params <- setdiff(c("kelim",
                                 "V1",
                                 "k12",
@@ -145,38 +145,38 @@ auc_2comp <- function(params, time, dose, iv.dose, medium = "plasma")
   alpha <- (alpha_beta_sum + sqrt(alpha_beta_sum^2 - 4*alpha_beta_prod)) / 2
   beta <- (alpha_beta_sum - sqrt(alpha_beta_sum^2 - 4*alpha_beta_prod)) / 2
 
-  if(any(iv.dose %in% TRUE)){
-  A[iv.dose %in% TRUE] <- (dose[iv.dose %in% TRUE] *
+  if(any(route %in% "iv")){
+  A[route %in% "iv"] <- (dose[route %in% "iv"] *
                              (alpha - params$k21)) /
     (params$V1 * (alpha - beta))
-  B[iv.dose %in% TRUE] <- (dose[iv.dose %in% TRUE] *
+  B[route %in% "iv"] <- (dose[route %in% "iv"] *
                              (params$k21 - beta)) /
     (params$V1 * (alpha - beta))
 
-auc[iv.dose %in% TRUE] <- A[iv.dose %in% TRUE]/alpha -
-  A[iv.dose %in% TRUE]*exp(-time[iv.dose %in% TRUE]*alpha)/alpha +
-  B[iv.dose %in% TRUE]/beta -
-  B[iv.dose %in% TRUE]*exp(-time[iv.dose %in% TRUE]*beta)/beta
+auc[route %in% "iv"] <- A[route %in% "iv"]/alpha -
+  A[route %in% "iv"]*exp(-time[route %in% "iv"]*alpha)/alpha +
+  B[route %in% "iv"]/beta -
+  B[route %in% "iv"]*exp(-time[route %in% "iv"]*beta)/beta
 }
 
-if(any(iv.dose %in% FALSE)){
-  A[iv.dose %in% FALSE] <- (params$kgutabs * params$Fgutabs_V1 *
-                              dose[iv.dose %in% FALSE] *
+if(any(route %in% "oral")){
+  A[route %in% "oral"] <- (params$kgutabs * params$Fgutabs_V1 *
+                              dose[route %in% "oral"] *
                               (alpha - params$k21)) /
     ( (params$kgutabs - alpha) * (alpha - beta))
 
-  B[iv.dose %in% FALSE] <- (params$kgutabs * params$Fgutabs_V1 *
-                              dose[iv.dose %in% FALSE] *
+  B[route %in% "oral"] <- (params$kgutabs * params$Fgutabs_V1 *
+                              dose[route %in% "oral"] *
                               (params$k21 - beta)) /
     ( (params$kgutabs - beta) * (alpha - beta))
 
-auc[iv.dose %in% FALSE] <- A[iv.dose %in% FALSE]/alpha -
-  A[iv.dose %in% FALSE]*exp(-time[iv.dose %in% FALSE]*alpha)/alpha +
-  B[iv.dose %in% FALSE]/beta -
-  B[iv.dose %in% FALSE]*exp(-time[iv.dose %in% FALSE]*beta)/beta +
-  (-A[iv.dose %in% FALSE] - B[iv.dose %in% FALSE])/params$kgutabs -
-  (-A[iv.dose %in% FALSE] - B[iv.dose %in% FALSE])*
-  exp(-time[iv.dose %in% FALSE]*params$kgutabs)/params$kgutabs
+auc[route %in% "oral"] <- A[route %in% "oral"]/alpha -
+  A[route %in% "oral"]*exp(-time[route %in% "oral"]*alpha)/alpha +
+  B[route %in% "oral"]/beta -
+  B[route %in% "oral"]*exp(-time[route %in% "oral"]*beta)/beta +
+  (-A[route %in% "oral"] - B[route %in% "oral"])/params$kgutabs -
+  (-A[route %in% "oral"] - B[route %in% "oral"])*
+  exp(-time[route %in% "oral"]*params$kgutabs)/params$kgutabs
 }
 
   if(any(medium %in% "blood")){

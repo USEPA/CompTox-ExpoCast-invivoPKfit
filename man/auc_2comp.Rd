@@ -4,7 +4,7 @@
 \alias{auc_2comp}
 \title{Analytical AUC for the 2-compartment model}
 \usage{
-auc_2comp(params, time, dose, iv.dose, medium = "plasma")
+auc_2comp(params, time, dose, route, medium = "plasma")
 }
 \arguments{
 \item{params}{A named list of parameter values including the following:
@@ -18,7 +18,7 @@ auc_2comp(params, time, dose, iv.dose, medium = "plasma")
   "Fgutabs_V1"}
   }
 
-  For oral administration (\code{iv.dose} FALSE), \code{params} must also
+  For oral administration (\code{route} FALSE), \code{params} must also
   include:
   \describe{
   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
@@ -37,7 +37,7 @@ auc_2comp(params, time, dose, iv.dose, medium = "plasma")
 
 \item{dose}{A numeric vector of doses in mg/kg}
 
-\item{iv.dose}{A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose}
+\item{route}{A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose}
 }
 \value{
 A vector of plasma AUC values, evaluated at each time point in `time`.

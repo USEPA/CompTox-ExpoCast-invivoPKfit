@@ -18,7 +18,7 @@
 #'  not be used.
 #'@param time A numeric vector of times in hours.
 #'@param dose A numeric vector of doses in mg/kg
-#'@param iv.dose A logical vector: TRUE for single IV bolus dose; FALSE for single oral
+#'@param route A logical vector: TRUE for single IV bolus dose; FALSE for single oral
 #'  dose
 #'
 #'@return A vector of plasma AUC values (mg/L*time) corresponding to `time`.
@@ -29,16 +29,16 @@
 auc_1comp <- function(params,
                       time,
                       dose,
-                      iv.dose,
+                      route,
                       medium){
 
-  #check whether lengths of time, dose, and iv.dose match
+  #check whether lengths of time, dose, and route match
   time_len <- length(time)
   dose_len <- length(dose)
-  ivdose_len <- length(iv.dose)
+  route_len <- length(route)
   medium_len <- length(medium)
 
-  len_all <- c(time_len, dose_len, ivdose_len, medium_len)
+  len_all <- c(time_len, dose_len, route_len, medium_len)
   #Cases:
   # All three lengths are the same -- OK
   # Two lengths are the same and the third is 1 -- OK
@@ -50,11 +50,11 @@ auc_1comp <- function(params,
 
   if(!good_len){
     stop(paste0("invivopkfit::auc_1comp(): ",
-                "'time', 'dose', 'iv.dose', and 'medium'",
+                "'time', 'dose', 'route', and 'medium'",
                 "must either be the same length or length 1.\n",
                 "'time' is length ", time_len, "\n",
                 "'dose' is length ", dose_len, "\n",
-                "'iv.dose' is length ", ivdose_len, "\n",
+                "'route' is length ", route_len, "\n",
                 "'medium' is length ", medium_len, "\n")
     )
   }
@@ -63,7 +63,7 @@ auc_1comp <- function(params,
   max_len <- max(len_all)
   time <- rep(time, length.out = max_len)
   dose <- rep(dose, length.out = max_len)
-  iv.dose <- rep(iv.dose, length.out = max_len)
+  route <- rep(route, length.out = max_len)
   medium <- rep(medium, length.out = max_len)
 
   #compute Fgutabs/Vdist if necessary
@@ -90,7 +90,7 @@ auc_1comp <- function(params,
   param_length <- sapply(params, length)
   params <- params[param_length>0]
 
-  if(any(iv.dose %in% FALSE)){
+  if(any(route %in% "oral")){
 
     #check for needed params
     if(!all(c("kelim", "kgutabs", "Fgutabs_Vdist") %in% names(params))){
@@ -105,7 +105,7 @@ auc_1comp <- function(params,
     }
   }
 
-  if(any(iv.dose %in% TRUE)){
+  if(any(route %in% "iv")){
     if(!all(c("kelim", "Vdist") %in% names(params))){
       stop(paste0("auc_1comp(): Error: For 1-compartment IV model, ",
                   "missing parameter(s): ",
@@ -126,36 +126,36 @@ auc_1comp <- function(params,
   auc <- vector(mode = "numeric", length = length(time))
 
   #IV model\
-  if(any(iv.dose %in% TRUE)){
-    auc[iv.dose %in% TRUE] <- dose[iv.dose %in% TRUE]/
+  if(any(route %in% "iv")){
+    auc[route %in% "iv"] <- dose[route %in% "iv"]/
       (params$Vdist*params$kelim) -
-      dose[iv.dose %in% TRUE]*
-      exp(-time[iv.dose %in% TRUE]*params$kelim)/
+      dose[route %in% "iv"]*
+      exp(-time[route %in% "iv"]*params$kelim)/
       (params$Vdist*params$kelim)
   }
 
   #Oral model
-  if(any(iv.dose %in% FALSE)){
+  if(any(route %in% "oral")){
 
     if(params$kelim != params$kgutabs){
       #the usual case: kelim != kgutabs
-      auc[iv.dose %in% FALSE] <- -dose[iv.dose %in% FALSE]*
+      auc[route %in% "oral"] <- -dose[route %in% "oral"]*
         params$Fgutabs_Vdist*params$kgutabs*
         (1/params$kgutabs - 1/params$kelim)/
         ((-params$kelim + params$kgutabs)) +
-        dose[iv.dose %in% FALSE]*
+        dose[route %in% "oral"]*
         params$Fgutabs_Vdist*params$kgutabs*
-        (exp(-time[iv.dose %in% FALSE]*params$kgutabs)/params$kgutabs -
-           exp(-time[iv.dose %in% FALSE]*params$kelim)/params$kelim)/
+        (exp(-time[route %in% "oral"]*params$kgutabs)/params$kgutabs -
+           exp(-time[route %in% "oral"]*params$kelim)/params$kelim)/
         ((-params$kelim + params$kgutabs))
 
     }else{ #in case kelim = kgutabs, use the alternate model equation
-      auc[iv.dose %in% FALSE] <- dose[iv.dose %in% FALSE]*params$Fgutabs_Vdist/
+      auc[route %in% "oral"] <- dose[route %in% "oral"]*params$Fgutabs_Vdist/
         (params$kelim) +
-        (-dose[iv.dose %in% FALSE]*params$Fgutabs_Vdist*
-           time[iv.dose %in% FALSE]*params$kelim -
-           dose[iv.dose %in% FALSE]*params$Fgutabs)*
-        exp(-time[iv.dose %in% FALSE]*params$kelim)/
+        (-dose[route %in% "oral"]*params$Fgutabs_Vdist*
+           time[route %in% "oral"]*params$kelim -
+           dose[route %in% "oral"]*params$Fgutabs)*
+        exp(-time[route %in% "oral"]*params$kelim)/
         (params$kelim)
     }
   }

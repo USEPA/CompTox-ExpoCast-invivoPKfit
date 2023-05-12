@@ -4,7 +4,7 @@
 \alias{auc_1comp}
 \title{Analytic AUC for 1-compartment model}
 \usage{
-auc_1comp(params, time, dose, iv.dose, medium)
+auc_1comp(params, time, dose, route, medium)
 }
 \arguments{
 \item{params}{A named list of model parameter values. For either IV or oral
@@ -23,7 +23,7 @@ not be used.}
 
 \item{dose}{A numeric vector of doses in mg/kg}
 
-\item{iv.dose}{A logical vector: TRUE for single IV bolus dose; FALSE for single oral
+\item{route}{A logical vector: TRUE for single IV bolus dose; FALSE for single oral
 dose}
 }
 \value{
