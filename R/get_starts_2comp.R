@@ -79,6 +79,13 @@ if(nrow(ivdat)>0){
   k21 <- 0.1
   k12 <- 0.5
 
+  if((Fgutabs_V1 < 0) %in% TRUE |
+     !is.finite(Fgutabs_V1)) Fgutabs_V1 <- 1
+  if((V1 <= 0) %in% TRUE |
+     !is.finite(V1)) V1 <- 1
+  if((Fgutabs <= 0) %in% TRUE |
+     !is.finite(Fgutabs)) Fgutabs <- 0.5
+
   starts <- c("kelim" = kelim,
               "kgutabs" = kgutabs,
               "k12" = k12,
