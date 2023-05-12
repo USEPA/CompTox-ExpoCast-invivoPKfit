@@ -1,0 +1,237 @@
+#'Toxicokinetic statistics for 1-compartment model
+#'
+#'Calculate predicted toxicokinetic statistics for a 1-compartment model.
+#'
+#'# Statistics computed
+#'
+#'## Total clearance
+#'
+#'\deqn{\textrm{CL}_{tot} = k_{elim} + V_{1}}
+#'
+#'## Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day
+#'
+#'To convert to steady-state *blood* concentration, multiply by the
+#'blood-to-plasma ratio.
+#'
+#'The dosing interval \eqn{\tau = \frac{1}{\textrm{day}}} will be converted to
+#'the same units as \eqn{k_{elim}}.
+#'
+#'### Oral route
+#'
+#'\deqn{C_{ss} = \frac{F_{gutabs} V_{1}}{k_{elim} \tau}}
+#'
+#'### Intravenous route
+#'
+#'\deqn{C_{ss} = \frac{1}{\textrm{CL}_{tot} \tau}}
+#'
+#'## Half-life of elimination
+#'
+#'\deqn{\textrm{Halflife} = \frac{\log(2)}{k_{elim}}}
+#'
+#'## Time of peak concentration
+#'
+#'For oral route:
+#'
+#'\deqn{\frac{\log \left( \frac{k_{gutabs}}{k_{elim}} \right)}{k_{gutabs} -
+#'k_{elim}}}
+#'
+#'For intravenous route, time of peak concentration is always 0.
+#'
+#'## Peak concentration
+#'
+#'Evaluate [cp_1comp()] at the time of peak concentration.
+#'
+#'## AUC evaluated at infinite time
+#'
+#'Evaluate [auc_1comp()] at time = `Inf`.
+#'
+#'## AUC evaluated at the time of the last observation
+#'
+#'Evaluate [auc_1comp()] at time = `tlast`.
+#'
+#'
+#'
+#'
+#'@param pars A named vector of model parameters (e.g. from [coef.pk()]).
+#'@param route Character: The route for which to compute TK stats. Currently
+#'  only "oral" and "iv" are supported.
+#'@param medium Character: the media (tissue) for which to compute TK stats..
+#'  Currently only "blood" and "plasma" are supported.
+#'@param dose Numeric: A dose for which to calculate TK stats.
+#'@param time.units Character: the units of time used for the parameters `par`.
+#'  For example, if `par["kelim"]` is in units of 1/weeks, then `time.units =
+#'  "weeks"`. If `par["kelim"]` is in units of 1/hours, then `time.units =
+#'  "hours"`. This is used to calculate the steady-state plasma/blood
+#'  concentration for long-term daily dosing of 1 mg/kg/day.
+#'@return A `data.frame` with two variables:
+#' - `param_name` = `c("CLtot", "CLtot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity", "A", "B", "alpha", "beta", "Vbeta", "Vbeta_Fgutabs", "Vss", "Vss_Fgutabs")`
+#' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed; e.g. all of the `"x_Fgutabs"` parameters can only be computed if `route = "oral"` ).
+#'@export
+#'@author John Wambaugh, Caroline Ring
+tkstats_2comp <- function(pars,
+                          route,
+                          medium,
+                          dose,
+                          # tlast,
+                          time.units){
+
+  missing_pars <- setdiff(`2comp`$params,
+                          names(pars))
+  pars[missing_pars] <- NA_real_
+
+  kelim <- pars["kelim"]
+  Fgutabs <- kelim["Fgutabs"]
+  V1 <- pars["V1"]
+  Fgutabs_V1 <- pars["Fgutabs_V1"]
+  kgutabs <- pars["kgutabs"]
+  k12 <- pars["k12"]
+  k21 <- pars["k21"]
+  Rblood2plasma <- pars["Rblood2plasma"]
+
+  if(is.na(Fgutabs_V1) &
+     !is.na(Fgutabs) &
+     !is.na(V1)){
+    Fgutabs_V1 <- Fgutabs/V1
+  }
+
+  CLtot <- kelim * V1
+
+  CLtot_Fgutabs <- kelim / Fgutabs_V1
+
+  alphabeta_sum <- kelim + k12 + k21
+  alphabeta_prod <- kelim * k21
+
+alpha <- (alphabeta_sum + sqrt(alphabeta_sum^2 - 4*alphabeta_prod))/2
+beta <- (alphabeta_sum - sqrt(alphabeta_sum^2 - 4*alphabeta_prod))/2
+
+A <- ifelse(route %in% "iv",
+                  dose*(alpha - k21) / (V1 * (alpha - beta)),
+                  (kgutabs * Fgutabs_V1 *
+                     (alpha - k21)) /
+                    ( (kgutabs - alpha) * (alpha - beta))
+)
+B <- ifelse(route %in% "iv",
+                  dose*(k21 - beta) / (V1 * (alpha - beta)),
+                  (kgutabs * Fgutabs_V1 *
+                     (k21 - beta)) /
+                    ( (kgutabs - beta) * (alpha - beta))
+)
+
+Vbeta <-  V1 * kelim / beta
+Vbeta_Fgutabs <- (1/Fgutabs_V1) * kelim / beta
+Vss <- V1 * (k21 + k12) / k21
+Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
+
+
+  #convert dose interval of (1/day) into time units
+  dose_int <- convert_time(x = 1,
+               from = "days",
+               to = time.units,
+               inverse = TRUE)
+
+  Css_1mgkgday <- ifelse(route %in% "oral",
+                      Fgutabs_V1 / kelim / dose_int,
+                      1/(kelim * V1 * dose_int)) *
+    ifelse(medium %in% "blood",
+           Rblood2plasma,
+           1)
+
+  halflife_terminal <- log(2) / beta
+
+  tmax <- ifelse(route %in% "oral",
+                 tryCatch(
+                   uniroot( f = function(x){
+                     cp_2comp_dt(params = list("kelim" = kelim,
+                                               "Fgutabs_V1" = Fgutabs_V1,
+                                               "kgutabs" = kgutabs,
+                                               "k12" = k12,
+                                               "k21" = k21,
+                                               "Rblood2plasma" = Rblood2plasma),
+                                 time = x,
+                                 dose = dose,
+                                 route = "oral",
+                                 medium = medium)
+                   },
+                   lower = 0,
+                   upper = 2 * log(kgutabs / kelim) / (kgutabs - kelim), #tmax for 1-compartment
+                   extendInt = "downX", #function should be decreasing
+                   maxiter = 1000,
+                   tol = .Machine$double.eps)$root,
+                   error = function(err) return(NA_real_)),
+                 0)
+
+  Cmax <- cp_2comp(params = list(
+    "kelim" = kelim,
+    "k12" = k12,
+    "k21" = k21,
+    "Fgutabs_V1" = Fgutabs_V1,
+    "kgutabs" = kgutabs,
+    "Rblood2plasma" = Rblood2plasma
+  ),
+  time = tmax,
+  dose = dose,
+  route= route,
+  medium = medium)
+
+  AUC_inf <- auc_2comp(params = list(
+    "kelim" = kelim,
+    "Fgutabs_V1" = Fgutabs_V1,
+    "kgutabs" = kgutabs,
+    "k12" = k12,
+    "k21" = k21,
+    "Rblood2plasma" = Rblood2plasma
+  ),
+  time = Inf,
+  dose = dose,
+  route = route,
+  medium = medium)
+
+  # AUC_tlast <- auc_2comp(params = list(
+  #   "kelim" = kelim,
+  #   "Fgutabs_V1" = Fgutabs_V1,
+  #   "kgutabs" = kgutabs,
+  #   "k12" = k12,
+  #   "k21" = k21,
+  #   "Rblood2plasma" = Rblood2plasma
+  # ),
+  # time = tlast,
+  # dose = dose,
+  # route = route,
+  # medium = medium)
+
+  return(data.frame(param_name = c("CLtot",
+                                   "CLtot/Fgutabs",
+                                   "Css_1mgkgday",
+                                   "halflife",
+                                   "tmax",
+                                   "Cmax",
+                                   "AUC_infinity",
+                                   # "AUC_tlast",
+                                   "A",
+                                   "B",
+                                   "alpha",
+                                   "beta",
+                                   "Vbeta",
+                                   "Vbeta_Fgutabs",
+                                   "Vss",
+                                   "Vss_Fgutabs"),
+                    param_value = c(CLtot,
+                                    CLtot_Fgutabs,
+                                    Css_1mgkgday,
+                                    halflife,
+                                    tmax,
+                                    Cmax,
+                                    AUC_inf,
+                                    # AUC_tlast,
+                                    A,
+                                    B,
+                                    alpha,
+                                    beta,
+                                    Vbeta,
+                                    Vbeta_Fgutabs,
+                                    Vss,
+                                    Vss_Fgutabs)
+                    )
+         )
+
+}

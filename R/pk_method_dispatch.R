@@ -206,3 +206,22 @@ check_required_status.default <- function(obj){
   stop(paste("No 'check_required_status' method exists for object of class",
              paste(class(x), collapse = ", ")))
 }
+
+#' Get TK stats
+#'
+#' This is the S3 method generic for get_tkstats(0)
+#'
+#' @param obj An object.
+#' @seealso [get_tkstats.pk()] for the method for class [pk()]
+#' @export
+get_tkstats <- function(obj, ...){
+  UseMethod("get_tkstats", obj)
+}
+
+#' Default method for get_tkstats()
+#'
+#' @export
+get_tkstats.default <- function(obj){
+  stop(paste("No 'get_tkstats' method exists for object of class",
+             paste(class(x), collapse = ", ")))
+}
