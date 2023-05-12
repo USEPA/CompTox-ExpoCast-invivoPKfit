@@ -58,6 +58,7 @@ compare_models.pk <- function(obj,
   if(is.null(method)) method <- obj$optimx_settings$method
   if(is.null(newdata)) newdata <- obj$data
 
+  #check that all methods are valid
   if(!(all(method %in% obj$optimx_settings$method))){
     stop(paste("All values in `method` must be found in `obj$optimx_settings$method.",
                paste0("`method` = ", paste(method, sep = ", ")),
