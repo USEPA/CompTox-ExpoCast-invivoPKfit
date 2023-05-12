@@ -4,7 +4,7 @@
 \alias{rmse.default}
 \title{Root mean squared error (RMSE) default method}
 \usage{
-\method{rmse}{default}(x, ...)
+\method{rmse}{default}(obj, ...)
 }
 \description{
 Root mean squared error (RMSE) default method

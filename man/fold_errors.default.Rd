@@ -4,7 +4,7 @@
 \alias{fold_errors.default}
 \title{Fold_error default method}
 \usage{
-\method{fold_errors}{default}(x, ...)
+\method{fold_errors}{default}(obj, ...)
 }
 \description{
 Fold_error default method

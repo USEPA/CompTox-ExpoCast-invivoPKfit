@@ -4,7 +4,7 @@
 \alias{get_tkstats.default}
 \title{Default method for get_tkstats()}
 \usage{
-\method{get_tkstats}{default}(obj)
+\method{get_tkstats}{default}(obj, ...)
 }
 \description{
 Default method for get_tkstats()

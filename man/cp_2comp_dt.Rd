@@ -4,7 +4,7 @@
 \alias{cp_2comp_dt}
 \title{Time derivative of analytical 2-compartment model}
 \usage{
-cp_2comp_dt(params, time, dose, iv.dose, medium)
+cp_2comp_dt(params, time, dose, route, medium)
 }
 \arguments{
 \item{params}{A named list of parameter values including the following:
@@ -18,7 +18,7 @@ cp_2comp_dt(params, time, dose, iv.dose, medium)
   "Fgutabs_V1"}
   }
 
- For oral administration (\code{iv.dose} FALSE), \code{params} must also
+ For oral administration (`route %in% "oral"`), \code{params} must also
  include:
   \describe{
   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
@@ -35,15 +35,19 @@ cp_2comp_dt(params, time, dose, iv.dose, medium)
 
 \item{time}{A numeric vector of times in hours, reflecting the time points
 when concentration is measured after the corresponding single bolus dose.
-Must be same length as `dose` and `iv.dose`, or length 1.}
+Must be same length as `dose` and `route`, or length 1.}
 
 \item{dose}{A numeric vector of doses in mg/kg, reflecting single bolus doses
-administered at time 0. Must be same length as `time` and `iv.dose`, or
-length 1.}
+administered at time 0. Must be same length as `time` and `route`, or length
+1.}
 
-\item{iv.dose}{A logical vector, reflecting the route of administration of
-each single bolus dose. TRUE for single IV bolus dose; FALSE for single oral
-bolus dose. Must be same length as `time` and `dose`, or length 1.}
+\item{route}{A character vector, reflecting the route of administration of
+each single bolus dose. Currently, only "iv" and "oral" are supported. Must
+be same length as `time` and `dose`, or length 1.}
+
+\item{medium}{A character vector reflecting the medium in which each resulting
+concentration is to be calculated: "blood" or "plasma". Default is "plasma".
+Must be same length as `time` and `dose`, or length 1.}
 }
 \value{
 A vector of instantaneous rates of change of plasma concentration

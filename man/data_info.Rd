@@ -4,7 +4,7 @@
 \alias{data_info}
 \title{data_info generic}
 \usage{
-data_info(x, ...)
+data_info(obj, ...)
 }
 \description{
 data_info generic

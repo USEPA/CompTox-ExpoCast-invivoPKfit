@@ -4,7 +4,7 @@
 \alias{rmse}
 \title{Root mean squared error (RMSE)}
 \usage{
-rmse(x)
+rmse(obj, ...)
 }
 \description{
 This is the S3 method generic for `rmse`.

@@ -4,7 +4,7 @@
 \alias{data_info.default}
 \title{data_info default method}
 \usage{
-\method{data_info}{default}(x, ...)
+\method{data_info}{default}(obj, ...)
 }
 \description{
 data_info default method

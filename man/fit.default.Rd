@@ -4,7 +4,7 @@
 \alias{fit.default}
 \title{Fit default method}
 \usage{
-\method{fit}{default}(x, ...)
+\method{fit}{default}(obj, ...)
 }
 \description{
 Fit default method

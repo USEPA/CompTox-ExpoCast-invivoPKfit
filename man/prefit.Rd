@@ -4,7 +4,7 @@
 \alias{prefit}
 \title{Prefitting}
 \usage{
-prefit(x, ...)
+prefit(obj, ...)
 }
 \description{
 Prefitting

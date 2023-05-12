@@ -4,7 +4,7 @@
 \alias{check_required_status.default}
 \title{Default method for checking required status}
 \usage{
-\method{check_required_status}{default}(obj)
+\method{check_required_status}{default}(obj, ...)
 }
 \description{
 Default method for checking required status

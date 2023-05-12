@@ -4,7 +4,7 @@
 \alias{preprocess_data.default}
 \title{Preprocess_data default method}
 \usage{
-\method{preprocess_data}{default}(x, ...)
+\method{preprocess_data}{default}(obj, ...)
 }
 \description{
 Preprocess_data default method

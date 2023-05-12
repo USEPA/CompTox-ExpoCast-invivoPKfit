@@ -4,7 +4,7 @@
 \alias{fold_errors}
 \title{Fold error}
 \usage{
-fold_errors(x)
+fold_errors(obj, ...)
 }
 \description{
 This is the S3 method generic for `fold_errors`.

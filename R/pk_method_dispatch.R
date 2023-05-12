@@ -54,47 +54,47 @@ pk_subtract.default <- function(object, pk_obj, objectname){
 #'
 #' @export
 #' @seealso [preprocess_data.pk()] for the `preprocess_data` method for class [pk()]
-preprocess_data <- function(x, ...){
-  UseMethod("preprocess_data", x)
+preprocess_data <- function(obj, ...){
+  UseMethod("preprocess_data", obj)
 }
 
 #' Preprocess_data default method
 #'
 #' @export
-preprocess_data.default <- function(x, ...){
+preprocess_data.default <- function(obj, ...){
   stop(paste("No 'preprocess_data' method exists for object of class",
-             paste(class(x), collapse = ", ")))
+             paste(class(obj), collapse = ", ")))
 }
 
 #' data_info generic
 #'
 #' @export
 #' @seealso [data_info.pk()] for the `data_info` method for class [pk()]
-data_info <- function(x, ...){
-  UseMethod("data_info", x)
+data_info <- function(obj, ...){
+  UseMethod("data_info", obj)
 }
 
 #' data_info default method
 #'
 #' @export
-data_info.default <- function(x, ...){
+data_info.default <- function(obj, ...){
   stop(paste("No 'data_info' method exists for object of class",
-             paste(class(x), collapse = ", ")))
+             paste(class(obj), collapse = ", ")))
 }
 
 #' Prefitting
 #'
 #' @export
-prefit <- function(x, ...){
-  UseMethod("prefit", x)
+prefit <- function(obj, ...){
+  UseMethod("prefit", obj)
 }
 
 #' Prefit default method
 #'
 #' @export
-prefit.default <- function(x, ...){
+prefit.default <- function(obj, ...){
   stop(paste("No 'prefit' method exists for object of class",
-             paste(class(x), collapse = ", ")))
+             paste(class(obj), collapse = ", ")))
 }
 
 #' Fitting
@@ -102,16 +102,16 @@ prefit.default <- function(x, ...){
 #' This is the S3 generic method for `fit`.
 #' @export
 #' @seealso [fit.pk()] for the `fit` method for class [pk()]
-fit <- function(x, ...){
-  UseMethod("fit", x)
+fit <- function(obj, ...){
+  UseMethod("fit", obj)
 }
 
 #' Fit default method
 #'
 #' @export
-fit.default <- function(x, ...){
+fit.default <- function(obj, ...){
   stop(paste("No 'fit' method exists for object of class",
-             paste(class(x), collapse = ", ")))
+             paste(class(obj), collapse = ", ")))
 }
 
 #' Root mean squared error (RMSE)
@@ -119,16 +119,16 @@ fit.default <- function(x, ...){
 #' This is the S3 method generic for `rmse`.
 #' @export
 #' @seealso [rmse.pk()] for the `rmse` method for class [pk()]
-rmse <- function(x){
-  UseMethod("rmse", x)
+rmse <- function(obj, ...){
+  UseMethod("rmse", obj)
 }
 
 #' Root mean squared error (RMSE) default method
 #'
 #' @export
-rmse.default <- function(x, ...){
+rmse.default <- function(obj, ...){
   stop(paste("No 'rmse' method exists for object of class",
-             paste(class(x), collapse = ", ")))
+             paste(class(obj), collapse = ", ")))
 }
 
 #' Coefficient standard deviations
@@ -149,7 +149,7 @@ coef_sd <- function(obj,
 #' @export
 coef_sd.default <- function(obj, ...){
   stop(paste("No 'coef_sd' method exists for object of class",
-             paste(class(x), collapse = ", ")))
+             paste(class(obj), collapse = ", ")))
 }
 
 #' Get status
@@ -166,9 +166,9 @@ get_status <- function(obj, ...){
 #' Default method for getting status
 #'
 #' @export
-get_status.default <- function(obj){
+get_status.default <- function(obj, ...){
   stop(paste("No 'get_status' method exists for object of class",
-             paste(class(x), collapse = ", ")))
+             paste(class(obj), collapse = ", ")))
 }
 
 #' Fold error
@@ -176,16 +176,16 @@ get_status.default <- function(obj){
 #' This is the S3 method generic for `fold_errors`.
 #' @export
 #' @seealso [fold_errors.pk()] for the `fold_errors` method for class [pk()]
-fold_errors <- function(x){
-  UseMethod("fold_errors", x)
+fold_errors <- function(obj, ...){
+  UseMethod("fold_errors", obj)
 }
 
 #' Fold_error default method
 #'
 #' @export
-fold_errors.default <- function(x, ...){
+fold_errors.default <- function(obj, ...){
   stop(paste("No 'fold_errors' method exists for object of class",
-             paste(class(x), collapse = ", ")))
+             paste(class(obj), collapse = ", ")))
 }
 
 #' Check required status
@@ -202,9 +202,9 @@ check_required_status <- function(obj, ...){
 #' Default method for checking required status
 #'
 #' @export
-check_required_status.default <- function(obj){
+check_required_status.default <- function(obj, ...){
   stop(paste("No 'check_required_status' method exists for object of class",
-             paste(class(x), collapse = ", ")))
+             paste(class(obj), collapse = ", ")))
 }
 
 #' Get TK stats
@@ -221,7 +221,26 @@ get_tkstats <- function(obj, ...){
 #' Default method for get_tkstats()
 #'
 #' @export
-get_tkstats.default <- function(obj){
+get_tkstats.default <- function(obj, ...){
   stop(paste("No 'get_tkstats' method exists for object of class",
-             paste(class(x), collapse = ", ")))
+             paste(class(obj), collapse = ", ")))
+}
+
+#' Model comparison
+#'
+#' This is the S3 method generic for compare_models()
+#'
+#' @param obj An object.
+#' @seealso [compare_models.pk()] for the method for class [pk()]
+#' @export
+compare_models <- function(obj, ...){
+  UseMethod("compare_models", obj)
+}
+
+#' Default method for compare_models()
+#'
+#' @export
+compare_models.default <- function(obj, ...){
+  stop(paste("No 'compare_models' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
 }

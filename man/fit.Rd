@@ -4,7 +4,7 @@
 \alias{fit}
 \title{Fitting}
 \usage{
-fit(x, ...)
+fit(obj, ...)
 }
 \description{
 This is the S3 generic method for `fit`.

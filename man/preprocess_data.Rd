@@ -4,7 +4,7 @@
 \alias{preprocess_data}
 \title{Preprocess data generic}
 \usage{
-preprocess_data(x, ...)
+preprocess_data(obj, ...)
 }
 \description{
 Preprocess data generic

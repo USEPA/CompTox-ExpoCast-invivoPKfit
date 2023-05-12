@@ -4,7 +4,7 @@
 \alias{get_status.default}
 \title{Default method for getting status}
 \usage{
-\method{get_status}{default}(obj)
+\method{get_status}{default}(obj, ...)
 }
 \description{
 Default method for getting status

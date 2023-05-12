@@ -4,7 +4,7 @@
 \alias{prefit.default}
 \title{Prefit default method}
 \usage{
-\method{prefit}{default}(x, ...)
+\method{prefit}{default}(obj, ...)
 }
 \description{
 Prefit default method
