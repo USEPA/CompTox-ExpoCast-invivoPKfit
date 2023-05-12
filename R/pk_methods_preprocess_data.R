@@ -404,7 +404,9 @@ preprocess_data.pk <- function(obj){
                                   as_label),
                            collapse = " + "),
                          ". If all SDs are missing in a group, ",
-                         "SD for each observation will be imputed as 30% of the observed mean concentration. ",
+                         "SD for each observation will be imputed as",
+                         # "30% of the observed mean concentration. ",
+                         " 0. ",
                          n_sd_est, " missing SDs will be estimated."))
         }
         data <- do.call(dplyr::group_by,
@@ -414,7 +416,8 @@ preprocess_data.pk <- function(obj){
                         Value_SD = ifelse(is.na(Value_SD_orig) &
                                                     N_Subjects > 1,
                                                   ifelse(rep(all(is.na(Value_SD_orig)), dplyr::n()),
-                                                                 0.3 * Value,
+                                                                 # 0.3 * Value,
+                                                         0,
                                                                  min(Value_SD_orig, na.rm = TRUE)),
                                                   Value_SD_orig)
           ) %>%
