@@ -32,7 +32,7 @@ fit.pk <- function(obj){
   }
 
 
-  suppress.messages <- obj$data_settings$suppress.messages
+  suppress.messages <- obj$settings_preprocess$suppress.messages
   #For each model:
   for (this_model in names(obj$stat_model)){
 

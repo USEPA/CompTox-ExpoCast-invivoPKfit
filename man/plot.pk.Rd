@@ -9,8 +9,9 @@
   newdata = NULL,
   model = NULL,
   method = NULL,
-  plot_data_aes = ggplot2::aes(x = Time_trans, y = Conc/Dose, ymin = Conc/Dose -
-    Conc_SD/Dose, ymax = Conc/Dose + Conc_SD/Dose, shape = Reference, fill = Detect),
+  plot_data_aes = ggplot2::aes(x = Time_trans, y = Conc/Dose, color = as.factor(Dose),
+    ymin = Conc/Dose - Conc_SD/Dose, ymax = Conc/Dose + Conc_SD/Dose, shape = Reference,
+    fill = Detect),
   plot_fit_aes = ggplot2::aes(x = Time_trans, y = Conc/Dose, linetype =
     interaction(model, method)),
   facet_fun = "facet_grid",

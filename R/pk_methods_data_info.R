@@ -62,7 +62,7 @@ data_info.pk <- function(obj){
   #do NCA
   dat_info$nca <- do.call(dplyr::group_by,
                           args =c(list(data),
-                                  obj$data_settings$nca_group)) %>%
+                                  obj$settings_data_info$nca_group)) %>%
     dplyr::summarise(tlast = max(Time_trans),
                      calc_nca(time = Time_trans,
                               dose = Dose,

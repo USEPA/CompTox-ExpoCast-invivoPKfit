@@ -24,7 +24,7 @@ Data pre-processing for an object `obj` includes the following steps, in order:
 1. Coerce data to class `data.frame` (if it is not already)
 2. Rename variables to harmonized "`invivopkfit` aesthetic" variable names, using `obj$mapping`
 3. Check that the data includes only one chemical and one species.
-4. Check that the data includes only routes in `obj$data_settings$routes_keep` and media in `obj$data_settings$media_keep`
+4. Check that the data includes only routes in `obj$settings_preprocess$routes_keep` and media in `obj$settings_preprocess$media_keep`
 5. Check that the data includes only one unit for concentration, one unit for time, and one unit for dose.
 6. Coerce Value, Value_SD, LOQ, Dose, and Time to numeric, if they are not already.
 7. Coerce Species, Route, and Media to lowercase.

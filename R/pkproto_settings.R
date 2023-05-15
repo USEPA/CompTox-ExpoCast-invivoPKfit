@@ -31,11 +31,11 @@
 #'   Default FALSE.
 #' @param ... Any additional arguments. Currently ignored.
 #'
-#' @return An object of class `pk_data_settings`. This is a named list of the
+#' @return An object of class `pk_settings_preprocess`. This is a named list of the
 #'   arguments provided to this function and their values.
 #' @author Caroline Ring
 #' @export
-settings_data <- function(routes_keep = c("oral", "iv"),
+settings_preprocess <- function(routes_keep = c("oral", "iv"),
                              media_keep = c("blood", "plasma"),
                           ratio_conc_dose = 1,
                              impute_loq = TRUE,
@@ -43,16 +43,36 @@ settings_data <- function(routes_keep = c("oral", "iv"),
                           calc_loq_factor = 0.45,
                              impute_sd = TRUE,
                           sd_group = dplyr::vars(Chemical, Species, Reference, Media),
-                          nca_group = dplyr::vars(Chemical, Species, Reference, Route, Media, Dose),
+
                              suppress.messages = FALSE,
                           ...){
 #get arguments and values
 argg <- c(as.list(environment()), list(...))
-this_settings_data <- argg
+this_settings_preprocess <- argg
 #set class
-class(this_settings_data) <- c(class(this_settings_data), "pkproto", "pk_data_settings")
+class(this_settings_preprocess) <- c(class(this_settings_preprocess), "pkproto", "pk_settings_preprocess")
 
-return(this_settings_data)
+return(this_settings_preprocess)
+}
+
+#' Data info settings
+#'
+#' @param nca_group A set of variables. Data will be split into groups according
+#'   to unique combinations of these variables, and non-compartmental analysis
+#'   will be performed separately on each group. Default `dplyr::vars(Chemical,
+#'   Species, Reference, Route, Media, Dose)`.
+#' @param ... Other arguments (currently ignored).
+#' @return An object of class `c(pkproto, pk_settings_data_info)`
+#' @export
+settings_data_info <- function(nca_group = dplyr::vars(Chemical, Species, Reference, Route, Media, Dose),
+                               ...){
+  #get arguments and values
+  argg <- c(as.list(environment()), list(...))
+  this_settings_data_info <- argg
+  #set class
+  class(this_settings_data_info) <- c(class(this_settings_data_info), "pkproto", "pk_settings_data_info")
+
+  return(this_settings_data_info)
 }
 
 #' `optimx` optimizer settings

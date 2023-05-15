@@ -68,32 +68,64 @@ pk_add.pk_scales <- function(object, pk_obj, objectname){
   return(pk_obj)
 }
 
-#' Add a `pk_data_settings` object.
+#' Add a `pk_settings_preprocess` object.
 #'
-#' @param object The `pk_data_settings` object to be added.
-#' @param pk_obj The `pk` object to which the `pk_data_settings` object will be added.
-#' @param objectname The name of the `pk_data_settings` object.
+#' @param object The `pk_settings_preprocess` object to be added.
+#' @param pk_obj The `pk` object to which the `pk_settings_preprocess` object will be added.
+#' @param objectname The name of the `pk_settings_preprocess` object.
 #'
-#' @return The `pk` object, modified by the `pk_data_settings` object.
+#' @return The `pk` object, modified by the `pk_settings_preprocess` object.
 #' @author Caroline Ring
 #' @export
-pk_add.pk_data_settings <- function(object, pk_obj, objectname){
+pk_add.pk_settings_preprocess <- function(object, pk_obj, objectname){
 
-  #New data_settings will *replace* existing ones
-  if(!is.null(pk_obj$data_settings)){
+  #New settings_preprocess will *replace* existing ones
+  if(!is.null(pk_obj$settings_preprocess)){
     message(paste0(objectname,
-                   ": data_settings already present; new data_settings will replace the existing one")
+                   ": settings_preprocess already present; new settings_preprocess will replace the existing one")
     )
   }
 
-  pk_obj$data_settings <- object
+  pk_obj$settings_preprocess <- object
   if(pk_obj$status > (status_preprocess - 1)){
     #with new data pre-processing settings, everything will change starting from
     #data pre-processing
     pk_obj$status <- status_preprocess - 1
     message(paste0(objectname,
-                   ": Modifying data_settings resets status to level ",
+                   ": Modifying settings_preprocess resets status to level ",
                    status_preprocess - 1,
+                   "; all later stages of the workflow will need to be re-done")
+    )
+  }
+  return(pk_obj)
+}
+
+#' Add a `pk_settings_data_info` object.
+#'
+#' @param object The `pk_settings_data_info` object to be added.
+#' @param pk_obj The `pk` object to which the `pk_settings_data_info` object will be added.
+#' @param objectname The name of the `pk_settings_data_info` object.
+#'
+#' @return The `pk` object, modified by the `pk_settings_data_info` object.
+#' @author Caroline Ring
+#' @export
+pk_add.pk_settings_data_info <- function(object, pk_obj, objectname){
+
+  #New settings_data_info will *replace* existing ones
+  if(!is.null(pk_obj$settings_data_info)){
+    message(paste0(objectname,
+                   ": settings_data_info already present; new settings_data_info will replace the existing one")
+    )
+  }
+
+  pk_obj$settings_data_info <- object
+  if(pk_obj$status > (status_preprocess - 1)){
+    #with new data info settings, everything will change starting from
+    #data info
+    pk_obj$status <- status_data_info - 1
+    message(paste0(objectname,
+                   ": Modifying settings_data_info resets status to level ",
+                   status_data_info - 1,
                    "; all later stages of the workflow will need to be re-done")
     )
   }

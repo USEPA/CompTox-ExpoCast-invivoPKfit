@@ -32,7 +32,7 @@
 #'   The data (either `newdata` or `obj$data`) will be grouped according to the
 #'   unique combinations of these variables. For each unique combination of
 #'   these variables in the data, a set of TK statistics will be computed.
-#'   The default is `obj$data_settings$nca_group`, to derive TK statistics for the
+#'   The default is `obj$settings_data_info$nca_group`, to derive TK statistics for the
 #'   same groups of data as non-compartmental analysis statistics. With the
 #'   default, you can directly compare e.g. a model-predicted AUC_inf to the
 #'   corresponding NCA-estimated AUC_inf. However, you may specify a different
@@ -53,7 +53,7 @@
 #' @author Caroline Ring
 get_tkstats.pk <- function(obj,
                            newdata = NULL,
-                           tk_group = obj$data_settings$nca_group,
+                           tk_group = obj$settings_data_info$nca_group,
                            model = NULL,
                            method = NULL){
 
@@ -97,6 +97,7 @@ get_tkstats.pk <- function(obj,
   all_coefs <- coef(obj,
                      model = model,
                      method = method)
+
 tkstats_all <- sapply(model,
        function(this_model){
          #get the model's TKstats function

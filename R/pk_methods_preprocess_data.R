@@ -6,7 +6,7 @@
 #' 1. Coerce data to class `data.frame` (if it is not already)
 #' 2. Rename variables to harmonized "`invivopkfit` aesthetic" variable names, using `obj$mapping`
 #' 3. Check that the data includes only one chemical and one species.
-#' 4. Check that the data includes only routes in `obj$data_settings$routes_keep` and media in `obj$data_settings$media_keep`
+#' 4. Check that the data includes only routes in `obj$settings_preprocess$routes_keep` and media in `obj$settings_preprocess$media_keep`
 #' 5. Check that the data includes only one unit for concentration, one unit for time, and one unit for dose.
 #' 6. Coerce Value, Value_SD, LOQ, Dose, and Time to numeric, if they are not already.
 #' 7. Coerce Species, Route, and Media to lowercase.
@@ -74,12 +74,12 @@ preprocess_data.pk <- function(obj){
     routes <- unique(data$Route)
     media <- unique(data$Media)
 
-    if( !(all(routes %in% obj$data_settings$routes_keep) &
-          all(media %in% obj$data_settings$media_keep)) ){
+    if( !(all(routes %in% obj$settings_preprocess$routes_keep) &
+          all(media %in% obj$settings_preprocess$media_keep)) ){
       stop(paste("preprocess_data.pk(): data contains unsupported media and/or routes.",
-                 paste("Supported media:", paste(obj$data_settings$media_keep, collapse = "; ")),
+                 paste("Supported media:", paste(obj$settings_preprocess$media_keep, collapse = "; ")),
                  paste("Media in data:", paste(media, collapse = "; ")),
-                 paste("Supported routes:", paste(obj$data_settings$routes_keep, collapse = "; ")),
+                 paste("Supported routes:", paste(obj$settings_preprocess$routes_keep, collapse = "; ")),
                  paste("Routes in data:", paste(routes, collapse = "; ")),
                  sep = "\n"))
     }
@@ -107,7 +107,7 @@ preprocess_data.pk <- function(obj){
 
     # If data has passed all these initial checks, then proceed with pre-processing
 
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       ### display messages describing loaded data
       message(
         paste(
@@ -128,7 +128,7 @@ preprocess_data.pk <- function(obj){
       value_num <- as.numeric(data$Value)
       old_na <- sum(is.na(data$Value) | !nzchar(data$Value))
       new_na <- sum(is.na(value_num))
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Column \"Value\" converted from ",
                        class(data$Value),
                        " to numeric. ",
@@ -147,7 +147,7 @@ preprocess_data.pk <- function(obj){
       valuesd_num <- as.numeric(data$Value_SD)
       old_na <- sum(is.na(data$Value_SD) | !nzchar(data$Value_SD))
       new_na <- sum(is.na(valuesd_num))
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Column \"Value_SD\" converted from ",
                        class(data$Value),
                        " to numeric. ",
@@ -166,7 +166,7 @@ preprocess_data.pk <- function(obj){
       loq_num <- as.numeric(data$LOQ)
       old_na <- sum(is.na(data$LOQ) | !nzchar(data$LOQ))
       new_na <- sum(is.na(loq_num))
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Column \"LOQ\" converted from ",
                        class(data$LOQ),
                        " to numeric. ",
@@ -186,7 +186,7 @@ preprocess_data.pk <- function(obj){
       dose_num <- as.numeric(data$Dose)
       old_na <- sum(is.na(data$Dose) | !nzchar(data$Dose))
       new_na <- sum(is.na(dose_num))
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Column \"Dose\" converted from ",
                        class(data$Dose),
                        " to numeric. ",
@@ -205,7 +205,7 @@ preprocess_data.pk <- function(obj){
       time_num <- as.numeric(data$Time)
       old_na <- sum(is.na(data$Time) | !nzchar(data$Time))
       new_na <- sum(is.na(time_num))
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Column \"Time\" converted from ",
                        class(data$TIme),
                        " to numeric. ",
@@ -224,7 +224,7 @@ preprocess_data.pk <- function(obj){
       N_Subjects_num <- as.numeric(data$N_Subjects)
       old_na <- sum(is.na(data$N_Subjects) | !nzchar(data$N_Subjects))
       new_na <- sum(is.na(N_Subjects_num))
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Column \"N_Subjects\" converted from ",
                        class(data$N_Subjects),
                        " to numeric. ",
@@ -238,7 +238,7 @@ preprocess_data.pk <- function(obj){
     }
 
     ### Coerce Species, Route, and Media to lowercase
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       message(paste("Species, Route, and Media",
                     "will be coerced to lowercase."))
     }
@@ -247,7 +247,7 @@ preprocess_data.pk <- function(obj){
     data$Media <- tolower(data$Media)
 
     #Coerce any negative Value to NA
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       if(any((data$Value<0) %in% TRUE)){
         message(paste('If value < 0, replacing Value with NA.',
                       sum((data$Value < 0) %in% TRUE),
@@ -257,7 +257,7 @@ preprocess_data.pk <- function(obj){
     data[(data$Value<0) %in% TRUE, "Value"] <- NA_real_
 
     #Coerce any negative LOQ to NA
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       if(any((data$LOQ<0) %in% TRUE)){
         message(paste('If LOQ < 0, replacing LOQ with NA.',
                       sum((data$LOQ < 0) %in% TRUE),
@@ -267,7 +267,7 @@ preprocess_data.pk <- function(obj){
     data[(data$LOQ<=0) %in% TRUE, "LOQ"] <- NA_real_
 
     #Coerce any negative Value_SD to NA
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       if(any((data$Value_SD<0) %in% TRUE)){
         message(paste('If value_SD < 0, replacing Value_SD with NA.',
                       sum((data$Value_SD < 0) %in% TRUE),
@@ -278,7 +278,7 @@ preprocess_data.pk <- function(obj){
 
 
     #Coerce any negative Time to NA
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       if(any((data$Time<0) %in% TRUE)){
         message(paste('If Time < 0, replacing Time with NA.',
                       sum((data$Time < 0) %in% TRUE),
@@ -289,7 +289,7 @@ preprocess_data.pk <- function(obj){
 
     #If any non-NA Value is currently less than its non-NA LOQ,
     #then replace it with NA
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       if(any((data$Value <= data$LOQ) %in% TRUE)){
         message(paste('If value <= LOQ, replacing Value with NA.',
                       sum((data$Value <= data$LOQ) %in% TRUE),
@@ -303,14 +303,14 @@ preprocess_data.pk <- function(obj){
     # Impute LOQ:
     # as calc_loq_factor * minimum non-NA value in each loq_group
     data$LOQ_orig <- data$LOQ
-    if(obj$data_settings$impute_loq %in% TRUE){
+    if(obj$settings_preprocess$impute_loq %in% TRUE){
       if(any(is.na(data$LOQ))){
-        if(!obj$data_settings$suppress.messages){
+        if(!obj$settings_preprocess$suppress.messages){
           message(paste0("Estimating missing LOQs as ",
-                         obj$data_settings$calc_loq_factor,
+                         obj$settings_preprocess$calc_loq_factor,
                          "* minimum non-NA, non-zero Value for each unique combination of ",
                          paste(
-                           sapply(obj$data_settings$loq_group,
+                           sapply(obj$settings_preprocess$loq_group,
                                   as_label),
                            collapse = " + ")
           )
@@ -318,11 +318,11 @@ preprocess_data.pk <- function(obj){
         }
         data <- do.call(dplyr::group_by,
                         args =c(list(data),
-                                obj$data_settings$loq_group)) %>%
+                                obj$settings_preprocess$loq_group)) %>%
           dplyr::mutate(LOQ_orig = LOQ,
                         LOQ = ifelse(is.na(LOQ_orig),
                                              min(Value[Value > 0], na.rm = TRUE) *
-                                               obj$data_settings$calc_loq_factor,
+                                               obj$settings_preprocess$calc_loq_factor,
                                              LOQ_orig)
           ) %>%
           dplyr::ungroup() %>%
@@ -331,7 +331,7 @@ preprocess_data.pk <- function(obj){
 
     } #end if impute_loq %in% TRUE
 
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       message(paste0("Converting 'Value' values of less than LOQ to NA. ",
                      sum((data$Value <  data$LOQ) %in% TRUE),
                      " values will be converted."))
@@ -341,7 +341,7 @@ preprocess_data.pk <- function(obj){
     #Remove any remaining cases where both Value and LOQ are NA
     #because if we don't have a value or an LOQ, we can't do anything
     if(any(is.na(data$Value) & is.na(data$LOQ))){
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Removing observations where both Value and LOQ were NA. ",
                        sum(is.na(data$Value) & is.na(data$LOQ)),
                        " observations will be removed."))
@@ -349,7 +349,7 @@ preprocess_data.pk <- function(obj){
       data <- subset(data,
                      !(is.na(data$Value) & is.na(data$LOQ)))
 
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste(dim(data)[1], "observations of",
                       length(unique(data$Chemical)), "unique chemicals,",
                       length(unique(data$Species)), "unique species, and",
@@ -360,7 +360,7 @@ preprocess_data.pk <- function(obj){
     # For any cases where N_Subjects is NA, impute N_Subjects = 1
     if(any(is.na(data$N_Subjects))){
       data$N_Subjects_orig <- data$N_Subjects
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(
           paste0(
             "N_Subjects is NA for ",
@@ -375,7 +375,7 @@ preprocess_data.pk <- function(obj){
 
     #for anything with N_Subjects == 1, set Value_SD to 0
     if(any(data$N_Subjects == 1)){
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(
           paste0(
             "N_Subjects is 1 for ",
@@ -389,9 +389,9 @@ preprocess_data.pk <- function(obj){
 
     # Impute missing SDs
     data$Value_SD_orig <- data$Value_SD
-    if(obj$data_settings$impute_sd %in% TRUE){
+    if(obj$settings_preprocess$impute_sd %in% TRUE){
       if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value_SD))){
-        if(!obj$data_settings$suppress.messages){
+        if(!obj$settings_preprocess$suppress.messages){
           #number of SDs to be estimated
           n_sd_est <- sum(
             (data$N_Subjects >1) %in% TRUE &
@@ -400,7 +400,7 @@ preprocess_data.pk <- function(obj){
           message(paste0("Estimating missing concentration SDs (for data points with N_Subjects > 1) as ",
                          "minimum non-missing SD for each group of data given by the unique combination of variables in ",
                          paste(
-                           sapply(obj$data_settings$sd_group,
+                           sapply(obj$settings_preprocess$sd_group,
                                   as_label),
                            collapse = " + "),
                          ". If all SDs are missing in a group, ",
@@ -411,7 +411,7 @@ preprocess_data.pk <- function(obj){
         }
         data <- do.call(dplyr::group_by,
                         args = c(list(data),
-                                 obj$data_settings$sd_group)) %>%
+                                 obj$settings_preprocess$sd_group)) %>%
           dplyr::mutate(Value_SD_orig = Value_SD,
                         Value_SD = ifelse(is.na(Value_SD_orig) &
                                                     N_Subjects > 1,
@@ -430,7 +430,7 @@ preprocess_data.pk <- function(obj){
     #Remove any remaining multi-subject observations where SD is NA
     #(with imputing SD = 0.3*Value as a fallback, this will only be cases where Value was NA)
     if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value_SD))){
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Removing remaining observations with N_Subjects > 1 where reported SD is NA. ",
                        sum((data$N_Subjects >1) %in% TRUE &
                              is.na(data$Value_SD)),
@@ -440,7 +440,7 @@ preprocess_data.pk <- function(obj){
                      !((N_Subjects >1) %in% TRUE & is.na(Value_SD))
       )
 
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste(dim(data)[1], "observations of",
                       length(unique(data$Chemical)), "unique chemicals,",
                       length(unique(data$Species)), "unique species, and",
@@ -450,7 +450,7 @@ preprocess_data.pk <- function(obj){
 
     #Remove any remaining multi-subject observations where Value is NA
     if(any((data$N_Subjects >1) %in% TRUE & is.na(data$Value))){
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Removing observations with N_Subjects > 1 where reported Value is NA (because log-likelihood for non-detect multi-subject observations has not been implemented). ",
                        sum((data$N_Subjects >1) %in% TRUE &
                              is.na(data$Value)),
@@ -460,7 +460,7 @@ preprocess_data.pk <- function(obj){
                      !((N_Subjects >1) %in% TRUE & is.na(Value))
       )
 
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste(dim(data)[1], "observations of",
                       length(unique(data$Chemical)), "unique chemicals,",
                       length(unique(data$Species)), "unique species, and",
@@ -470,14 +470,14 @@ preprocess_data.pk <- function(obj){
 
     #Remove any NA time values
     if(any(is.na(data$Time))){
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Removing observations with NA time values.",
                        sum(is.na(data$Time)),
                        " observations will be removed."))
       }
       data <- subset(data, !is.na(Time))
 
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste(dim(data)[1], "observations of",
                       length(unique(data$Reference)), "unique references remain."))
       }
@@ -485,14 +485,14 @@ preprocess_data.pk <- function(obj){
 
     #Remove any Dose = 0 observations
     if(any(data$Dose <= .Machine$double.eps)){
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Removing observations with Dose == 0 (control observations). ",
                        sum(data$Dose <= .Machine$double.eps),
                        " observations will be removed."))
       }
       data <- subset(data, data$Dose > .Machine$double.eps)
 
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste(dim(data)[1], "observations of",
                       length(unique(data$Reference)), "unique references remain."))
       }
@@ -521,7 +521,7 @@ preprocess_data.pk <- function(obj){
     }
 
     if(!(from_units == to_units)){
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       message(paste("Converting time from",
                     from_units,
                     "to",
@@ -548,12 +548,12 @@ preprocess_data.pk <- function(obj){
     #Scale concentration by ratio_conc_dose
 
     if(is.null(obj$scales$conc$expr)){
-      obj$data_settings$ratio_conc_dose <- 1
+      obj$settings_preprocess$ratio_conc_dose <- 1
     }
 
-    ratio_conc_dose <- obj$data_settings$ratio_conc_dose
+    ratio_conc_dose <- obj$settings_preprocess$ratio_conc_dose
 
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       if(!(ratio_conc_dose %in% 1)){
       message(paste("Concentrations, LOQs, and concentration SDs are being scaled by",
                     "ratio_conc_dose = ",
@@ -563,7 +563,7 @@ preprocess_data.pk <- function(obj){
 
 
 if("Conc" %in% names(data)){
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste("Harmonized variable `Conc` already exists in data!.",
                       "It will be overwritten as",
                       "`pmax(Value/ratio_conc_dose, LOQ/ratio_conc_dose, na.rm = TRUE)`."))
@@ -574,7 +574,7 @@ if("Conc" %in% names(data)){
                         na.rm = TRUE)
 
     if("Detect" %in% names(data)){
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste("Harmonized variable `Detect`already exists in data!",
                       "It will be overwritten as",
                       "`is.na(Value)`."))
@@ -583,7 +583,7 @@ if("Conc" %in% names(data)){
       data$Detect <- !is.na(data$Value)
 
     if("Conc_SD" %in% names(data)){
-      if(!obj$data_settings$suppress.messages){
+      if(!obj$settings_preprocess$suppress.messages){
         message(paste("Harmonized variable `Conc_SD` already exists in data!",
                       "It will be overwritten as",
                       "`ifelse(data$Detect,
@@ -594,7 +594,7 @@ if("Conc" %in% names(data)){
       data$Conc_SD <- data$Value_SD/ratio_conc_dose
 
       if("Conc.Units" %in% names(data)){
-        if(!obj$data_settings$suppress.messages){
+        if(!obj$settings_preprocess$suppress.messages){
           message(paste("Harmonized variable `Conc.Units` already exists in data!",
                         "It will be overwritten as",
                        "Value.Units/ratio_conc_dose"))
@@ -623,7 +623,7 @@ if("Conc" %in% names(data)){
                                                  env = caller_env())
     }
 
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       message(paste("Applying transformations to concentration variables:",
                     paste0("dose_norm = ", obj$scales$conc$dose_norm),
                     paste0("log10_trans = ", obj$scales$conc$log10_trans),

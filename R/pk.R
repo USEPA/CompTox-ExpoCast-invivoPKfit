@@ -338,8 +338,11 @@ pk <- function(data = NULL,
   #nd assign it class pk
   class(obj) <- append(class(obj), "pk")
 
-  # Add default data settings
-  obj <- obj + settings_data()
+  # Add default data preprocessing settings
+  obj <- obj + settings_preprocess()
+
+  # Add default data info settings
+  obj <- obj + settings_data_info()
 
   #Add default optimx settings
   obj <- obj + settings_optimx()

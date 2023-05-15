@@ -4,64 +4,28 @@
 \alias{scale_conc}
 \title{Scale concentrations}
 \usage{
-scale_conc(dose_norm = FALSE, log10_trans = FALSE, ratio_conc_dose = 1, ...)
+scale_conc(dose_norm = FALSE, log10_trans = FALSE, ...)
 }
 \arguments{
-\item{...}{Other arguments (not currently used)}
+\item{dose_norm}{Logical: Whether to normalize observed concentrations (and
+observed concentration standard deviations and limits of quantification) by
+dividing them by the corresponding dose. Default `FALSE`.}
 
-\item{expr}{An expression to compute normalized and/or transformed
-concentration data. See Details for requirements.}
+\item{log10_trans}{Logical: Whether to apply a `log10()` transformation to
+observed concentrations (and limits of quantification), after any dose
+normalization is applied. Default `FALSE`.}
+
+\item{...}{Other arguments (not currently used)}
 }
 \value{
-An object of class `pk_scales`: A named list with element `name =
- "conc"` (denoting the variable to be scaled) and `value = list("expr" =
- rlang::enquo(expr), ...)` (denoting the arguments supplied to
- [scale_conc()]). See [pk_add.pk_scales()].
+An object of class `pk_scales`: A named list with two elements. The
+ first element `name = "conc"` denotes the variable to be scaled. The second
+ element `value` is itself a named list of the arguments supplied to
+ [scale_conc()]). This object is usually added to an existing [pk()] object
+ using `+`. See [pk_add.pk_scales()].
 }
 \description{
-Normalize and/or transform concentration data
-}
-\details{
-# Requirements for `expr` `expr` should be an expression (unquoted) --
-effectively, the "right hand side" of a formula that will produce the
-transformed concentration variable. This expression may refer to any of the
-harmonized `invivopkfit` variable names (see [pk()] for a list), except that
-the concentration variable to be transformed (e.g. `Conc`, `Value`,
-`Value_SD`, etc.) should be replaced with the placeholder name `.conc`. For
-example, to apply dose-normalization (i.e., new concentration = old
-concentration / dose), you would supply
-
-`expr = .conc/Dose`
-
-To apply a log10 transformation (i.e., new concentration = log10(old
-concentration)), you would supply
-
-`expr = log10(.conc)`
-
-
-The reason for using the `.conc` placeholder is that this formula will be
-applied to five different concentration variables in the harmonized data
-(`Value`, `Value_SD`, `LOQ`, `Conc`, and `Conc_SD`), and (during curve
-fitting) will also be applied to model-predicted concentrations. The `.conc`
-placeholder is an easy way to say "Apply this transformation to all of the
-concentration-related variables."
-
-The expression may additionally refer to variables defined in the global
-environment, or the environment where you are calling this function. Variables
-will be looked for in the harmonized `invivopkfit` data frame first, and if
-not found there, will be looked for in the environment. This means if you have
-a variable in your global environment that is named the same thing as one of
-the `invivopkfit` harmonized variables, you should rename your global-environment variable before
-trying to refer to it in `expr`.
-
-For example, if you write at the R command line
-```
-b <- 5
-my_pk <- pk(data = my_df) + scale_conc(expr = .conc/b) + stat_model(model = "1comp")
-my_pk <- fit(my_pk)
-```
-Then all concentrations will be divided by 5, which you will be able to see by
-examining `my_pk$data`.
+Scale concentrations
 }
 \author{
 Caroline Ring

@@ -37,33 +37,112 @@ In `ggplot2`, you can add the instructions in any order. You can overwrite old i
 And just as `ggplot2` doesn't actually build the plot until you issue a `print` command, `invivoPKfit` doesn't actually fit the model until you issue  a `fit` command.
 
 
-# A full example
+# A worked example
 
 Here's a basic example.
+
+First, select data for a single chemical and species. This is the dataset that we will fit.
 
 ```{r}
 #select data for a single chemical and species
 my_data <- subset(cvt,
                           chemicals_analyzed.dsstox_substance_id %in% "DTXSID1021116" &
                             subjects.species_harmonized %in% "rat")
+```
 
- #initialize a `pk` object with default instructions for fitting PK models
-my_pk <- pk(data = my_data)
+Now, initialize a `pk` object.  This contains the data, along with a default set of instructions for how to do the model fitting. However, none of the instructions have been carried out yet -- this is just the list of instructions.
 
+```{r}
+my_pk <- pk(data = my_data) +
+  stat_model(model = "1comp")
+```
+
+There are four stages to model fitting.
+
+The first is data pre-processing. Here, variable names are harmonized, and the data set is cleaned, filtered, and missing values are imputed when necessary. Instructions for this data pre-processing step are given in `my_pk$settings_preprocess`.
+s
+```{r}
 #preprocess data
 my_pk <- preprocess_data(my_pk)
+```
 
+This step adds the pre-processed data to the `pk` object in a new element named `data`.
+ 
+Next, some summary information is gathered about the data. These are things like the number of detects/non-detects, broken out by the different routes and media present in the data. This step also includes non-compartmental analysis of the data, to calculate things like the empirical Cmax (maximum concentration), empirical tmax (time of maximum concentration), and empirical AUC (area under the concentration-time curve). Instructions for this "data info" step are given in `my_pk$settings_data_info`.
+
+```{r}
 #get summary data info
 my_pk <- data_info(my_pk)
+```
 
+This step adds the data summary info to the `pk` object in a new element named `data_info`.
+
+Next, a "pre-fitting" step is performed. This step looks at the data, along with the PK models to be fitted, and defines the following:
+
+- Which of the PK model parameters are to be fitted. For example, if there is no oral data, then parameters that define oral absorption rate and oral bioavailability will not be fitted.
+- The lower and upper bounds for the PK model parameters to be fitted, which may be constant or may be derived from the data in some way.
+- A starting guess at the value for each PK model parameter to be fitted, which may be constant or may be derived from the data in some way.
+
+```{r}
 #pre-fitting (get model parameter bounds & starting values)
 my_pk <- prefit(my_pk)
+```
 
+This step adds the parameter lower/upper bounds and starting guesses to the `pk` object.
+
+Finally, the model fitting can be performed.
+
+```{r}
 #model fitting
 my_pk <- fit(my_pk)
-  
-#get coefficients
+```
+
+This step adds the fitted model parameter values to the `pk` object. If multiple models were fitted, and/or if multiple optimization algorithms ("methods") were used to do the fitting, then one set of fitted model parameter values is added for each model and each optimization algorithm ("method").
+
+Once fitting has been completed, then you can use some familiar methods to extract information about the fitted model(s). 
+
+For example, you can extract the fitted model parameter values using `coef()`:
+
+```{r}
 coef(my_pk)
+```
+
+You can extract the residuals using `residuals()`
+
+```{r}
+residuals(my_pk)
+```
+
+You can get the predicted values using `predict()`
+
+```{r}
+predict(my_pk)
+```
+
+You can also get model-evaluation metrics such as log-likelihood:
+
+```{r}
+logLik(my_pk)
+```
+
+AIC:
+
+```{r}
+AIC(my_pk)
+```
+
+Root mean squared error (RMSE):
+
+```{r}
+rmse(my_pk)
+```
+
+
+And finally, you can compute derived toxicokinetic statistics, such as total clearance rate, half-life, steady-state plasma concentration, etc.
+
+
+
+```{r}
 
 #get TK stats
 get_tkstats(my_pk)
@@ -204,7 +283,7 @@ get_status(my_pk)
 ```
 
 
-## `my_pk$data_settings`
+## `my_pk$settings_preprocess`
 
 This element contains the instructions for pre-processing the data. It is the result of a call to `settings_data()` with all the default arguments.
 
@@ -376,13 +455,7 @@ my_pk <- my_pk + stat_model(model = "1comp")
 
 Now, "flat" and "2comp" models have been removed from the list of models to fit.
 
-
-
-
-## Subtracting models
-
-Unlike `ggplot2`, `invivopkfit` also lets you *subtract* instructions -- specifically, you can subtract models from `stat_model`, so that they will not be fit
-
+# 
 
 
 # Resetting status
