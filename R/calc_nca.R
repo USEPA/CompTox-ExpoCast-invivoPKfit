@@ -4,6 +4,7 @@ calc_nca <- function(time,
                     detect,
                     n_subj,
                    subject_id,
+                   route,
                    n.tail = 3){
   #Calculate area under the concentration-time curve for NCA.
   #At present we do not know individual animal IDs or animal-group IDs for each point,
@@ -43,15 +44,39 @@ calc_nca <- function(time,
           design = design)$est[,1],
           error = function(err){
             tmp <- rep(NA_real_, 7)
-            names(tmp) <- c("AUC to tlast",
-                               "AUC to infinity",
-                               "AUMC to infinity",
-                               "Mean residence time",
-                               "non-compartmental half-life",
-                               "Clearance",
-                               "Volume of distribution at steady state")
+            names(tmp) <- c("AUC_tlast",
+                               "AUC_infinity",
+                               "AUMC_infinity",
+                               "MRT",
+                               "halflife",
+                               "CLtot",
+                               "Vss")
             tmp
           })
+
+
+
+  if(all(route %in% "oral")){
+    names(pk_out) <- c("AUC_tlast",
+                       "AUC_infinity",
+                       "AUMC_infinity",
+                       "MTT",
+                       "halflife",
+                       "CLtot/Fgutabs",
+                       "Vss")
+    #halflife and Vss are not valid under oral administration, per ?PK::nca
+    pk_out <- pk_out[setdiff(names(pk_out),
+                             c("halflife",
+                               "Vss"))]
+  }else{
+    names(pk_out) <- c("AUC_tlast",
+                       "AUC_infinity",
+                       "AUMC_infinity",
+                       "MRT",
+                       "halflife",
+                       "CLtot",
+                       "Vss")
+  }
 
   #also compute tmax, Cmax
   peak <- unlist(get_peak(x = time,
