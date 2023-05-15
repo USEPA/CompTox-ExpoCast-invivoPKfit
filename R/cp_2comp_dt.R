@@ -194,7 +194,7 @@ cp_2comp_dt <- function(params, time, dose, route, medium)
   }
 
   if(any(medium %in% "blood")){
-    dcpdt[medium %in% blood] <- params$Rblood2plasma * dcpdt[medium %in% "blood"]
+    dcpdt[medium %in% "blood"] <- params$Rblood2plasma * dcpdt[medium %in% "blood"]
   }
 
   return(dcpdt)

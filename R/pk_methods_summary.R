@@ -257,6 +257,11 @@ rownames(instructions_DF) <- NULL
     summarise(winning_model = model[which.min(AIC)]) %>%
     as.data.frame()
 
+  #get TK stats
+
+  #compare Cmax, AUC of winning model (for each method) to NCA Cmax, AUC
+  tk_compare <-
+
 
   return(list("instructions" = instructions_DF,
               "data_summary" = get_data_info(obj),
