@@ -1,0 +1,365 @@
+---
+title: "main_vignette"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{main_vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(invivoPKfit)
+```
+
+# Introduction
+
+`invivoPKfit` is an R package to automate fitting pharmacokinetic/toxicokinetic models to measured concentration vs. time toxicokinetic data.
+
+This version of the package takes an "object-oriented" approach to this task.
+
+This version of the package is heavily modeled after `ggplot2`, and aims to provide a "grammar of PK modeling."
+
+The basic unit of `ggplot2` is a `ggplot` object. The basic unit of `invivopkfit` is a `pk` object.
+
+A `ggplot2` object is essentially a data set with various instructions about how to visualize that data set. Similarly, a `pk` object is essentially a data set with various instructions about how to fit PK models to that data set.
+
+You provide a set of instructions for building a `ggplot2` plot by adding `geom`, `stat`, `scale`, etc. commands to a `ggplot2` object (like `ggplot(my_data, aes(x=x, y=y)) + geom_point()`). Similarly, you provide a set of instructions for fitting an `invivopkfit` PK model by adding `settings`, `stat`, `scale` commands to a `pk` object.
+
+In `ggplot2`, you can add the instructions in any order. You can overwrite old instructions by adding new ones, if you change your mind. The package will internally re-order the instructions in the correct order to build the plot. `invivopkfit` works exactly the same way.
+
+And just as `ggplot2` doesn't actually build the plot until you issue a `print` command, `invivoPKfit` doesn't actually fit the model until you issue  a `fit` command.
+
+
+# A full example
+
+Here's a basic example.
+
+```{r}
+#select data for a single chemical and species
+my_data <- subset(cvt,
+                          chemicals_analyzed.dsstox_substance_id %in% "DTXSID1021116" &
+                            subjects.species_harmonized %in% "rat")
+
+ #initialize a `pk` object with default instructions for fitting PK models
+my_pk <- pk(data = my_data)
+
+#preprocess data
+my_pk <- preprocess_data(my_pk)
+
+#get summary data info
+my_pk <- data_info(my_pk)
+
+#pre-fitting (get model parameter bounds & starting values)
+my_pk <- prefit(my_pk)
+
+#model fitting
+my_pk <- fit(my_pk)
+  
+#get coefficients
+coef(my_pk)
+
+#get TK stats
+get_tkstats(my_pk)
+```
+
+We'll walk through the various pieces of this example.
+
+# A `pk` object
+
+Let's start with the first piece.
+
+```{r}
+my_pk <- pk(data = subset(cvt,
+                          chemicals_analyzed.dsstox_substance_id %in% "DTXSID1021116" &
+                            subjects.species_harmonized %in% "rat")
+            )
+```
+
+The function `pk()` creates and initializes a `pk` S3 object with the data in the `data` argument, and a default set of instructions for model fitting. When just created, a `pk` object is, under the hood, a `list` object with the following elements:
+
+```{r}
+names(my_pk)
+```
+
+## `my_pk$data_original`
+
+The `data_original` element contains the data set you provided in argument `data`. This is the data set that will be fitted. In this case, it is a subset of CvTdb.
+
+```{r}
+head(my_pk$data_original)
+```
+
+## `my_pk$mapping`
+
+The `mapping` element specifies how the column names in the original data should be translated to the harmonized/standardized variable names that are used internally to `invivopkfit`. This is analogous to providing an `aes` mapping in `ggplot2` -- and in fact, it uses the same `aes()` function as `ggplot2`!
+
+In `ggplot2`, you would specify which variables in your data map to the standardized "aesthetic" variables `x`, `y`, `color`, `shape`, etc., using a command like this:
+
+```{r, eval = FALSE}
+ggplot(data = my_data, 
+       aes(x = conc_time_values.time_hr,
+           y = conc_time_values.conc,
+           color = studies.dose_level_normalized_corrected,
+           shape = as.factor(documents_extraction.id)
+       )
+)
+```
+
+
+In `invivopkfit`, you specify which variables in your data map to the standardized variables `Chemical`, `Species`, `Time`, `Dose`, etc., using a command like this:
+
+```{r}
+pk(data = my_data,
+   ggplot2::aes(Chemical = chemicals_analyzed.dsstox_substance_id,
+                                      Chemical_Name = series.analyte_name_original,
+                             DTXSID = chemicals_analyzed.dsstox_substance_id,
+                             CASRN = chemicals_analyzed.dsstox_casrn,
+                             Species = subjects.species_harmonized,
+                             Reference = as.character(
+                               ifelse(
+                                 is.na(
+                                   documents_reference.id
+                                 ),
+                                 documents_extraction.id,
+                                 documents_reference.id
+                               )
+                             ),
+                             Media = series.conc_medium_normalized,
+                             Route = studies.administration_route_normalized,
+                             Dose = studies.dose_level_normalized_corrected,
+                             Dose.Units = "mg/kg",
+                             Subject = subjects.id,
+                             Series_ID = series.id,
+                             Study_ID = studies.id,
+                             ConcTime_ID = conc_time_values.id,
+                             N_Subjects =  series.n_subjects_in_series,
+                             Weight = subjects.weight_kg,
+                             Weight.Units = "kg",
+                             Time = conc_time_values.time_hr,
+                             Time.Units = "hours",
+                             Value = conc_time_values.conc,
+                             Value.Units = "mg/L",
+                             LOQ = series.loq_normalized,
+                             Value_SD  = conc_time_values.conc_sd_normalized
+               ))
+```
+
+The above command shows the default mapping that will be applied if you don't specify a `mapping` argument when you call `pk`. it's a series of "standardized = original" pairs, where the standardized `invivoPKfit` internal variable name is on the left-hand side, and the original data variable name is on the right-hand side. Here, the original data variable names are all from CvTdb. These are variables appearing in the `invivoPKfit` built-in data object `cvt`, which contains a subset of CvTdb data.
+
+```{r}
+names(cvt)
+```
+
+### Expressions in `aes()`
+
+Just as in `ggplot2`, you can specify expressions inside `aes`. This lets you specify mappings that are more complicated than just a simple one-to-one variable name change. 
+
+For example, the mapping for `Reference` uses an expression:
+
+```{r, eval = FALSE}
+ Reference = as.character(
+                               ifelse(
+                                 is.na(
+                                   documents_reference.id
+                                 ),
+                                 documents_extraction.id,
+                                 documents_reference.id
+                               )
+                             )
+```
+
+This expression says "For the standardized variable `Reference`: First look at the original variable `documents_reference.id`. If that variable is NA, then use the variable `documents_extraction.id`; otherwise, use `documents_reference.id`."
+
+This mapping for `Reference` occurs because of the way CvTdb handles references. In CvTdb, concentration-time data are extracted from a particular document. For example, this may be the PDF of a peer-reviewed publication. The unique ID for this document is the "extraction ID." However, the original reference for the data may be a *different* document; this is the "reference ID." For example, this occurred when Wambaugh et al. 2018 (doi: 10.1093/toxsci/kfy020) collected and published a data set that had originally been published in Cruz et al. 2002 (PMID: 12434508). The "reference ID" refers to Cruz et al. (2002); the "extraction ID" refers to Wambaugh et al. (2018). If the data are instead extracted from their original reference, then "reference ID" is left blank (NA) and only "extraction ID" is used. 
+
+You can use expressions to specify constant values for standardized variables, as well. The default mapping contains items like this:
+
+```{r}
+Value.Units = "mg/L"
+```
+
+This mapping says "For the standardized variable `Value.Units`: Don't take the value from any variable in the original data. Just assign the constant value `"mg/L"`to this variable."
+
+## `my_pk$status`
+
+This is an integer code representing the current status of the `pk` object in the overall `pk` workflow. The workflow steps are numbered like this:
+
+1. Initialize the `pk` object in `pk()`
+2. Preprocess data in `preprocess_data()`
+3. Get data summary info (including non-compartmental analysis) in `data_info()`
+4. Do pre-fitting (get parameter bounds & starting values) in `prefit()`
+5. Do model fitting in `fit()
+
+You can get the status of a `pk` object at any time using
+
+```{r}
+get_status(my_pk)
+```
+
+
+## `my_pk$data_settings`
+
+This element contains the instructions for pre-processing the data. It is the result of a call to `settings_data()` with all the default arguments.
+
+```{r}
+formals(settings_data)
+```
+
+### `routes_keep`
+
+This contains a list of the "allowed" routes of administration. Data will be filtered to keep only observations with routes on this list. The default is `c('oral', 'iv')`. Currently, `invivopkfit` only has models implemented for those two routes. So it is not recommended to change the default unless you know what you are doing.
+
+### `media_keep`
+This contains a list of the "allowed" tissue media in which concentrations can be measured/predicted. Data will be filtered to keep only observations with media on this list.The default is `c('blood', 'plasma')`. Currently, `invivoPKfit` only has models implemented for those two media. So it is not recommended to change the default unless you know what you are doing.
+
+### `ratio_conc_dose`
+
+
+
+### `impute_loq`, `loq_group` and `calc_loq_factor`
+
+This instructs `invivopkfit` on whether and how to try to impute values for limits of quantification, if LOQ values are missing for any observations. If `impute_loq = TRUE`, then missing LOQs will be imputed as follows. The data will be split into groups according to unique combinations of the variables specified in `loq_group`. Then, the minimum detected value will be multiplied by `calc_loq_factor`. The result will be imputed for any missing LOQs in that group.
+
+### `impute_sd`, `sd_group`
+
+This instructs `invivopkfit` on whether and how to try to impute missing values for sample standard deviations of observed concentrations. If `impute_sd = TRUE`, then missing SDs will be imputed as follows. The data will be split into groups according to unique combinations of the variables specified in `sd_group`. If there are any non-missing SDs in a group, then missing SDs will be imputed as the minimum non-missing SD in the group. If all SDs in a group are missing, then they will be imputed with 0.
+
+### `nca_group` 
+
+This instructs `invivopkfit` on how to perform non-compartmental analysis. Data will be split into groups according to unique combinations of the variables specified in `nca_group`. Then, non-compartmental analysis will be performed for each group using `PK::nca()`. 
+
+## `my_pk$scales`
+
+This element is itself a list with elements `conc` and `time`, providing instructions on how to scale and/or transform concentration and time variables before fitting any models.
+
+### `my_pk$scales$conc`
+
+The `conc` element is a result of a call to `scales_conc()` with the default arguments.
+
+```{r}
+formals(scale_conc)
+```
+
+#### `dose_norm`
+
+This instructs `invivopkfit` on whether to apply dose normalization before fitting -- i.e., divide each observed concentration (and its corresponding observed standard deviation and/or LOQ, if any) by its corresponding dose. Dose normalization may be useful to normalize the residual error if the residual error is heteroscedastic and scales with concentration (because higher dose usually means higher concentration).
+
+#### `log10_trans`
+
+This instructs `invivopkfit` whether to apply a `log10()` transformation to observed concentrations (and LOQs) before fitting. This transformation might also be useful to normalize heteroscedastic residual errors that scale multiplicatively with concentration.
+
+
+### `my_pk$scales$time`
+
+The `time` element is a result of a call to `scales_time()` with the default arguments (there is only one).
+
+```{r}
+formals(scale_time)
+```
+
+`new_units` instructs `invivokpfit` whether and how to convert observed times into different units. The default `new_units = "identity"` tells `invivopkfit` not to apply any transformations to the time units -- retain the original units. Another useful option is `new_units = "auto"`, which tells `invivopkfit` to choose new units based on the midpoint of observed times -- it will automatically choose time units that put the midpoint time on the order of 10, or as close as it can get to that. You can also specify any time units understood by `lubridate::duration()`, e.g. `minutes`, `hours`, `days`, `weeks`, `months`, `years`, to convert time into those units.
+
+## `my_pk$stat_model`
+
+This is a named list, with one item named for each model to be fitted. It is the result of a call to `stat_model()` with its default arguments.
+
+```{r}
+formals(stat_model)
+```
+
+The `model` argument is a character vector (or scalar), listing the names of one or more models to fit to the data. The default value lists the three models that are already implemented and built in to `invivopkfit`. 
+
+Each model is an object of class `pk_model`, which is simply a named list giving:
+
+- `name`: The model name
+- `params`: The model parameter names (listed as a character vector)
+- `conc_fun`: The name of a function that computes concentrations, given model parameters, time, dose, route, and media
+- `auc_fun`: The name of a function that computes AUC (area under the concentration time curve), given model parameters, time, dose, route, and media
+- `params_fun`" The name of a function that returns bounds and starting points for each of the model parameters, given the data
+- `tkstats_fun`: The name of a function that computes derived TK statistics (such as halflife, clearance rate, etc.) given model parameters
+- `conc_fun_args`: Any additional arguments to the function in `conc_fun`
+- `auc_fun_args`: Any additional arguments to the function in `auc_fun`
+- `params_fun_args`: Any additional arguments to the function in `params_fun`
+- `tkstats_fun_args` : Any additional arguments to the function in `tkstats_fun`
+
+You can define a new model using the command `pk_model()`.
+
+
+# Resetting status
+
+Note: Status can be "reset".  -- and then you do something like change the concentration scaling, which changes everything from pre-processing the data (step 2) and downstream -- then the object status will be reset back to 1. This tells `invivopkfit` that it needs to re-do all the steps starting from pre-processing the data.
+
+Let's say I've created a `pk` object. I don't apply any scalings/transformations to concentration or time.
+
+The status of the newly-created `pk` object is 1.
+
+```{r}
+my_pk <- pk(data = my_data) + #initialize a `pk` object
+  stat_model(model = c("flat",
+                       "1comp",
+                       "2comp")) + #add PK models to fit
+  settings_optimx(method = "L-BFGS-B") #use only this optimx::optimx() algorithm
+
+get_status(my_pk) #status is 1
+```
+
+Now I do all the steps up to step 5. (If you just call `fit()`, it will fast-forward through all the steps.)
+
+```{r}
+my_pk <- fit(my_pk)
+get_status(my_pk)
+```
+
+I can now extract the coefficients and the TK stats for my fitted models.
+
+```{r}
+coef(my_pk) 
+get_tkstats(my_pk)
+```
+
+
+But now I realize that I should have dose-normalized the concentration. I do this by adding a `scale_conc()`. `invivoPKfit` throws a warning to tell me that the status will be reset back to 1.
+
+```{r}
+my_pk <- my_pk + scale_conc(dose_norm = TRUE)
+```
+
+And in fact, the status is now reset to 1.
+
+```{r}
+get_status(my_pk)
+```
+
+This means that I can't do anything that requires a fully fitted model -- not until I re-do all the workflow steps.
+
+```{r, error = TRUE}
+coef(my_pk) #throws an error
+get_tkstats(my_pk) #throws an error
+```
+
+But after I re-fit the new model (setting the status back to 5), I can now extract the new coefficients and TK stats.
+```{r}
+my_pk <- fit(my_pk)
+status(my_pk)
+
+coef(my_pk) 
+get_tkstats(my_pk)
+```
+
+
+
+
+
+
+
+
+
+
+
