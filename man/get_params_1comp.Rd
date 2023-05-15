@@ -6,11 +6,12 @@
 \usage{
 get_params_1comp(
   data,
-  lower_bound = ggplot2::aes(kelim = log(2)/max(Time_trans), Vdist = 0.01, Fgutabs = 0,
-    kgutabs = log(2)/max(Time_trans), Fgutabs_Vdist = 0.01, Rblood2plasma = 100),
-  upper_bound = ggplot2::aes(kelim = log(2)/min(Time_trans[Time_trans > 0]), Vdist = 100,
-    Fgutabs = 1, kgutabs = log(2)/min(Time_trans[Time_trans > 0]), Fgutabs_Vdist = 100,
-    Rblood2plasma = 100),
+  lower_bound = ggplot2::aes(kelim = 0.5 * log(2)/max(Time_trans), Vdist = 0.01, Fgutabs
+    = 0, kgutabs = 0.5 * log(2)/max(Time_trans), Fgutabs_Vdist = 0.01, Rblood2plasma =
+    0.01),
+  upper_bound = ggplot2::aes(kelim = 2 * log(2)/min(Time_trans[Time_trans > 0]), Vdist =
+    100, Fgutabs = 1, kgutabs = 2 * log(2)/min(Time_trans[Time_trans > 0]), Fgutabs_Vdist
+    = 100, Rblood2plasma = 100),
   param_units = ggplot2::aes(kelim = paste0("1/", unique(Time_trans.Units)), Vdist =
     paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units), ")"), Fgutabs =
     "unitless fraction", kgutabs = paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist

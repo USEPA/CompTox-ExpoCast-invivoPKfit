@@ -51,16 +51,16 @@
 #'@author Caroline Ring
 
 get_params_1comp <- function(data,
-                             lower_bound = ggplot2::aes(kelim = log(2)/max(Time_trans),
+                             lower_bound = ggplot2::aes(kelim = 0.5*log(2)/max(Time_trans),
                                                         Vdist = 0.01,
                                                         Fgutabs = 0,
-                                                        kgutabs = log(2)/max(Time_trans),
+                                                        kgutabs = 0.5*log(2)/max(Time_trans),
                                                         Fgutabs_Vdist = 0.01,
-                                                        Rblood2plasma = 100),
-                             upper_bound = ggplot2::aes(kelim = log(2)/min(Time_trans[Time_trans>0]),
+                                                        Rblood2plasma = 1e-2),
+                             upper_bound = ggplot2::aes(kelim = 2*log(2)/min(Time_trans[Time_trans>0]),
                                                         Vdist = 100,
                                                         Fgutabs = 1,
-                                                        kgutabs = log(2)/min(Time_trans[Time_trans>0]),
+                                                        kgutabs = 2*log(2)/min(Time_trans[Time_trans>0]),
                                                         Fgutabs_Vdist = 1e2,
                                                         Rblood2plasma = 100),
 param_units = ggplot2::aes(kelim = paste0("1/", #kelim
