@@ -143,24 +143,30 @@ pk_add.pk_optimx_settings <- function(object, pk_obj, objectname){
 #' @author Caroline Ring
 #' @export
 pk_add.pk_stat_model <- function(object, pk_obj, objectname){
-  #New stat_models will *replace* existing ones by the same name
-  for(this_model in names(object)){
-    if(!is.null(pk_obj$stat_model[[this_model]])){
-      message(paste0(objectname,
-                     ": stat_model for",
-                     this_model,
-                     "already present; new stat_model will replace the existing one")
-      )
-    }
-    pk_obj$stat_model[[this_model]] <- object[[this_model]]
+  #New stat_model will *replace* existing stat_model
+  if(!is.null(pk_obj$stat_model)){
+    old_models <- names(pk_obj$stat_model)
+    new_models <- names(object)
+    message(paste0(objectname,
+                   ": stat_model already present; ",
+                   "new stat_model will replace the existing one.",
+                   "\n",
+                   paste("Old models: ", paste(old_models, collapse = ", ")),
+                   "\n",
+                   paste("New models: ", paste(new_models, collapse = ", "))
+                   ))
   }
+  pk_obj$stat_model <- object
+
+  #data pre-processing won't change with addition of new model, but model
+  #pre-fit and fit will change
   if(pk_obj$status > (status_prefit - 1)){
     message(paste0(objectname,
-                   ": Modifying stat_model resets status to level",
+                   ": Modifying stat_model resets status to level ",
                    status_prefit - 1,
                    "; all later stages of the workflow will need to be re-done")
     )
-    pk_obj$status <- (status_prefit - 1) #data pre-processing won't change with addition of new model, but model pre-fit and fit will change
+    pk_obj$status <- (status_prefit - 1)
   }
 
   return(pk_obj)

@@ -347,10 +347,7 @@ pk <- function(data = NULL,
   #Add default scalings for conc and time
   obj <- obj + scale_conc() + scale_time()
 
-  #Add NULL stat_model
-  #obj["stat_model"] <- list(NULL)
-
-  #Add default models: flat, 1comp, 2comp
+  # #Add default models: flat, 1comp, 2comp
   obj <- obj + stat_model()
 
   #Add default error model

@@ -71,9 +71,9 @@ get_tkstats(my_pk)
 
 We'll walk through the various pieces of this example.
 
-# A `pk` object
+# Anatomy of a `pk` object
 
-Let's start with the first piece.
+Let's start with the first piece: initializing a `pk` object.
 
 ```{r}
 my_pk <- pk(data = subset(cvt,
@@ -235,6 +235,16 @@ This instructs `invivopkfit` on whether and how to try to impute missing values 
 
 This instructs `invivopkfit` on how to perform non-compartmental analysis. Data will be split into groups according to unique combinations of the variables specified in `nca_group`. Then, non-compartmental analysis will be performed for each group using `PK::nca()`. 
 
+## `my_pk$optimx_settings`
+
+This element provides control settings for the optimizer used to fit the model(s) to the data, which is `optimx::optimx()`. It is the result of a call to `settings_optimx()` with default arguments.
+
+```{r}
+formals(settings_optimx)
+```
+
+These are simply the arguments for `optimx::optimx()`: `method`, `itnmax`, `hessian`, `control`, and `...`. 
+
 ## `my_pk$scales`
 
 This element is itself a list with elements `conc` and `time`, providing instructions on how to scale and/or transform concentration and time variables before fitting any models.
@@ -289,7 +299,90 @@ Each model is an object of class `pk_model`, which is simply a named list giving
 - `params_fun_args`: Any additional arguments to the function in `params_fun`
 - `tkstats_fun_args` : Any additional arguments to the function in `tkstats_fun`
 
-You can define a new model using the command `pk_model()`.
+You can define a new model by first writing each of the required functions above for that model: a concentration function, an AUC function, a parameters function, and a TK-stats function. Source the R scripts containing those functions. Then use the command `pk_model()`, giving the names of the new functions you have written. Assign the result to an R variable, which will contain your new `pk_model` object. That new model object will persist for the duration of your R session (unless you remove it), and will need to be re-defined if you restart R.
+
+## `my_pk$stat_error_model`
+
+This is the result of a call to `stat_error_model()` with its default arguments.
+
+```{r}
+formals(stat_error_model)
+```
+
+There is only one default argument: `error_group`. This specifies the error model as, essentially, a fixed-effects model. The data are split into groups according to unique combinations of the variables specified in `error_group`. Then, for observation $j$ within group $i$, the residual errors are independent and identically distributed as:
+
+$$ c_{ij} = f(t_{ij}, d_{ij}, r_{ij}, m_{ij}; \theta) + \textrm{Normal}(\mu = 0, \sigma = \sigma_{i} ) $$
+
+where for observation $j$ within group $i$:
+
+- $c_{ij}$ is the observed concentration
+- $t_{ij}$ is the time for the observed concentration
+- $d_{ij}$ is the dose for the observed concentration
+- $r_{ij}$ is the dose administration route for the observed concentration
+- $m_{ij}$ is the media (tissue) for the observed concentration
+- $f(t, d; \theta)$ is the model function that predicts concentration given time, dose, route, media, and a vector of model parameter values
+- $\theta$ is the vector of model parameters
+
+All groups $i = 1, 2, \ldots, N_i$ share the same vector of model parameters $\theta$, but each different group has its own error standard deviation $\sigma_i$. 
+
+The error standard deviations $\sigma_1, \sigma_2, \ldots, \sigma_{N_i}$ are hyperparameters of the model. They will be estimated from the data simultaneously with the model parameters in $\theta$.
+
+The argument `error_group` defines the different groups, and therefore the numnber of error SD hyperparameters that need to be estimated.
+
+If the variables in `error_group` put all the data into the same group, then that simply means there is only one group $i = 1$, and therefore only one error standard deviation $\sigma_1$.
+
+# Providing new instructions for a `pk` object
+
+If you just want to use the default fitting instructions, you can simply do
+
+```{r}
+my_pk <- pk(data = my_data)
+my_pk <- fit(my_pk)
+```
+
+But if you would like to specify different instructions, you do that by adding settings, scales, and stats using `+`, similarly to the way you add layers in `ggplot2`.
+
+Here is an example.
+
+```{r}
+my_pk <- pk(my_data) +
+  #instructions for concentration scaling/transformation
+  scale_conc(dose_norm = TRUE,
+             log10_trans = TRUE) +
+  #instructions for time rescaling
+  scale_time(new_units = "auto") +
+  #instructions to use only one method for optimx::optimx()
+  settings_optimx(method = "L-BFGS-B") +
+  #instructions to impute missing LOQs slightly differently
+  settings_data(calc_loq_factor = 0.5) +
+  #instructions to use an error model that puts all observations in the same group
+  stat_error_model(error_group = vars(Chemical, Species))
+```
+
+You can then overwrite any instructions by adding new/different ones. Let's say you made a mistake -- you actually wanted to dose-normalize concentrations, but *not* log-transform them. You can just do this:
+
+```{r}
+my_pk <- my_pk +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE)
+```
+
+Now the new instructions have replaced the old ones.
+
+And let's say you only want to fit the 1-compartment model -- you don't want the default fits to "flat" and "2comp". You can do this:
+
+```{r}
+my_pk <- my_pk + stat_model(model = "1comp")
+```
+
+Now, "flat" and "2comp" models have been removed from the list of models to fit.
+
+
+
+
+## Subtracting models
+
+Unlike `ggplot2`, `invivopkfit` also lets you *subtract* instructions -- specifically, you can subtract models from `stat_model`, so that they will not be fit
+
 
 
 # Resetting status
