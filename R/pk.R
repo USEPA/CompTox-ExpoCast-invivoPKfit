@@ -262,7 +262,7 @@ pk <- function(data = NULL,
                                       Chemical_Name = series.analyte_name_original,
                              DTXSID = chemicals_analyzed.dsstox_substance_id,
                              CASRN = chemicals_analyzed.dsstox_casrn,
-                             Species = subjects.species,
+                             Species = subjects.species_harmonized,
                              Reference = as.character(
                                ifelse(
                                  is.na(
@@ -341,17 +341,20 @@ pk <- function(data = NULL,
   # Add default data settings
   obj <- obj + settings_data()
 
+  #Add default optimx settings
+  obj <- obj + settings_optimx()
+
   #Add default scalings for conc and time
   obj <- obj + scale_conc() + scale_time()
 
   #Add NULL stat_model
-  obj$stat_model <- NULL
+  #obj["stat_model"] <- list(NULL)
+
+  #Add default models: flat, 1comp, 2comp
+  obj <- obj + stat_model()
 
   #Add default error model
   obj <- obj + stat_error_model()
-
-  #Add default optimx settings
-  obj <- obj + settings_optimx()
 
   #return the initialized pk object
   return(obj)
