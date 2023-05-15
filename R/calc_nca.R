@@ -14,6 +14,7 @@ calc_nca <- function(time,
   conc <- ifelse(detect %in% FALSE,
                  conc*0.5,
                  conc)
+
   if(all(is.na(subject_id))){
     #assume every obs is a different subject
     subject_id <- rep(1L, length(conc))
