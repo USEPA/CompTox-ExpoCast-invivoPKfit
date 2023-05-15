@@ -12,18 +12,72 @@
 #' @author Caroline Ring
 #'
 summary.pk <- function(obj){
-  #ensure that the model has been fitted
-  check <- check_required_status(obj = obj,
-                                 required_status = status_fit)
-  if(!(check %in% TRUE)){
-    stop(attr(check, "msg"))
+  objname <- deparse(substitute(obj))
+  status <- get_status(obj)
+
+  cat(paste0(objname, ":", "\n"))
+  cat(paste0(attr(status, "msg"), "\n"))
+
+  if(status >= 1){
+    #things that require status 1
+    #things that are just instructions:
+    #data
+    #preprocessing settings
+    settings_preprocess <- get_settings_preprocess(obj)
+    cat(paste0(
+      "Data preprocessing settings:\n",
+      paste(names(settings_preprocess),
+               settings_preprocess,
+               sep = " = ",
+               collapse = "\n"),
+      "\n"))
+
+    #data info settings
+    settings_data_info <- get_settings_data_info(obj)
+    cat(paste0(
+      "Data info settings:\n",
+      paste(names(settings_data_info),
+            settings_data_info,
+            sep = " = ",
+            collapse = "\n"),
+      "\n"))
+    #stat_model
+
+    #stat_error_model
+    #optimx settings
   }
 
-  suppress.messages <- obj$data_settings$suppress.messages
+
+  #things that require preprocessing & data_info (status 3):
+  #data_summary
+  cat("Data summary:\n")
+  data_info <- get_data_info(obj)
+  print(data_info)
+  cat("\n")
+
+  #nca
+  cat("NCA summary:\n")
+  nca <- get_nca(obj)
+  print(nca)
+  cat("\n")
+
+  #things that require pre-fitting (status 4):
+#stat_error_model
+
+  #things that require fitting (status 5):
+  #coefficients
   #get model coefficients
   coefs <- coef(obj)
+  #coef SDs
   #get coefficient SDs
   coef_sds <- coef_sd(obj)
+  #goodness of fit metrics
+
+
+
+  suppress.messages <- obj$data_settings$suppress.messages
+
+
   #transpose
   coefs <- lapply(coefs, t)
   coef_sds <- lapply(coef_sds, t)

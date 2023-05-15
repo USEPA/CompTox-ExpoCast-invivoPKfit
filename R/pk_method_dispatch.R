@@ -244,3 +244,184 @@ compare_models.default <- function(obj, ...){
   stop(paste("No 'compare_models' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
+
+
+#' get_data()
+#'
+#' This is the S3 method generic for get_data()
+#'
+#' @param obj An object.
+#' @seealso [get_data.pk()] for the method for class [pk()]
+#' @export
+get_data <- function(obj, ...){
+  UseMethod("get_data", obj)
+}
+
+#' Default method for get_data()
+#'
+#'@param obj An object
+#' @export
+get_data.default <- function(obj, ...){
+  stop(paste("No 'get_data' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_nca()
+#'
+#' This is the S3 method generic for get_nca()
+#'
+#' @param obj An object.
+#' @seealso [get_nca.pk()] for the method for class [pk()]
+#' @export
+get_nca <- function(obj, ...){
+  UseMethod("get_nca", obj)
+}
+
+#' Default method for get_nca()
+#'
+#'@param obj An object
+#' @export
+get_nca.default <- function(obj, ...){
+  stop(paste("No 'get_nca' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_data_info()
+#'
+#' This is the S3 method generic for get_data_info()
+#'
+#' @param obj An object.
+#' @seealso [get_data_info.pk()] for the method for class [pk()]
+#' @export
+get_data_info <- function(obj, ...){
+  UseMethod("get_data_info", obj)
+}
+
+#' Default method for get_data_info()
+#'
+#'@param obj An object
+#' @export
+get_data_info.default <- function(obj, ...){
+  stop(paste("No 'get_data_info' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_prefit()
+#'
+#' This is the S3 method generic for get_prefit()
+#'
+#' @param obj An object.
+#' @seealso [get_prefit.pk()] for the method for class [pk()]
+#' @export
+get_prefit <- function(obj, ...){
+  UseMethod("get_prefit", obj)
+}
+
+#' Default method for get_prefit()
+#'
+#'@param obj An object
+#' @export
+get_prefit.default <- function(obj, ...){
+  stop(paste("No 'get_prefit' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_settings_preprocess()
+#'
+#' This is the S3 method generic for get_settings_preprocess()
+#'
+#' @param obj An object.
+#' @seealso [get_settings_preprocess.pk()] for the method for class [pk()]
+#' @export
+get_settings_preprocess <- function(obj, ...){
+  UseMethod("get_settings_preprocess", obj)
+}
+
+#' Default method for get_settings_preprocess()
+#'
+#'@param obj An object
+#' @export
+get_settings_preprocess.default <- function(obj, ...){
+  stop(paste("No 'get_settings_preprocess' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_settings_data_info()
+#'
+#' This is the S3 method generic for get_settings_data_info()
+#'
+#' @param obj An object.
+#' @seealso [get_settings_data_info.pk()] for the method for class [pk()]
+#' @export
+get_settings_data_info <- function(obj, ...){
+  UseMethod("get_settings_data_info", obj)
+}
+
+#' Default method for get_settings_data_info()
+#'
+#'@param obj An object
+#' @export
+get_settings_data_info.default <- function(obj, ...){
+  stop(paste("No 'get_settings_data_info' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_stat_error_model()
+#'
+#' This is the S3 method generic for get_stat_error_model()
+#'
+#' @param obj An object.
+#' @seealso [get_stat_error_model.pk()] for the method for class [pk()]
+#' @export
+get_stat_error_model <- function(obj, ...){
+  UseMethod("get_stat_error_model", obj)
+}
+
+#' Default method for get_stat_error_model()
+#'
+#'@param obj An object
+#' @export
+get_stat_error_model.default <- function(obj, ...){
+  stop(paste("No 'get_stat_error_model' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_data_sigma_group()
+#'
+#' This is the S3 method generic for get_data_sigma_group()
+#'
+#' @param obj An object.
+#' @seealso [get_data_sigma_group.pk()] for the method for class [pk()]
+#' @export
+get_data_sigma_group <- function(obj, ...){
+  UseMethod("get_data_sigma_group", obj)
+}
+
+#' Default method for get_data_sigma_group()
+#'
+#'@param obj An object
+#' @export
+get_data_sigma_group.default <- function(obj, ...){
+  stop(paste("No 'get_data_sigma_group' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_settings_optimx()
+#'
+#' This is the S3 method generic for get_settings_optimx()
+#'
+#' @param obj An object.
+#' @seealso [get_settings_optimx.pk()] for the method for class [pk()]
+#' @export
+get_settings_optimx <- function(obj, ...){
+  UseMethod("get_settings_optimx", obj)
+}
+
+#' Default method for get_settings_optimx()
+#'
+#'@param obj An object
+#' @export
+get_settings_optimx.default <- function(obj, ...){
+  stop(paste("No 'get_settings_optimx' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}

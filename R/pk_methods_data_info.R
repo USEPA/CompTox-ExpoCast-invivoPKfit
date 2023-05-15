@@ -22,48 +22,29 @@ data_info.pk <- function(obj){
   }
 
   data <- obj$data
-  #get the summary data info
-  #unique Chemical, Species, References, Studies, Routes
-  dat_info <- as.list(unique(data[c("Chemical",
-                                    "Species")]))
 
-  dat_info$References_Analyzed <- sort(unique(data$Reference))
-  #get a list of studies analyzed
-  dat_info$Studies_Analyzed <- sort(unique(data$Study))
-  #get a list of routes analyzed
-  dat_info$Routes_Analyzed <- sort(unique(data$Route))
+  data_summary <- do.call(dplyr::group_by,
+          args =c(list(data),
+                  obj$settings_data_info$nca_group)) %>%
+    dplyr::summarise(group_id = dplyr::cur_group_id(),
+                     group_n_obs = dplyr::n(),
+                     group_n_detect = sum(Detect %in% TRUE),
+                     tlast = max(Time_trans),
+                     tlast_detect = max(Time_trans[Detect %in% TRUE]),
+                     Time.Units = unique(Time.Units),
+                     Time_trans.Units = unique(Time_trans.Units),
+                     Conc.Units = unique(Conc.Units),
+                     Conc_trans.Units = unique(Conc_trans.Units),
+                     Dose.Units = unique(Dose.Units)) %>%
+    as.data.frame()
 
-  #get a list of media analyzed
-  dat_info$Media_Analyzed <- sort(unique(data$Media))
-
-  #get the number of detects and non-detects by route and medium
-  dat_info$n_dat <- aggregate(x = list(Detect = data$Detect),
-                              by = data[c("Route", "Media")],
-                              FUN = function(Detect){
-                                c("Detect" = sum(Detect %in% TRUE),
-                                  "NonDetect" = sum(Detect %in% FALSE))
-                              })
-  names(dat_info$n_dat) <- gsub(x = names(dat_info$n_dat),
-                                pattern = "^Detect",
-                                replacement = "")
-
-  #get time of last detected observation
-  if(any(data$Detect %in% TRUE)){
-    dat_info$last_detect_time <- max(data[data$Detect %in% TRUE, "Time_trans"])
-  }else{
-    dat_info$last_detect_time <- 0
-  }
-  attr(dat_info$last_detect_time, "units") <- unique(data$Time_trans.Units)
-
-  #get time of last observation
-  dat_info$last_time <- max(data$Time_trans)
-  attr(dat_info$last_time, "units") <- unique(data$Time_trans.Units)
+  dat_info <- list("data_summary" = data_summary)
 
   #do NCA
   dat_info$nca <- do.call(dplyr::group_by,
                           args =c(list(data),
                                   obj$settings_data_info$nca_group)) %>%
-    dplyr::summarise(tlast = max(Time_trans),
+    dplyr::summarise(group_id = dplyr::cur_group_id(),
                      calc_nca(time = Time_trans,
                               dose = Dose,
                               conc = Conc,
