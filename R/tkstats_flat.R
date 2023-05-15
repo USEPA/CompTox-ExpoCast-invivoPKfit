@@ -31,19 +31,13 @@ tkstats_flat <- function(pars,
   Fgutabs_Vdist <- pars["Fgutabs_Vdist"]
   Rblood2plasma <- pars["Rblood2plasma"]
 
-  Css_1mgkgday <- cp_flat(params = list("Fgutabs" = Fgutabs,
-                                        "Vdist" = Vdist,
-                                        "Fgutabs_Vdist" = Fgutabs_Vdist,
-                                        "Rblood2plasma" = Rblood2plasma),
+  Css_1mgkgday <- cp_flat(params = as.list(pars[!is.na(pars)]),
                           time = Inf,
                           dose = dose,
                           route = route,
                           medium = medium)
 
- AUC_inf <- auc_flat(params = list("Fgutabs" = Fgutabs,
-                                   "Vdist" = Vdist,
-                                   "Fgutabs_Vdist" = Fgutabs_Vdist,
-                                   "Rblood2plasma" = Rblood2plasma),
+ AUC_inf <- auc_flat(params = as.list(pars[!is.na(pars)]),
                           time = Inf,
                           dose = dose,
                           route = route,

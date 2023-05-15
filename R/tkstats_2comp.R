@@ -141,14 +141,7 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
   tmax <- ifelse(route %in% "oral",
                  tryCatch(
                    uniroot( f = function(x){
-                     cp_2comp_dt(params = list("kelim" = kelim,
-                                               "V1" = V1,
-                                               "Fgutabs" = Fgutabs,
-                                               "Fgutabs_V1" = Fgutabs_V1,
-                                               "kgutabs" = kgutabs,
-                                               "k12" = k12,
-                                               "k21" = k21,
-                                               "Rblood2plasma" = Rblood2plasma),
+                     cp_2comp_dt(params = as.list(pars[!is.na(pars)]),
                                  time = x,
                                  dose = dose,
                                  route = "oral",
@@ -162,50 +155,18 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
                    error = function(err) return(NA_real_)),
                  0)
 
-  Cmax <- cp_2comp(params = list(
-    "kelim" = kelim,
-    "k12" = k12,
-    "k21" = k21,
-    "V1" = V1,
-    "Fgutabs" = Fgutabs,
-    "Fgutabs_V1" = Fgutabs_V1,
-    "kgutabs" = kgutabs,
-    "Rblood2plasma" = Rblood2plasma
-  ),
+  Cmax <- cp_2comp(params = as.list(pars[!is.na(pars)]),
   time = tmax,
   dose = dose,
   route= route,
   medium = medium)
 
-  AUC_inf <- auc_2comp(params = list(
-    "kelim" = kelim,
-    "V1" = V1,
-    "Fgutabs_V1" = Fgutabs_V1,
-    "Fgutabs" = Fgutabs,
-    "kgutabs" = kgutabs,
-    "k12" = k12,
-    "k21" = k21,
-    "Rblood2plasma" = Rblood2plasma
-  ),
+  AUC_inf <- auc_2comp(params = as.list(pars[!is.na(pars)]),
   time = Inf,
   dose = dose,
   route = route,
   medium = medium)
 
-  # AUC_tlast <- auc_2comp(params = list(
-  #   "kelim" = kelim,
-  # "V1" = V1,
-  # "Fgutabs" = Fgutabs,
-  #   "Fgutabs_V1" = Fgutabs_V1,
-  #   "kgutabs" = kgutabs,
-  #   "k12" = k12,
-  #   "k21" = k21,
-  #   "Rblood2plasma" = Rblood2plasma
-  # ),
-  # time = tlast,
-  # dose = dose,
-  # route = route,
-  # medium = medium)
 
   return(data.frame(param_name = c("CLtot",
                                    "CLtot/Fgutabs",
@@ -214,7 +175,6 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
                                    "tmax",
                                    "Cmax",
                                    "AUC_infinity",
-                                   # "AUC_tlast",
                                    "A",
                                    "B",
                                    "alpha",
@@ -230,7 +190,6 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
                                     tmax,
                                     Cmax,
                                     AUC_inf,
-                                    # AUC_tlast,
                                     A,
                                     B,
                                     alpha,

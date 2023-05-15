@@ -111,44 +111,17 @@ tkstats_1comp <- function(pars,
                  log(kgutabs / kelim) / (kgutabs - kelim),
                  0)
 
-  Cmax <- cp_1comp(params = list(
-    "kelim" = kelim,
-    "Vdist" = Vdist,
-    "Fgutabs" = Fgutabs,
-    "Fgutabs_Vdist" = Fgutabs_Vdist,
-    "kgutabs" = kgutabs,
-    "Rblood2plasma" = Rblood2plasma
-  ),
+  Cmax <- cp_1comp(params = as.list(pars[!is.na(pars)]),
   time = tmax,
   dose = dose,
   route= route,
   medium = medium)
 
-  AUC_inf <- auc_1comp(params = list(
-    "kelim" = kelim,
-    "Vdist" = Vdist,
-    "Fgutabs" = Fgutabs,
-    "Fgutabs_Vdist" = Fgutabs_Vdist,
-    "kgutabs" = kgutabs,
-    "Rblood2plasma" = Rblood2plasma
-  ),
+  AUC_inf <- auc_1comp(params = as.list(pars[!is.na(pars)]),
   time = Inf,
   dose = dose,
   route = route,
   medium = medium)
-
-  # AUC_tlast <- auc_1comp(params = list(
-  #   "kelim" = kelim,
-  # "Vdist" = Vdist,
-  # "Fgutabs" = Fgutabs,
-  #   "Fgutabs_Vdist" = Fgutabs_Vdist,
-  #   "kgutabs" = kgutabs,
-  #   "Rblood2plasma" = Rblood2plasma
-  # ),
-  # time = tlast,
-  # dose = dose,
-  # route = route,
-  # medium = medium)
 
   return(data.frame(param_name = c("CLtot",
                                    "CLtot/Fgutabs",
@@ -157,7 +130,6 @@ tkstats_1comp <- function(pars,
                                    "tmax",
                                    "Cmax",
                                    "AUC_infinity"
-                                   # "AUC_tlast"
                                    ),
                     param_value = c(CLtot,
                                     CLtot_Fgutabs,
@@ -166,7 +138,6 @@ tkstats_1comp <- function(pars,
                                     tmax,
                                     Cmax,
                                     AUC_inf
-                                    # AUC_tlast
                                     )))
 
 }
