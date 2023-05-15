@@ -427,3 +427,43 @@ get_settings_optimx.default <- function(obj, ...){
   stop(paste("No 'get_settings_optimx' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
+
+#' get_scale_conc()
+#'
+#' This is the S3 method generic for get_scale_conc()
+#'
+#' @param obj An object.
+#' @seealso [get_scale_conc.pk()] for the method for class [pk()]
+#' @export
+get_scale_conc <- function(obj, ...){
+  UseMethod("get_scale_conc", obj)
+}
+
+#' Default method for get_scale_conc()
+#'
+#'@param obj An object
+#' @export
+get_scale_conc.default <- function(obj, ...){
+  stop(paste("No 'get_scale_conc' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_scale_time()
+#'
+#' This is the S3 method generic for get_scale_time()
+#'
+#' @param obj An object.
+#' @seealso [get_scale_time.pk()] for the method for class [pk()]
+#' @export
+get_scale_time <- function(obj, ...){
+  UseMethod("get_scale_time", obj)
+}
+
+#' Default method for get_scale_time()
+#'
+#'@param obj An object
+#' @export
+get_scale_time.default <- function(obj, ...){
+  stop(paste("No 'get_scale_time' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
