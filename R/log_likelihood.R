@@ -143,10 +143,8 @@ log_likelihood <- function(par,
   model.params <- params[!grepl(x = names(params),
                                 pattern = "sigma")]
 
-
   #get un-transformed predicted plasma concentration vs. time for the current parameter
   #values, by dose and route
-
   pred <- do.call(modelfun,
           args = list(params = model.params,
                       time = fitdata$Time_trans,

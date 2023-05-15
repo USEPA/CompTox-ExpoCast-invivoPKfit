@@ -17,7 +17,7 @@
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   for which to make predictions and calculate RMSEs. If NULL (the default),
 #'   fold errors will be returned for all of the models in
-#'   `obj$optimx_settings$method`.
+#'   `obj$settings_optimx$method`.
 #' @return A named list of numeric matrices. There is one list element named for
 #'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
 #'   fitted to the data. Each list element is a matrix with the same number of
@@ -42,7 +42,7 @@ fold_errors.pk <- function(obj,
   }
 
   if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(method)) method <- obj$settings_optimx$method
   if(is.null(newdata)) newdata <- obj$data
 
   #get predicted concentrations

@@ -7,5 +7,12 @@
 get_settings_optimx.pk <- function(obj){
   out <- obj$settings_optimx
 
+  #convert char vectors into "c(...)
+  out$method <- rlang::parse_expr(paste0("c(",
+                                         "'",
+                                              paste(out$method,
+                                                    collapse = "','"),
+                                              "')"))
+
   return(out)
 }

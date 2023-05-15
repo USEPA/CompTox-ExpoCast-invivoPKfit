@@ -467,3 +467,23 @@ get_scale_time.default <- function(obj, ...){
   stop(paste("No 'get_scale_time' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
+
+#' get_error_group()
+#'
+#' This is the S3 method generic for get_error_group()
+#'
+#' @param obj An object.
+#' @seealso [get_error_group.pk()] for the method for class [pk()]
+#' @export
+get_error_group <- function(obj, ...){
+  UseMethod("get_error_group", obj)
+}
+
+#' Default method for get_error_group()
+#'
+#'@param obj An object
+#' @export
+get_error_group.default <- function(obj, ...){
+  stop(paste("No 'get_error_group' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}

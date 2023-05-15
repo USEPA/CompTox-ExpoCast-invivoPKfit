@@ -23,7 +23,7 @@
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   for which to calculate BICs. If NULL (the default),
 #'   log-likelihoods will be returned for all of the methods in
-#'   `obj$optimx_settings$method`.
+#'   `obj$settings_optimx$method`.
 #' @return A named list of numeric vectors. There is one list element
 #'   named for each model in `obj`'s [stat_model()] element, i.e. each PK model
 #'   that was fitted to the data. Each list element is a numeric vector with as
@@ -46,7 +46,7 @@ BIC.pk <- function(obj,
     stop(attr(check, "msg"))
   }
   if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(method)) method <- obj$settings_optimx$method
   if(is.null(newdata)) newdata <- obj$data
 
   BIC <- AIC(obj = obj,

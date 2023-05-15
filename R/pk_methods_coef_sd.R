@@ -8,7 +8,7 @@
 #'   the models in `obj$stat_model`.
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   whose coefficients to return. If NULL (the default), coefficients will be returned for
-#'   all of the models in `obj$optimx_settings$method`.
+#'   all of the models in `obj$settings_optimx$method`.
 #' @return A named list of numeric matrixes. There is one list element named for
 #'   each model in `model`. Each list element is a matrix with as many
 #'   rows as items in `method`. The row names are the method names. The matrix column names are
@@ -28,7 +28,7 @@ coef_sd.pk <- function(obj,
   }
 
   if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(method)) method <- obj$settings_optimx$method
 
   sapply(obj$stat_model[model],
          function(this_model){

@@ -6,6 +6,19 @@
 #' @author Caroline Ring
 get_settings_preprocess.pk <- function(obj){
   out <- obj$settings_preprocess
+  #convert char vectors into "c(...)
+  out$routes_keep <- rlang::parse_expr(paste0("c(",
+                                              "'",
+                                              paste(out$routes_keep,
+                                                    collapse = "','"),
+                                              "')"))
+
+  out$media_keep <- rlang::parse_expr(paste0("c(",
+                                             "'",
+                                              paste(out$media_keep,
+                                                    collapse = "','"),
+                                              "')"))
+
   #convert lists of quosures into "vars(...)"
   out$loq_group <- rlang::parse_expr(
     paste0("vars(",
