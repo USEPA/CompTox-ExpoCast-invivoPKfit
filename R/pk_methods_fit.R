@@ -92,7 +92,7 @@ fit.pk <- function(obj){
                  lower = lower_params,
                  upper = upper_params),
             #method and control
-            obj$optimx_settings,
+            obj$settings_optimx,
             #... additional args to log_likelihood
             list(
               const_params = const_params,

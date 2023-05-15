@@ -93,7 +93,7 @@ settings_optimx <- function(method = c("bobyqa", "L-BFGS-B"),
   argg <- c(as.list(environment()), list(...))
   this_settings_optimx <- argg
   #set class
-  class(this_settings_optimx) <- c(class(this_settings_optimx), "pkproto", "pk_optimx_settings")
+  class(this_settings_optimx) <- c(class(this_settings_optimx), "pkproto", "pk_settings_optimx")
 
   return(this_settings_optimx)
 }

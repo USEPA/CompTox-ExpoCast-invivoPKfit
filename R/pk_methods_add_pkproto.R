@@ -132,30 +132,30 @@ pk_add.pk_settings_data_info <- function(object, pk_obj, objectname){
   return(pk_obj)
 }
 
-#' Add a `pk_optimx_settings` object.
+#' Add a `pk_settings_optimx` object.
 #'
-#' @param object The `pk_optimx_settings` object to be added.
-#' @param pk_obj The `pk` object to which the `pk_optimx_settings` object will be added.
-#' @param objectname The name of the `pk_optimx_settings` object.
+#' @param object The `pk_settings_optimx` object to be added.
+#' @param pk_obj The `pk` object to which the `pk_settings_optimx` object will be added.
+#' @param objectname The name of the `pk_settings_optimx` object.
 #'
 #' @return The `pk` object, modified by adding the settings.
 #' @author Caroline Ring
 #' @export
-pk_add.pk_optimx_settings <- function(object, pk_obj, objectname){
+pk_add.pk_settings_optimx <- function(object, pk_obj, objectname){
 
-  #New optimx_settings will *replace* existing ones
-  if(!is.null(pk_obj$optimx_settings)){
+  #New settings_optimx will *replace* existing ones
+  if(!is.null(pk_obj$settings_optimx)){
     message(paste0(objectname,
-                   ": optimx_settings already present; new optimx_settings will replace the existing one")
+                   ": settings_optimx already present; new settings_optimx will replace the existing one")
     )
   }
 
-  pk_obj$optimx_settings <- object
+  pk_obj$settings_optimx <- object
   if(pk_obj$status > (status_prefit - 1)){
     #with new optimizer settings, data pre=processing and model pre-fitting
     #should not change, but model fitting will change
     message(paste0(objectname,
-                   ": Modifying optimx_settings resets status to level ",
+                   ": Modifying settings_optimx resets status to level ",
                    (status_prefit - 1),
                   "; all later stages of the workflow will need to be re-done")
     )
