@@ -146,6 +146,7 @@ tkstats_all <- sapply(model,
          #the result will be one data.frame
          tkstats_this_model <- do.call(rbind,
                  tkstats_list)
+         rownames(tkstats_this_model) <- NULL
          #return the tkstats data.frame for this model
          return(tkstats_this_model)
        }, #end function(this_model)
@@ -154,5 +155,7 @@ tkstats_all <- sapply(model,
 ) #end sapply over models
 #the result will be a named list of data.frames, one for each model
 #return it
+
+
 return(tkstats_all)
 }
