@@ -6,6 +6,9 @@
 #' @param media_keep Character: A list of media to keep. Data will be filtered
 #'   so that the harmonized variable name `Media` includes only values in
 #'   `media_keep`. Default is `c("blood", "plasma")`.
+#' @param ratio_conc_dose Numeric: The ratio of mass units of observed
+#'   concentrations to mass units of applied doses. Default 1, to indicate the
+#'   same mass units are used for both.
 #' @param impute_loq TRUE or FALSE: Whether to impute missing LOQ values.
 #' @param loq_group A list of variables, specified using a call to
 #'   [dplyr::vars()]. These should be harmonized variable names. Unique
@@ -34,6 +37,7 @@
 #' @export
 settings_data <- function(routes_keep = c("oral", "iv"),
                              media_keep = c("blood", "plasma"),
+                          ratio_conc_dose = 1,
                              impute_loq = TRUE,
                           loq_group = dplyr::vars(Chemical, Species, Reference, Media),
                           calc_loq_factor = 0.45,

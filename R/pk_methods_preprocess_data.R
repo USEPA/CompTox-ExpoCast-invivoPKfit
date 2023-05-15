@@ -548,10 +548,10 @@ preprocess_data.pk <- function(obj){
     #Scale concentration by ratio_conc_dose
 
     if(is.null(obj$scales$conc$expr)){
-      obj$scales$conc$ratio_conc_dose <- 1
+      obj$data_settings$ratio_conc_dose <- 1
     }
 
-    ratio_conc_dose <- obj$scales$conc$ratio_conc_dose
+    ratio_conc_dose <- obj$data_settings$ratio_conc_dose
 
     if(!obj$data_settings$suppress.messages){
       if(!(ratio_conc_dose %in% 1)){
@@ -617,7 +617,6 @@ if("Conc" %in% names(data)){
     #Transform Conc (this is either the measured value or the LOQ, depending on Detect)
     #If no conc transformation specified, assume identity
     if(is.null(obj$scales$conc$expr)){
-      #obj$scales$conc$ratio_conc_dose <- 1
       obj$scales$conc$dose_norm <- FALSE
       obj$scales$conc$log10_trans <- FALSE
       obj$scales$conc$expr <- rlang::new_quosure(quote(.conc),
@@ -626,7 +625,6 @@ if("Conc" %in% names(data)){
 
     if(!obj$data_settings$suppress.messages){
       message(paste("Applying transformations to concentration variables:",
-                    #paste0("ratio_conc_dose = ", obj$scales$conc$ratio_conc_dose),
                     paste0("dose_norm = ", obj$scales$conc$dose_norm),
                     paste0("log10_trans = ", obj$scales$conc$log10_trans),
                     sep = "\n"))
