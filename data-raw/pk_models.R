@@ -37,9 +37,6 @@ devtools::load_all()
 usethis::use_data(`1comp`,
                   `2comp`,
                   flat,
+                  internal = FALSE,
                   overwrite = TRUE)
-
-# save(list = c("1comp", "2comp", "flat"),
-#      file = "invivopkfit/data/pk_models_builtin.rda",
-#      compress = "bzip2")
 
