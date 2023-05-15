@@ -48,12 +48,16 @@
 #'  concentration-time curve). See Details for requirements.
 #'@param params_fun Name of the function that produces the `data.frame` of
 #'  parameter info (see Details)
+#'@param tkstats_fun Name of the function that produces a`data.frame` of
+#'  derived Tk statistics (see Details)
 #'@param conc_fun_args Any additional arguments to `conc_fun` other than those
 #'  listed in Details. Default NULL.
 #'@param auc_fun_args Any additional arguments to `auc_fun` other those those
 #'  listed in Details. Default NULL.
 #'@param params_fun_args Any additional arguments to `params_fun` other than
 #'  `data` (see Details). Default NULL.
+#'@param params_fun_args Any additional arguments to `tkstats_fun` other than
+#'  `data`, `medium`, `route` (see Details). Default NULL.
 #'@return An object of class `pk_model`. Effectively, a named list containing
 #'  all of the arguments provided to this function.
 #'@author Caroline Ring
@@ -63,9 +67,11 @@ pk_model <- function(name,
                      conc_fun,
                      auc_fun,
                      params_fun,
+                     tkstats_fun,
                      conc_fun_args = NULL,
                      auc_fun_args = NULL,
                      params_fun_args = NULL,
+                     tkstats_fun_args = NULL,
                      ...){
   #get arguments and values as a list
   argg <- c(as.list(environment()), list(...))
