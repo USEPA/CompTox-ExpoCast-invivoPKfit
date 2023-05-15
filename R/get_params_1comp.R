@@ -51,19 +51,18 @@
 #'@author Caroline Ring
 
 get_params_1comp <- function(data,
-                             lower_bound = c(kelim = 1e-4, #kelim
-                                             Vdist = 1e-4, #Vdist
-                                             Fgutabs = 1e-4, #Fgutabs
-                                             kgutabs = 1e-4, #kgutabs
-                                             Fgutabs_Vdist = 1e-4, #Fgutabs_Vdist
-                                             Rblood2plasma = 1e-4), #Rblood2plasma
-
-                             upper_bound = c(kelim = 1e6, #kelim
-                                             Vdist = 1e6, #Vdist
-                                             Fgutabs = 1, #Fgutabs
-                                            kgutabs = 1e6, #kgutabs
-                                             Fgutabs_Vdist = 1e4, #Fgutabs_Vdist
-                                             Rblood2plasma = 1e6), #Rblood2plasma
+                             lower_bound = ggplot2::aes(kelim = log(2)/max(Time_trans),
+                                                        Vdist = 0.01,
+                                                        Fgutabs = 0,
+                                                        kgutabs = log(2)/max(Time_trans),
+                                                        Fgutabs_Vdist = 0.01,
+                                                        Rblood2plasma = 100),
+                             upper_bound = ggplot2::aes(kelim = log(2)/min(Time_trans[Time_trans>0]),
+                                                        Vdist = 100,
+                                                        Fgutabs = 1,
+                                                        kgutabs = log(2)/min(Time_trans[Time_trans>0]),
+                                                        Fgutabs_Vdist = 1e2,
+                                                        Rblood2plasma = 100),
 param_units = ggplot2::aes(kelim = paste0("1/", #kelim
                                   unique(Time_trans.Units)),
                            Vdist = paste0("(", #Vdist
@@ -93,23 +92,23 @@ param_units = ggplot2::aes(kelim = paste0("1/", #kelim
                    "Fgutabs_Vdist",
                    "Rblood2plasma")
 
-  lower_bound_default = c(kelim = 1e-4, #kelim
-                  Vdist = 1e-4, #Vdist
-                  Fgutabs = 1e-4, #Fgutabs
-                  kgutabs = 1e-4, #kgutabs
-                  Fgutabs_Vdist = 1e-4, #Fgutabs_Vdist
-                  Rblood2plasma = 1e-4) #Rblood2plasma
+  lower_bound_default = ggplot2::aes(kelim = log(2)/max(Time_trans),
+                                     Vdist = 0.01,
+                                     Fgutabs = 0,
+                                     kgutabs = log(2)/max(Time_trans),
+                                     Fgutabs_Vdist = 0.01,
+                                     Rblood2plasma = 100)
 
   lower_bound_missing <- setdiff(names(lower_bound_default),
                                  names(lower_bound))
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
 
-  upper_bound_default = c(kelim = 1e6, #kelim
-                  Vdist = 1e6, #Vdist
-                  Fgutabs = 1, #Fgutabs
-                  kgutabs = 1e6, #kgutabs
-                  Fgutabs_Vdist = 1e4, #Fgutabs_Vdist
-                  Rblood2plasma = 1e6)
+  upper_bound_default = ggplot2::aes(kelim = log(2)/min(Time_trans[Time_trans>0]),
+                                     Vdist = 100,
+                                     Fgutabs = 1,
+                                     kgutabs = log(2)/min(Time_trans[Time_trans>0]),
+                                     Fgutabs_Vdist = 1e2,
+                                     Rblood2plasma = 100)
 
   upper_bound_missing <- setdiff(names(upper_bound_default),
                                  names(upper_bound))
@@ -158,12 +157,26 @@ if(!("oral" %in% data$Route)){
                            USE.NAMES = TRUE)
   param_units_vect <- param_units_vect[param_name]
 
+  lower_bound_vect <- sapply(lower_bound,
+                             function(x) rlang::eval_tidy(x,
+                                                          data = data),
+                             simplify = TRUE,
+                             USE.NAMES = TRUE)
+  lower_bound_vect <- lower_bound_vect[param_name]
+
+  upper_bound_vect <- sapply(upper_bound,
+                             function(x) rlang::eval_tidy(x,
+                                                          data = data),
+                             simplify = TRUE,
+                             USE.NAMES = TRUE)
+  upper_bound_vect <- upper_bound_vect[param_name]
+
   par_DF <- data.frame("param_name" = param_name,
                        "param_units" = param_units_vect,
                        "optimize_param" = optimize_param,
                        "use_param" = use_param,
-                       "lower_bound" = lower_bound,
-                       "upper_bound" = upper_bound)
+                       "lower_bound" = lower_bound_vect,
+                       "upper_bound" = upper_bound_vect)
 
   # now get starting values
   par_DF <-  get_starts_1comp(data = data,
