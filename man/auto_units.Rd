@@ -4,13 +4,7 @@
 \alias{auto_units}
 \title{Automatically select new time units}
 \usage{
-auto_units(
-  y,
-  from,
-  target = 10,
-  period_units = c("picoseconds", "nanoseconds", "microseconds", "milliseconds",
-    "seconds", "minutes", "hours", "days", "weeks", "months", "years")
-)
+auto_units(y, from, target = 10, period_units = time_units)
 }
 \arguments{
 \item{y}{A numeric vector of time values}
@@ -19,7 +13,7 @@ auto_units(
 
 \item{target}{The target value (order of magnitude) for the midpoint of rescaled time values. Default 10.}
 
-\item{period_units}{A list of acceptable/understood time units. See Details.}
+\item{period_units}{A list of acceptable/understood time units. See Details. Default `time_units`.}
 }
 \value{
 Character: Automatically-selected new time units, which will be one of `period_units`.
@@ -45,4 +39,7 @@ c("picoseconds",
 "months",
 "years")
 ```
+}
+\author{
+Caroline Ring
 }
