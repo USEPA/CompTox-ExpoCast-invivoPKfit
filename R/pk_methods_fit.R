@@ -113,10 +113,10 @@ fit.pk <- function(obj){
       })
 
       #Save the fitting results for this model
-      obj$stat_model[[this_model]]$fit <- optimx_out
+      obj$fit[[this_model]] <- optimx_out
 
     }else{ #if status for this model was "abort", then abort fit and return NULL
-      obj$stat_model[[this_model]]$fit <- "Fit aborted because status %in% 'abort'"
+      obj$fit[[this_model]] <- "Fit aborted because status %in% 'abort'"
     }
   } #end loop over models
 

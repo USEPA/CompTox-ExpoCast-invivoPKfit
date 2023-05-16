@@ -104,7 +104,7 @@ logLik.pk <- function(obj,
                                  force_finite = force_finite)
                 })
     #set attribute "df", the number of parameters optimized for this model
-    attr(ll, which = "df") <- attr(obj$stat_model[[this_model]]$fit, "npar")
+    attr(ll, which = "df") <- attr(obj$fit[[this_model]], "npar")
     #set attributes "nobs", the number of observations in `newdata`
     attr(ll, which = "nobs") <- nrow(newdata)
     ll

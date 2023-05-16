@@ -32,8 +32,8 @@ coef_sd.pk <- function(obj,
 
   sapply(model,
          function(this_model){
-           npar <- attr(obj$stat_model[[this_model]]$fit, "npar")
-           fit_par <- as.matrix(obj$stat_model[[this_model]]$fit[method, 1:npar])
+           npar <- attr(obj$fit[[this_model]], "npar")
+           fit_par <- as.matrix(obj$fit[[this_model]][method, 1:npar])
            #Add any "constant" params
            if(any(obj$prefit[[this_model]]$par_DF$optimize_param %in% FALSE &
                   obj$prefit[[this_model]]$par_DF$use_param %in% TRUE)){

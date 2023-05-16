@@ -31,9 +31,9 @@ coef.pk <- function(obj,
 
   sapply(model,
          function(this_model){
-           npar <- attr(obj$stat_model[[this_model]]$fit, "npar")
+           npar <- attr(obj$fit[[this_model]], "npar")
            if(!is.null(npar)){
-           fit_par <- obj$stat_model[[this_model]]$fit[method, 1:npar]
+           fit_par <- obj$fit[[this_model]][method, 1:npar]
 
            #Add any "constant" params
            if(any(obj$prefit[[this_model]]$par_DF$optimize_param %in% FALSE &
