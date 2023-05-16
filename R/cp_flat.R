@@ -37,6 +37,16 @@
 #'`Rblood2plasma`, the ratio of chemical concentration in whole blood to the
 #'chemical concentration in blood plasma.
 #'
+#' # Flat model equations
+#'
+#' ## IV administration
+#'
+#' \deqn{\textrm{Conc} = \frac{\textrm{Dose}}{V_{\textrm{dist}}}}
+#'
+#' ## Oral administration
+#'
+#' \deqn{\textrm{Conc} = \frac{F_{\textrm{gutabs}} \textrm{Dose}}{V_{\textrm{dist}}}}
+#'
 #'@param params A named list of parameter values. See Details for requirements.
 #'@param time A numeric vector of times, reflecting the time points
 #'  when concentration is measured after the corresponding single bolus dose.
