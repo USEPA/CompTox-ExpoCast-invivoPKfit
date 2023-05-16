@@ -11,12 +11,21 @@ find_and_replace <- function(path = "R",
          function(this_file){
            tmp <- readLines(con = this_file)
 
+           #any matches
+           if(any(grepl(pattern = find,
+                         x= tmp,
+                        fixed = TRUE))){
+
            tmp <- gsub(pattern = find,
                        replacement = replace,
-                       x = tmp)
+                       x = tmp,
+                       fixed = TRUE)
 
            writeLines(tmp,
                       con = this_file)
+           }
+
+           return(0)
 
          })
 
