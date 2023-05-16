@@ -1,9 +1,11 @@
 #' Add PK model(s) to be fitted
 #'
-#' @param model The name(s) of models to be fitted. These should be the names of objects of class `pk_model`. Built-in options are `"flat"`,
-#'   `"1comp"`, and `"2comp"`. You may add your own model by using [pk_model()].
+#' @param model A character vector: the name(s) of models to be fitted. These
+#'   should be the names of objects of class `pk_model`. Built-in options are
+#'   [`model_flat`], [`model_1comp`], and [`model_2comp`]. You may add your own
+#'   model by using [pk_model()].
 
-stat_model <- function(model = c("flat", "1comp", "2comp"),
+stat_model <- function(model = c("model_flat", "model_1comp", "model_2comp"),
                       ...){
   this_stat_model <- list()
   #pull pk_model objects by each name

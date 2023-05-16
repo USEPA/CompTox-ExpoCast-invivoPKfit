@@ -21,7 +21,7 @@
 #'
 #' See [params_1comp()] for the function that determines bounds and starting guesses for model parameters, based on the data.
 #'
-"1comp"
+"model_1comp"
 
 #' 2-compartment model
 #'
@@ -38,7 +38,7 @@
 #' See [tkstats_2comp()] for the function that calculates summary toxicokinetic statistics from 1-compartment model parameters.
 #'
 #' See [params_2comp()] for the function that determines bounds and starting guesses for model parameters, based on the data.
-"`2comp`"
+"model_2comp"
 
 #' Flat model
 #'
@@ -55,7 +55,7 @@
 #' See [tkstats_flat()] for the function that calculates summary toxicokinetic statistics from 1-compartment model parameters.
 #'
 #' See [params_flat()] for the function that determines bounds and starting guesses for model parameters, based on the data.
-"flat"
+"model_flat"
 
 #' CvTdb data
 #'

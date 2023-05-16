@@ -18,9 +18,9 @@
 #' individual functions for details on what TK stats are calculated for each
 #' model, and how they are calculated.
 
-#' -`1comp`: [tkstats_1comp()]
-#' -`2comp`: [tkstats_2comp()]
-#' -`flat`: [tkstats_flat()]
+#' -`model_1comp`: [tkstats_1comp()]
+#' -`model_2comp`: [tkstats_2comp()]
+#' -`model_flat`: [tkstats_flat()]
 #'
 #' @param obj A [pk()] model object. Must be fitted, or the function will exit
 #'   with an error.
@@ -45,7 +45,7 @@
 #' @return A `list` of `data.frame` objects, one  named for each model in
 #'   `model`. Each `data.frame` will have the variables in the `data.frame`
 #'   returned by the `tkstats_fun` for its corresponding model. (For the
-#'   built-in models `flat`, `1comp`, and `2comp`, these variables are
+#'   built-in models `model_flat`, `model_1comp`, and `model_2comp`, these variables are
 #'   `param_name` and `param_value`.) Additionally, there will be a variable
 #'   `method` denoting the [optimx::optimx()] method used to optimize the set of
 #'   model parameters used to derive each set of TK statistics.

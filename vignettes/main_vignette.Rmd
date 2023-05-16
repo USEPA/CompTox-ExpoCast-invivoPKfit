@@ -58,7 +58,7 @@ Now, initialize a `pk` object.  This contains the data, along with a set of inst
 
 ```{r}
 my_pk <- pk(data = my_data) +
-  stat_model(model = "1comp") + #fit a 1-compartment model
+  stat_model(model = "model_1comp") + #fit a 1-compartment model
   settings_optimx(method = "L-BFGS-B") + #use optimx algorithm L-BFGS-B
   settings_preprocess(suppress.messages = TRUE)
 ```
@@ -484,10 +484,10 @@ Each model is an object of class `pk_model`, which is simply a named list giving
 - `params_fun_args`: Any additional arguments to the function in `params_fun`
 - `tkstats_fun_args` : Any additional arguments to the function in `tkstats_fun`
 
-For example, here is the built-in model `1comp`:
+For example, here is the built-in model `model_1comp`:
 
 ```{r}
-`1comp`
+`model_1comp`
 ```
 
 You can define a new model by first writing each of the required functions above for that model: a concentration function, an AUC function, a parameters function, and a TK-stats function. Source the R scripts containing those functions. Then use the command `pk_model()`, giving the names of the new functions you have written. Assign the result to an R variable, which will contain your new `pk_model` object. That new model object will persist for the duration of your R session (unless you remove it), and will need to be re-defined if you restart R.
@@ -650,13 +650,13 @@ get_scale_conc(my_pk)
 ```
 
 
-And let's say you only want to fit the 1-compartment model -- you don't want the default fits to "flat" and "2comp". You can do this:
+And let's say you only want to fit the 1-compartment model -- you don't want the default fits to "model_flat" and "model_2comp". You can do this:
 
 ```{r}
-my_pk <- my_pk + stat_model(model = "1comp")
+my_pk <- my_pk + stat_model(model = "model_1comp")
 ```
 
-Now, "flat" and "2comp" models have been removed from the list of models to fit.
+Now, "model_flat" and "model_2comp" models have been removed from the list of models to fit.
 
 ```{r}
 get_stat_model(my_pk)
@@ -700,9 +700,9 @@ The status of the newly-created `pk` object is 1.
 
 ```{r}
 my_pk <- pk(data = my_data) + #initialize a `pk` object
-  stat_model(model = c("flat",
-                       "1comp",
-                       "2comp")) + #add PK models to fit
+  stat_model(model = c("model_flat",
+                       "model_1comp",
+                       "model_2comp")) + #add PK models to fit
   settings_optimx(method = "L-BFGS-B") #use only this optimx::optimx() algorithm
 
 get_status(my_pk) #status is 1

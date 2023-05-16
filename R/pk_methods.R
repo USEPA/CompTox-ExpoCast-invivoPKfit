@@ -13,7 +13,7 @@
 #' actually perform the optimization and fit the model, you need to call one of
 #' the methods to do that -- including [print.pk()], [summarize.pk()],
 #' [fit.pk()]. If you just type in a set of instructions like `pk(data =
-#' my_data) + stat_model(model = c("flat", "1comp", "2comp")` and hit
+#' my_data) + stat_model(model = c(model_flat, model_1comp, model_2comp)` and hit
 #' Enter/Return, then by default R will call the [print.pk()] method. (This is
 #' true no matter what you type at the R command line and hit enter -- R will
 #' call the appropriate `print` method for an object of that class, or

@@ -22,7 +22,7 @@ tkstats_flat <- function(pars,
                          dose,
                          time.units){
   #the only TK stat for a flat model is Css, since effectively it is "always" at Css
-  missing_pars <- setdiff(`flat`$params,
+  missing_pars <- setdiff(model_flat$params,
                           names(pars))
   pars[missing_pars] <- NA_real_
 

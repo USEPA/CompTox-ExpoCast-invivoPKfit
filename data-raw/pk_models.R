@@ -1,7 +1,7 @@
 devtools::load_all()
 
 #' 1-compartment model object.
-`1comp` <- pk_model(name = "1comp",
+model_1comp <- pk_model(name = "model_1comp",
                     params = c("kelim", "Vdist", "Fgutabs", "kgutabs", "Fgutabs_Vdist", "Rblood2plasma"),
                     conc_fun = "cp_1comp",
                     auc_fun = "auc_1comp",
@@ -12,7 +12,7 @@ devtools::load_all()
                     params_fun_args = NULL,
                     tkstats_fun_args = NULL)
 
-`2comp` <- pk_model(name = "2comp",
+model_2comp <- pk_model(name = "model_2comp",
                     params = c("kelim", "k12", "k21", "V1", "Fgutabs", "kgutabs", "Fgutabs_k1", "Rblood2plasma"),
                     conc_fun = "cp_2comp",
                     auc_fun = "auc_2comp",
@@ -23,7 +23,7 @@ devtools::load_all()
                     params_fun_args = NULL,
                     tkstats_fun_args = NULL)
 
-`flat` <- pk_model(name = "flat",
+model_flat <- pk_model(name = "model_flat",
                     params = c("Vdist", "Fgutabs", "Fgutabs_Vdist", "Rblood2plasma"),
                     conc_fun = "cp_flat",
                     auc_fun = "auc_flat",
@@ -34,9 +34,9 @@ devtools::load_all()
                     params_fun_args = NULL,
                    tkstats_fun_args = NULL)
 
-usethis::use_data(`1comp`,
-                  `2comp`,
-                  flat,
+usethis::use_data(model_1comp,
+                  model_2comp,
+                  model_flat,
                   internal = FALSE,
                   overwrite = TRUE)
 

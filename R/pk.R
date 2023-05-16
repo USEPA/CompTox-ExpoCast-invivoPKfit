@@ -48,7 +48,7 @@
 #'For example, you might write at the console
 #'
 #'```
-#' my_pk <- pk(my_data) + stat_model(model = "1comp") + data_settings(impute_loq = TRUE)
+#' my_pk <- pk(my_data) + stat_model(model = model_1comp) + data_settings(impute_loq = TRUE)
 #'```
 #'
 #'This is OK even though `data_settings` provides instructions for data
@@ -59,7 +59,7 @@
 #'same data set. You can simply write
 #'
 #' ```
-#'my_pk <- my_pk + stat_model(model = "2comp")
+#'my_pk <- my_pk + stat_model(model = model_2comp)
 #' ```
 #'
 #'Then you might realize that you actually wanted to dose-normalize the

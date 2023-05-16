@@ -71,7 +71,7 @@ tkstats_1comp <- function(pars,
                           # tlast,
                           time.units){
 
-  missing_pars <- setdiff(`1comp`$params,
+  missing_pars <- setdiff(model_1comp$params,
                           names(pars))
   pars[missing_pars] <- NA_real_
 

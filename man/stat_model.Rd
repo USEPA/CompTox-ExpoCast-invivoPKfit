@@ -4,11 +4,13 @@
 \alias{stat_model}
 \title{Add PK model(s) to be fitted}
 \usage{
-stat_model(model = c("flat", "1comp", "2comp"), ...)
+stat_model(model = c("model_flat", "model_1comp", "model_2comp"), ...)
 }
 \arguments{
-\item{model}{The name(s) of models to be fitted. These should be the names of objects of class `pk_model`. Built-in options are `"flat"`,
-`"1comp"`, and `"2comp"`. You may add your own model by using [pk_model()].}
+\item{model}{A character vector: the name(s) of models to be fitted. These
+should be the names of objects of class `pk_model`. Built-in options are
+[`model_flat`], [`model_1comp`], and [`model_2comp`]. You may add your own
+model by using [pk_model()].}
 }
 \description{
 Add PK model(s) to be fitted

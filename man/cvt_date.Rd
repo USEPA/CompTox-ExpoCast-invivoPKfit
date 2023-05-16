@@ -14,6 +14,7 @@ cvt_date
 The most recent download date of [`cvt`] data
 }
 \details{
-A character scalar giving the date in "YYYY-MM-DD" format.
+A character scalar giving the date in "YYYY-MM-DD" format of the download
+date of the data in [`cvt`] from the CvTdb database.
 }
 \keyword{datasets}
