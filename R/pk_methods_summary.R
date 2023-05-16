@@ -258,9 +258,29 @@ rownames(instructions_DF) <- NULL
     as.data.frame()
 
   #get TK stats
+  tkstats <- get_tkstats(obj)
+  #pivot wider and rowbind?
 
-  #compare Cmax, AUC of winning model (for each method) to NCA Cmax, AUC
-  tk_compare <-
+
+  #compare Cmax, AUC of winning model (for each method) to NCA Cmax, AUC, for each NCA group
+  tkwin <- do.call(rbind,
+                   mapply(function(this_method, this_model){
+    tmp <- get_tkstats(obj, method = this_method, model = this_model)[[1]]
+    tmp$model <- this_model
+    tmp
+  },
+  this_method = winmodel_DF$method,
+  this_model = winmodel_DF$winning_model,
+  SIMPLIFY = FALSE,
+  USE.NAMES = FALSE))
+
+  nca <- get_nca(obj)
+  tk_nca <- merge(tkwin,
+        nca,
+        by = setdiff(intersect(names(tkwin),
+                               names(nca)),
+                     "param_value"),
+        suffixes = c(".tkstats", ".nca"))
 
 
   return(list("instructions" = instructions_DF,
@@ -268,5 +288,7 @@ rownames(instructions_DF) <- NULL
               "nca" = get_nca(obj),
               "parameters" = outDF,
               "goodness_of_fit" = gof_DF,
-              "winning_model" = winmodel_DF))
+              "winning_model" = winmodel_DF,
+              "tkstats" = tkstats,
+              "tkstats_winning_vs_nca" = tk_nca))
 }

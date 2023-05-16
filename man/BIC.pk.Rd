@@ -24,7 +24,7 @@ returned for all of the models in `obj$stat_model`.}
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 for which to calculate BICs. If NULL (the default),
 log-likelihoods will be returned for all of the methods in
-`obj$optimx_settings$method`.}
+`obj$settings_optimx$method`.}
 }
 \value{
 A named list of numeric vectors. There is one list element

@@ -34,7 +34,7 @@ plotted for these models. Default `NULL` to plot fits for all models in
 
 \item{method}{Character: One or more of the [optimx::optimx()] methods used.
 Default `NULL` to plot fits for all methods in
-`obj$optimx_settings$method`.}
+`obj$settings_optimx$method`.}
 
 \item{plot_data_aes}{Aesthetic mapping for the plot layer that visualizes the
 data.}

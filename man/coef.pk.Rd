@@ -15,7 +15,7 @@ the models in `obj$stat_model`.}
 
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 whose coefficients to return. If NULL (the default), coefficients will be returned for
-all of the models in `obj$optimx_settings$method`.}
+all of the models in `obj$settings_optimx$method`.}
 }
 \value{
 A named list of numeric matrixes. There is one list element named for

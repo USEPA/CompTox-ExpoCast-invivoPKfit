@@ -15,7 +15,7 @@
 #'   `obj$stat_model`.
 #' @param method Character: One or more of the [optimx::optimx()] methods used.
 #'   Default `NULL` to plot fits for all methods in
-#'   `obj$optimx_settings$method`.
+#'   `obj$settings_optimx$method`.
 #' @param plot_data_aes Aesthetic mapping for the plot layer that visualizes the
 #'   data.
 #' @param plot_fit_aes Aesthetic mapping for the plot layer that visualizes the
@@ -64,14 +64,14 @@ plot.pk <- function(obj,
   }
 
   if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(method)) method <- obj$settings_optimx$method
   if(is.null(newdata)) newdata <- obj$data
 
   #check that all methods are valid
-  if(!(all(method %in% obj$optimx_settings$method))){
-    stop(paste("All values in `method` must be found in `obj$optimx_settings$method.",
+  if(!(all(method %in% obj$settings_optimx$method))){
+    stop(paste("All values in `method` must be found in `obj$settings_optimx$method.",
                paste0("`method` = ", paste(method, sep = ", ")),
-               paste0("`obj$optimx_settings$method` = ", paste(obj$optimx_settings$method)),
+               paste0("`obj$settings_optimx$method` = ", paste(obj$settings_optimx$method)),
                sep = "\n"))
   }
 
