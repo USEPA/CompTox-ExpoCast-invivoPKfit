@@ -41,23 +41,35 @@ And just as `ggplot2` doesn't actually build the plot until you issue a `print` 
 
 Here's a basic example.
 
+## Select data to be fit
+
 First, select data for a single chemical and species. This is the dataset that we will fit.
 
 ```{r}
 #select data for a single chemical and species
 my_data <- subset(cvt,
-                          chemicals_analyzed.dsstox_substance_id %in% "DTXSID1021116" &
-                            subjects.species_harmonized %in% "rat")
+                          chemicals_analyzed.dsstox_substance_id %in% "DTXSID7020687" &
+                            subjects.species_harmonized %in% "rabbit")
 ```
 
-Now, initialize a `pk` object.  This contains the data, along with a default set of instructions for how to do the model fitting. However, none of the instructions have been carried out yet -- this is just the list of instructions.
+## Initialize a `pk` object
+
+Now, initialize a `pk` object.  This contains the data, along with a set of instructions for how to do the model fitting. Note that none of the instructions have actually been carried out yet. At this point, the `pk` object is just the data and the list of instructions.
 
 ```{r}
 my_pk <- pk(data = my_data) +
-  stat_model(model = "1comp")
+  stat_model(model = "1comp") + #fit a 1-compartment model
+  settings_optimx(method = "L-BFGS-B") + #use optimx algorithm L-BFGS-B
+  settings_preprocess(suppress.messages = TRUE)
 ```
 
-There are four stages to model fitting.
+The instructions aren't carried out until you explicitly ask for them to be carried out, by calling functions that implement steps in the model fitting workflow.
+
+The model fitting workflow has four steps.
+
+## Model fitting workflow
+
+### Step 1: Pre-processing data
 
 The first is data pre-processing. Here, variable names are harmonized, and the data set is cleaned, filtered, and missing values are imputed when necessary. Instructions for this data pre-processing step are given in `my_pk$settings_preprocess`.
 s
@@ -67,6 +79,8 @@ my_pk <- preprocess_data(my_pk)
 ```
 
 This step adds the pre-processed data to the `pk` object in a new element named `data`.
+
+### Step 2: Data info
  
 Next, some summary information is gathered about the data. These are things like the number of detects/non-detects, broken out by the different routes and media present in the data. This step also includes non-compartmental analysis of the data, to calculate things like the empirical Cmax (maximum concentration), empirical tmax (time of maximum concentration), and empirical AUC (area under the concentration-time curve). Instructions for this "data info" step are given in `my_pk$settings_data_info`.
 
@@ -76,6 +90,8 @@ my_pk <- data_info(my_pk)
 ```
 
 This step adds the data summary info to the `pk` object in a new element named `data_info`.
+
+### Step 3: Pre-fitting
 
 Next, a "pre-fitting" step is performed. This step looks at the data, along with the PK models to be fitted, and defines the following:
 
@@ -90,6 +106,8 @@ my_pk <- prefit(my_pk)
 
 This step adds the parameter lower/upper bounds and starting guesses to the `pk` object.
 
+### Step 4: Model fitting
+
 Finally, the model fitting can be performed.
 
 ```{r}
@@ -99,7 +117,11 @@ my_pk <- fit(my_pk)
 
 This step adds the fitted model parameter values to the `pk` object. If multiple models were fitted, and/or if multiple optimization algorithms ("methods") were used to do the fitting, then one set of fitted model parameter values is added for each model and each optimization algorithm ("method").
 
+### Post-fitting: Getting information about the fitted models
+
 Once fitting has been completed, then you can use some familiar methods to extract information about the fitted model(s). 
+
+#### Coefficients, residuals, and predictions
 
 For example, you can extract the fitted model parameter values using `coef()`:
 
@@ -119,6 +141,16 @@ You can get the predicted values using `predict()`
 predict(my_pk)
 ```
 
+#### Plots
+
+You can plot the fit using `plot()`:
+
+```{r}
+plot(my_pk)
+```
+
+#### Model evaluation metrics
+
 You can also get model-evaluation metrics such as log-likelihood:
 
 ```{r}
@@ -137,14 +169,11 @@ Root mean squared error (RMSE):
 rmse(my_pk)
 ```
 
+#### Toxicokinetic statistics
 
-And finally, you can compute derived toxicokinetic statistics, such as total clearance rate, half-life, steady-state plasma concentration, etc.
-
-
+And finally, you can compute derived toxicokinetic statistics, such as total clearance rate, half-life, steady-state plasma concentration, etc., using `get_tkstats()`.
 
 ```{r}
-
-#get TK stats
 get_tkstats(my_pk)
 ```
 
@@ -152,16 +181,15 @@ We'll walk through the various pieces of this example.
 
 # Anatomy of a `pk` object
 
-Let's start with the first piece: initializing a `pk` object.
+Let's start at the very beginning (a very good place to start). When you initialize a `pk` object, what does that object actually contain?
+
+Here, I'll initialize a `pk` object with all the default options.
 
 ```{r}
-my_pk <- pk(data = subset(cvt,
-                          chemicals_analyzed.dsstox_substance_id %in% "DTXSID1021116" &
-                            subjects.species_harmonized %in% "rat")
-            )
+my_pk <- pk(data = my_data)
 ```
 
-The function `pk()` creates and initializes a `pk` S3 object with the data in the `data` argument, and a default set of instructions for model fitting. When just created, a `pk` object is, under the hood, a `list` object with the following elements:
+This newly-initialized `pk` object is, under the hood, a `list` object with the following elements:
 
 ```{r}
 names(my_pk)
@@ -194,7 +222,7 @@ ggplot(data = my_data,
 
 In `invivopkfit`, you specify which variables in your data map to the standardized variables `Chemical`, `Species`, `Time`, `Dose`, etc., using a command like this:
 
-```{r}
+```{r, eval = FALSE}
 pk(data = my_data,
    ggplot2::aes(Chemical = chemicals_analyzed.dsstox_substance_id,
                                       Chemical_Name = series.analyte_name_original,
@@ -285,10 +313,23 @@ get_status(my_pk)
 
 ## `my_pk$settings_preprocess`
 
-This element contains the instructions for pre-processing the data. It is the result of a call to `settings_data()` with all the default arguments.
+This element contains the instructions for pre-processing the data. It is the result of a call to the function `settings_preprocess()` with all the default arguments. In other words, 
+
+```{r, eval = FALSE}
+
+my_pk <- pk(my_data)
+```
+
+is the same as
+
+```{r, eval = FALSE}
+my_pk <- pk(my_data) + settings_preprocess()
+```
+
+Here are the default arguments to `settings_preprocess()`.
 
 ```{r}
-formals(settings_data)
+formals(settings_preprocess)
 ```
 
 ### `routes_keep`
@@ -300,7 +341,7 @@ This contains a list of the "allowed" tissue media in which concentrations can b
 
 ### `ratio_conc_dose`
 
-
+This gives the ratio of the mass units used for concentrations to the mass units used for dose. The default is 1, indicating the same mass units are used in each (in CvTdb, by default, concentrations are mg/L and doses are mg/kg). If, for example, you had data where concentrations were ng/L and doses were mg/kg, you would need to use `ratio_conc_dose = 1e-6`. During data preprocessing, concentrations are multiplied by `ratio_conc_dose` so that the units harmonize with dose units.
 
 ### `impute_loq`, `loq_group` and `calc_loq_factor`
 
@@ -310,13 +351,46 @@ This instructs `invivopkfit` on whether and how to try to impute values for limi
 
 This instructs `invivopkfit` on whether and how to try to impute missing values for sample standard deviations of observed concentrations. If `impute_sd = TRUE`, then missing SDs will be imputed as follows. The data will be split into groups according to unique combinations of the variables specified in `sd_group`. If there are any non-missing SDs in a group, then missing SDs will be imputed as the minimum non-missing SD in the group. If all SDs in a group are missing, then they will be imputed with 0.
 
+
+## `my_pk$settings_data_info`
+
+This element provides control settings for getting summary data information, including non-compartmental analysis. It is the result of a call to `settings_data_info()` with default arguments. In other words, just calling `pk()` by itself is the same as
+
+```{r}
+my_pk <- pk(my_data) +
+  settings_preprocess() +
+  settings_data_info()
+```
+
+Here are the default arguments to `settings_data_info()`:
+
+```{r}
+formals(settings_data_info)
+```
+
 ### `nca_group` 
 
-This instructs `invivopkfit` on how to perform non-compartmental analysis. Data will be split into groups according to unique combinations of the variables specified in `nca_group`. Then, non-compartmental analysis will be performed for each group using `PK::nca()`. 
+This argument instructs `invivopkfit` on how to perform non-compartmental analysis. Data will be split into groups according to unique combinations of the variables specified in `nca_group`. Then, non-compartmental analysis will be performed for each group using `PK::nca()`. 
+
+For each NCA group, a few basic summary statistics will also be computed:
+
+-number of observations
+-number of detects
+-time of first and last observations
+-time of first and last detected observations
 
 ## `my_pk$optimx_settings`
 
-This element provides control settings for the optimizer used to fit the model(s) to the data, which is `optimx::optimx()`. It is the result of a call to `settings_optimx()` with default arguments.
+This element provides control settings for the optimizer used to fit the model(s) to the data, which is `optimx::optimx()`. It is the result of a call to `settings_optimx()` with default arguments. In other words, just calling `pk()` by itself is the same as
+
+```{r, eval = FALSE}
+my_pk <- pk(my_data) +
+  settings_preprocess() +
+  settings_data_info() +
+  settings_optimx()
+```
+
+Here are the default arguments to `settings_optimx()`:
 
 ```{r}
 formals(settings_optimx)
@@ -330,7 +404,17 @@ This element is itself a list with elements `conc` and `time`, providing instruc
 
 ### `my_pk$scales$conc`
 
-The `conc` element is a result of a call to `scales_conc()` with the default arguments.
+The `conc` element is a result of a call to `scales_conc()` with the default arguments. In other words, `pk()` alone is the same as
+
+```{r, eval = FALSE}
+my_pk <- pk(my_data) +
+  settings_preprocess() +
+  settings_data_info() +
+  settings_optimx() +
+  scale_conc()
+```
+
+Here are the default arguments to `scale_conc()`:
 
 ```{r}
 formals(scale_conc)
@@ -344,10 +428,20 @@ This instructs `invivopkfit` on whether to apply dose normalization before fitti
 
 This instructs `invivopkfit` whether to apply a `log10()` transformation to observed concentrations (and LOQs) before fitting. This transformation might also be useful to normalize heteroscedastic residual errors that scale multiplicatively with concentration.
 
-
 ### `my_pk$scales$time`
 
-The `time` element is a result of a call to `scales_time()` with the default arguments (there is only one).
+The `time` element is a result of a call to `scales_time()` with the default arguments (there is only one). Calling `pk()` by itself is the same as
+
+```{r, eval = FALSE}
+my_pk <- pk(my_data) +
+  settings_preprocess() +
+  settings_data_info() +
+  settings_optimx() +
+  scale_conc() +
+  scale_time()
+```
+
+Here are the default arguments to `scale_time()`:
 
 ```{r}
 formals(scale_time)
@@ -357,7 +451,19 @@ formals(scale_time)
 
 ## `my_pk$stat_model`
 
-This is a named list, with one item named for each model to be fitted. It is the result of a call to `stat_model()` with its default arguments.
+This is a named list, with one item named for each model to be fitted. It is the result of a call to `stat_model()` with its default arguments. In other words, calling `pk()` by itself is the same as calling
+
+```{r, eval = FALSE}
+my_pk <- pk(my_data) +
+  settings_preprocess() +
+  settings_data_info() +
+  settings_optimx() +
+  scale_conc() +
+  scale_time() +
+  stat_model()
+```
+
+Here are the default arguments to `stat_model`:
 
 ```{r}
 formals(stat_model)
@@ -378,11 +484,32 @@ Each model is an object of class `pk_model`, which is simply a named list giving
 - `params_fun_args`: Any additional arguments to the function in `params_fun`
 - `tkstats_fun_args` : Any additional arguments to the function in `tkstats_fun`
 
+For example, here is the built-in model `1comp`:
+
+```{r}
+`1comp`
+```
+
 You can define a new model by first writing each of the required functions above for that model: a concentration function, an AUC function, a parameters function, and a TK-stats function. Source the R scripts containing those functions. Then use the command `pk_model()`, giving the names of the new functions you have written. Assign the result to an R variable, which will contain your new `pk_model` object. That new model object will persist for the duration of your R session (unless you remove it), and will need to be re-defined if you restart R.
 
 ## `my_pk$stat_error_model`
 
 This is the result of a call to `stat_error_model()` with its default arguments.
+
+In other words, calling `pk()` by itself is the same as calling
+
+```{r, eval = FALSE}
+my_pk <-pk(my_data) +
+  settings_preprocess() +
+  settings_data_info() +
+  settings_optimx() +
+  scale_conc() +
+  scale_time() +
+  stat_model() +
+  stat_error_model()
+```
+
+Here are the default arguments to `stat_error_model()`:
 
 ```{r}
 formals(stat_error_model)
@@ -414,17 +541,23 @@ If the variables in `error_group` put all the data into the same group, then tha
 
 If you just want to use the default fitting instructions, you can simply do
 
-```{r}
+```{r, eval = FALSE}
 my_pk <- pk(data = my_data)
 my_pk <- fit(my_pk)
 ```
 
 But if you would like to specify different instructions, you do that by adding settings, scales, and stats using `+`, similarly to the way you add layers in `ggplot2`.
 
-Here is an example.
+It doesn't matter what order you add the instructions in. 
+
+Here is an example. Notice that I've added the instructions in a different order than shown in the "anatomy of a `pk` object`. That's to emphasize that it doesn't matter what order you add the instructions. Any instructions you don't add explicitly will take their default values.
+
+Note that it will throw messages about replacing existing instructions. These are just messages for your information -- they do not mean anything is wrong!
 
 ```{r}
 my_pk <- pk(my_data) +
+    #instructions to use an error model that puts all observations in the same group
+  stat_error_model(error_group = vars(Chemical, Species)) +
   #instructions for concentration scaling/transformation
   scale_conc(dose_norm = TRUE,
              log10_trans = TRUE) +
@@ -433,12 +566,77 @@ my_pk <- pk(my_data) +
   #instructions to use only one method for optimx::optimx()
   settings_optimx(method = "L-BFGS-B") +
   #instructions to impute missing LOQs slightly differently
-  settings_data(calc_loq_factor = 0.5) +
-  #instructions to use an error model that puts all observations in the same group
-  stat_error_model(error_group = vars(Chemical, Species))
+  settings_preprocess(calc_loq_factor = 0.5) 
 ```
 
-You can then overwrite any instructions by adding new/different ones. Let's say you made a mistake -- you actually wanted to dose-normalize concentrations, but *not* log-transform them. You can just do this:
+# Checking the current instructions for a `pk` object
+
+## Check original data
+
+```{r}
+get_data_original(my_pk)
+```
+## Check mapping
+
+```{r}
+get_mapping(my_pk)
+```
+
+## Check status
+
+```{r}
+get_status(my_pk)
+```
+
+
+You can check the current instructions for a `pk` object using various functions that are named `get_[element]`. This is (hopefully) easier than remembering how to access all the list elements in the `pk` object.
+
+## Check `settings_preprocess`
+
+```{r}
+get_settings_preprocess(my_pk)
+```
+
+## Check `settings_data_info`
+
+```{r}
+get_settings_data_info(my_pk)
+```
+
+## Check `settings_optimx`
+
+```{r}
+get_settings_optimx(my_pk)
+```
+
+## Check `scale_conc`
+
+```{r}
+get_scale_conc(my_pk)
+```
+
+## Check `scale_time`
+```{r}
+get_scale_time(my_pk)
+```
+
+## Check `stat_model`
+
+```{r}
+get_stat_model(my_pk)
+```
+
+## Check `stat_error_model`
+
+```{r}
+get_stat_error_model(my_pk)
+```
+
+## Replacing instructions with new ones
+
+You can then overwrite any instructions by adding new/different ones. Let's say you made a mistake -- you actually wanted to dose-normalize concentrations, but *not* log-transform them. 
+
+You can just do this:
 
 ```{r}
 my_pk <- my_pk +
@@ -446,6 +644,11 @@ my_pk <- my_pk +
 ```
 
 Now the new instructions have replaced the old ones.
+
+```{r}
+get_scale_conc(my_pk)
+```
+
 
 And let's say you only want to fit the 1-compartment model -- you don't want the default fits to "flat" and "2comp". You can do this:
 
@@ -455,7 +658,12 @@ my_pk <- my_pk + stat_model(model = "1comp")
 
 Now, "flat" and "2comp" models have been removed from the list of models to fit.
 
-# 
+```{r}
+get_stat_model(my_pk)
+```
+
+# What happens to a `pk` object as you go through the steps of model fitting workflow
+
 
 
 # Resetting status
@@ -524,6 +732,18 @@ get_tkstats(my_pk)
 
 
 
+# Main analysis
+
+```{r}
+cvt %>%
+  dplyr::group_by(chemicals_analyzed.dsstox_substance_id,
+                  subjects.species_harmonized) %>%
+  dplyr::summarise({
+    this_pk <- pk(data = cur_data_all())
+    this_pk <- fit(this_pk)
+    
+  })
+```
 
 
 
