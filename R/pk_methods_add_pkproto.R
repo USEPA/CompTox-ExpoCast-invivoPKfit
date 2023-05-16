@@ -236,3 +236,39 @@ pk_add.pk_stat_error_model <- function(object, pk_obj, objectname){
   return(pk_obj)
 }
 
+#' Add an `uneval` object
+#'
+#' Add an object created by [ggplot2::aes()]
+#'
+#' This function adds a new variable mapping (created by [ggplot2::aes()]),
+#' which has class `uneval`, to an existing [pk()] object.
+#'
+#' The new mapping will completely replace any existing mapping.
+#'
+#' @param object The `uneval` (mapping) object to be added.
+#' @param pk_obj The [pk()] object to which the `uneval` object will be added.
+#' @param objectname The name of the `uneval` object.
+#'
+#' @return The [pk()] object, modified by adding the new mapping.
+#' @author Caroline Ring
+#' @export
+pk_add.uneval <- function(object, pk_obj, objectname){
+  if(!is.null(pk_obj$mapping)){
+    message(paste0(objectname,
+                   ": mapping already present; new mapping will replace the existing one")
+    )
+  }
+
+  pk_obj$mapping <- object
+
+  #data pre-processing and everything downstream will change
+  if(pk_obj$status > (status_preprocess - 1)){
+    message(paste0(objectname,
+                   ": Modifying mapping resets status to level ",
+                   status_preprocess - 1,
+                   "; all later stages of the workflow will need to be re-done"))
+    pk_obj$status <-  status_preprocess - 1
+  }
+
+  return(pk_obj)
+}
