@@ -6,11 +6,9 @@
 #'@param medium Character: the media (tissue) for which to compute TK stats.
 #'  Currently only "blood" and "plasma" are supported.
 #'@param dose Numeric: A dose for which to calculate TK stats.
-#'@param time.units Character: the units of time used for the parameters `par`.
-#'  For example, if `par["kelim"]` is in units of 1/weeks, then `time.units =
-#'  "weeks"`. If `par["kelim"]` is in units of 1/hours, then `time.units =
-#'  "hours"`. This is used to calculate the steady-state plasma/blood
-#'  concentration for long-term daily dosing of 1 mg/kg/day. Not used for flat model.
+#'@param time_unit Character: the units of time.
+#'@param conc_unit Character: The units of concentration.
+#'@param dose_unit Character: The units of dose.
 #'@return A `data.frame` with two variables:
 #' - `param_name` = `c("CLtot", "CLtot/Fgutabs", "Css_1mgkgday", "halflife", "Cmax", "AUC_infinity")`
 #' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed).
@@ -20,7 +18,10 @@ tkstats_flat <- function(pars,
                          route,
                          medium,
                          dose,
-                         time.units){
+                         time_unit,
+                         conc_unit,
+                         vol_unit,
+                         ...){
   #the only TK stat for a flat model is Css, since effectively it is "always" at Css
   missing_pars <- setdiff(model_flat$params,
                           names(pars))
@@ -36,7 +37,7 @@ tkstats_flat <- function(pars,
     Fgutabs_Vdist <- Fgutabs/Vdist
   }
 
-  Css_1mgkgday <- cp_flat(params = as.list(pars[!is.na(pars)]),
+  Css <- cp_flat(params = as.list(pars[!is.na(pars)]),
                           time = Inf,
                           dose = dose,
                           route = route,
@@ -51,7 +52,7 @@ tkstats_flat <- function(pars,
   return(data.frame("param_name" = c(
     "CLtot",
     "CLtot/Fgutabs",
-    "Css_1mgkgday",
+    "Css",
     "halflife",
     "Cmax",
     "AUC_infinity",
@@ -60,12 +61,20 @@ tkstats_flat <- function(pars,
                     "param_value" = c(
                       0,
                       0,
-                      Css_1mgkgday,
+                      Css,
                       Inf,
-                      Css_1mgkgday,
+                      Css,
                       AUC_inf,
                       Vdist,
-                      1/(Fgutabs_Vdist))
+                      1/(Fgutabs_Vdist)),
+                      param_units = c(paste0(vol_unit, "/", time_unit),
+                                      paste0(vol_unit, "/", time_unit),
+                                      conc_unit,
+                                      time_unit,
+                                      time_unit,
+                                      paste0(conc_unit, " * ", time_unit),
+                                      vol_unit,
+                                      vol_unit)
     )
     )
 }

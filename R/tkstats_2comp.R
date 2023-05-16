@@ -58,11 +58,13 @@
 #'@param medium Character: the media (tissue) for which to compute TK stats..
 #'  Currently only "blood" and "plasma" are supported.
 #'@param dose Numeric: A dose for which to calculate TK stats.
-#'@param time.units Character: the units of time used for the parameters `par`.
-#'  For example, if `par["kelim"]` is in units of 1/weeks, then `time.units =
-#'  "weeks"`. If `par["kelim"]` is in units of 1/hours, then `time.units =
+#'@param time_unit Character: the units of time used for the parameters `par`.
+#'  For example, if `par["kelim"]` is in units of 1/weeks, then `time_unit =
+#'  "weeks"`. If `par["kelim"]` is in units of 1/hours, then `time_unit =
 #'  "hours"`. This is used to calculate the steady-state plasma/blood
 #'  concentration for long-term daily dosing of 1 mg/kg/day.
+#'@param conc_unit Character: The units of concentration.
+#'@param dose_unit Character: The units of dose.
 #'@return A `data.frame` with two variables:
 #' - `param_name` = `c("CLtot", "CLtot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity", "A", "B", "alpha", "beta", "Vbeta", "Vbeta_Fgutabs", "Vss", "Vss_Fgutabs")`
 #' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed; e.g. all of the `"x_Fgutabs"` parameters can only be computed if `route = "oral"` ).
@@ -72,8 +74,10 @@ tkstats_2comp <- function(pars,
                           route,
                           medium,
                           dose,
-                          # tlast,
-                          time.units){
+                          time_unit,
+                          conc_unit,
+                          vol_unit,
+                          ...){
 
   missing_pars <- setdiff(model_2comp$params,
                           names(pars))
@@ -126,10 +130,10 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
   #convert dose interval of (1/day) into time units
   dose_int <- convert_time(x = 1,
                from = "days",
-               to = time.units,
+               to = time_unit,
                inverse = TRUE)
 
-  Css_1mgkgday <- ifelse(route %in% "oral",
+  Css <- dose * ifelse(route %in% "oral",
                       Fgutabs_V1 / kelim / dose_int,
                       1/(kelim * V1 * dose_int)) *
     ifelse(medium %in% "blood",
@@ -170,34 +174,30 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
 
   return(data.frame(param_name = c("CLtot",
                                    "CLtot/Fgutabs",
-                                   "Css_1mgkgday",
+                                   "Css",
                                    "halflife",
                                    "tmax",
                                    "Cmax",
                                    "AUC_infinity",
-                                   # "A",
-                                   # "B",
-                                   # "alpha",
-                                   # "beta",
-                                   # "Vbeta",
-                                   # "Vbeta_Fgutabs",
                                    "Vdist_ss",
                                    "Vdist_ss/Fgutabs"),
                     param_value = c(CLtot,
                                     CLtot_Fgutabs,
-                                    Css_1mgkgday,
+                                    Css,
                                     halflife_terminal,
                                     tmax,
                                     Cmax,
                                     AUC_inf,
-                                    # A,
-                                    # B,
-                                    # alpha,
-                                    # beta,
-                                    # Vbeta,
-                                    # Vbeta_Fgutabs,
                                     Vss,
-                                    Vss_Fgutabs)
+                                    Vss_Fgutabs),
+                    param_units = c(paste0(vol_unit, "/", time_unit),
+                                    paste0(vol_unit, "/", time_unit),
+                                    conc_unit,
+                                    time_unit,
+                                    time_unit,
+                                    paste0(conc_unit, " * ", time_unit),
+                                    vol_unit,
+                                    vol_unit)
                     )
          )
 }

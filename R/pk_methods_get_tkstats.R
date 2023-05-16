@@ -26,18 +26,19 @@
 #'   with an error.
 #' @param newdata Optional: A `data.frame` containing new data for which to
 #'   compute the TK stats. Must contain at least variables `Chemical`,
-#'   `Species`, `Route`, `Media`, `Dose`, and any other variables named in
+#'   `Species`, `Route`, `Media`, `Dose`, `Dose.Unit`, `Conc.Unit`, either
+#'   `Time_trans.Unit` or `Time.Unit`, and any other variables named in
 #'   `tk_grouping`. Default `NULL`, to use the data in `obj$data`.
 #' @param tk_group A list of variables provided using a `dplyr::vars()` call.
 #'   The data (either `newdata` or `obj$data`) will be grouped according to the
 #'   unique combinations of these variables. For each unique combination of
-#'   these variables in the data, a set of TK statistics will be computed.
-#'   The default is `obj$settings_data_info$nca_group`, to derive TK statistics for the
-#'   same groups of data as non-compartmental analysis statistics. With the
+#'   these variables in the data, a set of TK statistics will be computed. The
+#'   default is `obj$settings_data_info$nca_group`, to derive TK statistics for
+#'   the same groups of data as non-compartmental analysis statistics. With the
 #'   default, you can directly compare e.g. a model-predicted AUC_inf to the
 #'   corresponding NCA-estimated AUC_inf. However, you may specify a different
-#'   data grouping if you wish. Each group should have a unique combination of `Chemical`,
-#'   `Species`, `Route`, `Media`, and `Dose`.
+#'   data grouping if you wish. Each group should have a unique combination of
+#'   `Chemical`, `Species`, `Route`, `Media`, and `Dose`.
 #' @param model Character: One or more of the models fitted. Default `NULL` to
 #'   return TK stats for all models.
 #' @param method Character: One or more of the [optimx::optimx()] methods used.
@@ -45,17 +46,18 @@
 #' @return A `list` of `data.frame` objects, one  named for each model in
 #'   `model`. Each `data.frame` will have the variables in the `data.frame`
 #'   returned by the `tkstats_fun` for its corresponding model. (For the
-#'   built-in models `model_flat`, `model_1comp`, and `model_2comp`, these variables are
-#'   `param_name` and `param_value`.) Additionally, there will be a variable
-#'   `method` denoting the [optimx::optimx()] method used to optimize the set of
-#'   model parameters used to derive each set of TK statistics.
+#'   built-in models `model_flat`, `model_1comp`, and `model_2comp`, these
+#'   variables are `param_name` and `param_value`.) Additionally, there will be
+#'   a variable `method` denoting the [optimx::optimx()] method used to optimize
+#'   the set of model parameters used to derive each set of TK statistics.
 #' @export
 #' @author Caroline Ring
 get_tkstats.pk <- function(obj,
                            newdata = NULL,
                            tk_group = obj$settings_data_info$nca_group,
                            model = NULL,
-                           method = NULL){
+                           method = NULL,
+                           vol_unit = "L"){
 
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -106,6 +108,16 @@ tkstats_all <- sapply(model,
          this_tkstats_args <- obj$stat_model[[this_model]]$tkstats_fun_args
          #Get the matrix of coefficients for this model -- one row named for each method
          this_coef <- all_coefs[[this_model]]
+         #Derive dose units
+         dose_unit <- unique(newdata$Dose.Unit)
+         #Derive conc unit
+           conc_unit <- unique(newdata$Conc.Unit)
+         #Derive time unit
+         if("Time_trans.Unit" %in% names(newdata)){
+           time_unit <- unique(newdata$Time_trans.Unit)
+         }else{
+           time_unit <- unique(newdata$Time.Unit)
+         }
          #loop over methods: get tkstats for the set of coefficients for each method
          #the result will be a named list of data.frames, one for each method
          tkstats_list <- sapply(method,
@@ -126,7 +138,9 @@ tkstats_all <- sapply(model,
                                      route = unique(Route),
                                      medium = unique(Media),
                                      dose = unique(Dose),
-                                     time.units = unique(obj$data$Time_trans.Units)
+                                     time_unit = time_unit,
+                                     conc_unit = conc_unit,
+                                     vol_unit = vol_unit
                                 ),
                                 this_tkstats_args
                               )
@@ -155,7 +169,6 @@ tkstats_all <- sapply(model,
 ) #end sapply over models
 #the result will be a named list of data.frames, one for each model
 #return it
-
 
 return(tkstats_all)
 }

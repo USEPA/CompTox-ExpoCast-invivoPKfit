@@ -40,6 +40,53 @@
 #'See [get_params_flat()], [get_params_1comp()], [get_params_2comp()] for
 #'examples.
 #'
+#'# `tkstats_fun` requirements
+#'
+#'`tkstats_fun` should be a function which accepts a vector of model parameter
+#'values and calculates derived summary toxicokinetic statistics (e.g. total
+#'clearance, halflife, AUC, volume of distribution at steadystate).
+#'
+#'The function must take the following named arguments:
+#'
+#' - `pars`: A named numeric vector of model parameter values.
+#' - `route`: A character scalar naming a route (e.g. "oral" or "iv")
+#' - `medium`: A character scalar naming a tissue medium of analysis (e.g. "blood" or "plasma")
+#' - `dose`: A numeric scalar giving a dose level for which to calculate TK statistics
+#' - `time_unit`: A character scalar giving the units of time
+#' - `conc_unit`: A character scalar giving the units of concentration
+#' - `vol_unit`: A character scalar giving the units of volume
+#'
+#'and return a `data.frame` of derived toxicokinetic statistics, which should
+#'have the following variables:
+#'
+#' - `param_name`: A character vector giving the names of each derived TK statistic
+#' - `param_value`: A character vector giving the values of each derived TK statistic
+#' - `param_units`: A character vector giving the units of each derived TK statistic
+#'
+#'It is recommended (although not required) that the function return the
+#'following statistics, using these names in the `param_name` variable:
+#'
+#' - `CLtot`: Total clearance rate (units of volume/time)
+#' - `CLtot/Fgutabs`: Total clearance rate scaled by bioavailability (if oral bioavailability is available) (units of volume/time)
+#' - `Css`: The steady-state concentration after a long-term daily dose of `dose` (units of concentration)
+#' - `halflife`: The terminal half-life (units of time)
+#' - `tmax`: The time of peak concentration (units of time)
+#' - `Cmax`: The peak concentration (units of time)
+#' - `AUC_infinity`: The area under the concentration-time curve, calculated at infinite time (units of concentration * time)
+#' - `Vdist_ss`: The volume of distribution at steady-state (units of volume)
+#' - `Vdist_ss/Fgutabs`: The volume of distribution at steady-state scaled by bioavailability (if oral bioavailability is available) (units of volume)
+#'
+#'The recommendation to return these statistics, using these names, is intended
+#'to make it easier to compare TK statistics across models, and to compare TK
+#'statistics to the results of non-compartmental analysis. If these names are
+#'not used, then some outputs of [summary.pk()] will not be very useful. The
+#'automated comparison of TK stats from the winning model to the results of
+#'non-compartmental analysis relies on these names being present in the output
+#'of `tkstats_fun` to match the names of the statistics output from NCA; it
+#'shouldn't crash without them, but the results won't be very useful. And TK
+#'stats compiled across models will not be easy to compare if the models use
+#'different names for the statistics.
+#'
 #'@param name Character: The name of the model
 #'@param params Character vector: Parameter names of the model
 #'@param conc_fun Name of a function to predict tissue concentrations. See
@@ -48,15 +95,15 @@
 #'  concentration-time curve). See Details for requirements.
 #'@param params_fun Name of the function that produces the `data.frame` of
 #'  parameter info (see Details)
-#'@param tkstats_fun Name of the function that produces a`data.frame` of
-#'  derived Tk statistics (see Details)
+#'@param tkstats_fun Name of the function that produces a`data.frame` of derived
+#'  TK statistics (see Details)
 #'@param conc_fun_args Any additional arguments to `conc_fun` other than those
 #'  listed in Details. Default NULL.
 #'@param auc_fun_args Any additional arguments to `auc_fun` other those those
 #'  listed in Details. Default NULL.
 #'@param params_fun_args Any additional arguments to `params_fun` other than
 #'  `data` (see Details). Default NULL.
-#'@param params_fun_args Any additional arguments to `tkstats_fun` other than
+#'@param tkstats_fun_args Any additional arguments to `tkstats_fun` other than
 #'  `data`, `medium`, `route` (see Details). Default NULL.
 #'@return An object of class `pk_model`. Effectively, a named list containing
 #'  all of the arguments provided to this function.

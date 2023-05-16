@@ -4,7 +4,7 @@
 \alias{tkstats_flat}
 \title{TK stats for flat model}
 \usage{
-tkstats_flat(pars, route, medium, dose, time.units)
+tkstats_flat(pars, route, medium, dose, time_unit, conc_unit, vol_unit, ...)
 }
 \arguments{
 \item{pars}{A named vector of model parameters (e.g. from [coef.pk()]).}
@@ -17,11 +17,11 @@ Currently only "blood" and "plasma" are supported.}
 
 \item{dose}{Numeric: A dose for which to calculate TK stats.}
 
-\item{time.units}{Character: the units of time used for the parameters `par`.
-For example, if `par["kelim"]` is in units of 1/weeks, then `time.units =
-"weeks"`. If `par["kelim"]` is in units of 1/hours, then `time.units =
-"hours"`. This is used to calculate the steady-state plasma/blood
-concentration for long-term daily dosing of 1 mg/kg/day. Not used for flat model.}
+\item{time_unit}{Character: the units of time.}
+
+\item{conc_unit}{Character: The units of concentration.}
+
+\item{dose_unit}{Character: The units of dose.}
 }
 \value{
 A `data.frame` with two variables:

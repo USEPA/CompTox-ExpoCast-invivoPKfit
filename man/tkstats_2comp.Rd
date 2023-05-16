@@ -4,7 +4,7 @@
 \alias{tkstats_2comp}
 \title{Toxicokinetic statistics for 1-compartment model}
 \usage{
-tkstats_2comp(pars, route, medium, dose, time.units)
+tkstats_2comp(pars, route, medium, dose, time_unit, conc_unit, vol_unit, ...)
 }
 \arguments{
 \item{pars}{A named vector of model parameters (e.g. from [coef.pk()]).}
@@ -17,11 +17,15 @@ Currently only "blood" and "plasma" are supported.}
 
 \item{dose}{Numeric: A dose for which to calculate TK stats.}
 
-\item{time.units}{Character: the units of time used for the parameters `par`.
-For example, if `par["kelim"]` is in units of 1/weeks, then `time.units =
-"weeks"`. If `par["kelim"]` is in units of 1/hours, then `time.units =
+\item{time_unit}{Character: the units of time used for the parameters `par`.
+For example, if `par["kelim"]` is in units of 1/weeks, then `time_unit =
+"weeks"`. If `par["kelim"]` is in units of 1/hours, then `time_unit =
 "hours"`. This is used to calculate the steady-state plasma/blood
 concentration for long-term daily dosing of 1 mg/kg/day.}
+
+\item{conc_unit}{Character: The units of concentration.}
+
+\item{dose_unit}{Character: The units of dose.}
 }
 \value{
 A `data.frame` with two variables:

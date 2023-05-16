@@ -690,6 +690,55 @@ Notice that missing `LOQ` values have been imputed; compare `LOQ.orig` to `LOQ`.
 
 (A warning: If you do `scale_conc(log10_trans = TRUE)`, then the log10 transformation will be applied to the concentration SD as well as the concentration. This means you can no longer take `Conc_trans + Conc_SD` or `Conc_trans - Conc_SD` as upper and lower bounds. This math is handled correctly internal to `invivopkfit`, but if you extract the pre-processed data and use it for another purpose, be aware of that caveat!)
 
+## Data summary info
+
+```{r}
+my_pk <- data_info(my_pk)
+```
+
+```{r}
+names(pk)
+```
+
+A new element `data_info` has been added. This element is itself a named list containing element "data_summary" and "nca". You can extract these elements using the following functions:
+
+```{r}
+get_data_info(my_pk)
+```
+
+```{r}
+get_nca(my_pk)
+```
+
+## Pre-fitting
+
+```{r}
+my_pk <- prefit(my_pk)
+```
+
+```{r}
+names(my_pk)
+```
+
+No new elements have been added to the top level of `my_pk`. The results of pre-fitting are stored as new sub-elements of `my_pk`.
+
+```{r}
+names(my_pk$stat_error_model)
+```
+
+```{r}
+names(my_pk$stat_model)
+```
+
+# Fitting
+
+
+
+
+
+
+
+
 # Resetting status
 
 Note: Status can be "reset".  -- and then you do something like change the concentration scaling, which changes everything from pre-processing the data (step 2) and downstream -- then the object status will be reset back to 1. This tells `invivopkfit` that it needs to re-do all the steps starting from pre-processing the data.

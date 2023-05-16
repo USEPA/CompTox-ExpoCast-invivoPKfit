@@ -9,7 +9,8 @@
   newdata = NULL,
   tk_group = obj$settings_data_info$nca_group,
   model = NULL,
-  method = NULL
+  method = NULL,
+  vol_unit = "L"
 )
 }
 \arguments{
@@ -18,19 +19,20 @@ with an error.}
 
 \item{newdata}{Optional: A `data.frame` containing new data for which to
 compute the TK stats. Must contain at least variables `Chemical`,
-`Species`, `Route`, `Media`, `Dose`, and any other variables named in
+`Species`, `Route`, `Media`, `Dose`, `Dose.Unit`, `Conc.Unit`, either
+`Time_trans.Unit` or `Time.Unit`, and any other variables named in
 `tk_grouping`. Default `NULL`, to use the data in `obj$data`.}
 
 \item{tk_group}{A list of variables provided using a `dplyr::vars()` call.
 The data (either `newdata` or `obj$data`) will be grouped according to the
 unique combinations of these variables. For each unique combination of
-these variables in the data, a set of TK statistics will be computed.
-The default is `obj$settings_data_info$nca_group`, to derive TK statistics for the
-same groups of data as non-compartmental analysis statistics. With the
+these variables in the data, a set of TK statistics will be computed. The
+default is `obj$settings_data_info$nca_group`, to derive TK statistics for
+the same groups of data as non-compartmental analysis statistics. With the
 default, you can directly compare e.g. a model-predicted AUC_inf to the
 corresponding NCA-estimated AUC_inf. However, you may specify a different
-data grouping if you wish. Each group should have a unique combination of `Chemical`,
-`Species`, `Route`, `Media`, and `Dose`.}
+data grouping if you wish. Each group should have a unique combination of
+`Chemical`, `Species`, `Route`, `Media`, and `Dose`.}
 
 \item{model}{Character: One or more of the models fitted. Default `NULL` to
 return TK stats for all models.}
@@ -42,10 +44,10 @@ Default `NULL` to return TK stats for all methods.}
 A `list` of `data.frame` objects, one  named for each model in
   `model`. Each `data.frame` will have the variables in the `data.frame`
   returned by the `tkstats_fun` for its corresponding model. (For the
-  built-in models `model_flat`, `model_1comp`, and `model_2comp`, these variables are
-  `param_name` and `param_value`.) Additionally, there will be a variable
-  `method` denoting the [optimx::optimx()] method used to optimize the set of
-  model parameters used to derive each set of TK statistics.
+  built-in models `model_flat`, `model_1comp`, and `model_2comp`, these
+  variables are `param_name` and `param_value`.) Additionally, there will be
+  a variable `method` denoting the [optimx::optimx()] method used to optimize
+  the set of model parameters used to derive each set of TK statistics.
 }
 \description{
 Extract derived TK statistics from a fitted [pk()] model object.
