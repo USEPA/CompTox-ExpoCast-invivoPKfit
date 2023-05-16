@@ -664,7 +664,31 @@ get_stat_model(my_pk)
 
 # What happens to a `pk` object as you go through the steps of model fitting workflow
 
+## Pre-processing data
 
+```{r}
+my_pk <- preprocess_data(my_pk)
+```
+
+Re-check the names of the `pk` object:
+
+```{r}
+names(my_pk)
+```
+
+Notice that a new element `data` has been added to the end. This contains the pre-processed data. You can access it using the function `get_data()`.
+
+```{r}
+get_data(my_pk)
+```
+
+Notice that the variables `Value` and `LOQ` have been translated into `Conc` and `Detect`. If `Value < LOQ` then `Detect = FALSE`; otherwise `Detect = TRUE`. If `Detect = FALSE`, then `Conc = LOQ`; otherwise, `Conc = Value`. This is just a different way of presenting the same information, but it's a bit easier to handle with some of the internal calculations of `invivoPKfit`.
+
+Also, notice that the requested time and concentration transformations have been applied -- compare `Time` and `Time.Units` vs. `Time_trans` and `Time_trans.Units`; compare `Conc` and `Conc.Units` vs. `Conc_trans` and `Conc_trans.Units`.
+
+Notice that missing `LOQ` values have been imputed; compare `LOQ.orig` to `LOQ`. Similarly, missing `Value_SD` values have been imputed; compare `Value_SD.orig` and `Value_SD`. Note that the standard deviations are put in a new variable `Conc_SD` to match with the `Conc` variable. Also, note that the concentration transformations have been applied to the `Conc_SD` variable as well -- see `Conc_SD_trans`. That way, the transformation concentration standard deviations are in the same units as the transformed concentrations.
+
+(A warning: If you do `scale_conc(log10_trans = TRUE)`, then the log10 transformation will be applied to the concentration SD as well as the concentration. This means you can no longer take `Conc_trans + Conc_SD` or `Conc_trans - Conc_SD` as upper and lower bounds. This math is handled correctly internal to `invivopkfit`, but if you extract the pre-processed data and use it for another purpose, be aware of that caveat!)
 
 # Resetting status
 
