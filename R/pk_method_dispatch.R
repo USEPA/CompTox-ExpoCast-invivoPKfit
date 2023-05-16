@@ -487,3 +487,64 @@ get_error_group.default <- function(obj, ...){
   stop(paste("No 'get_error_group' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
+
+#' get_stat_model()
+#'
+#' This is the S3 method generic for get_stat_model()
+#'
+#' @param obj An object.
+#' @seealso [get_stat_model.pk()] for the method for class [pk()]
+#' @export
+get_stat_model <- function(obj, ...){
+  UseMethod("get_stat_model", obj)
+}
+
+#' Default method for get_stat_model()
+#'
+#'@param obj An object
+#' @export
+get_stat_model.default <- function(obj, ...){
+  stop(paste("No 'get_stat_model' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_data_original()
+#'
+#' This is the S3 method generic for get_data_original()
+#'
+#' @param obj An object.
+#' @seealso [get_data_original.pk()] for the method for class [pk()]
+#' @export
+get_data_original <- function(obj, ...){
+  UseMethod("get_data_original", obj)
+}
+
+#' Default method for get_data_original()
+#'
+#'@param obj An object
+#' @export
+get_data_original.default <- function(obj, ...){
+  stop(paste("No 'get_data_original' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_mapping()
+#'
+#' This is the S3 method generic for get_mapping()
+#'
+#' @param obj An object.
+#' @seealso [get_mapping.pk()] for the method for class [pk()]
+#' @export
+get_mapping <- function(obj, ...){
+  UseMethod("get_mapping", obj)
+}
+
+#' Default method for get_mapping()
+#'
+#'@param obj An object
+#' @export
+get_mapping.default <- function(obj, ...){
+  stop(paste("No 'get_mapping' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
