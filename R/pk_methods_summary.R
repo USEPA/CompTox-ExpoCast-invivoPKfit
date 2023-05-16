@@ -240,9 +240,16 @@ rownames(instructions_DF) <- NULL
                                             na.rm = TRUE)
            this_gof_DF$median_fold_err <- median(this_fold_errors[, this_gof_DF$method],
                                             na.rm = TRUE)
-           this_gof_DF$frac_within_2fold <- apply(this_fold_errors[, this_gof_DF$method],
-                                                  2,
-                                                  function(x) sum(x >= 0.5 & x <= 2)/length(x))
+           if(length(this_gof_DF$method) > 1){
+             this_gof_DF$frac_within_2fold <- apply(this_fold_errors[, this_gof_DF$method],
+                                                    2,
+                                                    function(x) sum(x >= 0.5 & x <= 2)/length(x))
+           }else{
+             #if there is only one method then it's a vector rather than a 1-row matrix
+            x <- this_fold_errors[,this_gof_DF$method]
+             this_gof_DF$frac_within_2fold <- sum(x >= 0.5 & x <= 2)/length(x)
+           }
+
            return(this_gof_DF)
          },
          simplify = FALSE,
