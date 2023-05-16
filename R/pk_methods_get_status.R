@@ -32,17 +32,23 @@ get_status.pk <- function(obj){
              "3/5. Data information summary and NCA",
              "4/5. Model pre-fitting ",
              "5/5. Model fitting")
-  completed_steps <- copy(steps)
-  completed_steps[seq(1, obj_status)] <- paste(completed_steps[seq(1, obj_status)],
+  n_steps <- length(steps)
+
+  steps[seq(1, obj_status)] <- paste(steps[seq(1, obj_status)],
                                                "--",
                                                "COMPLETE")
 
-  completed_steps[seq(obj_status+1, length(steps))] <- paste(completed_steps[seq(obj_status+1, length(steps))],
-                                                           "--",
-                                                           "NOT COMPLETE")
+  if(obj_status < n_steps){
+    steps[seq(obj_status+1,
+              n_steps)] <- paste(steps[seq(obj_status+1,
+                                           n_steps)],
+                                 "--",
+                                 "NOT COMPLETE")
+  }
+
   msg <- paste(
     paste0("Status of pk object ", objname, ":"),
-    paste(completed_steps,
+    paste(steps,
           collapse = "\n"),
     sep  = "\n"
   )
