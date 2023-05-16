@@ -1,0 +1,57 @@
+---
+title: "cvt_fitting"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{cvt_fitting}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(invivoPKfit)
+```
+
+# "Joint" analysis
+
+```{r}
+joint <- cvt %>%
+  dplyr::group_by(Chemical, Species) %>%
+  summarise(pk_obj = {
+      this_pk <- pk(dplyr::cur_data_all()) +
+        stat_error_model(error_group = vars(Chemical, Species, Reference, Medium))
+      list(fit(this_pk))
+  })
+```
+
+# "Pooled" analysis
+
+```{r}
+pooled <- cvt %>%
+  dplyr::group_by(Chemical, Species) %>%
+  summarise(pk_obj = {
+    list(
+      pk(dplyr::cur_data_all()) +
+        stat_error_model(error_group = vars(Chemical, Species, Medium))
+    )
+  })
+```
+
+# "Separate" analysis
+
+```{r}
+separate <- cvt %>%
+  dplyr::group_by(Chemical, Species, Reference) %>%
+  summarise(pk_obj = {
+      pk(dplyr::cur_data_all()) +
+        stat_error_model(error_group = vars(Chemical, Species, Reference, Medium))
+    list(fit(this_pk))
+  })
+```
+
