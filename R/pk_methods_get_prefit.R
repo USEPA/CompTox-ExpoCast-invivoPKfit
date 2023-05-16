@@ -21,7 +21,7 @@ get_prefit.pk <- function(obj,
   }
 
   return(sapply(model,
-                function(x) obj$stat_model[[x]]$par_DF,
+                function(this_model) obj$stat_model[[this_model]]$par_DF,
                 simplify = FALSE,
                 USE.NAMES = TRUE))
 }

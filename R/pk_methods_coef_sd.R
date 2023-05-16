@@ -30,14 +30,14 @@ coef_sd.pk <- function(obj,
   if(is.null(model)) model <- names(obj$stat_model)
   if(is.null(method)) method <- obj$settings_optimx$method
 
-  sapply(obj$stat_model[model],
+  sapply(model,
          function(this_model){
-           npar <- attr(this_model$fit, "npar")
-           fit_par <- as.matrix(this_model$fit[method, 1:npar])
+           npar <- attr(obj$stat_model[[this_model]]$fit, "npar")
+           fit_par <- as.matrix(obj$stat_model[[this_model]]$fit[method, 1:npar])
            #Add any "constant" params
-           if(any(this_model$par_DF$optimize_param %in% FALSE &
-                  this_model$par_DF$use_param %in% TRUE)){
-             const_parDF <- subset(this_model$par_DF,
+           if(any(obj$stat_model[[this_model]]$par_DF$optimize_param %in% FALSE &
+                  obj$stat_model[[this_model]]$par_DF$use_param %in% TRUE)){
+             const_parDF <- subset(obj$stat_model[[this_model]]$par_DF,
                                    optimize_param %in% FALSE &
                                      use_param %in% TRUE)[c("param_name",
                                                             "start")]
@@ -57,7 +57,7 @@ coef_sd.pk <- function(obj,
                                     const_params = const_par,
                                     fitdata = obj$data,
                                     data_sigma_group = obj$stat_error_model$data_sigma_group,
-                                    modelfun = this_model$conc_fun,
+                                    modelfun = obj$stat_model[[this_model]]$conc_fun,
                                     scales_conc = obj$scales$conc,
                                     negative = TRUE,
                                     force_finite = TRUE)

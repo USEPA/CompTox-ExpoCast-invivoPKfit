@@ -30,16 +30,15 @@ coef.pk <- function(obj,
   if(is.null(method)) method <- obj$settings_optimx$method
 
   sapply(model,
-         function(this_modelname){
-           this_model <- obj$stat_model[[this_modelname]]
-           npar <- attr(this_model$fit, "npar")
+         function(this_model){
+           npar <- attr(obj$stat_model[[this_model]]$fit, "npar")
            if(!is.null(npar)){
-           fit_par <- this_model$fit[method, 1:npar]
+           fit_par <- obj$stat_model[[this_model]]$fit[method, 1:npar]
 
            #Add any "constant" params
-           if(any(this_model$par_DF$optimize_param %in% FALSE &
-                  this_model$par_DF$use_param %in% TRUE)){
-             const_parDF <- subset(this_model$par_DF,
+           if(any(obj$stat_model[[this_model]]$par_DF$optimize_param %in% FALSE &
+                  obj$stat_model[[this_model]]$par_DF$use_param %in% TRUE)){
+             const_parDF <- subset(obj$stat_model[[this_model]]$par_DF,
                                    optimize_param %in% FALSE &
                                      use_param %in% TRUE)[c("param_name",
                                                             "start")]
@@ -53,13 +52,13 @@ coef.pk <- function(obj,
            }
            }else{
              fit_par <- matrix(data = NA_real_,
-                               ncol = sum(this_model$par_DF$use_param) +
+                               ncol = sum(obj$stat_model[[this_model]]$par_DF$use_param) +
                                  sum(obj$stat_error_model$sigma_DF$use_param),
                                nrow = length(method))
              rownames(fit_par) <- method
              colnames(fit_par) <- c(
-               this_model$par_DF[
-                 this_model$par_DF$use_param %in% TRUE,
+               obj$stat_model[[this_model]]$par_DF[
+                 obj$stat_model[[this_model]]$par_DF$use_param %in% TRUE,
                  "param_name"
                ],
                obj$stat_error_model$sigma_DF[

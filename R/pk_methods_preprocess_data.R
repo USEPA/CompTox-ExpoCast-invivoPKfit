@@ -117,9 +117,9 @@ preprocess_data.pk <- function(obj){
     }
 
     #Check to make sure that time units are in allowable list
-    if(!all(unique(Time.Units %in% time_units))){
+    if(!all(unique(data$Time.Units %in% time_units))){
       stop(paste0("preprocess_data.pk(): Data has Time.Units ",
-                 unique(Time.Units),
+                 unique(data$Time.Units),
                  " that are not on the list of allowable time units (see built-in data object `time_units`):\n",
                  paste(time_units, collapse = "\n")))
     }
