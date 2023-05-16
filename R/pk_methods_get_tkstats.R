@@ -76,6 +76,7 @@ get_tkstats.pk <- function(obj,
                paste0("`method` = ", paste(method, sep = ", ")),
                paste0("`obj$settings_optimx$method` = ", paste(obj$settings_optimx$method)),
                sep = "\n"))
+
   }
 
   #check that tk_group is valid: it must produce groups with a unique
@@ -109,14 +110,14 @@ tkstats_all <- sapply(model,
          #Get the matrix of coefficients for this model -- one row named for each method
          this_coef <- all_coefs[[this_model]]
          #Derive dose units
-         dose_unit <- unique(newdata$Dose.Unit)
+         dose_unit <- unique(newdata$Dose.Units)
          #Derive conc unit
-           conc_unit <- unique(newdata$Conc.Unit)
+           conc_unit <- unique(newdata$Conc.Units)
          #Derive time unit
-         if("Time_trans.Unit" %in% names(newdata)){
-           time_unit <- unique(newdata$Time_trans.Unit)
+         if("Time_trans.Units" %in% names(newdata)){
+           time_unit <- unique(newdata$Time_trans.Units)
          }else{
-           time_unit <- unique(newdata$Time.Unit)
+           time_unit <- unique(newdata$Time.Units)
          }
          #loop over methods: get tkstats for the set of coefficients for each method
          #the result will be a named list of data.frames, one for each method

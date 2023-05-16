@@ -151,12 +151,13 @@ tkstats_1comp <- function(pars,
                                     Vdist,
                                     1/(Fgutabs_Vdist)
                                     ),
-                    param_units = c(paste0(vol_unit, "/", time_unit),
-                                    paste0(vol_unit, "/", time_unit),
-                                    conc_unit,
-                                    time_unit,
-                                    time_unit,
-                                    paste0(conc_unit, " * ", time_unit),
+                    param_units = c(paste0(vol_unit, "/", time_unit), #CLtot
+                                    paste0(vol_unit, "/", time_unit), #CLtot/Fgutabs
+                                    conc_unit, #Css
+                                    time_unit, #halflife
+                                    time_unit, #tmax
+                                    conc_unit, #Cmax
+                                    paste0(conc_unit, " * ", time_unit), #AUC_inf
                                     vol_unit,
                                     vol_unit)
                     ))

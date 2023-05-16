@@ -195,6 +195,7 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
                                     conc_unit,
                                     time_unit,
                                     time_unit,
+                                    conc_unit,
                                     paste0(conc_unit, " * ", time_unit),
                                     vol_unit,
                                     vol_unit)
