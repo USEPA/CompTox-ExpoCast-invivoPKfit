@@ -23,22 +23,14 @@
 #'@param y A numeric vector of time values
 #'@param from The original units of `y`
 #'@param target The target value (order of magnitude) for the midpoint of rescaled time values. Default 10.
-#'@param period_units A list of acceptable/understood time units. See Details.
+#'@param period_units A list of acceptable/understood time units. See Details. Default `time_units`.
 #'@return Character: Automatically-selected new time units, which will be one of `period_units`.
+#'@export
+#'@author Caroline Ring
 auto_units <- function(y,
                        from,
                        target = 10,
-                       period_units = c("picoseconds",
-                                         "nanoseconds",
-                                         "microseconds",
-                                         "milliseconds",
-                                         "seconds",
-                                         "minutes",
-                                         "hours",
-                                         "days",
-                                         "weeks",
-                                         "months",
-                                         "years")){
+                       period_units = time_units){
 
 
   #auto-select units based on the midpoint of x

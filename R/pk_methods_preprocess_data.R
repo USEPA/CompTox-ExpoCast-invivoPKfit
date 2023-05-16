@@ -53,6 +53,15 @@ preprocess_data.pk <- function(obj){
                                  USE.NAMES = TRUE)
     )
 
+    ### Coerce Species, Route, and Media to lowercase
+    if(!obj$settings_preprocess$suppress.messages){
+      message(paste("Species, Route, and Media",
+                    "will be coerced to lowercase."))
+    }
+    data$Species <- tolower(data$Species)
+    data$Route <- tolower(data$Route)
+    data$Media <- tolower(data$Media)
+
     #Check to make sure the data include only one Chemical and Species. Stop
     #with an error otherwise.
     chems <- unique(data$Chemical)
@@ -85,6 +94,8 @@ preprocess_data.pk <- function(obj){
     }
 
 
+
+
     #Check to make sure there is only one value for each set of units
     time_units <- unique(data$Time.Units)
     value_units <- unique(data$Value.Units)
@@ -103,6 +114,14 @@ preprocess_data.pk <- function(obj){
                  paste("Weight units:", paste(weight_units, collapse = "; "), sep = " "),
                  paste("Dose units:", paste(dose_units, collapse = "; "), sep = " "),
                  sep = "\n"))
+    }
+
+    #Check to make sure that time units are in allowable list
+    if(!all(unique(Time.Units %in% time_units))){
+      stop(paste0("preprocess_data.pk(): Data has Time.Units ",
+                 unique(Time.Units),
+                 " that are not on the list of allowable time units (see built-in data object `time_units`):\n",
+                 paste(time_units, collapse = "\n")))
     }
 
     # If data has passed all these initial checks, then proceed with pre-processing
@@ -207,7 +226,7 @@ preprocess_data.pk <- function(obj){
       new_na <- sum(is.na(time_num))
       if(!obj$settings_preprocess$suppress.messages){
         message(paste0("Column \"Time\" converted from ",
-                       class(data$TIme),
+                       class(data$Time),
                        " to numeric. ",
                        "Pre-conversion NAs and blanks: ",
                        old_na,
@@ -237,14 +256,9 @@ preprocess_data.pk <- function(obj){
       rm(N_Subjects_num, old_na, new_na)
     }
 
-    ### Coerce Species, Route, and Media to lowercase
-    if(!obj$settings_preprocess$suppress.messages){
-      message(paste("Species, Route, and Media",
-                    "will be coerced to lowercase."))
-    }
-    data$Species <- tolower(data$Species)
-    data$Route <- tolower(data$Route)
-    data$Media <- tolower(data$Media)
+
+
+
 
     #Coerce any negative Value to NA
     if(!obj$settings_preprocess$suppress.messages){
