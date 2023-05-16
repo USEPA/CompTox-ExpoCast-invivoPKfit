@@ -4,7 +4,7 @@
 \alias{coef.pk}
 \title{Get coefficients}
 \usage{
-\method{coef}{pk}(obj, model = NULL, method = NULL)
+\method{coef}{pk}(obj, model = NULL, method = NULL, ...)
 }
 \arguments{
 \item{obj}{A [pk] object}

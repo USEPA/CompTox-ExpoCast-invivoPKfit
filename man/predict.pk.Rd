@@ -4,7 +4,7 @@
 \alias{predict.pk}
 \title{Get predictions}
 \usage{
-\method{predict}{pk}(obj, newdata = NULL, model = NULL, method = NULL, type = "conc")
+\method{predict}{pk}(obj, newdata = NULL, model = NULL, method = NULL, type = "conc", ...)
 }
 \arguments{
 \item{obj}{A [pk] object.}

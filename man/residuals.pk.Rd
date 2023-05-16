@@ -4,7 +4,7 @@
 \alias{residuals.pk}
 \title{Get residuals}
 \usage{
-\method{residuals}{pk}(obj, newdata = NULL, model = NULL, method = NULL)
+\method{residuals}{pk}(obj, newdata = NULL, model = NULL, method = NULL, ...)
 }
 \arguments{
 \item{obj}{A `pk` object}

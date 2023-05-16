@@ -44,7 +44,8 @@
 residuals.pk <- function(obj,
                          newdata = NULL,
                          model = NULL,
-                         method = NULL){
+                         method = NULL,
+                         ...){
 
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,

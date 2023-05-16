@@ -261,7 +261,7 @@ rownames(instructions_DF) <- NULL
   model_compare <- compare_models(obj)
   winmodel_DF <- model_compare %>%
     dplyr::group_by(method) %>%
-    summarise(winning_model = model[which.min(AIC)]) %>%
+    dplyr::summarise(winning_model = model[which.min(AIC)]) %>%
     as.data.frame()
 
   #get TK stats
