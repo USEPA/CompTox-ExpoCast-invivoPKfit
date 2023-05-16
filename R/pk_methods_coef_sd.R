@@ -35,9 +35,9 @@ coef_sd.pk <- function(obj,
            npar <- attr(obj$stat_model[[this_model]]$fit, "npar")
            fit_par <- as.matrix(obj$stat_model[[this_model]]$fit[method, 1:npar])
            #Add any "constant" params
-           if(any(obj$stat_model[[this_model]]$par_DF$optimize_param %in% FALSE &
-                  obj$stat_model[[this_model]]$par_DF$use_param %in% TRUE)){
-             const_parDF <- subset(obj$stat_model[[this_model]]$par_DF,
+           if(any(obj$prefit[[this_model]]$par_DF$optimize_param %in% FALSE &
+                  obj$prefit[[this_model]]$par_DF$use_param %in% TRUE)){
+             const_parDF <- subset(obj$prefit[[this_model]]$par_DF,
                                    optimize_param %in% FALSE &
                                      use_param %in% TRUE)[c("param_name",
                                                             "start")]
@@ -56,7 +56,7 @@ coef_sd.pk <- function(obj,
                      log_likelihood(x,
                                     const_params = const_par,
                                     fitdata = obj$data,
-                                    data_sigma_group = obj$stat_error_model$data_sigma_group,
+                                    data_sigma_group =obj$prefit$stat_error_model$data_sigma_group,
                                     modelfun = obj$stat_model[[this_model]]$conc_fun,
                                     scales_conc = obj$scales$conc,
                                     negative = TRUE,

@@ -36,12 +36,12 @@ fit.pk <- function(obj){
   #For each model:
   for (this_model in names(obj$stat_model)){
 
-    if(obj$stat_model[[this_model]]$status %in% "continue"){
+    if(obj$prefit[[this_model]]$fit_decision %in% "continue"){
 
       #Pull par_DF to get which params to optimize, bounds, and starting values
-      par_DF <- obj$stat_model[[this_model]]$par_DF
+      par_DF <- obj$prefit[[this_model]]$par_DF
       #Do the same for sigma_DF (the data frame of error SDs)
-      sigma_DF <- obj$stat_error_model$sigma_DF
+      sigma_DF <- obj$prefit$stat_error_model$sigma_DF
 
       #Rowbind par_DF and sigma_DF
       par_DF <- rbind(par_DF,
@@ -97,7 +97,7 @@ fit.pk <- function(obj){
             list(
               const_params = const_params,
               fitdata = fitdata,
-              data_sigma_group = obj$stat_error_model$data_sigma_group,
+              data_sigma_group =obj$prefit$stat_error_model$data_sigma_group,
               modelfun = obj$stat_model[[this_model]]$conc_fun,
               scales_conc = obj$scales$conc,
               negative = TRUE,

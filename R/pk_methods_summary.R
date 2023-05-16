@@ -170,10 +170,10 @@ rownames(instructions_DF) <- NULL
                          outDF_model_list <- sapply(colnames(this_coef),
                                                     function(this_method){
                                                       #grab par_DF (with bounds & starting values)
-                                                      this_outDF <- obj$stat_model[[this_model]]$par_DF
+                                                      this_outDF <- obj$prefit[[this_model]]$par_DF
                                                       #rowbind sigma_DF
                                                       this_outDF <- rbind(this_outDF,
-                                                                          obj$stat_error_model$sigma_DF)
+                                                                          obj$prefit$stat_error_model$sigma_DF)
                                                       this_outDF$model <- this_model
                                                       #for this method
                                                       this_outDF$method <- this_method

@@ -36,9 +36,9 @@ coef.pk <- function(obj,
            fit_par <- obj$stat_model[[this_model]]$fit[method, 1:npar]
 
            #Add any "constant" params
-           if(any(obj$stat_model[[this_model]]$par_DF$optimize_param %in% FALSE &
-                  obj$stat_model[[this_model]]$par_DF$use_param %in% TRUE)){
-             const_parDF <- subset(obj$stat_model[[this_model]]$par_DF,
+           if(any(obj$prefit[[this_model]]$par_DF$optimize_param %in% FALSE &
+                  obj$prefit[[this_model]]$par_DF$use_param %in% TRUE)){
+             const_parDF <- subset(obj$prefit[[this_model]]$par_DF,
                                    optimize_param %in% FALSE &
                                      use_param %in% TRUE)[c("param_name",
                                                             "start")]
@@ -52,17 +52,17 @@ coef.pk <- function(obj,
            }
            }else{
              fit_par <- matrix(data = NA_real_,
-                               ncol = sum(obj$stat_model[[this_model]]$par_DF$use_param) +
-                                 sum(obj$stat_error_model$sigma_DF$use_param),
+                               ncol = sum(obj$prefit[[this_model]]$par_DF$use_param) +
+                                 sum(obj$prefit$stat_error_model$sigma_DF$use_param),
                                nrow = length(method))
              rownames(fit_par) <- method
              colnames(fit_par) <- c(
-               obj$stat_model[[this_model]]$par_DF[
-                 obj$stat_model[[this_model]]$par_DF$use_param %in% TRUE,
+               obj$prefit[[this_model]]$par_DF[
+                 obj$prefit[[this_model]]$par_DF$use_param %in% TRUE,
                  "param_name"
                ],
-               obj$stat_error_model$sigma_DF[
-                 obj$stat_error_model$sigma_DF$use_param %in% TRUE,
+               obj$prefit$stat_error_model$sigma_DF[
+                 obj$prefit$stat_error_model$sigma_DF$use_param %in% TRUE,
                  "param_name"
                ]
              )

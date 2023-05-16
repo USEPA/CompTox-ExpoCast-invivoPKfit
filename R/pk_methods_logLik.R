@@ -97,7 +97,7 @@ logLik.pk <- function(obj,
                 function(this_coef_row){
                   log_likelihood(par = as.list(this_coef_row),
                                  fitdata = newdata,
-                                 data_sigma_group = obj$stat_error_model$data_sigma_group,
+                                 data_sigma_group =obj$prefit$stat_error_model$data_sigma_group,
                                  modelfun = obj$stat_model[[this_model]]$conc_fun,
                                  scales_conc = obj$scales$conc,
                                  negative = negative,
