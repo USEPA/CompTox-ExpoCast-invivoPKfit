@@ -30,6 +30,11 @@ tkstats_flat <- function(pars,
   Vdist <- pars["Vdist"]
   Fgutabs_Vdist <- pars["Fgutabs_Vdist"]
   Rblood2plasma <- pars["Rblood2plasma"]
+  if(is.na(Fgutabs_Vdist) &
+     !is.na(Fgutabs) &
+     !is.na(Vdist)){
+    Fgutabs_Vdist <- Fgutabs/Vdist
+  }
 
   Css_1mgkgday <- cp_flat(params = as.list(pars[!is.na(pars)]),
                           time = Inf,
@@ -49,14 +54,18 @@ tkstats_flat <- function(pars,
     "Css_1mgkgday",
     "halflife",
     "Cmax",
-    "AUC_infinity"),
+    "AUC_infinity",
+    "Vdist_ss",
+    "Vdist_ss/Fgutabs"),
                     "param_value" = c(
                       0,
                       0,
+                      Css_1mgkgday,
                       Inf,
                       Css_1mgkgday,
-                      Css_1mgkgday,
-                      AUC_inf)
+                      AUC_inf,
+                      Vdist,
+                      1/(Fgutabs_Vdist))
     )
     )
 }

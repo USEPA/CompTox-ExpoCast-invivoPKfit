@@ -129,7 +129,9 @@ tkstats_1comp <- function(pars,
                                    "halflife",
                                    "tmax",
                                    "Cmax",
-                                   "AUC_infinity"
+                                   "AUC_infinity",
+                                   "Vdist_ss",
+                                   "Vdist_ss/Fgutabs"
                                    ),
                     param_value = c(CLtot,
                                     CLtot_Fgutabs,
@@ -137,7 +139,9 @@ tkstats_1comp <- function(pars,
                                     halflife,
                                     tmax,
                                     Cmax,
-                                    AUC_inf
+                                    AUC_inf,
+                                    Vdist,
+                                    1/(Fgutabs_Vdist)
                                     )))
 
 }
