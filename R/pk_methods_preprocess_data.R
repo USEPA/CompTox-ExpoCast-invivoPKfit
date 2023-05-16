@@ -682,6 +682,11 @@ if("Conc" %in% names(data)){
     # add data & data info to object
     obj$data <- data
 
+    #if keep_data_original is FALSE, then delete original data from object, as
+    #it is no longer needed
+    if(obj$settings_preprocess$keep_data_original %in% FALSE){
+      obj$data_original <- NULL
+    }
 
     obj$status <- status_preprocess #preprocessing complete
 

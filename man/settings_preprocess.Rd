@@ -14,6 +14,7 @@ settings_preprocess(
   impute_sd = TRUE,
   sd_group = dplyr::vars(Chemical, Species, Reference, Media),
   suppress.messages = FALSE,
+  keep_data_original = FALSE,
   ...
 )
 }
@@ -56,11 +57,16 @@ Media)`.}
 \item{suppress.messages}{TRUE or FALSE: Whether to suppress verbose messages.
 Default FALSE.}
 
+\item{keep_data_original}{Logical (TRUE or FALSE): Whether to keep the
+original data after preprocessing. If FALSE (the default), then the
+original data in `obj$data_original` will be deleted from the object after
+pre-processing is complete.}
+
 \item{...}{Any additional arguments. Currently ignored.}
 }
 \value{
-An object of class `pk_settings_preprocess`. This is a named list of the
-  arguments provided to this function and their values.
+An object of class `pk_settings_preprocess`. This is a named list of
+  the arguments provided to this function and their values.
 }
 \description{
 Data preprocessing settings
