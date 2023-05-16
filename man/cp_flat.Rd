@@ -67,6 +67,16 @@ and `Fgutabs_Vdist`.)
 If `any(medium %in% 'blood')`, then `params` must also include
 `Rblood2plasma`, the ratio of chemical concentration in whole blood to the
 chemical concentration in blood plasma.
+
+# Flat model equations
+
+## IV administration
+
+\deqn{\textrm{Conc} = \frac{\textrm{Dose}}{V_{\textrm{dist}}}}
+
+## Oral administration
+
+\deqn{\textrm{Conc} = \frac{F_{\textrm{gutabs}} \textrm{Dose}}{V_{\textrm{dist}}}}
 }
 \author{
 Caroline Ring, John Wambaugh, Chris Cook
