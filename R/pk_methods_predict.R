@@ -34,7 +34,8 @@ predict.pk <- function(obj,
                        newdata = NULL,
                        model = NULL,
                        method = NULL,
-                       type = "conc"
+                       type = "conc",
+                       ...
 ){
 
   #ensure that the model has been fitted
@@ -52,6 +53,28 @@ predict.pk <- function(obj,
                 method = method)
 
   if(is.null(newdata)) newdata <- obj$data
+
+  #check that newdata has the required variables
+  req_vars <- c("Dose",
+                "Route",
+                "Media")
+  time_vars <- c("Time",
+                 "Time_trans")
+  if(!(all(req_vars %in% names(newdata))) |
+     !(sum(time_vars %in% names(newdata)) > 0)){
+    stop(paste("predict.pk(): newdata is missing one or more required variables:",
+               "Dose, Route, Media, and either Time or Time_trans"))
+  }
+
+  if(!is.numeric(newdata$Dose) |
+     !is.numeric(newdata$Time) |
+     !is.character(newdata$Route)|
+     !is.character(newdata$Media)){
+    stop(paste("predict.pk(): One or more variables in newdata is not of the required type:",
+               "Dose (should be numeric); Time (should be numeric);",
+               "Route (should be character); Media (should be character)"))
+  }
+
   if(!("Time_trans" %in% names(newdata))){
     #transform time if needed
     #first, default to identity transformation if none is specified
