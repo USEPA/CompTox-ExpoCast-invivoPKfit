@@ -1,11 +1,20 @@
-#' Add a pkproto object to a pk object
+#' Add a `pkproto` object to a `pk` object
 #'
-#' @param e1 A pk pbject
-#' @param e2 A pkproto object
-#' @return The pk object, modified by adding the pkproto object
+#' Add a `pkproto` object to a `pk` object
+#'
+#' Note that `e1 + e2` is equivalent to
+#'
+#' ```
+#' `+`(e1, e2)
+#' ```
+#'
+#' @param e1 A `pk` pbject
+#' @param e2 A `pkproto` object
+#' @return The `pk` object, modified by adding the `pkproto` object
 #'@export
 #' @author Caroline Ring
 "+.pk" <- function(e1, e2) {
+  #throw error if only one argument
   if (missing(e2)) {
     cli::cli_abort(c(
       "Cannot use {.code +} with a single argument",
@@ -17,6 +26,7 @@
   # can be displayed in error messages
   e2name <- deparse(substitute(e2))
 
+  #make sue
   if      (is.pk(e1))  add_pk(e1, e2, e2name)
   else if (is.pkproto(e1)) {
     cli::cli_abort(c(

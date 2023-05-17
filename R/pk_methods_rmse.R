@@ -2,8 +2,10 @@
 #'
 #' Extract root mean squared error of a fitted `pk` object
 #'
-#' # Formula for RMSE RMSE is calculated using the following formula, to
-#' properly handle summary data:
+#' # Formula for RMSE
+#'
+#' RMSE is calculated using the following formula, to properly handle summary
+#' data:
 #'
 #' \deqn{
 #' \sqrt{
