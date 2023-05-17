@@ -272,3 +272,12 @@ pk_add.uneval <- function(object, pk_obj, objectname){
 
   return(pk_obj)
 }
+
+#' Add facet_by()
+#'
+#' @param object The `pk_facet_by` object to be added.
+#' @param pk_obj The [pk()] object to which the `pk_facet_by` object will be added.
+#' @param objectname The name of the `pk_facet_by` object.
+pk_add.pk_facet_by <- function(object, pk_obj, objectname){
+
+}

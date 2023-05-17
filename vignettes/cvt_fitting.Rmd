@@ -18,16 +18,50 @@ knitr::opts_chunk$set(
 library(invivoPKfit)
 ```
 
+```{r}
+trans_opts <- expand.grid(dose_norm = c(TRUE, FALSE),
+            log10_trans = c(TRUE, FALSE),
+            rescale_time = c("identity", "auto"),
+            stringsAsFactors = FALSE)
+```
+
+
 # "Joint" analysis
 
 ```{r}
 joint <- cvt %>%
-  dplyr::group_by(Chemical, Species) %>%
-  summarise(pk_obj = {
+  dplyr::group_by(chemicals_analyzed.dsstox_substance_id,
+                  subjects.species_harmonized) %>%
+  dplyr::summarise(pk_obj = {
+    print(dplyr::cur_group())
       this_pk <- pk(dplyr::cur_data_all()) +
-        stat_error_model(error_group = vars(Chemical, Species, Reference, Medium))
-      list(fit(this_pk))
-  })
+        stat_error_model(error_group = vars(Chemical, Species, Reference, Medium)) +
+        settings_preprocess(suppress.messages = TRUE)
+      
+      tmp_list <- mapply(FUN = function(dose_norm, log10_trans, rescale_time){
+        print(paste(
+          paste("dose_norm =", dose_norm),
+              paste("log10_trans =", log10_trans),
+              paste("rescale_time =", rescale_time),
+          sep = "\n"))
+        tmp_pk <- this_pk +
+          scale_conc(dose_norm = dose_norm,
+                     log10_trans = log10_trans) +
+          scale_time(new_units = rescale_time)
+        data.frame(dose_norm = dose_norm,
+                   log10_trans = log10_trans,
+                   rescale_time = rescale_time,
+                   pk_obj = list(fit(this_pk)))
+      },
+      dose_norm = trans_opts$dose_norm,
+      log10_trans = trans_opts$log10_trans,
+      rescale_time = trans_opts$rescale_time,
+      SIMPLIFY = FALSE)
+      
+      tmp_list %>% dplyr::bind_rows()
+      
+  }
+  )
 ```
 
 # "Pooled" analysis
