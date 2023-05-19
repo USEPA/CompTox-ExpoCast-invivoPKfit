@@ -4,7 +4,15 @@
 \alias{predict.pk}
 \title{Get predictions}
 \usage{
-\method{predict}{pk}(obj, newdata = NULL, model = NULL, method = NULL, type = "conc", ...)
+\method{predict}{pk}(
+  obj,
+  newdata = NULL,
+  model = NULL,
+  method = NULL,
+  type = "conc",
+  exclude = TRUE,
+  ...
+)
 }
 \arguments{
 \item{obj}{A [pk] object.}
@@ -27,10 +35,16 @@ returned for all of the models in `obj$optimx_settings$method`.}
 \item{type}{Either `"conc"` (the default) or `"auc"`. `type = "conc"`
 predicts concentrations; `type = "auc"` predicts area under the
 concentration-time curve (AUC).}
+
+\item{exclude}{Logical: `TRUE` to return `NA_real_` for any observations in
+the data marked for exclusion (if there is a variable `exclude` in the
+data, an observation is marked for exclusion when `exclude %in% TRUE`).
+`FALSE` to return the prediction for each observation, regardless of
+exclusion. Default `TRUE`.}
 }
 \value{
 A named list of numeric matrixes. There is one list element named for
-  each model in `obj`'s [stat_model()] element, i.e. each PK model that was
+  each model in `obj`'s [stat_model()] element, *i.e.*, each PK model that was
   fitted to the data. Each list element is a matrix with the same number of
   rows as the data in `obj$data` (corresponding to the rows in `obj$data`),
   and as many columns as there were [optimx::optimx()] methods (specified in

@@ -18,8 +18,13 @@
 #' @param type Either `"conc"` (the default) or `"auc"`. `type = "conc"`
 #'   predicts concentrations; `type = "auc"` predicts area under the
 #'   concentration-time curve (AUC).
+#' @param exclude Logical: `TRUE` to return `NA_real_` for any observations in
+#'   the data marked for exclusion (if there is a variable `exclude` in the
+#'   data, an observation is marked for exclusion when `exclude %in% TRUE`).
+#'   `FALSE` to return the prediction for each observation, regardless of
+#'   exclusion. Default `TRUE`.
 #' @return A named list of numeric matrixes. There is one list element named for
-#'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
+#'   each model in `obj`'s [stat_model()] element, *i.e.*, each PK model that was
 #'   fitted to the data. Each list element is a matrix with the same number of
 #'   rows as the data in `obj$data` (corresponding to the rows in `obj$data`),
 #'   and as many columns as there were [optimx::optimx()] methods (specified in
@@ -35,6 +40,7 @@ predict.pk <- function(obj,
                        model = NULL,
                        method = NULL,
                        type = "conc",
+                       exclude = TRUE,
                        ...
 ){
 
@@ -92,7 +98,7 @@ predict.pk <- function(obj,
       to_units <- auto_units(y = newdata$Time,
                              from = from_units)
     }
-    if(!obj$data_settings$suppress.messages){
+    if(!obj$settings_preprocess$suppress.messages){
       message(paste("Converting time from",
                     from_units,
                     "to",
@@ -135,6 +141,12 @@ predict.pk <- function(obj,
                                                 time = newdata$Time_trans,
                                                 route = newdata$Route,
                                                 medium = newdata$Media))
+                   if(exclude %in% TRUE){
+                   #set NA for excluded data, if any
+                   preds[obj$data$exclude %in% TRUE] <- NA_real_
+                   }
+
+                   preds
 
                  })
          },
