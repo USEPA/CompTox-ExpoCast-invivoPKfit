@@ -85,12 +85,12 @@
 #'average or median LOQ being used?  It is impossible to formulate the
 #'log-likelihood without knowing the answers to these questions. Therefore,
 #'multiple-subject observations below LOQ are excluded from analysis (they are
-#'removed in [preprocess_data()]).
+#'marked as excluded in [preprocess_data()]).
 #'
 #'# Joint log-likelihood for a chemical and species
 #'
 #'The joint log-likelihood for a chemical and species is simply the sum of
-#'log-likelihoods across observations and studys.
+#'log-likelihoods across observations.
 #'
 #'\deqn{LL_{i} = \sum_{j=1}^{J_i} \sum_{k=1}^{K_{ij}} LL_{ijk}}
 #'
@@ -101,11 +101,11 @@
 #'  optimized.
 #'@param const_params Optional: A named list of parameters and their values that
 #'  are being held constant.
-#'@param fitdata A `data.frame` of data with harmonized variable names, with transformations applied.
+#'@param data A `data.frame` of data with harmonized variable names, with transformations applied.
 #'  Required: `Time_trans`, `Dose`, `Conc`, `Detect`, `N_Subjects`, `Conc_SD`,
 #'  `Conc_trans`, `Conc_SD_trans`.
 #'@param data_sigma_group A `factor` vector which could be a new variable in
-#'  `fitdata`, giving the error group for each row in `fitdata`.
+#'  `data`, giving the error group for each row in `data`.
 #'@param modelfun Character or function: The name of the function that produces
 #'  concentration predictions for the model being evaluated.
 #'@param scales_conc As from a [pk] object, element `$scales$conc` (see
@@ -127,7 +127,7 @@
 #' @author Caroline Ring
 log_likelihood <- function(par,
                            const_params = NULL,
-                           fitdata = NULL,
+                           data = NULL,
                            data_sigma_group = NULL,
                            modelfun = NULL,
                            scales_conc = NULL,
@@ -147,10 +147,10 @@ log_likelihood <- function(par,
   #values, by dose and route
   pred <- do.call(modelfun,
           args = list(params = model.params,
-                      time = fitdata$Time_trans,
-                      dose = fitdata$Dose,
-                      route = fitdata$Route,
-                      medium = fitdata$Media
+                      time = data$Time_trans,
+                      dose = data$Dose,
+                      route = data$Route,
+                      medium = data$Media
                       ))
 
 if(any(grepl(x = names(params),
@@ -169,11 +169,11 @@ if(any(grepl(x = names(params),
 
   #add sigma_study and pred as temp columns to DF
   #this makes logical indexing easier
-  fitdata$sigma_study <- sigma_study
-  fitdata$pred <- pred
+  data$sigma_study <- sigma_study
+  data$pred <- pred
   #transform predictions the same way as concentrations
-  fitdata$pred_trans <- rlang::eval_tidy(scales_conc$expr,
-                                         data = cbind(fitdata,
+  data$pred_trans <- rlang::eval_tidy(scales_conc$expr,
+                                         data = cbind(data,
                                                       data.frame(".conc" = pred))
   )
 
@@ -182,32 +182,32 @@ if(any(grepl(x = names(params),
     ll_summary <- "dlnorm_summary"
     #maintain other transformations such as dose-scaling,
     #but undo log10 transformation
-    conc_natural <- 10^(fitdata$Conc_trans)
-    conc_sd_natural <- 10^(fitdata$Conc_SD_trans)
+    conc_natural <- 10^(data$Conc_trans)
+    conc_sd_natural <- 10^(data$Conc_SD_trans)
   }else{ #if log10 transformation has *not* been applied
     ll_summary <- "dnorm_summary"
-    conc_natural <- fitdata$Conc_trans
-    conc_sd_natural <- fitdata$Conc_SD_trans
+    conc_natural <- data$Conc_trans
+    conc_sd_natural <- data$Conc_SD_trans
   }
 
   #get log-likelihood for each observation
-  loglike <- ifelse(fitdata$N_Subjects %in% 1,
-                    ifelse(fitdata$Detect %in% TRUE,
-                           dnorm(x = fitdata$Conc_trans,
-                                 mean = fitdata$pred_trans,
-                                 sd = fitdata$sigma_study,
+  loglike <- ifelse(data$N_Subjects %in% 1,
+                    ifelse(data$Detect %in% TRUE,
+                           dnorm(x = data$Conc_trans,
+                                 mean = data$pred_trans,
+                                 sd = data$sigma_study,
                                  log = TRUE),
-                           pnorm(q = fitdata$Conc_trans,
-                                 mean = fitdata$pred_trans,
-                                 sd = fitdata$sigma_study,
+                           pnorm(q = data$Conc_trans,
+                                 mean = data$pred_trans,
+                                 sd = data$sigma_study,
                                  log.p = TRUE)
                     ),
                     do.call(ll_summary,
-                            list(mu = fitdata$pred_trans,
-                                 sigma = fitdata$sigma_study,
+                            list(mu = data$pred_trans,
+                                 sigma = data$sigma_study,
                                  x_mean = conc_natural,
                                  x_sd = conc_sd_natural,
-                                 x_N = fitdata$N_Subjects,
+                                 x_N = data$N_Subjects,
                                  log = TRUE))
   )
 

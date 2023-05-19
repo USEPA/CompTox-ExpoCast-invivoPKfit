@@ -1,8 +1,31 @@
+#' Fitting
+#'
 #' Fit PK model(s) for a `pk` object
 #'
+#' This function estimates the parameters for each model in `stat_model` from
+#' the data, using numerical optimization implemented in [optimx::optimx()]. The
+#' optimization is done by maximizing the log-likelihood function implemented in
+#' [log_likelihood()] (technically, by minimizing the negative log-likelihood).
+#' Only the non-excluded observations are used.
+#'
+#' Due to limitations of [optimx::optimx()], the log-likelihood function is
+#' forced to return finite values during this optimization. Impossible
+#' combinations of parameters (e.g., parameter values that produce negative
+#' predicted concentrations) should have a log-likelihood of `-Inf`, but due to
+#' this limitation, they instead have a log-likelihood of `-Machine.doublexmax`.
+#' This limitation means that the log-likelihood function is flat in regions of
+#' impossible parameter values. It is unlikely, but possible, that the optimizer
+#' might get "stuck" in such a flat region -- report convergence, but return a
+#' "bad" set of parameter values that produces non-physical predictions.
+#'
+#' Before trusting the results of any fit, it is recommended to check the
+#' log-likelihood using [logLik()] and the Akaike Information Criterion using
+#' [AIC()], which check the log-likelihood *without* forcing it to return finite
+#' values.
+#'
 #' @param obj A [pk] object.
-#' @return The same [pk] object, with element `fit` added to each `$stat_model`
-#'   element, reflecting the fitted parameters for the corresponding model.
+#' @return The same [pk] object, with element `fit` containing the fitted
+#'   results for each model in `stat_model`.
 #' @export
 #' @author Caroline Ring
 fit.pk <- function(obj){
@@ -31,6 +54,10 @@ fit.pk <- function(obj){
     obj <- prefit(obj)
   }
 
+  #pull the non-excluded observations for fitting
+  data <- subset(obj$data, exclude %in% FALSE)
+  #pull the sigma parameter corresponding to each non-excluded observation
+  data_sigma_group <- obj$prefit$stat_error_model$data_sigma_group[obj$data$exclude %in% FALSE]
 
   suppress.messages <- obj$settings_preprocess$suppress.messages
   #For each model:
@@ -79,10 +106,7 @@ fit.pk <- function(obj){
         const_params <- NULL
       }
 
-      #pull the non-excluded observations for fitting
-      data <- subset(obj$data, exclude %in% FALSE)
-      #pull the sigma parameter corresponding to each non-excluded observation
-      data_sigma_group <- obj$prefit$stat_error_model$data_sigma_group[data$exclude %in% FALSE]
+
 
       #Now call optimx::optimx() and do the fit
       optimx_out <- tryCatch({
