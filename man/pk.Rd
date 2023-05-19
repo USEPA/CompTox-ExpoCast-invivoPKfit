@@ -13,7 +13,7 @@ pk(
     documents_extraction.id, documents_reference.id)), Media =
     series.conc_medium_normalized, Route = studies.administration_route_normalized, Dose
     = studies.dose_level_normalized_corrected, Dose.Units = "mg/kg", 
-     Subject =
+     Subject_ID =
     subjects.id, Series_ID = series.id, Study_ID = studies.id, ConcTime_ID =
     conc_time_values.id, N_Subjects = series.n_subjects_in_series, Weight =
     subjects.weight_kg, Weight.Units = "kg", Time = conc_time_values.time_hr, Time.Units
