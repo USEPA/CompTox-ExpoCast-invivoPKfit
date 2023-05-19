@@ -2,7 +2,7 @@
 % Please edit documentation in R/pk_methods_prefit.R
 \name{prefit.pk}
 \alias{prefit.pk}
-\title{Do pre-fit calculations and checks}
+\title{Pre-fitting}
 \usage{
 \method{prefit}{pk}(obj)
 }
@@ -10,12 +10,20 @@
 \item{obj}{A `pk` object}
 }
 \value{
-The same `pk` object, but with additional elements added to each item
-  in `models`, containing the results of pre-fit calculations and checks for
-  each model.
+The same `pk` object, but with a new element `prefit`, containing the
+  results of pre-fit calculations and checks for each model and for the error
+  model.
 }
 \description{
 Do pre-fit calculations and checks
+}
+\details{
+This function does the following:
+
+- Based on the error model in `stat_error_model` and the pre-processed data, determines the number of residual standard deviations ("sigmas") hyperparameters to be estimated.
+- Determines which "sigma" hyperparameter corresponds to each observation in the data.
+- Calculates lower/upper bounds and starting guesses for each "sigma" hyperparameter
+- For each model in `stat_model`, calls its `params_fun`, the function that, based on the data, determines whether to optimize each model parameter, and calculates lower/upper bounds and starting guesses for each model parameter to be optimized. Only non-excluded observations are passed to each model's `params_fun`.
 }
 \author{
 Caroline Ring
