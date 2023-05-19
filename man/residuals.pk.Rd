@@ -10,6 +10,7 @@
   model = NULL,
   method = NULL,
   exclude = TRUE,
+  scale_conc = FALSE,
   ...
 )
 }
@@ -39,6 +40,11 @@ the data marked for exclusion (if there is a variable `exclude` in the
 data, an observation is marked for exclusion when `exclude %in% TRUE`).
 `FALSE` to return the residual for each observation, regardless of
 exclusion. Default `TRUE`.}
+
+\item{scale_conc}{Logical: `TRUE` to apply the concentration
+transformation(s) defined in `obj$scales$conc` to both predictions and
+observations before calculating residuals. `FALSE` to calculate residuals
+for un-transformed predictions and observations. Default `FALSE`.}
 }
 \value{
 A named list of numeric matrices. There is one list element named for
@@ -48,9 +54,9 @@ A named list of numeric matrices. There is one list element named for
   and as many columns as there were [optimx::optimx()] methods (specified in
   [settings_optimx()]). The column names are the method names.  Each column
   contains the residuals (observed - predicted) of the model fitted by the
-  corresponding method. These residuals are concentrations in the same units
-  as `obj$data$Conc.Units`; any concentration transformations (in
-  `obj$scale$conc`) are *not* applied.
+  corresponding method.  If `scale_conc %in% FALSE`, these residuals are in
+  the same units as `obj$data$Conc.Units`. If `scale_conc %in% TRUE`, the
+  residuals are in the same units as `obj$data$Conc_trans.Units`.
 }
 \description{
 Extract residuals from a fitted `pk` object.

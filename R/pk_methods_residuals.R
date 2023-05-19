@@ -30,6 +30,10 @@
 #'   data, an observation is marked for exclusion when `exclude %in% TRUE`).
 #'   `FALSE` to return the residual for each observation, regardless of
 #'   exclusion. Default `TRUE`.
+#' @param scale_conc Logical: `TRUE` to apply the concentration
+#'   transformation(s) defined in `obj$scales$conc` to both predictions and
+#'   observations before calculating residuals. `FALSE` to calculate residuals
+#'   for un-transformed predictions and observations. Default `FALSE`.
 #' @return A named list of numeric matrices. There is one list element named for
 #'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
 #'   fitted to the data. Each list element is a matrix with the same number of
@@ -37,9 +41,9 @@
 #'   and as many columns as there were [optimx::optimx()] methods (specified in
 #'   [settings_optimx()]). The column names are the method names.  Each column
 #'   contains the residuals (observed - predicted) of the model fitted by the
-#'   corresponding method. These residuals are concentrations in the same units
-#'   as `obj$data$Conc.Units`; any concentration transformations (in
-#'   `obj$scale$conc`) are *not* applied.
+#'   corresponding method.  If `scale_conc %in% FALSE`, these residuals are in
+#'   the same units as `obj$data$Conc.Units`. If `scale_conc %in% TRUE`, the
+#'   residuals are in the same units as `obj$data$Conc_trans.Units`.
 #' @export
 #' @author Caroline Ring
 residuals.pk <- function(obj,
@@ -47,6 +51,7 @@ residuals.pk <- function(obj,
                          model = NULL,
                          method = NULL,
                          exclude = TRUE,
+                         scale_conc = FALSE,
                          ...){
 
   #ensure that the model has been fitted
@@ -65,9 +70,15 @@ residuals.pk <- function(obj,
                    model = model,
                    method = method,
                    type = "conc",
-                   exclude = exclude)
+                   exclude = exclude,
+                   scale_conc = scale_conc)
 
   obs <- newdata$Conc
+
+  if(scale_conc %in% TRUE){
+    obs <- rlang::eval_tidy(obj$scales$conc$expr, data = cbind(newdata,
+                                                                 data.frame(".conc" = obs)))
+  }
 
   resids <- sapply(preds,
          function(this_pred){

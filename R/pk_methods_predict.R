@@ -23,16 +23,20 @@
 #'   data, an observation is marked for exclusion when `exclude %in% TRUE`).
 #'   `FALSE` to return the prediction for each observation, regardless of
 #'   exclusion. Default `TRUE`.
+#' @param scale_conc Logical: `TRUE` to apply the concentration scaling defined
+#'   in `obj$scales$conc` to the predictions before returning them. `FALSE` to
+#'   return the un-transformed predictions. Default `FALSE`.
 #' @return A named list of numeric matrixes. There is one list element named for
-#'   each model in `obj`'s [stat_model()] element, *i.e.*, each PK model that was
-#'   fitted to the data. Each list element is a matrix with the same number of
-#'   rows as the data in `obj$data` (corresponding to the rows in `obj$data`),
-#'   and as many columns as there were [optimx::optimx()] methods (specified in
-#'   [settings_optimx()]). The column names are the method names. Each column
-#'   contains the predictions of the model fitted by the corresponding method.
-#'   These predictions are concentrations in the same units as
-#'   `obj$data$Conc.Units`; any concentration transformations (in
-#'   `obj$scale$conc`) are *not* applied.
+#'   each model in `obj`'s [stat_model()] element, *i.e.*, each PK model that
+#'   was fitted to the data. Each list element is a matrix with the same number
+#'   of rows as the data in `obj$data` (corresponding to the rows in
+#'   `obj$data`), and as many columns as there were [optimx::optimx()] methods
+#'   (specified in [settings_optimx()]). The column names are the method names.
+#'   Each column contains the predictions of the model fitted by the
+#'   corresponding method. If `scale_conc %in% FALSE`, these predictions are
+#'   un-transformed concentrations in the same units as `obj$data$Conc.Units`. If
+#'   `scale_conc %in% TRUE`, the predictions are transformed concentrations in
+#'   the same units as `obj$data$Conc_trans.Units`.
 #' @export
 #' @author Caroline Ring
 predict.pk <- function(obj,
@@ -41,6 +45,7 @@ predict.pk <- function(obj,
                        method = NULL,
                        type = "conc",
                        exclude = TRUE,
+                       scale_conc = FALSE,
                        ...
 ){
 
@@ -144,6 +149,12 @@ predict.pk <- function(obj,
                    if(exclude %in% TRUE){
                    #set NA for excluded data, if any
                    preds[obj$data$exclude %in% TRUE] <- NA_real_
+                   }
+
+                   if(scale_conc %in% TRUE){
+                     #apply the concentration scaling from the pk object
+                     preds <- rlang::eval_tidy(obj$scales$conc$expr, data = cbind(newdata,
+                                                                                  data.frame(".conc" = preds)))
                    }
 
                    preds
