@@ -2,14 +2,21 @@
 % Please edit documentation in R/get_peak.R
 \name{get_peak}
 \alias{get_peak}
-\title{Helper function to find peak}
+\title{Find the peak of a data series}
 \usage{
-get_peak(x, y, ...)
+get_peak(x, y, ties = "median", na.rm = TRUE, ...)
 }
 \arguments{
 \item{x}{A numeric vector of `x` data}
 
 \item{y}{A numeric vector of `y` data}
+
+\item{ties}{As for [stats::approxfun()]: The function to apply to y-values
+that have the same x-value. Default `'median'`. `'mean'` may also be
+useful.}
+
+\item{na.rm}{As for [stats::approxfun()]: How to handle missing values.
+Default `TRUE` to exclude missing values from analysis.}
 
 \item{...}{Optional: Additional arguments which will be passed to
 [stats::approx()] (other than `x`, `y`, and `xout`).}
@@ -22,18 +29,13 @@ A list with two named numeric scalar components, `x` and `y`,
 Finds x- and y-value at peak y value.
 }
 \details{
-This is a helper function called by [get_starts()] to estimate the end of the
-absorption phase for oral TK data.
-
 If there is more than one unique `x` value where both `x` and corresponding
-`y` are finite, this function calls [stats::approx()], then uses
-[base::which.max()] to locate the maximum interpolated `y`-value. In effect,
-this takes the average `y` value for each unique `x` value, then finds the
-maximum.
+`y` are finite, this function calls [stats::approx()] with `method = 'linear'`, then uses
+[base::which.max()] to locate the maximum interpolated `y`-value.
 
 If there is only one unique `x` value where both `x` and corresponding `y`
-are finite, this function returns that `x` value, along with the average of
-the finite `y` values corresponding to it.
+are finite, this function calls [stats::approx()] with `method = 'constant'`, then uses
+[base::which.max()] to locate the maximum interpolated `y`-value.
 
 If there are no unique `x` values where both `x` and corresponding `y` are
 finite, this function returns `NA_real_` for the peak `x` and `y` values.

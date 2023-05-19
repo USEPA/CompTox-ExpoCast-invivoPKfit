@@ -2,8 +2,11 @@
 #'
 #' @param obj An object of class [pk()]
 #' @export
+#' @importFrom magrittr `%>%`
 #' @author Caroline Ring
 data_info.pk <- function(obj){
+
+
   #check status
   objname <- deparse(substitute(obj))
   status <- obj$status
@@ -13,12 +16,16 @@ data_info.pk <- function(obj){
                    status,
                    ". data_info() will reset its status to ",
                    status_data_info,
-                   ". Any results from later workflow stages will be lost."))
+                   ". Any results from later workflow stages will be lost.\n"))
   }
 
   #if preprocessing not already done, do it
   if(obj$status < status_preprocess){
     obj <- preprocess_data(obj)
+  }
+
+  if(obj$settings_preprocess$suppress.messages %in% FALSE){
+    message("data_info.pk(): Getting data summary info\n")
   }
 
   data <- obj$data
@@ -27,12 +34,21 @@ data_info.pk <- function(obj){
           args =c(list(data),
                   obj$settings_data_info$nca_group)) %>%
     dplyr::summarise(nca_group_id = dplyr::cur_group_id(),
-                     nca_group_n_obs = dplyr::n(),
-                     nca_group_n_detect = sum(Detect %in% TRUE),
-                     tlast = max(Time_trans),
-                     tlast_detect = max(Time_trans[Detect %in% TRUE]),
-                     tfirst = min(Time_trans),
-                     tfirst_detect = min(Time_trans[Detect %in% TRUE]),
+                     n_obs = dplyr::n(),
+                     n_exclude = sum(exclude %in% TRUE),
+                     n_detect = sum(Detect %in% TRUE & exclude %in% FALSE),
+                     tlast = ifelse(any(exclude %in% FALSE),
+                                    max(Time_trans[exclude %in% FALSE]),
+                                    NA_real_),
+                     tlast_detect = ifelse(any(Detect %in% TRUE & exclude %in% FALSE),
+                                           max(Time_trans[Detect %in% TRUE & exclude %in% FALSE]),
+                                           NA_real_),
+                     tfirst = ifelse(any(exclude %in% FALSE),
+                                     min(Time_trans[exclude %in% FALSE]),
+                                     NA_real_),
+                     tfirst_detect = ifelse(any(Detect %in% TRUE & exclude %in% FALSE),
+                                            min(Time_trans[Detect %in% TRUE & exclude %in% FALSE]),
+                                            NA_real_),
                      Time.Units = unique(Time.Units),
                      Time_trans.Units = unique(Time_trans.Units),
                      Conc.Units = unique(Conc.Units),
@@ -40,112 +56,202 @@ data_info.pk <- function(obj){
                      Dose.Units = unique(Dose.Units)) %>%
     as.data.frame()
 
-  dat_info <- list("data_summary" = data_summary)
+
 
   #do NCA -- only on detects.
-  dat_info$nca <- do.call(dplyr::group_by,
+  if(obj$settings_preprocess$suppress.messages %in% FALSE){
+    message("data_info.pk(): Doing non-compartmental analysis\n")
+  }
+
+  nca <- do.call(dplyr::group_by,
                           args =c(list(data),
                                   obj$settings_data_info$nca_group)) %>%
     dplyr::summarise(nca_group_id = dplyr::cur_group_id(),
-                     calc_nca(time = Time_trans[Detect %in% TRUE],
-                              dose = Dose[Detect %in% TRUE],
-                              conc = Conc[Detect %in% TRUE],
-                              detect = Detect[Detect %in% TRUE],
+                     Conc.Units = unique(Conc.Units),
+                    Time_trans.Units = unique(Time_trans.Units),
+                    Dose.Units = unique(Dose.Units),
+                     calc_nca(time = Time_trans[exclude %in% FALSE],
+                              dose = Dose[exclude %in% FALSE],
+                              conc = Conc[exclude %in% FALSE],
+                              detect = Detect[exclude %in% FALSE],
                               route = unique(Route),
-                              n_subj = N_Subjects[Detect %in% TRUE],
-                              subject_id = Subject_ID[Detect %in% TRUE])) %>%
+                              series_id = Series_ID[exclude %in% FALSE])) %>%
+    dplyr::group_by(nca_group_id) %>%
+    dplyr::mutate(param_units = dplyr::case_when(
+      param_name %in% c("AUC_tlast",
+                        "AUC_infinity") ~ paste(Conc.Units,
+                                                "*",
+                                                Time_trans.Units),
+      param_name %in% "AUMC_infinity" ~ paste(Conc.Units,
+                                              "*",
+                                              Time_trans.Units,
+                                              "*",
+                                              Time_trans.Units),
+      param_name %in% c("MRT",
+                        "MTT",
+                        "halflife",
+                        "tmax") ~ Time_trans.Units,
+      param_name %in% c("CLtot",
+                        "CLtot/Fgutabs") ~ paste0("L/",
+                                                  Time_trans.Units),
+      param_name %in% "Vss" ~ paste0(Conc.Units,
+                                     "/",
+                                     Dose.Units),
+      param_name %in% "Cmax" ~ Conc.Units
+      )) %>%
+    dplyr::select(-c(Conc.Units,
+                     Time_trans.Units,
+                     Dose.Units)) %>%
     as.data.frame()
 
-  # #add units for each NCA param
-  dat_info$nca[dat_info$nca$param_name %in% c("AUC_tlast",
-                                              "AUC_infinity"),
-               "param_units"] <- paste(unique(data$Conc.Units),
-                                            "*",
-                                            unique(data$Time_trans.Units))
-  dat_info$nca[dat_info$nca$param_name %in% "AUMC_infinity",
-               "param_units"] <- paste(unique(data$Conc.Units),
-                                            "*",
-                                            unique(data$Time_trans.Units),
-                                          "*",
-                                          unique(data$Time_trans.Units))
-  dat_info$nca[dat_info$nca$param_name %in% c("MRT",
-                                              "MTT",
-                                              "halflife",
-                                              "tmax"),
-               "param_units"] <-  unique(data$Time_trans.Units)
-  dat_info$nca[dat_info$nca$param_name %in% c("CLtot",
-                                              "CLtot/Fgutabs"),
-               "param_units"] <- paste0("1/",
-                                           unique(data$Time_trans.Units))
-  dat_info$nca[dat_info$nca$param_name %in% "Vss",
-               "param_units"] <- paste0(unique(data$Conc.Units),
-                                           "/",
-                                           unique(data$Dose.Units))
-  dat_info$nca[dat_info$nca$param_name %in% "Cmax",
-               "param_units"] <- unique(data$Conc.Units)
-  #save data summary info
-  obj$data_info <- dat_info
-
   #get data flags:
-  data_flags <- NULL
-  df <- merge(dat_info$data_summary,
-              dat_info$nca,
-              by = intersect(names(dat_info$data_summary),
-                             names(dat_info$nca))
-  )
-  #for groups with route == "oral", is Cmax equal to the first or last detected time?
-  tmax_first <- df %>%
-    dplyr::filter(Route %in% "oral" &
-                    param_name %in% "tmax") %>%
-                    dplyr::mutate(test = isTRUE(all.equal(param_value, tfirst_detect,
-                                            tolerance = sqrt(.Machine$double.eps))))
-
-  if(sum(tmax_first$test)>0){
-      data_flags <- c(data_flags,
-                      paste("tmax is equal to time of first detect in",
-                            sum(tmax_first$test),
-                            "NCA data groups with oral data"))
+  if(obj$settings_preprocess$suppress.messages %in% FALSE){
+    message("data_info.pk(): Getting data flags\n")
   }
 
-  tmax_last <- df %>%
-    dplyr::filter(Route %in% "oral" &
-                    param_name %in% "tmax") %>%
-    dplyr::mutate(test = isTRUE(all.equal(param_value, tlast_detect,
-                                     tolerance = sqrt(.Machine$double.eps))))
+  nca_wide <- nca %>% tidyr::pivot_wider(id_cols = nca_group_id,
+                                 names_from = param_name,
+                                 values_from = param_value)
 
-  if(sum(tmax_last$test)>0){
-    data_flags <- c(data_flags,
-                    paste("tmax is equal to time of last detect in",
-                          sum(tmax_last$test),
-                          "NCA data groups with oral data"))
-  }
+  df <- dplyr::inner_join(data_summary,
+              nca_wide,
+              by = "nca_group_id") %>%
+    dplyr::mutate(`Cmax/Dose` = Cmax/Dose,
+                  `AUC/Dose` = AUC_infinity/Dose) %>%
+    dplyr::mutate(
+    data_flag = ifelse(
+      n_obs - n_exclude < 3,
+      "Fewer than 3 non-excluded observations",
+      NA_character_
+    )
+  ) %>% dplyr::mutate(
+    data_flag = ifelse(
+      n_detect < 3,
+      paste2(data_flag,
+             "Fewer than 3 detected observations",
+             sep = " | "),
+      data_flag
+    )
+  ) %>% dplyr::mutate(
+    data_flag = ifelse(
+      Route %in% "oral" &
+        isTRUE(all.equal(tmax, tfirst_detect,
+                         tolerance = sqrt(.Machine$double.eps))),
+      paste2(data_flag,
+             "tmax is equal to time of first detect",
+             sep = " | "),
+      data_flag
+    )) %>% dplyr::mutate(
+      data_flag = ifelse(
+        Route %in% "oral" &
+          isTRUE(all.equal(tmax, tlast_detect,
+                           tolerance = sqrt(.Machine$double.eps))),
+        paste2(data_flag,
+               "tmax is equal to time of last detect",
+               sep = " | "),
+        data_flag
+      )) %>% dplyr::mutate(
+        data_flag = ifelse(
+          (CLtot < 0) %in% TRUE |
+            (`CLtot/Fgutabs` < 0) %in% TRUE,
+          paste2(data_flag,
+                 "CLtot or CLtot/Fgutabs is negative",
+                 sep = " | "),
+          data_flag)
+      ) %>% dplyr::mutate(
+        data_flag = ifelse((AUC_infinity < 0) %in% TRUE,
+                           paste2(data_flag,
+                                  "AUC_infinity is negative",
+                                  sep = " | "),
+                           data_flag)
+      ) %>%
+    as.data.frame()
 
-  #Is the NCA clearance negative?
+  #do NCA on all the data together, grouped by Chemical, Species, Route, Media
+  nca_dose_norm <- data %>% dplyr::group_by(Chemical, Species, Route, Media) %>%
+    dplyr::summarise(nca_dosenorm_group_id = dplyr::cur_group_id(),
+                     Dose = 1,
+                     n_obs = dplyr::n(),
+                     n_exclude = sum(exclude %in% TRUE),
+                     n_detect = sum(Detect %in% TRUE & exclude %in% FALSE),
+                     tlast = ifelse(any(exclude %in% FALSE),
+                                    max(Time_trans[exclude %in% FALSE]),
+                                    NA_real_),
+                     tlast_detect = ifelse(any(exclude %in% FALSE),
+                                           max(Time_trans[Detect %in% TRUE & exclude %in% FALSE]),
+                                           NA_real_),
+                     tfirst = ifelse(any(exclude %in% FALSE),
+                                     min(Time_trans[exclude %in% FALSE]),
+                                     NA_real_),
+                     tfirst_detect = ifelse(any(exclude %in% FALSE),
+                                            min(Time_trans[Detect %in% TRUE & exclude %in% FALSE]),
+                                            NA_real_),
+                       Conc.Units = unique(Conc.Units),
+                     Time_trans.Units = unique(Time_trans.Units),
+                     Dose.Units = unique(Dose.Units),
+                     calc_nca(time = Time_trans[exclude %in% FALSE],
+                              dose = 1,
+                              conc = Conc[exclude %in% FALSE]/Dose[exclude %in% FALSE],
+                              detect = Detect[exclude %in% FALSE],
+                              route = unique(Route),
+                              series_id = Series_ID[exclude %in% FALSE])) %>%
+    dplyr::group_by(nca_dosenorm_group_id) %>%
+    dplyr::mutate(param_units = dplyr::case_when(
+      param_name %in% c("AUC_tlast",
+                        "AUC_infinity") ~ paste(Conc.Units,
+                                                "*",
+                                                Time_trans.Units),
+      param_name %in% "AUMC_infinity" ~ paste(Conc.Units,
+                                              "*",
+                                              Time_trans.Units,
+                                              "*",
+                                              Time_trans.Units),
+      param_name %in% c("MRT",
+                        "MTT",
+                        "halflife",
+                        "tmax") ~ Time_trans.Units,
+      param_name %in% c("CLtot",
+                        "CLtot/Fgutabs") ~ paste0("L/",
+                                                  Time_trans.Units),
+      param_name %in% "Vss" ~ paste0(Conc.Units,
+                                     "/",
+                                     Dose.Units),
+      param_name %in% "Cmax" ~ Conc.Units
+    )) %>%
+    dplyr::select(-c(Conc.Units,
+                     Dose.Units,
+                     Time_trans.Units)) %>%
+    as.data.frame()
 
-  neg_CLtot <- df %>%
-    dplyr::filter(param_name %in% c("CLtot",
-                                    "CLtot/Fgutabs") &
-                    param_value < 0)
+  #Other data flags:
+  #Check for obeying dose normalization by route
 
-  if(nrow(neg_CLtot)>0){
-    data_flags <- c(data_flags,
-                    paste("CLtot or CLtot/Fgutabs is negative in",
-                          nrow(neg_CLtot),
-                          "NCA data groups"))
-  }
+  dose_norm_check <- df %>%
+    dplyr::group_by(Chemical, Species, Route, Media) %>%
+    dplyr::summarise(
+      Cmax_Dose_fold_range = {
+        tmprange <- suppressWarnings(range(`Cmax/Dose`, na.rm = TRUE))
+        if(all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
+        tmprange[2]/tmprange[1]
+      },
+      data_flag_Cmax = ifelse(Cmax_Dose_fold_range > 10,
+                         "Cmax may not scale with dose. Cmax/Dose range > 10-fold across NCA groups for this Route/Media",
+                         NA_character_),
+      AUC_Dose_fold_range = {
+        tmprange <- suppressWarnings(range(`AUC/Dose`, na.rm = TRUE))
+        if(all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
+        tmprange[2]/tmprange[1]
+      },
+      data_flag_AUC = ifelse(AUC_Dose_fold_range > 10,
+                              "AUC_infinity may not scale with dose. AUC/Dose range > 10-fold across NCA groups for this Route/Media",
+                              NA_character_),
+    )
 
-  neg_AUCinf <- df %>%
-    dplyr::filter(param_name %in% c("AUC_infinity") &
-                    param_value < 0)
 
-  if(nrow(neg_AUCinf)>0){
-    data_flags <- c(data_flags,
-                    paste("AUC_infinity is negative in",
-                          nrow(neg_AUCinf),
-                          "NCA data groups"))
-  }
-
-  obj$data_info$data_flags <- data_flags
+  obj$data_info <- list("data_summary" = df,
+                        "nca" = nca,
+                        "nca_dose_norm" = nca_dose_norm,
+                        "dose_norm_check" = dose_norm_check)
 
   obj$status <- status_data_info #data summarization complete
 
