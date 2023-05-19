@@ -14,7 +14,7 @@
 #'   all of the models in `obj$stat_model`.
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   for which to make predictions. If NULL (the default), predictions will be
-#'   returned for all of the models in `obj$optimx_settings$method`.
+#'   returned for all of the models in `obj$settings_optimx$method`.
 #' @param type Either `"conc"` (the default) or `"auc"`. `type = "conc"`
 #'   predicts concentrations; `type = "auc"` predicts area under the
 #'   concentration-time curve (AUC).
@@ -52,7 +52,7 @@ predict.pk <- function(obj,
   }
 
   if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(method)) method <- obj$settings_optimx$method
 
   coefs <- coef(obj = obj,
                 model = model,
@@ -120,7 +120,7 @@ predict.pk <- function(obj,
   #loop over models
   sapply(model,
          function(this_model){
-           this_coef_mat <- coefs[[this_model]]
+           this_coef_mat <- coefs[[this_model]][method, ]
            apply(this_coef_mat,
                  1,
                  function(this_coef_row){

@@ -25,10 +25,11 @@
 #'   for which to make predictions and calculate residuals. If NULL (the
 #'   default), residuals will be returned for all of the models in
 #'   `obj$optimx_settings$method`.
-#' @param type Either `"conc"` (the default) or `"auc"`. `type = "conc"`
-#'   predicts concentrations; `type = "auc"` predicts area under the
-#'   concentration-time curve (AUC). Currently, only `type = "conc"` is
-#'   implemented.
+#' @param exclude Logical: `TRUE` to return `NA_real_` for any observations in
+#'   the data marked for exclusion (if there is a variable `exclude` in the
+#'   data, an observation is marked for exclusion when `exclude %in% TRUE`).
+#'   `FALSE` to return the residual for each observation, regardless of
+#'   exclusion. Default `TRUE`.
 #' @return A named list of numeric matrices. There is one list element named for
 #'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
 #'   fitted to the data. Each list element is a matrix with the same number of
@@ -45,6 +46,7 @@ residuals.pk <- function(obj,
                          newdata = NULL,
                          model = NULL,
                          method = NULL,
+                         exclude = TRUE,
                          ...){
 
   #ensure that the model has been fitted
@@ -55,29 +57,38 @@ residuals.pk <- function(obj,
   }
 
   if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$optimx_settings$method
+  if(is.null(method)) method <- obj$settings_optimx$method
   if(is.null(newdata)) newdata <- obj$data
 
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,
                    method = method,
-                   type = "conc")
+                   type = "conc",
+                   exclude = exclude)
 
   obs <- newdata$Conc
 
-  sapply(preds,
+  resids <- sapply(preds,
          function(this_pred){
            apply(this_pred,
                  2,
                  function(x){
-                   ifelse(newdata$Detect %in% FALSE &
+                   restmp <- ifelse(newdata$Detect %in% FALSE &
                             x <= obs,
                           0,
                           obs - x)
+                   if(exclude %in% TRUE){
+                     restmp[newdata$exclude %in% TRUE] <- NA_real_
+                   }
+                   restmp
                  }
            )
          },
          simplify = FALSE,
          USE.NAMES = TRUE)
+
+
+
+  resids
 }

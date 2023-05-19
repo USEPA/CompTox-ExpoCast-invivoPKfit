@@ -4,7 +4,14 @@
 \alias{residuals.pk}
 \title{Get residuals}
 \usage{
-\method{residuals}{pk}(obj, newdata = NULL, model = NULL, method = NULL, ...)
+\method{residuals}{pk}(
+  obj,
+  newdata = NULL,
+  model = NULL,
+  method = NULL,
+  exclude = TRUE,
+  ...
+)
 }
 \arguments{
 \item{obj}{A `pk` object}
@@ -27,10 +34,11 @@ for which to make predictions and calculate residuals. If NULL (the
 default), residuals will be returned for all of the models in
 `obj$optimx_settings$method`.}
 
-\item{type}{Either `"conc"` (the default) or `"auc"`. `type = "conc"`
-predicts concentrations; `type = "auc"` predicts area under the
-concentration-time curve (AUC). Currently, only `type = "conc"` is
-implemented.}
+\item{exclude}{Logical: `TRUE` to return `NA_real_` for any observations in
+the data marked for exclusion (if there is a variable `exclude` in the
+data, an observation is marked for exclusion when `exclude %in% TRUE`).
+`FALSE` to return the residual for each observation, regardless of
+exclusion. Default `TRUE`.}
 }
 \value{
 A named list of numeric matrices. There is one list element named for

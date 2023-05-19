@@ -30,7 +30,7 @@ all of the models in `obj$stat_model`.}
 
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 for which to make predictions. If NULL (the default), predictions will be
-returned for all of the models in `obj$optimx_settings$method`.}
+returned for all of the models in `obj$settings_optimx$method`.}
 
 \item{type}{Either `"conc"` (the default) or `"auc"`. `type = "conc"`
 predicts concentrations; `type = "auc"` predicts area under the
