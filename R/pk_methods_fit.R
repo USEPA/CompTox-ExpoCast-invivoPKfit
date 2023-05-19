@@ -79,7 +79,11 @@ fit.pk <- function(obj){
         const_params <- NULL
       }
 
-      fitdata <- obj$data
+      #pull the non-excluded observations for fitting
+      data <- subset(obj$data, exclude %in% FALSE)
+      #pull the sigma parameter corresponding to each non-excluded observation
+      data_sigma_group <- obj$prefit$stat_error_model$data_sigma_group[data$exclude %in% FALSE]
+
       #Now call optimx::optimx() and do the fit
       optimx_out <- tryCatch({
 
@@ -96,8 +100,8 @@ fit.pk <- function(obj){
             #... additional args to log_likelihood
             list(
               const_params = const_params,
-              fitdata = fitdata,
-              data_sigma_group =obj$prefit$stat_error_model$data_sigma_group,
+              data = data,
+              data_sigma_group = data_sigma_group,
               modelfun = obj$stat_model[[this_model]]$conc_fun,
               scales_conc = obj$scales$conc,
               negative = TRUE,
