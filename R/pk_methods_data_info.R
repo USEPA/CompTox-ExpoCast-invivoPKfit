@@ -136,7 +136,8 @@ data_info.pk <- function(obj){
     data_flag = ifelse(
       Route %in% "oral" &
         isTRUE(all.equal(tmax, tfirst_detect,
-                         tolerance = sqrt(.Machine$double.eps))),
+                         tolerance = sqrt(.Machine$double.eps))) &
+                 !is.na(tmax),
       paste2(data_flag,
              "tmax is equal to time of first detect",
              sep = " | "),
@@ -145,7 +146,8 @@ data_info.pk <- function(obj){
       data_flag = ifelse(
         Route %in% "oral" &
           isTRUE(all.equal(tmax, tlast_detect,
-                           tolerance = sqrt(.Machine$double.eps))),
+                           tolerance = sqrt(.Machine$double.eps))) &
+                   !is.na(tmax),
         paste2(data_flag,
                "tmax is equal to time of last detect",
                sep = " | "),
@@ -245,7 +247,7 @@ data_info.pk <- function(obj){
       data_flag_AUC = ifelse(AUC_Dose_fold_range > 10,
                               "AUC_infinity may not scale with dose. AUC/Dose range > 10-fold across NCA groups for this Route/Media",
                               NA_character_),
-    )
+    ) %>% as.data.frame()
 
 
   obj$data_info <- list("data_summary" = df,
