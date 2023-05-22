@@ -7,16 +7,19 @@
 #'
 #' @param x Numeric: one or more time values to be converted.
 #' @param from Character vector: `x` is currently in these units. Must be units
-#'   understood by `lubridate::duration()`, i.e. "seconds", "hours", "days",
-#'   "weeks", "months", "years", "milliseconds", "microseconds", "nanoseconds",
-#'   and/or "picoseconds". Default value is "hours".
+#'   understood by `lubridate::duration()`, i.e. `"seconds"`, `"hours"`,
+#'   `"days"`, `"weeks"`, `"months"`, `"years"`, `"milliseconds"`,
+#'   `"microseconds"`, `"nanoseconds"`, and/or `"picoseconds"`. Default value is
+#'   `"hours"`.
 #' @param to Character vector: `x` will be converted to these units. Must be
-#'   either "auto", or units understood by `lubridate::duration()`, i.e.
-#'   "seconds", "hours", "days", "weeks", "months", "years", "milliseconds",
-#'   "microseconds", "nanoseconds", and/or "picoseconds". Default value is
-#'   "hours". If "auto", then units will be automatically chosen that make the
-#'   midpoint of `x` (or its inverse, if `inverse = TRUE`) as close to an order of magnitude of 10 as
-#'   possible (see [auto_units()]).
+#'   either `"auto"`, `"identity"`, or units understood by
+#'   `lubridate::duration()`, i.e. `"seconds"`, `"hours"`, `"days"`, `"weeks"`,
+#'   `"months"`, `"years"`, `"milliseconds"`, `"microseconds"`, `"nanoseconds"`,
+#'   and/or `"picoseconds"`. Default value is `"identity"`.  If `"identity"`,
+#'   then `x` will be returned unchanged. If `"auto"`, then units will be
+#'   automatically chosen that make the midpoint of `x` (or its inverse, if
+#'   `inverse = TRUE`) as close to an order of magnitude of 10 as possible (see
+#'   [auto_units()]).
 #' @param inverse Logical: TRUE if `x` is in units of *inverse* time (e.g.
 #'   1/hour, 1/day); FALSE if `x` is in units of time (e.g. hours, days).
 #'   Default value is FALSE.
@@ -27,14 +30,12 @@
 #' @author Caroline Ring
 convert_time <- function(x,
                                    from = "hours",
-                                   to = "hours",
+                                   to = "identity",
                                    inverse = FALSE){
 
   period_units <- time_units
 
-  if(inverse %in% TRUE){
-    y <- 1/x
-  }else{y <- x}
+
 
 
   if(to %in% "auto"){
@@ -43,6 +44,12 @@ convert_time <- function(x,
                      from = from)
   }
 
+
+  if(to != "identity"){
+
+    if(inverse %in% TRUE){
+      y <- 1/x
+    }else{y <- x}
 
   if(to %in% period_units){
   y_new <- as.numeric(
@@ -63,6 +70,10 @@ convert_time <- function(x,
     yout <- 1/y_new
   }else{
     yout <- y_new
+  }
+  }else{
+    #if to == "identity", then just return the input as-is
+    yout <- x
   }
 
   return(yout)
