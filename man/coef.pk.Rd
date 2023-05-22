@@ -7,25 +7,32 @@
 \method{coef}{pk}(obj, model = NULL, method = NULL, ...)
 }
 \arguments{
-\item{obj}{A [pk] object}
+\item{obj}{A [pk()] object}
 
-\item{model}{Optional: Specify one or more of the fitted models whose
-coefficients to return. If NULL (the default), coefficients will be returned for all of
-the models in `obj$stat_model`.}
+\item{model}{Optional: Specify (as a `character` vector) one or more of the
+fitted models whose coefficients to return. If `NULL` (the default),
+coefficients will be returned for all of the models in `obj$stat_model`.}
 
-\item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
-whose coefficients to return. If NULL (the default), coefficients will be returned for
-all of the models in `obj$settings_optimx$method`.}
+\item{method}{Optional: Specify (as a `character` vector)one or more of the
+[optimx::optimx()] methods whose coefficients to return. If `NULL` (the
+default), coefficients will be returned for all of the models in
+`obj$settings_optimx$method`.}
 }
 \value{
 A named list of numeric matrixes. There is one list element named for
-  each model in `model`. Each list element is a matrix with as many
-  rows as items in `method`. The row names are the method names. The matrix column names are
-  the names of the fitted parameters, including any error standard deviation
-  hyperparameters (whose names begin with "sigma").
+  each model in `model`. Each list element is a matrix with as many rows as
+  items in `method`. The row names are the method names. The matrix column
+  names are the names of the fitted parameters, including any error standard
+  deviation hyperparameters (whose names begin with "sigma"). The matrix
+  elements are the values of the corresponding model parameters as fitted by
+  the corresponding method.
 }
 \description{
-Extract coefficients from a fitted `pk` object
+Extract coefficients from a fitted [pk()] object
+}
+\details{
+This function extracts fitted model parameter values from a fitted [pk()]
+object.
 }
 \seealso{
 Other methods for fitted pk objects: 
