@@ -68,6 +68,9 @@ predict.pk <- function(obj,
   if(is.null(model)) model <- names(obj$stat_model)
   if(is.null(method)) method <- obj$settings_optimx$method
 
+  method_ok <- check_method(obj = obj, method = method)
+  model_ok <- check_model(obj = obj, model = model)
+
   coefs <- coef(obj = obj,
                 model = model,
                 method = method)

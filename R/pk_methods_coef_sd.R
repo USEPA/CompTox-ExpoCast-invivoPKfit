@@ -55,6 +55,9 @@ coef_sd.pk <- function(obj,
   if(is.null(model)) model <- names(obj$stat_model)
   if(is.null(method)) method <- obj$settings_optimx$method
 
+  method_ok <- check_method(obj = obj, method = method)
+  model_ok <- check_model(obj = obj, model = model)
+
   sapply(model,
          function(this_model){
            npar <- attr(obj$fit[[this_model]], "npar")
@@ -80,10 +83,11 @@ coef_sd.pk <- function(obj,
                    numhess <- numDeriv::hessian(func = function(x){
                      log_likelihood(x,
                                     const_params = const_par,
-                                    fitdata = obj$data,
+                                    data = obj$data,
                                     data_sigma_group =obj$prefit$stat_error_model$data_sigma_group,
                                     modelfun = obj$stat_model[[this_model]]$conc_fun,
-                                    scales_conc = obj$scales$conc,
+                                    dose_norm = obj$scales$conc$dose_norm,
+                                    log10_trans = obj$scales$conc$log10_trans,
                                     negative = TRUE,
                                     force_finite = TRUE)
                    },

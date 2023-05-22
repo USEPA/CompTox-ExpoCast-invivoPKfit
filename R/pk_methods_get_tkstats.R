@@ -26,8 +26,8 @@
 #'   with an error.
 #' @param newdata Optional: A `data.frame` containing new data for which to
 #'   compute the TK stats. Must contain at least variables `Chemical`,
-#'   `Species`, `Route`, `Media`, `Dose`, `Dose.Unit`, `Conc.Unit`, either
-#'   `Time_trans.Unit` or `Time.Unit`, and any other variables named in
+#'   `Species`, `Route`, `Media`, `Dose`, `Dose.Units`, `Conc.Units`, either
+#'   `Time_trans.Units` or `Time.Units`, and any other variables named in
 #'   `tk_grouping`. Default `NULL`, to use the data in `obj$data`.
 #' @param tk_group A list of variables provided using a `dplyr::vars()` call.
 #'   The data (either `newdata` or `obj$data`) will be grouped according to the
@@ -38,11 +38,18 @@
 #'   default, you can directly compare e.g. a model-predicted AUC_inf to the
 #'   corresponding NCA-estimated AUC_inf. However, you may specify a different
 #'   data grouping if you wish. Each group should have a unique combination of
-#'   `Chemical`, `Species`, `Route`, `Media`, and `Dose`.
+#'   `Chemical`, `Species`, `Route`, `Media`, and `Dose`, because the TK stats
+#'   depend on these values, and it is required to have one unique set of TK
+#'   stats per group.
 #' @param model Character: One or more of the models fitted. Default `NULL` to
 #'   return TK stats for all models.
 #' @param method Character: One or more of the [optimx::optimx()] methods used.
 #'   Default `NULL` to return TK stats for all methods.
+#' @param exclude Logical: `TRUE` to get the TK groupings after removing any
+#'   observations in the data marked for exclusion (if there is a variable
+#'   `exclude` in the data, an observation is marked for exclusion when `exclude
+#'   %in% TRUE`). `FALSE` to include all observations when getting the TK
+#'   groupings, regardless of exclusion status. Default `TRUE`.
 #' @return A `list` of `data.frame` objects, one  named for each model in
 #'   `model`. Each `data.frame` will have the variables in the `data.frame`
 #'   returned by the `tkstats_fun` for its corresponding model. (For the
@@ -58,6 +65,7 @@ get_tkstats.pk <- function(obj,
                            tk_group = obj$settings_data_info$nca_group,
                            model = NULL,
                            method = NULL,
+                           exclude = TRUE,
                            vol_unit = "L"){
 
   #ensure that the model has been fitted
@@ -71,13 +79,30 @@ get_tkstats.pk <- function(obj,
   if(is.null(method)) method <- obj$settings_optimx$method
   if(is.null(newdata)) newdata <- obj$data
 
-  #check that all methods are valid
-  if(!(all(method %in% obj$settings_optimx$method))){
-    stop(paste("All values in `method` must be found in `obj$settings_optimx$method.",
-               paste0("`method` = ", paste(method, sep = ", ")),
-               paste0("`obj$settings_optimx$method` = ", paste(obj$settings_optimx$method)),
-               sep = "\n"))
+  method_ok <- check_method(obj = obj, method = method)
+  model_ok <- check_model(obj = obj, model = model)
 
+  grp_vars <- sapply(tk_group,
+                     rlang::as_label)
+
+  newdata_ok <- check_newdata(newdata = newdata,
+                              olddata = obj$data,
+                              req_vars = union(
+                                c("Chemical",
+                                  "Species",
+                                  "Time",
+                                  "Time.Units",
+                                  "Dose",
+                                  "Dose.Units",
+                                  "Conc.Units",
+                                  "Route",
+                                  "Media"),
+                                grp_vars),
+                              exclude = exclude)
+
+  #if exclude = TRUE, remove excluded observations
+  if(exclude %in% TRUE){
+    newdata <- subset(newdata, exclude %in% FALSE)
   }
 
   #check that tk_group is valid: it must produce groups with a unique
@@ -93,84 +118,85 @@ get_tkstats.pk <- function(obj,
                     Dose) %>%
     dplyr::count() #how many distinct rows per group?
 
+
   #if more than one distinct row per group, stop
   if(any(newdata_grouped$n > 1)){
-   stop("tk_group does not produce groups with unique combinations of Chemical, Species, Route, Media, and Dose.")
+    stop("tk_group does not produce groups with unique combinations of Chemical, Species, Route, Media, and Dose.")
   }
 
   all_coefs <- coef(obj,
-                     model = model,
-                     method = method)
+                    model = model,
+                    method = method)
 
-tkstats_all <- sapply(model,
-       function(this_model){
-         #get the model's TKstats function
-         this_tkstats_fun <- obj$stat_model[[this_model]]$tkstats_fun
-         #get any additional arguments to the model's TKstats function
-         this_tkstats_args <- obj$stat_model[[this_model]]$tkstats_fun_args
-         #Get the matrix of coefficients for this model -- one row named for each method
-         this_coef <- all_coefs[[this_model]]
-         #Derive dose units
-         dose_unit <- unique(newdata$Dose.Units)
-         #Derive conc unit
-           conc_unit <- unique(newdata$Conc.Units)
-         #Derive time unit
-         if("Time_trans.Units" %in% names(newdata)){
-           time_unit <- unique(newdata$Time_trans.Units)
-         }else{
-           time_unit <- unique(newdata$Time.Units)
-         }
-         #loop over methods: get tkstats for the set of coefficients for each method
-         #the result will be a named list of data.frames, one for each method
-         tkstats_list <- sapply(method,
-                function(this_method){
-                  #pull the set of coefficients for this method
-                  #convert from one row of a data.frame to a named vector
-                  coef_row <- unlist(this_coef[this_method, ])
-                  #get the unique combinations of refrence, route, media, dose from obj$data_info$nca
-                  tkstats_this_method <- do.call(dplyr::group_by, #use do.call() because the grouping is a *list* of quosures
-                          c(list(newdata),
-                            tk_group
+  tkstats_all <- sapply(model,
+                        function(this_model){
+                          #get the model's TKstats function
+                          this_tkstats_fun <- obj$stat_model[[this_model]]$tkstats_fun
+                          #get any additional arguments to the model's TKstats function
+                          this_tkstats_args <- obj$stat_model[[this_model]]$tkstats_fun_args
+                          #Get the matrix of coefficients for this model -- one row named for each method
+                          this_coef <- all_coefs[[this_model]]
+                          #Derive dose units
+                          dose_unit <- unique(newdata$Dose.Units)
+                          #Derive conc unit
+                          conc_unit <- unique(newdata$Conc.Units)
+                          #Derive time unit
+                          if("Time_trans.Units" %in% names(newdata)){
+                            time_unit <- unique(newdata$Time_trans.Units)
+                          }else{
+                            time_unit <- unique(newdata$Time.Units)
+                          }
+                          #loop over methods: get tkstats for the set of coefficients for each method
+                          #the result will be a named list of data.frames, one for each method
+                          tkstats_list <- sapply(method,
+                                                 function(this_method){
+                                                   #pull the set of coefficients for this method convert from one
+                                                   #row of a data.frame to a named vector
+                                                   coef_row <- unlist(this_coef[this_method, ])
+                                                   #get the unique combinations of refrence, route, media, dose from obj$data_info$nca
+                                                   tkstats_this_method <- do.call(dplyr::group_by, #use do.call() because the grouping is a *list* of quosures
+                                                                                  c(list(newdata),
+                                                                                    tk_group
+                                                                                  )
+                                                   ) %>%
+                                                     dplyr::summarise( #for each group: get the data.frame of tkstats
+                                                       do.call(this_tkstats_fun,
+                                                               args = c(
+                                                                 list(pars = coef_row, #a named numeric vector
+                                                                      route = unique(Route),
+                                                                      medium = unique(Media),
+                                                                      dose = unique(Dose),
+                                                                      time_unit = time_unit,
+                                                                      conc_unit = conc_unit,
+                                                                      vol_unit = vol_unit
+                                                                 ),
+                                                                 this_tkstats_args
+                                                               )
+                                                       )#end do.call(this_tkstats_fun)
+                                                     ) %>%
+                                                     as.data.frame() #convert from tibble back to data.frame
+
+                                                   #add method as a variable
+                                                   tkstats_this_method$method <- this_method
+                                                   #return the data.frame of tkstats for this model & this method
+                                                   return(tkstats_this_method)
+                                                 },
+                                                 simplify = FALSE, #return
+                                                 USE.NAMES = TRUE #name the list elements after the items in "method"
                           )
-                  ) %>%
-                    dplyr::summarise( #for each group: get the data.frame of tkstats
-                      do.call(this_tkstats_fun,
-                              args = c(
-                                list(pars = coef_row, #a named numeric vector
-                                     route = unique(Route),
-                                     medium = unique(Media),
-                                     dose = unique(Dose),
-                                     time_unit = time_unit,
-                                     conc_unit = conc_unit,
-                                     vol_unit = vol_unit
-                                ),
-                                this_tkstats_args
-                              )
-                      )#end do.call(this_tkstats_fun)
-                      ) %>%
-                        as.data.frame() #convert from tibble back to data.frame
+                          #now, rowbind the tkstats data.frames for each method for this model
+                          #the result will be one data.frame
+                          tkstats_this_model <- do.call(rbind,
+                                                        tkstats_list)
+                          rownames(tkstats_this_model) <- NULL
+                          #return the tkstats data.frame for this model
+                          return(tkstats_this_model)
+                        }, #end function(this_model)
+                        simplify = FALSE, #return a list
+                        USE.NAMES = TRUE #name the list elements after the items in "model"
+  ) #end sapply over models
+  #the result will be a named list of data.frames, one for each model
+  #return it
 
-                  #add method as a variable
-                  tkstats_this_method$method <- this_method
-                  #return the data.frame of tkstats for this model & this method
-                  return(tkstats_this_method)
-                },
-                simplify = FALSE, #return
-                USE.NAMES = TRUE #name the list elements after the items in "method"
-                )
-        #now, rowbind the tkstats data.frames for each method for this model
-         #the result will be one data.frame
-         tkstats_this_model <- do.call(rbind,
-                 tkstats_list)
-         rownames(tkstats_this_model) <- NULL
-         #return the tkstats data.frame for this model
-         return(tkstats_this_model)
-       }, #end function(this_model)
-       simplify = FALSE, #return a list
-       USE.NAMES = TRUE #name the list elements after the items in "model"
-) #end sapply over models
-#the result will be a named list of data.frames, one for each model
-#return it
-
-return(tkstats_all)
+  return(tkstats_all)
 }

@@ -40,7 +40,7 @@ preprocess_data.pk <- function(obj){
   }
 
   if(is.null(obj$data_original)){
-    message("Original data is NULL")
+    message("preprocess_data.pk(): Original data is NULL")
     obj$data <- NULL
     obj$data_info <- NULL
     obj$status <- status_preprocess

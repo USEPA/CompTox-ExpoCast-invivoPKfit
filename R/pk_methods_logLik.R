@@ -96,7 +96,8 @@ logLik.pk <- function(obj,
   if(is.null(method)) method <- obj$optimx_settings$method
   if(is.null(newdata)) newdata <- obj$data
 
-
+  method_ok <- check_method(obj = obj, method = method)
+  model_ok <- check_model(obj = obj, model = model)
 
   #check variables in newdata
 #including error grouping variables
