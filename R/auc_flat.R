@@ -49,6 +49,9 @@
 #'
 #'@author Caroline Ring, John Wambaugh, Chris Cook
 #' @export auc_flat
+#' @family built-in model functions
+#' @family flat model functions
+#' @family model AUC functions
 auc_flat <- function(time, params, dose, route, medium) {
 
   #check whether lengths of time, dose, and route match

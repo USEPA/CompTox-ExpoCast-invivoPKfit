@@ -70,6 +70,28 @@ and some `route %in% "oral"`), then `V1` is required along with either
 `Rblood2plasma`, the ratio of chemical concentration in whole blood to the
 chemical concentration in blood plasma.
 }
+\seealso{
+Other built-in model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_2comp}()},
+\code{\link{auc_flat}()},
+\code{\link{cp_1comp}()},
+\code{\link{cp_flat}()},
+\code{\link{get_params_1comp}()},
+\code{\link{get_params_2comp}()},
+\code{\link{get_params_flat}()}
+
+Other 2-compartment model functions: 
+\code{\link{auc_2comp}()},
+\code{\link{get_params_2comp}()}
+
+Other model concentration functions: 
+\code{\link{cp_1comp}()},
+\code{\link{cp_flat}()}
+}
 \author{
 Caroline Ring, John Wambaugh
 }
+\concept{2-compartment model functions}
+\concept{built-in model functions}
+\concept{model concentration functions}

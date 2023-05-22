@@ -20,31 +20,46 @@ get_params_1comp(
 )
 }
 \arguments{
-\item{data}{The data set to be fitted (e.g. the result of
-[preprocess_data()])}
+\item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}
+
+\item{lower_bound}{A mapping specified using a call to [ggplot2::aes()],
+giving the lower bounds for each variable, as expressions which may include
+variables in `data`.}
+
+\item{upper_bound}{A mapping specified using a call to [ggplot2::aes()],
+giving the upper bounds for each variable, as expressions which may include
+variables in `data`.}
+
+\item{param_units}{A mapping specified using a call to [ggplot2::aes()],
+giving the units for each variable, as expressions which may include
+variables in `data`.}
 }
 \value{
 A `data.frame`with the following variables:
-- `param_name`: Names of the model parameters
-- `param_units`: Units of the model parameters
+- `param_name`: Character: Names of the model parameters
+- `param_units`: Character: Units of the model parameters
 - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
 - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+-`lower_bounds`: Numeric: The lower bounds for each parameter
+- `upper_bounds`: Numeric: The upper bounds for each parameter
+- `start`: Numeric: The starting guesses for each parameter
 }
 \description{
 Get parameters for 1-compartment model and determine whether each is to be
 estimated from the data
 }
 \details{
-The full set of model parameters for the 1-compartment model includes
-`Vdist`, `kelim`, `kgutabs`, `Fgutabs`, and `Rblood2plasma`. Whether each one can be estimated
-from the data depends on what routes of administration are included in the
-data.
+The full set of model parameters for the 1-compartment model includes `Vdist`,
+`kelim`, `kgutabs`, `Fgutabs`, and `Rblood2plasma`. Whether each one can be
+estimated from the data depends on what routes of administration are included
+in the data.
 
 # IV data, no oral data
 
 If IV dosing data are available, but no oral dosing data are available, then
 only the parameters `Vdist` and `kelim` will be estimated from the data. The
-parameters `kgutabs` and `Fgutabs` cannot be estimated from IV data alone, and will not be used in evaluating the model.
+parameters `kgutabs` and `Fgutabs` cannot be estimated from IV data alone, and
+will not be used in evaluating the model.
 
 # Oral data, no IV data
 
@@ -53,8 +68,8 @@ the parameters `kelim` and `kgutabs` can be estimated from the data. However,
 the parameters `Fgutabs` and `Vdist` cannot be identified separately. From
 oral data alone, only the ratio `Fgutabs/Vdist` can be identified. This ratio
 is represented by a single parameter named `Fgutabs_Vdist`. `Fgutabs` and
-`Vdist` will not be used to evaluate the model nor be estimated from data, but `Fgutabs_Vdist` will be estimated from data, along
-with `kelim` and `kgutabs`.
+`Vdist` will not be used to evaluate the model nor be estimated from data, but
+`Fgutabs_Vdist` will be estimated from data, along with `kelim` and `kgutabs`.
 
 # Oral data and IV data
 
@@ -63,16 +78,36 @@ If both oral and IV dosing data are available, then `Vdist`, `kelim`,
 
 # Blood and plasma data
 
-If both blood and plasma data are available, then `Rblood2plasma` will be estimated from the data.
+If both blood and plasma data are available, then `Rblood2plasma` will be
+estimated from the data.
 
-# Blood data, no plasma data
+# Only one of blood or plasma data
 
-If blood data but no plasma data are available, then `Rblood2plasma` will be used in model evaluation, but held constant at 1, not estimated from the data.
+If only one of blood or plasma data are available, then `Rblood2plasma` will be
+held constant at 1, not estimated from the data.
+}
+\seealso{
+Other 1-compartment model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{cp_1comp}()}
 
-# Plasma data, no blood data
+Other get_params functions: 
+\code{\link{get_params_2comp}()},
+\code{\link{get_params_flat}()}
 
-If plasma data but no blood data are available, then `Rblood2plasma` will neither be estimated nor be used in model evaluation at all.
+Other built-in model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_2comp}()},
+\code{\link{auc_flat}()},
+\code{\link{cp_1comp}()},
+\code{\link{cp_2comp}()},
+\code{\link{cp_flat}()},
+\code{\link{get_params_2comp}()},
+\code{\link{get_params_flat}()}
 }
 \author{
 Caroline Ring
 }
+\concept{1-compartment model functions}
+\concept{built-in model functions}
+\concept{get_params functions}

@@ -30,33 +30,44 @@
 #'
 #' If both blood and plasma data are available, then `Rblood2plasma` will be estimated from the data.
 #'
-#' # Blood data, no plasma data
+#'# Only one of blood or plasma data
 #'
-#' If blood data but no plasma data are available, then `Rblood2plasma` will be used in model evaluation, but held constant at 1, not estimated from the data.
-#'
-#' # Plasma data, no blood data
-#'
-#' If plasma data but no blood data are available, then `Rblood2plasma` will neither be estimated nor be used in model evaluation at all.
+#'If only one of blood or plasma data are available, then `Rblood2plasma` will be
+#'held constant at 1, not estimated from the data.
 #'
 #'
-#' @param data The data set to be fitted, with harmonized variable names (e.g. the result of [preprocess_data()]).
+#'@param data The data set to be fitted (e.g. the result of [preprocess_data()])
+#'@param lower_bound A mapping specified using a call to [ggplot2::aes()],
+#'  giving the lower bounds for each variable, as expressions which may include
+#'  variables in `data`.
+#' @param upper_bound A mapping specified using a call to [ggplot2::aes()],
+#'  giving the upper bounds for each variable, as expressions which may include
+#'  variables in `data`.
+#'@param param_units A mapping specified using a call to [ggplot2::aes()],
+#'  giving the units for each variable, as expressions which may include
+#'  variables in `data`.
 #'@return A `data.frame`with the following variables:
-#' - `param_name`: Names of the model parameters
-#' - `param_units`: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherrwise
+#' - `param_name`: Character: Names of the model parameters
+#' - `param_units`: Character: Units of the model parameters
+#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
 #' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+#' -`lower_bounds`: Numeric: The lower bounds for each parameter
+#' - `upper_bounds`: Numeric: The upper bounds for each parameter
+#' - `start`: Numeric: The starting guesses for each parameter
 #'@author Caroline Ring
+#' @family flat model functions
+#' @family get_params functions
+#' @family built-in model functions
 
 get_params_flat <- function(data,
-                            lower_bound = c(Vdist = 1e-4, #Vdist
-                                            Fgutabs = 1e-4, #Fgutabs
-                                            Fgutabs_Vdist = 1e-4, #Fgutabs_Vdist
-                                            Rblood2plasma = 1e-4), #Rblood2plasma
-
-                            upper_bound = c(Vdist = 1e6, #Vdist
-                                            Fgutabs = 1, #Fgutabs
-                                            Fgutabs_Vdist = 1e4, #Fgutabs_Vdist
-                                            Rblood2plasma = 1e6),
+                            lower_bound = ggplot2::aes(Vdist = 0.01,
+                                                       Fgutabs = 0,
+                                                       Fgutabs_Vdist = 0.01,
+                                                       Rblood2plasma = 1e-2),
+                            upper_bound = ggplot2::aes(Vdist = 100,
+                                                       Fgutabs = 1,
+                                                       Fgutabs_Vdist = 1e2,
+                                                       Rblood2plasma = 100),
                             param_units = ggplot2::aes(Vdist = paste0("(", #Vdist
                                                                       unique(Dose.Units),
                                                                       ")",
@@ -79,19 +90,19 @@ get_params_flat <- function(data,
                   "Fgutabs_Vdist",
                   "Rblood2plasma")
 
-  lower_bound_default = c(Vdist = 1e-4, #Vdist
-                          Fgutabs = 1e-4, #Fgutabs
-                          Fgutabs_Vdist = 1e-4, #Fgutabs_Vdist
-                          Rblood2plasma = 1e-4) #Rblood2plasma
+  lower_bound_default = ggplot2::aes(Vdist = 0.01,
+                                     Fgutabs = 0,
+                                     Fgutabs_Vdist = 0.01,
+                                     Rblood2plasma = 1e-2)
 
   lower_bound_missing <- setdiff(names(lower_bound_default),
                                  names(lower_bound))
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
 
-  upper_bound_default = c(Vdist = 1e6, #Vdist
-                          Fgutabs = 1, #Fgutabs
-                          Fgutabs_Vdist = 1e4, #Fgutabs_Vdist
-                          Rblood2plasma = 1e6)
+  upper_bound_default =ggplot2::aes(Vdist = 100,
+                                    Fgutabs = 1,
+                                    Fgutabs_Vdist = 1e2,
+                                    Rblood2plasma = 100)
 
   upper_bound_missing <- setdiff(names(upper_bound_default),
                                  names(upper_bound))
@@ -141,13 +152,27 @@ if(!("oral" %in% data$Route)){
                              USE.NAMES = TRUE)
   param_units_vect <- param_units_vect[param_name]
 
+  lower_bound_vect <- sapply(lower_bound,
+                             function(x) rlang::eval_tidy(x,
+                                                          data = data),
+                             simplify = TRUE,
+                             USE.NAMES = TRUE)
+  lower_bound_vect <- lower_bound_vect[param_name]
+
+  upper_bound_vect <- sapply(upper_bound,
+                             function(x) rlang::eval_tidy(x,
+                                                          data = data),
+                             simplify = TRUE,
+                             USE.NAMES = TRUE)
+  upper_bound_vect <- upper_bound_vect[param_name]
+
 
   par_DF <- data.frame("param_name" = param_name,
                        "param_units" = param_units_vect,
                        "optimize_param" = optimize_param,
                        "use_param" = use_param,
-                       "lower_bound" = lower_bound,
-                       "upper_bound" = upper_bound)
+                       "lower_bound" = lower_bound_vect,
+                       "upper_bound" = upper_bound_vect)
 
   rownames(par_DF) <- par_DF$param_name
 

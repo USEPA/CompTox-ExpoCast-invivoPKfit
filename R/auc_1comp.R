@@ -25,6 +25,9 @@
 #'
 #'@author Caroline Ring, John Wambaugh
 #' @export auc_1comp
+#' @family built-in model functions
+#' @family 1-compartment model functions
+#' @family model AUC functions
 
 auc_1comp <- function(params,
                       time,

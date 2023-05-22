@@ -32,21 +32,34 @@
 #'
 #' If both blood and plasma data are available, then `Rblood2plasma` will be estimated from the data.
 #'
-#' # Blood data, no plasma data
+#'# Only one of blood or plasma data
 #'
-#' If blood data but no plasma data are available, then `Rblood2plasma` will be used in model evaluation, but held constant at 1, not estimated from the data.
+#'If only one of blood or plasma data are available, then `Rblood2plasma` will be
+#'held constant at 1, not estimated from the data.
 #'
-#' # Plasma data, no blood data
 #'
-#' If plasma data but no blood data are available, then `Rblood2plasma` will neither be estimated nor be used in model evaluation at all.
-#'
-#' @param data The data set to be fitted, with harmonized variable names (e.g. the result of [preprocess_data()]).
+#'@param data The data set to be fitted (e.g. the result of [preprocess_data()])
+#'@param lower_bound A mapping specified using a call to [ggplot2::aes()],
+#'  giving the lower bounds for each variable, as expressions which may include
+#'  variables in `data`.
+#' @param upper_bound A mapping specified using a call to [ggplot2::aes()],
+#'  giving the upper bounds for each variable, as expressions which may include
+#'  variables in `data`.
+#'@param param_units A mapping specified using a call to [ggplot2::aes()],
+#'  giving the units for each variable, as expressions which may include
+#'  variables in `data`.
 #'@return A `data.frame`with the following variables:
-#' - `param_name`: Names of the model parameters
-#' - `param_units`: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherrwise
+#' - `param_name`: Character: Names of the model parameters
+#' - `param_units`: Character: Units of the model parameters
+#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
 #' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+#' -`lower_bounds`: Numeric: The lower bounds for each parameter
+#' - `upper_bounds`: Numeric: The upper bounds for each parameter
+#' - `start`: Numeric: The starting guesses for each parameter
 #'@author Caroline Ring
+#' @family 2-compartment model functions
+#' @family get_params functions
+#' @family built-in model functions
 
 get_params_2comp <- function(data,
                              lower_bound = ggplot2::aes(kelim = 0.5*log(2)/max(Time_trans),

@@ -67,6 +67,9 @@
 #'@author Caroline Ring, John Wambaugh, Chris Cook
 #'
 #'@export cp_flat
+#' @family built-in model functions
+#' @family flat model functions
+#' @family model concentration functions
 
 cp_flat <- function(params, time, dose, route, medium) {
 

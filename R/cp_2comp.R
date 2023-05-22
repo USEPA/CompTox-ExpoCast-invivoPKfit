@@ -57,6 +57,9 @@
 #'@export cp_2comp
 #'
 #'@author Caroline Ring, John Wambaugh
+#' @family built-in model functions
+#' @family 2-compartment model functions
+#' @family model concentration functions
 cp_2comp <- function(params, time, dose, route, medium = "plasma")
 {
 

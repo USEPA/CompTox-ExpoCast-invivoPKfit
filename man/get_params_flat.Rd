@@ -6,10 +6,10 @@
 \usage{
 get_params_flat(
   data,
-  lower_bound = c(Vdist = 1e-04, Fgutabs = 1e-04, Fgutabs_Vdist = 1e-04, Rblood2plasma =
-    1e-04),
-  upper_bound = c(Vdist = 1e+06, Fgutabs = 1, Fgutabs_Vdist = 10000, Rblood2plasma =
-    1e+06),
+  lower_bound = ggplot2::aes(Vdist = 0.01, Fgutabs = 0, Fgutabs_Vdist = 0.01,
+    Rblood2plasma = 0.01),
+  upper_bound = ggplot2::aes(Vdist = 100, Fgutabs = 1, Fgutabs_Vdist = 100, Rblood2plasma
+    = 100),
   param_units = ggplot2::aes(Vdist = paste0("(", unique(Dose.Units), ")", "/", "(",
     unique(Conc.Units), ")"), Fgutabs = "unitless fraction", Fgutabs_Vdist = paste0("(",
     unique(Conc.Units), ")", "/", "(", unique(Dose.Units), ")"), Rblood2plasma =
@@ -17,14 +17,29 @@ get_params_flat(
 )
 }
 \arguments{
-\item{data}{The data set to be fitted, with harmonized variable names (e.g. the result of [preprocess_data()]).}
+\item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}
+
+\item{lower_bound}{A mapping specified using a call to [ggplot2::aes()],
+giving the lower bounds for each variable, as expressions which may include
+variables in `data`.}
+
+\item{upper_bound}{A mapping specified using a call to [ggplot2::aes()],
+giving the upper bounds for each variable, as expressions which may include
+variables in `data`.}
+
+\item{param_units}{A mapping specified using a call to [ggplot2::aes()],
+giving the units for each variable, as expressions which may include
+variables in `data`.}
 }
 \value{
 A `data.frame`with the following variables:
-- `param_name`: Names of the model parameters
-- `param_units`: Units of the model parameters
-- `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherrwise
+- `param_name`: Character: Names of the model parameters
+- `param_units`: Character: Units of the model parameters
+- `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
 - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+-`lower_bounds`: Numeric: The lower bounds for each parameter
+- `upper_bounds`: Numeric: The upper bounds for each parameter
+- `start`: Numeric: The starting guesses for each parameter
 }
 \description{
 The full set of model parameters for the flat model includes
@@ -58,14 +73,33 @@ If both oral and IV dosing data are available, then `Vdist`, `kelim`,
 
 If both blood and plasma data are available, then `Rblood2plasma` will be estimated from the data.
 
-# Blood data, no plasma data
+# Only one of blood or plasma data
 
-If blood data but no plasma data are available, then `Rblood2plasma` will be used in model evaluation, but held constant at 1, not estimated from the data.
+If only one of blood or plasma data are available, then `Rblood2plasma` will be
+held constant at 1, not estimated from the data.
+}
+\seealso{
+Other flat model functions: 
+\code{\link{auc_flat}()},
+\code{\link{cp_flat}()}
 
-# Plasma data, no blood data
+Other get_params functions: 
+\code{\link{get_params_1comp}()},
+\code{\link{get_params_2comp}()}
 
-If plasma data but no blood data are available, then `Rblood2plasma` will neither be estimated nor be used in model evaluation at all.
+Other built-in model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_2comp}()},
+\code{\link{auc_flat}()},
+\code{\link{cp_1comp}()},
+\code{\link{cp_2comp}()},
+\code{\link{cp_flat}()},
+\code{\link{get_params_1comp}()},
+\code{\link{get_params_2comp}()}
 }
 \author{
 Caroline Ring
 }
+\concept{built-in model functions}
+\concept{flat model functions}
+\concept{get_params functions}

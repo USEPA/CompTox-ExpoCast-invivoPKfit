@@ -53,12 +53,15 @@
 #'  concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 #'  Must be same length as `time` and `dose`, or length 1.
 #'
-#'@return A vector of blood or plasma concentration values (mg/L) corresponding
+#'@return A vector of blood or plasma concentration values  corresponding
 #'  to `time`.
 #'
 #'@author Caroline Ring, John Wambaugh
 #'
 #'@export cp_1comp
+#' @family built-in model functions
+#' @family 1-compartment model functions
+#' @family model concentration functions
 cp_1comp <- function(params, time, dose, route, medium = 'plasma'){
 
   #check whether lengths of time, dose, and route match

@@ -36,6 +36,9 @@
 #'@return A vector of plasma AUC values, evaluated at each time point in `time`.
 #' @export auc_2comp
 #' @author Caroline Ring, John Wambaugh
+#' @family built-in model functions
+#' @family 2-compartment model functions
+#' @family model AUC functions
 auc_2comp <- function(params, time, dose, route, medium = "plasma")
 {
 

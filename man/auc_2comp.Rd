@@ -47,6 +47,28 @@ Calculate area under the plasma concentration vs. time curve for the
 1-compartment model, using an analytical equation (the integral of the
 1-compartment model equation with respect to time).
 }
+\seealso{
+Other built-in model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_flat}()},
+\code{\link{cp_1comp}()},
+\code{\link{cp_2comp}()},
+\code{\link{cp_flat}()},
+\code{\link{get_params_1comp}()},
+\code{\link{get_params_2comp}()},
+\code{\link{get_params_flat}()}
+
+Other 2-compartment model functions: 
+\code{\link{cp_2comp}()},
+\code{\link{get_params_2comp}()}
+
+Other model AUC functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_flat}()}
+}
 \author{
 Caroline Ring, John Wambaugh
 }
+\concept{2-compartment model functions}
+\concept{built-in model functions}
+\concept{model AUC functions}

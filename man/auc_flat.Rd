@@ -61,6 +61,28 @@ If `any(medium %in% 'blood')`, then `params` must also include
 `Rblood2plasma`, the ratio of chemical concentration in whole blood to the
 chemical concentration in blood plasma.
 }
+\seealso{
+Other built-in model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_2comp}()},
+\code{\link{cp_1comp}()},
+\code{\link{cp_2comp}()},
+\code{\link{cp_flat}()},
+\code{\link{get_params_1comp}()},
+\code{\link{get_params_2comp}()},
+\code{\link{get_params_flat}()}
+
+Other flat model functions: 
+\code{\link{cp_flat}()},
+\code{\link{get_params_flat}()}
+
+Other model AUC functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_2comp}()}
+}
 \author{
 Caroline Ring, John Wambaugh, Chris Cook
 }
+\concept{built-in model functions}
+\concept{flat model functions}
+\concept{model AUC functions}

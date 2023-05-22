@@ -78,6 +78,28 @@ chemical concentration in blood plasma.
 
 \deqn{\textrm{Conc} = \frac{F_{\textrm{gutabs}} \textrm{Dose}}{V_{\textrm{dist}}}}
 }
+\seealso{
+Other built-in model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_2comp}()},
+\code{\link{auc_flat}()},
+\code{\link{cp_1comp}()},
+\code{\link{cp_2comp}()},
+\code{\link{get_params_1comp}()},
+\code{\link{get_params_2comp}()},
+\code{\link{get_params_flat}()}
+
+Other flat model functions: 
+\code{\link{auc_flat}()},
+\code{\link{get_params_flat}()}
+
+Other model concentration functions: 
+\code{\link{cp_1comp}()},
+\code{\link{cp_2comp}()}
+}
 \author{
 Caroline Ring, John Wambaugh, Chris Cook
 }
+\concept{built-in model functions}
+\concept{flat model functions}
+\concept{model concentration functions}

@@ -27,7 +27,7 @@ concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 Must be same length as `time` and `dose`, or length 1.}
 }
 \value{
-A vector of blood or plasma concentration values (mg/L) corresponding
+A vector of blood or plasma concentration values  corresponding
  to `time`.
 }
 \description{
@@ -69,6 +69,28 @@ If `any(medium %in% 'blood')`, then `params` must also include
 `Rblood2plasma`, the ratio of chemical concentration in whole blood to the
 chemical concentration in blood plasma.
 }
+\seealso{
+Other built-in model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_2comp}()},
+\code{\link{auc_flat}()},
+\code{\link{cp_2comp}()},
+\code{\link{cp_flat}()},
+\code{\link{get_params_1comp}()},
+\code{\link{get_params_2comp}()},
+\code{\link{get_params_flat}()}
+
+Other 1-compartment model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{get_params_1comp}()}
+
+Other model concentration functions: 
+\code{\link{cp_2comp}()},
+\code{\link{cp_flat}()}
+}
 \author{
 Caroline Ring, John Wambaugh
 }
+\concept{1-compartment model functions}
+\concept{built-in model functions}
+\concept{model concentration functions}
