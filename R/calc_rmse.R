@@ -50,7 +50,7 @@
 #' SD (reported on the natural scale, i.e. the mean and SD of natural-scale
 #' individual observations) are used to produce an estimate of the log-scale
 #' sample mean and sample SD (i.e., the mean and SD of log-transformed
-#' individual observations), using [convert_summary_to_log()].
+#' individual observations), using [convert_summary_to_log10()].
 #'
 #' The formulas are as follows. Again, \eqn{\bar{y}_i} is the sample mean for
 #' group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.
@@ -99,7 +99,7 @@ calc_rmse <- function(pred,
                       obs_sd,
                       n_subj,
                       detect,
-                      log = FALSE){
+                      log10_trans = FALSE){
   #If both obs and pred are below LOQ, set pred to obs
   #This will effectively make error zero in these cases.
   pred <- ifelse(detect %in% FALSE &
@@ -107,13 +107,13 @@ calc_rmse <- function(pred,
                  obs,
                  pred)
 
-  #Convert to log-scale if necessary
-  if(log %in% TRUE){
-    tmplist <- convert_summary_to_log(sample_mean = obs,
+  #Convert to log10-scale if necessary
+  if(log10_trans %in% TRUE){
+    tmplist <- convert_summary_to_log10(sample_mean = obs,
                                       sample_SD = obs_sd)
-    obs <- tmplist$logmean
-    obs_sd <- tmplist$logSD
-    pred <- log(pred)
+    obs <- tmplist$log10mean
+    obs_sd <- tmplist$log10SD
+    pred <- log10(pred)
   }
 
 #Calculate MSE.
@@ -215,7 +215,7 @@ calc_rmse <- function(pred,
 #' SD (reported on the natural scale, i.e. the mean and SD of natural-scale
 #' individual observations) are used to produce an estimate of the log-scale
 #' sample mean and sample SD (i.e., the mean and SD of log-transformed
-#' individual observations), using [convert_summary_to_log()].
+#' individual observations), using [convert_summary_to_log10()].
 #'
 #' The formulas are as follows. Again, \eqn{\bar{y}_i} is the sample mean for
 #' group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.
@@ -226,88 +226,74 @@ calc_rmse <- function(pred,
 #' \deqn{\textrm{log-scale sample SD}_i = \sqrt{\log \left(1 +
 #' \frac{s_i^2}{\bar{y}_i^2} \right)}}
 #'
-#' @param group_mean Numeric vector: Observed sample means for summary data, or
+#' @param obs Numeric vector: Observed sample means for summary data, or
 #'   observed values for non-summary data. Censored observations should *not* be
-#'   NA; they should be substituted with some value at or below the
-#'   corresponding LOQ (e.g. LOQ or LOQ/2). Even if `log %in% TRUE`, these
-#'   should *not* be log-transformed. (If `log %in% TRUE`, they will be
-#'   transformed to log-scale means internally to this function before
-#'   calculation.)
-#' @param group_sd Numeric vector: Observed sample SDs for summary data. For
-#'   non-summary data (individual-subject observations), the corresponding
-#'   element of `group_sd` should be set to 0. Even if `log %in% TRUE`, these
-#'   should *not* be log-transformed. (If `log %in% TRUE`, they will be
-#'   transformed to log-scale standard deviations internally to this function
+#'   NA; they should be substituted with the LOQ. Even if `log10_trans %in%
+#'   TRUE`, these should *not* be log-transformed. (If `log10_trans %in% TRUE`,
+#'   they will be transformed to log-scale means internally to this function
 #'   before calculation.)
-#' @param group_n Numeric vector: Observed sample number of subjects for summary
+#' @param obs_sd Numeric vector: Observed sample SDs for summary data. For
+#'   non-summary data (individual-subject observations), the corresponding
+#'   element of `obs_sd` should be set to 0. Even if `log10_trans %in% TRUE`,
+#'   these should *not* be log-transformed. (If `log10_trans %in% TRUE`, they
+#'   will be transformed to log-scale standard deviations internally to this
+#'   function before calculation.)
+#' @param n_subj Numeric vector: Observed sample number of subjects for summary
 #'   data. For non-summary data (individual-subject observations), `group_n`
 #'   should be set to 1.
+#' @param detect Logical: Whether each
 #' @param pred Numeric vector: Model-predicted value corresponding to each
-#'   observed value. Even if `log %in% TRUE`, these should *not* be
-#'   log-transformed. (If `log %in% TRUE`, they will be log-transformed
-#'   internally to this function before calculation.)
-#' @param group_LOQ Numeric vector: Reported limit of quantification (LOQ) (i.e,
-#'   left-censoring limit) for each observation. May contain `NA_real_`s for
-#'   non-censored observations. Even if `log %in% TRUE`, these should *not* be
-#'   log-transformed. (If `log %in% TRUE`, log transformation will be handled
-#'   internally to this function before calculation.)
+#'   observed value. Even if `log10_trans %in% TRUE`, these should *not* be
+#'   log-transformed.  (If `log10_trans %in% TRUE`, they will be
+#'   log10-transformed internally to this function before calculation.)
 #' @param log Logical. FALSE (default) means that R-squared is computed for
 #'   observations vs. predictions. TRUE means that R-squared is computed for
 #'   log(observations) vs. log(predictions) (see Details).
 #' @return A numeric scalar: the R-squared value for observations vs.
 #'   predictions.
 #' @author Caroline Ring
-calc_rsq <- function(group_mean,
-                     group_sd,
-                     group_n,
+calc_rsq <- function(obs,
+                     obs_sd,
+                     n_subj,
+                     detect,
                      pred,
-                     group_LOQ,
-                     log = FALSE){
-  #If both obs and pred are below LOQ, set obs to pred.
+                     log10_trans = FALSE){
+  #If both obs and pred are below LOQ, set pred = LOQ.
   #This will effectively make error zero in these cases.
-  if(any((group_mean <= group_LOQ &
-          pred <= group_LOQ) %in% TRUE)){
-  group_mean[(group_mean <= group_LOQ &
-               pred <= group_LOQ) %in% TRUE] <- pred[(group_mean <= group_LOQ &
-                                                       pred <= group_LOQ) %in% TRUE]
-  }
+  pred <- ifelse(detect %in% FALSE &
+                  pred <= obs,
+                obs,
+                pred)
 
-  #If obs is below LOQ but pred is not, set obs to LOQ.
-  if(any((group_mean <= group_LOQ &
-          !(pred <= group_LOQ)) %in% TRUE)){
-  group_mean[(group_mean <= group_LOQ &
-               !(pred <= group_LOQ)) %in% TRUE] <- group_LOQ[(group_mean <= group_LOQ &
-                                                         !(pred <= group_LOQ)) %in% TRUE]
-}
-  #Convert to log-scale if necessary
-  if(log %in% TRUE){
-    tmplist <- convert_summary_to_log(sample_mean = group_mean,
-                                      sample_SD = group_sd)
-    group_mean <- tmplist$logmean
-    group_sd <- tmplist$logSD
-    pred <- log(pred)
+  #Convert to log10-scale if necessary
+  if(log10_trans %in% TRUE){
+    tmplist <- convert_summary_to_log10(sample_mean = obs,
+                                      sample_SD = obs_sd)
+    obs <- tmplist$log10mean
+    obs_sd <- tmplist$log10SD
+    pred <- log10(pred)
   }
 
   #grand mean of predictions
-  pred_bar <- sum(group_n*pred)/sum(group_n)
+  pred_bar <- sum(n_subj*pred)/sum(n_subj)
   #grand mean of observations
-  x_bar <- sum(group_n*group_mean)/sum(group_n)
+  x_bar <- sum(n_subj*obs)/sum(n_subj)
 #Calculate numerator of Pearson correlation coefficient
-  r_num <- sum(pred * group_n * group_mean) -
-    pred_bar * sum(group_n * group_mean) -
-    x_bar * sum(group_n * pred) +
-    x_bar * pred_bar * sum(group_n)
+  r_num <- sum(pred * n_subj * obs) -
+    pred_bar * sum(n_subj * obs) -
+    x_bar * sum(n_subj * pred) +
+    x_bar * pred_bar * sum(n_subj)
 #Calculate first denominator term of Pearson correlation coefficient
   r_denom_1 <- sqrt(sum(
-    (group_n - 1) * group_sd^2 +
-      group_n * group_mean^2
+    (n_subj - 1) * obs_sd^2 +
+      n_subj * obs^2
   ) -
-    2 * x_bar * sum(group_n * group_mean) +
-    sum(group_n) * x_bar^2)
+    2 * x_bar * sum(n_subj * obs) +
+    sum(n_subj) * x_bar^2)
   #Calculate second denominator term of Pearson correlation coefficient
-  r_denom_2 <- sqrt(sum(group_n * pred^2) -
-    2 * pred_bar * sum(group_n * pred) +
-    sum(group_n) * pred_bar^2)
+  r_denom_2 <- sqrt(sum(n_subj * pred^2) -
+    2 * pred_bar * sum(n_subj * pred) +
+    sum(n_subj) * pred_bar^2)
 
   #Put the pieces together to get Pearson correlation coefficient
   if((r_denom_1 > 0) %in% TRUE  &
@@ -322,37 +308,6 @@ rsq <- r^2
 
 return(rsq)
 
-}
-
-#' Convert sample mean and SD to log-scale
-#'
-#' Estimate log-scale sample mean and standard deviation from natural-scale
-#' sample mean and standard deviation
-#'
-#' \eqn{\bar{y}_i} is the natural-scale sample mean for group \eqn{i}. \eqn{s_i}
-#' is the natural-scale sample standard deviation for group \eqn{i}.
-#'
-#' \deqn{\textrm{log-scale sample mean}_i = \log
-#' \left(\frac{\bar{y}_i^2}{\sqrt{\bar{y}_i^2 + s_i^2}} \right)}
-#'
-#' \deqn{
-#' \textrm{log-scale sample SD}_i =
-#'  \sqrt{
-#'  \log \left(1 + \frac{s_i^2}{\bar{y}_i^2} \right)
-#'  }
-#'  }
-#'
-#'
-#' @param sample_mean Numeric: one or more sample means
-#' @param sample_SD Numeric: one or more sample SDs
-#' @return A list with two named elements: "logmean" and "logSD", the log-scale
-#'   sample means and log-scale sample SDs, respectively.
-#' @author Caroline Ring
-convert_summary_to_log <- function(sample_mean, sample_SD){
-  logmean <- log(sample_mean^2 / sqrt(sample_SD^2 + sample_mean^2))
-  logSD <- sqrt(log(1 + (sample_SD^2 / sample_mean^2)))
-  return(list("logmean" = logmean,
-              "logSD" = logSD))
 }
 
 #' Combined standard deviation
@@ -531,7 +486,7 @@ bp_test <- function(group_mean,
 
   #Convert to log-scale if necessary
   if(log %in% TRUE){
-    tmplist <- convert_summary_to_log(sample_mean = group_mean,
+    tmplist <- convert_summary_to_log10(sample_mean = group_mean,
                                       sample_SD = group_sd)
     group_mean <- tmplist$logmean
     group_sd <- tmplist$logSD
@@ -672,4 +627,36 @@ bp_sst <- function(Ni,
         6*(si^2*(Ni - 1) +
              ybari^2*Ni)*mui^2 +
         Ni*mui^4)
+}
+
+#' Convert sample mean and SD to log10-scale
+#'
+#' Estimate log10-scale sample mean and standard deviation from natural-scale
+#' sample mean and standard deviation
+#'
+#' \eqn{\bar{y}_i} is the natural-scale sample mean for group \eqn{i}. \eqn{s_i}
+#' is the natural-scale sample standard deviation for group \eqn{i}.
+#'
+#' \deqn{\textrm{log10-scale sample mean}_i = \log_{10}
+#' \left(\frac{\bar{y}_i^2}{\sqrt{\bar{y}_i^2 + s_i^2}} \right)}
+#'
+#' \deqn{
+#' \textrm{log10-scale sample SD}_i =
+#'  \sqrt{
+#'  \log_{10} \left(1 + \frac{s_i^2}{\bar{y}_i^2} \right)
+#'  }
+#'  }
+#'
+#'
+#' @param sample_mean Numeric: one or more sample means
+#' @param sample_SD Numeric: one or more sample SDs
+#' @return A list with two named elements: "log10mean" and "log10SD", the log10-scale
+#'   sample means and log10-scale sample SDs, respectively.
+#' @export
+#' @author Caroline Ring
+convert_summary_to_log10 <- function(sample_mean, sample_SD){
+  log10mean <- log10(sample_mean^2 / sqrt(sample_SD^2 + sample_mean^2))
+  log10SD <- sqrt(log10(1 + (sample_SD^2 / sample_mean^2)))
+  return(list("log10mean" = log10mean,
+              "log10SD" = log10SD))
 }

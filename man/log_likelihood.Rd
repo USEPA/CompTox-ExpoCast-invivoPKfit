@@ -7,10 +7,11 @@
 log_likelihood(
   par,
   const_params = NULL,
-  fitdata = NULL,
+  data = NULL,
   data_sigma_group = NULL,
   modelfun = NULL,
-  scales_conc = NULL,
+  dose_norm = FALSE,
+  log10_trans = FALSE,
   negative = TRUE,
   force_finite = FALSE
 )
@@ -22,20 +23,21 @@ optimized.}
 \item{const_params}{Optional: A named list of parameters and their values that
 are being held constant.}
 
-\item{fitdata}{A `data.frame` of data with harmonized variable names, with transformations applied.
-Required: `Time_trans`, `Dose`, `Conc`, `Detect`, `N_Subjects`, `Conc_SD`,
-`Conc_trans`, `Conc_SD_trans`.}
+\item{data}{A `data.frame` of data with harmonized variable names. Required:
+`Time_trans`, `Dose`, `Conc`, `Detect`, `N_Subjects`, `Conc_SD`. `Conc` and
+`Conc_SD` will be transformed according to `dose_norm` and `log10_trans`.}
 
 \item{data_sigma_group}{A `factor` vector which could be a new variable in
-`fitdata`, giving the error group for each row in `fitdata`.}
+`data`, giving the error group for each row in `data`.}
 
 \item{modelfun}{Character or function: The name of the function that produces
 concentration predictions for the model being evaluated.}
 
-\item{scales_conc}{As from a [pk] object, element `$scales$conc` (see
-[scale_conc()] for how to specify. A list specifying the
-scaling/transformation of concentrations, with elements named
-`ratio_conc_dose`, `dose_norm`, `log10_trans`, `expr`.}
+\item{dose_norm}{Logical: Whether to dose-normalize predicted and observed
+concentrations before calculating likelihood.}
+
+\item{log10_trans}{Logical: Whether to apply a [log10()] transformation to
+predicted and observed concentrations before calculating likelihood.}
 
 \item{negative}{Logical: Whether to return the *negative* log-likelihood
 (i.e., the log-likelihood multiplied by negative 1). Default TRUE, to
@@ -139,12 +141,12 @@ LOQ is reported? Did individual observations all have the same LOQ, or is an
 average or median LOQ being used?  It is impossible to formulate the
 log-likelihood without knowing the answers to these questions. Therefore,
 multiple-subject observations below LOQ are excluded from analysis (they are
-removed in [preprocess_data()]).
+marked as excluded in [preprocess_data()]).
 
 # Joint log-likelihood for a chemical and species
 
 The joint log-likelihood for a chemical and species is simply the sum of
-log-likelihoods across observations and studys.
+log-likelihoods across observations.
 
 \deqn{LL_{i} = \sum_{j=1}^{J_i} \sum_{k=1}^{K_{ij}} LL_{ijk}}
 

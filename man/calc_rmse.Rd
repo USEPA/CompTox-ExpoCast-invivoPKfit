@@ -4,19 +4,13 @@
 \alias{calc_rmse}
 \title{Calculate RMSE (root mean squared error)}
 \usage{
-calc_rmse(pred, obs, obs_sd, n_subj, detect, log = FALSE)
+calc_rmse(pred, obs, obs_sd, n_subj, detect, log10_trans = FALSE)
 }
 \arguments{
 \item{pred}{Numeric vector: Model-predicted value corresponding to each
 observed value. Even if `log %in% TRUE`, these should *not* be
 log-transformed. (If `log %in% TRUE`, they will be log-transformed
 internally to this function before calculation.)}
-
-\item{log}{Logical. FALSE (default) means that RMSE is computed for
-natural-scale observations and predictions -- effectively, `sqrt(mean(
-(observed - pred)^2 ))`. TRUE means that observations and predictions will
-be log-transformed before RMSE is calculated (see Details)
--- effectively `sqrt(mean( ( log(observed) - log(pred) )^2 ))`.}
 
 \item{group_mean}{Numeric vector: Observed sample means for summary data, or
 observed values for non-summary data. Censored observations should *not* be
@@ -42,6 +36,12 @@ left-censoring limit) for each observation. May contain `NA_real_`s for
 non-censored observations. Even if `log %in% TRUE`, these should *not* be
 log-transformed. (If `log %in% TRUE`, log transformation will be handled
 internally to this function before calculation.)}
+
+\item{log}{Logical. FALSE (default) means that RMSE is computed for
+natural-scale observations and predictions -- effectively, `sqrt(mean(
+(observed - pred)^2 ))`. TRUE means that observations and predictions will
+be log-transformed before RMSE is calculated (see Details)
+-- effectively `sqrt(mean( ( log(observed) - log(pred) )^2 ))`.}
 }
 \value{
 A numeric scalar: the root mean squared error (RMSE) for this set of
@@ -99,7 +99,7 @@ observed values are reported in summary format, each sample mean and sample
 SD (reported on the natural scale, i.e. the mean and SD of natural-scale
 individual observations) are used to produce an estimate of the log-scale
 sample mean and sample SD (i.e., the mean and SD of log-transformed
-individual observations), using [convert_summary_to_log()].
+individual observations), using [convert_summary_to_log10()].
 
 The formulas are as follows. Again, \eqn{\bar{y}_i} is the sample mean for
 group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.

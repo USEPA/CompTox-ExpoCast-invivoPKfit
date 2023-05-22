@@ -48,8 +48,8 @@ First, select data for a single chemical and species. This is the dataset that w
 ```{r}
 #select data for a single chemical and species
 my_data <- subset(cvt,
-                          chemicals_analyzed.dsstox_substance_id %in% "DTXSID7020687" &
-                            subjects.species_harmonized %in% "rabbit")
+                          chemicals_analyzed.dsstox_substance_id %in% "DTXSID1021116" &
+                            subjects.species_harmonized %in% "rat")
 ```
 
 ## Initialize a `pk` object
@@ -58,9 +58,7 @@ Now, initialize a `pk` object.  This contains the data, along with a set of inst
 
 ```{r}
 my_pk <- pk(data = my_data) +
-  stat_model(model = "model_1comp") + #fit a 1-compartment model
-  settings_optimx(method = "L-BFGS-B") + #use optimx algorithm L-BFGS-B
-  settings_preprocess(suppress.messages = TRUE)
+  settings_preprocess(suppress.messages = TRUE, keep_data_original = TRUE)
 ```
 
 The instructions aren't carried out until you explicitly ask for them to be carried out, by calling functions that implement steps in the model fitting workflow.

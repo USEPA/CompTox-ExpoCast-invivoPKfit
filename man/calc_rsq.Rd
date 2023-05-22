@@ -4,38 +4,33 @@
 \alias{calc_rsq}
 \title{Calculate r-squared for observed vs. predicted values}
 \usage{
-calc_rsq(group_mean, group_sd, group_n, pred, group_LOQ, log = FALSE)
+calc_rsq(obs, obs_sd, n_subj, detect, pred, log10_trans = FALSE)
 }
 \arguments{
-\item{group_mean}{Numeric vector: Observed sample means for summary data, or
+\item{obs}{Numeric vector: Observed sample means for summary data, or
 observed values for non-summary data. Censored observations should *not* be
-NA; they should be substituted with some value at or below the
-corresponding LOQ (e.g. LOQ or LOQ/2). Even if `log %in% TRUE`, these
-should *not* be log-transformed. (If `log %in% TRUE`, they will be
-transformed to log-scale means internally to this function before
-calculation.)}
-
-\item{group_sd}{Numeric vector: Observed sample SDs for summary data. For
-non-summary data (individual-subject observations), the corresponding
-element of `group_sd` should be set to 0. Even if `log %in% TRUE`, these
-should *not* be log-transformed. (If `log %in% TRUE`, they will be
-transformed to log-scale standard deviations internally to this function
+NA; they should be substituted with the LOQ. Even if `log10_trans %in%
+TRUE`, these should *not* be log-transformed. (If `log10_trans %in% TRUE`,
+they will be transformed to log-scale means internally to this function
 before calculation.)}
 
-\item{group_n}{Numeric vector: Observed sample number of subjects for summary
+\item{obs_sd}{Numeric vector: Observed sample SDs for summary data. For
+non-summary data (individual-subject observations), the corresponding
+element of `obs_sd` should be set to 0. Even if `log10_trans %in% TRUE`,
+these should *not* be log-transformed. (If `log10_trans %in% TRUE`, they
+will be transformed to log-scale standard deviations internally to this
+function before calculation.)}
+
+\item{n_subj}{Numeric vector: Observed sample number of subjects for summary
 data. For non-summary data (individual-subject observations), `group_n`
 should be set to 1.}
 
-\item{pred}{Numeric vector: Model-predicted value corresponding to each
-observed value. Even if `log %in% TRUE`, these should *not* be
-log-transformed. (If `log %in% TRUE`, they will be log-transformed
-internally to this function before calculation.)}
+\item{detect}{Logical: Whether each}
 
-\item{group_LOQ}{Numeric vector: Reported limit of quantification (LOQ) (i.e,
-left-censoring limit) for each observation. May contain `NA_real_`s for
-non-censored observations. Even if `log %in% TRUE`, these should *not* be
-log-transformed. (If `log %in% TRUE`, log transformation will be handled
-internally to this function before calculation.)}
+\item{pred}{Numeric vector: Model-predicted value corresponding to each
+observed value. Even if `log10_trans %in% TRUE`, these should *not* be
+log-transformed.  (If `log10_trans %in% TRUE`, they will be
+log10-transformed internally to this function before calculation.)}
 
 \item{log}{Logical. FALSE (default) means that R-squared is computed for
 observations vs. predictions. TRUE means that R-squared is computed for
@@ -126,7 +121,7 @@ observed values are reported in summary format, each sample mean and sample
 SD (reported on the natural scale, i.e. the mean and SD of natural-scale
 individual observations) are used to produce an estimate of the log-scale
 sample mean and sample SD (i.e., the mean and SD of log-transformed
-individual observations), using [convert_summary_to_log()].
+individual observations), using [convert_summary_to_log10()].
 
 The formulas are as follows. Again, \eqn{\bar{y}_i} is the sample mean for
 group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.

@@ -127,7 +127,8 @@ fit.pk <- function(obj){
               data = data,
               data_sigma_group = data_sigma_group,
               modelfun = obj$stat_model[[this_model]]$conc_fun,
-              scales_conc = obj$scales$conc,
+              dose_norm = obj$scales$conc$dose_norm,
+              log10_trans = obj$scales$conc$log10_trans,
               negative = TRUE,
               force_finite = TRUE
             ) #end list()

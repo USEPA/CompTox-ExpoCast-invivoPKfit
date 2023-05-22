@@ -101,17 +101,17 @@
 #'  optimized.
 #'@param const_params Optional: A named list of parameters and their values that
 #'  are being held constant.
-#'@param data A `data.frame` of data with harmonized variable names, with transformations applied.
-#'  Required: `Time_trans`, `Dose`, `Conc`, `Detect`, `N_Subjects`, `Conc_SD`,
-#'  `Conc_trans`, `Conc_SD_trans`.
+#'@param data A `data.frame` of data with harmonized variable names. Required:
+#'  `Time_trans`, `Dose`, `Conc`, `Detect`, `N_Subjects`, `Conc_SD`. `Conc` and
+#'  `Conc_SD` will be transformed according to `dose_norm` and `log10_trans`.
 #'@param data_sigma_group A `factor` vector which could be a new variable in
 #'  `data`, giving the error group for each row in `data`.
 #'@param modelfun Character or function: The name of the function that produces
 #'  concentration predictions for the model being evaluated.
-#'@param scales_conc As from a [pk] object, element `$scales$conc` (see
-#'  [scale_conc()] for how to specify. A list specifying the
-#'  scaling/transformation of concentrations, with elements named
-#'  `ratio_conc_dose`, `dose_norm`, `log10_trans`, `expr`.
+#'@param dose_norm Logical: Whether to dose-normalize predicted and observed
+#'  concentrations before calculating likelihood.
+#'@param log10_trans Logical: Whether to apply a [log10()] transformation to
+#'  predicted and observed concentrations before calculating likelihood.
 #'@param force_finite Logical: Whether to force return of a finite value (e.g.
 #'  as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If
 #'  TRUE, then if the log-likelihood works out to be non-finite, then it will be
@@ -123,14 +123,15 @@
 #'  *minimized* by an optimization algorithm.
 #'@return A log-likelihood value for the data given the parameter values in
 #'  params
-#' @export
-#' @author Caroline Ring
+#'@export
+#'@author Caroline Ring
 log_likelihood <- function(par,
                            const_params = NULL,
                            data = NULL,
                            data_sigma_group = NULL,
                            modelfun = NULL,
-                           scales_conc = NULL,
+                           dose_norm = FALSE,
+                           log10_trans = FALSE,
                            negative = TRUE,
                            force_finite = FALSE) {
 
@@ -153,32 +154,34 @@ log_likelihood <- function(par,
                       medium = data$Media
                       ))
 
-if(any(grepl(x = names(params),
-             pattern= "sigma"))){
-  sigma.params <- params[grepl(x = names(params),
-                               pattern = "sigma")]
-  #match the study ID and assign each sigma to its corresponding study
-  sigma_study <- unlist(sigma.params[paste0("sigma_", data_sigma_group)])
+
+  data$pred <- pred
+
+  #transform predictions and concentrations
+
+  #dose normalization?
+  if(dose_norm %in% TRUE){
+    data$pred_trans <- pred/data$Dose
+    data$Conc_trans <- data$Conc/data$Dose
+    data$Conc_SD_trans <- data$Conc_SD/data$Dose
   }else{
-    stop(paste("Could not find any parameters with 'sigma' in the name.",
-    "Param names are:",
-    paste(names(params), collapse = "; ")
-    ))
+    data$pred_trans <- pred
+    data$Conc_trans <- data$Conc
+    data$Conc_SD_trans <- data$Conc_SD
   }
 
+  #log10 transformation?
+  if(log10_trans %in% TRUE){
+    data$pred_trans <- log10(data$pred_trans)
+    data$Conc_trans <- log10(data$Conc_trans)
+    data$Conc_SD_trans <- log10(data$Conc_SD_trans)
+  }else{
+    data$pred_trans <-  data$pred_trans
+    data$Conc_trans <- data$Conc_trans
+    data$Conc_SD_trans <- data$Conc_SD_trans
+  }
 
-  #add sigma_study and pred as temp columns to DF
-  #this makes logical indexing easier
-  data$sigma_study <- sigma_study
-  data$pred <- pred
-  #transform predictions the same way as concentrations
-  data$pred_trans <- rlang::eval_tidy(scales_conc$expr,
-                                         data = cbind(data,
-                                                      data.frame(".conc" = pred))
-  )
-
-
-  if(scales_conc$log10_trans %in% TRUE){
+  if(log10_trans %in% TRUE){
     ll_summary <- "dlnorm_summary"
     #maintain other transformations such as dose-scaling,
     #but undo log10 transformation
@@ -190,26 +193,75 @@ if(any(grepl(x = names(params),
     conc_sd_natural <- data$Conc_SD_trans
   }
 
+  #residual error SDs
+  #defined by data_sigma_group
+  if(any(grepl(x = names(params),
+               pattern= "sigma"))){
+
+    sigma_params <- params[grepl(x = names(params),
+                                 pattern = "sigma")]
+
+    #match the study ID and assign each sigma to its corresponding study
+    #except if data_sigma_group is NA -- then assume data are equally likely to come from any of the existing distributions
+
+    sigma_study <- matrix(nrow = length(data_sigma_group),
+                          ncol = length(sigma_params))
+
+    for (i in seq_along(sigma_params)){
+      this_sigma <- sigma_params[[i]]
+      sigma_study[, i] <- sapply(data_sigma_group,
+                                 function(this_dsg){
+                                   if(is.na(this_dsg) |
+                                      !(paste0("sigma_", this_dsg) %in% names(sigma_params))){
+                                     this_sigma
+                                   }else{
+                                     sigma_params[[paste0("sigma_", this_dsg)]]
+                                   }
+                                 },
+                                 simplify = TRUE,
+                                 USE.NAMES = FALSE)
+    }
+
+  }else{
+    stop(paste("Could not find any parameters with 'sigma' in the name.",
+               "Param names are:",
+               paste(names(params), collapse = "; ")
+    ))
+  }
+
+  #any unassigned sigma_study --
+  #treat as equally likely to have any of the sigma_study values
+  #(essentially a mixture distribution)
+
+
   #get log-likelihood for each observation
-  loglike <- ifelse(data$N_Subjects %in% 1,
+  #average over log-likelihood for the possible values of sigma_study for each observation
+  loglike <- apply(sigma_study,
+                   2,
+                   function(this_sigma_study){
+                   ifelse(data$N_Subjects %in% 1,
                     ifelse(data$Detect %in% TRUE,
                            dnorm(x = data$Conc_trans,
                                  mean = data$pred_trans,
-                                 sd = data$sigma_study,
+                                 sd = this_sigma_study,
                                  log = TRUE),
                            pnorm(q = data$Conc_trans,
                                  mean = data$pred_trans,
-                                 sd = data$sigma_study,
+                                 sd = this_sigma_study,
                                  log.p = TRUE)
                     ),
                     do.call(ll_summary,
                             list(mu = data$pred_trans,
-                                 sigma = data$sigma_study,
+                                 sigma = this_sigma_study,
                                  x_mean = conc_natural,
                                  x_sd = conc_sd_natural,
                                  x_N = data$N_Subjects,
                                  log = TRUE))
   )
+                   })
+
+  #average log-likelihood across possible values of sigma_study
+  loglike <- rowMeans(loglike)
 
   #sum log-likelihoods over observations
   ll <- sum(loglike)

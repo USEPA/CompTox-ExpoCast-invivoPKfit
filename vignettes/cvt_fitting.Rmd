@@ -25,6 +25,36 @@ trans_opts <- expand.grid(dose_norm = c(TRUE, FALSE),
             stringsAsFactors = FALSE)
 ```
 
+# Jonit analysis for only one set of options
+
+# Test preprocessing data
+
+```{r}
+data_pre <- cvt %>%
+  dplyr::group_by(chemicals_analyzed.dsstox_substance_id,
+                  subjects.species_harmonized) %>%
+  dplyr::summarise(pk_obj = {
+    #print(dplyr::cur_group())
+      this_pk <- pk(dplyr::cur_data_all()) 
+      list(preprocess_data(this_pk))
+  }
+  )
+```
+
+## Test data summary
+
+```{r}
+data_info_all <- cvt %>%
+  dplyr::group_by(chemicals_analyzed.dsstox_substance_id,
+                  subjects.species_harmonized) %>%
+  dplyr::summarise(pk_obj = {
+    #print(dplyr::cur_group())
+      this_pk <- pk(dplyr::cur_data_all()) 
+      list(data_info(this_pk))
+  }
+  )
+```
+
 
 # "Joint" analysis
 

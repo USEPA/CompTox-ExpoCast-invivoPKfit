@@ -548,3 +548,24 @@ get_mapping.default <- function(obj, ...){
              paste(class(obj), collapse = ", ")))
 }
 
+#' rsq()
+#'
+#' This is the S3 method generic for rsq()
+#'
+#' @param obj An object.
+#' @seealso [rsq.pk()] for the method for class [pk()]
+#' @export
+rsq <- function(obj, ...){
+  UseMethod("rsq", obj)
+}
+
+#' Default method for rsq()
+#'
+#'@param obj An object
+#' @export
+rsq.default <- function(obj, ...){
+  stop(paste("No 'rsq' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+

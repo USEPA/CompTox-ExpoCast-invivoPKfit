@@ -4,23 +4,26 @@
 \alias{convert_time}
 \title{Helper function to convert time units}
 \usage{
-convert_time(x, from = "hours", to = "hours", inverse = FALSE)
+convert_time(x, from = "hours", to = "identity", inverse = FALSE)
 }
 \arguments{
 \item{x}{Numeric: one or more time values to be converted.}
 
 \item{from}{Character vector: `x` is currently in these units. Must be units
-understood by `lubridate::duration()`, i.e. "seconds", "hours", "days",
-"weeks", "months", "years", "milliseconds", "microseconds", "nanoseconds",
-and/or "picoseconds". Default value is "hours".}
+understood by `lubridate::duration()`, i.e. `"seconds"`, `"hours"`,
+`"days"`, `"weeks"`, `"months"`, `"years"`, `"milliseconds"`,
+`"microseconds"`, `"nanoseconds"`, and/or `"picoseconds"`. Default value is
+`"hours"`.}
 
 \item{to}{Character vector: `x` will be converted to these units. Must be
-either "auto", or units understood by `lubridate::duration()`, i.e.
-"seconds", "hours", "days", "weeks", "months", "years", "milliseconds",
-"microseconds", "nanoseconds", and/or "picoseconds". Default value is
-"hours". If "auto", then units will be automatically chosen that make the
-midpoint of `x` (or its inverse, if `inverse = TRUE`) as close to an order of magnitude of 10 as
-possible (see [auto_units()]).}
+either `"auto"`, `"identity"`, or units understood by
+`lubridate::duration()`, i.e. `"seconds"`, `"hours"`, `"days"`, `"weeks"`,
+`"months"`, `"years"`, `"milliseconds"`, `"microseconds"`, `"nanoseconds"`,
+and/or `"picoseconds"`. Default value is `"identity"`.  If `"identity"`,
+then `x` will be returned unchanged. If `"auto"`, then units will be
+automatically chosen that make the midpoint of `x` (or its inverse, if
+`inverse = TRUE`) as close to an order of magnitude of 10 as possible (see
+[auto_units()]).}
 
 \item{inverse}{Logical: TRUE if `x` is in units of *inverse* time (e.g.
 1/hour, 1/day); FALSE if `x` is in units of time (e.g. hours, days).

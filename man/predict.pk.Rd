@@ -11,7 +11,7 @@
   method = NULL,
   type = "conc",
   exclude = TRUE,
-  scale_conc = FALSE,
+  use_scale_conc = FALSE,
   ...
 )
 }
@@ -21,9 +21,10 @@
 \item{newdata}{Optional: A `data.frame` with new data for which to make
 predictions. If NULL (the default), then predictions will be made for the
 data in `obj$data`. `newdata` is required to contain at least the following
-variables: `Time`, `Dose`, `Route`, and `Media`. `Time` will be transformed
-according to the transformation in `obj$scales$time` before predictions are
-made.}
+variables: `Time`, `Time.Units`, `Dose`, `Route`, and `Media`. If variable
+`Time_trans` is not present, then `Time` will be transformed according to
+the transformation in `obj$scales$time` before making predictions;
+otherwise, `Time_trans` will be used to make predictions.}
 
 \item{model}{Optional: Specify one or more of the fitted models for which to
 make predictions. If NULL (the default), predictions will be returned for
@@ -43,9 +44,16 @@ data, an observation is marked for exclusion when `exclude %in% TRUE`).
 `FALSE` to return the prediction for each observation, regardless of
 exclusion. Default `TRUE`.}
 
-\item{scale_conc}{Logical: `TRUE` to apply the concentration scaling defined
-in `obj$scales$conc` to the predictions before returning them. `FALSE` to
-return the un-transformed predictions. Default `FALSE`.}
+\item{use_scale_conc}{Possible values: `TRUE`, `FALSE`, or a named list with
+elements `dose_norm` and `log10_trans` which themselves should be either
+`TRUE` or `FALSE`. If `use_scale_conc = TRUE`, then the concentration
+scaling/transformations in `obj` will be applied to both predicted and
+observed concentrations before the log-likelihood is computed. If
+`use_scale_conc = FALSE` (the default for this function), then no
+concentration scaling or transformation will be applied before the
+log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
+log10_trans = ...)`, then the specified dose normalization and/or
+log10-transformation will be applied.}
 }
 \value{
 A named list of numeric matrixes. There is one list element named for
@@ -55,14 +63,27 @@ A named list of numeric matrixes. There is one list element named for
   `obj$data`), and as many columns as there were [optimx::optimx()] methods
   (specified in [settings_optimx()]). The column names are the method names.
   Each column contains the predictions of the model fitted by the
-  corresponding method. If `scale_conc %in% FALSE`, these predictions are
-  un-transformed concentrations in the same units as `obj$data$Conc.Units`. If
-  `scale_conc %in% TRUE`, the predictions are transformed concentrations in
-  the same units as `obj$data$Conc_trans.Units`.
+  corresponding method. If `use_scale_conc %in% FALSE`, these predictions are
+  un-transformed concentrations in the same units as `obj$data$Conc.Units`.
+  If `use_scale_conc %in% TRUE`, the predictions are transformed
+  concentrations in the same units as `obj$data$Conc_trans.Units`.
 }
 \description{
 Extract predictions from a fitted `pk` object.
 }
+\seealso{
+Other methods for fitted pk objects: 
+\code{\link{AIC.pk}()},
+\code{\link{BIC.pk}()},
+\code{\link{coef.pk}()},
+\code{\link{coef_sd.pk}()},
+\code{\link{get_tkstats.pk}()},
+\code{\link{logLik.pk}()},
+\code{\link{residuals.pk}()},
+\code{\link{rmse.pk}()},
+\code{\link{rsq.pk}()}
+}
 \author{
 Caroline Ring
 }
+\concept{methods for fitted pk objects}

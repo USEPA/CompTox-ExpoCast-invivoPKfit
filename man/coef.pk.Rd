@@ -27,6 +27,19 @@ A named list of numeric matrixes. There is one list element named for
 \description{
 Extract coefficients from a fitted `pk` object
 }
+\seealso{
+Other methods for fitted pk objects: 
+\code{\link{AIC.pk}()},
+\code{\link{BIC.pk}()},
+\code{\link{coef_sd.pk}()},
+\code{\link{get_tkstats.pk}()},
+\code{\link{logLik.pk}()},
+\code{\link{predict.pk}()},
+\code{\link{residuals.pk}()},
+\code{\link{rmse.pk}()},
+\code{\link{rsq.pk}()}
+}
 \author{
 Caroline Ring
 }
+\concept{methods for fitted pk objects}

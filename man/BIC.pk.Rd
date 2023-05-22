@@ -4,7 +4,7 @@
 \alias{BIC.pk}
 \title{Bayesian information criterion}
 \usage{
-\method{BIC}{pk}(obj, newdata = NULL, model = NULL, method = NULL)
+\method{BIC}{pk}(obj, newdata = NULL, model = NULL, method = NULL, exclude = TRUE)
 }
 \arguments{
 \item{obj}{A `pk` object}
@@ -12,7 +12,7 @@
 \item{newdata}{Optional: A `data.frame` with new data for which to compute
 log-likelihood. If NULL (the default), then BICs will be
 computed for the data in `obj$data`. `newdata` is required to contain at
-least the following variables: `Time`, `Dose`, `Route`,`Media`, `Conc`,
+least the following variables: `Time`, `Time.Units`, `Dose`, `Route`,`Media`, `Conc`,
 `Detect`, `N_Subjects`. Before log-likelihood is calculated, `Time` will be
 transformed according to the transformation in `obj$scales$time` and `Conc`
 will be transformed according to the transformation in `obj$scales$conc`.}
@@ -25,6 +25,12 @@ returned for all of the models in `obj$stat_model`.}
 for which to calculate BICs. If NULL (the default),
 log-likelihoods will be returned for all of the methods in
 `obj$settings_optimx$method`.}
+
+\item{exclude}{Logical: `TRUE` to compute the AIC after removing any
+observations in the data marked for exclusion (if there is a variable
+`exclude` in the data, an observation is marked for exclusion when `exclude
+%in% TRUE`). `FALSE` to include all observations, regardless of exclusion
+status. Default `TRUE`.}
 }
 \value{
 A named list of numeric vectors. There is one list element
@@ -47,8 +53,30 @@ where \eqn{n_{par}} is the number of parameters in the fitted model.
 Note that the BIC is just the AIC with \eqn{k = \(n_{obs})}.
 }
 \seealso{
-[AIC.pk(0)], [logLik.pk()]
+Other fit evaluation metrics: 
+\code{\link{AIC.pk}()},
+\code{\link{logLik.pk}()},
+\code{\link{rmse.pk}()},
+\code{\link{rsq.pk}()}
+
+Other log likelihood functions: 
+\code{\link{AIC.pk}()},
+\code{\link{logLik.pk}()}
+
+Other methods for fitted pk objects: 
+\code{\link{AIC.pk}()},
+\code{\link{coef.pk}()},
+\code{\link{coef_sd.pk}()},
+\code{\link{get_tkstats.pk}()},
+\code{\link{logLik.pk}()},
+\code{\link{predict.pk}()},
+\code{\link{residuals.pk}()},
+\code{\link{rmse.pk}()},
+\code{\link{rsq.pk}()}
 }
 \author{
 Caroline Ring
 }
+\concept{fit evaluation metrics}
+\concept{log likelihood functions}
+\concept{methods for fitted pk objects}

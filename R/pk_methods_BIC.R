@@ -13,7 +13,7 @@
 #' @param newdata Optional: A `data.frame` with new data for which to compute
 #'   log-likelihood. If NULL (the default), then BICs will be
 #'   computed for the data in `obj$data`. `newdata` is required to contain at
-#'   least the following variables: `Time`, `Dose`, `Route`,`Media`, `Conc`,
+#'   least the following variables: `Time`, `Time.Units`, `Dose`, `Route`,`Media`, `Conc`,
 #'   `Detect`, `N_Subjects`. Before log-likelihood is calculated, `Time` will be
 #'   transformed according to the transformation in `obj$scales$time` and `Conc`
 #'   will be transformed according to the transformation in `obj$scales$conc`.
@@ -24,6 +24,11 @@
 #'   for which to calculate BICs. If NULL (the default),
 #'   log-likelihoods will be returned for all of the methods in
 #'   `obj$settings_optimx$method`.
+#' @param exclude Logical: `TRUE` to compute the AIC after removing any
+#'   observations in the data marked for exclusion (if there is a variable
+#'   `exclude` in the data, an observation is marked for exclusion when `exclude
+#'   %in% TRUE`). `FALSE` to include all observations, regardless of exclusion
+#'   status. Default `TRUE`.
 #' @return A named list of numeric vectors. There is one list element
 #'   named for each model in `obj`'s [stat_model()] element, i.e. each PK model
 #'   that was fitted to the data. Each list element is a numeric vector with as
@@ -31,14 +36,17 @@
 #'   [settings_optimx()]). The vector names are the method names.  Each vector
 #'   element contains the BIC of the model fitted by the corresponding method,
 #'   using the data in `newdata`.
-#' @seealso [AIC.pk(0)], [logLik.pk()]
+#' @family fit evaluation metrics
+#' @family log likelihood functions
+#' @family methods for fitted pk objects
 #' @importFrom stats BIC
 #' @export
 #' @author Caroline Ring
 BIC.pk <- function(obj,
                    newdata = NULL,
                    model = NULL,
-                   method = NULL){
+                   method = NULL,
+                   exclude = TRUE){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -53,6 +61,7 @@ BIC.pk <- function(obj,
              newdata = newdata,
              model = model,
              method = method,
+             exclude = exclude,
              k = log(nrow(newdata)))
   return(BIC)
 }

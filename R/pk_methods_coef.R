@@ -16,6 +16,7 @@
 #'   hyperparameters (whose names begin with "sigma").
 #' @export
 #' @author Caroline Ring
+#' @family methods for fitted pk objects
 coef.pk <- function(obj,
                     model = NULL,
                     method = NULL,

@@ -4,7 +4,7 @@
 \alias{AIC.pk}
 \title{Akaike information criterion}
 \usage{
-\method{AIC}{pk}(obj, newdata = NULL, model = NULL, method = NULL, k = 2)
+\method{AIC}{pk}(obj, newdata = NULL, model = NULL, method = NULL, exclude = TRUE, k = 2)
 }
 \arguments{
 \item{obj}{A `pk` object}
@@ -12,10 +12,11 @@
 \item{newdata}{Optional: A `data.frame` with new data for which to compute
 log-likelihood. If NULL (the default), then log-likelihoods will be
 computed for the data in `obj$data`. `newdata` is required to contain at
-least the following variables: `Time`, `Dose`, `Route`,`Media`, `Conc`,
-`Detect`, `N_Subjects`. Before log-likelihood is calculated, `Time` will be
-transformed according to the transformation in `obj$scales$time` and `Conc`
-will be transformed according to the transformation in `obj$scales$conc`.}
+least the following variables: `Time`, `Time.Units`, `Dose`,
+`Route`,`Media`, `Conc`, `Detect`, `N_Subjects`. Before log-likelihood is
+calculated, `Time` will be transformed according to the transformation in
+`obj$scales$time` and `Conc` will be transformed according to the
+transformation in `obj$scales$conc`.}
 
 \item{model}{Optional: Specify one or more of the fitted models for which to
 calculate log-likelihood. If NULL (the default), log-likelihoods will be
@@ -25,12 +26,21 @@ returned for all of the models in `obj$stat_model`.}
 for which to make predictions and calculate AICs. If NULL (the default),
 log-likelihoods will be returned for all of the models in
 `obj$settings_optimx$method`.}
+
+\item{exclude}{Logical: `TRUE` to compute the AIC after removing any
+observations in the data marked for exclusion (if there is a variable
+`exclude` in the data, an observation is marked for exclusion when `exclude
+%in% TRUE`). `FALSE` to include all observations, regardless of exclusion
+status. Default `TRUE`.}
+
+\item{k}{Default 2. The `k` parameter in the log-likelihood formula (see
+Details).}
 }
 \value{
-A named list of numeric vectors. There is one list element
-  named for each model in `obj`'s [stat_model()] element, i.e. each PK model
-  that was fitted to the data. Each list element is a numeric vector with as
-  many elements as there were [optimx::optimx()] methods (specified in
+A named list of numeric vectors. There is one list element named for
+  each model in `obj`'s [stat_model()] element, i.e. each PK model that was
+  fitted to the data. Each list element is a numeric vector with as many
+  elements as there were [optimx::optimx()] methods (specified in
   [settings_optimx()]). The vector names are the method names.  Each vector
   element contains the AIC of the model fitted by the corresponding method,
   using the data in `newdata`.
@@ -46,8 +56,30 @@ where \eqn{n_{par}} is the number of parameters in the fitted model, and
 \eqn{k = 2} for the standard AIC.
 }
 \seealso{
-[BIC.pk(0)], [logLik.pk()]
+Other fit evaluation metrics: 
+\code{\link{BIC.pk}()},
+\code{\link{logLik.pk}()},
+\code{\link{rmse.pk}()},
+\code{\link{rsq.pk}()}
+
+Other log likelihood functions: 
+\code{\link{BIC.pk}()},
+\code{\link{logLik.pk}()}
+
+Other methods for fitted pk objects: 
+\code{\link{BIC.pk}()},
+\code{\link{coef.pk}()},
+\code{\link{coef_sd.pk}()},
+\code{\link{get_tkstats.pk}()},
+\code{\link{logLik.pk}()},
+\code{\link{predict.pk}()},
+\code{\link{residuals.pk}()},
+\code{\link{rmse.pk}()},
+\code{\link{rsq.pk}()}
 }
 \author{
 Caroline Ring
 }
+\concept{fit evaluation metrics}
+\concept{log likelihood functions}
+\concept{methods for fitted pk objects}

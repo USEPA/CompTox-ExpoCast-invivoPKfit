@@ -10,7 +10,7 @@
   model = NULL,
   method = NULL,
   exclude = TRUE,
-  scale_conc = FALSE,
+  use_scale_conc = FALSE,
   ...
 )
 }
@@ -20,11 +20,11 @@
 \item{newdata}{Optional: A `data.frame` with new data for which to make
 predictions and compute residuals. If NULL (the default), then residuals
 will be computed for the data in `obj$data`. `newdata` is required to
-contain at least the following variables: `Time`, `Dose`, `Route`, `Media`,
-`Conc`, `Detect`, `N_Subjects`, `Conc_SD`. `Time` will be transformed
-according to the transformation in `obj$scales$time`. Residuals will be
-calculated on un-transformed concentration data (i.e., ignoring any
-scalings or transformations in `obj$scales$conc`).}
+contain at least the following variables: `Time`, `Time.Units`, `Dose`,
+`Route`, `Media`, `Conc`, `Detect`. If variable `Time_trans` is not
+present, then `Time` will be transformed according to the transformation in
+`obj$scales$time` before making predictions; otherwise, `Time_trans` will
+be used to make predictions.}
 
 \item{model}{Optional: Specify one or more of the fitted models for which to
 make predictions and calculate residuals. If NULL (the default), residuals
@@ -41,10 +41,16 @@ data, an observation is marked for exclusion when `exclude %in% TRUE`).
 `FALSE` to return the residual for each observation, regardless of
 exclusion. Default `TRUE`.}
 
-\item{scale_conc}{Logical: `TRUE` to apply the concentration
-transformation(s) defined in `obj$scales$conc` to both predictions and
-observations before calculating residuals. `FALSE` to calculate residuals
-for un-transformed predictions and observations. Default `FALSE`.}
+\item{use_scale_conc}{Possible values: `TRUE`, `FALSE`, or a named list with
+elements `dose_norm` and `log10_trans` which themselves should be either
+`TRUE` or `FALSE`. If `use_scale_conc = TRUE`, then the concentration
+scaling/transformations in `obj` will be applied to both predicted and
+observed concentrations before the log-likelihood is computed. If
+`use_scale_conc = FALSE` (the default for this function), then no
+concentration scaling or transformation will be applied before the
+log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
+log10_trans = ...)`, then the specified dose normalization and/or
+log10-transformation will be applied.}
 }
 \value{
 A named list of numeric matrices. There is one list element named for
@@ -54,9 +60,11 @@ A named list of numeric matrices. There is one list element named for
   and as many columns as there were [optimx::optimx()] methods (specified in
   [settings_optimx()]). The column names are the method names.  Each column
   contains the residuals (observed - predicted) of the model fitted by the
-  corresponding method.  If `scale_conc %in% FALSE`, these residuals are in
-  the same units as `obj$data$Conc.Units`. If `scale_conc %in% TRUE`, the
-  residuals are in the same units as `obj$data$Conc_trans.Units`.
+  corresponding method.  If `use_scale_conc %in% FALSE`, these residuals are
+  in the same units as `obj$data$Conc.Units`. If `use_scale_conc %in% TRUE`,
+  the residuals are in the same units as `obj$data$Conc_trans.Units`. If
+  `use_scale_conc` was a named list, then the residuals are in units of
+  `obj$data$Conc.Units` transformed as specified in `use_scale_conc`.
 }
 \description{
 Extract residuals from a fitted `pk` object.
@@ -68,6 +76,19 @@ concentration value and `pred` is the predicted concentration value.
 For non-detect observations, residual is zero if `pred` is also below the
 LOQ. Otherwise, the residual is the difference between the LOQ and `pred`.
 }
+\seealso{
+Other methods for fitted pk objects: 
+\code{\link{AIC.pk}()},
+\code{\link{BIC.pk}()},
+\code{\link{coef.pk}()},
+\code{\link{coef_sd.pk}()},
+\code{\link{get_tkstats.pk}()},
+\code{\link{logLik.pk}()},
+\code{\link{predict.pk}()},
+\code{\link{rmse.pk}()},
+\code{\link{rsq.pk}()}
+}
 \author{
 Caroline Ring
 }
+\concept{methods for fitted pk objects}

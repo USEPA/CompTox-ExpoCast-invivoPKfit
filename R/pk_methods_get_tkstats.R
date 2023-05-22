@@ -52,6 +52,7 @@
 #'   the set of model parameters used to derive each set of TK statistics.
 #' @export
 #' @author Caroline Ring
+#' @family methods for fitted pk objects
 get_tkstats.pk <- function(obj,
                            newdata = NULL,
                            tk_group = obj$settings_data_info$nca_group,

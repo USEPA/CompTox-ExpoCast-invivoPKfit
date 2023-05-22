@@ -72,6 +72,19 @@ model, and how they are calculated.
 -`model_2comp`: [tkstats_2comp()]
 -`model_flat`: [tkstats_flat()]
 }
+\seealso{
+Other methods for fitted pk objects: 
+\code{\link{AIC.pk}()},
+\code{\link{BIC.pk}()},
+\code{\link{coef.pk}()},
+\code{\link{coef_sd.pk}()},
+\code{\link{logLik.pk}()},
+\code{\link{predict.pk}()},
+\code{\link{residuals.pk}()},
+\code{\link{rmse.pk}()},
+\code{\link{rsq.pk}()}
+}
 \author{
 Caroline Ring
 }
+\concept{methods for fitted pk objects}
