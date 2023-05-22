@@ -127,11 +127,11 @@ if(!("oral" %in% data$Route)){
     optimize_param[param_name %in% "Rblood2plasma"] <- FALSE
   }
 
-  #if no medium is "blood" then Rblood2plasma will not be used at all
-  if(!("blood" %in% data$Media)){
-    use_param[param_name %in% "Rblood2plasma"] <- FALSE
-    #otherwise, if blood-only data, Rblood2plasma will be used, but held constant at 1
-  }
+  # #if no medium is "blood" then Rblood2plasma will not be used at all
+  # if(!("blood" %in% data$Media)){
+  #   use_param[param_name %in% "Rblood2plasma"] <- FALSE
+  #   #otherwise, if blood-only data, Rblood2plasma will be used, but held constant at 1
+  # }
 
   #get param units based on data
   param_units_vect <- sapply(param_units,
@@ -153,6 +153,18 @@ if(!("oral" %in% data$Route)){
 
   par_DF <- get_starts_flat(data = data,
                             par_DF = par_DF)
+
+  #check to ensure starting values are within bounds
+  #if not, then replace them by a value halfway between bounds
+  start_low <- (par_DF$start < par_DF$lower_bound) %in% TRUE
+  start_high <- (par_DF$start > par_DF$upper_bound) %in% TRUE
+  start_nonfin <- !is.finite(par_DF$start)
+
+  par_DF[start_low | start_high | start_nonfin,
+         "start"] <- rowMeans(cbind(par_DF[start_low | start_high | start_nonfin,
+                                           c("lower_bound",
+                                             "upper_bound")]))
+
 
   return(par_DF)
 

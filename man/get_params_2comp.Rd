@@ -6,10 +6,13 @@
 \usage{
 get_params_2comp(
   data,
-  lower_bound = c(kelim = 1e-04, V1 = 1e-04, k21 = 1e-04, k21 = 1e-04, Fgutabs = 1e-04,
-    kgutabs = 1e-04, Fgutabs_V1 = 1e-04, Rblood2plasma = 1e-04),
-  upper_bound = c(kelim = 1e+06, V1 = 1e+06, k21 = 1e+06, k12 = 1e+06, Fgutabs = 1,
-    kgutabs = 1e+06, Fgutabs_v1 = 10000, Rblood2plasma = 1e+06),
+  lower_bound = ggplot2::aes(kelim = 0.5 * log(2)/max(Time_trans), k12 = 0.5 *
+    log(2)/max(Time_trans), k21 = 0.5 * log(2)/max(Time_trans), V1 = 0.01, Fgutabs = 0,
+    kgutabs = 0.5 * log(2)/max(Time_trans), Fgutabs_V1 = 0.01, Rblood2plasma = 0.01),
+  upper_bound = ggplot2::aes(kelim = 2 * log(2)/min(Time_trans[Time_trans > 0]), k12 = 2
+    * log(2)/min(Time_trans[Time_trans > 0]), k21 = 2 * log(2)/min(Time_trans[Time_trans
+    > 0]), V1 = 100, Fgutabs = 1, kgutabs = 2 * log(2)/min(Time_trans[Time_trans > 0]),
+    Fgutabs_V1 = 100, Rblood2plasma = 100),
   param_units = ggplot2::aes(kelim = paste0("1/", unique(Time_trans.Units)), V1 =
     paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units), ")"), k21 =
     paste0("1/", unique(Time_trans.Units)), k12 = paste0("1/", unique(Time_trans.Units)),
