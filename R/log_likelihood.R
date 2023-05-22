@@ -185,42 +185,96 @@ log_likelihood <- function(par,
     ll_summary <- "dlnorm_summary"
     #maintain other transformations such as dose-scaling,
     #but undo log10 transformation
-    conc_natural <- 10^(data$Conc_trans)
-    conc_sd_natural <- 10^(data$Conc_SD_trans)
+    data$conc_natural <- 10^(data$Conc_trans)
+    data$conc_sd_natural <- 10^(data$Conc_SD_trans)
   }else{ #if log10 transformation has *not* been applied
     ll_summary <- "dnorm_summary"
-    conc_natural <- data$Conc_trans
-    conc_sd_natural <- data$Conc_SD_trans
+    data$conc_natural <- data$Conc_trans
+    data$conc_sd_natural <- data$Conc_SD_trans
   }
 
   #residual error SDs
   #defined by data_sigma_group
   if(any(grepl(x = names(params),
                pattern= "sigma"))){
-
+  #get sigma params
     sigma_params <- params[grepl(x = names(params),
                                  pattern = "sigma")]
-
     #match the study ID and assign each sigma to its corresponding study
     #except if data_sigma_group is NA -- then assume data are equally likely to come from any of the existing distributions
+    sigma_obs <- sigma_params[paste("sigma",
+                                      data_sigma_group,
+                                      sep = "_")]
+    sigma_obs <- sapply(sigma_obs,
+                        function(x) ifelse(is.null(x), NA_real_, x))
+    data$sigma_obs <- sigma_obs
 
-    sigma_study <- matrix(nrow = length(data_sigma_group),
-                          ncol = length(sigma_params))
 
-    for (i in seq_along(sigma_params)){
-      this_sigma <- sigma_params[[i]]
-      sigma_study[, i] <- sapply(data_sigma_group,
-                                 function(this_dsg){
-                                   if(is.na(this_dsg) |
-                                      !(paste0("sigma_", this_dsg) %in% names(sigma_params))){
-                                     this_sigma
-                                   }else{
-                                     sigma_params[[paste0("sigma_", this_dsg)]]
-                                   }
-                                 },
-                                 simplify = TRUE,
-                                 USE.NAMES = FALSE)
+
+if(any(!is.na(sigma_obs))){
+    #compute log likliehoods for observations with sigmas
+    data_sigma <- data[!is.na(sigma_obs), ]
+    ll_data_sigma <-  ifelse(data_sigma$N_Subjects %in% 1,
+           ifelse(data_sigma$Detect %in% TRUE,
+                  dnorm(x = data_sigma$Conc_trans,
+                        mean = data_sigma$pred_trans,
+                        sd = data_sigma$sigma_obs,
+                        log = TRUE),
+                  pnorm(q = data_sigma$Conc_trans,
+                        mean = data_sigma$pred_trans,
+                        sd = data_sigma$sigma_obs,
+                        log.p = TRUE)
+           ),
+           do.call(ll_summary,
+                   list(mu = data_sigma$pred_trans,
+                        sigma = data_sigma$sigma_obs,
+                        x_mean = data_sigma$conc_natural,
+                        x_sd = data_sigma$conc_sd_natural,
+                        x_N = data_sigma$N_Subjects,
+                        log = TRUE))
+    )
+}else{
+  ll_data_sigma <- numeric(0)
+}
+
+    #compute log likelihoods for observations without sigmas
+    if(any(is.na(sigma_obs))){
+    data_no_sigma <- data[is.na(sigma_obs), ]
+    ll_data_no_sigma <-  sapply(unlist(sigma_params),
+                                function(this_sigma){
+                                  #place these observations in each group in turn
+      ifelse(data_no_sigma$N_Subjects %in% 1,
+                             ifelse(data_no_sigma$Detect %in% TRUE,
+                                    dnorm(x = data_no_sigma$Conc_trans,
+                                          mean = data_no_sigma$pred_trans,
+                                          sd = this_sigma,
+                                          log = TRUE),
+                                    pnorm(q = data_no_sigma$Conc_trans,
+                                          mean = data_no_sigma$pred_trans,
+                                          sd = this_sigma,
+                                          log.p = TRUE)
+                             ),
+                             do.call(ll_summary,
+                                     list(mu = data_no_sigma$pred_trans,
+                                          sigma = this_sigma,
+                                          x_mean = data_no_sigma$conc_natural,
+                                          x_sd = data_no_sigma$conc_sd_natural,
+                                          x_N = data_no_sigma$N_Subjects,
+                                          log = TRUE))
+    )
+                                }
+    ) #end sapply(unlist(sigma_params),
+
+    #the result will be a matrix with as many columns as there are sigma_params,
+    #and as many rows as there are observations without sigma groups
+    #take the row means
+    ll_data_no_sigma <- rowMeans(ll_data_no_sigma)
+    }else{
+      ll_data_no_sigma <- numeric(0)
     }
+
+    loglike <- c(ll_data_sigma,
+            ll_data_no_sigma)
 
   }else{
     stop(paste("Could not find any parameters with 'sigma' in the name.",
@@ -228,40 +282,6 @@ log_likelihood <- function(par,
                paste(names(params), collapse = "; ")
     ))
   }
-
-  #any unassigned sigma_study --
-  #treat as equally likely to have any of the sigma_study values
-  #(essentially a mixture distribution)
-
-
-  #get log-likelihood for each observation
-  #average over log-likelihood for the possible values of sigma_study for each observation
-  loglike <- apply(sigma_study,
-                   2,
-                   function(this_sigma_study){
-                   ifelse(data$N_Subjects %in% 1,
-                    ifelse(data$Detect %in% TRUE,
-                           dnorm(x = data$Conc_trans,
-                                 mean = data$pred_trans,
-                                 sd = this_sigma_study,
-                                 log = TRUE),
-                           pnorm(q = data$Conc_trans,
-                                 mean = data$pred_trans,
-                                 sd = this_sigma_study,
-                                 log.p = TRUE)
-                    ),
-                    do.call(ll_summary,
-                            list(mu = data$pred_trans,
-                                 sigma = this_sigma_study,
-                                 x_mean = conc_natural,
-                                 x_sd = conc_sd_natural,
-                                 x_N = data$N_Subjects,
-                                 log = TRUE))
-  )
-                   })
-
-  #average log-likelihood across possible values of sigma_study
-  loglike <- rowMeans(loglike)
 
   #sum log-likelihoods over observations
   ll <- sum(loglike)
