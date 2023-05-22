@@ -10,6 +10,7 @@
   tk_group = obj$settings_data_info$nca_group,
   model = NULL,
   method = NULL,
+  exclude = TRUE,
   vol_unit = "L"
 )
 }
@@ -19,8 +20,8 @@ with an error.}
 
 \item{newdata}{Optional: A `data.frame` containing new data for which to
 compute the TK stats. Must contain at least variables `Chemical`,
-`Species`, `Route`, `Media`, `Dose`, `Dose.Unit`, `Conc.Unit`, either
-`Time_trans.Unit` or `Time.Unit`, and any other variables named in
+`Species`, `Route`, `Media`, `Dose`, `Dose.Units`, `Conc.Units`, either
+`Time_trans.Units` or `Time.Units`, and any other variables named in
 `tk_grouping`. Default `NULL`, to use the data in `obj$data`.}
 
 \item{tk_group}{A list of variables provided using a `dplyr::vars()` call.
@@ -32,13 +33,21 @@ the same groups of data as non-compartmental analysis statistics. With the
 default, you can directly compare e.g. a model-predicted AUC_inf to the
 corresponding NCA-estimated AUC_inf. However, you may specify a different
 data grouping if you wish. Each group should have a unique combination of
-`Chemical`, `Species`, `Route`, `Media`, and `Dose`.}
+`Chemical`, `Species`, `Route`, `Media`, and `Dose`, because the TK stats
+depend on these values, and it is required to have one unique set of TK
+stats per group.}
 
 \item{model}{Character: One or more of the models fitted. Default `NULL` to
 return TK stats for all models.}
 
 \item{method}{Character: One or more of the [optimx::optimx()] methods used.
 Default `NULL` to return TK stats for all methods.}
+
+\item{exclude}{Logical: `TRUE` to get the TK groupings after removing any
+observations in the data marked for exclusion (if there is a variable
+`exclude` in the data, an observation is marked for exclusion when `exclude
+%in% TRUE`). `FALSE` to include all observations when getting the TK
+groupings, regardless of exclusion status. Default `TRUE`.}
 }
 \value{
 A `list` of `data.frame` objects, one  named for each model in
