@@ -860,7 +860,7 @@ get_tkstats(my_pk)
 
 # Main analysis
 
-```{r}
+```{r, eval = FALSE}
 cvt %>%
   dplyr::group_by(chemicals_analyzed.dsstox_substance_id,
                   subjects.species_harmonized) %>%
