@@ -22,8 +22,11 @@
 #' created, with 1 indicating that a measurement exists for the corresponding
 #' time point/series ID combination, and 0 indicating that a measurement does
 #' not exist. If the column sums of this table are all 1, then it is a serial
-#' sampling design. If the column sums are all equal to the number of rows of
-#' the table, then it is a complete sampling design. Otherwise, it is a batch
+#' sampling design, except if there is only one observation per time point, it
+#' is a complete sampling design, and if there are multiple observations for
+#' some time points and only one observation for other time points, it is a
+#' batch design. If the column sums are all equal to the number of rows of the
+#' table, then it is a complete sampling design. Otherwise, it is a batch
 #' sampling design.
 #'
 #' # Parameters estimated by NCA
@@ -74,7 +77,8 @@
 #'   default).
 #' @param ... Other arguments that will be passed to [PK::nca()] (other than
 #'   `data`, `design`, and `method`: *i.e.*, `n.tail`, `nsample`)
-#' @return A `data.frame` with 9 rows and `length(method) + 3` variables. See Details.
+#' @return A `data.frame` with 9 rows and `length(method) + 3` variables. See
+#'   Details.
 #' @export
 #' @author Caroline Ring
 calc_nca <- function(time,
@@ -93,6 +97,8 @@ calc_nca <- function(time,
      !(all(is.na(dose))) &
      !(all(is.na(conc))) &
      !(all(is.na(detect)))){
+
+    dose <- unique(dose)
 
     if(is.null(series_id)){
       series_id <- rep(NA_integer_, length(conc))
@@ -126,7 +132,18 @@ series_id <- series_id[ord]
 
   if(all(design_check==1)){
     #one measurement per animal per time
-    design <- "ssd"
+    if(all(table(time) >= 2)){
+      #ssd requires at least 2 observations per time point
+      design <- "ssd"
+    }else{
+      if(all(table(time) == 1)){
+        #if only 1 observation per time point, use "complete"
+        design <- "complete"
+      }else{
+      #if 1 observation for some time points and multiple observations for others, use "batch"
+      design <- "batch"
+      }
+    }
   }else if(all(design_check == nrow(m))){
     #each animal measured at every time point
     design <- "complete"

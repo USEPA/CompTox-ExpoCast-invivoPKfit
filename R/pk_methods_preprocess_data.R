@@ -738,7 +738,7 @@ if("Conc" %in% names(data)){
       fixed = TRUE)
 
     #If Series ID is not included, then assign it as NA
-    if(!("Series_ID" %in% data)){
+    if(!("Series_ID" %in% names(data))){
       data$Series_ID <- NA_integer_
     }
 
