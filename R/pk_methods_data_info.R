@@ -172,6 +172,7 @@ data_info.pk <- function(obj){
     as.data.frame()
 
   #do NCA on all the data together, grouped by Chemical, Species, Route, Media
+  #and dose-normalized
   nca_dose_norm <- data %>% dplyr::group_by(Chemical, Species, Route, Media) %>%
     dplyr::summarise(nca_dosenorm_group_id = dplyr::cur_group_id(),
                      n_obs = dplyr::n(),
@@ -183,13 +184,13 @@ data_info.pk <- function(obj){
                      tlast = ifelse(any(exclude %in% FALSE),
                                     max(Time_trans[exclude %in% FALSE]),
                                     NA_real_),
-                     tlast_detect = ifelse(any(exclude %in% FALSE),
+                     tlast_detect = ifelse(any(Detect %in% TRUE & exclude %in% FALSE),
                                            max(Time_trans[Detect %in% TRUE & exclude %in% FALSE]),
                                            NA_real_),
                      tfirst = ifelse(any(exclude %in% FALSE),
                                      min(Time_trans[exclude %in% FALSE]),
                                      NA_real_),
-                     tfirst_detect = ifelse(any(exclude %in% FALSE),
+                     tfirst_detect = ifelse(any(Detect %in% TRUE & exclude %in% FALSE),
                                             min(Time_trans[Detect %in% TRUE & exclude %in% FALSE]),
                                             NA_real_),
                        Conc.Units = unique(Conc.Units),
