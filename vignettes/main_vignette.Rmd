@@ -122,7 +122,7 @@ Once fitting has been completed, then you can use some familiar methods to extra
 
 #### Coefficients, residuals, and predictions
 
-For example, you can extract the fitted model parameter values using `coef()`:
+For example, you can extract the fitted model parameter values using `coef()`. The result will be a list of matrices, whose columns are model parameters, and whose rows correspond to the optimization algorithms used for fitting.
 
 ```{r}
 coef(my_pk)
