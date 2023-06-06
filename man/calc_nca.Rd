@@ -36,7 +36,8 @@ default).}
 `data`, `design`, and `method`: *i.e.*, `n.tail`, `nsample`)}
 }
 \value{
-A `data.frame` with 9 rows and `length(method) + 3` variables. See Details.
+A `data.frame` with 9 rows and `length(method) + 3` variables. See
+  Details.
 }
 \description{
 Do non-compartmental analysis on a single-dose set of concentration vs. time
@@ -62,8 +63,11 @@ sorts the data by increasing time. Then, a table of time vs. series ID is
 created, with 1 indicating that a measurement exists for the corresponding
 time point/series ID combination, and 0 indicating that a measurement does
 not exist. If the column sums of this table are all 1, then it is a serial
-sampling design. If the column sums are all equal to the number of rows of
-the table, then it is a complete sampling design. Otherwise, it is a batch
+sampling design, except if there is only one observation per time point, it
+is a complete sampling design, and if there are multiple observations for
+some time points and only one observation for other time points, it is a
+batch design. If the column sums are all equal to the number of rows of the
+table, then it is a complete sampling design. Otherwise, it is a batch
 sampling design.
 
 # Parameters estimated by NCA

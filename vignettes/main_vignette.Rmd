@@ -58,7 +58,8 @@ Now, initialize a `pk` object.  This contains the data, along with a set of inst
 
 ```{r}
 my_pk <- pk(data = my_data) +
-  settings_preprocess(suppress.messages = TRUE, keep_data_original = TRUE)
+  settings_preprocess(suppress.messages = TRUE,
+                      keep_data_original = TRUE)
 ```
 
 The instructions aren't carried out until you explicitly ask for them to be carried out, by calling functions that implement steps in the model fitting workflow.
@@ -127,25 +128,50 @@ For example, you can extract the fitted model parameter values using `coef()`:
 coef(my_pk)
 ```
 
-You can extract the residuals using `residuals()`
+You can extract the residuals using `residuals()` (for the observations in the original data) using `predict()`. The result is a list of matrices, one for each fitted model, whose columns contain the residuals from the fits by each optimization algorithm.
 
 ```{r}
-residuals(my_pk)
+my_resids <- residuals(my_pk)
+lapply(my_resids, head)
 ```
 
-You can get the predicted values using `predict()`
+You can get the predicted values (for the time points, doses, and routes in the original data) using `predict()`. The result is a list of matrices, one for each fitted model, whose columns contain the predictions from the fits by each optimization algorithm.
 
 ```{r}
-predict(my_pk)
+my_preds <- predict(my_pk)
+lapply(my_preds, head)
+```
+
+If instead you want to get predicted values for new data (new timepoints, doses, or routes), you can do this by providing argument `newdata`
+
+```{r}
+predict(my_pk, newdata = data.frame(Time = seq(0, 5, by = 0.5),
+                                    Time.Units = "hours",
+                                    Dose = 1,
+                                    Route = "iv",
+                                    Media = "plasma",
+                                    exclude = FALSE))
 ```
 
 #### Plots
 
-You can plot the fit using `plot()`:
+You can plot the fit using `plot()` (which returns a `ggplot2` plot object):
 
 ```{r}
-plot(my_pk)
+p <- plot(my_pk)
+print(p)
 ```
+
+By default, the concentration axis is scaled the same way as the data was scaled for fitting. You can specify whether to dose-normalize and/or log-transform the plot y axis using argument `use_scale_conc`:
+
+```{r}
+p2 <- plot(my_pk,
+     use_scale_conc = list(dose_norm = TRUE,
+                           log10_trans = FALSE)
+     )
+print(p2)
+```
+
 
 #### Model evaluation metrics
 
@@ -161,18 +187,47 @@ AIC:
 AIC(my_pk)
 ```
 
+BIC:
+
+```{r}
+BIC(my_pk)
+```
+
 Root mean squared error (RMSE):
 
 ```{r}
 rmse(my_pk)
 ```
 
-#### Toxicokinetic statistics
-
-And finally, you can compute derived toxicokinetic statistics, such as total clearance rate, half-life, steady-state plasma concentration, etc., using `get_tkstats()`.
+R-squared for predicted vs. observed:
 
 ```{r}
-get_tkstats(my_pk)
+rsq(my_pk)
+```
+
+#### Data
+
+You can get the pre-processed data:
+
+```{r}
+data_proc <- get_data(my_pk)
+head(data_proc)
+```
+
+And you can get summary information about the pre-processed data -- including non-compartmental analysis results:
+
+```{r}
+get_data_info(my_pk)
+```
+
+
+#### Toxicokinetic statistics
+
+And finally, you can compute derived toxicokinetic statistics, such as total clearance rate, half-life, steady-state plasma concentration, etc., using `get_tkstats()`. (The result is a list, one `data.frame` of TK stats for each model that was fitted.)
+
+```{r}
+my_tkstats <- get_tkstats(my_pk)
+head(my_tkstats$model_1comp)
 ```
 
 We'll walk through the various pieces of this example.

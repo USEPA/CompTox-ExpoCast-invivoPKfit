@@ -9,6 +9,17 @@ test_that("data preprocessing works without errors",
           }
 )
 
+test_that("data preprocessing handles NULL data as expected",
+          {
+            my_pk <- pk(
+              data = NULL
+              )
+            expect_messsage(preprocess_data(my_pk),
+                            regexp = "preprocess_data.pk(): Original data is NULL",
+                            fixed = TRUE)
+          }
+)
+
 test_that("data preprocessing adds an element 'data'",
           {
             my_pk <- pk(

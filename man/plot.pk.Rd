@@ -9,15 +9,14 @@
   newdata = NULL,
   model = NULL,
   method = NULL,
-  plot_data_aes = ggplot2::aes(x = Time_trans, y = Conc/Dose, color = as.factor(Dose),
-    ymin = Conc/Dose - Conc_SD/Dose, ymax = Conc/Dose + Conc_SD/Dose, shape = Reference,
-    fill = Detect),
-  plot_fit_aes = ggplot2::aes(x = Time_trans, y = Conc/Dose, linetype =
-    interaction(model, method)),
-  facet_fun = "facet_grid",
-  facet_fun_args = list(rows = ggplot2::vars(Route), cols = ggplot2::vars(Media), scales
-    = "free_y", labeller = "label_both"),
-  n_interp = 10
+  exclude = TRUE,
+  use_scale_conc = FALSE,
+  plot_data_aes = NULL,
+  plot_fit_aes = NULL,
+  facet_fun = NULL,
+  facet_fun_args = NULL,
+  n_interp = 10,
+  ...
 )
 }
 \arguments{
@@ -33,20 +32,34 @@ plotted for these models. Default `NULL` to plot fits for all models in
 `obj$stat_model`.}
 
 \item{method}{Character: One or more of the [optimx::optimx()] methods used.
-Default `NULL` to plot fits for all methods in
-`obj$settings_optimx$method`.}
+Default `NULL` to plot fits for all methods in `obj$settings_optimx$method`.}
 
-\item{plot_data_aes}{Aesthetic mapping for the plot layer that visualizes the
-data.}
+\item{use_scale_conc}{Possible values: `TRUE`, `FALSE`, or a named list with
+elements `dose_norm` and `log10_trans` which themselves should be either
+`TRUE` or `FALSE`.  If `use_scale_conc = FALSE` (the default for this
+function), then the data and fits will be plotted without any
+dose-normalization or log-transformation. If `use_scale_conc = TRUE` , then
+the concentration scaling/transformations in `obj` will be applied to the
+y-axis (concentration axis). If `use_scale_conc = list(dose_norm = ...,
+log10_trans = ...)`, then the specified dose normalization and/or
+log10-transformation will be applied to the y-axis (concentration axis) of
+the plots.}
 
-\item{plot_fit_aes}{Aesthetic mapping for the plot layer that visualizes the
-fits.}
+\item{plot_data_aes}{Optional: Aesthetic mapping for the plot layer that
+visualizes the data. Default `NULL`, in which case a default mapping will be
+used based on the value of `use_scale_conc`.}
 
-\item{facet_fun}{The name of the `ggplot2` faceting function to use:
-[ggplot2::facet_grid()], [ggplot2::facet_wrap()], or `NULL` to do no
-faceting. Default `"facet_grid"`.}
+\item{plot_fit_aes}{Optional: Aesthetic mapping for the plot layer that
+visualizes the fitted curves. Default `NULL`, in which case a default mapping will be
+used based on the value of `use_scale_conc`.}
 
-\item{facet_fun_args}{A named list of arguments to the faceting function in `facet_fun`. Default:
+\item{facet_fun}{Default `"facet_grid"`. Optional: The name of the `ggplot2` faceting function to use:
+[ggplot2::facet_grid()], [ggplot2::facet_wrap()], or `'none'` to do no
+faceting. Default `NULL`, in which case a default faceting will be
+applied based on the value of `use_scale_conc`.}
+
+\item{facet_fun_args}{A named list of arguments to the faceting function in
+ `facet_fun` (if any). Default:
 ```
 list(rows = ggplot2::vars(Route),
 cols= ggplot2::vars(Media),
@@ -54,7 +67,8 @@ scales = "free_y",
 labeller = "label_both")
 ```}
 
-\item{n_interp}{For plotting: the number of time points to interpolate between each observed time point. Default 10.}
+\item{n_interp}{For plotting: the number of time points to interpolate between
+each observed time point. Default 10.}
 }
 \value{
 A [ggplot2::ggplot()]-class plot object.

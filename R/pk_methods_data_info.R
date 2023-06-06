@@ -37,6 +37,8 @@ data_info.pk <- function(obj){
                      n_obs = dplyr::n(),
                      n_exclude = sum(exclude %in% TRUE),
                      n_detect = sum(Detect %in% TRUE & exclude %in% FALSE),
+                     n_series_id = length(unique(Series_ID[exclude %in% FALSE])),
+                     n_timepts = length(unique(Time_trans[exclude %in% FALSE])),
                      tlast = ifelse(any(exclude %in% FALSE),
                                     max(Time_trans[exclude %in% FALSE]),
                                     NA_real_),
@@ -58,7 +60,7 @@ data_info.pk <- function(obj){
 
 
 
-  #do NCA -- only on detects.
+  #do NCA
   if(obj$settings_preprocess$suppress.messages %in% FALSE){
     message("data_info.pk(): Doing non-compartmental analysis\n")
   }
@@ -172,10 +174,12 @@ data_info.pk <- function(obj){
   #do NCA on all the data together, grouped by Chemical, Species, Route, Media
   nca_dose_norm <- data %>% dplyr::group_by(Chemical, Species, Route, Media) %>%
     dplyr::summarise(nca_dosenorm_group_id = dplyr::cur_group_id(),
-                     Dose = 1,
                      n_obs = dplyr::n(),
                      n_exclude = sum(exclude %in% TRUE),
                      n_detect = sum(Detect %in% TRUE & exclude %in% FALSE),
+                     n_series_id = length(unique(Series_ID[exclude %in% FALSE])),
+                     n_timepts = length(unique(Time_trans[exclude %in% FALSE])),
+                     n_ref = length(unique(Reference[exclude %in% FALSE])),
                      tlast = ifelse(any(exclude %in% FALSE),
                                     max(Time_trans[exclude %in% FALSE]),
                                     NA_real_),
@@ -197,7 +201,6 @@ data_info.pk <- function(obj){
                               detect = Detect[exclude %in% FALSE],
                               route = unique(Route),
                               series_id = Series_ID[exclude %in% FALSE])) %>%
-    dplyr::group_by(nca_dosenorm_group_id) %>%
     dplyr::mutate(param_units = dplyr::case_when(
       param_name %in% c("AUC_tlast",
                         "AUC_infinity") ~ paste(Conc.Units,
@@ -236,16 +239,16 @@ data_info.pk <- function(obj){
         if(all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
         tmprange[2]/tmprange[1]
       },
-      data_flag_Cmax = ifelse(Cmax_Dose_fold_range > 10,
-                         "Cmax may not scale with dose. Cmax/Dose range > 10-fold across NCA groups for this Route/Media",
+      data_flag_Cmax = ifelse(Cmax_Dose_fold_range > 2,
+                         "Cmax may not scale with dose. Cmax/Dose range > 2-fold across NCA groups for this Route/Media",
                          NA_character_),
       AUC_Dose_fold_range = {
         tmprange <- suppressWarnings(range(`AUC/Dose`, na.rm = TRUE))
         if(all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
         tmprange[2]/tmprange[1]
       },
-      data_flag_AUC = ifelse(AUC_Dose_fold_range > 10,
-                              "AUC_infinity may not scale with dose. AUC/Dose range > 10-fold across NCA groups for this Route/Media",
+      data_flag_AUC = ifelse(AUC_Dose_fold_range > 2,
+                              "AUC_infinity may not scale with dose. AUC/Dose range > 2-fold across NCA groups for this Route/Media",
                               NA_character_),
     ) %>% as.data.frame()
 
