@@ -133,11 +133,11 @@ log_likelihood <- function(par,
                            dose_norm = FALSE,
                            log10_trans = FALSE,
                            negative = TRUE,
-                           force_finite = FALSE) {
+                           force_finite = FALSE,
+                           suppress.messages = TRUE) {
 
-  #combine parameters to be optimized and held constant,
-  #and convert into a list, since that is what model functions expect
-  params <- as.list(c(par, const_params))
+  #combine parameters to be optimized and held constant
+  params <- c(par, const_params)
 
   #Extract parameters whose names do not match 'sigma'
   #(that is, all the actual model parameters)
@@ -198,8 +198,8 @@ log_likelihood <- function(par,
   if(any(grepl(x = names(params),
                pattern= "sigma"))){
   #get sigma params
-    sigma_params <- params[grepl(x = names(params),
-                                 pattern = "sigma")]
+    sigma_params <- as.list(params[grepl(x = names(params),
+                                 pattern = "sigma")])
     #match the study ID and assign each sigma to its corresponding study
     #except if data_sigma_group is NA -- then assume data are equally likely to come from any of the existing distributions
     sigma_obs <- sigma_params[paste("sigma",
@@ -212,7 +212,7 @@ log_likelihood <- function(par,
 
 
 if(any(!is.na(sigma_obs))){
-    #compute log likliehoods for observations with sigmas
+    #compute log likelihoods for observations with sigmas
     data_sigma <- data[!is.na(sigma_obs), ]
     ll_data_sigma <-  ifelse(data_sigma$N_Subjects %in% 1,
            ifelse(data_sigma$Detect %in% TRUE,
@@ -239,7 +239,15 @@ if(any(!is.na(sigma_obs))){
 
     #compute log likelihoods for observations without sigmas
     if(any(is.na(sigma_obs))){
+
     data_no_sigma <- data[is.na(sigma_obs), ]
+    if(suppress.messages %in% FALSE){
+      message(paste("log_likelihood():",
+                    nrow(data_no_sigma),
+                    "observations are not in any existing error-SD (sigma) group.",
+                    "They will be treated as equally likely to be in",
+                    "any of the existing error-SD groups."))
+      }
     ll_data_no_sigma <-  sapply(unlist(sigma_params),
                                 function(this_sigma){
                                   #place these observations in each group in turn
@@ -304,7 +312,11 @@ if(any(!is.na(sigma_obs))){
   #then when log-likelihood is infinitely unlikely,
   #return a large negative number instead
   if(force_finite %in% TRUE){
-  if (!is.finite(ll)) ll <- -1 * (.Machine$double.xmax)
+  if (!is.finite(ll)){
+    #now return sqrt of .Machine$double.xmax, not just .Machine$double.xmax
+    #not taking sqrt seems to break L-BFGS-B sometimes
+    ll <- -1 * sqrt(.Machine$double.xmax)
+  }
   }
 
   #to get negative log-likelihood (e.g. for minimization)

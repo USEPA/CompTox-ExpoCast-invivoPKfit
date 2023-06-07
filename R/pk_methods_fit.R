@@ -107,11 +107,17 @@ fit.pk <- function(obj){
       }
 
 
+      if(suppress.messages %in% FALSE){
+        message(paste("fit.pk(): Fitting model",
+                this_model,
+                "using optimx::optimx()"))
+      }
 
       #Now call optimx::optimx() and do the fit
-      optimx_out <- tryCatch({
+      suppressWarnings(
+        optimx_out <- tryCatch({
 
-        do.call(
+        tmp <- do.call(
           optimx::optimx,
           args = c(
             #
@@ -130,16 +136,25 @@ fit.pk <- function(obj){
               dose_norm = obj$scales$conc$dose_norm,
               log10_trans = obj$scales$conc$log10_trans,
               negative = TRUE,
-              force_finite = TRUE
+              force_finite = TRUE,
+              suppress.messages = suppress.messages
             ) #end list()
           ) #end args = c()
         ) #end do.call
+
+        # tmp <- cbind(tmp,
+        #              attr(tmp, "details"))
+        # #in case convcode is 9999, this implies an error in calling stat::optim
+        # tmp[tmp$convcode %in% 9999, "message"] <- "Error from stat::optim() called by optimx::optimx()"
+
+        tmp
 
       },
       error = function(err){
         return(paste0("Error from optimx::optimx(): ",
                       err$message))
-      })
+      }) #end tryCatch()
+      ) #end suppressWarnings()
 
       #Save the fitting results for this model
       obj$fit[[this_model]] <- optimx_out

@@ -63,6 +63,29 @@ This function is used by [postprocess_data()] to determine the time of peak
 concentration for the 2-compartment model, by locating the point where the
 time derivative of concentration crosses zero.
 }
+\seealso{
+Other built-in model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_2comp}()},
+\code{\link{auc_flat}()},
+\code{\link{cp_1comp}()},
+\code{\link{cp_2comp}()},
+\code{\link{cp_flat}()},
+\code{\link{get_params_1comp}()},
+\code{\link{get_params_2comp}()},
+\code{\link{get_params_flat}()},
+\code{\link{tkstats_2comp}()},
+\code{\link{transformed_params_2comp}()}
+
+Other 2-compartment model functions: 
+\code{\link{auc_2comp}()},
+\code{\link{cp_2comp}()},
+\code{\link{get_params_2comp}()},
+\code{\link{tkstats_2comp}()},
+\code{\link{transformed_params_2comp}()}
+}
 \author{
 Caroline Ring, John Wambaugh
 }
+\concept{2-compartment model functions}
+\concept{built-in model functions}

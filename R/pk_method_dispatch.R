@@ -568,4 +568,22 @@ rsq.default <- function(obj, ...){
              paste(class(obj), collapse = ", ")))
 }
 
+#' get_winning_model()
+#'
+#' This is the S3 method generic for get_winning_model()
+#'
+#' @param obj An object.
+#' @seealso [get_winning_model.pk()] for the method for class [pk()]
+#' @export
+get_winning_model <- function(obj, ...){
+  UseMethod("get_winning_model", obj)
+}
 
+#' Default method for get_winning_model()
+#'
+#'@param obj An object
+#' @export
+get_winning_model.default <- function(obj, ...){
+  stop(paste("No 'get_winning_model' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}

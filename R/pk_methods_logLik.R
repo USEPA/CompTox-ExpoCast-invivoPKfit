@@ -85,6 +85,8 @@ logLik.pk <- function(obj,
                       force_finite = FALSE,
                       exclude = TRUE){
 
+  suppress.messages <- obj$settings_preprocess$suppress.messages
+
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -170,14 +172,15 @@ logLik.pk <- function(obj,
                                              levels = levels(obj$prefit$stat_error_model$data_sigma_group))
 
                  #data from new levels will be treated as equally likely to come from any of the existing levels
-                  log_likelihood(par = as.list(this_coef_row),
+                  log_likelihood(par = this_coef_row,
                                  data = newdata,
                                  data_sigma_group = data_sigma_group,
                                  modelfun = obj$stat_model[[this_model]]$conc_fun,
                                  dose_norm = conc_scale$dose_norm,
                                  log10_trans = conc_scale$log10_trans,
                                  negative = negative,
-                                 force_finite = force_finite)
+                                 force_finite = force_finite,
+                                 suppress.messages = suppress.messages)
                 })
     #set attribute "df", the number of parameters optimized for this model
     attr(ll, which = "df") <- attr(obj$fit[[this_model]], "npar")

@@ -1,6 +1,6 @@
 #'TK stats for flat model
 #'
-#'@param pars A named vector of model parameters (e.g. from [coef.pk()]).
+#'@param pars A named numeric vector of model parameters (e.g. from [coef.pk()]).
 #'@param route Character: The route for which to compute TK stats. Currently
 #'  only "oral" and "iv" are supported.
 #'@param medium Character: the media (tissue) for which to compute TK stats.
@@ -22,28 +22,21 @@ tkstats_flat <- function(pars,
                          conc_unit,
                          vol_unit,
                          ...){
-  #the only TK stat for a flat model is Css, since effectively it is "always" at Css
-  missing_pars <- setdiff(model_flat$params,
-                          names(pars))
-  pars[missing_pars] <- NA_real_
+  params <- fill_params_flat(params)
 
-  Fgutabs <- pars["Fgutabs"]
-  Vdist <- pars["Vdist"]
-  Fgutabs_Vdist <- pars["Fgutabs_Vdist"]
-  Rblood2plasma <- pars["Rblood2plasma"]
-  if(is.na(Fgutabs_Vdist) &
-     !is.na(Fgutabs) &
-     !is.na(Vdist)){
-    Fgutabs_Vdist <- Fgutabs/Vdist
+  #for readability, assign params to variables inside this function
+  for(x in names(params)){
+    assign(x, unname(params[x]))
   }
 
-  Css <- cp_flat(params = as.list(pars[!is.na(pars)]),
+
+  Css <- cp_flat(params = pars,
                           time = Inf,
                           dose = dose,
                           route = route,
                           medium = medium)
 
- AUC_inf <- auc_flat(params = as.list(pars[!is.na(pars)]),
+ AUC_inf <- auc_flat(params = pars,
                           time = Inf,
                           dose = dose,
                           route = route,

@@ -13,7 +13,8 @@ log_likelihood(
   dose_norm = FALSE,
   log10_trans = FALSE,
   negative = TRUE,
-  force_finite = FALSE
+  force_finite = FALSE,
+  suppress.messages = TRUE
 )
 }
 \arguments{
