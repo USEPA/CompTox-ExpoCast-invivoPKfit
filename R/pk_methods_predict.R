@@ -102,6 +102,15 @@ predict.pk <- function(obj,
   sapply(model,
          function(this_model){
            this_coef_mat <- coefs[[this_model]][method, ]
+           if(!is.matrix(this_coef_mat)){
+             #in case there is only 1 method and the matrix is therefore 1-row and gets converetd into a vector,
+             #convert it back
+             this_coef_mat <- matrix(this_coef_mat,
+                                     nrow = 1,
+                                     ncol = length(this_coef_mat))
+             colnames(this_coef_mat) <- colnames(coefs[[this_model]])
+             rownames(this_coef_mat) <- method
+           }
            apply(this_coef_mat,
                  1,
                  function(this_coef_row){
