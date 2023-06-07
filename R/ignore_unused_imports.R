@@ -19,6 +19,5 @@
 #'
 ignore_unused_imports <- function() {
   pracma::cumtrapz
-  akmedoids::elbow_point
 
 }
