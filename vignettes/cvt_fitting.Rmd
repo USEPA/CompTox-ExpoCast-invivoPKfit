@@ -25,7 +25,7 @@ trans_opts <- expand.grid(dose_norm = c(TRUE, FALSE),
             stringsAsFactors = FALSE)
 ```
 
-# Jonit analysis for only one set of options
+# Joint analysis for only one set of options
 
 # Test preprocessing data
 
@@ -34,7 +34,7 @@ data_pre <- cvt %>%
   dplyr::group_by(chemicals_analyzed.dsstox_substance_id,
                   subjects.species_harmonized) %>%
   dplyr::summarise(pk_obj = {
-    #print(dplyr::cur_group())
+    print(dplyr::cur_group())
       this_pk <- pk(dplyr::cur_data_all()) 
       list(preprocess_data(this_pk))
   }
@@ -48,15 +48,43 @@ data_info_all <- cvt %>%
   dplyr::group_by(chemicals_analyzed.dsstox_substance_id,
                   subjects.species_harmonized) %>%
   dplyr::summarise(pk_obj = {
-    #print(dplyr::cur_group())
+    print(dplyr::cur_group())
       this_pk <- pk(dplyr::cur_data_all()) 
       list(data_info(this_pk))
   }
   )
 ```
 
+## Test pre-fit
 
-# "Joint" analysis
+```{r}
+prefit_all <- cvt %>%
+  dplyr::group_by(chemicals_analyzed.dsstox_substance_id,
+                  subjects.species_harmonized) %>%
+  dplyr::summarise(pk_obj = {
+    #print(dplyr::cur_group())
+      this_pk <- pk(dplyr::cur_data_all()) 
+      list(prefit(this_pk))
+  }
+  )
+```
+
+## Test fit
+
+```{r}
+fit_all <- cvt %>%
+  dplyr::group_by(chemicals_analyzed.dsstox_substance_id,
+                  subjects.species_harmonized) %>%
+  dplyr::summarise(pk_obj = {
+    #print(dplyr::cur_group())
+      this_pk <- pk(dplyr::cur_data_all()) 
+      list(fit(this_pk))
+  }
+  )
+```
+
+
+# "Joint" analysis for multiple sets of options?
 
 ```{r}
 joint <- cvt %>%

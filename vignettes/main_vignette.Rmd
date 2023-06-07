@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(invivoPKfit)
+devtools::load_all()
 ```
 
 # Introduction
@@ -58,7 +58,7 @@ Now, initialize a `pk` object.  This contains the data, along with a set of inst
 
 ```{r}
 my_pk <- pk(data = my_data) +
-  settings_preprocess(suppress.messages = TRUE,
+  settings_preprocess(suppress.messages = FALSE,
                       keep_data_original = TRUE)
 ```
 
