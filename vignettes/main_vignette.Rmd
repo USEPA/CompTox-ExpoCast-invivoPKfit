@@ -116,6 +116,19 @@ my_pk <- fit(my_pk)
 
 This step adds the fitted model parameter values to the `pk` object. If multiple models were fitted, and/or if multiple optimization algorithms ("methods") were used to do the fitting, then one set of fitted model parameter values is added for each model and each optimization algorithm ("method").
 
+### Skip straight to Step 4
+
+Note that you could just skip straight to the last step. If you call `fit()` on a newly-initialized `pk` object, all of the preceding steps will be done automatically. The following code will give you exactly the same results as going through each step individually as above.
+
+```{r, eval = FALSE}
+my_pk <- pk(data = my_data) +
+  settings_preprocess(suppress.messages = FALSE,
+                      keep_data_original = TRUE)
+
+my_pk <- fit(my_pk)
+```
+
+
 ### Post-fitting: Getting information about the fitted models
 
 Once fitting has been completed, then you can use some familiar methods to extract information about the fitted model(s). 
