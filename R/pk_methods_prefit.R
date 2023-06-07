@@ -10,6 +10,17 @@
 #' - For each model in `stat_model`, calls its `params_fun`, the function that, based on the data, determines whether to optimize each model parameter, and calculates lower/upper bounds and starting guesses for each model parameter to be optimized. Only non-excluded observations are passed to each model's `params_fun`.
 #'
 #'
+#' Lower bounds for each "sigma" hyperparameter are set to `sqrt(.Machine$double_eps)`.
+#'
+#' Upper bounds for each "sigma" hyperparameter are calculated as the standard
+#' deviation of observations in the corresponding error SD group (see
+#' [combined_sd()]). If the combined SD is non-finite or less than the sigma
+#' lower bound, then the combined SD of all non-excluded data is substituted. If
+#' that is still non-finite or less then the sigma lower bound, then a constant
+#' value of 100 is substituted.
+#'
+#' The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
+#'
 #' @param obj A `pk` object
 #' @return The same `pk` object, but with a new element `prefit`, containing the
 #'   results of pre-fit calculations and checks for each model and for the error
@@ -64,24 +75,57 @@ obj$prefit$stat_error_model$data_sigma_group <- data_sigma_group
 
 
   #get bounds and starting points for each error sigma to be fitted
+sigma_lower <- sqrt(.Machine$double.eps)
   sigma_DF <- data.frame(param_name = paste("sigma",
                                             levels(data_sigma_group),
                                             sep = "_"),
                          param_units = unique(data$Conc_trans.Units),
                          optimize_param = TRUE,
                          use_param = TRUE,
-                         lower_bound = .Machine$double.eps)
+                         lower_bound = sigma_lower)
+  rownames(sigma_DF) <- levels(data_sigma_group)
 
-  #get upper bound: standard deviation of the transformed concentration
-  #(Conc_trans) in each group
-  sigma_DF$upper_bound <- tapply(X = subset(data, exclude %in% FALSE)[["Conc_trans"]],
-                                 INDEX = data_sigma_group[data$exclude %in% FALSE],
-                                 FUN = sd,
-                                 na.rm = TRUE,
-                                 simplify = TRUE)
+  #upper bounds: combined SD per group (except handle it if combined SD is zero)
+  for(this_ds in rownames(sigma_DF)){
+    DF_sub <- subset(data,
+                     exclude %in% FALSE &
+                       data_sigma_group %in% this_ds)
+    if(nrow(DF_sub) > 0){
+    sigma_upper <- combined_sd(
+      group_mean = DF_sub$Conc_trans,
+                                        group_sd = DF_sub$Conc_SD_trans,
+                                        group_n = DF_sub$N_Subjects,
+                                        unbiased = TRUE,
+                                        na.rm = TRUE,
+                                        log = FALSE)
+    #if combined SD is non-finite or 0, then substitute with grand combined SD
+    #of all non-excluded data
+    if(!is.finite(sigma_upper) |
+       sigma_upper <= sigma_lower){
+      DF_sub <- subset(data,
+                         exclude %in% FALSE)
+      sigma_upper <- combined_sd(
+        group_mean = DF_sub$Conc_trans,
+        group_sd = DF_sub$Conc_SD_trans,
+        group_n = DF_sub$N_Subjects,
+        unbiased = TRUE,
+        na.rm = TRUE,
+        log = FALSE)
+    }
 
-  #get starting value for sigma: say, 0.5 of the upper bound
-  sigma_DF$start <- 0.5*sigma_DF$upper_bound
+    #if sigma_upper is still non-finite or 0, then impute 100
+    if(!is.finite(sigma_upper) |
+       sigma_upper <= sigma_lower){
+      sigma_upper <- 100
+    }
+      sigma_DF[this_ds, "upper_bound"] <- sigma_upper
+    }
+  }
+
+
+
+  #starting value = 0.1* upper bound
+  sigma_DF$start <- 0.1 * sigma_DF$upper_bound
 
   #assign rownames to sigma_DF
   rownames(sigma_DF) <- sigma_DF$param_name
