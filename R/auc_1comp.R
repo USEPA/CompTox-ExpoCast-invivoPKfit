@@ -89,7 +89,8 @@ auc_1comp <- function(params,
                        1/(Vdist*kelim) - #IV model
                          exp(-time*kelim)/
                          (Vdist*kelim), #iv route
-                       ifelse(kelim != kgutabs, #oral route
+                       ifelse(rep(kelim != kgutabs, #oral route
+                                  length(route)),
                               #equation when kelim != kgutabs
                               -1*
                                 Fgutabs_Vdist*kgutabs*

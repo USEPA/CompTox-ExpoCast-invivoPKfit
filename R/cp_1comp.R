@@ -84,7 +84,8 @@ cp_1comp <- function(params, time, dose, route, medium = 'plasma'){
   #compute plasma concentration
   cp <- dose * ifelse(route %in% "iv",
          exp(-kelim * time)/Vdist, #iv route
-         ifelse(kelim != kgutabs, #oral route
+         ifelse(rep(kelim != kgutabs, #oral route
+                    length(route)),
                 #equation when kelim != kgutabs
                 (Fgutabs_Vdist *
                    kgutabs)/
