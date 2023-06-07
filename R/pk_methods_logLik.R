@@ -172,7 +172,7 @@ logLik.pk <- function(obj,
                                              levels = levels(obj$prefit$stat_error_model$data_sigma_group))
 
                  #data from new levels will be treated as equally likely to come from any of the existing levels
-                  log_likelihood(par = as.list(this_coef_row),
+                  log_likelihood(par = this_coef_row,
                                  data = newdata,
                                  data_sigma_group = data_sigma_group,
                                  modelfun = obj$stat_model[[this_model]]$conc_fun,
