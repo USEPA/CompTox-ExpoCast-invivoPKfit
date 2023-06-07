@@ -49,7 +49,13 @@ prefit.pk <- function(obj){
     obj <- data_info(obj)
   }
 
+  suppress.messages <- obj$settings_preprocess$suppress.messages
+
   data <- obj$data
+
+  if(suppress.messages %in% FALSE){
+    message(paste("prefit.pk(): Assigning error SD groups to all observations"))
+  }
 
   #get the error model obj$stat_error_model, which defines the number of sigmas that will need to be optimized
   #count the number of unique combinations of vars in obj$stat_error_model$error_group
@@ -73,7 +79,10 @@ data_sigma_group <- droplevels(data_sigma_group)
 
 obj$prefit$stat_error_model$data_sigma_group <- data_sigma_group
 
-
+if(suppress.messages %in% FALSE){
+  message(paste("prefit.pk():",
+                "Getting bounds and starting guesses for each error SD to be fitted"))
+}
   #get bounds and starting points for each error sigma to be fitted
 sigma_lower <- sqrt(.Machine$double.eps)
   sigma_DF <- data.frame(param_name = paste("sigma",
@@ -168,6 +177,20 @@ sigma_lower <- sqrt(.Machine$double.eps)
              n_sigma,
              ")")
     )
+
+    if(suppress.messages %in% FALSE){
+    if(n_detect <= (n_par + n_sigma)){
+      message(paste0("prefit.pk():",
+                     "Model", this_model,
+                     ": Fit will not be performed.",
+                     "Number of non-excluded detects (",
+                     n_detect,
+                     ") is less than or equal to number of parameters to optimize (",
+                     n_par, ") plus number of error SDs to optimize (",
+                     n_sigma,
+                     ")"))
+    }
+    }
 
   }
 
