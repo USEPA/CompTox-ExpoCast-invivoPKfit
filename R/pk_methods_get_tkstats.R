@@ -62,7 +62,7 @@
 #' @family methods for fitted pk objects
 get_tkstats.pk <- function(obj,
                            newdata = NULL,
-                           tk_group = obj$settings_data_info$nca_group,
+                           tk_group = NULL,
                            model = NULL,
                            method = NULL,
                            exclude = TRUE,
@@ -78,6 +78,7 @@ get_tkstats.pk <- function(obj,
   if(is.null(model)) model <- names(obj$stat_model)
   if(is.null(method)) method <- obj$settings_optimx$method
   if(is.null(newdata)) newdata <- obj$data
+  if(is.null(tk_group)) tk_group <- obj$settings_data_info$nca_group
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)

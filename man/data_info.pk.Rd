@@ -2,7 +2,7 @@
 % Please edit documentation in R/pk_methods_data_info.R
 \name{data_info.pk}
 \alias{data_info.pk}
-\title{Get summary data info and NCA}
+\title{calculate summary data info}
 \usage{
 \method{data_info}{pk}(obj)
 }
@@ -10,7 +10,7 @@
 \item{obj}{An object of class [pk()]}
 }
 \description{
-Get summary data info and NCA
+Calculate summary data information, including non-compartmental analysis.
 }
 \author{
 Caroline Ring

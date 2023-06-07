@@ -79,7 +79,7 @@ tkstats_1comp <- function(pars,
                           vol_unit,
                           ...){
 
-  params <- fill_params_1comp(params)
+  params <- fill_params_1comp(pars)
 
   #for readability, assign params to variables inside this function
   for(x in names(params)){
@@ -129,8 +129,8 @@ tkstats_1comp <- function(pars,
                                    "tmax",
                                    "Cmax",
                                    "AUC_infinity",
-                                   "Vdist_ss",
-                                   "Vdist_ss/Fgutabs"
+                                   "Vss",
+                                   "Vss/Fgutabs"
                                    ),
                     param_value = c(CLtot,
                                     CLtot_Fgutabs,

@@ -14,5 +14,5 @@ get_data_info.pk <- function(obj){
     stop(attr(check, "msg"))
   }
 
-  return(obj$data_info$data_summary)
+  return(obj$data_info)
 }

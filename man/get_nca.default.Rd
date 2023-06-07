@@ -5,10 +5,14 @@
 \title{Default method for get_nca()}
 \usage{
 \method{get_nca}{default}(obj, ...)
+
+\method{get_nca}{default}(obj, ...)
 }
 \arguments{
 \item{obj}{An object}
 }
 \description{
+Default method for get_nca()
+
 Default method for get_nca()
 }

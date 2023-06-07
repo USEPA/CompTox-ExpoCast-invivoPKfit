@@ -587,3 +587,87 @@ get_winning_model.default <- function(obj, ...){
   stop(paste("No 'get_winning_model' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
+
+#' nca()
+#'
+#' This is the S3 method generic for nca()
+#'
+#' @param obj An object.
+#' @seealso [nca.pk()] for the method for class [pk()]
+#' @export
+nca <- function(obj, ...){
+  UseMethod("nca", obj)
+}
+
+#' Default method for nca()
+#'
+#'@param obj An object
+#' @export
+nca.default <- function(obj, ...){
+  stop(paste("No 'nca' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' data_summary()
+#'
+#' This is the S3 method generic for data_summary()
+#'
+#' @param obj An object.
+#' @seealso [data_summary.pk()] for the method for class [pk()]
+#' @export
+data_summary <- function(obj, ...){
+  UseMethod("data_summary", obj)
+}
+
+#' Default method for data_summary()
+#'
+#'@param obj An object
+#' @export
+data_summary.default <- function(obj, ...){
+  stop(paste("No 'data_summary' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_nca()
+#'
+#' This is the S3 method generic for `get_nca()`
+#'
+#' `get_nca()` is an alias for `nca`
+#'
+#' @param obj An object.
+#' @seealso [nca.pk()] for the method for class [pk()]
+#' @export
+get_nca <- function(obj, ...){
+  UseMethod("nca", obj)
+}
+
+#' Default method for get_nca()
+#'
+#'@param obj An object
+#' @export
+get_nca.default <- function(obj, ...){
+  stop(paste("No 'get_nca' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
+#' get_data_summary()
+#'
+#' This is the S3 method generic for get_data_summary()
+#'
+#' `get_data_summary()` is an alias for `data_summary()`
+#'
+#' @param obj An object.
+#' @seealso [data_summary.pk()] for the method for class [pk()]
+#' @export
+get_data_summary <- function(obj, ...){
+  UseMethod("data_summary", obj)
+}
+
+#' Default method for get_data_summary()
+#'
+#'@param obj An object
+#' @export
+get_data_summary.default <- function(obj, ...){
+  stop(paste("No 'get_data_summary' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}

@@ -5,13 +5,22 @@
 \title{get_nca()}
 \usage{
 get_nca(obj, ...)
+
+get_nca(obj, ...)
 }
 \arguments{
 \item{obj}{An object.}
 }
 \description{
 This is the S3 method generic for get_nca()
+
+This is the S3 method generic for `get_nca()`
+}
+\details{
+`get_nca()` is an alias for `nca`
 }
 \seealso{
 [get_nca.pk()] for the method for class [pk()]
+
+[nca.pk()] for the method for class [pk()]
 }

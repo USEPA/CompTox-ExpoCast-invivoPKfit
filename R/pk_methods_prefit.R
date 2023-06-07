@@ -155,7 +155,7 @@ sigma_lower <- sqrt(.Machine$double.eps)
     #number of parameters to optimize
     n_par <- sum(obj$prefit[[this_model]]$par_DF$optimize_param)
     #number of detected, non-excluded observations
-    n_detect <- sum(obj$data_info$data_summary$n_detect)
+    n_detect <- sum(obj$data_info$data_summary_all$n_detect)
     obj$prefit[[this_model]]$fit_decision <- ifelse(
       n_detect <= (n_par + n_sigma),
       "abort",

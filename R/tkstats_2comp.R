@@ -82,7 +82,7 @@ tkstats_2comp <- function(pars,
                           ...){
 
 
-  params <- fill_params_2comp(params)
+  params <- fill_params_2comp(pars)
 
   #get transformed parameters for 2-comp model
   trans_params <- transformed_params_2comp(params = pars)
@@ -162,8 +162,8 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
                                    "tmax",
                                    "Cmax",
                                    "AUC_infinity",
-                                   "Vdist_ss",
-                                   "Vdist_ss/Fgutabs"),
+                                   "Vss",
+                                   "Vss/Fgutabs"),
                     param_value = c(CLtot,
                                     CLtot_Fgutabs,
                                     Css,

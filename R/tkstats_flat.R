@@ -22,7 +22,7 @@ tkstats_flat <- function(pars,
                          conc_unit,
                          vol_unit,
                          ...){
-  params <- fill_params_flat(params)
+  params <- fill_params_flat(pars)
 
   #for readability, assign params to variables inside this function
   for(x in names(params)){
@@ -49,8 +49,8 @@ tkstats_flat <- function(pars,
     "halflife",
     "Cmax",
     "AUC_infinity",
-    "Vdist_ss",
-    "Vdist_ss/Fgutabs"),
+    "Vss",
+    "Vss/Fgutabs"),
                     "param_value" = c(
                       0,
                       0,

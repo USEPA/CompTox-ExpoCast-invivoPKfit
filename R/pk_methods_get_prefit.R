@@ -20,16 +20,20 @@ get_prefit.pk <- function(obj,
     model <- names(obj$stat_model)
   }
 
-  parDF_list <- sapply(model,
+  out_list <- sapply(model,
                 function(this_model) {
                   tmp <- rbind(
                     obj$prefit[[this_model]]$par_DF,
                     obj$prefit$stat_error_model$sigma_DF)
                   rownames(tmp) <- NULL
-                  tmp
+
+
+                  list("par_DF" = tmp,
+                       "fit_decision" = obj$prefit[[this_model]]$fit_decision,
+                       "fit_decision_reason" = obj$prefit[[this_model]]$fit_decision_reason)
                   },
                 simplify = FALSE,
                 USE.NAMES = TRUE)
 
-  return(parDF_list)
+  return(out_list)
 }
