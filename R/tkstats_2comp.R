@@ -79,6 +79,11 @@ tkstats_2comp <- function(pars,
                           vol_unit,
                           ...){
 
+
+  params <- as.list(pars[!is.na(pars)])
+  params <- fix_params_2comp(params)
+  pars <- unlist(params)
+  #set any missing ones to NA
   missing_pars <- setdiff(model_2comp$params,
                           names(pars))
   pars[missing_pars] <- NA_real_
@@ -92,37 +97,21 @@ tkstats_2comp <- function(pars,
   k21 <- pars["k21"]
   Rblood2plasma <- pars["Rblood2plasma"]
 
-  if(is.na(Fgutabs_V1) &
-     !is.na(Fgutabs) &
-     !is.na(V1)){
-    Fgutabs_V1 <- Fgutabs/V1
-  }
-
   CLtot <- kelim * V1
 
   CLtot_Fgutabs <- kelim / Fgutabs_V1
 
-  alphabeta_sum <- kelim + k12 + k21
-  alphabeta_prod <- kelim * k21
 
-alpha <- (alphabeta_sum + sqrt(alphabeta_sum^2 - 4*alphabeta_prod))/2
-beta <- (alphabeta_sum - sqrt(alphabeta_sum^2 - 4*alphabeta_prod))/2
+  #get transformed parameters for 2-comp model
+  trans_params <- transformed_params_2comp(params = as.list(pars[!is.na(pars)]),
+                                           time,
+                                           dose,
+                                           route,
+                                           medium)
 
-A <- ifelse(route %in% "iv",
-                  dose*(alpha - k21) / (V1 * (alpha - beta)),
-                  (kgutabs * Fgutabs_V1 *
-                     (alpha - k21)) /
-                    ( (kgutabs - alpha) * (alpha - beta))
-)
-B <- ifelse(route %in% "iv",
-                  dose*(k21 - beta) / (V1 * (alpha - beta)),
-                  (kgutabs * Fgutabs_V1 *
-                     (k21 - beta)) /
-                    ( (kgutabs - beta) * (alpha - beta))
-)
+Vbeta <-  V1 * kelim / trans_params$beta
+Vbeta_Fgutabs <- (1/Fgutabs_V1) * kelim / trans_params$beta
 
-Vbeta <-  V1 * kelim / beta
-Vbeta_Fgutabs <- (1/Fgutabs_V1) * kelim / beta
 Vss <- V1 * (k21 + k12) / k21
 Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
 

@@ -107,9 +107,15 @@ fit.pk <- function(obj){
       }
 
 
+      if(suppress.messages %in% FALSE){
+        message(paste("fit.pk(): Fitting model",
+                this_model,
+                "using optimx::optimx()"))
+      }
 
       #Now call optimx::optimx() and do the fit
-      optimx_out <- tryCatch({
+      suppressWarnings(
+        optimx_out <- tryCatch({
 
         do.call(
           optimx::optimx,
@@ -139,7 +145,8 @@ fit.pk <- function(obj){
       error = function(err){
         return(paste0("Error from optimx::optimx(): ",
                       err$message))
-      })
+      }) #end tryCatch()
+      ) #end suppressWarnings()
 
       #Save the fitting results for this model
       obj$fit[[this_model]] <- optimx_out
