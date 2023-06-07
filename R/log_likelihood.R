@@ -313,6 +313,8 @@ if(any(!is.na(sigma_obs))){
   #return a large negative number instead
   if(force_finite %in% TRUE){
   if (!is.finite(ll)){
+    #now return sqrt of .Machine$double.xmax, not just .Machine$double.xmax
+    #not taking sqrt seems to break L-BFGS-B sometimes
     ll <- -1 * sqrt(.Machine$double.xmax)
   }
   }
