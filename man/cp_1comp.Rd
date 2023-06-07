@@ -7,7 +7,7 @@
 cp_1comp(params, time, dose, route, medium = "plasma")
 }
 \arguments{
-\item{params}{A named list of numeric parameter values. See Details for
+\item{params}{A named numeric vector of model parameter values. See Details for
 requirements.}
 
 \item{time}{A numeric vector of times, reflecting the time point when
@@ -74,11 +74,14 @@ Other built-in model functions:
 \code{\link{auc_1comp}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
+\code{\link{cp_2comp_dt}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_flat}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_2comp}()},
-\code{\link{get_params_flat}()}
+\code{\link{get_params_flat}()},
+\code{\link{tkstats_2comp}()},
+\code{\link{transformed_params_2comp}()}
 
 Other 1-compartment model functions: 
 \code{\link{auc_1comp}()},

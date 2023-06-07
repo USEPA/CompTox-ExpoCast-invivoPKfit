@@ -7,7 +7,7 @@
 tkstats_2comp(pars, route, medium, dose, time_unit, conc_unit, vol_unit, ...)
 }
 \arguments{
-\item{pars}{A named vector of model parameters (e.g. from [coef.pk()]).}
+\item{pars}{A named numeric vector of model parameters (e.g. from [coef.pk()]).}
 
 \item{route}{Character: The route for which to compute TK stats. Currently
 only "oral" and "iv" are supported.}
@@ -83,6 +83,29 @@ Evaluate [auc_1comp()] at time = `Inf`.
 
 Evaluate [auc_1comp()] at time = `tlast`.
 }
+\seealso{
+Other built-in model functions: 
+\code{\link{auc_1comp}()},
+\code{\link{auc_2comp}()},
+\code{\link{auc_flat}()},
+\code{\link{cp_1comp}()},
+\code{\link{cp_2comp_dt}()},
+\code{\link{cp_2comp}()},
+\code{\link{cp_flat}()},
+\code{\link{get_params_1comp}()},
+\code{\link{get_params_2comp}()},
+\code{\link{get_params_flat}()},
+\code{\link{transformed_params_2comp}()}
+
+Other 2-compartment model functions: 
+\code{\link{auc_2comp}()},
+\code{\link{cp_2comp_dt}()},
+\code{\link{cp_2comp}()},
+\code{\link{get_params_2comp}()},
+\code{\link{transformed_params_2comp}()}
+}
 \author{
 John Wambaugh, Caroline Ring
 }
+\concept{2-compartment model functions}
+\concept{built-in model functions}

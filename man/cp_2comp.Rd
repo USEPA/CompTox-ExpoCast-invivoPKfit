@@ -7,7 +7,7 @@
 cp_2comp(params, time, dose, route, medium = "plasma")
 }
 \arguments{
-\item{params}{A named list of parameter values. See Details for requirements.}
+\item{params}{A named numeric vector of parameter values. See Details for requirements.}
 
 \item{time}{A numeric vector of times, reflecting the time points
 when concentration is measured after the corresponding single bolus dose.
@@ -76,14 +76,20 @@ Other built-in model functions:
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
+\code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_2comp}()},
-\code{\link{get_params_flat}()}
+\code{\link{get_params_flat}()},
+\code{\link{tkstats_2comp}()},
+\code{\link{transformed_params_2comp}()}
 
 Other 2-compartment model functions: 
 \code{\link{auc_2comp}()},
-\code{\link{get_params_2comp}()}
+\code{\link{cp_2comp_dt}()},
+\code{\link{get_params_2comp}()},
+\code{\link{tkstats_2comp}()},
+\code{\link{transformed_params_2comp}()}
 
 Other model concentration functions: 
 \code{\link{cp_1comp}()},

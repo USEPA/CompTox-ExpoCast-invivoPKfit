@@ -54,111 +54,30 @@
 #' @family model AUC functions
 auc_flat <- function(time, params, dose, route, medium) {
 
-  #check whether lengths of time, dose, and route match
-  time_len <- length(time)
-  dose_len <- length(dose)
-  route_len <- length(route)
-  medium_len <- length(medium)
+  params <- fill_params_flat(params)
 
-  len_all <- c(time_len, dose_len, route_len, medium_len)
-  #Cases:
-  # All three lengths are the same -- OK
-  # Two lengths are the same and the third is 1 -- OK
-  # Two lengths are 1 and the third is not 1 -- OK
-  # Otherwise there is a problem
-  good_len <- (length(unique(len_all)) == 1) |
-    (length(unique(len_all)) == 2 &
-       sum(len_all == 1) %in% c(1, 2))
+  check_msg <- check_params_flat(params = params,
+                           route = route,
+                           medium = medium)
 
-  if(!good_len){
-    stop(paste0("invivopkfit::auc_flat(): ",
-                "'time', 'dose', 'route', and 'medium'",
-                "must either be the same length or length 1.\n",
-                "'time' is length ", time_len, "\n",
-                "'dose' is length ", dose_len, "\n",
-                "'route' is length ", route_len, "\n",
-                "'medium' is length ", medium_len, "\n")
-    )
+  if(!(check_msg %in% "Parameters OK")){
+    stop(paste("cp_flat():",
+               check_msg))
   }
 
-  #if any are length-1, repeat them to match the longest
-  max_len <- max(len_all)
-  time <- rep(time, length.out = max_len)
-  dose <- rep(dose, length.out = max_len)
-  route <- rep(route, length.out = max_len)
-  medium <- rep(medium, length.out = max_len)
-
-  #drop any length-0 params
-  param_length <- sapply(params, length)
-  params <- params[param_length>0]
-
-  #check for required params
-
-  #if Fgutabs and Vdist provided, compute Fgutabs_Vdist
-  if(all(c("Fgutabs", "Vdist") %in% names(params))){
-    params$Fgutabs_Vdist <- params$Fgutabs/params$Vdist
+  #for readability, assign params to variables inside this function
+  for(x in names(params)){
+    assign(x, unname(params[x]))
   }
 
-  #if Vdist and Fgutabs_Vdist provided, but not Fgutabs, compute Fgutabs
-  if(all(c("Vdist", "Fgutabs_Vdist") %in% names(params)) &
-     !("Fgutabs" %in% names(params))
-  ){
-    params$Fgutabs <- params$Fgutabs_Vdist * params$Vdist
-  }
 
-  #if Fgutabs and Fgutabs_Vdist provided, but not Vdist, compute Vdist
-  if(all(c("Fgutabs", "Fgutabs_Vdist") %in% names(params)) &
-     !("Vdist" %in% names(params))
-  ){
-    params$Vdist <- params$Fgutabs / params$Fgutabs_Vdist
-  }
+  auc <- dose * ifelse(route %in% "iv",
+                       time/Vdist,
+                       time * Fgutabs_Vdist)
 
-  #drop any length-0 params
-  param_length <- sapply(params, length)
-  params <- params[param_length>0]
-
-  if(any(route %in% "iv")){
-    missing_params <- setdiff(c("Vdist"),
-                              names(params))
-    if(length(missing_params)>0){
-      stop(paste("auc_flat(): Error: For flat IV model,",
-                 "missing parameters:",
-                 paste(missing_params, collapse = ", ")))
-    }
-  }
-
-  if(any(route %in% "oral")){
-    missing_params <- setdiff("Fgutabs_Vdist",
-                              names(params))
-    if(length(missing_params)>0){
-      stop(paste("auc_flat(): Error: For flat PO model,",
-                 "missing parameters:",
-                 paste(missing_params, collapse = ", ")))
-    }
-  }
-
-  if(any(medium %in% "blood")){
-    if(!("Rblood2plasma" %in% names(params))){
-      stop(paste0("auc_flat(): Error: For flat model ",
-                  "in blood: missing parameter Rblood2plasma"))
-    }
-  }
-
-  auc <- vector(mode = "numeric", length = max_len)
-
-  if(any(route %in% "iv")){
-    auc[route %in% "iv"] <- dose[route %in% "iv"]/params$Vdist *
-      time[route %in% "iv"]
-  }
-
-  if(any(route %in% "oral")){
-    auc[route %in% "oral"] <- dose[route %in% "oral"]*params$Fgutabs_Vdist *
-      time[route %in% "oral"]
-  }
-
-  if(any(medium %in% "blood")){
-    auc[medium %in% "blood"] <- auc[medium %in% "blood"] * params$Rblood2plasma
-  }
+  auc <- ifelse(medium %in% "blood",
+                Rblood2plasma * auc,
+                auc)
 
   return(auc)
 }

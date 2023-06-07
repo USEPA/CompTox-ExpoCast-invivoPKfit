@@ -85,6 +85,8 @@ logLik.pk <- function(obj,
                       force_finite = FALSE,
                       exclude = TRUE){
 
+  suppress.messages <- obj$settings_preprocess$suppress.messages
+
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -177,7 +179,8 @@ logLik.pk <- function(obj,
                                  dose_norm = conc_scale$dose_norm,
                                  log10_trans = conc_scale$log10_trans,
                                  negative = negative,
-                                 force_finite = force_finite)
+                                 force_finite = force_finite,
+                                 suppress.messages = suppress.messages)
                 })
     #set attribute "df", the number of parameters optimized for this model
     attr(ll, which = "df") <- attr(obj$fit[[this_model]], "npar")

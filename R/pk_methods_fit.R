@@ -117,7 +117,7 @@ fit.pk <- function(obj){
       suppressWarnings(
         optimx_out <- tryCatch({
 
-        do.call(
+        tmp <- do.call(
           optimx::optimx,
           args = c(
             #
@@ -136,10 +136,18 @@ fit.pk <- function(obj){
               dose_norm = obj$scales$conc$dose_norm,
               log10_trans = obj$scales$conc$log10_trans,
               negative = TRUE,
-              force_finite = TRUE
+              force_finite = TRUE,
+              suppress.messages = suppress.messages
             ) #end list()
           ) #end args = c()
         ) #end do.call
+
+        # tmp <- cbind(tmp,
+        #              attr(tmp, "details"))
+        # #in case convcode is 9999, this implies an error in calling stat::optim
+        # tmp[tmp$convcode %in% 9999, "message"] <- "Error from stat::optim() called by optimx::optimx()"
+
+        tmp
 
       },
       error = function(err){

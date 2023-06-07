@@ -79,22 +79,13 @@ tkstats_1comp <- function(pars,
                           vol_unit,
                           ...){
 
-  missing_pars <- setdiff(model_1comp$params,
-                          names(pars))
-  pars[missing_pars] <- NA_real_
+  params <- fill_params_1comp(params)
 
-  kelim <- pars["kelim"]
-  Fgutabs <- pars["Fgutabs"]
-  Vdist <- pars["Vdist"]
-  Fgutabs_Vdist <- pars["Fgutabs_Vdist"]
-  kgutabs <- pars["kgutabs"]
-  Rblood2plasma <- pars["Rblood2plasma"]
-
-  if(is.na(Fgutabs_Vdist) &
-     !is.na(Fgutabs) &
-     !is.na(Vdist)){
-    Fgutabs_Vdist <- Fgutabs/Vdist
+  #for readability, assign params to variables inside this function
+  for(x in names(params)){
+    assign(x, unname(params[x]))
   }
+
 
   CLtot <- kelim * Vdist
 
@@ -119,13 +110,13 @@ tkstats_1comp <- function(pars,
                  log(kgutabs / kelim) / (kgutabs - kelim),
                  0)
 
-  Cmax <- cp_1comp(params = as.list(pars[!is.na(pars)]),
+  Cmax <- cp_1comp(params =pars,
   time = tmax,
   dose = dose,
   route= route,
   medium = medium)
 
-  AUC_inf <- auc_1comp(params = as.list(pars[!is.na(pars)]),
+  AUC_inf <- auc_1comp(params =pars,
   time = Inf,
   dose = dose,
   route = route,

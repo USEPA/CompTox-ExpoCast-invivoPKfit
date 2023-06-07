@@ -1,42 +1,38 @@
-#' Check 2-compartment model parameters
+#' Check flat model parameters
 #'
-#' Check to make sure required parameters are present to evaluate 2-compartment
+#' Check to make sure required parameters are present to evaluate flat
 #' model for a given route and medium
 #'
-#' @param params A named numeric vector of parameters for the 2-compartment model.
+#' @param params A named numeric vector of parameters for the flat model.
 #' @param route A character vector of routes: "iv" and/or "oral".
 #' @param medium A character vector of tissue media: "plasma" and/or "blood".
 #' @param ... Additional arguments (not currently used)
 #' @return Character: A message. If all required parameters are present for the
 #'   given media & routes, the message is "Parameters OK". If required
 #'   parameters for the oral route are missing, the message is "Error: For
-#'   2-compartment oral model, missing parameters (comma-separated list of
+#'   flat oral model, missing parameters (comma-separated list of
 #'   parameter names)".  If required
 #'   parameters for the IV route are missing, the message is "Error: For
-#'   2-compartment oral model, missing parameters (comma-separated list of
+#'   flat oral model, missing parameters (comma-separated list of
 #'   parameter names)".
 #' @author Caroline Ring
 
-check_params_2comp <- function(params,
+check_params_flat <- function(params,
                                route,
                                medium,
                                ...){
 
   msg <- "Parameters OK"
 
-  params <- fill_params_2comp(params)
+  params <- fill_params_flat(params)
 
   #check for any missing parameters
   #required params for oral dose
   if(any(route %in% "oral")){
-    missing_params <- setdiff(c("kelim",
-                                "k21",
-                                "k12",
-                                "Fgutabs_V1",
-                                "kgutabs"),
+    missing_params <- setdiff(c("Fgutabs_Vdist"),
                               names(params)[is.finite(params)])
     if(length(missing_params)>0){
-      msg <- (paste("Error: For 2-compartment oral model,",
+      msg <- (paste("Error: For flat oral model,",
                  "missing parameters:",
                  paste(missing_params, collapse = ", ")))
     }
@@ -44,13 +40,10 @@ check_params_2comp <- function(params,
 
   #required params for IV dose
   if(any(route %in% "iv")){
-    missing_params <- setdiff(c("kelim",
-                                "V1",
-                                "k12",
-                                "k21"),
+    missing_params <- setdiff(c("Vdist"),
                               names(params)[is.finite(params)])
     if(length(missing_params)>0){
-      msg <- (paste("Error: For 2-compartment IV model,",
+      msg <- (paste("Error: For flat IV model,",
                  "missing parameters:",
                  paste(missing_params, collapse = ", ")))
     }
@@ -58,7 +51,7 @@ check_params_2comp <- function(params,
 
   if(any(medium %in% "blood")){
     if(!("Rblood2plasma" %in% names(params)[is.finite(params)])){
-      msg <- (paste0("Error: For 2-compartment model ",
+      msg <- (paste0("Error: For flat model ",
                   "in blood: missing parameter Rblood2plasma"))
     }
   }

@@ -106,7 +106,7 @@ predict.pk <- function(obj,
                  1,
                  function(this_coef_row){
                    #get coefficients
-                   this_coef <- as.list(this_coef_row)
+                   this_coef <- this_coef_row
                    #get model function to be evaluated
                    this_model_fun <- ifelse(type %in% "conc",
                                             obj$stat_model[[this_model]]$conc_fun,

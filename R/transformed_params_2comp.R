@@ -1,30 +1,47 @@
-transformed_params_2comp <- function(params){
+#'Transformed parameters for 2-compartment model
+#'
+#'@param params A named numeric vector of parameters for the 2-compartment
+#'  model. Any missing parameters will be filled with `NA_real_`.
+#'@param ... Additional arguments (not currently used).
+#'@return A named numeric vector of transformed parameters with elements
+#'  "alpha", "beta", "A_iv_unit", "B_iv_unit", "A_oral_unit", "B_oral_unit".
+#' @author Caroline Ring, Gilbert Padilla Mercado, John Wambaugh
+#' @export transformed_params_2comp
+#' @family built-in model functions
+#' @family 2-compartment model functions
+transformed_params_2comp <- function(params,
+                                     ...){
 
   params <- fill_params_2comp(params)
+
+  #for readability, assign params to variables inside this function
+  for(x in names(params)){
+    assign(x, unname(params[x]))
+  }
 
   #see https://www.boomer.org/c/p4/c19/c1902.php
   #for these equations
 
-  alpha_beta_sum <- params$kelim + params$k12 + params$k21
-  alpha_beta_prod <- params$kelim * params$k21
+  alpha_beta_sum <- kelim + k12 + k21
+  alpha_beta_prod <- kelim * k21
 
   alpha <- (alpha_beta_sum + sqrt(alpha_beta_sum^2 - 4*alpha_beta_prod)) / 2
   beta <- (alpha_beta_sum - sqrt(alpha_beta_sum^2 - 4*alpha_beta_prod)) / 2
 
-  A_iv_unit <- (alpha - params$k21) /
-    (params$V1 * (alpha - beta))
-  B_iv_unit <- (params$k21 - beta) /
-    (params$V1 * (alpha - beta))
+  A_iv_unit <- (alpha - k21) /
+    (V1 * (alpha - beta))
+  B_iv_unit <- (k21 - beta) /
+    (V1 * (alpha - beta))
 
-  A_oral_unit <- (params$kgutabs * params$Fgutabs_V1 *
-                    (alpha - params$k21)) /
-    ( (params$kgutabs - alpha) * (alpha - beta))
+  A_oral_unit <- (kgutabs * Fgutabs_V1 *
+                    (alpha - k21)) /
+    ( (kgutabs - alpha) * (alpha - beta))
 
-  B_oral_unit <- (params$kgutabs * params$Fgutabs_V1 *
-                    (params$k21 - beta)) /
-    ( (params$kgutabs - beta) * (alpha - beta))
+  B_oral_unit <- (kgutabs * Fgutabs_V1 *
+                    (k21 - beta)) /
+    ( (kgutabs - beta) * (alpha - beta))
 
-  return(list("alpha" = alpha,
+  return(c("alpha" = alpha,
               "beta" = beta,
               "A_iv_unit" = A_iv_unit,
               "B_iv_unit" = B_iv_unit,

@@ -7,7 +7,7 @@
 tkstats_flat(pars, route, medium, dose, time_unit, conc_unit, vol_unit, ...)
 }
 \arguments{
-\item{pars}{A named vector of model parameters (e.g. from [coef.pk()]).}
+\item{pars}{A named numeric vector of model parameters (e.g. from [coef.pk()]).}
 
 \item{route}{Character: The route for which to compute TK stats. Currently
 only "oral" and "iv" are supported.}

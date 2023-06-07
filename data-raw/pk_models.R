@@ -13,7 +13,7 @@ model_1comp <- pk_model(name = "model_1comp",
                     tkstats_fun_args = NULL)
 
 model_2comp <- pk_model(name = "model_2comp",
-                    params = c("kelim", "k12", "k21", "V1", "Fgutabs", "kgutabs", "Fgutabs_k1", "Rblood2plasma"),
+                    params = c("kelim", "k12", "k21", "V1", "Fgutabs", "kgutabs", "Fgutabs_V1", "Rblood2plasma"),
                     conc_fun = "cp_2comp",
                     auc_fun = "auc_2comp",
                     params_fun = "get_params_2comp",

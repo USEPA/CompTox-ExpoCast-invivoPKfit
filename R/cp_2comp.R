@@ -39,7 +39,7 @@
 #'`Rblood2plasma`, the ratio of chemical concentration in whole blood to the
 #'chemical concentration in blood plasma.
 #'
-#'@param params A named list of parameter values. See Details for requirements.
+#'@param params A named numeric vector of parameter values. See Details for requirements.
 #'@param time A numeric vector of times, reflecting the time points
 #'  when concentration is measured after the corresponding single bolus dose.
 #'  Must be same length as other arguments, or length 1.
@@ -62,6 +62,8 @@
 #' @family model concentration functions
 cp_2comp <- function(params, time, dose, route, medium = "plasma")
 {
+  #fill any missing parameters with NAs, and impute Fgutabs_v1 from Fgutabs and
+  #V1 if necessary
   params <- fill_params_2comp(params)
 
 #check that required params are present
@@ -74,28 +76,35 @@ cp_2comp <- function(params, time, dose, route, medium = "plasma")
   }
 
   #get transformed parameters for 2-comp model
-  trans_params <- transformed_params_2comp(params,
-                                           time,
-                                           dose,
-                                           route,
-                                           medium)
+  trans_params <- transformed_params_2comp(params)
+
+  #for readability, assign params to variables inside this function
+  for(x in names(params)){
+    assign(x, unname(params[x]))
+  }
+
+  #for readability, assign transformed params to variables inside this function
+  for(x in names(trans_params)){
+    assign(x, unname(trans_params[x]))
+  }
+
 #get predicted concentration
   cp <- dose * ifelse(route %in% "iv",
-                 trans_params$A_iv_unit *
-                   exp(-trans_params$alpha * time) +
-                   trans_params$B_iv_unit *
-                   exp(-trans_params$beta * time),
+                 A_iv_unit *
+                   exp(-alpha * time) +
+                   B_iv_unit *
+                   exp(-beta * time),
 
-                 trans_params$A_oral_unit *
-                   exp(-trans_params$alpha * time) +
-                   trans_params$B_oral_unit *
-                   exp(-trans_params$beta * time) +
-                   -(trans_params$A_oral_unit + trans_params$B_oral_unit) *
-                   exp(-params$kgutabs * time)
+                 A_oral_unit *
+                   exp(-alpha * time) +
+                   B_oral_unit *
+                   exp(-beta * time) +
+                   -(A_oral_unit + B_oral_unit) *
+                   exp(-kgutabs * time)
   )
 
   cp <- ifelse(medium %in% "blood",
-               params$Rblood2plasma * cp,
+               Rblood2plasma * cp,
                cp)
 
   return(cp)

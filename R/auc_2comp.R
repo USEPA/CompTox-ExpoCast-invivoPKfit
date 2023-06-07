@@ -41,7 +41,8 @@
 #' @family model AUC functions
 auc_2comp <- function(params, time, dose, route, medium = "plasma")
 {
-
+  #fill any missing parameters with NAs, and impute Fgutabs_v1 from Fgutabs and
+  #V1 if necessary
   params <- fill_params_2comp(params)
 
   #check that required params are present
@@ -55,32 +56,38 @@ auc_2comp <- function(params, time, dose, route, medium = "plasma")
   }
 
   #get transformed parameters for 2-comp model
-  trans_params <- transformed_params_2comp(params,
-                                           time,
-                                           dose,
-                                           route,
-                                           medium)
+  trans_params <- transformed_params_2comp(params)
+
+  #for readability, assign params to variables inside this function
+  for(x in names(params)){
+    assign(x, unname(params[x]))
+  }
+
+  #for readability, assign transformed params to variables inside this function
+  for(x in names(trans_params)){
+    assign(x, unname(trans_params[x]))
+  }
 
   auc <- dose * ifelse(route %in% "iv",
-                trans_params$A_iv_unit/trans_params$alpha -
-                  trans_params$A_iv_unit*exp(-time*trans_params$alpha)/
-                  trans_params$alpha +
-                  trans_params$B_iv_unit/trans_params$beta -
-                  trans_params$B_iv_unit*exp(-time*trans_params$beta)/
-                  trans_params$beta,
-                trans_params$A_oral_unit/trans_params$alpha -
-                  trans_params$A_oral_unit*exp(-time*trans_params$alpha)/
-                  trans_params$alpha +
-                  trans_params$B_oral_unit/trans_params$beta -
-                  trans_params$B_oral_unit*exp(-time*trans_params$beta)/
-                  trans_params$beta +
-                  (-trans_params$A_oral_unit -trans_params$B_oral_unit)/
-                  params$kgutabs -
-                  (-trans_params$A_oral_unit -trans_params$B_oral_unit)*
-                  exp(-time*params$kgutabs)/params$kgutabs
+                A_iv_unit/alpha -
+                  A_iv_unit*exp(-time*alpha)/
+                  alpha +
+                  B_iv_unit/beta -
+                  B_iv_unit*exp(-time*beta)/
+                  beta,
+                A_oral_unit/alpha -
+                  A_oral_unit*exp(-time*alpha)/
+                  alpha +
+                  B_oral_unit/beta -
+                  B_oral_unit*exp(-time*beta)/
+                  beta +
+                  (-A_oral_unit -B_oral_unit)/
+                  kgutabs -
+                  (-A_oral_unit -B_oral_unit)*
+                  exp(-time*kgutabs)/kgutabs
                 )
 auc <- ifelse(medium %in% "blood",
-              params$Rblood2plasma * auc,
+              Rblood2plasma * auc,
               auc
               )
 

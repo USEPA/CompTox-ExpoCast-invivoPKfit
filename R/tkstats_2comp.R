@@ -52,7 +52,7 @@
 #'
 #'
 #'
-#'@param pars A named vector of model parameters (e.g. from [coef.pk()]).
+#'@param pars A named numeric vector of model parameters (e.g. from [coef.pk()]).
 #'@param route Character: The route for which to compute TK stats. Currently
 #'  only "oral" and "iv" are supported.
 #'@param medium Character: the media (tissue) for which to compute TK stats..
@@ -70,6 +70,8 @@
 #' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed; e.g. all of the `"x_Fgutabs"` parameters can only be computed if `route = "oral"` ).
 #'@export
 #'@author John Wambaugh, Caroline Ring
+#' @family built-in model functions
+#' @family 2-compartment model functions
 tkstats_2comp <- function(pars,
                           route,
                           medium,
@@ -80,37 +82,29 @@ tkstats_2comp <- function(pars,
                           ...){
 
 
-  params <- as.list(pars[!is.na(pars)])
-  params <- fix_params_2comp(params)
-  pars <- unlist(params)
-  #set any missing ones to NA
-  missing_pars <- setdiff(model_2comp$params,
-                          names(pars))
-  pars[missing_pars] <- NA_real_
+  params <- fill_params_2comp(params)
 
-  kelim <- pars["kelim"]
-  Fgutabs <- pars["Fgutabs"]
-  V1 <- pars["V1"]
-  Fgutabs_V1 <- pars["Fgutabs_V1"]
-  kgutabs <- pars["kgutabs"]
-  k12 <- pars["k12"]
-  k21 <- pars["k21"]
-  Rblood2plasma <- pars["Rblood2plasma"]
+  #get transformed parameters for 2-comp model
+  trans_params <- transformed_params_2comp(params = pars)
+
+  #for readability, assign params to variables inside this function
+  for(x in names(params)){
+    assign(x, unname(params[x]))
+  }
+
+  #for readability, assign transformed params to variables inside this function
+  for(x in names(trans_params)){
+    assign(x, unname(trans_params[x]))
+  }
 
   CLtot <- kelim * V1
 
   CLtot_Fgutabs <- kelim / Fgutabs_V1
 
 
-  #get transformed parameters for 2-comp model
-  trans_params <- transformed_params_2comp(params = as.list(pars[!is.na(pars)]),
-                                           time,
-                                           dose,
-                                           route,
-                                           medium)
 
-Vbeta <-  V1 * kelim / trans_params$beta
-Vbeta_Fgutabs <- (1/Fgutabs_V1) * kelim / trans_params$beta
+Vbeta <-  V1 * kelim / beta
+Vbeta_Fgutabs <- (1/Fgutabs_V1) * kelim / beta
 
 Vss <- V1 * (k21 + k12) / k21
 Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
@@ -134,7 +128,7 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
   tmax <- ifelse(route %in% "oral",
                  tryCatch(
                    uniroot( f = function(x){
-                     cp_2comp_dt(params = as.list(pars[!is.na(pars)]),
+                     cp_2comp_dt(params = pars,
                                  time = x,
                                  dose = dose,
                                  route = "oral",
@@ -148,13 +142,13 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
                    error = function(err) return(NA_real_)),
                  0)
 
-  Cmax <- cp_2comp(params = as.list(pars[!is.na(pars)]),
+  Cmax <- cp_2comp(params = pars,
   time = tmax,
   dose = dose,
   route= route,
   medium = medium)
 
-  AUC_inf <- auc_2comp(params = as.list(pars[!is.na(pars)]),
+  AUC_inf <- auc_2comp(params = pars,
   time = Inf,
   dose = dose,
   route = route,
