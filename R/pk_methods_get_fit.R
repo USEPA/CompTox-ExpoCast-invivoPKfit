@@ -1,4 +1,4 @@
-#' get fits from a `pk` object
+#' Get fits from a `pk` object
 #'
 #' Get the [optimx::optimx()] output from a fitted `pk` object
 #'
@@ -23,7 +23,8 @@
 #'   element.
 #' @author Caroline Ring
 #' @export
-.get_fit.pk <- function(obj,
+#' @family methods for fitted pk objects
+get_fit.pk <- function(obj,
                        model = NULL,
                        ...){
 

@@ -89,6 +89,7 @@ Other methods for fitted pk objects:
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},
 \code{\link{coef_sd.pk}()},
+\code{\link{get_fit.pk}()},
 \code{\link{get_tkstats.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{predict.pk}()},

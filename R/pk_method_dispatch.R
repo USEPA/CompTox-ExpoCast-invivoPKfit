@@ -693,3 +693,25 @@ eval_tkstats.default <- function(obj, ...){
   stop(paste("No 'eval_tkstats' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
+
+#' get_fit()
+#'
+#' This is the S3 method generic for get_fit()
+#'
+#' `get_fit()` is an alias for `data_summary()`
+#'
+#' @param obj An object.
+#' @seealso [data_summary.pk()] for the method for class [pk()]
+#' @export
+get_fit <- function(obj, ...){
+  UseMethod("data_summary", obj)
+}
+
+#' Default method for get_fit()
+#'
+#'@param obj An object
+#' @export
+get_fit.default <- function(obj, ...){
+  stop(paste("No 'get_fit' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
