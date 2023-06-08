@@ -51,6 +51,60 @@ add_pk <- function(pk_obj, object, objectname) {
   p
 }
 
+#' Add a `pkproto` object to a `pk` object
+#'
+#' This is the S3 generic method.
+#'
+#' @param pkproto_obj The `pkproto` object to be added
+#' @param pk_obj The `pk` object to which the `pkproto` object is to be added
+#' @param objectname The object name
+#'
+#' @export
+#' @seealso [pk_add.pk_scales()] for the method for adding `pk_scales` objects
+#'   (from [scale_conc()] and [scale_time()]); [pk_add.pk_settings_preprocess()]
+#'   for the method for adding `pk_settings_preprocess` objects (from
+#'   [settings_preprocess()]); [pk_add.pk_settings_data_info()] for the method
+#'   for adding `pk_settings_data_info` objects (from [settings_data_info()]);
+#'   [pk_add.pk_settings_optimx()] for the method for adding
+#'   `pk_settings_optimx` objects (from [settings_optimx()]);
+#'   [pk_add.pk_stat_model()] for the method for adding `pk_stat_model` objects
+#'   (from `stat_model()`)
+pk_add <- function(pkproto_obj, pk_obj, objectname){
+  UseMethod("pk_add")
+}
+
+#' Add pkproto object default method
+#'
+#' @export
+pk_add.default <- function(object, pk_obj, objectname){
+  stop(paste("No 'pk_add' method exists for object of class",
+             object))
+}
+
+#'Subtract a `pkproto` object from a `pk` object
+#'
+#' This is the S3 generic method.
+#'
+#' @param pkproto_obj The `pkproto` object to be subtracted
+#' @param pk_obj The `pk` object to which the `pkproto` object is to be subtracted
+#' @param objectname The object name
+#'
+#' @export
+#' @seealso
+#'   [pk_subtract.pk_stat_model()] for the method for subtracting `pk_stat_model` objects
+#'   (from `stat_model()`)
+pk_subtract <- function(pkproto_obj, pk_obj, objectname){
+  UseMethod("pk_subtract")
+}
+
+#' Subtract pkproto object default method
+#'
+#' @export
+pk_subtract.default <- function(object, pk_obj, objectname){
+  stop(paste("No 'pk_subtract' method exists for object of class",
+             object))
+}
+
 #' Add a `pk_scales` object to a `pk` object.
 #'
 #' @param object The `pk_scales` object to be added.
@@ -283,11 +337,56 @@ pk_add.uneval <- function(object, pk_obj, objectname){
   return(pk_obj)
 }
 
-#' Add facet_by()
+#' Add facet_data()
 #'
-#' @param object The `pk_facet_by` object to be added.
-#' @param pk_obj The [pk()] object to which the `pk_facet_by` object will be added.
-#' @param objectname The name of the `pk_facet_by` object.
-pk_add.pk_facet_by <- function(object, pk_obj, objectname){
+#' @param object The `pk_facet_data` object to be added.
+#' @param pk_obj The [pk()] object to which the `pk_facet_data` object will be added.
+#' @param objectname The name of the `pk_facet_data` object.
+pk_add.pk_facet_data <- function(object, pk_obj, objectname){
 
+  #data pre-processing and everything downstream will change
+  if(pk_obj$status > (status_preprocess - 1)){
+    message(paste0(objectname,
+                   ": Modifying faceting resets status to level ",
+                   status_preprocess - 1,
+                   "; all later stages of the workflow will need to be re-done"))
+    pk_obj$status <-  status_preprocess - 1
+  }
+
+  #check to see whether the facets produce more than one group of data
+  #if they produce only one, then do not change class to pk_faceted
+
+  data_original <- do.call(dplyr::group_by,
+                      pk_obj$data_original)
+
+  n_grps <- dplyr::n_groups(data_original)
+
+  if(n_grps > 1){
+    #produce a tibble with a list column of pk objects, each for one slice of the data
+    pk_faceted_obj <- data_original %>%
+      dplyr::summarise(pk_object = list(
+        pk(data = dplyr::cur_data_all(), #the current slice of data
+                                   mapping = pk_obj$mapping, #use the same mapping
+           facets = object$facets,
+           #use the same settings, scales, stats
+           settings_preprocess_args = get_settings_preprocess(pk_obj),
+           settings_data_info_args = get_settings_data_info(pk_obj),
+           settings_optimx_args = get_settings_optimx(pk_obj),
+           scale_conc_args = get_scale_conc(pk_obj),
+           scale_time_args = get_scale_time(pk_obj),
+           stat_model_args = get_stat_model(pk_obj),
+           stat_error_model_args = get_stat_error_model(pk_obj))
+                                   )
+        )
+#set an attribute to store faceting variables
+    attr(pk_faceted_obj, "facets") <- object$facets
+    class(pk_faceted_obj) <- c("pk_faceted",
+                               "pk")
+    return(pk_faceted_obj)
+  }else{
+    #if there is only one facet,
+    #just keep treating it as a `pk` object -- no need to go to all the trouble
+    pk_obj$facets <- object$facets
+    return(pk_obj)
+  }
 }

@@ -9,7 +9,6 @@
 #' @author Caroline Ring
 data_info.pk <- function(obj){
 
-
   #check status
   objname <- deparse(substitute(obj))
   status <- obj$status
@@ -33,39 +32,31 @@ data_info.pk <- function(obj){
 
   data <- obj$data
 
-
-
-  #get data summay
+  #get data summary
   if(obj$settings_preprocess$suppress.messages %in% FALSE){
     message("data_info.pk(): Getting data summary statistics\n")
   }
-  data_summary_all <- data_summary(obj = obj,
-                               newdata = NULL,
-                               summary_group = vars(Chemical, Species))
 
-  data_summary <- data_summary(obj = obj,
-                               newdata = NULL,
-                               summary_group = NULL)
+  summary_group <-   unique(
+    c(obj$facet_data,
+      vars(Route, Media)
+    )
+  )
 
-  #perform NCA
-  if(obj$settings_preprocess$suppress.messages %in% FALSE){
-    message("data_info.pk(): Doing non-compartmental analysis\n")
-  }
-  nca_wide <- nca(obj = obj,
-             newdata = NULL,
-             nca_group = NULL,
-             exclude = TRUE,
-             dose_norm = FALSE)
+  data_summary_out <- data_summary(obj = obj,
+                               newdata = NULL,
+                               summary_group = summary_group
+  )
 
   #do NCA dose-normalized
-  # if(obj$settings_preprocess$suppress.messages %in% FALSE){
-  #   message("data_info.pk(): Doing dose-normalized non-compartmental analysis\n")
-  # }
-  # nca_dose_norm <- nca(obj = obj,
-  #                      newdata = NULL,
-  #                      nca_group = vars(Chemical, Species, Route, Media),
-  #                      exclude = TRUE,
-  #                      dose_norm = TRUE)
+  if(obj$settings_preprocess$suppress.messages %in% FALSE){
+    message("data_info.pk(): Doing dose-normalized non-compartmental analysis\n")
+  }
+  nca_dose_norm <- nca(obj = obj,
+                       newdata = NULL,
+                       nca_group = summary_group,
+                       exclude = TRUE,
+                       dose_norm = TRUE)
 
   #get data flags:
   if(obj$settings_preprocess$suppress.messages %in% FALSE){
@@ -73,31 +64,14 @@ data_info.pk <- function(obj){
   }
 
   #get grouping variables
-  nca_group <- obj$settings_data_info$nca_group
-  grp_vars <- sapply(nca_group,
+
+  grp_vars <- sapply(summary_group,
                      rlang::as_label)
 
-
   df <- dplyr::inner_join(data_summary,
-              nca_wide,
+              nca_dose_norm,
               by = grp_vars) %>%
-    dplyr::mutate(`Cmax/Dose` = Cmax/Dose,
-                  `AUC/Dose` = AUC_infinity/Dose) %>%
-    dplyr::mutate(
-    data_flag = ifelse(
-      (n_obs - n_exclude) < 3,
-      "Fewer than 3 non-excluded observations",
-      NA_character_
-    )
-  ) %>% dplyr::mutate(
-    data_flag = ifelse(
-      n_detect < 3,
-      paste2(data_flag,
-             "Fewer than 3 non-excluded detected observations",
-             sep = " | "),
-      data_flag
-    )
-  ) %>% dplyr::mutate(
+   dplyr::mutate(
     data_flag = ifelse(
       Route %in% "oral" &
         (abs(tmax - tfirst_detect) < sqrt(.Machine$double.eps)) %in% TRUE &
@@ -133,31 +107,31 @@ data_info.pk <- function(obj){
     as.data.frame()
 
   #Other data flags:
-  #Check for obeying dose normalization by chemical, species, route, media
+  #Check for obeying dose normalization by summary_group
 
-  dose_norm_check <- df %>%
-    dplyr::group_by(Chemical, Species, Route, Media) %>%
+  dose_norm_check <- do.call(dplyr::group_by,
+                             df,
+                             summary_group) %>%
     dplyr::summarise(
-      Cmax_Dose_fold_range = {
-        tmprange <- suppressWarnings(range(`Cmax/Dose`, na.rm = TRUE))
+      Cmax_fold_range = {
+        tmprange <- suppressWarnings(range(`Cmax`, na.rm = TRUE))
         if(all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
         tmprange[2]/tmprange[1]
       },
-      data_flag_Cmax = ifelse(Cmax_Dose_fold_range > 2,
+      data_flag_Cmax = ifelse(Cmax_fold_range > 2,
                               "Cmax may not scale with dose. Cmax/Dose range > 2-fold across NCA groups for this Route/Media",
                               NA_character_),
-      AUC_Dose_fold_range = {
-        tmprange <- suppressWarnings(range(`AUC/Dose`, na.rm = TRUE))
+      AUC_fold_range = {
+        tmprange <- suppressWarnings(range(`AUC_infinity`, na.rm = TRUE))
         if(all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
         tmprange[2]/tmprange[1]
       },
-      data_flag_AUC = ifelse(AUC_Dose_fold_range > 2,
+      data_flag_AUC = ifelse(AUC_fold_range > 2,
                              "AUC_infinity may not scale with dose. AUC/Dose range > 2-fold across NCA groups for this Route/Media",
                              NA_character_),
     ) %>% as.data.frame()
 
-  obj$data_info <- list("data_summary_all" = data_summary_all,
-    "data_summary_nca" = df,
+  obj$data_info <- list("data_summary" = df,
                         "dose_norm_check" = dose_norm_check)
 
   obj$status <- status_data_info #data summarization complete

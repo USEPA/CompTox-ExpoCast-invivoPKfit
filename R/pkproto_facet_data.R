@@ -10,7 +10,7 @@
 #'
 #' ```
 #' pk_cvt <- pk(cvt) +
-#'  facet_by(
+#'  facet_data(
 #'  facets = vars(
 #'  chemicals_analyzed.dsstox_substance_id,
 #' subjects.species_harmonized
@@ -55,18 +55,18 @@
 #'   variables should appear in the *original* data (i.e., the `data` argument
 #'   to [pk()]).
 #' @param ... Additional arguments, not currently used.
-#' @return An object of class `c("pkproto", "pk_facet_by")`. Under the hood, a
+#' @return An object of class `c("pkproto", "pk_facet_data")`. Under the hood, a
 #'   named  `list` containing the arguments provided to this function. Almost
 #'   always added to a [pk()] object using [`+.pk`].
 #' @export
 #' @author Caroline Ring, Gilbert Padilla Mercado, Paul Kruse
-facet_by <- function(facets = vars(Chemical, Species),
+facet_data <- function(facets = vars(Chemical, Species),
                      ...){
   #get arguments and values
   argg <- c(as.list(environment()), list(...))
-  this_facet_by <- argg
+  this_facet_data <- argg
   #set class
-  class(this_facet_by) <- c(class(this_facet_by), "pkproto", "pk_facet_by")
+  class(this_facet_data) <- c(class(this_facet_data), "pkproto", "pk_facet_data")
 
-  return(this_facet_by)
+  return(this_facet_data)
 }

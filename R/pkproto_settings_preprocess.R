@@ -29,10 +29,6 @@
 #'   Media)`.
 #' @param suppress.messages TRUE or FALSE: Whether to suppress verbose messages.
 #'   Default FALSE.
-#' @param keep_data_original Logical (TRUE or FALSE): Whether to keep the
-#'   original data after preprocessing. If FALSE (the default), then the
-#'   original data in `obj$data_original` will be deleted from the object after
-#'   pre-processing is complete.
 #' @param ... Any additional arguments. Currently ignored.
 #'
 #' @return An object of class `pk_settings_preprocess`. This is a named list of
@@ -48,7 +44,6 @@ settings_preprocess <- function(routes_keep = c("oral", "iv"),
                                 impute_sd = TRUE,
                                 sd_group = dplyr::vars(Chemical, Species, Reference, Media),
                                 suppress.messages = FALSE,
-                                keep_data_original = FALSE,
                                 ...){
   #get arguments and values
   argg <- c(as.list(environment()), list(...))

@@ -18,107 +18,16 @@
 #'- settings for the numerical optimization algorithm to be used to fit any model
 #'- optionally: which PK model(s) should be fitted to this dataset. (You do not have to fit any PK model if you don't want to; you can instead just set up the `pk` object with data, and do non-compartmental analysis on it.)
 #'
-#'The most basic `pk` object, as created by [pk()] when it is called without anything else added to it, is a named list with the following elements:
-#'
-#' - `data_orig`: The original data set, supplied as [pk()] argument `data`
-#' - `mapping`: A mapping of original variable names to harmonized variable names, supplied in [pk()] argument `mapping`
-#' - `data_settings`: Instructions for data pre-processing (a named list of arguments to [preprocess_data()]), supplied in [pk()] arguments `mapping` and `data_settings`
-#' - `scales`: Instructions for data scaling and/or transformation. A list with elements named `conc` and `time`, where each element contains the scaling/transformation to apply to the corresponding variable. See [scale_conc()] and [scale_time()].
-#'     - `scales$conc`: A named list with elements `ratio_conc_dose`, `dose_norm`, `log10_trans`, and `expr`. See [scale_conc()]. When you call [pk()] by itself, [scale_conc()] is automatically called with its default arguments. To change the concentration scaling, use ` + scale_conc(...)` and specify your desired new arguments.
-#'         - `scales$conc$ratio_conc_dose`: The ratio of mass units of observed concentrations to mass units of administered doses. Usually this is 1, but if (for example) observed concentrations are in ng/L and administered doses are in mg/kg, then `ratio_conc_to_dose = 1e-6` to scale observed concentrations to units of mg/L to match the administered dose mass units.
-#'         - `scales$conc$dose_norm`: TRUE to divide each observed concentration (after scaling by `ratio_conc_dose`) by its corresponding administered dose; FALSE not to.
-#'         - `scales$conc$log10_trans`: TRUE to apply [log10()] transformation to each observed concentration (after scaling by `ratio_conc_dose` and performing any requested dose-normalization); FALSE to not apply [log10()] transformation.
-#'         -`scales$conc$expr`: A [rlang::quosure] containing an R expression that provides the "recipe" for applying the concentration transformations to any concentration variable. The quosure is automatically created using the arguments to [scale_conc()]; you as the user do not have to worry about it.
-#'    -`scales$time`: A named list with one element, `new_units`. See [scale_time()]. When you call [pk()] by itself, [scale_time()] is automatically called with its default arguments. To change the time scaling, use `+ scale_time(new_units = ...)` and specify your desired new units.
-#'        -`scales$time$new_units`: The new units into which time values should be transformed. By default, this is `"identity"`, meaning that time will not be transformed.
-#' - `stat_error_model`: A named list with one element, `error_group`.
-#' - `stat_model`: By default, this is NULL, indicating that no model will be fit to the data. When you add one or more models using ` + stat_model(model = ...)`, this element will become a named list, with one element for each model to be fit. The element for each model is the `pk_model` object corresponding to the named model. See, for example, the built-in `pk_model` objects [flat], [1comp], [2comp]
-#' - `optimx_settings`: Instructions for the numerical optimizer: a named list of arguments to [optimx::optimx()]. See [settings_optimx()].
-#' - `status`: What stage of the analysis has been applied to this object so far? Options are 1 (meaning the workflow has been set up), 2 (meaning data has been pre-processed), 3 (meaning that pre-fitting is complete), or 4 (meaning that fitting is complete).
-#'
 #'
 #'No data processing, model fitting, or any other analysis is done until you
-#'explicitly request it. Until then, the `pk` object remains just a set of data and
-#'instructions. This allows you to specify the instructions for each analysis
-#'step without regard for the actual order of the analysis steps, and to
-#'overwrite previous instructions, without having to re-do the model fitting
+#'explicitly request it. Until then, the `pk` object remains just a set of data
+#'and instructions. This allows you to specify the instructions for each
+#'analysis step without regard for the actual order of the analysis steps, and
+#'to overwrite previous instructions, without having to re-do the model fitting
 #'each time you add or change a set of instructions. This is particularly useful
 #'if you are working in interactive mode at the R console.
 #'
-#'For example, you might write at the console
 #'
-#'```
-#' my_pk <- pk(my_data) + stat_model(model = model_1comp) + data_settings(impute_loq = TRUE)
-#'```
-#'
-#'This is OK even though `data_settings` provides instructions for data
-#'pre-processing, a step that comes *before* model fitting. Internally, the `pk`
-#'object will put the instructions in the right order.
-#'
-#'You might then realize that you also want to fit a 2-compartment model to the
-#'same data set. You can simply write
-#'
-#' ```
-#'my_pk <- my_pk + stat_model(model = model_2comp)
-#' ```
-#'
-#'Then you might realize that you actually wanted to dose-normalize the
-#'concentration data before fitting the models. You can do that simply by
-#'writing
-#'
-#'`my_pk <- my_pk + scale_conc(normalize = "dose")`
-#'
-#'
-#'Now, you are pretty sure that is the final set of instructions. You can
-#'actually do the fit as follows:
-#'
-#'`my_pk <- fit(my_pk)`
-#'
-#'Now, the following steps will occur:
-#'
-#' - Data pre-processing, using [preprocess_data.pk()]
-#'     - Rename variables to use the harmonized variable names expected by [invivopkfit], using the variable-name mapping in `my_pk$mapping`
-#'     - Filter data to keep only certain routes and media, as instructed by `my_pk$data_settings$routes_keep` and `my_pk$data_settings$media_keep`
-#'     - Imputation of missing LOQs, as instructed by `my_pk$data_settings$impute_loq` and `my_pk$data_settings$loq_group`
-#'     - Imputation of missing SDs, as instructed by `my_pk$data_settings$impute_sd` and `my_pk$data_settings$sd_group`
-#'     - Scaling and transformation of concentration data (concentrations, LOQs, and concentration SDs), as instructed by `my_pk$scales$conc`
-#'     - Scaling of time data, as instructed by `my_pk$scales$time`
-#' - Model pre-fitting, using [prefit.pk()]
-#'     - For each model listed in `my_pk$stat_model`:
-#'      - Automatic determination of whether to fit oral model, IV model, or both, depending on whether oral and IV data are available.
-#'      - Automatic checks on whether data are sufficient to proceed with model fitting (e.g., are there more observations than parameters to be estimated?)
-#'      - Automatic determination of the number of residual error standard deviations to be estimated (as instructed by `my_pk$stat_error_model$error_group`)
-#'      - Automatic determination of which residual error SD corresponds to each observation
-#'      - Automatic determination of parameter bounds
-#'      - Automatic determination of parameter starting guesses
-#' - Model fitting, using [fit.pk()]
-#'     - For each model listed in `my_pk$stat_model`:
-#'         - Numerical optimization of model parameters using [optimx::optimx()], as instructed by `my_pk$optimx_settings`
-#'             - Optimization is performed by maximizing the log-likelihood function [log_likelihood()] for the data with all transformations applied
-#'         - Calculation of uncertainty in the optimized parameter values using an approximation to the Hessian (the matrix of second derivatives) evaluated at the maximum-likelihood set of parameters
-#'
-#'`my_pk` will be modified to contain the results of each of these steps:
-#'
-
-
-#'
-#'You may do these steps one at a time if you wish, using the following methods:
-#'
-#' - Data pre-processing, including scaling/transformation: [preprocess.pk()]. The `my_pk` object will be modified as follows:
-#'     - The pre-processed data, in a new element `my_pk$data`
-#'     - Summary information about the pre-processed data, in a new element `my_pk$data_info`
-#' - Model pre-fitting: [prefit.pk()]. The `my_pk` object will be modified as follows:
-#'     - A data.frame of residual error SD hyperparameter names, units, bounds, and starting guesses, in a new element `my_pk$stat_error_model$sigma_DF`
-#'     - The name of the residual error SD hyperparameter corresponding to each observation, in a new element `my_pk$stat_error_model$data_sigma_group`
-#'     - For each fitted model (in the corresponding named element in `my_pk$stat_model`):
-#'         - A `data.frame` of the parameter names, units, bounds, and starting guesses, in a new element `my_pk$stat_model[[model_name]]$parDF`
-#'         - Whether to proceed with the fit, in `my_pk$stat_model[[model_name]]$status` (either `"continue"` or `"abort"`)
-#'         - The reason for proceeding or aborting the fit, in in `my_pk$stat_model[[model_name]]$status_reason` (e.g., insufficient detected observations to estimate the required number of parameters and hyperparameters)
-#' - Model fitting: [fit.pk()]. The `my_pk` object will be modified as follwos:
-#'     - For each fitted model (in the corresponding named element in `my_pk$stat_model`):
-#'     - The output of optimization, in `my_pk$stat_model[[model_name]]$fit`. If optimization failed or was not performed, this element will contain a string giving the relevant error message.
-#'
-#'The `pk` object
 #'
 #'# Mappings
 #'
@@ -233,11 +142,28 @@
 #'
 #'# Data
 #'
-#'`data` should contain data for only one `Chemical` and one `Species`. It may
-#'contain data for multiple `Route`,`Media`, and/or `Reference` values. However,
 #'`Route` values should be either `"oral"` (oral bolus administration) or `"iv"`
 #'(IV bolus administration), and `Media` values should be either `"blood"` or
 #'`"plasma"`.
+#'
+#'If `data` contains data for more than one `Chemical` and `Species`, then you
+#'should use [facet_data()] to run a "faceted" analysis. A faceted analysis will
+#'group the data according to unique combinations of the faceting variables, and
+#'produce a `pk` object for each group. The result is a [tibble::tibble()]
+#'grouped by the faceting variables, with a list column named `pk` containing
+#'the `pk` object for each group. This [tibble::tibble()] is an object of class
+#'`pk_faceted`.
+#'
+#'All methods for `pk` objects have a corresponding version for a
+#'`pk_faceted` object, which applies the method to each `pk` object in turn and
+#'either returns the same `pk_faceted` object with a modified `pk` column (for
+#'methods that operate on a `pk` object and return a modified version of the
+#'same `pk` object like [preprocess_data()], [data_info()], [prefit()], [fit()]), or produces a
+#'[tibble::tibble()] grouped by the faceting variables, with a list column named
+#'after the `pk` method containing the results of that method (for methods that
+#'operate on a `pk` object but return something other than a modified `pk`
+#'object, e.g. [summary.pk()], [coef.pk()], [coef_sd.pk()], [predict.pk()],
+#'[residuals.pk()], [nca.pk()]).
 #'
 #'
 #'@param data A `data.frame`. The default is an empty data frame.
@@ -290,7 +216,15 @@ pk <- function(data = NULL,
                              LOQ = series.loq_normalized,
                              Value_SD  = conc_time_values.conc_sd_normalized
                ),
-               data_group = vars(Chemical, Species)
+               facets = vars(Chemical, Species),
+               settings_preprocess_args = list(),
+               settings_data_info_args = list(),
+               settings_optimx_args = list(),
+               scale_conc_args = list(),
+               scale_time_args = list(),
+               stat_model_args = list(),
+               stat_error_model_args = list()
+
 ){
 
   #Check to ensure the mapping contains all required harmonized column names
@@ -332,7 +266,7 @@ pk <- function(data = NULL,
 
   #Create the initial pk object
   obj <- list("data_original" = data,
-              "data_group" = data_group,
+              "facets" = facets,
               "mapping" = mapping,
               "status" = status_init
   )
@@ -341,22 +275,25 @@ pk <- function(data = NULL,
   class(obj) <- append(class(obj), "pk")
 
   # Add default data preprocessing settings
-  obj <- obj + settings_preprocess()
+  obj <- obj + do.call(settings_preprocess, settings_preprocess_args)
 
   # Add default data info settings
-  obj <- obj + settings_data_info()
+  obj <- obj + do.call(settings_data_info,
+                       settings_data_info_args)
 
   #Add default optimx settings
-  obj <- obj + settings_optimx()
+  obj <- obj + do.call(settings_optimx,
+                       settings_optimx_args)
 
   #Add default scalings for conc and time
-  obj <- obj + scale_conc() + scale_time()
+  obj <- obj + do.call(scale_conc, scale_conc_args)
+  obj <- obj + do.call(scale_time, scale_time_args)
 
   # #Add default models: flat, 1comp, 2comp
-  obj <- obj + stat_model()
+  obj <- obj + do.call(stat_model, stat_model_args)
 
   #Add default error model
-  obj <- obj + stat_error_model()
+  obj <- obj + do.call(stat_error_model, stat_error_model_args)
 
   #return the initialized pk object
   return(obj)
