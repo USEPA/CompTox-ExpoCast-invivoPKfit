@@ -289,7 +289,8 @@ pk <- function(data = NULL,
                              Value.Units = "mg/L",
                              LOQ = series.loq_normalized,
                              Value_SD  = conc_time_values.conc_sd_normalized
-               )
+               ),
+               data_group = vars(Chemical, Species)
 ){
 
   #Check to ensure the mapping contains all required harmonized column names
@@ -331,6 +332,7 @@ pk <- function(data = NULL,
 
   #Create the initial pk object
   obj <- list("data_original" = data,
+              "data_group" = data_group,
               "mapping" = mapping,
               "status" = status_init
   )

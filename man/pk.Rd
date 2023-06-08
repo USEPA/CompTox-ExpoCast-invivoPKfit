@@ -18,7 +18,8 @@ pk(
     conc_time_values.id, N_Subjects = series.n_subjects_in_series, Weight =
     subjects.weight_kg, Weight.Units = "kg", Time = conc_time_values.time_hr, Time.Units
     = "hours", Value = conc_time_values.conc, Value.Units = "mg/L", LOQ =
-    series.loq_normalized, Value_SD = conc_time_values.conc_sd_normalized)
+    series.loq_normalized, Value_SD = conc_time_values.conc_sd_normalized),
+  data_group = vars(Chemical, Species)
 )
 }
 \arguments{

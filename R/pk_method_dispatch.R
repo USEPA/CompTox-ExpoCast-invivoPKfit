@@ -682,7 +682,7 @@ get_data_summary.default <- function(obj, ...){
 #' @seealso [data_summary.pk()] for the method for class [pk()]
 #' @export
 eval_tkstats <- function(obj, ...){
-  UseMethod("data_summary", obj)
+  UseMethod("eval_tkstats", obj)
 }
 
 #' Default method for eval_tkstats()
@@ -704,7 +704,7 @@ eval_tkstats.default <- function(obj, ...){
 #' @seealso [data_summary.pk()] for the method for class [pk()]
 #' @export
 get_fit <- function(obj, ...){
-  UseMethod("data_summary", obj)
+  UseMethod("get_fit", obj)
 }
 
 #' Default method for get_fit()
@@ -715,3 +715,26 @@ get_fit.default <- function(obj, ...){
   stop(paste("No 'get_fit' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
+
+#' get_data_group()
+#'
+#' This is the S3 method generic for get_data_group()
+#'
+#' `get_data_group()` is an alias for `data_summary()`
+#'
+#' @param obj An object.
+#' @seealso [data_summary.pk()] for the method for class [pk()]
+#' @export
+get_data_group <- function(obj, ...){
+  UseMethod("get_data_group", obj)
+}
+
+#' Default method for get_data_group()
+#'
+#'@param obj An object
+#' @export
+get_data_group.default <- function(obj, ...){
+  stop(paste("No 'get_data_group' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
+
