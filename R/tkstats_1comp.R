@@ -79,7 +79,7 @@ tkstats_1comp <- function(pars,
                           vol_unit,
                           ...){
 
-  params <- fill_params_1comp(params)
+  params <- fill_params_1comp(pars)
 
   #for readability, assign params to variables inside this function
   for(x in names(params)){

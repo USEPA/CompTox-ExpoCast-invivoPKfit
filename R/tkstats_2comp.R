@@ -82,7 +82,7 @@ tkstats_2comp <- function(pars,
                           ...){
 
 
-  params <- fill_params_2comp(params)
+  params <- fill_params_2comp(pars)
 
   #get transformed parameters for 2-comp model
   trans_params <- transformed_params_2comp(params = pars)

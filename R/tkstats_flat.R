@@ -22,7 +22,7 @@ tkstats_flat <- function(pars,
                          conc_unit,
                          vol_unit,
                          ...){
-  params <- fill_params_flat(params)
+  params <- fill_params_flat(pars)
 
   #for readability, assign params to variables inside this function
   for(x in names(params)){
