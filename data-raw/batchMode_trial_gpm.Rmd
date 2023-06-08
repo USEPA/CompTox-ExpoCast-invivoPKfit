@@ -1,0 +1,63 @@
+---
+title: "PK object batch mode trial"
+author: "Gilberto Padilla Mercado"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+devtools::load_all() # Loads the invivopkfit package in feature/pkS3obj branch
+library(tidyverse)
+library(here)
+```
+
+## Working with one DTXSID + Species combination
+
+
+```{r data_loading}
+cvt %>% names()
+
+cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>% unique() %>% length()
+
+my_predata <- subset(cvt,
+                     chemicals_analyzed.dsstox_substance_id %in% "DTXSID0020442" &
+                       subjects.species_harmonized %in% "rat")
+
+
+
+```
+
+
+```{r}
+my_pk <- pk(data = my_predata) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = "L-BFGS-B") +
+  scale_conc(dose_norm = TRUE) +
+  # scale_time() +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species))
+
+my_pk <- preprocess_data(my_pk)
+
+my_pk <- data_info(my_pk)
+
+my_pk <- prefit(my_pk) 
+# I get a warning here 
+# "In med_y - pred : "
+# "longer object length is not a multiple of shorter object length"
+
+my_pk <- fit(my_pk)
+
+
+pk_results <- coef(my_pk)
+
+predict(my_pk) # Doesn't run rn for some reason
+pred_results <- predict(my_pk)
+
+plot_results <- plot(my_pk)
+print(plot_results)
+
+my_tkstats <- get_tkstats(my_pk)
+```
+
