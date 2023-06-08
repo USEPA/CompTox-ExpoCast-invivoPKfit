@@ -91,6 +91,10 @@
 #' \deqn{\textrm{log-scale sample SD}_i = \sqrt{\log \left(1 +
 #' \frac{s_i^2}{\bar{y}_i^2} \right)}}
 #'
+#' @param pred Numeric vector: Model-predicted value corresponding to each
+#'   observed value. Even if `log10_trans %in% TRUE`, these should *not* be
+#'   log-transformed.  (If `log10_trans %in% TRUE`, they will be
+#'   log10-transformed internally to this function before calculation.)
 #' @param obs Numeric vector: Observed sample means for summary data, or
 #'   observed values for non-summary data. Censored observations should *not* be
 #'   NA; they should be substituted with the LOQ. Even if `log10_trans %in%
@@ -107,21 +111,17 @@
 #'   data. For non-summary data (individual-subject observations), `group_n`
 #'   should be set to 1.
 #' @param detect Logical: Whether each
-#' @param pred Numeric vector: Model-predicted value corresponding to each
-#'   observed value. Even if `log10_trans %in% TRUE`, these should *not* be
-#'   log-transformed.  (If `log10_trans %in% TRUE`, they will be
-#'   log10-transformed internally to this function before calculation.)
-#' @param log Logical. FALSE (default) means that R-squared is computed for
+#' @param log10_trans Logical. FALSE (default) means that R-squared is computed for
 #'   observations vs. predictions. TRUE means that R-squared is computed for
 #'   log(observations) vs. log(predictions) (see Details).
 #' @return A numeric scalar: the R-squared value for observations vs.
 #'   predictions.
 #' @author Caroline Ring
-calc_rsq <- function(obs,
+calc_rsq <- function(pred,
+                     obs,
                      obs_sd,
                      n_subj,
                      detect,
-                     pred,
                      log10_trans = FALSE){
   #If both obs and pred are below LOQ, set pred = LOQ.
   #This will effectively make error zero in these cases.

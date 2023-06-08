@@ -215,11 +215,11 @@ if(!(check %in% TRUE)){
          function(this_pred){
            apply(this_pred, #loop over columns of this_pred, each one is a method
                  2,
-                 function(x) calc_rsq(obs = obs,
+                 function(x) calc_rsq( pred = x,
+                                       obs = obs,
                                        obs_sd = obs_sd,
                                        n_subj = newdata$N_Subjects,
                                        detect = newdata$Detect,
-                                      pred = x,
                                        log10_trans = conc_scale$log10_trans)
            )
          },

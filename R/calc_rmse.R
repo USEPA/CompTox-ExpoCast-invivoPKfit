@@ -44,7 +44,7 @@
 #'
 #' # Log transformation
 #'
-#' If `log %in% TRUE`, then both the observed and predicted values will be
+#' If `log10_trans %in% TRUE`, then both the observed and predicted values will be
 #' (natural) log-transformed before calculating the RMSE. In the case where
 #' observed values are reported in summary format, each sample mean and sample
 #' SD (reported on the natural scale, i.e. the mean and SD of natural-scale
@@ -61,35 +61,31 @@
 #' \deqn{\textrm{log-scale sample SD}_i = \sqrt{\log \left(1 +
 #' \frac{s_i^2}{\bar{y}_i^2} \right)}}
 #'
-#' @param group_mean Numeric vector: Observed sample means for summary data, or
-#'   observed values for non-summary data. Censored observations should *not* be
-#'   NA; they should be substituted with some value at or below the
-#'   corresponding LOQ (e.g. LOQ or LOQ/2). Even if `log %in% TRUE`, these
-#'   should *not* be log-transformed. (If `log %in% TRUE`, they will be
-#'   transformed to log-scale means internally to this function before
-#'   calculation.)
-#' @param group_sd Numeric vector: Observed sample SDs for summary data. For
-#'   non-summary data (individual-subject observations), the corresponding
-#'   element of `group_sd` should be set to 0. Even if `log %in% TRUE`, these
-#'   should *not* be log-transformed. (If `log %in% TRUE`, they will be
-#'   transformed to log-scale standard deviations internally to this function
-#'   before calculation.)
-#' @param group_n Numeric vector: Observed sample number of subjects for summary
-#'   data. For non-summary data (individual-subject observations), `group_n`
-#'   should be set to 1.
 #' @param pred Numeric vector: Model-predicted value corresponding to each
-#'   observed value. Even if `log %in% TRUE`, these should *not* be
-#'   log-transformed. (If `log %in% TRUE`, they will be log-transformed
+#'   observed value. Even if `log10_trans %in% TRUE`, these should *not* be
+#'   log-transformed. (If `log10_trans %in% TRUE`, they will be log-transformed
 #'   internally to this function before calculation.)
-#' @param group_LOQ Numeric vector: Reported limit of quantification (LOQ) (i.e,
-#'   left-censoring limit) for each observation. May contain `NA_real_`s for
-#'   non-censored observations. Even if `log %in% TRUE`, these should *not* be
-#'   log-transformed. (If `log %in% TRUE`, log transformation will be handled
-#'   internally to this function before calculation.)
-#' @param log Logical. FALSE (default) means that RMSE is computed for
+#' @param obs Numeric vector: Observed sample means for each observation if
+#'   summary data, or observed values for each observation if non-summary data.
+#'   Censored observations should *not* be NA; they should be substituted with
+#'   the LOQ. Even if `log10_trans %in% TRUE`, these should *not* be
+#'   log-transformed. (If `log10_trans %in% TRUE`, they will be transformed to
+#'   log-scale means internally to this function before calculation.)
+#' @param obs_sd Numeric vector: Observed sample SDs for each observation, if
+#'   summary data. For non-summary data (individual-subject observations), the
+#'   corresponding element of `group_sd` should be set to 0. Even if
+#'   `log10_trans %in% TRUE`, these should *not* be log-transformed. (If
+#'   `log10_trans %in% TRUE`, they will be transformed to log-scale standard
+#'   deviations internally to this function before calculation.)
+#' @param n_subj Numeric vector: Observed sample number of subjects for each
+#'   observation. For non-summary data (individual-subject observations),
+#'   `n_subj` should be set to 1.
+#' @param detect Logical vector: `TRUE` for each observation that was detected
+#'   (above LOQ); `FALSE` for each observation that was non-detect (below LOQ).
+#' @param log10_trans Logical. FALSE (default) means that RMSE is computed for
 #'   natural-scale observations and predictions -- effectively, `sqrt(mean(
 #'   (observed - pred)^2 ))`. TRUE means that observations and predictions will
-#'   be log-transformed before RMSE is calculated (see Details)
+#'   be log10-transformed before RMSE is calculated (see Details)
 #'   -- effectively `sqrt(mean( ( log(observed) - log(pred) )^2 ))`.
 #' @return A numeric scalar: the root mean squared error (RMSE) for this set of
 #'   observations and predictions.
