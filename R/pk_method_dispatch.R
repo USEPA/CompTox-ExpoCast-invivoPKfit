@@ -671,3 +671,25 @@ get_data_summary.default <- function(obj, ...){
   stop(paste("No 'get_data_summary' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
+
+#' eval_tkstats()
+#'
+#' This is the S3 method generic for eval_tkstats()
+#'
+#' `eval_tkstats()` is an alias for `data_summary()`
+#'
+#' @param obj An object.
+#' @seealso [data_summary.pk()] for the method for class [pk()]
+#' @export
+eval_tkstats <- function(obj, ...){
+  UseMethod("data_summary", obj)
+}
+
+#' Default method for eval_tkstats()
+#'
+#'@param obj An object
+#' @export
+eval_tkstats.default <- function(obj, ...){
+  stop(paste("No 'eval_tkstats' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}
