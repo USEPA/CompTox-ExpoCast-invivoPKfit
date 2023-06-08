@@ -6,18 +6,22 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+
+library(tidyverse, quietly = TRUE)
 devtools::load_all() # Loads the invivopkfit package in feature/pkS3obj branch
-library(tidyverse)
-library(here)
+
 ```
 
 ## Working with one DTXSID + Species combination
 
+The first step is understanding how to work with a single DTXSID + Species combination.
+Once we know how to do this, it will be easier to apply it to (potentially)
+a list of these objects in a vectorized fashion.
+Here I subset the `cvt` object and use that as my working data.
 
 ```{r data_loading}
-cvt %>% names()
-
+# There are 103 unique chemicals in this object
 cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>% unique() %>% length()
 
 my_predata <- subset(cvt,
@@ -28,8 +32,13 @@ my_predata <- subset(cvt,
 
 ```
 
+Next, I want to follow the steps required for the particular analysis I would like.
+In this instance, I set the optimizer to "L-BFGS-B" and dose-normalize the output.
+I do not scale the time or log-transform the concentration values.
+Since I would like to do a "Pooled" analysis,
+I set the `error_group = vars(Chemical, Species)`.
 
-```{r}
+```{r single_fit}
 my_pk <- pk(data = my_predata) +
   settings_preprocess(keep_data_original = TRUE) +
   settings_optimx(method = "L-BFGS-B") +
@@ -40,7 +49,7 @@ my_pk <- pk(data = my_predata) +
 
 my_pk <- preprocess_data(my_pk)
 
-my_pk <- data_info(my_pk)
+my_pk <- data_info(my_pk) # summarize error (Returning more or less than 1 row per summarize)
 
 my_pk <- prefit(my_pk) 
 # I get a warning here 
@@ -48,16 +57,57 @@ my_pk <- prefit(my_pk)
 # "longer object length is not a multiple of shorter object length"
 
 my_pk <- fit(my_pk)
+```
 
-
+```{r single_result_extraction}
+# A list of each fit model with the estimated parameters for that model
+# Each row has 
 pk_results <- coef(my_pk)
 
-predict(my_pk) # Doesn't run rn for some reason
 pred_results <- predict(my_pk)
 
 plot_results <- plot(my_pk)
-print(plot_results)
 
 my_tkstats <- get_tkstats(my_pk)
 ```
+
+
+```{r single_result_tidying}
+# Currently, it seems tk_stats_*() does not return dose-normalized values.
+my_tkstats %>%
+  pluck("model_1comp") %>%
+  distinct() %>% head()
+
+# Assembling the data that I want to add for a summary data.frame
+my_pk$fit$model_flat
+my_pk$settings_optimx$method
+my_pk$scales$conc$dose_norm
+my_pk$scales$conc$log10_trans
+rlang::quo_get_expr(my_pk$scales$conc$expr)
+
+# Building the wide "fit" data.frame from various parts of the `pk` object
+my_pk$fit %>%
+  as.data.frame() %>%
+  # Switches default order of 
+  rename_with(~paste0(str_extract(.,
+                                  pattern = "(?<=\\.).+$"),
+                      ".",
+                      str_extract(.,
+                                  pattern = "(?<=model_)[:alnum:]+")
+                      )
+  ) %>%
+  dplyr::select(-(starts_with(c("kkt", "xtime", "niter", "fevals", "gevals", "sigma")))) %>%
+  rownames_to_column(var = "method") %>%
+  mutate(DTXSID = unique(my_pk$data$DTXSID),
+         Species = unique(my_pk$data$Species),
+         fit_log_conc = my_pk$scales$conc$log10_trans,
+         fit_conc_dose = my_pk$scales$conc$dose_norm,
+         rescale_time = ifelse(my_pk$scales$time == "identity",
+                               FALSE, TRUE),
+         .before = method) %>%
+  View()
+
+
+```
+
 
