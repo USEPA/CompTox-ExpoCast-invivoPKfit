@@ -16,7 +16,7 @@ data_info.pk_faceted <- function(obj){
                                             data_info)
     )
   class(obj) <- c("pk_faceted", "pk", class(obj))
-  return(obj)
+  attr(pk_faceted_obj, "facets") <- object$facets
 
   return(obj)
 }
