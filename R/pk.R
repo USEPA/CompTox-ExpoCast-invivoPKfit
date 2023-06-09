@@ -223,7 +223,8 @@ pk <- function(data = NULL,
                scale_conc_args = list(),
                scale_time_args = list(),
                stat_model_args = list(),
-               stat_error_model_args = list()
+               stat_error_model_args = list(),
+               facet_data_args = list()
 
 ){
 
@@ -294,6 +295,9 @@ pk <- function(data = NULL,
 
   #Add default error model
   obj <- obj + do.call(stat_error_model, stat_error_model_args)
+
+  #add default faceting
+  obj <- obj + do.call(facet_data, facet_data_args)
 
   #return the initialized pk object
   return(obj)
