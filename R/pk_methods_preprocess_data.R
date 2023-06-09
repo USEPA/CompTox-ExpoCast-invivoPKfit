@@ -20,7 +20,7 @@
 #'   about the data, e.g. number of observations by route, media,
 #'   detect/nondetect; empirical tmax, time of peak concentration for oral data;
 #'   number of observations before and after empirical tmax)
-#' @author Caroline Ring
+#' @author John Wambaugh, Caroline Ring, Christopher Cook, Gilbert Padilla Mercado
 #' @importFrom magrittr `%>%`
 #' @export
 preprocess_data.pk <- function(obj){
@@ -65,24 +65,6 @@ preprocess_data.pk <- function(obj){
     data$Species <- tolower(data$Species)
     data$Route <- tolower(data$Route)
     data$Media <- tolower(data$Media)
-
-    # #Check to make sure the data include only one set of data_group. Stop
-    # #with an error otherwise.
-
-    data_grp <- do.call(dplyr::group_by,
-                             args = c(list(data),
-                                      obj$data_group))
-
-    n_grps <- dplyr::n_groups(data_grp)
-
-    if(n_grps > 1){
-      stop(paste("preprocess_data.pk():",
-                 "Renamed data contains multiple unique combinations of the data grouping variables",
-                 rlang::as_label(obj$data_group)))
-    }
-
-    chems <- unique(data$Chemical)
-    species <- unique(data$Species)
 
     #Check to make sure the data include only route_keep and media_keep
     routes <- unique(data$Route)
@@ -130,6 +112,13 @@ preprocess_data.pk <- function(obj){
     }
 
     # If data has passed all these initial checks, then proceed with pre-processing
+    data_group <- obj$data_group
+
+n_grps <- do.call(dplyr::group_by,
+                  args = c(list(data),
+                           data_group)) %>%
+  dplyr::group_keys() %>%
+  dplyr::n_distinct()
 
     if(!obj$settings_preprocess$suppress.messages){
       ### display messages describing loaded data
@@ -138,10 +127,12 @@ preprocess_data.pk <- function(obj){
           paste(
           paste(nrow(data),
                 "concentration vs. time observations loaded."),
-          paste("Chemicals:", chems),
-          paste("Species:", species),
-          paste("Routes:", routes),
-          paste("Media:", media),
+         paste0("Number of unique data groups ",
+               "(unique combinations of ",
+               paste(sapply(data_group, rlang::as_label),
+                     collapse = ", "),
+               "): ",
+               n_grps),
           sep = "\n"
         ),
         "\n")
@@ -481,18 +472,31 @@ data$Value_SD_orig <- data$Value_SD
                                             "N_Subjects > 1 and Value_SD is NA",
                                           sep = "; "),
                                     data$exclude_reason)
+    }
 
 
-      # data <- subset(data,
-      #                !((N_Subjects >1) %in% TRUE & is.na(Value_SD))
-     # )
 
-      # if(!obj$settings_preprocess$suppress.messages){
-      #   message(paste(dim(data)[1], "observations of",
-      #                 length(unique(data$Chemical)), "unique chemicals,",
-      #                 length(unique(data$Species)), "unique species, and",
-      #                 length(unique(data$Reference)), "unique references remain."))
-      # }
+    if(!obj$settings_preprocess$suppress.messages){
+      n_grps <- do.call(dplyr::group_by,
+                        args = c(list(data),
+                                 data_group)) %>%
+        dplyr::group_keys() %>%
+        dplyr::n_distinct()
+      ### display messages describing loaded data
+      message(
+        paste0(
+          paste(
+            paste("Remaining observations:", nrow(data)),
+            paste0("Number of unique data groups ",
+                   "(unique combinations of ",
+                   paste(sapply(data_group, rlang::as_label),
+                         collapse = ", "),
+                   "): ",
+                   n_grps),
+            sep = "\n"
+          ),
+          "\n")
+      )
     }
 
     #Exclude any remaining multi-subject observations where Value is NA
@@ -503,9 +507,6 @@ data$Value_SD_orig <- data$Value_SD
                              is.na(data$Value)),
                        " observations will be excluded.\n"))
       }
-      # data <- subset(data,
-      #                !((N_Subjects >1) %in% TRUE & is.na(Value))
-      # )
 
       data$exclude <- ifelse((data$N_Subjects >1) %in% TRUE & is.na(data$Value),
                              TRUE,
@@ -518,12 +519,29 @@ data$Value_SD_orig <- data$Value_SD
                                     data$exclude_reason
       )
 
-      # if(!obj$settings_preprocess$suppress.messages){
-      #   message(paste(dim(data)[1], "observations of",
-      #                 length(unique(data$Chemical)), "unique chemicals,",
-      #                 length(unique(data$Species)), "unique species, and",
-      #                 length(unique(data$Reference)), "unique references remain.\n"))
-      # }
+    }
+
+    if(!obj$settings_preprocess$suppress.messages){
+      n_grps <- do.call(dplyr::group_by,
+                        args = c(list(data),
+                                 data_group)) %>%
+        dplyr::group_keys() %>%
+        dplyr::n_distinct()
+      ### display messages describing loaded data
+      message(
+        paste0(
+          paste(
+            paste("Remaining observations:", nrow(data)),
+            paste0("Number of unique data groups ",
+                   "(unique combinations of ",
+                   paste(sapply(data_group, rlang::as_label),
+                         collapse = ", "),
+                   "): ",
+                   n_grps),
+            sep = "\n"
+          ),
+          "\n")
+      )
     }
 
     #Exclude any NA time values
@@ -533,7 +551,7 @@ data$Value_SD_orig <- data$Value_SD
                        sum(is.na(data$Time)),
                        " observations will be excluded.\n"))
       }
-      # data <- subset(data, !is.na(Time))
+
 
       data$exclude <- ifelse(is.na(data$Time),
                              TRUE,
@@ -545,11 +563,29 @@ data$Value_SD_orig <- data$Value_SD
                                           sep = "; "),
                                    data$exclude_reason
       )
+    }
 
-      # if(!obj$settings_preprocess$suppress.messages){
-      #   message(paste(dim(data)[1], "observations of",
-      #                 length(unique(data$Reference)), "unique references remain.\n"))
-      # }
+    if(!obj$settings_preprocess$suppress.messages){
+      n_grps <- do.call(dplyr::group_by,
+                        args = c(list(data),
+                                 data_group)) %>%
+        dplyr::group_keys() %>%
+        dplyr::n_distinct()
+      ### display messages describing loaded data
+      message(
+        paste0(
+          paste(
+            paste("Remaining observations:", nrow(data)),
+            paste0("Number of unique data groups ",
+                   "(unique combinations of ",
+                   paste(sapply(data_group, rlang::as_label),
+                         collapse = ", "),
+                   "): ",
+                   n_grps),
+            sep = "\n"
+          ),
+          "\n")
+      )
     }
 
     #Exclude any Dose = 0 observations
@@ -559,7 +595,6 @@ data$Value_SD_orig <- data$Value_SD
                        sum(data$Dose <= .Machine$double.eps),
                        " observations will be excluded.\n"))
       }
-      # data <- subset(data, data$Dose > .Machine$double.eps)
 
       data$exclude <- ifelse(data$Dose < .Machine$double.eps,
                              TRUE,
@@ -572,10 +607,29 @@ data$Value_SD_orig <- data$Value_SD
                                    data$exclude_reason
       )
 
-      # if(!obj$settings_preprocess$suppress.messages){
-      #   message(paste(dim(data)[1], "observations of",
-      #                 length(unique(data$Reference)), "unique references remain\n."))
-      # }
+    }
+
+    if(!obj$settings_preprocess$suppress.messages){
+      n_grps <- do.call(dplyr::group_by,
+                        args = c(list(data),
+                                 data_group)) %>%
+        dplyr::group_keys() %>%
+        dplyr::n_distinct()
+      ### display messages describing loaded data
+      message(
+        paste0(
+          paste(
+            paste("Remaining observations:", nrow(data)),
+            paste0("Number of unique data groups ",
+                   "(unique combinations of ",
+                   paste(sapply(data_group, rlang::as_label),
+                         collapse = ", "),
+                   "): ",
+                   n_grps),
+            sep = "\n"
+          ),
+          "\n")
+      )
     }
 
     #apply time transformation
