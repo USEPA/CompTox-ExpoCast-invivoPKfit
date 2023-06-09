@@ -360,49 +360,7 @@ pk_add.pk_facet_data <- function(object, pk_obj, objectname){
   #construct data_group as list of quosures
   #(same effect as a `dplyr::vars()` call)
   data_group <-  do.call(rlang::quos, rlang::syms(newvars))
-
-  #check to see whether the facets produce more than one group of data
-  #if they produce only one, then do not change class to pk_faceted
-
-  data_original <- do.call(dplyr::group_by,
-                      args = c(list(pk_obj$data_original),
-                      object$facets))
-
-  n_grps <- dplyr::n_groups(data_original)
-
-  if(n_grps > 1){
-    #translate the faceting variables (original data variables names) into harmonized variable names
-
-
-    #produce a tibble with a list column of pk objects, each for one slice of the data
-    pk_faceted_obj <-  do.call(dplyr::group_by,
-                               args = c(list(pk_obj$data_original),
-                                        object$facets)) %>%
-      dplyr::summarise(pk_object = list(
-        pk(data = dplyr::cur_data_all(), #the current slice of data
-                                   mapping = pk_obj$mapping, #use the same mapping
-           data_group = data_group,
-           #use the same settings, scales, stats
-           settings_preprocess_args = get_settings_preprocess(pk_obj),
-           settings_data_info_args = get_settings_data_info(pk_obj),
-           settings_optimx_args = get_settings_optimx(pk_obj),
-           scale_conc_args = get_scale_conc(pk_obj),
-           scale_time_args = get_scale_time(pk_obj),
-           stat_model_args = get_stat_model(pk_obj),
-           stat_error_model_args = get_stat_error_model(pk_obj))
-                                   )
-        )
-#set an attribute to store faceting variables
-    attr(pk_faceted_obj, "facets") <- object$facets
-    class(pk_faceted_obj) <- c("pk_faceted",
-                               "pk",
-                               class(pk_faceted_obj))
-    return(pk_faceted_obj)
-  }else{
-    #if there is only one facet,
-    #just keep treating it as a `pk` object -- no need to go to all the trouble
-    #just modify data_group to match faceting
     pk_obj$data_group <- data_group
     return(pk_obj)
-  }
+
 }
