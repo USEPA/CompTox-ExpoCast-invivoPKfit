@@ -104,6 +104,7 @@ calc_nca <- function(time,
       series_id <- rep(NA_integer_, length(conc))
     }
 
+    #order everything by increasing time
 ord <- order(time)
 time <- time[ord]
 conc <- conc[ord]
@@ -128,29 +129,43 @@ series_id <- series_id[ord]
   ntab <- table(time, series_id)
   m <- matrix(ntab, ncol = ncol(ntab))
 
-  design_check <- colSums(m)
+  obs_per_time <- table(time)
+  obs_per_seriesID <- table(series_id)
 
-  if(all(design_check==1)){
-    #one measurement per animal per time
-    if(all(table(time) >= 2)){
-      #ssd requires at least 2 observations per time point
+  if(all(m==1)){
+    #every subject measured at every time point
+    design <- "complete"
+  }else if(any(obs_per_time==1) &
+       any(obs_per_time>1)){
+      #if 1 observation for some time point and multiple observations for others,
+      #it should be "batch" but it will fail due to a bug in PK::nca.batch()
+      #munge time very slightly to make 1 observation for each time point,
+      #and use an ssd design
+    time_split <- split(time, time)
+    min_time_nz <- min(time[time > 0])
+    time_split <- sapply(time_split,
+                         function(this_time){
+                           if(length(this_time)==1){
+                             this_time
+                           }else{
+                             #add a small fuzz factor: 1% of smallest time
+                             this_time + runif(length(this_time),
+                                               min = 0,
+                                               max = 0.01*min_time_nz)
+                           }
+                         })
+    time <- unsplit(time_split, time)
+    design <- "complete"
+  }else if(all(obs_per_time > 1) &
+           length(unique(obs_per_seriesID))>1){
+    #multiple observations for every time point, but not all subjects at every time point
+      design <- "batch"
+    }else if(length(unique(obs_per_seriesID))==1){
+      #one obs per subject per time point
       design <- "ssd"
     }else{
-      if(all(table(time) == 1)){
-        #if only 1 observation per time point, use "complete"
-        design <- "complete"
-      }else{
-      #if 1 observation for some time points and multiple observations for others, use "batch"
       design <- "batch"
-      }
     }
-  }else if(all(design_check == nrow(m))){
-    #each animal measured at every time point
-    design <- "complete"
-  }else{
-    #each animal measured at multiple timepoints, but not at every time point
-    design <- "batch"
-  }
 
   data <- data.frame(id = series_id,
                      conc = conc,
