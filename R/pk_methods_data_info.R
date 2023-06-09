@@ -37,6 +37,8 @@ data_info.pk <- function(obj){
     message("data_info.pk(): Getting data summary statistics\n")
   }
 
+  #grouping for data summary:
+  #data grouping, plus also Route and Media if not already included in data grouping
   summary_group <-   unique(
     c(obj$data_group,
       vars(Route, Media)
@@ -57,6 +59,16 @@ data_info.pk <- function(obj){
                        nca_group = summary_group,
                        exclude = TRUE,
                        dose_norm = TRUE)
+  #pivot wider
+  #first get names of grouping vars
+  grp_vars <- sapply(summary_group,
+                     rlang::as_label)
+#then pivot wider
+  nca_dose_norm <-   nca_dose_norm %>%
+    tidyr::pivot_wider(id_cols = tidyselect::all_of(grp_vars),
+                       names_from = param_name,
+                       values_from = param_value) %>%
+    as.data.frame()
 
   #get data flags:
   if(obj$settings_preprocess$suppress.messages %in% FALSE){
