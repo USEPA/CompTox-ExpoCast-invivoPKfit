@@ -41,8 +41,7 @@ get_elbow <- function(x, y, ...){
   slope <- (obs_last[2] - obs_first[2])/(obs_last[1] - obs_first[1])
   intercept <- obs_first[2] - slope * obs_first[1]
 
-  ux <- sort(unique(x))
-  med_y <- sapply(ux,
+  med_y <- sapply(x,
                           function(this_x) median(y[x==this_x])
   )
 
