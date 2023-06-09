@@ -19,6 +19,8 @@ obj <- obj %>%
   dplyr::transmute(pk_object = purrr::map(pk_object,
                                           preprocess_data)
                    )
+
+class(obj) <- c("pk_faceted", "pk", class(obj))
     return(obj)
 
 }

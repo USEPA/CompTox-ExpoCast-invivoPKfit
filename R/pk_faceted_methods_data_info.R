@@ -15,6 +15,7 @@ data_info.pk_faceted <- function(obj){
     dplyr::transmute(pk_object = purrr::map(pk_object,
                                             data_info)
     )
+  class(obj) <- c("pk_faceted", "pk", class(obj))
   return(obj)
 
   return(obj)

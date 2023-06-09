@@ -13,5 +13,7 @@ fit.pk_faceted <- function(obj){
                                             fit)
     )
 
+  class(obj) <- c("pk_faceted", "pk", class(obj))
+
   return(obj)
 }

@@ -35,6 +35,8 @@ prefit.pk_faceted <- function(obj){
                                             prefit)
     )
 
+  class(obj) <- c("pk_faceted", "pk", class(obj))
+
   return(obj)
 
 }
