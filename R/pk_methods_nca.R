@@ -121,11 +121,7 @@ nca.pk <- function(obj,
                      Time_trans.Units,
                      Dose.Units))
 
-  nca_wide <- nca_out %>%
-    tidyr::pivot_wider(id_cols = tidyselect::all_of(grp_vars),
-                       names_from = param_name,
-                       values_from = param_value) %>%
-    as.data.frame()
 
-  return(nca_wide)
+
+  return(nca_out)
 }
