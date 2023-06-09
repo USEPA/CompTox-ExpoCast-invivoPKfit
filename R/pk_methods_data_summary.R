@@ -97,31 +97,6 @@ data_summary.pk <- function(obj,
 
     )
 
-  # data_summary <- data_summary %>%
-  #   tidyr::pivot_longer(c(n_obs,
-  #                         n_exclude,
-  #                         n_detect,
-  #                         n_series_id,
-  #                         n_timepts,
-  #                         n_ref,
-  #                         tfirst,
-  #                         tfirst_detect,
-  #                         tlast,
-  #                         tlast_detect),
-  #                       names_to = "param_name",
-  #                       values_to = "param_value")  %>%
-  #   dplyr::mutate(param_units = dplyr::case_when( #derive NCA param units from data units
-  #     param_name %in% c("tlast",
-  #                       "tlast_detect",
-  #                       "tfirst",
-  #                       "tfirst_detect") ~ Time_trans.Units,
-  #     param_name %in% "n_obs" ~ "Number of observations",
-  #     param_name %in% "n_exclude" ~ "Number of excluded observations",
-  #     param_name %in% "n_detect" ~ "Number of non-excluded detected observations",
-  #     param_name %in% c("n_series_id") ~ "Number of unique series IDs",
-  #     param_name %in% c("n_timepts") ~ "Number of unique timepoints",
-  #     param_name %in% "n_ref" ~ "Number of unique reference IDs"))
-
   data_summary <- data_summary %>%
     as.data.frame()
 
