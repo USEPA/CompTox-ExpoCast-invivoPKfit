@@ -1,64 +1,64 @@
 #' Preprocess data generic
 #'
 #' @export
-#' @seealso [preprocess_data.pk()] for the `preprocess_data` method for class [pk()]
-preprocess_data <- function(obj, ...){
-  UseMethod("preprocess_data", obj)
+#' @seealso [do_preprocess.pk()] for the `do_preprocess` method for class [pk()]
+do_preprocess <- function(obj, ...){
+  UseMethod("do_preprocess", obj)
 }
 
-#' Preprocess_data default method
+#' do_preprocess default method
 #'
 #' @export
-preprocess_data.default <- function(obj, ...){
-  stop(paste("No 'preprocess_data' method exists for object of class",
+do_preprocess.default <- function(obj, ...){
+  stop(paste("No 'do_preprocess' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
 
-#' data_info generic
+#' do_data_info generic
 #'
 #' @export
-#' @seealso [data_info.pk()] for the `data_info` method for class [pk()]
-data_info <- function(obj, ...){
-  UseMethod("data_info", obj)
+#' @seealso [do_data_info.pk()] for the `do_data_info` method for class [pk()]
+do_data_info <- function(obj, ...){
+  UseMethod("do_data_info", obj)
 }
 
-#' data_info default method
+#' do_data_info default method
 #'
 #' @export
-data_info.default <- function(obj, ...){
-  stop(paste("No 'data_info' method exists for object of class",
+do_data_info.default <- function(obj, ...){
+  stop(paste("No 'do_data_info' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
 
 #' Prefitting
 #'
 #' @export
-prefit <- function(obj, ...){
-  UseMethod("prefit", obj)
+do_prefit <- function(obj, ...){
+  UseMethod("do_prefit", obj)
 }
 
-#' Prefit default method
+#' do_prefit default method
 #'
 #' @export
-prefit.default <- function(obj, ...){
-  stop(paste("No 'prefit' method exists for object of class",
+do_prefit.default <- function(obj, ...){
+  stop(paste("No 'do_prefit' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
 
 #' Fitting
 #'
-#' This is the S3 generic method for `fit`.
+#' This is the S3 generic method for `do_fit`.
 #' @export
-#' @seealso [fit.pk()] for the `fit` method for class [pk()]
-fit <- function(obj, ...){
-  UseMethod("fit", obj)
+#' @seealso [do_fit.pk()] for the `do_fit` method for class [pk()]
+do_fit <- function(obj, ...){
+  UseMethod("do_fit", obj)
 }
 
-#' Fit default method
+#' do_fit default method
 #'
 #' @export
-fit.default <- function(obj, ...){
-  stop(paste("No 'fit' method exists for object of class",
+do_fit.default <- function(obj, ...){
+  stop(paste("No 'do_fit' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
 

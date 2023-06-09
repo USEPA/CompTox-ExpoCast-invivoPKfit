@@ -19,14 +19,14 @@ pk(
     subjects.weight_kg, Weight.Units = "kg", Time = conc_time_values.time_hr, Time.Units
     = "hours", Value = conc_time_values.conc, Value.Units = "mg/L", LOQ =
     series.loq_normalized, Value_SD = conc_time_values.conc_sd_normalized),
-  data_group = vars(Chemical, Species),
   settings_preprocess_args = list(),
   settings_data_info_args = list(),
   settings_optimx_args = list(),
   scale_conc_args = list(),
   scale_time_args = list(),
   stat_model_args = list(),
-  stat_error_model_args = list()
+  stat_error_model_args = list(),
+  facet_data_args = list()
 )
 }
 \arguments{

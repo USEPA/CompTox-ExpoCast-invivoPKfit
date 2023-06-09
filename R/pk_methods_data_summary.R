@@ -48,7 +48,7 @@ data_summary.pk <- function(obj,
                             summary_group = NULL){
 
   if(is.null(summary_group)){
-    summary_group <- obj$settings_data_info$nca_group
+    summary_group <- obj$data_group
   }
 
   if(is.null(newdata)) newdata <- obj$data

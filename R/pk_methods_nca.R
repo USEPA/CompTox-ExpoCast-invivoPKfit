@@ -44,6 +44,9 @@ nca.pk <- function(obj,
                    nca_group = NULL,
                    exclude = TRUE,
                    dose_norm = FALSE){
+
+  suppress.messages <- obj$settings_preprocess$suppress.messages
+
   if(is.null(nca_group)){
     nca_group <- obj$settings_data_info$nca_group
   }
@@ -89,12 +92,28 @@ nca.pk <- function(obj,
     dplyr::summarise(Conc.Units = unique(Conc.Units),
                      Time_trans.Units = unique(Time_trans.Units),
                      Dose.Units = unique(Dose.Units),
-                     calc_nca(time = Time_trans[exclude %in% FALSE], #calculate NCA
+                     {
+                       if(suppress.messages %in% FALSE){
+                         cur_data_summary <- dplyr::inner_join(get_data_summary(obj,
+                                                                                summary_group = nca_group),
+                                                               dplyr::cur_group(),
+                                                               by = grp_vars) %>%
+                           as.data.frame
+                         message(paste("nca.pk(): Doing",
+                                       ifelse(dose_norm %in% TRUE,
+                                              "dose-normalized",
+                                              "non-dose-normalized"),
+                                       "NCA for the following data:"))
+                         print(cur_data_summary)
+                       }
+                       calc_nca(time = Time_trans[exclude %in% FALSE], #calculate NCA
                               dose = Dose[exclude %in% FALSE],
                               conc = Conc[exclude %in% FALSE],
                               detect = Detect[exclude %in% FALSE],
                               route = unique(Route[exclude %in% FALSE]),
-                              series_id = Series_ID[exclude %in% FALSE])) %>%
+                              series_id = Series_ID[exclude %in% FALSE])
+                       }
+                     ) %>%
     dplyr::mutate(param_units = dplyr::case_when( #derive NCA param units from data units
       param_name %in% c("AUC_tlast",
                         "AUC_infinity") ~ paste(Conc.Units,
