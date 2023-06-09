@@ -77,7 +77,9 @@ data_sigma_group <- interaction(
 data_sigma_group[data$exclude %in% TRUE] <- NA_character_
 data_sigma_group <- droplevels(data_sigma_group)
 
-obj$prefit$stat_error_model$data_sigma_group <- data_sigma_group
+#add data_sigma_group to data
+obj$data$data_sigma_group <- data_sigma_group
+data <- get_data(obj)
 
 #get bounds and starting points for each error sigma to be fitted
 
@@ -95,8 +97,7 @@ sigma_DF <- data %>%
 sigma_DF <- do.call(dplyr::group_by,
                     args = c(list(sigma_DF),
                              obj$stat_error_model$error_group)) %>%
-  dplyr::summarise(data_sigma_group = unique(data_sigma_group),
-                   param_name = paste("sigma",
+  dplyr::summarise(param_name = paste("sigma",
                                       unique(data_sigma_group),
                                       sep = "_"),
                    param_units = unique(Conc_trans.Units),
