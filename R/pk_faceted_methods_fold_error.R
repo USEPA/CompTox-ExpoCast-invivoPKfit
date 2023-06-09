@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-fold_error.pk <- function(obj, ...){
+fold_error.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(fold_error =purrr::map(pk_object,fold_error))
 }

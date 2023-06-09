@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-get_error_group.pk <- function(obj, ...){
+get_error_group.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(get_error_group =purrr::map(pk_object,get_error_group))
 }

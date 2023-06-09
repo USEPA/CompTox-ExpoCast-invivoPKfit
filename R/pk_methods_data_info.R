@@ -38,7 +38,7 @@ data_info.pk <- function(obj){
   }
 
   summary_group <-   unique(
-    c(obj$facet_data,
+    c(obj$data_group,
       vars(Route, Media)
     )
   )
@@ -68,7 +68,7 @@ data_info.pk <- function(obj){
   grp_vars <- sapply(summary_group,
                      rlang::as_label)
 
-  df <- dplyr::inner_join(data_summary,
+  df <- dplyr::inner_join(data_summary_out,
               nca_dose_norm,
               by = grp_vars) %>%
    dplyr::mutate(
@@ -76,10 +76,8 @@ data_info.pk <- function(obj){
       Route %in% "oral" &
         (abs(tmax - tfirst_detect) < sqrt(.Machine$double.eps)) %in% TRUE &
                  !is.na(tmax),
-      paste2(data_flag,
-             "tmax is equal to time of first detect",
-             sep = " | "),
-      data_flag
+    "tmax is equal to time of first detect",
+      NA_real_
     )) %>% dplyr::mutate(
       data_flag = ifelse(
         Route %in% "oral" &
@@ -110,8 +108,8 @@ data_info.pk <- function(obj){
   #Check for obeying dose normalization by summary_group
 
   dose_norm_check <- do.call(dplyr::group_by,
-                             df,
-                             summary_group) %>%
+                             args = c(list(df),
+                             summary_group)) %>%
     dplyr::summarise(
       Cmax_fold_range = {
         tmprange <- suppressWarnings(range(`Cmax`, na.rm = TRUE))

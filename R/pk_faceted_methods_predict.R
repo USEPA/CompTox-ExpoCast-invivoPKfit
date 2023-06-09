@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-predict.pk <- function(obj, ...){
+predict.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(predict =purrr::map(pk_object,predict))
 }

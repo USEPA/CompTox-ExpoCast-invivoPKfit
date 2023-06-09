@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-get_stat_model.pk <- function(obj, ...){
+get_stat_model.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(get_stat_model =purrr::map(pk_object,get_stat_model))
 }

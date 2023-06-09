@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-logLik.pk <- function(obj, ...){
+logLik.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(logLik =purrr::map(pk_object,logLik))
 }

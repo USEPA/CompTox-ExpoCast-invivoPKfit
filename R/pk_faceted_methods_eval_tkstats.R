@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-eval_tkstats.pk <- function(obj, ...){
+eval_tkstats.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(eval_tkstats =purrr::map(pk_object,eval_tkstats))
 }

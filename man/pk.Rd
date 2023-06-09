@@ -19,7 +19,7 @@ pk(
     subjects.weight_kg, Weight.Units = "kg", Time = conc_time_values.time_hr, Time.Units
     = "hours", Value = conc_time_values.conc, Value.Units = "mg/L", LOQ =
     series.loq_normalized, Value_SD = conc_time_values.conc_sd_normalized),
-  facets = vars(Chemical, Species),
+  data_group = vars(Chemical, Species),
   settings_preprocess_args = list(),
   settings_data_info_args = list(),
   settings_optimx_args = list(),

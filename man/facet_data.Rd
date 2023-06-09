@@ -4,7 +4,10 @@
 \alias{facet_data}
 \title{Facet a PK fit}
 \usage{
-facet_data(facets = vars(Chemical, Species), ...)
+facet_data(
+  facets = vars(chemicals_analyzed.dsstox_substance_id, subjects.species_harmonized),
+  ...
+)
 }
 \arguments{
 \item{facets}{A set of variables or expressions quoted by [dplyr::vars()],

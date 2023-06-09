@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-get_settings_optimx.pk <- function(obj, ...){
+get_settings_optimx.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(get_settings_optimx =purrr::map(pk_object,get_settings_optimx))
 }

@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-rmse.pk <- function(obj, ...){
+rmse.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(rmse =purrr::map(pk_object,rmse))
 }

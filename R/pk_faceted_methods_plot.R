@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-plot.pk <- function(obj, ...){
+plot.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(plot =purrr::map(pk_object,plot))
 }

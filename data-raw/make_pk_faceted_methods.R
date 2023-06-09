@@ -9,13 +9,16 @@ pk_methods_names <- gsub(x=pk_methods_names,
                          replacement = "",
                          fixed = TRUE)
 
+#these behave differently (they modify in place)
+#and I have created these manually.
 pk_methods_names <- setdiff(pk_methods_names,
                             c("preprocess_data",
                               "data_info",
                               "prefit",
-                              "fit"))
+                              "fit",
+                              "add_pkproto"))
 
-for (i in seq_along(pk_methods_list)){
+for (i in seq_along(pk_methods_names)){
   this_name <- pk_methods_names[i]
 
   #produce text of the pk_faceted script
@@ -39,7 +42,7 @@ for (i in seq_along(pk_methods_list)){
                           "@family methods for pk_faceted objects"
                           )
                         ),
-                 paste0(this_name, ".pk <- function(obj, ...){"),
+                 paste0(this_name, ".pk_faceted <- function(obj, ...){"),
                  paste0("obj %>% dplyr::mutate(",
                         this_name, " =",
                         "purrr::map(pk_object,",

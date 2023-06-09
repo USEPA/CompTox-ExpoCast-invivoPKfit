@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-is.pk <- function(obj, ...){
+is.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(is =purrr::map(pk_object,is))
 }

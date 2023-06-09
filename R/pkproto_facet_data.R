@@ -60,7 +60,8 @@
 #'   always added to a [pk()] object using [`+.pk`].
 #' @export
 #' @author Caroline Ring, Gilbert Padilla Mercado, Paul Kruse
-facet_data <- function(facets = vars(Chemical, Species),
+facet_data <- function(facets = vars(chemicals_analyzed.dsstox_substance_id,
+                                     subjects.species_harmonized),
                      ...){
   #get arguments and values
   argg <- c(as.list(environment()), list(...))

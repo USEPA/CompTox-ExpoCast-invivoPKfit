@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-get_scale_conc.pk <- function(obj, ...){
+get_scale_conc.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(get_scale_conc =purrr::map(pk_object,get_scale_conc))
 }

@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-summary.pk <- function(obj, ...){
+summary.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(summary =purrr::map(pk_object,summary))
 }

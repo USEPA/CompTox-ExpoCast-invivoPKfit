@@ -66,22 +66,23 @@ preprocess_data.pk <- function(obj){
     data$Route <- tolower(data$Route)
     data$Media <- tolower(data$Media)
 
-    # #Check to make sure the data include only one Chemical and Species. Stop
+    # #Check to make sure the data include only one set of data_group. Stop
     # #with an error otherwise.
+
+    data_grp <- do.call(dplyr::group_by,
+                             args = c(list(data),
+                                      obj$data_group))
+
+    n_grps <- dplyr::n_groups(data_grp)
+
+    if(n_grps > 1){
+      stop(paste("preprocess_data.pk():",
+                 "Renamed data contains multiple unique combinations of the data grouping variables",
+                 rlang::as_label(obj$data_group)))
+    }
+
     chems <- unique(data$Chemical)
     species <- unique(data$Species)
-    #
-    # nchem <- length(chems)
-    # nspecies <- length(species)
-    #
-    # if(!(nchem %in% 1 & nspecies %in% 1)){
-    #   stop(paste("preprocess_data.pk(): data contains multiple chemicals and/or multiple species.",
-    #              "Unique chemicals in this data:",
-    #              paste(chems, collapse = "; "),
-    #              "Unique Species in this data:",
-    #              paste(species, collapse = "; "),
-    #              sep = "\n"))
-    # }
 
     #Check to make sure the data include only route_keep and media_keep
     routes <- unique(data$Route)

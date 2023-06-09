@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-compare_models.pk <- function(obj, ...){
+compare_models.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(compare_models =purrr::map(pk_object,compare_models))
 }

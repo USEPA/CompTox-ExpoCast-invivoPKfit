@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-get_mapping.pk <- function(obj, ...){
+get_mapping.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(get_mapping =purrr::map(pk_object,get_mapping))
 }

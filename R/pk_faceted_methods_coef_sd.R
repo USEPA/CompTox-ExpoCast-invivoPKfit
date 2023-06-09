@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-coef_sd.pk <- function(obj, ...){
+coef_sd.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(coef_sd =purrr::map(pk_object,coef_sd))
 }

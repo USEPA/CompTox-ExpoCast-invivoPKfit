@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-subtract_pkproto.pk <- function(obj, ...){
+subtract_pkproto.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(subtract_pkproto =purrr::map(pk_object,subtract_pkproto))
 }

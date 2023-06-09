@@ -216,7 +216,7 @@ pk <- function(data = NULL,
                              LOQ = series.loq_normalized,
                              Value_SD  = conc_time_values.conc_sd_normalized
                ),
-               facets = vars(Chemical, Species),
+               data_group = vars(Chemical, Species),
                settings_preprocess_args = list(),
                settings_data_info_args = list(),
                settings_optimx_args = list(),
@@ -266,7 +266,7 @@ pk <- function(data = NULL,
 
   #Create the initial pk object
   obj <- list("data_original" = data,
-              "facets" = facets,
+              "data_group" = data_group,
               "mapping" = mapping,
               "status" = status_init
   )

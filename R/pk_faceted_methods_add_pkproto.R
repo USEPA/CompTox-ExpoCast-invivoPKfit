@@ -28,7 +28,7 @@
 
   #make sue
   if      (is.pk_faceted(e1)) {
-    if(!inherits(e2, "facet_data")){
+    if(!inherits(e2, "pk_facet_data")){
     #add to each of the pk objects in turn
     e1 %>% dplyr::transmute(pk_object = purrr::map(pk_object,
                                                    function(x){

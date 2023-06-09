@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-AIC.pk <- function(obj, ...){
+AIC.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(AIC =purrr::map(pk_object,AIC))
 }

@@ -7,6 +7,6 @@
 #'@export
 #'@author Caroline Ring
 #'@family methods for pk_faceted objects
-residuals.pk <- function(obj, ...){
+residuals.pk_faceted <- function(obj, ...){
 obj %>% dplyr::mutate(residuals =purrr::map(pk_object,residuals))
 }
