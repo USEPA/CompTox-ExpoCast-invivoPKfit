@@ -96,7 +96,7 @@ fit_group <- function(data,
           ) #end args = c()
         ) #end do.call
         tmp$method <- rownames(tmp)
-
+        tmp
       },
       error = function(err){
         method <- settings_optimx$method
