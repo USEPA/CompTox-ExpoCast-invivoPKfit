@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 
 library(tidyverse, quietly = TRUE)
-devtools::load_all() # Loads the invivopkfit package in feature/pkS3obj branch
+devtools::load_all() # Loads the invivopkfit package in feature/pkS3obj_facet branch
 
 ```
 
@@ -22,11 +22,12 @@ Here I subset the `cvt` object and use that as my working data.
 
 ```{r data_loading}
 # There are 103 unique chemicals in this object
-cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>% unique() %>% length()
+cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>%
+  unique() %>%
+  length()
 
 my_predata <- subset(cvt,
-                     chemicals_analyzed.dsstox_substance_id %in% "DTXSID0020442" &
-                       subjects.species_harmonized %in% "rat")
+                     chemicals_analyzed.dsstox_substance_id %in% "DTXSID0020442")
 
 
 
@@ -41,73 +42,145 @@ I set the `error_group = vars(Chemical, Species)`.
 ```{r single_fit}
 my_pk <- pk(data = my_predata) +
   settings_preprocess(keep_data_original = TRUE) +
-  settings_optimx(method = "L-BFGS-B") +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
   scale_conc(dose_norm = TRUE) +
   # scale_time() +
   # stat_model() + 
-  stat_error_model(error_group = vars(Chemical, Species))
+  stat_error_model(error_group = vars(Chemical, Species)) +
+  facet_data(vars(chemicals_analyzed.dsstox_substance_id,
+                                     subjects.species_harmonized))
 
-my_pk <- preprocess_data(my_pk)
+my_pk <- do_preprocess(my_pk)
 
-my_pk <- data_info(my_pk) # summarize error (Returning more or less than 1 row per summarize)
+my_pk <- do_data_info(my_pk) 
+# summarizes error (Returning more or less than 1 row per summarize)
 
-my_pk <- prefit(my_pk) 
-# I get a warning here 
-# "In med_y - pred : "
-# "longer object length is not a multiple of shorter object length"
+my_pk <- do_prefit(my_pk) 
 
-my_pk <- fit(my_pk)
+my_pk <- do_fit(my_pk)
 ```
 
-```{r single_result_extraction}
+Batch mode works now I need to write a function that recapitulates `coef()` method
+
+```{r coef_function_remake}
 # A list of each fit model with the estimated parameters for that model
-# Each row has 
-pk_results <- coef(my_pk)
+pk_results <- coef(my_pk) # NAs are printed
 
-pred_results <- predict(my_pk)
+my_coefs_test <- my_pk$fit |>
+  ungroup() |>
+  tidyr::unnest(cols = fit) |>
+  tidyr::unite(sigma, starts_with("sigma_"),
+        na.rm = TRUE) |>
+  group_split(method)
 
+my_coef <- function(obj,
+                    data_group = NULL,
+                    ...) {
+  # Check fit status
+  check <- check_required_status(obj = obj,
+                                 required_status = status_fit)
+  
+  if (check %in% FALSE) stop(attr(check, "msg")) # Stop if not fitted
+  
+  # Assign data groups to variable
+  if (is.null(data_group)) data_group <- obj$data_group
+  
+  fit_coef <- obj$fit |>
+    dplyr::ungroup() |>
+    tidyr::unnest(cols = fit) |>
+    tidyr::unite(sigma, starts_with("sigma_"),
+                 na.rm = TRUE)# |>
+    # dplyr::group_split(method)
+  
+  # method_names <- purrr::map(fit_coef,
+  #     \(x) unique(x$method)) |>
+  #   unlist()
+  # 
+  # names(fit_coef) <- method_names
+  
+  return(fit_coef)
+}
+
+my_coefs <- my_coef(my_pk)
+
+```
+
+
+```{r predict_method_remake}
+pred_results <- predict(my_pk) # Error about missing parameters
+
+
+my_test_data <- my_pk$data
+
+my_test_data %>%
+  group_by(!!!my_pk$data_group) %>%
+  dplyr::select(all_of(c("Time", "Time.Units", "Dose", "Route", "Media"))) %>%
+  dplyr::left_join(my_coefs,
+            relationship = "many-to-many") -> joined_test_data
+
+# Testing not complete
+joined_test_data %>%
+  relocate(method, .before = model) %>%
+  group_by(across(Chemical:model)) %>%
+  nest(.key = "coefs") %>%
+  rowwise() %>%
+  dplyr::mutate(model_fun = my_pk$stat_model[[model]]$conc_fun,
+                predicted_Value = do.call(model_fun,
+                                          args = list(
+                                            params = coefs,
+                                            dose = Dose,
+                                            time = Time,
+                                            route = Route,
+                                            medium = Media
+                                          )),
+  .after = model) %>%
+  head()
+
+my_predict <- function(obj,
+                       newdata = NULL,
+                       type = "conc",
+                       exclude = TRUE,
+                       use_scale_conc = FALSE) {
+    # Check fit status
+  check <- check_required_status(obj = obj,
+                                 required_status = status_fit)
+  
+  if (check %in% FALSE) stop(attr(check, "msg")) # Stop if not fitted
+  
+  if (is.null(newdata)) newdata <- obj$data
+  newdata_ok <- check_newdata(newdata = newdata,
+                              olddata = obj$data,
+                              req_vars = c("Time",
+                                           "Time.Units",
+                                           "Dose",
+                                           "Route",
+                                           "Media"),
+                              exclude = exclude)
+  
+    #scale time if needed
+  if (!("Time_trans" %in% names(newdata))){
+  newdata$Time_trans <- convert_time(x = newdata$Time,
+                                     from = newdata$Time.Units,
+                                     to = obj$scales$time$new_units)
+  }
+
+  #apply transformations if so specified
+  conc_scale <- conc_scale_use(obj = obj,
+                               use_scale_conc = use_scale_conc)
+  
+  
+}
+
+
+
+
+```
+
+```{r}
 plot_results <- plot(my_pk)
 
 my_tkstats <- get_tkstats(my_pk)
 ```
 
-
-```{r single_result_tidying}
-# Currently, it seems tk_stats_*() does not return dose-normalized values.
-my_tkstats %>%
-  pluck("model_1comp") %>%
-  distinct() %>% head()
-
-# Assembling the data that I want to add for a summary data.frame
-my_pk$fit$model_flat
-my_pk$settings_optimx$method
-my_pk$scales$conc$dose_norm
-my_pk$scales$conc$log10_trans
-rlang::quo_get_expr(my_pk$scales$conc$expr)
-
-# Building the wide "fit" data.frame from various parts of the `pk` object
-my_pk$fit %>%
-  as.data.frame() %>%
-  # Switches default order of 
-  rename_with(~paste0(str_extract(.,
-                                  pattern = "(?<=\\.).+$"),
-                      ".",
-                      str_extract(.,
-                                  pattern = "(?<=model_)[:alnum:]+")
-                      )
-  ) %>%
-  dplyr::select(-(starts_with(c("kkt", "xtime", "niter", "fevals", "gevals", "sigma")))) %>%
-  rownames_to_column(var = "method") %>%
-  mutate(DTXSID = unique(my_pk$data$DTXSID),
-         Species = unique(my_pk$data$Species),
-         fit_log_conc = my_pk$scales$conc$log10_trans,
-         fit_conc_dose = my_pk$scales$conc$dose_norm,
-         rescale_time = ifelse(my_pk$scales$time == "identity",
-                               FALSE, TRUE),
-         .before = method) %>%
-  View()
-
-
-```
 
 
