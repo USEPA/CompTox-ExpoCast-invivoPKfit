@@ -41,14 +41,14 @@ I set the `error_group = vars(Chemical, Species)`.
 
 ```{r single_fit}
 my_pk <- pk(data = my_predata) +
+  facet_data(vars(chemicals_analyzed.dsstox_substance_id,
+                  subjects.species_harmonized)) +
   settings_preprocess(keep_data_original = TRUE) +
   settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
   scale_conc(dose_norm = TRUE) +
   # scale_time() +
   # stat_model() + 
-  stat_error_model(error_group = vars(Chemical, Species)) +
-  facet_data(vars(chemicals_analyzed.dsstox_substance_id,
-                                     subjects.species_harmonized))
+  stat_error_model(error_group = vars(Chemical, Species)) 
 
 my_pk <- do_preprocess(my_pk)
 
