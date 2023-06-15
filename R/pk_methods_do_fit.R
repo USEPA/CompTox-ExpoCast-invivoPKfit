@@ -73,83 +73,84 @@ do_fit.pk <- function(obj){
 
 
   fit_list <- sapply(names(obj$stat_model),
-         function(this_model){
+                     function(this_model){
 
-    if(suppress.messages %in% FALSE){
-      message(paste("do_fit.pk(): Fitting model",
-                    this_model,
-                    "using optimx::optimx()"))
-    }
+                       if(suppress.messages %in% FALSE){
+                         message(paste("do_fit.pk(): Fitting model",
+                                       this_model,
+                                       "using optimx::optimx()"))
+                       }
 
-    #nest the necessary data frames...
-    data_nest <- get_data(obj) %>%
-      tidyr::nest(data = !tidyselect::all_of(data_group_vars))
+                       #nest the necessary data frames...
+                       data_nest <- get_data(obj) %>%
+                         tidyr::nest(data = !tidyselect::all_of(data_group_vars))
 
-    par_DF_nest <- obj$prefit$par_DF %>%
-      dplyr::filter(model %in% this_model) %>%
-      dplyr::select(!model) %>%
-      tidyr::nest(par_DF = !tidyselect::all_of(data_group_vars))
+                       par_DF_nest <- obj$prefit$par_DF %>%
+                         dplyr::filter(model %in% this_model) %>%
+                         dplyr::select(!model) %>%
+                         tidyr::nest(par_DF = !tidyselect::all_of(data_group_vars))
 
-    sigma_DF_nest <-  obj$prefit$stat_error_model$sigma_DF %>%
-      tidyr::nest(sigma_DF = !tidyselect::all_of(data_group_vars))
+                       sigma_DF_nest <-  obj$prefit$stat_error_model$sigma_DF %>%
+                         tidyr::nest(sigma_DF = !tidyselect::all_of(data_group_vars))
 
-    fit_check <- obj$prefit$fit_check %>%
-      dplyr::filter(model %in% this_model) %>%
-      dplyr::select(!model) %>%
-      dplyr::select(!c(n_par, n_sigma, n_detect, n_par_opt, fit_reason))
+                       fit_check <- obj$prefit$fit_check %>%
+                         dplyr::filter(model %in% this_model) %>%
+                         dplyr::select(!model) %>%
+                         dplyr::select(!c(n_par, n_sigma, n_detect, n_par_opt, fit_reason))
 
-    #merge it all together
-    info_nest <- dplyr::inner_join(
-      dplyr::inner_join(
-      dplyr::inner_join(data_nest,
-                                   par_DF_nest,
-                                   by = data_group_vars),
-      sigma_DF_nest,
-      by = data_group_vars),
-      fit_check,
-      by = data_group_vars)
+                       #merge it all together
+                       info_nest <- dplyr::inner_join(
+                         dplyr::inner_join(
+                           dplyr::inner_join(data_nest,
+                                             par_DF_nest,
+                                             by = data_group_vars),
+                           sigma_DF_nest,
+                           by = data_group_vars),
+                         fit_check,
+                         by = data_group_vars)
 
-    #now use purrr::map2() to run the fit for each group
-    fit_out <- info_nest %>%
-      dplyr::group_by(!!!data_group) %>%
-      dplyr::summarise(fit = {
-        if(suppress.messages %in% FALSE){
-          cur_data_summary <- dplyr::inner_join(get_data_summary(obj,
-                                                                 summary_group = unique(
-                                                                   c(data_group,
-                                                                     vars(Route,
-                                                                          Media)
-                                                                   )
-                                                                 )),
-                                              dplyr::cur_group(),
-                                              by = data_group_vars) %>%
-          as.data.frame
-        message(paste("do_fit.pk(): Fitting model",
-                      this_model,
-                      "using optimx::optimx()"))
-        print(cur_data_summary)
-        }
+                       #now use purrr::map2() to run the fit for each group
+                       fit_out <- info_nest %>%
+                         dplyr::group_by(!!!data_group) %>%
+                         # summary() to reframe()
+                         dplyr::reframe(fit = {
+                           if(suppress.messages %in% FALSE){
+                             cur_data_summary <- dplyr::inner_join(get_data_summary(obj,
+                                                                                    summary_group = unique(
+                                                                                      c(data_group,
+                                                                                        vars(Route,
+                                                                                             Media)
+                                                                                      )
+                                                                                    )),
+                                                                   dplyr::cur_group(),
+                                                                   by = data_group_vars) %>%
+                               as.data.frame
+                             message(paste("do_fit.pk(): Fitting model",
+                                           this_model,
+                                           "using optimx::optimx()"))
+                             print(cur_data_summary)
+                           }
+                          # Changed cur_data() to pick(everything()) because cur_data() is deprecated
+                           purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
+                                       .f = fit_group,
+                                       this_model = this_model,
+                                       settings_optimx = get_settings_optimx(obj),
+                                       modelfun = obj$stat_model[[this_model]]$conc_fun,
+                                       dose_norm = obj$scales$conc$dose_norm,
+                                       log10_trans = obj$scales$conc$log10_trans,
+                                       suppress.messages = suppress.messages)
+                         }
+                         )
 
-        purrr::pmap(.l = dplyr::cur_data(),
-                                   .f = fit_group,
-                                   this_model = this_model,
-                                   settings_optimx = get_settings_optimx(obj),
-                                   modelfun = obj$stat_model[[this_model]]$conc_fun,
-                                   dose_norm = obj$scales$conc$dose_norm,
-                                   log10_trans = obj$scales$conc$log10_trans,
-                                   suppress.messages = suppress.messages)
-      }
-      )
+                       fit_out
 
-   fit_out
-
-  }, #end loop over models
-  simplify = FALSE,
-  USE.NAMES = TRUE)
+                     }, #end loop over models
+                     simplify = FALSE,
+                     USE.NAMES = TRUE)
 
   obj$fit <- do.call(dplyr::bind_rows,
                      c(fit_list,
-                     list(.id = "model")))
+                       list(.id = "model")))
 
   obj$status <- status_fit #fitting complete
   return(obj)
