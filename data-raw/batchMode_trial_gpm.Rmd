@@ -41,14 +41,13 @@ I set the `error_group = vars(Chemical, Species)`.
 
 ```{r single_fit}
 my_pk <- pk(data = my_predata) +
-  facet_data(vars(chemicals_analyzed.dsstox_substance_id,
-                  subjects.species_harmonized)) +
+  facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE) +
   settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
   scale_conc(dose_norm = TRUE) +
   # scale_time() +
   # stat_model() + 
-  stat_error_model(error_group = vars(Chemical, Species)) 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
 
 my_pk <- do_preprocess(my_pk)
 
@@ -58,6 +57,8 @@ my_pk <- do_data_info(my_pk)
 my_pk <- do_prefit(my_pk) 
 
 my_pk <- do_fit(my_pk)
+
+
 
 ```
 
@@ -92,9 +93,9 @@ my_coef <- function(obj,
     unique()
   
   coefs <- obj$fit %>% unnest(cols = fit) %>%
-  group_by(model, method, !!!obj$data_group) %>%
-  dplyr::select(starts_with("sigma_"),
-                any_of(possible_model_params)) %>%
+    group_by(model, method, !!!obj$data_group) %>%
+    dplyr::select(starts_with("sigma_"),
+                  any_of(possible_model_params)) %>%
     unite(starts_with("sigma_"),
           col = "sigma",
           sep = "",
@@ -143,7 +144,7 @@ my_predict <- function(obj,
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
   
-  coefs <- my_coef(obj = obj) %>%
+  coefs <- coef(obj = obj) %>%
     dplyr::filter(model %in% model,
                   method %in% method)
   
@@ -206,7 +207,7 @@ my_predict <- function(obj,
               map(observations,
                   .f = \(x) {
                     x %>%
-                      group_by(Time_trans) %>%
+                      group_by(Time_trans) %>% # revise!
                       mutate(Estimate = sapply(coefs_vector,
                                                FUN = model_fun,
                                                time = Time_trans,
@@ -244,13 +245,13 @@ my_pred %>%
 # Ran the following after making the pk object:
 devtools::load_all()
 
-my_coefs_update <- coef(my_pk)
-my_pred_update <- predict(my_pk, type = "auc",
+my_coefs_update <- coef(my_pk, model = "model_flat", drop_sigma = TRUE)
+my_pred_update <- predict(my_pk,
                           use_scale_conc = TRUE)
 
 
 my_pred_update %>%
-  filter(model == "model_flat",
+  filter(model == "model_2comp",
          Route == "oral",
          Species == "rat", # hamster has a Fgutabs of zero
          method == "L-BFGS-B") %>%
@@ -267,10 +268,18 @@ my_coefs_update %>%
 
 
 
-```{r}
-plot_results <- plot(my_pk)
+```{r remaining_methods}
+# rmse()
+# get_tkstats()
+# residuals()
+# plot()
+
 
 my_tkstats <- get_tkstats(my_pk)
+
+plot_results <- plot(my_pk)
+
+
 ```
 
 

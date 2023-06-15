@@ -25,6 +25,9 @@
 #' @family methods for fitted pk objects
 coef.pk <- function(obj,
                     data_group = NULL,
+                    model = NULL,
+                    method = NULL,
+                    drop_sigma = FALSE,
                     ...) {
   # Check fit status
   check <- check_required_status(obj = obj,
@@ -39,32 +42,51 @@ coef.pk <- function(obj,
                                                                 param_name,
                                                                 start)
   const_pars <- const_pars %>%
-    pivot_wider(names_from = param_name,
+    tidyr::pivot_wider(names_from = param_name,
                 values_from = start)
 
   possible_model_params <- sapply(obj$stat_model, `[[`, "params") %>%
     unlist() %>%
     unique()
 
-  coefs <- obj$fit %>% unnest(cols = fit) %>%
-    group_by(model, method, !!!obj$data_group) %>%
-    dplyr::select(starts_with("sigma_"),
-                  any_of(possible_model_params)) %>%
-    unite(starts_with("sigma_"),
+  coefs <- obj$fit %>% tidyr::unnest(cols = fit) %>%
+    dplyr::group_by(model, method, !!!obj$data_group) %>%
+    dplyr::select(dplyr::starts_with("sigma_"),
+                  dplyr::any_of(possible_model_params)) %>%
+    tidyr::unite(dplyr::starts_with("sigma_"),
           col = "sigma",
           sep = "",
           na.rm = TRUE)
 
-  coefs <- left_join(coefs, const_pars)
+  coefs <- dplyr::left_join(coefs, const_pars)
 
   coefs_tidy <- coefs %>%
-    nest(coefs_tibble = any_of(possible_model_params)) %>%
-    mutate(coefs_vector = map(coefs_tibble,
+    tidyr::nest(coefs_tibble = dplyr::any_of(possible_model_params)) %>%
+    dplyr::mutate(coefs_vector = map(coefs_tibble,
                               .f = \(x){
                                 as.data.frame(x %>%
                                                 dplyr::select(!where(is.na))) %>%
                                   unlist()
                               })) %>%
-    unnest(coefs_tibble)
+    tidyr::unnest(coefs_tibble)
+
+
+
+  if (is.character(method)) {
+    method_vector <- method
+    message(paste("Filtering by method(s): ", method))
+    coefs_tidy <- coefs_tidy %>% dplyr::filter(method %in% method_vector)
+  }
+  if (is.character(model)) {
+    model_vector <- model
+    message(paste("Filtering by model(s): ", model))
+    coefs_tidy <- coefs_tidy %>% dplyr::filter(model %in% model_vector)
+  }
+
+  if (drop_sigma) {
+    coefs_tidy <- coefs_tidy %>% dplyr::select(-sigma) %>% dplyr::distinct()
+  }
+
   return(coefs_tidy)
 }
+

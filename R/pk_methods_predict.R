@@ -70,9 +70,9 @@ predict.pk <- function(obj,
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
 
-  coefs <- my_coef(obj = obj) %>%
-    dplyr::filter(model %in% model,
-                  method %in% method)
+  coefs <- coef(obj = obj,
+                model = model,
+                method = method)
 
   if(is.null(newdata)) newdata <- obj$data
 
@@ -111,30 +111,29 @@ predict.pk <- function(obj,
 
   newdata <- newdata %>%
     dplyr::select(!!!obj$data_group,
-                  all_of(req_vars),
-                  any_of(trans_vars)) %>%
-    group_by(!!!obj$data_group,
+                  dplyr::all_of(req_vars),
+                  dplyr::any_of(trans_vars)) %>%
+    dplyr::group_by(!!!obj$data_group,
              Route, Media) %>%
-    nest(.key = "observations")
+    tidyr::nest(.key = "observations")
 
-  newdata <- left_join(coefs, newdata,
-                       relationship = "many-to-many")
-  # From here, trying to call map within mutate to add the prediction column by
-  # calling the appropriate model function and feeding it the parameters in coefs_vector
+  newdata <- dplyr::left_join(coefs, newdata,
+                              relationship = "many-to-many")
 
+# After join it is joined by model, method, Chemical, Species
   newdata <- newdata %>%
     dplyr::group_by(Route, Media,
                     .add = TRUE) %>%
-    mutate(model_fun = case_when(
+    dplyr::mutate(model_fun = dplyr::case_when(
       type == "conc" ~obj$stat_model[[model]]$conc_fun,
       type == "auc"  ~obj$stat_model[[model]]$auc_fun,
       .default = obj$stat_model[[model]]$conc_fun)) %>%
-    reframe(predictions =
-              map(observations,
+    dplyr::reframe(predictions =
+              purrr::map(observations,
                   .f = \(x) {
                     x %>%
-                      group_by(Time_trans) %>%
-                      mutate(Estimate = sapply(coefs_vector,
+                      dplyr::group_by(Time_trans) %>%
+                      dplyr::mutate(Estimate = sapply(coefs_vector,
                                                FUN = model_fun,
                                                time = Time_trans,
                                                dose = ifelse(obj$scales$conc$dose_norm,
@@ -144,11 +143,10 @@ predict.pk <- function(obj,
                                                simplify = TRUE,
                                                USE.NAMES = TRUE))
                   })) %>%
-    unnest(predictions)
+    tidyr::unnest(predictions)
 
-  if (type == "conc") newdata <- rename(newdata, Conc_est = "Estimate")
-  if (type == "auc") newdata <- rename(newdata, AUC_est = "Estimate")
-
+  if (type == "conc") newdata <- dplyr::rename(newdata, Conc_est = "Estimate")
+  if (type == "auc") newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
 
   return(newdata)
 }

@@ -353,14 +353,9 @@ pk_add.pk_facet_data <- function(object, pk_obj, objectname){
     pk_obj$status <-  status_preprocess - 1
   }
 
-  #this will become the data_group
-  mapping <- sapply(pk_obj$mapping, rlang::as_label)
-  facets <- sapply(object$facets, rlang::as_label)
-  newvars <- names(mapping)[match(facets,mapping)]
-  #construct data_group as list of quosures
-  #(same effect as a `dplyr::vars()` call)
-  data_group <-  do.call(rlang::quos, rlang::syms(newvars))
-    pk_obj$data_group <- data_group
+  # this will become the data_group
+  # this takes the harmonized variables in the pk object
+    pk_obj$data_group <- object$facets
     return(pk_obj)
 
 }
