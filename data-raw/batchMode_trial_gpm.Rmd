@@ -66,7 +66,7 @@ Batch mode works, now I need to write a function that recapitulates `coef()` met
 
 ```{r coef_function_remake}
 # A list of each fit model with the estimated parameters for that model
-pk_results <- coef(my_pk) # NAs are printed
+pk_results <- coef(my_pk)
 
 # New possible coef function!!
 my_coef <- function(obj,
@@ -245,7 +245,7 @@ my_pred %>%
 # Ran the following after making the pk object:
 devtools::load_all()
 
-my_coefs_update <- coef(my_pk, model = "model_flat", drop_sigma = TRUE)
+my_coefs_update <- coef(my_pk, drop_sigma = TRUE)
 my_pred_update <- predict(my_pk,
                           use_scale_conc = TRUE)
 

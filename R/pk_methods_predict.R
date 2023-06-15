@@ -72,7 +72,8 @@ predict.pk <- function(obj,
 
   coefs <- coef(obj = obj,
                 model = model,
-                method = method)
+                method = method,
+                drop_sigma = TRUE)
 
   if(is.null(newdata)) newdata <- obj$data
 
@@ -122,8 +123,9 @@ predict.pk <- function(obj,
 
 # After join it is joined by model, method, Chemical, Species
   newdata <- newdata %>%
-    dplyr::group_by(Route, Media,
-                    .add = TRUE) %>%
+    dplyr::group_by(model, method,
+                    !!!obj$data_group,
+                    Route, Media) %>%
     dplyr::mutate(model_fun = dplyr::case_when(
       type == "conc" ~obj$stat_model[[model]]$conc_fun,
       type == "auc"  ~obj$stat_model[[model]]$auc_fun,

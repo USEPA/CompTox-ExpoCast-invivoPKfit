@@ -53,10 +53,12 @@ coef.pk <- function(obj,
     dplyr::group_by(model, method, !!!obj$data_group) %>%
     dplyr::select(dplyr::starts_with("sigma_"),
                   dplyr::any_of(possible_model_params)) %>%
-    tidyr::unite(dplyr::starts_with("sigma_"),
-          col = "sigma",
-          sep = "",
-          na.rm = TRUE)
+    # If user wants sigmas
+    # this pivot_longer provides the sigmas per error group
+    tidyr::pivot_longer(cols = starts_with("sigma_"),
+                        names_to = "error_group",
+                        values_to = "sigma_value") %>%
+    dplyr::filter(!is.na(sigma_value))
 
   coefs <- dplyr::left_join(coefs, const_pars)
 
@@ -74,17 +76,19 @@ coef.pk <- function(obj,
 
   if (is.character(method)) {
     method_vector <- method
-    message(paste("Filtering by method(s): ", method))
+    message("Filtering by method(s): ", paste(method, collapse = " "))
     coefs_tidy <- coefs_tidy %>% dplyr::filter(method %in% method_vector)
   }
   if (is.character(model)) {
     model_vector <- model
-    message(paste("Filtering by model(s): ", model))
+    message("Filtering by model(s): ", paste(model, collapse = " "))
     coefs_tidy <- coefs_tidy %>% dplyr::filter(model %in% model_vector)
   }
 
   if (drop_sigma) {
-    coefs_tidy <- coefs_tidy %>% dplyr::select(-sigma) %>% dplyr::distinct()
+    coefs_tidy <- coefs_tidy %>%
+      dplyr::select(!c(sigma_value, error_group)) %>%
+      dplyr::distinct()
   }
 
   return(coefs_tidy)
