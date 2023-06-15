@@ -67,25 +67,6 @@ Batch mode works, now I need to write a function that recapitulates `coef()` met
 # A list of each fit model with the estimated parameters for that model
 pk_results <- coef(my_pk) # NAs are printed
 
-
-const_pars <- subset(my_pk$prefit$par_DF,
-       optimize_param %in% FALSE &
-         use_param %in% TRUE) %>% dplyr::select(model, Chemical, Species,
-                                         param_name, start) 
-const_pars <- const_pars %>%
-  pivot_wider(names_from = param_name,
-              values_from = start)
-
-
-my_fit_test <- my_pk$fit %>% unnest(cols = fit) %>%
-  group_by(model, method, Chemical, Species) %>%
-  dplyr::select(starts_with("sigma_"),
-                any_of(sapply(my_pk$stat_model, `[[`, "params") %>%
-                         unlist() %>%
-                         unique())) # need Rblood2plasma
-
-left_join(my_fit_test, const_pars)
-
 # New possible coef function!!
 my_coef <- function(obj,
                     data_group = NULL,
@@ -140,35 +121,6 @@ my_coefs <- my_coef(obj = my_pk)
 
 
 ```{r predict_method_remake}
-pred_results <- predict(my_pk) # Error about missing parameters
-
-
-my_test_data <- my_pk$data
-
-my_test_data %>%
-  group_by(!!!my_pk$data_group) %>%
-  dplyr::select(all_of(c("Time", "Time.Units", "Dose", "Route", "Media"))) %>%
-  dplyr::left_join(my_coefs,
-            relationship = "many-to-many") -> joined_test_data
-
-# Testing not complete
-joined_test_data %>%
-  relocate(method, .before = model) %>%
-  group_by(across(Chemical:model)) %>%
-  nest(.key = "coefs") %>%
-  rowwise() %>%
-  dplyr::mutate(model_fun = my_pk$stat_model[[model]]$conc_fun,
-                predicted_Value = do.call(model_fun,
-                                          args = list(
-                                            params = coefs,
-                                            dose = Dose,
-                                            time = Time,
-                                            route = Route,
-                                            medium = Media
-                                          )),
-  .after = model) %>%
-  head()
-
 my_predict <- function(obj,
                        newdata = NULL,
                        model = NULL,
@@ -246,13 +198,16 @@ my_predict <- function(obj,
   newdata <- newdata %>%
     dplyr::group_by(Route, Media,
                     .add = TRUE) %>%
-    mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
+    mutate(model_fun = case_when(
+      type == "conc" ~obj$stat_model[[model]]$conc_fun,
+      type == "auc"  ~obj$stat_model[[model]]$auc_fun,
+      .default = obj$stat_model[[model]]$conc_fun)) %>%
     reframe(predictions = 
               map(observations,
                   .f = \(x) {
                     x %>%
                       group_by(Time_trans) %>%
-                      mutate(Conc_est = sapply(coefs_vector,
+                      mutate(Estimate = sapply(coefs_vector,
                                                FUN = model_fun,
                                                time = Time_trans,
                                                dose = ifelse(obj$scales$conc$dose_norm,
@@ -264,11 +219,14 @@ my_predict <- function(obj,
                               })) %>%
     unnest(predictions)
   
+  if (type == "conc") newdata <- rename(newdata, Conc_est = "Estimate")
+  if (type == "auc") newdata <- rename(newdata, AUC_est = "Estimate")
+  
   
   return(newdata) 
 }
 
-my_pred <- my_predict(my_pk, use_scale_conc = TRUE)
+my_pred <- my_predict(my_pk, type = "auc", use_scale_conc = TRUE)
 
 
 my_pred %>%
@@ -279,6 +237,35 @@ my_pred %>%
   View()
 
 ```
+
+
+```{r after_method_update}
+# Changed pk_methods coef() and predict() to those above
+# Ran the following after making the pk object:
+devtools::load_all()
+
+my_coefs_update <- coef(my_pk)
+my_pred_update <- predict(my_pk, type = "auc",
+                          use_scale_conc = TRUE)
+
+
+my_pred_update %>%
+  filter(model == "model_flat",
+         Route == "oral",
+         Species == "rat", # hamster has a Fgutabs of zero
+         method == "L-BFGS-B") %>%
+  View("predicted_update")
+
+my_coefs_update %>%
+  filter(model == "model_flat",
+         Species == "rat",
+         method == "L-BFGS-B") %>%
+  View("coef_update")
+
+# Seems to have worked!
+```
+
+
 
 ```{r}
 plot_results <- plot(my_pk)

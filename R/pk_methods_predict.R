@@ -55,8 +55,7 @@ predict.pk <- function(obj,
                        type = "conc",
                        exclude = TRUE,
                        use_scale_conc = FALSE,
-                       ...
-){
+                       ...){
 
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -71,16 +70,16 @@ predict.pk <- function(obj,
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
 
-  coefs <- coef(obj = obj,
-                model = model,
-                method = method)
+  coefs <- my_coef(obj = obj) %>%
+    dplyr::filter(model %in% model,
+                  method %in% method)
 
   if(is.null(newdata)) newdata <- obj$data
 
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
                               req_vars = c("Time",
-                                  "Time.Units",
+                                           "Time.Units",
                                            "Dose",
                                            "Route",
                                            "Media"),
@@ -88,68 +87,68 @@ predict.pk <- function(obj,
 
   #scale time if needed
   if(!("Time_trans" %in% names(newdata))){
-  newdata$Time_trans <- convert_time(x = newdata$Time,
-                                     from = newdata$Time.Units,
-                                     to = obj$scales$time$new_units)
+    newdata$Time_trans <- convert_time(x = newdata$Time,
+                                       from = newdata$Time.Units,
+                                       to = obj$scales$time$new_units)
   }
 
   #apply transformations if so specified
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
 
+  req_vars <- c("Time",
+                "Time.Units",
+                "Dose",
+                "Route",
+                "Media",
+                "Value",
+                "Value.Units")
 
-  #loop over models
-  sapply(model,
-         function(this_model){
-           this_coef_mat <- coefs[[this_model]][method, ]
-           if(!is.matrix(this_coef_mat)){
-             #in case there is only 1 method and the matrix is therefore 1-row and gets converetd into a vector,
-             #convert it back
-             this_coef_mat <- matrix(this_coef_mat,
-                                     nrow = 1,
-                                     ncol = length(this_coef_mat))
-             colnames(this_coef_mat) <- colnames(coefs[[this_model]])
-             rownames(this_coef_mat) <- method
-           }
-           apply(this_coef_mat,
-                 1,
-                 function(this_coef_row){
-                   #get coefficients
-                   this_coef <- this_coef_row
-                   #get model function to be evaluated
-                   this_model_fun <- ifelse(type %in% "conc",
-                                            obj$stat_model[[this_model]]$conc_fun,
-                                            ifelse(type %in% "auc",
-                                                   obj$stat_model[[this_model]]$auc_fun,
-                                                   NULL)
-                   )
+  trans_vars <- c("Time_trans",
+                  "Time_trans.Units",
+                  "Conc_trans",
+                  "Conc_trans.Units")
 
-                   #evaluate model function
-                   preds <- do.call(this_model_fun,
-                                    args = list(params = this_coef,
-                                                dose = newdata$Dose,
-                                                time = newdata$Time_trans,
-                                                route = newdata$Route,
-                                                medium = newdata$Media))
-                   if(exclude %in% TRUE){
-                     if("exclude" %in% names(newdata)){
-                   #set NA for excluded data, if any
-                   preds[newdata$exclude %in% TRUE] <- NA_real_
-                     }
-                   }
+  newdata <- newdata %>%
+    dplyr::select(!!!obj$data_group,
+                  all_of(req_vars),
+                  any_of(trans_vars)) %>%
+    group_by(!!!obj$data_group,
+             Route, Media) %>%
+    nest(.key = "observations")
 
-                  if(conc_scale$dose_norm %in% TRUE){
-                    preds <- preds/newdata$Dose
-                  }
+  newdata <- left_join(coefs, newdata,
+                       relationship = "many-to-many")
+  # From here, trying to call map within mutate to add the prediction column by
+  # calling the appropriate model function and feeding it the parameters in coefs_vector
 
-                   if(conc_scale$log10_trans %in% TRUE){
-                     preds <- log10(preds)
-                   }
+  newdata <- newdata %>%
+    dplyr::group_by(Route, Media,
+                    .add = TRUE) %>%
+    mutate(model_fun = case_when(
+      type == "conc" ~obj$stat_model[[model]]$conc_fun,
+      type == "auc"  ~obj$stat_model[[model]]$auc_fun,
+      .default = obj$stat_model[[model]]$conc_fun)) %>%
+    reframe(predictions =
+              map(observations,
+                  .f = \(x) {
+                    x %>%
+                      group_by(Time_trans) %>%
+                      mutate(Estimate = sapply(coefs_vector,
+                                               FUN = model_fun,
+                                               time = Time_trans,
+                                               dose = ifelse(obj$scales$conc$dose_norm,
+                                                             1, Dose),
+                                               route = Route,
+                                               medium = Media,
+                                               simplify = TRUE,
+                                               USE.NAMES = TRUE))
+                  })) %>%
+    unnest(predictions)
 
-                   preds
+  if (type == "conc") newdata <- rename(newdata, Conc_est = "Estimate")
+  if (type == "auc") newdata <- rename(newdata, AUC_est = "Estimate")
 
-                 })
-         },
-         simplify = FALSE,
-         USE.NAMES = TRUE)
+
+  return(newdata)
 }

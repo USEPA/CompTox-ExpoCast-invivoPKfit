@@ -24,59 +24,47 @@
 #' @author Caroline Ring
 #' @family methods for fitted pk objects
 coef.pk <- function(obj,
-                    model = NULL,
-                    method = NULL,
-                    ...){
-  #ensure that the model has been fitted
+                    data_group = NULL,
+                    ...) {
+  # Check fit status
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
-  if(!(check %in% TRUE)){
-    stop(attr(check, "msg"))
-  }
 
-  if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$settings_optimx$method
+  if (check %in% FALSE) stop(attr(check, "msg")) # Stop if not fitted
 
-  sapply(model,
-         function(this_model){
-           npar <- attr(obj$fit[[this_model]], "npar")
-           if(!is.null(npar)){
-           fit_par <- obj$fit[[this_model]][method, 1:npar]
+  const_pars <- subset(obj$prefit$par_DF,
+                       optimize_param %in% FALSE &
+                         use_param %in% TRUE) %>% dplyr::select(model,
+                                                                !!!obj$data_group,
+                                                                param_name,
+                                                                start)
+  const_pars <- const_pars %>%
+    pivot_wider(names_from = param_name,
+                values_from = start)
 
-           #Add any "constant" params
-           if(any(obj$prefit[[this_model]]$par_DF$optimize_param %in% FALSE &
-                  obj$prefit[[this_model]]$par_DF$use_param %in% TRUE)){
-             const_parDF <- subset(obj$prefit[[this_model]]$par_DF,
-                                   optimize_param %in% FALSE &
-                                     use_param %in% TRUE)[c("param_name",
-                                                            "start")]
-             const_par <- const_parDF[["start"]]
-             names(const_par) <- const_parDF[["param_name"]]
-             const_par <- do.call(rbind,
-                                  replicate(nrow(fit_par),
-                                            const_par,
-                                            simplify = FALSE))
-             fit_par <- as.matrix(cbind(fit_par, const_par))
-           }
-           }else{
-             fit_par <- matrix(data = NA_real_,
-                               ncol = sum(obj$prefit[[this_model]]$par_DF$use_param) +
-                                 sum(obj$prefit$stat_error_model$sigma_DF$use_param),
-                               nrow = length(method))
-             rownames(fit_par) <- method
-             colnames(fit_par) <- c(
-               obj$prefit[[this_model]]$par_DF[
-                 obj$prefit[[this_model]]$par_DF$use_param %in% TRUE,
-                 "param_name"
-               ],
-               obj$prefit$stat_error_model$sigma_DF[
-                 obj$prefit$stat_error_model$sigma_DF$use_param %in% TRUE,
-                 "param_name"
-               ]
-             )
-           }
-           return(fit_par)
-         },
-         USE.NAMES = TRUE,
-         simplify = FALSE)
+  possible_model_params <- sapply(obj$stat_model, `[[`, "params") %>%
+    unlist() %>%
+    unique()
+
+  coefs <- obj$fit %>% unnest(cols = fit) %>%
+    group_by(model, method, !!!obj$data_group) %>%
+    dplyr::select(starts_with("sigma_"),
+                  any_of(possible_model_params)) %>%
+    unite(starts_with("sigma_"),
+          col = "sigma",
+          sep = "",
+          na.rm = TRUE)
+
+  coefs <- left_join(coefs, const_pars)
+
+  coefs_tidy <- coefs %>%
+    nest(coefs_tibble = any_of(possible_model_params)) %>%
+    mutate(coefs_vector = map(coefs_tibble,
+                              .f = \(x){
+                                as.data.frame(x %>%
+                                                dplyr::select(!where(is.na))) %>%
+                                  unlist()
+                              })) %>%
+    unnest(coefs_tibble)
+  return(coefs_tidy)
 }
