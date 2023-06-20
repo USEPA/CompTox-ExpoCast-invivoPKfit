@@ -46,7 +46,7 @@
 #'   If `use_scale_conc %in% TRUE`, the predictions are transformed
 #'   concentrations in the same units as `obj$data$Conc_trans.Units`.
 #' @export
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
 predict.pk <- function(obj,
                        newdata = NULL,
@@ -104,6 +104,10 @@ predict.pk <- function(obj,
                 "Media",
                 "Value",
                 "Value.Units")
+
+  if (exclude) {
+    req_vars <- c(req_vars, "Detect", "exclude")
+  }
 
   trans_vars <- c("Time_trans",
                   "Time_trans.Units",

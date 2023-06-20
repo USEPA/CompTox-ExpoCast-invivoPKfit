@@ -104,7 +104,7 @@ calc_rmse <- function(pred,
                  pred)
 
   #Convert to log10-scale if necessary
-  if(log10_trans %in% TRUE){
+  if (log10_trans %in% TRUE){
     tmplist <- convert_summary_to_log10(sample_mean = obs,
                                       sample_SD = obs_sd)
     obs <- tmplist$log10mean

@@ -21,7 +21,7 @@
 #'   elements are the values of the corresponding model parameters as fitted by
 #'   the corresponding method.
 #' @export
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
 coef.pk <- function(obj,
                     data_group = NULL,
