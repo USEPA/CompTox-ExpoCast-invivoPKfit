@@ -100,7 +100,8 @@ rmse.pk <- function(obj,
                     model = NULL,
                     method = NULL,
                     exclude = TRUE,
-                    use_scale_conc = TRUE){
+                    use_scale_conc = TRUE,
+                    rmse_group = vars(Route, Media, Dose, Time)){
 #ensure that the model has been fitted
 check <- check_required_status(obj = obj,
                                required_status = status_fit)
@@ -129,6 +130,14 @@ if(!(check %in% TRUE)){
                                                  "Detect"),
                               exclude = exclude)
 
+
+
+  # Conc_trans columns will contain transformed values,
+  conc_scale <- conc_scale_use(obj = obj,
+                               use_scale_conc = use_scale_conc)
+  message("Transformations used: \n",
+          "Dose-normalization ", conc_scale$dose_norm, "\n",
+          "log-transformation ", conc_scale$log10_trans)
 
   #Get predictions WITHOUT any scaling/transformations
   preds <- predict(obj,
@@ -161,11 +170,6 @@ if(!(check %in% TRUE)){
     ungroup()
 
 
-  # Conc_trans columns will contain transformed values,
-  conc_scale <- conc_scale_use(obj = obj,
-                               use_scale_conc = use_scale_conc)
-
-  # # STOPPED HERE 6/16
   #apply dose-normalization if specified
   # conditional mutate ifelse
   rmse_df <- new_preds %>%
@@ -180,9 +184,8 @@ if(!(check %in% TRUE)){
                            Conc_SD)) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(!!!obj$data_group,
-                    Route, Media,
                     model, method,
-                    Dose, Time) %>%
+                    !!!rmse_group) %>%
     dplyr::mutate(
       RMSE = calc_rmse(obs = Conc_set,
                        obs_sd = Conc_set_SD,
@@ -191,6 +194,14 @@ if(!(check %in% TRUE)){
                        detect = Detect,
                        log10_trans = conc_scale$log10_trans)) %>%
     ungroup()
+
+  message("Groups: \n",
+          paste(sapply(unlist(obj$data_group), rlang::as_label),
+                collapse = ", "),
+          ", ",
+          paste(sapply(unlist(rmse_group), rlang::as_label),
+                collapse = ", "),
+          ", method, model")
 
   return(rmse_df)
 }

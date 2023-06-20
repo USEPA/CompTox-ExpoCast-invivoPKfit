@@ -80,15 +80,14 @@ residuals.pk <- function(obj,
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
                               req_vars = c("Time",
-                                                 "Time.Units",
-                                  "Dose",
-                                  "Route",
-                                  "Media",
-                                  "Conc",
-                                  "Detect"),
+                                           "Time.Units",
+                                           "Dose",
+                                           "Route",
+                                           "Media",
+                                           "Conc",
+                                           "Detect"),
                               exclude = exclude)
 
-  #Get predictions
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,
@@ -97,44 +96,46 @@ residuals.pk <- function(obj,
                    exclude = exclude,
                    use_scale_conc = use_scale_conc)
 
-  obs <- newdata$Conc
 
-  #apply transformations if so specified
+  #remove any excluded observations & corresponding predictions, if so specified
+  if (exclude %in% TRUE) {
+    if ("exclude" %in% names(newdata)) {
+      preds <- preds %>% filter(exclude %in% FALSE)
+      newdata <- newdata %>% filter(exclude %in% FALSE)
+    }
+  }
+
+  req_vars <- c(names(preds),
+                "Conc",
+                "Detect",
+                "exclude")
+
+
+  new_preds <- dplyr::left_join(preds, newdata) %>%
+    dplyr::select(dplyr::all_of(req_vars)) %>%
+    ungroup()
+
+
+  # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  if(conc_scale$dose_norm %in% TRUE){
-    obs <- obs/newdata$Dose
-  }
+  message("Transformations used: \n",
+          "Dose-normalization ", conc_scale$dose_norm, "\n",
+          "log-transformation ", conc_scale$log10_trans)
 
-  if(conc_scale$log10_trans %in% TRUE){
-    obs <- log10(obs)
-  }
+  # # STOPPED HERE 6/16
+  #apply dose-normalization if specified
+  # conditional mutate ifelse
+  resids <- new_preds %>%
+    # needs to be rowwise first then by
+    dplyr::rowwise() %>%
+    dplyr::mutate(
+      Conc_set = ifelse(conc_scale$dose_norm,
+                        Conc / Dose,
+                        Conc),
+      Residuals = ifelse(Detect %in% FALSE & Conc_est <= Conc_set,
+                         0, Conc_est - Conc_set)) %>%
+    dplyr::ungroup()
 
-
-  resids <- sapply(preds,
-         function(this_pred){
-           apply(this_pred,
-                 2,
-                 function(x){
-                   restmp <- ifelse(newdata$Detect %in% FALSE &
-                            x <= obs,
-                          0,
-                          obs - x)
-                   if(exclude %in% TRUE){
-                     if("exclude" %in% names(newdata)){
-                     restmp <- ifelse(newdata$exclude %in% TRUE,
-                                      NA_real_,
-                                      restmp)
-                     }
-                   }
-                   restmp
-                 }
-           )
-         },
-         simplify = FALSE,
-         USE.NAMES = TRUE)
-
-
-
-  resids
+  return(resids)
 }
