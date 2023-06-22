@@ -29,9 +29,6 @@ cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>%
 my_predata <- subset(cvt,
                      chemicals_analyzed.dsstox_substance_id %in% c("DTXSID0020442",
                                                                    "DTXSID2021731"))
-
-
-
 ```
 
 Next, I want to follow the steps required for the particular analysis I would like.
@@ -58,7 +55,6 @@ my_pk <- do_data_info(my_pk)
 my_pk <- do_prefit(my_pk)
 
 my_pk <- do_fit(my_pk)
-
 
 
 ```
@@ -249,34 +245,61 @@ devtools::load_all()
 my_coefs_update <- coef(my_pk)
 my_pred_update <- predict(my_pk,
                           exclude = TRUE, # add the "exclude" column to output
-                          use_scale_conc = FALSE)
+                          use_scale_conc = TRUE)
 
-my_ndf <- my_pk$data
+
+
 
 rmse(my_pk) %>% View("RMSE_test")
 residuals(my_pk) %>% View("Residuals_test")
-
-
-my_pred_update %>%
-  filter(model == "model_2comp",
-         Route == "oral",
-         Species == "rat", # hamster has a Fgutabs of zero
-         method == "L-BFGS-B") %>%
-  View("predicted_update")
-
-my_coefs_update %>%
-  filter(model == "model_flat",
-         Species == "rat",
-         method == "L-BFGS-B") %>%
-  View("coef_update")
 
 # Seems to have worked!
 ```
 
 
+```{r plotting_method}
+# Experimenting with what works with my_ndf
+# 
+my_ndf <- my_pk$data
+
+my_ndf %>%
+  filter(Chemical %in% "DTXSID0020442", Species %in% "rat") %>%
+  mutate(Dose = factor(Dose),
+         Reference = factor(Reference),
+         Detect_int = as.character(Detect)
+         ) %>%
+  ggplot(aes(
+    x = Time_trans,
+    y = Conc_trans,
+    color = Dose,
+    shape = Reference
+  )) +
+  geom_point(aes(
+    fill = Dose,
+    alpha = Detect_int
+  )) +
+  geom_point() +
+  scale_shape_manual(values = 21:25) +
+  scale_alpha_manual(values = c("FALSE" = 0, "TRUE" = 1),
+                     breaks = c("TRUE", "FALSE"),
+                     name = "Detect") +
+  guides(shape = guide_legend(override.aes = list(fill = "black")),
+         alpha = guide_legend(override.aes = list(alpha = 1,
+                                                  fill = c("black", "white"),
+                                                  color = "black",
+                                                  shape = 21))) +
+  facet_grid(rows = vars(Detect), # This is just for illustrative purposes, this would be Routes
+             cols = vars(Route)) +
+  theme_bw()
+# Need to find a way to make this vectorized...
+# probably within a mutate and map function
+
+
+```
+
+
 
 ```{r remaining_methods}
-# residuals()
 # plot()
 # 
 # get_tkstats()
