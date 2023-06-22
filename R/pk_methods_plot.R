@@ -58,7 +58,7 @@ plot.pk <- function(obj,
                     plot_point_aes = NULL,
                     facet_fun = NULL,
                     facet_fun_args = NULL,
-                    drop_nonDetect = TRUE,
+                    drop_nonDetect = FALSE,
                     # Predict/interpolation arguments
                     plot_fit_aes = NULL,
                     n_interp = 10,
@@ -93,8 +93,7 @@ plot.pk <- function(obj,
                                use_scale_conc = use_scale_conc)
 
   if (drop_nonDetect %in% TRUE) {
-    newdata <- subset(newdata,
-                      Detect %in% TRUE)
+    newdata <- subset(newdata, Detect %in% TRUE)
   }
 
   req_vars <- c("Time",
@@ -102,30 +101,37 @@ plot.pk <- function(obj,
                 "Dose",
                 "Route",
                 "Media",
+                "Reference",
+                "Conc",
+                "Conc_SD",
                 "Value",
-                "Value.Units")
-
-  if (!drop_nonDetect) {
-    req_vars <- c(req_vars, "Detect", "exclude")
-  }
+                "Value.Units",
+                "Detect", "exclude")
 
   trans_vars <- c("Time_trans",
                   "Time_trans.Units",
                   "Conc_trans",
                   "Conc_trans.Units")
 
+  # I think ideally there should be required variables and
+  # a way to ensure all the aes() variables get added
   newdata <- newdata %>%
     dplyr::select(!!!obj$data_group,
                   dplyr::all_of(req_vars),
                   dplyr::any_of(trans_vars)) %>%
+    dplyr::rowwise() %>%
     dplyr::mutate(Conc_set = ifelse(conc_scale$dose_norm,
                                     Conc / Dose,
                                     Conc),
                   Conc_set_SD = ifelse(conc_scale$dose_norm,
                                        Conc_SD / Dose,
-                                       Conc_SD)) %>%
-    dplyr::group_by(!!!obj$data_group,
-                    Route, Media) %>%
+                                       Conc_SD),
+                  Detect = ifelse(Detect,
+                                  "Detect",
+                                  "Non-Detect"),
+                  Dose = factor(Dose)) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(!!!obj$data_group) %>%
     tidyr::nest(.key = "observations")
 
 
@@ -135,10 +141,10 @@ plot.pk <- function(obj,
                                         ymin = Conc_set - Conc_set_SD,
                                         ymax = Conc_set + Conc_set_SD,
                                         color = Dose,
-                                        shape = factor(Reference))
+                                        shape = Reference)
 
   plot_point_aes_default <- ggplot2::aes(fill = Dose,
-                                         alpha = as.character(Detect))
+                                         alpha = Detect)
 
   plot_fit_aes_default <- ggplot2::aes(x = Time_trans,
                                        y = Conc_est,
@@ -164,136 +170,71 @@ plot.pk <- function(obj,
 
   if (facet_fun %in% "none") facet_fun <- NULL
 
-  # Need to write this into a mutate + map pattern function
-  #initialize plot
-  p <- ggplot(data = newdata,
-              mapping = plot_data_aes) +
-    geom_point(mapping = plot_point_aes,
-               stroke = 1) +
-    geom_errorbar(mapping = plot_data_aes)
-  theme_bw()
+  newdata <- newdata %>%
+    mutate(observation_plot =
+             map(observations,
+                 \(x) {
+                   # Need to write this into a mutate + map pattern function
+                   #initialize plot
+                   p <- ggplot(data = x,
+                               mapping = plot_data_aes) +
+                     geom_point(mapping = plot_point_aes,
+                                stroke = 1) + # plots points
+                     geom_errorbar(mapping = plot_data_aes)
 
-  # if alpha = Detect then we have to do some trickery to implement that
-  # that is the objective of plot_point_aes
-  if (rlang::as_label(plot_point_aes$alpha) %in% "Detect") {
-    newdata <- newdata %>%
-      mutate(Detect = factor(Detect,
-                             levels = c(TRUE, FALSE),
-                             labels = c("Detect", "Non-Detect")))
+                   # if alpha = Detect then we have to do some trickery to implement that
+                   # that is the objective of plot_point_aes
+                   if (rlang::as_label(plot_point_aes$alpha) %in% "Detect") {
+                     # plot the data
+                     p <- p +
+                       geom_point()
+                     # plots here are un-filled points (only inherits color variable by default)
 
-    # plot the data
-    p <- p +
-      geom_point()
-    # plots un-filled points (only inherits color variable by default)
+                     if ("shape" %in% c(names(plot_data_aes),
+                                        names(plot_point_aes))) {
+                       # Ensure shapes can take both fill and color if alpha is set
+                       p <- p +
+                         scale_shape_manual(values = 21:25)
+                     }
 
-    if ("shape" %in% c(names(plot_data_aes),
-                       names(plot_point_aes))) {
-      # Ensure shapes can take both fill and color if alpha is set
-      p <- p +
-        scale_shape_manual(values = 21:25)
-    }
+                     #set an alpha scale
+                     p <- p + scale_alpha_manual(values = c("Detect" = 1, "Non-Detect" = 0),
+                                                 breaks = c("Detect", "Non-Detect"),
+                                                 drop = FALSE,
+                                                 name = NULL)
 
-    #set an alpha scale
-    p <- p + scale_alpha_manual(values = c("Detect" = 1, "Non-Detect" = 0),
-                                breaks = c("Detect", "Non-Detect"),
-                                drop = FALSE,
-                                name = NULL)
+                     # Need to check whether there are two values in Detect
+                     # some might be all Non-Detect or all Detect
+                     if (length(unique(x$Detect)) > 1){
+                       alpha_fill <- c("black", NA)
+                     } else {
+                       alpha_fill <- ifelse(unique(x$Detect) == "Detect",
+                                            "black", NA)
+                     }
+                     p <- p +
+                       guides(alpha = guide_legend(override.aes = list(shape = 21,
+                                                                       color = "black",
+                                                                       stroke = 1,
+                                                                       fill = alpha_fill,
+                                                                       alpha = 1)))
 
-    p <- p +
-      guides(alpha = guide_legend(override.aes = list(shape = 21,
-                                                      color = "black",
-                                                      stroke = 1,
-                                                      fill = c("black", NA),
-                                                      alpha = 1)))
+                   }
 
-  }
+                   #Apply faceting, if any
+                   if (!is.null(facet_fun)) {
+                     p <- p +
+                       do.call(facet_fun,
+                               args = facet_fun_args)
+                   }
 
-  #Apply faceting, if any
-  if (!is.null(facet_fun)) {
-    p <- p +
-      do.call(facet_fun,
-              args = facet_fun_args)
-  }
+                   p +
+                     labs(x = "Time",
+                          y = "Concentration") +
+                     theme_bw() +
+                     theme(panel.border = element_rect(color = "black", fill = NA,
+                                                       linewidth = 1))
 
+                 }))
 
-
-  #if there is a fit, then plot it
-  if (obj$status >= status_fit) {
-    #then create a data.frame of predicted concentrations at interpolated time points
-    data_plot <- newdata %>%
-      dplyr::group_by(Chemical, Species, Route, Media, Dose, Reference) %>%
-      dplyr::summarise(Time_trans = {
-        #get unique timepoints in this group, including 0, sorted in increasing order
-        time_tmp <- sort(unique(c(0,Time_trans)))
-        #between each of those time points, interpolate 10 new points
-        time_interp <- sapply(1:(length(time_tmp)-1),
-                              function(i) {
-                                seq(from = time_tmp[i],
-                                    to = time_tmp[i+1],
-                                    length.out = n_interp)
-                              })
-        #convert from matrix into vector, and keep only unique items
-        unique(as.numeric(time_interp))
-      },
-      Time_trans.Units = unique(Time_trans.Units),
-      Time = {
-        #get unique timepoints in this group, including 0, sorted in increasing order
-        time_tmp <- sort(unique(c(0,Time)))
-        #between each of those time points, interpolate 10 new points
-        time_interp <- sapply(1:(length(time_tmp)-1),
-                              function(i) {
-                                seq(from = time_tmp[i],
-                                    to = time_tmp[i+1],
-                                    length.out = n_interp)
-                              })
-        #convert from matrix into vector, and keep only unique items
-        unique(as.numeric(time_interp))
-      },
-      Time.Units = unique(Time.Units)
-      ) %>%
-      dplyr::ungroup() %>%
-      as.data.frame()
-
-    #for each model, get predictions for the plot data
-    preds <- predict(obj = obj,
-                     newdata = data_plot,
-                     model = model,
-                     method = method,
-                     type = "conc",
-                     use_scale_conc = FALSE,
-                     exclude = FALSE)
-    #translate the predictions into data.frames with variables model, method, and Conc
-    preds_all <- do.call(rbind,
-                         lapply(model,
-                                function(this_model){
-                                  do.call(rbind,
-                                          lapply(method,
-                                                 function(this_method){
-                                                   preds_vect <- preds[[this_model]][, this_method]
-                                                   preds_DF <- data.frame(model = this_model,
-                                                                          method = this_method,
-                                                                          Conc = preds_vect)
-                                                   #column bind these predictions to data_plot,
-                                                   #and return the result
-                                                   cbind(data_plot,
-                                                         preds_DF)
-                                                 }
-                                          )
-                                  )
-                                }
-                         )
-    )
-
-    #now, add the predictions layer
-    p <- p +
-      geom_line(data = preds_all,
-                mapping = plot_fit_aes)
-  }
-
-  #if log10_trans is true, then apply log10 scaling to y axis
-  if(conc_scale$log10_trans %in% TRUE){
-    p <- p + scale_y_log10()
-  }
-
-  return(p)
+  return(newdata)
 }
