@@ -71,6 +71,16 @@ my_pred_update <- predict(my_pk,
 
 
 
+my_pred2 <- predict(my_pk,
+                    newdata = data.frame(Chemical = "DTXSID2021731",
+                                         Species = "rat",
+                                         Route = "iv",
+                                         Media = "plasma",
+                                         Dose = 20,
+                                         Time = 1.6,
+                                         Time.Units = "hours"),
+                    exclude = FALSE,
+                    use_scale_conc = FALSE)
 
 rmse(my_pk) %>% View("RMSE_test")
 residuals(my_pk) %>% View("Residuals_test")
@@ -137,20 +147,64 @@ trans_vars <- c("Time_trans",
 my_ndf %>%
   dplyr::select(Chemical, Species,
                 dplyr::all_of(req_vars),
-                dplyr::any_of(trans_vars)) %>%
-  mutate(Detect = ifelse(Detect, "Detect", "Non-Detect")) %>%
+                dplyr::any_of(trans_vars)) -> my_ndf
+
+# Time interpolation
+my_ndf %>% uncount(1) %>% 
+  group_by(Dose, Route, Media) %>%
+  mutate(Time_trans = (max(Time)/(n() - 1))*(row_number() - 1)) %>%
   View()
+
 
 devtools::load_all()
 my_plot <- plot(my_pk)
 
+
+my_plot[[3]][[2]] %>%
+  dplyr::select(Time, Dose, Route, Media, Reference) %>% View("reduced")
+
+my_plot[[3]][[2]] %>%
+  tidyr::uncount(3) %>%
+  arrange(Time) %>%
+  group_by(across(!starts_with("Time"))) %>% 
+  mutate(Time = seq(from = min(Time),
+                    to = max(Time),
+                    length.out = length(Time))) %>% View()
+
+# Testing the stat_function way
+# 
+my_plot$observation_plot[[2]] +
+  ggplot2::stat_function(fun = \(x) {
+    sqrt(1/x)
+    },
+    aes(linetype = "solid"),
+                         inherit.aes = FALSE)
+
+my_statfun <- ggplot2::stat_function(fun = \(x) {
+    sqrt(5*x)
+    },
+    aes(linetype = "dotted"),
+    inherit.aes = FALSE) 
+my_statfun2 <- ggplot2::stat_function(fun = \(x) {
+    0.5*x
+    },
+    aes(linetype = "solid"),
+    inherit.aes = FALSE) 
+# Note that we cannot add ggproto objects together! But I can make them into a list
+# and add that to the main object
+
+my_plot$observation_plot[[2]] + list(my_statfun, my_statfun2)
+
+my_plot$observation_plot[[2]] + my_statfun +
+  scale_linetype_identity()
 ```
 
 
 
 ```{r remaining_methods}
 # plot()
-# 
+# coef_sd
+# logLik.pk
 # get_tkstats()
 
 

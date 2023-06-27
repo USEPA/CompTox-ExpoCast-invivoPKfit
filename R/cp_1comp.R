@@ -62,41 +62,43 @@
 #' @family built-in model functions
 #' @family 1-compartment model functions
 #' @family model concentration functions
-cp_1comp <- function(params, time, dose, route, medium = 'plasma'){
-
+cp_1comp <- function(params, time, dose, route, medium = 'plasma') {
   params <- fill_params_1comp(params)
 
   check_msg <- check_params_1comp(params = params,
-                            route = route,
-                            medium = medium)
+                                  route = route,
+                                  medium = medium)
 
-  if(!(check_msg %in% "Parameters OK")){
+  if (!(check_msg %in% "Parameters OK")) {
     stop(paste("cp_1comp():",
                check_msg))
   }
 
   #for readability, assign params to variables inside this function
-  for(x in names(params)){
+  for (x in names(params)) {
     assign(x, unname(params[x]))
   }
 
 
   #compute plasma concentration
-  cp <- dose * ifelse(route %in% "iv",
-         exp(-kelim * time)/Vdist, #iv route
-         ifelse(rep(kelim != kgutabs, #oral route
-                    length(route)),
-                #equation when kelim != kgutabs
-                (Fgutabs_Vdist *
-                   kgutabs)/
-                  (kgutabs - kelim) *
-                  (exp(-kelim * time) -
-                     exp(-kgutabs* time)),
-                #alternate equation when kelim == kgutabs
-                Fgutabs_Vdist  * kelim *
-                  time *
-                  exp(-kelim * time)
-         )
+  cp <- dose * ifelse(
+    route %in% "iv",
+    exp(-kelim * time) / Vdist,
+    #iv route
+    ifelse(
+      rep(kelim != kgutabs, #oral route
+          length(route)),
+      #equation when kelim != kgutabs
+      (Fgutabs_Vdist *
+         kgutabs) /
+        (kgutabs - kelim) *
+        (exp(-kelim * time) -
+           exp(-kgutabs * time)),
+      #alternate equation when kelim == kgutabs
+      Fgutabs_Vdist  * kelim *
+        time *
+        exp(-kelim * time)
+    )
   )
 
   cp <- ifelse(medium %in% "blood",

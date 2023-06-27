@@ -134,7 +134,6 @@ plot.pk <- function(obj,
     dplyr::group_by(!!!obj$data_group) %>%
     tidyr::nest(.key = "observations")
 
-
   # Default arguments and functions
   plot_data_aes_default <- ggplot2::aes(x = Time_trans,
                                         y = Conc_set,
@@ -228,13 +227,47 @@ plot.pk <- function(obj,
                    }
 
                    p +
-                     labs(x = "Time",
+                     labs(title = paste(Chemical, Species),
+                          subtitle = method,
+                          x = "Time",
                           y = "Concentration") +
                      theme_bw() +
                      theme(panel.border = element_rect(color = "black", fill = NA,
                                                        linewidth = 1))
 
                  }))
+
+  # For predictions, I will interpolate the time
+
+  if (get_status(obj = obj) == 5) {
+    interp_data <- newdata
+    interp_data <- interp_data %>%
+      mutate(interpolated = map(observations,
+                                \(x) {
+                                  x %>%
+                                    dplyr::select(Time, Time.Units,
+                                                  Dose, Route, Media) %>%
+                                    dplyr::distinct() %>%
+                                    tidyr::uncount(n_interp) %>%
+                                    dplyr::group_by(Dose, Route, Media) %>%
+                                    dplyr::mutate(Time_trans = (max(Time) / (n() - 1)) *
+                                                    (row_number() - 1),
+                                                  Dose = as.numeric(Dose),
+                                                  Chemical = Chemical,
+                                                  Species = Species)
+                                }))
+    interp_data <- interp_data %>%
+      mutate(predicted = map(interpolated,
+                             \(x) {
+                               predict(obj = obj,
+                                       newdata = x,
+                                       use_scale_conc = conc_scale$dose_norm,
+                                       exclude = FALSE)
+                             }))
+
+
+    return(interp_data)
+  }
 
   return(newdata)
 }

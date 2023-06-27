@@ -55,104 +55,134 @@ predict.pk <- function(obj,
                        type = "conc",
                        exclude = TRUE,
                        use_scale_conc = FALSE,
-                       ...){
-
+                       ...) {
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
-  if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$settings_optimx$method
+  if (is.null(model))
+    model <- names(obj$stat_model)
+  if (is.null(method))
+    method <- obj$settings_optimx$method
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
 
-  coefs <- coef(obj = obj,
-                model = model,
-                method = method,
-                drop_sigma = TRUE)
+  coefs <- coef(
+    obj = obj,
+    model = model,
+    method = method,
+    drop_sigma = TRUE
+  )
 
-  if(is.null(newdata)) newdata <- obj$data
+  other_vars <- NULL
 
-  newdata_ok <- check_newdata(newdata = newdata,
-                              olddata = obj$data,
-                              req_vars = c("Time",
-                                           "Time.Units",
-                                           "Dose",
-                                           "Route",
-                                           "Media"),
-                              exclude = exclude)
+  if (is.null(newdata)) {
+    newdata <- obj$data
+
+    other_vars <- ggplot2::vars(
+      Value,
+      Value.Units,
+      Time_trans.Units,
+      Conc_trans,
+      Conc_trans.Units,
+      Detect,
+      exclude
+    )
+  }
+
+  newdata_ok <- check_newdata(
+    newdata = newdata,
+    olddata = obj$data,
+    req_vars = c("Time",
+                 "Time.Units",
+                 "Dose",
+                 "Route",
+                 "Media"),
+    exclude = exclude
+  )
 
   #scale time if needed
-  if(!("Time_trans" %in% names(newdata))){
-    newdata$Time_trans <- convert_time(x = newdata$Time,
-                                       from = newdata$Time.Units,
-                                       to = obj$scales$time$new_units)
+  if (!("Time_trans" %in% names(newdata))) {
+    newdata$Time_trans <- convert_time(
+      x = newdata$Time,
+      from = newdata$Time.Units,
+      to = obj$scales$time$new_units
+    )
   }
 
   #apply transformations if so specified
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
 
-  req_vars <- c("Time",
-                "Time.Units",
-                "Dose",
-                "Route",
-                "Media",
-                "Value",
-                "Value.Units")
-
-  if (exclude) {
-    req_vars <- c(req_vars, "Detect", "exclude")
-  }
-
-  trans_vars <- c("Time_trans",
-                  "Time_trans.Units",
-                  "Conc_trans",
-                  "Conc_trans.Units")
+  req_vars <- ggplot2::vars(Time,
+                            Time.Units,
+                            Time_trans,
+                            Dose,
+                            Route,
+                            Media)
 
   newdata <- newdata %>%
-    dplyr::select(!!!obj$data_group,
-                  dplyr::all_of(req_vars),
-                  dplyr::any_of(trans_vars)) %>%
-    dplyr::group_by(!!!obj$data_group,
-             Route, Media) %>%
-    tidyr::nest(.key = "observations")
+    dplyr::select(!!!union(obj$data_group, req_vars),
+                  !!!other_vars) %>%
+    dplyr::group_by(!!!union(obj$data_group,
+                             ggplot2::vars(Route, Media))) %>%
+    tidyr::nest(.key = "observations") %>%
+    dplyr::ungroup()
 
-  newdata <- dplyr::left_join(coefs, newdata,
-                              relationship = "many-to-many")
+  newdata <- tidyr::expand_grid(expand_grid(model, method),
+                                newdata)
 
-# After join it is joined by model, method, Chemical, Species
+  newdata <- dplyr::left_join(newdata, coefs)
+
+
+  newdata <- newdata %>%
+    rowwise() %>%
+    filter(!is.null(observations)) %>%
+    ungroup()
+
+  # After join it is joined by model, method, Chemical, Species
   newdata <- newdata %>%
     dplyr::group_by(model, method,
                     !!!obj$data_group,
                     Route, Media) %>%
-    dplyr::mutate(model_fun = dplyr::case_when(
-      type == "conc" ~obj$stat_model[[model]]$conc_fun,
-      type == "auc"  ~obj$stat_model[[model]]$auc_fun,
-      .default = obj$stat_model[[model]]$conc_fun)) %>%
+    dplyr::mutate(
+      model_fun = dplyr::case_when(
+        type == "conc" ~ obj$stat_model[[model]]$conc_fun,
+        type == "auc"  ~ obj$stat_model[[model]]$auc_fun,
+        .default = obj$stat_model[[model]]$conc_fun
+      )
+    )
+
+  newdata <- newdata %>%
     dplyr::reframe(predictions =
-              purrr::map(observations,
-                  .f = \(x) {
-                    x %>%
-                      dplyr::group_by(Time_trans) %>%
-                      dplyr::mutate(Estimate = sapply(coefs_vector,
-                                               FUN = model_fun,
-                                               time = Time_trans,
-                                               dose = ifelse(conc_scale$dose_norm,
-                                                             1, Dose),
-                                               route = Route,
-                                               medium = Media,
-                                               simplify = TRUE,
-                                               USE.NAMES = TRUE))
-                  })) %>%
+                     purrr::map(observations,
+                                .f = \(x) {
+                                  x %>%
+                                    dplyr::rowwise() %>%
+                                    dplyr::mutate(
+                                      Estimate = sapply(
+                                        coefs_vector,
+                                        FUN = model_fun,
+                                        time = Time_trans,
+                                        dose = ifelse(conc_scale$dose_norm,
+                                                      1, Dose),
+                                        route = Route,
+                                        medium = Media,
+                                        simplify = TRUE,
+                                        USE.NAMES = TRUE
+                                      )
+                                    )
+                                })) %>%
     tidyr::unnest(predictions)
 
-  if (type == "conc") newdata <- dplyr::rename(newdata, Conc_est = "Estimate")
-  if (type == "auc") newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
+  if (type == "conc")
+    newdata <- dplyr::rename(newdata, Conc_est = "Estimate")
+  if (type == "auc")
+    newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
 
   return(newdata)
 }
