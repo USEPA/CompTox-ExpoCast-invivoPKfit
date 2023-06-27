@@ -4,7 +4,7 @@
 \alias{coef.pk}
 \title{Get coefficients}
 \usage{
-\method{coef}{pk}(obj, model = NULL, method = NULL, ...)
+\method{coef}{pk}(obj, model = NULL, method = NULL, drop_sigma = FALSE, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
@@ -49,6 +49,6 @@ Other methods for fitted pk objects:
 \code{\link{rsq.pk}()}
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }
 \concept{methods for fitted pk objects}

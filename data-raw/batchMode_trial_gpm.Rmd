@@ -157,46 +157,9 @@ my_ndf %>% uncount(1) %>%
 
 
 devtools::load_all()
-my_plot <- plot(my_pk)
+my_plot <- plot(my_pk, use_scale_conc = FALSE)
 
 
-my_plot[[3]][[2]] %>%
-  dplyr::select(Time, Dose, Route, Media, Reference) %>% View("reduced")
-
-my_plot[[3]][[2]] %>%
-  tidyr::uncount(3) %>%
-  arrange(Time) %>%
-  group_by(across(!starts_with("Time"))) %>% 
-  mutate(Time = seq(from = min(Time),
-                    to = max(Time),
-                    length.out = length(Time))) %>% View()
-
-# Testing the stat_function way
-# 
-my_plot$observation_plot[[2]] +
-  ggplot2::stat_function(fun = \(x) {
-    sqrt(1/x)
-    },
-    aes(linetype = "solid"),
-                         inherit.aes = FALSE)
-
-my_statfun <- ggplot2::stat_function(fun = \(x) {
-    sqrt(5*x)
-    },
-    aes(linetype = "dotted"),
-    inherit.aes = FALSE) 
-my_statfun2 <- ggplot2::stat_function(fun = \(x) {
-    0.5*x
-    },
-    aes(linetype = "solid"),
-    inherit.aes = FALSE) 
-# Note that we cannot add ggproto objects together! But I can make them into a list
-# and add that to the main object
-
-my_plot$observation_plot[[2]] + list(my_statfun, my_statfun2)
-
-my_plot$observation_plot[[2]] + my_statfun +
-  scale_linetype_identity()
 ```
 
 

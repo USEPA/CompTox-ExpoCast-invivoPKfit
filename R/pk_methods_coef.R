@@ -24,7 +24,6 @@
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
 coef.pk <- function(obj,
-                    data_group = NULL,
                     model = NULL,
                     method = NULL,
                     drop_sigma = FALSE,

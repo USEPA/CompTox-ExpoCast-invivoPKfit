@@ -10,14 +10,15 @@
   model = NULL,
   method = NULL,
   exclude = TRUE,
-  use_scale_conc = TRUE
+  use_scale_conc = TRUE,
+  rmse_group = vars(Route, Media, Dose, Time)
 )
 }
 \arguments{
 \item{obj}{A `pk` object}
 
 \item{newdata}{Optional: A `data.frame` with new data for which to make
-predictions and compute RMSsE. If NULL (the default), then RMSEs will be
+predictions and compute RMSEs. If NULL (the default), then RMSEs will be
 computed for the data in `obj$data`. `newdata` is required to contain at
 least the following variables: `Time`, `Time.Units`, `Dose`, `Route`,
 `Media`, `Conc`, `Conc_SD`, `N_Subjects`, `Detect`. If variable
@@ -136,7 +137,7 @@ Other methods for fitted pk objects:
 \code{\link{rsq.pk}()}
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }
 \concept{fit evaluation metrics}
 \concept{methods for fitted pk objects}

@@ -9,13 +9,15 @@
   newdata = NULL,
   model = NULL,
   method = NULL,
-  exclude = TRUE,
   use_scale_conc = FALSE,
   plot_data_aes = NULL,
-  plot_fit_aes = NULL,
+  plot_point_aes = NULL,
   facet_fun = NULL,
   facet_fun_args = NULL,
+  drop_nonDetect = FALSE,
+  plot_fit_aes = NULL,
   n_interp = 10,
+  print_out = FALSE,
   ...
 )
 }
@@ -49,9 +51,8 @@ the plots.}
 visualizes the data. Default `NULL`, in which case a default mapping will be
 used based on the value of `use_scale_conc`.}
 
-\item{plot_fit_aes}{Optional: Aesthetic mapping for the plot layer that
-visualizes the fitted curves. Default `NULL`, in which case a default mapping will be
-used based on the value of `use_scale_conc`.}
+\item{plot_point_aes}{Optional: Aesthetic mappings for geom_point layer
+that determines the fill of the points. Defaults to `NULL`.}
 
 \item{facet_fun}{Default `"facet_grid"`. Optional: The name of the `ggplot2` faceting function to use:
 [ggplot2::facet_grid()], [ggplot2::facet_wrap()], or `'none'` to do no
@@ -67,8 +68,18 @@ scales = "free_y",
 labeller = "label_both")
 ```}
 
+\item{drop_nonDetect}{Default `FALSE`. Whether to eliminate observations below
+the level of quantification (LOQ).}
+
+\item{plot_fit_aes}{Optional: Aesthetic mapping for the plot layer that
+visualizes the fitted curves. Default `NULL`, in which case a default mapping will be
+used based on the value of `use_scale_conc`.}
+
 \item{n_interp}{For plotting: the number of time points to interpolate between
 each observed time point. Default 10.}
+
+\item{print_out}{For plotting: whether the output of the function should be
+the list of plots. Default `FALSE`.}
 }
 \value{
 A [ggplot2::ggplot()]-class plot object.

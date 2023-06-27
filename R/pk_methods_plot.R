@@ -28,6 +28,8 @@
 #'@param plot_data_aes Optional: Aesthetic mapping for the plot layer that
 #'  visualizes the data. Default `NULL`, in which case a default mapping will be
 #'  used based on the value of `use_scale_conc`.
+#'@param plot_point_aes Optional: Aesthetic mappings for geom_point layer
+#'  that determines the fill of the points. Defaults to `NULL`.
 #'@param plot_fit_aes Optional: Aesthetic mapping for the plot layer that
 #'  visualizes the fitted curves. Default `NULL`, in which case a default mapping will be
 #'  used based on the value of `use_scale_conc`.
@@ -43,8 +45,12 @@
 #'scales = "free_y",
 #'labeller = "label_both")
 #'```
+#'@param drop_nonDetect Default `FALSE`. Whether to eliminate observations below
+#'  the level of quantification (LOQ).
 #'@param n_interp For plotting: the number of time points to interpolate between
 #'  each observed time point. Default 10.
+#'@param print_out For plotting: whether the output of the function should be
+#'  the list of plots. Default `FALSE`.
 #'@return A [ggplot2::ggplot()]-class plot object.
 #'@import ggplot2
 #'@export
@@ -62,6 +68,7 @@ plot.pk <- function(obj,
                     # Predict/interpolation arguments
                     plot_fit_aes = NULL,
                     n_interp = 10,
+                    print_out = FALSE,
                     ...){
 
   #ensure that the model has at least been preprocessed
@@ -96,53 +103,23 @@ plot.pk <- function(obj,
     newdata <- subset(newdata, Detect %in% TRUE)
   }
 
-  req_vars <- c("Time",
-                "Time.Units",
-                "Dose",
-                "Route",
-                "Media",
-                "Reference",
-                "Conc",
-                "Conc_SD",
-                "Value",
-                "Value.Units",
-                "Detect", "exclude")
+  common_vars <- ggplot2::vars(Time, Time.Units, Time_trans,
+                               Dose, Route, Media)
+  obs_vars <- ggplot2::vars(Conc, Conc_SD, Value, Value.Units,
+                            Detect, exclude,
+                            Conc_trans, Conc_trans.Units,
+                            Reference)
 
-  trans_vars <- c("Time_trans",
-                  "Time_trans.Units",
-                  "Conc_trans",
-                  "Conc_trans.Units")
-
-  # I think ideally there should be required variables and
-  # a way to ensure all the aes() variables get added
-  newdata <- newdata %>%
-    dplyr::select(!!!obj$data_group,
-                  dplyr::all_of(req_vars),
-                  dplyr::any_of(trans_vars)) %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(Conc_set = ifelse(conc_scale$dose_norm,
-                                    Conc / Dose,
-                                    Conc),
-                  Conc_set_SD = ifelse(conc_scale$dose_norm,
-                                       Conc_SD / Dose,
-                                       Conc_SD),
-                  Detect = ifelse(Detect,
-                                  "Detect",
-                                  "Non-Detect"),
-                  Dose = factor(Dose)) %>%
-    dplyr::ungroup() %>%
-    dplyr::group_by(!!!obj$data_group) %>%
-    tidyr::nest(.key = "observations")
 
   # Default arguments and functions
   plot_data_aes_default <- ggplot2::aes(x = Time_trans,
                                         y = Conc_set,
                                         ymin = Conc_set - Conc_set_SD,
                                         ymax = Conc_set + Conc_set_SD,
-                                        color = Dose,
+                                        color = factor(Dose),
                                         shape = Reference)
 
-  plot_point_aes_default <- ggplot2::aes(fill = Dose,
+  plot_point_aes_default <- ggplot2::aes(fill = factor(Dose),
                                          alpha = Detect)
 
   plot_fit_aes_default <- ggplot2::aes(x = Time_trans,
@@ -168,6 +145,29 @@ plot.pk <- function(obj,
   if (is.null(facet_fun_args)) facet_fun_args <- facet_fun_args_default
 
   if (facet_fun %in% "none") facet_fun <- NULL
+
+  # I think ideally there should be required variables and
+  # a way to ensure all the aes() variables get added
+  newdata <- newdata %>%
+    dplyr::select(!!!union(union(obj$data_group,
+                                 common_vars),
+                           obs_vars)) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(Conc_set = ifelse(conc_scale$dose_norm,
+                                    Conc / Dose,
+                                    Conc),
+                  Conc_set_SD = ifelse(conc_scale$dose_norm,
+                                       Conc_SD / Dose,
+                                       Conc_SD),
+                  Detect = ifelse(Detect,
+                                  "Detect",
+                                  "Non-Detect"),
+                  Dose = Dose) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(!!!obj$data_group) %>%
+    tidyr::nest(.key = "observations")
+
+
 
   newdata <- newdata %>%
     mutate(observation_plot =
@@ -245,29 +245,43 @@ plot.pk <- function(obj,
       mutate(interpolated = map(observations,
                                 \(x) {
                                   x %>%
-                                    dplyr::select(Time, Time.Units,
-                                                  Dose, Route, Media) %>%
+                                    dplyr::select(!!!common_vars) %>%
                                     dplyr::distinct() %>%
                                     tidyr::uncount(n_interp) %>%
                                     dplyr::group_by(Dose, Route, Media) %>%
                                     dplyr::mutate(Time_trans = (max(Time) / (n() - 1)) *
-                                                    (row_number() - 1),
-                                                  Dose = as.numeric(Dose),
-                                                  Chemical = Chemical,
-                                                  Species = Species)
+                                                    (row_number() - 1))
                                 }))
     interp_data <- interp_data %>%
-      mutate(predicted = map(interpolated,
-                             \(x) {
-                               predict(obj = obj,
-                                       newdata = x,
-                                       use_scale_conc = conc_scale$dose_norm,
-                                       exclude = FALSE)
-                             }))
+      dplyr::select(!!!obj$data_group, interpolated) %>%
+      unnest() %>%
+      ungroup()
 
+    interp_data <- predict(obj = obj,
+                           newdata = interp_data,
+                           use_scale_conc = conc_scale$dose_norm,
+                           exclude = FALSE) %>%
+      group_by(!!!obj$data_group) %>%
+      nest(.key = "predicted")
 
-    return(interp_data)
+    newdata <- left_join(newdata, interp_data)
+
+    newdata <- newdata %>%
+      mutate(predicted_plot = map(predicted,
+                                  \(x) {
+                                    ggplot2::geom_line(data = x,
+                                                       plot_fit_aes,
+                                                       inherit.aes = FALSE)
+                                  })) %>%
+      mutate(final_plot = map2(observation_plot, predicted_plot,
+                               \(x, y) x + y +
+                                 guides(color = guide_legend(title = "Dose"),
+                                        linetype = guide_legend(title = "Model & Method"))
+                               ))
+
   }
+
+  if (print_out) return(newdata$final_plot)
 
   return(newdata)
 }
