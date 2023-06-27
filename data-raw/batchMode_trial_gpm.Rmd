@@ -90,74 +90,21 @@ residuals(my_pk) %>% View("Residuals_test")
 
 
 ```{r plotting_method}
-# Experimenting with what works with my_ndf
-# 
-my_ndf <- my_pk$data
-
-my_ndf %>%
-  filter(Chemical %in% "DTXSID0020442", Species %in% "rat") %>%
-  mutate(Dose = factor(Dose),
-         Reference = factor(Reference),
-         Detect_int = as.character(Detect)
-         ) %>%
-  ggplot(aes(
-    x = Time_trans,
-    y = Conc_trans,
-    color = Dose,
-    shape = Reference
-  )) +
-  geom_point(aes(
-    fill = Dose,
-    alpha = Detect_int
-  )) +
-  geom_point() +
-  scale_shape_manual(values = 21:25) +
-  scale_alpha_manual(values = c("FALSE" = 0, "TRUE" = 1),
-                     breaks = c("TRUE", "FALSE"),
-                     name = "Detect") +
-  guides(shape = guide_legend(override.aes = list(fill = "black")),
-         alpha = guide_legend(override.aes = list(alpha = 1,
-                                                  fill = c("black", "white"),
-                                                  color = "black",
-                                                  shape = 21))) +
-  facet_grid(rows = vars(Detect), # This is just for illustrative purposes, this would be Routes
-             cols = vars(Route)) +
-  theme_bw()
-# Need to find a way to make this vectorized...
-# probably within a mutate and map function
-
-
-req_vars <- c("Time",
-              "Time.Units",
-              "Dose",
-              "Route",
-              "Media",
-              "Reference",
-              "Conc",
-              "Conc_SD",
-              "Value",
-              "Value.Units",
-              "Detect", "exclude")
-
-trans_vars <- c("Time_trans",
-                "Time_trans.Units",
-                "Conc_trans",
-                "Conc_trans.Units")
-
-my_ndf %>%
-  dplyr::select(Chemical, Species,
-                dplyr::all_of(req_vars),
-                dplyr::any_of(trans_vars)) -> my_ndf
-
-# Time interpolation
-my_ndf %>% uncount(1) %>% 
-  group_by(Dose, Route, Media) %>%
-  mutate(Time_trans = (max(Time)/(n() - 1))*(row_number() - 1)) %>%
-  View()
-
 
 devtools::load_all()
 my_plot <- plot(my_pk, use_scale_conc = FALSE)
+plot(my_pk, use_scale_conc = TRUE,
+     method = "L-BFGS-B",
+     print_out = TRUE)
+
+# This is printable into a one file, multipage pdf
+pdf(file = "C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Code Notes/plotMethod_OnefileTest.pdf",
+    width = 10,
+    height = 8)
+plot(my_pk, use_scale_conc = TRUE,
+     method = "L-BFGS-B",
+     print_out = TRUE)
+dev.off()
 
 
 ```

@@ -134,7 +134,7 @@ plot.pk <- function(obj,
                                         cols = ggplot2::vars(Media),
                                         scales = "free_y",
                                         labeller = "label_both"),
-                                   list(ggplot2::vars(Route, Media, Dose),
+                                   list(ggplot2::vars(Dose, Route, Media),
                                         scales = "free_y",
                                         labeller = "label_both"))
 
@@ -215,7 +215,8 @@ plot.pk <- function(obj,
                                                                        color = "black",
                                                                        stroke = 1,
                                                                        fill = alpha_fill,
-                                                                       alpha = 1)))
+                                                                       alpha = 1),
+                                                   order = 2))
 
                    }
 
@@ -228,9 +229,10 @@ plot.pk <- function(obj,
 
                    p +
                      labs(title = paste(Chemical, Species),
-                          subtitle = method,
                           x = "Time",
-                          y = "Concentration") +
+                          y = ifelse(conc_scale$dose_norm,
+                                     "Concentration/Dose",
+                                     "Concentration")) +
                      theme_bw() +
                      theme(panel.border = element_rect(color = "black", fill = NA,
                                                        linewidth = 1))
@@ -244,12 +246,18 @@ plot.pk <- function(obj,
     interp_data <- interp_data %>%
       mutate(interpolated = map(observations,
                                 \(x) {
+                                  t_units <- unique(x[["Time.Units"]])
                                   x %>%
                                     dplyr::select(!!!common_vars) %>%
-                                    dplyr::distinct() %>%
-                                    tidyr::uncount(n_interp) %>%
                                     dplyr::group_by(Dose, Route, Media) %>%
-                                    dplyr::mutate(Time_trans = (max(Time) / (n() - 1)) *
+                                    dplyr::reframe(Time = max(Time),
+                                                   totalN = n() - 1) %>%
+                                    dplyr::mutate(maxTime = max(Time),
+                                                  totalN = max(totalN),
+                                                  Time.Units = "hours") %>%
+                                    tidyr::uncount(n_interp * totalN) %>%
+                                    dplyr::group_by(Dose, Route, Media) %>%
+                                    dplyr::mutate(Time_trans = (maxTime / (n() - 1)) *
                                                     (row_number() - 1))
                                 }))
     interp_data <- interp_data %>%
@@ -260,6 +268,8 @@ plot.pk <- function(obj,
     interp_data <- predict(obj = obj,
                            newdata = interp_data,
                            use_scale_conc = conc_scale$dose_norm,
+                           model = model,
+                           method = method,
                            exclude = FALSE) %>%
       group_by(!!!obj$data_group) %>%
       nest(.key = "predicted")
@@ -275,8 +285,10 @@ plot.pk <- function(obj,
                                   })) %>%
       mutate(final_plot = map2(observation_plot, predicted_plot,
                                \(x, y) x + y +
-                                 guides(color = guide_legend(title = "Dose"),
-                                        linetype = guide_legend(title = "Model & Method"))
+                                 guides(color = guide_legend(title = "Dose", order = 1),
+                                        fill = "none",
+                                        linetype = guide_legend(title = "Model & Method", order = 3),
+                                        shape = guide_legend(order = 4))
                                ))
 
   }
