@@ -49,6 +49,9 @@
 #'  the level of quantification (LOQ).
 #'@param n_interp For plotting: the number of time points to interpolate between
 #'  each observed time point. Default 10.
+#'@param limit_predicted Default `TRUE`. When TRUE, it filters the predicted
+#'  values for fits to not exceed 1.5 of the maximum observed concentration values
+#'  for each `data_group` in the `pk` object.
 #'@param print_out For plotting: whether the output of the function should be
 #'  the list of plots. Default `FALSE`.
 #'@return A [ggplot2::ggplot()]-class plot object.
@@ -69,6 +72,7 @@ plot.pk <- function(obj,
                     # Predict/interpolation arguments
                     plot_fit_aes = NULL,
                     n_interp = 10,
+                    limit_predicted = TRUE,
                     print_out = FALSE,
                     ...){
 
@@ -130,17 +134,18 @@ plot.pk <- function(obj,
                                        y = Conc_est,
                                        linetype = interaction(model, method))
 
-  facet_fun_default <- ifelse(conc_scale$dose_norm,
-                              "facet_grid", "facet_wrap")
-
-  facet_fun_args_default <- ifelse(conc_scale$dose_norm,
-                                   list(rows = ggplot2::vars(Route),
-                                        cols = ggplot2::vars(Media),
-                                        scales = "free_y",
-                                        labeller = "label_both"),
-                                   list(ggplot2::vars(Dose, Route, Media),
-                                        scales = "free_y",
-                                        labeller = "label_both"))
+  if (conc_scale$dose_norm) {
+    facet_fun_default <- "facet_grid"
+    facet_fun_args_default <- list(rows = ggplot2::vars(Route),
+                                   cols = ggplot2::vars(Media),
+                                   scales = "free_y",
+                                   labeller = "label_both")
+  } else {
+    facet_fun_default <- "facet_wrap"
+    facet_fun_args_default <- list(ggplot2::vars(Route, Media, Dose),
+                                   scales = "free_y",
+                                   labeller = "label_both")
+  }
 
   if (is.null(plot_data_aes)) plot_data_aes <- plot_data_aes_default
   if (is.null(plot_point_aes)) plot_point_aes <- plot_point_aes_default
@@ -224,12 +229,10 @@ plot.pk <- function(obj,
 
                    }
 
-                   #Apply faceting, if any
-                   if (!is.null(facet_fun)) {
-                     p <- p +
-                       do.call(facet_fun,
-                               args = facet_fun_args)
-                   }
+                   p <- p +
+                     do.call(facet_fun,
+                             args = facet_fun_args)
+
                    if (log10_C) {
                      p <- p + scale_y_continuous(trans = "log10",
                                                  labels = scales::label_scientific())
@@ -290,6 +293,13 @@ plot.pk <- function(obj,
 
     newdata <- left_join(newdata, interp_data)
 
+    if (limit_predicted) {
+      newdata <- newdata %>%
+        mutate(predicted = map2(observations, predicted,
+                                  \(x, y) {
+                                    filter(y, Conc_est <= (1.5*max(x$Conc_set)))
+                                  }))
+    }
     newdata <- newdata %>%
       mutate(predicted_plot = map(predicted,
                                   \(x) {

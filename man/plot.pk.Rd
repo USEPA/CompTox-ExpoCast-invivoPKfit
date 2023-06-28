@@ -10,6 +10,7 @@
   model = NULL,
   method = NULL,
   use_scale_conc = FALSE,
+  log10_C = NULL,
   plot_data_aes = NULL,
   plot_point_aes = NULL,
   facet_fun = NULL,
@@ -17,6 +18,7 @@
   drop_nonDetect = FALSE,
   plot_fit_aes = NULL,
   n_interp = 10,
+  limit_predicted = TRUE,
   print_out = FALSE,
   ...
 )
@@ -77,6 +79,10 @@ used based on the value of `use_scale_conc`.}
 
 \item{n_interp}{For plotting: the number of time points to interpolate between
 each observed time point. Default 10.}
+
+\item{limit_predicted}{Default `TRUE`. When TRUE, it filters the predicted
+values for fits to not exceed 1.5 of the maximum observed concentration values
+for each `data_group` in the `pk` object.}
 
 \item{print_out}{For plotting: whether the output of the function should be
 the list of plots. Default `FALSE`.}
