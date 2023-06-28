@@ -28,7 +28,10 @@ cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>%
 
 my_predata <- subset(cvt,
                      chemicals_analyzed.dsstox_substance_id %in% c("DTXSID0020442",
-                                                                   "DTXSID2021731"))
+                                                                   "DTXSID2021731",
+                                                                   "DTXSID5034773",
+                                                                   "DTXSID5032600",
+                                                                   "DTXSID7022253"))
 ```
 
 Next, I want to follow the steps required for the particular analysis I would like.
@@ -112,7 +115,6 @@ dev.off()
 
 
 ```{r remaining_methods}
-# plot()
 # coef_sd
 # logLik.pk
 # get_tkstats()

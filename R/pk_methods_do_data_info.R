@@ -12,7 +12,7 @@ do_data_info.pk <- function(obj){
   #check status
   objname <- deparse(substitute(obj))
   status <- obj$status
-  if(status >= status_data_info){
+  if (status >= status_data_info) {
     warning(paste0(objname,
                    " current status is ",
                    status,
@@ -22,18 +22,18 @@ do_data_info.pk <- function(obj){
   }
 
   #if preprocessing not already done, do it
-  if(obj$status < status_preprocess){
+  if (obj$status < status_preprocess) {
     obj <- do_preprocess(obj)
   }
 
-  if(obj$settings_preprocess$suppress.messages %in% FALSE){
+  if (obj$settings_preprocess$suppress.messages %in% FALSE) {
     message("do_data_info.pk(): Getting data summary info\n")
   }
 
   data <- obj$data
 
   #get data summary
-  if(obj$settings_preprocess$suppress.messages %in% FALSE){
+  if (obj$settings_preprocess$suppress.messages %in% FALSE) {
     message("do_data_info.pk(): Getting data summary statistics\n")
   }
 
@@ -46,12 +46,12 @@ do_data_info.pk <- function(obj){
   )
 
   data_summary_out <- data_summary(obj = obj,
-                               newdata = NULL,
-                               summary_group = summary_group
+                                   newdata = NULL,
+                                   summary_group = summary_group
   )
 
   #do NCA dose-normalized
-  if(obj$settings_preprocess$suppress.messages %in% FALSE){
+  if (obj$settings_preprocess$suppress.messages %in% FALSE) {
     message("do_data_info.pk(): Doing dose-normalized non-compartmental analysis\n")
   }
   nca_dose_norm <- nca(obj = obj,
@@ -63,7 +63,7 @@ do_data_info.pk <- function(obj){
   #first get names of grouping vars
   grp_vars <- sapply(summary_group,
                      rlang::as_label)
-#then pivot wider
+  #then pivot wider
   nca_dose_norm <-   nca_dose_norm %>%
     tidyr::pivot_wider(id_cols = tidyselect::all_of(grp_vars),
                        names_from = param_name,
@@ -71,7 +71,7 @@ do_data_info.pk <- function(obj){
     as.data.frame()
 
   #get data flags:
-  if(obj$settings_preprocess$suppress.messages %in% FALSE){
+  if (obj$settings_preprocess$suppress.messages %in% FALSE) {
     message("do_data_info.pk(): Getting data flags\n")
   }
 
@@ -81,39 +81,39 @@ do_data_info.pk <- function(obj){
                      rlang::as_label)
 
   df <- dplyr::inner_join(data_summary_out,
-              nca_dose_norm,
-              by = grp_vars) %>%
-   dplyr::mutate(
-    data_flag = ifelse(
-      Route %in% "oral" &
-        (abs(tmax - tfirst_detect) < sqrt(.Machine$double.eps)) %in% TRUE &
-                 !is.na(tmax),
-    "tmax is equal to time of first detect",
-      NA_real_
-    )) %>% dplyr::mutate(
+                          nca_dose_norm,
+                          by = grp_vars) %>%
+    dplyr::mutate(
       data_flag = ifelse(
         Route %in% "oral" &
-          (abs(tmax - tlast_detect) < sqrt(.Machine$double.eps)) %in% TRUE &
-                   !is.na(tmax),
-        paste2(data_flag,
-               "tmax is equal to time of last detect",
-               sep = " | "),
-        data_flag
+          (abs(tmax - tfirst_detect) < sqrt(.Machine$double.eps)) %in% TRUE &
+          !is.na(tmax),
+        "tmax is equal to time of first detect",
+        NA_real_
       )) %>% dplyr::mutate(
         data_flag = ifelse(
-          (CLtot < 0) %in% TRUE |
-            (`CLtot/Fgutabs` < 0) %in% TRUE,
+          Route %in% "oral" &
+            (abs(tmax - tlast_detect) < sqrt(.Machine$double.eps)) %in% TRUE &
+            !is.na(tmax),
           paste2(data_flag,
-                 "CLtot or CLtot/Fgutabs is negative",
+                 "tmax is equal to time of last detect",
                  sep = " | "),
-          data_flag)
-      ) %>% dplyr::mutate(
-        data_flag = ifelse((AUC_infinity < 0) %in% TRUE,
-                           paste2(data_flag,
-                                  "AUC_infinity is negative",
-                                  sep = " | "),
-                           data_flag)
-      ) %>%
+          data_flag
+        )) %>% dplyr::mutate(
+          data_flag = ifelse(
+            (CLtot < 0) %in% TRUE |
+              (`CLtot/Fgutabs` < 0) %in% TRUE,
+            paste2(data_flag,
+                   "CLtot or CLtot/Fgutabs is negative",
+                   sep = " | "),
+            data_flag)
+        ) %>% dplyr::mutate(
+          data_flag = ifelse((AUC_infinity < 0) %in% TRUE,
+                             paste2(data_flag,
+                                    "AUC_infinity is negative",
+                                    sep = " | "),
+                             data_flag)
+        ) %>%
     as.data.frame()
 
   #Other data flags:
@@ -121,11 +121,11 @@ do_data_info.pk <- function(obj){
 
   dose_norm_check <- do.call(dplyr::group_by,
                              args = c(list(df),
-                             summary_group)) %>%
-    dplyr::summarise(
+                                      summary_group)) %>%
+    dplyr::reframe(
       Cmax_fold_range = {
         tmprange <- suppressWarnings(range(`Cmax`, na.rm = TRUE))
-        if(all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
+        if (all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
         tmprange[2]/tmprange[1]
       },
       data_flag_Cmax = ifelse(Cmax_fold_range > 2,
@@ -133,7 +133,7 @@ do_data_info.pk <- function(obj){
                               NA_character_),
       AUC_fold_range = {
         tmprange <- suppressWarnings(range(`AUC_infinity`, na.rm = TRUE))
-        if(all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
+        if (all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
         tmprange[2]/tmprange[1]
       },
       data_flag_AUC = ifelse(AUC_fold_range > 2,

@@ -60,6 +60,7 @@ plot.pk <- function(obj,
                     method = NULL,
                     use_scale_conc = FALSE,
                     # Plotting arguments
+                    log10_C = NULL,
                     plot_data_aes = NULL,
                     plot_point_aes = NULL,
                     facet_fun = NULL,
@@ -82,6 +83,7 @@ plot.pk <- function(obj,
   if (is.null(method)) method <- obj$settings_optimx$method
   if (is.null(newdata)) newdata <- obj$data
 
+
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
                               req_vars = c("Time",
@@ -102,6 +104,8 @@ plot.pk <- function(obj,
   if (drop_nonDetect %in% TRUE) {
     newdata <- subset(newdata, Detect %in% TRUE)
   }
+
+  if (is.null(log10_C)) log10_C <- conc_scale$log10_trans
 
   common_vars <- ggplot2::vars(Time, Time.Units, Time_trans,
                                Dose, Route, Media)
@@ -226,6 +230,10 @@ plot.pk <- function(obj,
                        do.call(facet_fun,
                                args = facet_fun_args)
                    }
+                   if (log10_C) {
+                     p <- p + scale_y_continuous(trans = "log10",
+                                                 labels = scales::label_scientific())
+                   }
 
                    p +
                      labs(title = paste(Chemical, Species),
@@ -235,7 +243,13 @@ plot.pk <- function(obj,
                                      "Concentration")) +
                      theme_bw() +
                      theme(panel.border = element_rect(color = "black", fill = NA,
-                                                       linewidth = 1))
+                                                       linewidth = 1),
+                           plot.title = element_text(hjust = 0.5, face = "bold"),
+                           strip.background = element_rect(fill = "grey95",
+                                                           color = "black",
+                                                           size = 1))
+
+
 
                  }))
 
@@ -291,6 +305,11 @@ plot.pk <- function(obj,
                                         shape = guide_legend(order = 4))
                                ))
 
+  } else {
+    newdata <- newdata %>%
+      rename(final_plot = "observation_plot")
+
+    message("Note that the final plots do not contain any fits")
   }
 
   if (print_out) return(newdata$final_plot)
