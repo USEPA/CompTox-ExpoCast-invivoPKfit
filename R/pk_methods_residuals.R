@@ -40,12 +40,9 @@
 #'   log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
-#' @return A named list of numeric matrices. There is one list element named for
-#'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
-#'   fitted to the data. Each list element is a matrix with the same number of
-#'   rows as the data in `obj$data` (corresponding to the rows in `obj$data`),
-#'   and as many columns as there were [optimx::optimx()] methods (specified in
-#'   [settings_optimx()]). The column names are the method names.  Each column
+#' @return A data.frame with the final column being calculated residuals.
+#'   There is one row per each [optimx::optimx()] methods (specified in
+#'   [settings_optimx()]), and `data_group`.  The final column
 #'   contains the residuals (observed - predicted) of the model fitted by the
 #'   corresponding method.  If `use_scale_conc %in% FALSE`, these residuals are
 #'   in the same units as `obj$data$Conc.Units`. If `use_scale_conc %in% TRUE`,
@@ -100,7 +97,6 @@ residuals.pk <- function(obj,
   #remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE) {
     if ("exclude" %in% names(newdata)) {
-      preds <- preds %>% filter(exclude %in% FALSE)
       newdata <- newdata %>% filter(exclude %in% FALSE)
     }
   }
@@ -123,7 +119,6 @@ residuals.pk <- function(obj,
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
 
-  # # STOPPED HERE 6/16
   #apply dose-normalization if specified
   # conditional mutate ifelse
   resids <- new_preds %>%

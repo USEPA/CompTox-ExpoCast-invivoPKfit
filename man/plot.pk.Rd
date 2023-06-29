@@ -18,7 +18,7 @@
   drop_nonDetect = FALSE,
   plot_fit_aes = NULL,
   n_interp = 10,
-  limit_predicted = TRUE,
+  fit_limits = NULL,
   print_out = FALSE,
   ...
 )
@@ -48,6 +48,10 @@ y-axis (concentration axis). If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied to the y-axis (concentration axis) of
 the plots.}
+
+\item{log10_C}{Default `NULL`. Determines whether y-axis (concentration) should
+be log10 transformed. Takes `TRUE` or `FALSE` values. Otherwise it defaults
+to the value determined from `use_scale_conc`.}
 
 \item{plot_data_aes}{Optional: Aesthetic mapping for the plot layer that
 visualizes the data. Default `NULL`, in which case a default mapping will be
@@ -80,9 +84,12 @@ used based on the value of `use_scale_conc`.}
 \item{n_interp}{For plotting: the number of time points to interpolate between
 each observed time point. Default 10.}
 
-\item{limit_predicted}{Default `TRUE`. When TRUE, it filters the predicted
+\item{fit_limits}{Default `NULL`. c(Upper Bound, Lower Bound).
+Supply a numeric vector. These values filter the predicted
 values for fits to not exceed 1.5 of the maximum observed concentration values
-for each `data_group` in the `pk` object.}
+for each `data_group` in the `pk` object. When there is a log10 transformation
+of concentration values, it limits predicted values to 1/20th of the minimum
+observed concentration values.}
 
 \item{print_out}{For plotting: whether the output of the function should be
 the list of plots. Default `FALSE`.}

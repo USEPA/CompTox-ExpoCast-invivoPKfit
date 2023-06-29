@@ -94,9 +94,10 @@ residuals(my_pk) %>% View("Residuals_test")
 ```{r plotting_method}
 
 devtools::load_all()
-my_plot <- plot(my_pk, use_scale_conc = TRUE)
 plot(my_pk, use_scale_conc = TRUE,
-     print_out = TRUE)
+     print_out = TRUE, log10_C = TRUE)
+
+my_plot <- plot(my_pk, use_scale_conc = TRUE)
 
 # This is printable into a one file, multipage pdf
 pdf(file = "C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Code Notes/plotMethod_freeY.pdf",

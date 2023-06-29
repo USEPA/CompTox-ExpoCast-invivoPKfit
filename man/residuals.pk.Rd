@@ -53,12 +53,9 @@ log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
 }
 \value{
-A named list of numeric matrices. There is one list element named for
-  each model in `obj`'s [stat_model()] element, i.e. each PK model that was
-  fitted to the data. Each list element is a matrix with the same number of
-  rows as the data in `obj$data` (corresponding to the rows in `obj$data`),
-  and as many columns as there were [optimx::optimx()] methods (specified in
-  [settings_optimx()]). The column names are the method names.  Each column
+A data.frame with the final column being calculated residuals.
+  There is one row per each [optimx::optimx()] methods (specified in
+  [settings_optimx()]), and `data_group`.  The final column
   contains the residuals (observed - predicted) of the model fitted by the
   corresponding method.  If `use_scale_conc %in% FALSE`, these residuals are
   in the same units as `obj$data$Conc.Units`. If `use_scale_conc %in% TRUE`,

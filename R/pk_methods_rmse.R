@@ -84,13 +84,13 @@
 #'   log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
-#' @return A named list of numeric vectors. There is one list element named for
+#' @param rmse_group A list of quosures provided in the format
+#'  `vars(...)` that determines the group for which RMSE is calculated.
+#'  Defaults to `vars(Route, Media, Dose, Time)`.
+#' @return A `data.frame` with calculated RMSE as the final row. There is one row per
 #'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
-#'   fitted to the data. Each list element is a numeric vector with as many
-#'   elements as there were [optimx::optimx()] methods (specified in
-#'   [settings_optimx()]). The vector names are the method names.  Each vector
-#'   element contains the root mean squared error of the model fitted by the
-#'   corresponding method, using the data in `newdata`.
+#'   fitted to the data, each [optimx::optimx()] methods (specified in
+#'   [settings_optimx()]), `data_group` and `rmse_group` specified.
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family fit evaluation metrics
@@ -105,13 +105,13 @@ rmse.pk <- function(obj,
 #ensure that the model has been fitted
 check <- check_required_status(obj = obj,
                                required_status = status_fit)
-if(!(check %in% TRUE)){
+if (!(check %in% TRUE)) {
   stop(attr(check, "msg"))
 }
 
-  if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$optimx_settings$method
-  if(is.null(newdata)) newdata <- obj$data
+  if (is.null(model)) model <- names(obj$stat_model)
+  if (is.null(method)) method <- obj$optimx_settings$method
+  if (is.null(newdata)) newdata <- obj$data
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -139,7 +139,7 @@ if(!(check %in% TRUE)){
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
 
-  #Get predictions WITHOUT any scaling/transformations
+  #Get predictions
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,
@@ -152,7 +152,6 @@ if(!(check %in% TRUE)){
   #remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE) {
     if ("exclude" %in% names(newdata)) {
-      preds <- preds %>% filter(exclude %in% FALSE)
       newdata <- newdata %>% filter(exclude %in% FALSE)
     }
   }
@@ -186,13 +185,14 @@ if(!(check %in% TRUE)){
     dplyr::group_by(!!!obj$data_group,
                     model, method,
                     !!!rmse_group) %>%
-    dplyr::mutate(
+    dplyr::summarize(
       RMSE = calc_rmse(obs = Conc_set,
                        obs_sd = Conc_set_SD,
                        pred = Conc_est,
                        n_subj = N_Subjects,
                        detect = Detect,
                        log10_trans = conc_scale$log10_trans)) %>%
+    distinct() %>%
     ungroup()
 
   message("Groups: \n",

@@ -19,13 +19,12 @@ default), coefficients will be returned for all of the models in
 `obj$settings_optimx$method`.}
 }
 \value{
-A named list of numeric matrixes. There is one list element named for
-  each model in `model`. Each list element is a matrix with as many rows as
-  items in `method`. The row names are the method names. The matrix column
-  names are the names of the fitted parameters, including any error standard
-  deviation hyperparameters (whose names begin with "sigma"). The matrix
-  elements are the values of the corresponding model parameters as fitted by
-  the corresponding method.
+A data.frame with a row for each `data_group` x `method` x `model` combination
+ in a fitted [pk()] object. When `drop_sigma = TRUE` there is also a row for each
+ unique standard deviation hyper-parameter defined by `error_group` in the fitted [pk()] object.
+ There is a column for all parameter estimates given each model in `model`.
+ A list-column `coefs_vector` summarizes all estimated parameters into a named vector.
+ This named vector is used in functions that call upon the model functions, such as [predict()].
 }
 \description{
 Extract coefficients from a fitted [pk()] object

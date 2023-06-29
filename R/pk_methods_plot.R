@@ -25,6 +25,9 @@
 #'  log10_trans = ...)`, then the specified dose normalization and/or
 #'  log10-transformation will be applied to the y-axis (concentration axis) of
 #'  the plots.
+#'@param log10_C Default `NULL`. Determines whether y-axis (concentration) should
+#'  be log10 transformed. Takes `TRUE` or `FALSE` values. Otherwise it defaults
+#'  to the value determined from `use_scale_conc`.
 #'@param plot_data_aes Optional: Aesthetic mapping for the plot layer that
 #'  visualizes the data. Default `NULL`, in which case a default mapping will be
 #'  used based on the value of `use_scale_conc`.
@@ -49,9 +52,12 @@
 #'  the level of quantification (LOQ).
 #'@param n_interp For plotting: the number of time points to interpolate between
 #'  each observed time point. Default 10.
-#'@param limit_predicted Default `TRUE`. When TRUE, it filters the predicted
+#'@param fit_limits Default `NULL`. c(Upper Bound, Lower Bound).
+#'  Supply a numeric vector. These values filter the predicted
 #'  values for fits to not exceed 1.5 of the maximum observed concentration values
-#'  for each `data_group` in the `pk` object.
+#'  for each `data_group` in the `pk` object. When there is a log10 transformation
+#'  of concentration values, it limits predicted values to 1/20th of the minimum
+#'  observed concentration values.
 #'@param print_out For plotting: whether the output of the function should be
 #'  the list of plots. Default `FALSE`.
 #'@return A [ggplot2::ggplot()]-class plot object.
@@ -72,14 +78,14 @@ plot.pk <- function(obj,
                     # Predict/interpolation arguments
                     plot_fit_aes = NULL,
                     n_interp = 10,
-                    limit_predicted = TRUE,
+                    fit_limits = NULL,
                     print_out = FALSE,
                     ...){
 
   #ensure that the model has at least been preprocessed
   check <- check_required_status(obj = obj,
                                  required_status = status_preprocess)
-  if (!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
@@ -110,6 +116,31 @@ plot.pk <- function(obj,
   }
 
   if (is.null(log10_C)) log10_C <- conc_scale$log10_trans
+
+
+  if (is.null(fit_limits)) {
+    fit_limits <- c(1.5, 0.05)
+  }
+  if (is.numeric(fit_limits) & length(fit_limits) <= 2) {
+    limit_predicted <- TRUE
+    if (log10_C) {
+      if (length(fit_limits) == 1) {
+        fit_limits[2] <- 0.05
+        warning("Lower Bound not defined, setting it to the default.")
+      } else {
+        message("Lower and Upper Bounds supplied will be used.")
+      }
+    } else {
+      fit_limits <- fit_limits[1]
+      warning("No lower bound needed, Upper Bounds set to first value supplied.")
+    }
+  } else {
+    if (is.character(fit_limits) & (fit_limits == "none")) {
+      limit_predicted <- FALSE
+    } else {
+      stop("fit_limits must be numeric vector of length 1 or 2. Set fit_limits = 'none' to prevent possible predicted data filtering.")
+    }
+  }
 
   common_vars <- ggplot2::vars(Time, Time.Units, Time_trans,
                                Dose, Route, Media)
@@ -235,7 +266,7 @@ plot.pk <- function(obj,
 
                    if (log10_C) {
                      p <- p + scale_y_continuous(trans = "log10",
-                                                 labels = scales::label_scientific())
+                                                 labels = scales::label_log())
                    }
 
                    p +
@@ -279,7 +310,7 @@ plot.pk <- function(obj,
                                 }))
     interp_data <- interp_data %>%
       dplyr::select(!!!obj$data_group, interpolated) %>%
-      unnest() %>%
+      unnest(cols = c(interpolated)) %>%
       ungroup()
 
     interp_data <- predict(obj = obj,
@@ -294,11 +325,21 @@ plot.pk <- function(obj,
     newdata <- left_join(newdata, interp_data)
 
     if (limit_predicted) {
-      newdata <- newdata %>%
-        mutate(predicted = map2(observations, predicted,
+      if (log10_C) {
+        newdata <- newdata %>%
+          mutate(predicted = map2(observations, predicted,
                                   \(x, y) {
-                                    filter(y, Conc_est <= (1.5*max(x$Conc_set)))
+                                    filter(y,
+                                           Conc_est <= (fit_limits[1]*max(x$Conc_set)),
+                                           Conc_est >= (fit_limits[2]*min(x$Conc_set)))
                                   }))
+      } else {
+        newdata <- newdata %>%
+          mutate(predicted = map2(observations, predicted,
+                                  \(x, y) {
+                                    filter(y, Conc_est <= (fit_limits[1]*max(x$Conc_set)))
+                                  }))
+      }
     }
     newdata <- newdata %>%
       mutate(predicted_plot = map(predicted,

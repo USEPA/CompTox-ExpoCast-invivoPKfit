@@ -51,15 +51,16 @@ concentration scaling or transformation will be applied before the
 log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
+
+\item{rmse_group}{A list of quosures provided in the format
+`vars(...)` that determines the group for which RMSE is calculated.
+Defaults to `vars(Route, Media, Dose, Time)`.}
 }
 \value{
-A named list of numeric vectors. There is one list element named for
+A `data.frame` with calculated RMSE as the final row. There is one row per
   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
-  fitted to the data. Each list element is a numeric vector with as many
-  elements as there were [optimx::optimx()] methods (specified in
-  [settings_optimx()]). The vector names are the method names.  Each vector
-  element contains the root mean squared error of the model fitted by the
-  corresponding method, using the data in `newdata`.
+  fitted to the data, each [optimx::optimx()] methods (specified in
+  [settings_optimx()]), `data_group` and `rmse_group` specified.
 }
 \description{
 Extract root mean squared error of a fitted `pk` object
