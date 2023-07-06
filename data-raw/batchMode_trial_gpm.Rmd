@@ -29,8 +29,7 @@ cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>%
 my_predata <- subset(cvt,
                      chemicals_analyzed.dsstox_substance_id %in% c("DTXSID0020442",
                                                                    "DTXSID2021731",
-                                                                   "DTXSID5032600",
-                                                                   "DTXSID7022253"))
+                                                                   "DTXSID5032600"))
 ```
 
 Next, I want to follow the steps required for the particular analysis I would like.
@@ -59,7 +58,8 @@ my_pk <- do_prefit(my_pk)
 my_pk <- do_fit(my_pk)
 ```
 
-Batch mode works, now I need to write a function that recapitulates `coef()` method
+Batch mode works! Now, I have updated the `coef`, `predict`, `rmse`, and `residuals`
+methods.
 
 ```{r after_method_update}
 # Changed pk_methods coef() and predict() to those above
@@ -71,6 +71,9 @@ my_pred_update <- predict(my_pk,
                           exclude = TRUE, # add the "exclude" column to output
                           use_scale_conc = TRUE)
 
+predict(my_pk,
+        exclude = TRUE, # add the "exclude" column to output
+        use_scale_conc = TRUE)
 
 
 my_pred2 <- predict(my_pk,
@@ -87,15 +90,14 @@ my_pred2 <- predict(my_pk,
 rmse(my_pk) %>% View("RMSE_test")
 residuals(my_pk) %>% View("Residuals_test")
 
-# Seems to have worked!
 ```
 
 
 ```{r plotting_method}
 
-devtools::load_all()
+
 plot(my_pk, use_scale_conc = TRUE,
-     print_out = TRUE, log10_C = TRUE)
+     print_out = TRUE, log10_C = FALSE)
 
 my_plot <- plot(my_pk, use_scale_conc = TRUE)
 
@@ -107,6 +109,18 @@ plot(my_pk, use_scale_conc = TRUE,
      print_out = TRUE)
 dev.off()
 
+png(file = "C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Code Notes/examplePlot.png",
+    width = 8,
+    height = 6,
+    units = "in",
+    res = 150,
+    type = "cairo",
+    antialias = "none")
+plot(my_pk, use_scale_conc = TRUE,
+     method = "L-BFGS-B",
+     print_out = TRUE)[[3]]
+dev.off()
+
 
 ```
 
@@ -116,13 +130,47 @@ dev.off()
 # coef_sd
 # logLik.pk
 # get_tkstats()
-
-
-
+devtools::load_all()
+get_tkstats(my_pk) %>% head()
+get_tkstats(my_pk) %>% View("TK_test")
 my_tkstats <- get_tkstats(my_pk)
 
-plot_results <- plot(my_pk)
+# For the July 5th version where it returns a nested dataframe
+# 
+my_tkstats %>%
+  reframe(tkstats_df = purrr::map(c_data,
+                                  \(x) {
+                                    x %>%
+                                      dplyr::rowwise() %>%
+                                      dplyr::mutate(
+                                        TKstats = sapply(
+                                          coefs_vector,
+                                          FUN = tk_fun,
+                                          route = Route,
+                                          medium = Media,
+                                          dose = Dose,
+                                          time_unit = Time.Units,
+                                          conc_unit = Conc.Units,
+                                          vol_unit = "L",
+                                          simplify = FALSE,
+                                          USE.NAMES = TRUE
+                                        )
+                                      ) %>%
+                                      dplyr::ungroup()
+                                  })) -> my_tkstats
 
+
+
+
+my_tkstats %>% unnest(cols = c(tkstats_df)) -> my_tkstats
+
+my_tkstats %>% mutate(TKstats_wide  = map(TKstats,
+                                     \(x) {
+                                       dplyr::select(x, -param_units) %>%
+                                         tidyr::pivot_wider(names_from = param_name,
+                                                     values_from = param_value)
+                                     })) %>%
+  unnest(cols = c(TKstats_wide)) %>% View()
 
 ```
 

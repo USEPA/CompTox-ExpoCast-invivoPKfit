@@ -82,16 +82,16 @@ cp_2comp_dt <- function(params, time, dose, route, medium)
 
   #get dcp/dt
   dcpdt <- dose * ifelse(route %in% "iv",
-                 A_iv_unit * - alpha *
+                 A_iv_unit * -alpha *
                     exp(-alpha * time) +
-                   B_iv_oral * - beta *
+                   B_iv_oral * -beta *
                     exp(-beta * time),
-                A_oral_unit * - alpha *
+                A_oral_unit * -alpha *
                    exp(-alpha * time) +
-                   B_oral_unit * - beta *
+                   B_oral_unit * -beta *
                    exp(-beta * time) +
                    -(A_oral_unit + B_oral_unit) *
-                   - kgutabs *
+                   -kgutabs *
                    exp(-kgutabs * time)
                  )
 

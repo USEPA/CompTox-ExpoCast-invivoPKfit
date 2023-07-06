@@ -24,6 +24,15 @@ tkstats_flat <- function(pars,
                          ...){
   params <- fill_params_flat(pars)
 
+  check_msg <- check_params_flat(params = params,
+                                 route = route,
+                                 medium = medium)
+
+  if(!(check_msg %in% "Parameters OK")){
+    stop(paste("cp_flat():",
+               check_msg))
+  }
+
   #for readability, assign params to variables inside this function
   for(x in names(params)){
     assign(x, unname(params[x]))
