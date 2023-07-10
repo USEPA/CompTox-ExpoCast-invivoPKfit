@@ -26,10 +26,14 @@ cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>%
   unique() %>%
   length()
 
-my_predata <- subset(cvt,
-                     chemicals_analyzed.dsstox_substance_id %in% c("DTXSID0020442",
-                                                                   "DTXSID2021731",
-                                                                   "DTXSID5032600"))
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID0020442",
+                                                              "DTXSID5032600"))
+
+
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID3061635"))
+
 ```
 
 Next, I want to follow the steps required for the particular analysis I would like.
@@ -46,7 +50,7 @@ my_pk <- pk(data = my_predata) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   # scale_time() +
   # stat_model() + 
-  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+  stat_error_model(error_group = vars(Chemical, Species)) 
 
 my_pk <- do_preprocess(my_pk)
 
@@ -66,7 +70,7 @@ methods.
 # Ran the following after making the pk object:
 devtools::load_all()
 
-my_coefs_update <- coef(my_pk)
+my_coefs_update <- coef(my_pk, drop_sigma = TRUE)
 my_pred_update <- predict(my_pk,
                           exclude = TRUE, # add the "exclude" column to output
                           use_scale_conc = TRUE)
@@ -124,55 +128,92 @@ dev.off()
 
 ```
 
+```{r get_tkstats_logLik_methods}
+my_tkstats <- get_tkstats(my_pk)
+
+names(my_tkstats)
+my_tkstats
+
+
+my_logLike_update <- logLik(my_pk)
+
+
+
+
+```
 
 
 ```{r remaining_methods}
 # coef_sd
 # logLik.pk
-# get_tkstats()
+
 devtools::load_all()
-get_tkstats(my_pk) %>% head()
-get_tkstats(my_pk) %>% View("TK_test")
-my_tkstats <- get_tkstats(my_pk)
-
-# For the July 5th version where it returns a nested dataframe
-# 
-my_tkstats %>%
-  reframe(tkstats_df = purrr::map(c_data,
-                                  \(x) {
-                                    x %>%
-                                      dplyr::rowwise() %>%
-                                      dplyr::mutate(
-                                        TKstats = sapply(
-                                          coefs_vector,
-                                          FUN = tk_fun,
-                                          route = Route,
-                                          medium = Media,
-                                          dose = Dose,
-                                          time_unit = Time.Units,
-                                          conc_unit = Conc.Units,
-                                          vol_unit = "L",
-                                          simplify = FALSE,
-                                          USE.NAMES = TRUE
-                                        )
-                                      ) %>%
-                                      dplyr::ungroup()
-                                  })) -> my_tkstats
-
-
-
-
-my_tkstats %>% unnest(cols = c(tkstats_df)) -> my_tkstats
-
-my_tkstats %>% mutate(TKstats_wide  = map(TKstats,
-                                     \(x) {
-                                       dplyr::select(x, -param_units) %>%
-                                         tidyr::pivot_wider(names_from = param_name,
-                                                     values_from = param_value)
-                                     })) %>%
-  unnest(cols = c(TKstats_wide)) %>% View()
+AIC(my_pk)
+BIC(my_pk)
 
 ```
 
+The purpose of the following code is to generate data.frames with information for
+all 103 chemicals in the `cvt` dataset that comes with `invivopkfit`.
+I will need to do append each dataframe to the last for the outputs of the following
+methods:
+
+- `AIC()`
+- `BIC()` left-joined with `AIC` output
+- `get_tkstats()`
+
+I will also have to fit these iteratively and manage the memory as part of the loop.
+
+
+```{r for_loop_allDTXSIDs}
+
+# All DTXSID
+eachDTXSID <- unique(cvt$chemicals_analyzed.dsstox_substance_id)
+
+id <- 1
+AIC_BIC <- data.frame()
+while (id <= 10) {
+  # Establishing the loop
+  DTX_set <- eachDTXSID[seq(from = id, to = id + 3)]
+  DTX_set <- DTX_set[!is.na(DTX_set)]
+  print(DTX_set)
+  id <- id + 4
+  Sys.sleep(0.5)
+  
+  # Subsetting cvt
+  my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% DTX_set)
+  
+  # Fitting loop
+  my_pk <- pk(data = my_predata) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  # scale_time() +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) # Pooled model
+
+  my_pk <- do_preprocess(my_pk)
+  
+  my_pk <- do_data_info(my_pk) 
+  # summarizes error (Returning more or less than 1 row per summarize)
+  
+  my_pk <- do_prefit(my_pk)
+  
+  my_pk <- do_fit(my_pk)
+  
+  
+  # OUTPUTS
+  # AIC/BIC
+  temp_AIC <- AIC(my_pk)
+  temp_BIC <- BIC(my_pk)
+  temp_IC <- left_join(temp_AIC, temp_BIC)
+  AIC_BIC <- bind_rows(AIC_BIC, temp_IC)
+  
+} # Doesn't work because something for Solvent red 1 introduces an error 
+
+
+```
 
 

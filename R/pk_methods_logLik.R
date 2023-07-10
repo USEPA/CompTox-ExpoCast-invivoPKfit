@@ -73,7 +73,7 @@
 #'   specified, or for the data in `obj$data` if `newdata` is `NULL`.
 #' @export
 #' @importFrom stats logLik
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family fit evaluation metrics
 #' @family log likelihood functions
 #' @family methods for fitted pk objects
@@ -83,20 +83,33 @@ logLik.pk <- function(obj,
                       method = NULL,
                       negative = FALSE,
                       force_finite = FALSE,
-                      exclude = TRUE){
+                      exclude = TRUE,
+                      drop_obs = TRUE){
 
   suppress.messages <- obj$settings_preprocess$suppress.messages
 
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
+  other_vars <- NULL
+  if (is.null(model)) model <- names(obj$stat_model)
+  if (is.null(method)) method <- obj$optimx_settings$method
+  if (is.null(newdata)) {
+    newdata <- obj$data
 
-  if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$optimx_settings$method
-  if(is.null(newdata)) newdata <- obj$data
+    other_vars <- ggplot2::vars(
+      Value,
+      Value.Units,
+      Time_trans.Units,
+      Conc_trans,
+      Conc_trans.Units,
+      data_sigma_group,
+      exclude
+    )
+  }
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -119,16 +132,8 @@ logLik.pk <- function(obj,
                                 err_grp_vars),
                               exclude = exclude)
 
-  if(exclude %in% TRUE){
-    if("exclude" %in% names(newdata)){
-    newdata <- subset(newdata, exclude %in% FALSE)
-    }
-  }else{
-    newdata <- newdata
-  }
-
   #scale time if needed
-  if(!("Time_trans" %in% names(newdata))){
+  if (!("Time_trans" %in% names(newdata))) {
     newdata$Time_trans <- convert_time(x = newdata$Time,
                                        from = newdata$Time.Units,
                                        to = obj$scales$time$new_units)
@@ -139,56 +144,81 @@ logLik.pk <- function(obj,
                                use_scale_conc = TRUE)
 
   #remove any excluded observations & corresponding predictions, if so specified
-  if(exclude %in% TRUE){
-    if("exclude" %in% names(newdata)){
-      newdata <- subset(newdata,
-                        exclude %in% FALSE)
-
+  if (exclude %in% TRUE) {
+    if ("exclude" %in% names(newdata)) {
+      newdata <- subset(newdata, exclude %in% FALSE)
     }
   }
 
-  #evalaute log likelihoods for each model using sapply()
-  sapply(model, function(this_model){
-    #get model parameters
-    coefs <- coef(obj = obj,
-                  model = this_model,
-                  method = method)[[1]] #we have to put [[1]] because for one model,coef.pk() returns a one-element list
-    #for each row of model parameters, evaluate log-likelihood
-    ll <- apply(coefs,
-                1,
-                function(this_coef_row){
+  # get coefs data.frame for each model and method
+  #
+  coefs <- coef(
+    obj = obj,
+    model = model,
+    method = method,
+    drop_sigma = FALSE
+  ) %>%
+    dplyr::select(coefs_vector, sigma_value, error_group) %>%
+    dplyr::mutate(coefs_vector = purrr::map(coefs_vector,
+                                            \(x) {
+                                              sigma_transfer <- sigma_value
+                                              names(sigma_transfer) <- error_group
+                                              c(x, sigma_transfer)
+                                            })) %>%
+    dplyr::select(-sigma_value, -error_group)
 
-                  data_sigma_group <- as.character(interaction(
-                    lapply(
-                      obj$stat_error_model$error_group,
-                      function(x){
-                        rlang::eval_tidy(x, data = newdata)
-                      }
-                    )
-                  ))
 
-                  #apply levels from original data
-                  data_sigma_group <- factor(data_sigma_group,
-                                             levels = levels(obj$prefit$stat_error_model$data_sigma_group))
+  req_vars <- ggplot2::vars(Time,
+                            Time.Units,
+                            Time_trans,
+                            Dose,
+                            Route,
+                            Media,
+                            Conc,
+                            Conc_SD,
+                            N_Subjects,
+                            Detect)
 
-                 #data from new levels will be treated as equally likely to come from any of the existing levels
-                  log_likelihood(par = this_coef_row,
-                                 data = newdata,
-                                 data_sigma_group = data_sigma_group,
-                                 modelfun = obj$stat_model[[this_model]]$conc_fun,
-                                 dose_norm = conc_scale$dose_norm,
-                                 log10_trans = conc_scale$log10_trans,
-                                 negative = negative,
-                                 force_finite = force_finite,
-                                 suppress.messages = suppress.messages)
-                })
-    #set attribute "df", the number of parameters optimized for this model
-    attr(ll, which = "df") <- attr(obj$fit[[this_model]], "npar")
-    #set attributes "nobs", the number of observations in `newdata`
-    attr(ll, which = "nobs") <- nrow(newdata)
-    ll
-  },
-  simplify = FALSE,
-  USE.NAMES = TRUE)
+  newdata <- newdata %>%
+    dplyr::select(!!!union(obj$data_group, req_vars),
+                  !!!other_vars) %>%
+    dplyr::mutate(data_sigma_group = factor(data_sigma_group)) %>%
+    dplyr::group_by(!!!obj$data_group) %>%
+    tidyr::nest(.key = "observations") %>%
+    dplyr::ungroup()
+
+  newdata <- tidyr::expand_grid(expand_grid(model, method),
+                                newdata)
+
+  newdata <- dplyr::left_join(newdata, coefs)
+
+
+  newdata <- newdata %>%
+    rowwise() %>%
+    filter(!is.null(observations)) %>%
+    mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
+    ungroup() %>%
+    distinct
+
+
+  newdata <- newdata %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(log_likelihood = log_likelihood(
+      par = coefs_vector,
+      data = observations,
+      data_sigma_group = observations$data_sigma_group,
+      modelfun = model_fun,
+      dose_norm = conc_scale$dose_norm,
+      log10_trans = conc_scale$log10_trans,
+      negative = negative,
+      force_finite = force_finite,
+      suppress.messages = suppress.messages))
+
+ if (drop_obs == TRUE) {
+   newdata <- newdata %>%
+     dplyr::select(-observations)
+ }
+
+  return(newdata)
 
 }

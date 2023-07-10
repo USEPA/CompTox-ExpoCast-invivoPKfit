@@ -49,6 +49,7 @@ AIC.pk <- function(obj,
                    model = NULL,
                    method = NULL,
                    exclude = TRUE,
+                   drop_obs = TRUE,
                    k = 2){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -58,7 +59,28 @@ AIC.pk <- function(obj,
   }
   if(is.null(model)) model <- names(obj$stat_model)
   if(is.null(method)) method <- obj$settings_optimx$method
-  if(is.null(newdata)) newdata <- obj$data
+
+  # Get the number of parameters
+  #
+  #
+
+
+  param_table <- obj$prefit$par_DF %>%
+    dplyr::filter(optimize_param %in% TRUE) %>%
+    dplyr::select(model, !!!obj$data_group, param_name, param_units)
+
+
+
+
+  sigma_table <- obj$prefit$stat_error_model$sigma_DF %>%
+    tibble::rownames_to_column("error_group") %>%
+    dplyr::select(!!!obj$data_group, param_name, param_units) %>%
+    tidyr::expand_grid(model = unique(param_table$model))
+
+  params_df <- bind_rows(param_table, sigma_table) %>%
+    dplyr::group_by(!!!obj$data_group, model) %>% dplyr::count(name = "npar")
+
+
   #get log-likelihoods
   ll <- logLik(obj = obj,
                newdata = newdata,
@@ -66,14 +88,21 @@ AIC.pk <- function(obj,
                method = method,
                negative = FALSE,
                force_finite = FALSE,
-               exclude = exclude)
+               exclude = exclude,
+               drop_obs = drop_obs)
+
+  ll <- ll %>%
+    dplyr::select(!!!obj$data_group,
+                  model, method,
+                  log_likelihood) %>%
+    left_join(params_df)
+
+
   #get number of parameters (excluding any constant, non-optimized parameters)
-  AIC <- sapply(model,
-                function(this_model){
-                  npar <- attr(ll[[this_model]], "df")
-                  -2*ll[[this_model]] + k* npar
-                },
-                simplify = FALSE,
-                USE.NAMES = TRUE)
+
+  AIC <- ll %>% dplyr::group_by(!!!obj$data_group, model) %>%
+    mutate(AIC = (k * npar) - (2 * log_likelihood))
+
+
   return(AIC)
 }

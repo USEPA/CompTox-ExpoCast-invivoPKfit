@@ -21,7 +21,7 @@ fit_group <- function(data,
                       dose_norm,
                       log10_trans,
                       suppress.messages){
-  if(fit_decision %in% "continue"){
+  if (fit_decision %in% "continue") {
 
     #Rowbind par_DF and sigma_DF
     par_DF <- dplyr::bind_rows(par_DF,

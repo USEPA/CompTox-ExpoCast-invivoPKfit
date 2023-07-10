@@ -1,6 +1,6 @@
 #' Bayesian information criterion
 #'
-#' Get the Bayesian information criterion (AIC) for a fitted `pk` object
+#' Get the Bayesian information criterion (BIC) for a fitted `pk` object
 #'
 #' The BIC is calculated from the log-likelihood (LL) as follows:
 #' \deqn{\textrm{BIC} = -2\textrm{LL} + \log(n_{obs}) n_{par}}
@@ -49,19 +49,59 @@ BIC.pk <- function(obj,
                    exclude = TRUE){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
-                                 required_status = status_fit)
+                                 required_status = 5)
   if(!(check %in% TRUE)){
     stop(attr(check, "msg"))
   }
   if(is.null(model)) model <- names(obj$stat_model)
   if(is.null(method)) method <- obj$settings_optimx$method
-  if(is.null(newdata)) newdata <- obj$data
 
-  BIC <- AIC(obj = obj,
-             newdata = newdata,
-             model = model,
-             method = method,
-             exclude = exclude,
-             k = log(nrow(newdata)))
+  # Get the number of parameters
+
+  param_table <- obj$prefit$par_DF %>%
+    dplyr::filter(optimize_param %in% TRUE) %>%
+    dplyr::select(model, !!!obj$data_group, param_name, param_units)
+
+
+
+
+  sigma_table <- obj$prefit$stat_error_model$sigma_DF %>%
+    tibble::rownames_to_column("error_group") %>%
+    dplyr::select(!!!obj$data_group, param_name, param_units) %>%
+    tidyr::expand_grid(model = unique(param_table$model))
+
+  params_df <- bind_rows(param_table, sigma_table) %>%
+    dplyr::group_by(!!!obj$data_group, model) %>% dplyr::count(name = "npar")
+
+
+  #get log-likelihoods
+  ll <- logLik(obj = obj,
+               newdata = newdata,
+               model = model,
+               method = method,
+               negative = FALSE,
+               force_finite = FALSE,
+               exclude = exclude,
+               drop_obs = FALSE)
+
+  ll <- ll %>% dplyr::rowwise() %>%
+    dplyr::mutate(NROW = nrow(observations))
+
+  ll <- ll %>%
+    dplyr::select(!!!obj$data_group,
+                  model, method,
+                  log_likelihood,
+                  NROW) %>%
+    dplyr::left_join(params_df)
+
+
+  #get number of parameters (excluding any constant, non-optimized parameters)
+
+  BIC <- ll %>%
+    dplyr::group_by(!!!obj$data_group, model, method) %>%
+    mutate(BIC = (log(NROW) * npar) - (2 * log_likelihood))
+
+
+  return(BIC)
   return(BIC)
 }

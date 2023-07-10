@@ -42,17 +42,17 @@ do_fit.pk <- function(obj){
   }
 
   #if preprocessing not already done, do it
-  if(obj$status < status_preprocess){
+  if (obj$status < status_preprocess) {
     obj <- do_preprocess(obj)
   }
 
   #if data summary not already done, do it
-  if(obj$status < status_data_info){
+  if (obj$status < status_data_info) {
     obj <- do_data_info(obj)
   }
 
   #if prefitting not already done, do it
-  if(obj$status < status_prefit){
+  if (obj$status < status_prefit) {
     obj <- do_prefit(obj)
   }
 
@@ -60,7 +60,7 @@ do_fit.pk <- function(obj){
 
 
   #pull the non-excluded observations for fitting
-  data <- subset(obj$data, exclude %in% FALSE)
+  data <- obj$data %>% dplyr::filter(exclude %in% FALSE)
   #pull the sigma parameter corresponding to each non-excluded observation
   data_sigma_group <- data$data_sigma_group
 
@@ -114,7 +114,7 @@ do_fit.pk <- function(obj){
                          dplyr::group_by(!!!data_group) %>%
                          # summary() to reframe()
                          dplyr::reframe(fit = {
-                           if(suppress.messages %in% FALSE){
+                           if (suppress.messages %in% FALSE) {
                              cur_data_summary <- dplyr::inner_join(get_data_summary(obj,
                                                                                     summary_group = unique(
                                                                                       c(data_group,
