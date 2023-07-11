@@ -136,18 +136,19 @@ get_tkstats.pk <- function(obj,
   model_df <- data.frame(model = sapply(obj$stat_model, `[[`, "name"),
                          tk_fun = sapply(obj$stat_model, `[[`, "tkstats_fun"))
 
-  tkstats_all <- dplyr::left_join(newdata %>%
-                                    dplyr::group_by(!!!tk_group) %>%
-                                    dplyr::distinct(Chemical,
-                                                    Species,
-                                                    Route,
-                                                    Media,
-                                                    Dose,
-                                                    Time.Units,
-                                                    Dose.Units,
-                                                    Conc.Units),
-                                  all_coefs,
-                           relationship = "many-to-many") %>%
+  tkstats_all <- dplyr::left_join(
+    all_coefs,
+    newdata %>%
+      dplyr::group_by(!!!tk_group) %>%
+      dplyr::distinct(Chemical,
+                      Species,
+                      Route,
+                      Media,
+                      Dose,
+                      Time.Units,
+                      Dose.Units,
+                      Conc.Units),
+    relationship = "many-to-many") %>%
     dplyr::left_join(model_df,
               relationship = "many-to-many") %>%
     dplyr::group_by(!!!obj$data_group, model, method,

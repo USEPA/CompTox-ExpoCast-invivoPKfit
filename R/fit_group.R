@@ -21,19 +21,19 @@ fit_group <- function(data,
                       dose_norm,
                       log10_trans,
                       suppress.messages){
+  #Rowbind par_DF and sigma_DF
+  par_DF <- dplyr::bind_rows(par_DF,
+                             sigma_DF)
+
+  #get params to be optimized with their starting points
+  opt_params <- par_DF %>%
+    dplyr::filter(optimize_param %in% TRUE) %>%
+    dplyr::pull(start)
+  names(opt_params) <- par_DF %>%
+    dplyr::filter(optimize_param %in% TRUE) %>%
+    dplyr::pull(param_name)
+
   if (fit_decision %in% "continue") {
-
-    #Rowbind par_DF and sigma_DF
-    par_DF <- dplyr::bind_rows(par_DF,
-                               sigma_DF)
-
-    #get params to be optimized with their starting points
-    opt_params <- par_DF %>%
-      dplyr::filter(optimize_param %in% TRUE) %>%
-      dplyr::pull(start)
-    names(opt_params) <- par_DF %>%
-      dplyr::filter(optimize_param %in% TRUE) %>%
-      dplyr::pull(param_name)
 
     #param lower bounds (only on params to be optimized)
     lower_params <- par_DF %>%
@@ -142,29 +142,32 @@ fit_group <- function(data,
     out <- optimx_out
 
   }else{ #if status for this model was "abort", then abort fit and return NULL
-    method <- settings_optimx$method
-    tmp <- data.frame(c(rep(NA_real_,
+    method <- rlang::eval_tidy(settings_optimx$method)
+    tmp <- c(rep(NA_real_,
                             length(opt_params)),
                         rep(NA_real_, 4),
                         -9999,
                         rep(NA, 2),
-                        NA_real_))
+                        NA_real_)
     names(tmp) <- c(names(opt_params),
                     "value", "fevals", "gevals", "niter",
                     "convcode",
                     "kkt1", "kkt2",
                     "xtime")
+    tmp <- data.frame(as.list(tmp)) %>%
+      dplyr::slice(rep(1:n(),
+                       each = length(method)))
     rownames(tmp) <- method
     tmp$method <- rownames(tmp)
 
     attr(tmp, "maximize") <- FALSE
     attr(tmp, "npar") <- length(opt_params)
     attr(tmp, "follow.on") <- FALSE
-    method <- settings_optimx$method
+    # method <- settings_optimx$method
     details <- cbind(method = as.list(method),
-                     ngatend = as.list(rep(NA_real, length(method))),
-                     nhatend = as.list(rep(NA_real, length(method))),
-                     hev = as.list(rep(NA_real, length(method))),
+                     ngatend = as.list(rep(NA_real_, length(method))),
+                     nhatend = as.list(rep(NA_real_, length(method))),
+                     hev = as.list(rep(NA_real_, length(method))),
                      message = as.list(rep("Fit status was 'abort'",
                                            length(method)
                      )

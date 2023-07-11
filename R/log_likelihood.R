@@ -302,7 +302,13 @@ log_likelihood <- function(par,
       #the result will be a matrix with as many columns as there are sigma_params,
       #and as many rows as there are observations without sigma groups
       #take the row means
-      ll_data_no_sigma <- rowMeans(ll_data_no_sigma)
+      # however, there are times there is only one value
+      # so make that just equal the mean of this
+      if (is.null(dim(ll_data_no_sigma))) {
+        ll_data_no_sigma <- mean(ll_data_no_sigma)
+      } else {
+        ll_data_no_sigma <- rowMeans(ll_data_no_sigma)
+      }
     } else{
       ll_data_no_sigma <- numeric(0)
     }

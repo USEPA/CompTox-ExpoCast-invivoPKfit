@@ -60,6 +60,11 @@ coef.pk <- function(obj,
 
   coefs <- dplyr::left_join(coefs, const_pars)
 
+  for (this_param in intersect(names(const_pars), possible_model_params)) {
+    coefs[this_param] <- tidyr::replace_na(coefs[[this_param]],
+                                           replace = unique(const_pars[[this_param]]))
+  }
+
   coefs_tidy <- coefs %>%
     tidyr::nest(coefs_tibble = dplyr::any_of(possible_model_params)) %>%
     dplyr::mutate(coefs_vector = map(coefs_tibble,

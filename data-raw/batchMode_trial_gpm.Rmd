@@ -28,11 +28,17 @@ cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>%
 
 my_predata <- cvt %>%
   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID0020442",
-                                                              "DTXSID5032600"))
-
+                                                              "DTXSID5032600",
+                                                              "DTXSID2021103"))
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID5032600")
 
 my_predata <- cvt %>%
-  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID3061635"))
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID2021103")
+# Opt params not found ERROR
+# 
+# 
+
 
 ```
 
@@ -43,7 +49,7 @@ Since I would like to do a "Pooled" analysis,
 I set the `error_group = vars(Chemical, Species)`.
 
 ```{r single_fit}
-my_pk <- pk(data = my_predata) +
+my_pk <- pk(data = cvt) +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE) +
   settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
@@ -59,6 +65,7 @@ my_pk <- do_data_info(my_pk)
 
 my_pk <- do_prefit(my_pk)
 
+
 my_pk <- do_fit(my_pk)
 ```
 
@@ -69,6 +76,8 @@ methods.
 # Changed pk_methods coef() and predict() to those above
 # Ran the following after making the pk object:
 devtools::load_all()
+all_my_data <- my_pk$data # following the full dataset to prefit
+my_pk$data %>% filter(Chemical == "DTXSID2021103")
 
 my_coefs_update <- coef(my_pk, drop_sigma = TRUE)
 my_pred_update <- predict(my_pk,
@@ -145,10 +154,9 @@ my_logLike_update <- logLik(my_pk)
 
 ```{r remaining_methods}
 # coef_sd
-# logLik.pk
 
 devtools::load_all()
-AIC(my_pk)
+AIC(my_pk2) %>% View()
 BIC(my_pk)
 
 ```
@@ -165,53 +173,33 @@ methods:
 I will also have to fit these iteratively and manage the memory as part of the loop.
 
 
-```{r for_loop_allDTXSIDs}
+```{r allDTXSIDs_analysis}
 
-# All DTXSID
-eachDTXSID <- unique(cvt$chemicals_analyzed.dsstox_substance_id)
+# after fitting pk object for all cvt objects
+# saveRDS(my_pk, file = "data-raw/all_cvt_pk.rds")
 
-id <- 1
-AIC_BIC <- data.frame()
-while (id <= 10) {
-  # Establishing the loop
-  DTX_set <- eachDTXSID[seq(from = id, to = id + 3)]
-  DTX_set <- DTX_set[!is.na(DTX_set)]
-  print(DTX_set)
-  id <- id + 4
-  Sys.sleep(0.5)
-  
-  # Subsetting cvt
-  my_predata <- cvt %>%
-  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% DTX_set)
-  
-  # Fitting loop
-  my_pk <- pk(data = my_predata) +
-  facet_data(vars(Chemical, Species)) +
-  settings_preprocess(keep_data_original = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
-  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
-  # scale_time() +
-  # stat_model() + 
-  stat_error_model(error_group = vars(Chemical, Species)) # Pooled model
+my_tkstats <- get_tkstats(my_pk)
+my_IC <- left_join(AIC(my_pk), BIC(my_pk))
 
-  my_pk <- do_preprocess(my_pk)
-  
-  my_pk <- do_data_info(my_pk) 
-  # summarizes error (Returning more or less than 1 row per summarize)
-  
-  my_pk <- do_prefit(my_pk)
-  
-  my_pk <- do_fit(my_pk)
-  
-  
-  # OUTPUTS
-  # AIC/BIC
-  temp_AIC <- AIC(my_pk)
-  temp_BIC <- BIC(my_pk)
-  temp_IC <- left_join(temp_AIC, temp_BIC)
-  AIC_BIC <- bind_rows(AIC_BIC, temp_IC)
-  
-} # Doesn't work because something for Solvent red 1 introduces an error 
+my_IC %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "bobyqa") %>%
+  ungroup() %>%
+  count(model)
+# model_1comp 60
+# model_2comp 48
+# model_flat   3
+
+my_IC %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "L-BFGS-B") %>% View()
+  ungroup() %>%
+  count(model)
+# model_1comp 56
+# model_2comp 50
+# model_flat   5
+
+all_my_data <- my_pk$data
 
 
 ```

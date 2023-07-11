@@ -136,7 +136,7 @@ predict.pk <- function(obj,
   newdata <- tidyr::expand_grid(expand_grid(model, method),
                                 newdata)
 
-  newdata <- dplyr::left_join(newdata, coefs)
+  newdata <- dplyr::left_join(coefs, newdata)
 
 
   newdata <- newdata %>%
