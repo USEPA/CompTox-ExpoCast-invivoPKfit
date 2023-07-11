@@ -177,6 +177,7 @@ I will also have to fit these iteratively and manage the memory as part of the l
 
 # after fitting pk object for all cvt objects
 # saveRDS(my_pk, file = "data-raw/all_cvt_pk.rds")
+my_pk <- readRDS("data-raw/all_cvt_pk.rds")
 
 my_tkstats <- get_tkstats(my_pk)
 my_IC <- left_join(AIC(my_pk), BIC(my_pk))
@@ -192,7 +193,7 @@ my_IC %>% group_by(Chemical, Species, method) %>%
 
 my_IC %>% group_by(Chemical, Species, method) %>%
   filter(AIC == min(AIC),
-         method == "L-BFGS-B") %>% View()
+         method == "L-BFGS-B") %>%
   ungroup() %>%
   count(model)
 # model_1comp 56
@@ -200,6 +201,97 @@ my_IC %>% group_by(Chemical, Species, method) %>%
 # model_flat   5
 
 all_my_data <- my_pk$data
+all_my_data %>%
+  group_by(Chemical,
+           Species,
+           Reference,
+           Route,
+           Dose, Time) %>%
+  filter(n() > 1,
+         sum(is.na(Conc)) != n(),
+         LOQ < Conc) %>%
+  mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rowwise() %>%
+  mutate(foldConc = Conc / meanConc) %>%
+  count(foldConc > 2)
+# 88.4% inside twofold
+# 2.4%  above twofold
+# 9.2%  below twofold
+
+all_my_data %>%
+  group_by(Chemical,
+           Species,
+           Reference,
+           Route,
+           Dose, Time) %>%
+  filter(n() > 1,
+         sum(is.na(Conc)) != n(),
+         LOQ < Conc) %>%
+  mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rowwise() %>%
+  mutate(foldConc = Conc / meanConc) %>%
+  ggplot(aes(x = foldConc)) +
+  geom_histogram(binwidth = 0.1,
+                 fill = "grey5") +
+  coord_cartesian(xlim =  c(0, 4),
+                  ylim = c(0, 2000)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  expand_limits(y = 0) +
+  geom_vline(xintercept = c(0.5, 2), color = "red3", linetype = "dashed") +
+  annotate(geom= "text",
+           x = 1.25, y = 1800,
+           label = "88.4% of Observations\n within a factor of 2") +
+  theme_classic() +
+  labs(x = "Concentration Normalized to Average",
+                y = "Number of Observations") +
+  theme(panel.border = element_rect(color = "black", fill = NA),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.4))
+
+ggsave(paste0("C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Figures/",
+              "NormalizedConcentrations_2023-07-11.png"),
+       height = 3.5,
+       width = 5.5,
+       units = "in")
+
+my_preds <- predict(my_pk)
+
+winmodels <- my_IC %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "L-BFGS-B") %>%
+  ungroup() %>%
+  dplyr::select(Chemical, Species,
+                method, model)
+
+my_preds <- inner_join(winmodels, my_preds)
+
+my_preds %>%
+  rowwise() %>%
+  mutate(Pred_Obs = Conc_trans/Conc_est) %>%
+  filter(is.finite(Pred_Obs)) %>%
+  ggplot(aes(x = Pred_Obs)) +
+  geom_histogram(
+                 fill = "grey5") +
+  coord_cartesian(xlim =  c(0.001, 1000),
+                  ylim = c(0, 2000)) +
+  scale_y_continuous() +
+  scale_x_log10()
+  expand_limits(y = 0) +
+  geom_vline(xintercept = c(0.5, 2), color = "red3", linetype = "dashed") +
+  annotate(geom = "text",
+           x = 1.25, y = 1800,
+           label = "88.4% of Observations\n within a factor of 2") +
+  theme_classic() +
+  labs(x = "Concentration Normalized to Average",
+                y = "Number of Observations") +
+  theme(panel.border = element_rect(color = "black", fill = NA),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.4))
+
+# 89.9% of Pred_Obs are finite
+# 64.5% Are below two-fold
+# 26.3%  Are above two-fold
+# 9.3% Are within twofold
 
 
 ```
