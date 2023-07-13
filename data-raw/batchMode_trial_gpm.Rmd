@@ -7,7 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
-
+set.seed(2023)
 library(tidyverse, quietly = TRUE)
 devtools::load_all() # Loads the invivopkfit package in feature/pkS3obj_facet branch
 tidyverse_conflicts()
@@ -56,7 +56,7 @@ my_pk <- pk(data = cvt) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   # scale_time() +
   # stat_model() + 
-  stat_error_model(error_group = vars(Chemical, Species)) 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) # Add Reference for Joint Analysis
 
 my_pk <- do_preprocess(my_pk)
 
@@ -159,6 +159,8 @@ devtools::load_all()
 AIC(my_pk2) %>% View()
 BIC(my_pk)
 
+get_winning_model(my_pk)
+
 ```
 
 The purpose of the following code is to generate data.frames with information for
@@ -177,8 +179,9 @@ I will also have to fit these iteratively and manage the memory as part of the l
 
 # after fitting pk object for all cvt objects
 # saveRDS(my_pk, file = "data-raw/all_cvt_pk.rds")
+# saveRDS(my_pk, file = "data-raw/all_cvt_pk_JOINT.rds")
 my_pk <- readRDS("data-raw/all_cvt_pk.rds")
-
+my_AIC <- AIC(my_pk)
 my_tkstats <- get_tkstats(my_pk)
 my_IC <- left_join(AIC(my_pk), BIC(my_pk))
 
@@ -195,6 +198,7 @@ my_IC %>% group_by(Chemical, Species, method) %>%
   filter(AIC == min(AIC),
          method == "L-BFGS-B") %>%
   ungroup() %>%
+  filter(model == "model_flat") %>% pull(Chemical) %>% unique()
   count(model)
 # model_1comp 56
 # model_2comp 50
@@ -255,7 +259,8 @@ ggsave(paste0("C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA
        width = 5.5,
        units = "in")
 
-my_preds <- predict(my_pk)
+my_preds <- predict(my_pk,
+                    use_scale_conc = TRUE)
 
 winmodels <- my_IC %>% group_by(Chemical, Species, method) %>%
   filter(AIC == min(AIC),
@@ -265,34 +270,82 @@ winmodels <- my_IC %>% group_by(Chemical, Species, method) %>%
                 method, model)
 
 my_preds <- inner_join(winmodels, my_preds)
+my_tkstats <- inner_join(winmodels, my_tkstats)
+my_nca <- get_nca(my_pk,
+                  nca_group = vars(Chemical, Species,))
+my_nca <- my_nca %>% dplyr::select(-param_sd_z, -param_units) %>%
+  pivot_wider(names_from = param_name,
+              values_from = param_value)
+
+# Saving some CSVs
+# my_tkstats %>% write_csv(file = "data-raw/Pooled_TKstats.csv")
+# my_nca %>% write_csv(file = "data-raw/NonCompartmentalAnalysis.csv")
+
 
 my_preds %>%
   rowwise() %>%
   mutate(Pred_Obs = Conc_trans/Conc_est) %>%
-  filter(is.finite(Pred_Obs)) %>%
+  filter(is.finite(Pred_Obs),
+         model %in% c("model_1comp", "model_2comp")) %>%
+  # mutate(pass = ifelse(Pred_Obs <= 2 & Pred_Obs >= 0.5, TRUE, FALSE)) %>%
+  # pull(pass) %>% table()
   ggplot(aes(x = Pred_Obs)) +
-  geom_histogram(
+  geom_histogram(binwidth = 0.4,
                  fill = "grey5") +
-  coord_cartesian(xlim =  c(0.001, 1000),
-                  ylim = c(0, 2000)) +
-  scale_y_continuous() +
-  scale_x_log10()
+  scale_x_log10(limits = c(NA, 1E6)) +
   expand_limits(y = 0) +
   geom_vline(xintercept = c(0.5, 2), color = "red3", linetype = "dashed") +
-  annotate(geom = "text",
-           x = 1.25, y = 1800,
-           label = "88.4% of Observations\n within a factor of 2") +
+  facet_grid(cols = vars(model),
+             rows = vars(Route)) +
+  labs(x = "Predicted/Observed",
+       y = "Number of Observations") +
   theme_classic() +
-  labs(x = "Concentration Normalized to Average",
-                y = "Number of Observations") +
-  theme(panel.border = element_rect(color = "black", fill = NA),
+  theme(aspect.ratio = 1,
+        panel.border = element_rect(color = "black", fill = NA),
         panel.grid.major = element_line(color = "grey90", linewidth = 0.4))
 
 # 89.9% of Pred_Obs are finite
-# 64.5% Are below two-fold
-# 26.3%  Are above two-fold
-# 9.3% Are within twofold
+# 19.3% Are below two-fold
+# 34.8%  Are above two-fold
+# 45.9% Are within twofold
 
+ggsave(paste0("C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Figures/",
+              "PredictedObserved_compartmentModels_2023-07-11.png"),
+       height = 4, width = 9)
+
+
+# Pooled analysis
+all_my_data %>% group_by(Chemical, Species, Reference, Media, Route) %>%
+  filter(is.finite(Conc)) %>%
+  summarise(OOM = log10(max(Conc) / min(Conc))) %>% 
+  ggplot(aes(x = OOM)) +
+  geom_histogram(bins = 15,
+                 color = NA,
+                 fill = "grey5") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_x_continuous(breaks = c(0, 1, 2, 3, 4, 5)) +
+  labs(x = "Orders of Magnitude per Series\n log10(max/min)",
+       y = "Count") +
+  theme(aspect.ratio = 1,
+        panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        axis.ticks = element_blank(),
+        axis.line = element_blank())
+
+ggsave(paste0("C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Figures/",
+              "OrdersOfMagnitude_2023-07-12.png"),
+       height = 4, width = 4)
+
+my_pk$prefit$fit_check %>% filter(fit_decision == "abort") %>%
+  dplyr::select(model, Chemical) %>% distinct()
+
+all_my_data %>%
+  filter(Chemical == "DTXSID2021781")
+
+
+my_AIC %>% group_by(Chemical, Species, method) %>%
+  filter(if_any(contains("AIC"), ~ . == min(.)))
 
 ```
 

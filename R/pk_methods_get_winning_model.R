@@ -18,11 +18,9 @@
 #'@param criterion The name of a criterion function to use for model comparison.
 #'  Default "AIC". Must be the name of a function that (as for `AIC`) accepts
 #'  arguments `obj`, `newdata`, `method` and `model` (may accept other
-#'  arguments, specified in `...`) and returns output as for `AIC`: a named list
-#'  of numeric vectors (named for each of the model names in `model`), where
-#'  each vector has elements named for each of the method names in `method`,
-#'  containing the criterion value calculated for that model fitted using that
-#'  method.
+#'  arguments, specified in `...`) and returns output as for `AIC`: a data.frame
+#'  with a column with the same name as `criterion` that has calculated values
+#'  for model comparison. The "winning" value will be the smallest value.
 #'@param ... Optional: Other arguments to `criterion` function.
 #'@return A named character array with one element for each item in `method`,
 #'  giving the name of the winning model. The return value has attribute
@@ -39,40 +37,37 @@ get_winning_model.pk <- function(obj,
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
-  if(is.null(method)) method <- obj$settings_optimx$method
-  if(is.null(newdata)) newdata <- obj$data
+  if (is.null(method)) method <- obj$settings_optimx$method
+  # AIC and logLik will take newdata = NULL
+
 
   #check that all methods are valid
-  if(!(all(method %in% obj$settings_optimx$method))){
+  if (!(all(method %in% obj$settings_optimx$method))) {
     stop(paste("All values in `method` must be found in `obj$settings_optimx$method.",
                paste0("`method` = ", paste(method, sep = ", ")),
                paste0("`obj$settings_optimx$method` = ", paste(obj$settings_optimx$method)),
                sep = "\n"))
   }
 
-  model_compare <- compare_models(obj = obj,
-                                  newdata = newdata,
-                                  model = NULL,
-                                  method = method,
-                                  criterion = criterion,
-                                  ...)
+  # N.B. this updated method makes compare_models() superfluous
+
+  model_compare <- do.call(criterion,
+                           args = list(obj = obj,
+                                       newdata = newdata,
+                                       method = method))
 
  #return the winning model for each method
-  mc_sort <- model_compare[order(model_compare$method,
-                      model_compare[[criterion]],
-                      decreasing = FALSE,
-                      na.last =TRUE),]
-
-  winmodels <- tapply(mc_sort$model,
-         mc_sort$method,
-         FUN = function(x) x[1])
-
-
-  attr(winmodels, "criterion") <- criterion
+ winmodels <- model_compare %>%
+   dplyr::group_by(!!!obj$data_group, method) %>%
+   dplyr::filter(if_any(contains(criterion), ~ . == min(.)),
+          method == method) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(!!!obj$data_group,
+                  method, model)
 
   return(winmodels)
 
