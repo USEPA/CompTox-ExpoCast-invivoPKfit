@@ -56,7 +56,8 @@ my_pk <- pk(data = cvt) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   # scale_time() +
   # stat_model() + 
-  stat_error_model(error_group = vars(Chemical, Species, Reference)) # Add Reference for Joint Analysis
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+# Add Reference for Joint Analysis
 
 my_pk <- do_preprocess(my_pk)
 
@@ -160,6 +161,7 @@ AIC(my_pk2) %>% View()
 BIC(my_pk)
 
 get_winning_model(my_pk)
+eval_tkstats(my_pk)
 
 ```
 
@@ -280,7 +282,8 @@ my_nca <- my_nca %>% dplyr::select(-param_sd_z, -param_units) %>%
 # Saving some CSVs
 # my_tkstats %>% write_csv(file = "data-raw/Pooled_TKstats.csv")
 # my_nca %>% write_csv(file = "data-raw/NonCompartmentalAnalysis.csv")
-
+# Loading CSVs
+my_nca <- read_csv(file = "data-raw/NonCompartmentalAnalysis.csv")
 
 my_preds %>%
   rowwise() %>%
@@ -333,7 +336,9 @@ all_my_data %>% group_by(Chemical, Species, Reference, Media, Route) %>%
         axis.ticks = element_blank(),
         axis.line = element_blank())
 
-ggsave(paste0("C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Figures/",
+ggsave(paste0("C:/Users/GPADILLA/",
+              "OneDrive - Environmental Protection Agency (EPA)/",
+              "Profile/Documents/Figures/",
               "OrdersOfMagnitude_2023-07-12.png"),
        height = 4, width = 4)
 
@@ -343,10 +348,22 @@ my_pk$prefit$fit_check %>% filter(fit_decision == "abort") %>%
 all_my_data %>%
   filter(Chemical == "DTXSID2021781")
 
-
-my_AIC %>% group_by(Chemical, Species, method) %>%
-  filter(if_any(contains("AIC"), ~ . == min(.)))
-
 ```
 
+
+```{r update_eval_kstats}
+
+
+my_eval <- left_join(my_tkstats_red, my_nca_red) %>%
+  filter(is.finite(AUC_inf.tkstats), is.finite(AUC_inf.nca)) %>%
+  group_by(!!!my_pk$settings_data_info$nca_group)
+
+my_eval %>%
+  dplyr::select(AUC_inf.tkstats, AUC_inf.nca, Cmax.tkstats, Cmax.nca) %>%
+  ungroup(Dose) %>%
+  summarize(AUC_inf_RMSE = abs(mean(AUC_inf.tkstats) - mean(AUC_inf.nca)),
+            Cmax_RMSE = abs(mean(Cmax.tkstats) - mean(AUC_inf.nca)))
+
+
+```
 

@@ -42,12 +42,8 @@
 #'   local copy of `newdata` with 1's. This doesn't affect the data outside of
 #'   this function. But it means that any values in the `Dose` variable of
 #'   `newdata` will be ignored if `dose_norm %in% TRUE`.)
-#' @param which_params A character vector specifying the names of one or more TK
-#'   stats to compare. The output will include only the specified TK statistics.
-#'   If `NULL` (the default), then the output will contain all statistics that
-#'   are calculated by both `nca.pk()` and the model `tkstats` function.
-#'   Currently, these are `CLtot`, `CLtot/Fgutabs`, `halflife`, `AUC_infinity`,
-#'   `Cmax`, `tmax`, `Vss`.
+#' @param finite_only Logical: `TRUE` (default) returns only rows (observations)
+#'   for which AUC is finite in both `nca` and `tkstats`.
 #' @return A `list` of `data.frame` objects, one  named for each model in
 #'   `model`. Each `data.frame` will have the variables in the `data.frame`
 #'   returned by the `tkstats_fun` for its corresponding model. (For the
@@ -57,7 +53,7 @@
 #'   the set of model parameters used to derive each set of TK statistics.
 #' @export
 #' @family methods for fitted pk objects
-#' @author Caroline Ring, Gilbert Padilla Mercado, John Wambaugh
+#' @author Caroline Ring, Gilberto Padilla Mercado, John Wambaugh
 eval_tkstats.pk <- function(obj,
                          newdata = NULL,
                          model = NULL,
@@ -65,7 +61,7 @@ eval_tkstats.pk <- function(obj,
                          tk_group = NULL,
                          exclude = TRUE,
                          dose_norm = TRUE,
-                         which_params = NULL,
+                         finite_only = TRUE
                          ...){
 
   #ensure that the model has been fitted
@@ -104,59 +100,69 @@ eval_tkstats.pk <- function(obj,
                               exclude = exclude)
 
   #if exclude = TRUE, remove excluded observations
-  if(exclude %in% TRUE){
+  if (exclude %in% TRUE) {
     newdata <- subset(newdata, exclude %in% FALSE)
   }
 
-#calc NCA for newdata
-   nca_df <- get_nca(obj = obj,
-                        newdata = newdata,
-                        nca_group = tk_group,
-                        exclude = exclude,
-                        dose_norm = dose_norm)
+  #Get the winning model for filtering
+  #
+  winmodel_df <- get_winning_model(obj = obj,
+                                   method = method)
 
-   nca_df <- nca_df %>%
-      tidyr::pivot_longer(cols = !(tidyselect::all_of(grp_vars)),
-                                    names_to = "param_name",
-                                    values_to = "param_value")
+#calc NCA for newdata
+   nca_df <- get_nca(my_pk)
+   nca_df <- nca_df %>% dplyr::select(-param_sd_z, -param_units) %>%
+     pivot_wider(names_from = param_name,
+                 values_from = param_value) %>%
+     right_join(winmodel_df)
 
     #get tkstats
-    if(dose_norm %in% TRUE){
+    if (dose_norm %in% TRUE) {
     newdata$Conc <- newdata$Conc/newdata$Dose
     newdata$Dose <- newdata$Dose/newdata$Dose
     }
 
-    tkstats_list <- get_tkstats(obj = obj,
-                                newdata = newdata,
-                                model = model,
-                                method = method,
-                                tk_group = tk_group,
-                                exclude = exclude)
+   tkstats_df <- get_tkstats(obj = obj,
+                             newdata = newdata,
+                             model = model,
+                             method = method,
+                             tk_group = tk_group,
+                             exclude = exclude) %>%
+     right_join(winmodel_df)
 
     #merge
-    tk_eval <- sapply(tkstats_list,
-                      function(this_tkstats){
+    nca_df_red <- nca_df %>%
+      dplyr::select(intersect(names(nca_df), names(tkstats_df))) %>%
+      rename(AUC_inf.nca = "AUC_infinity",
+             CLtot.nca = "CLtot",
+             `CLtot/Fgutabs.nca` = "CLtot/Fgutabs",
+             Cmax.nca = "Cmax",
+             halflife.nca = "halflife",
+             tmax.nca = "tmax",
+             Vss.nca = "Vss")
 
-                        tmp <- dplyr::inner_join(this_tkstats,
-                                nca_df,
-                                 by = c(grp_vars,
-                                        "param_name"),
-                                suffix = c(".fitted", ".nca")) %>%
-                          dplyr::select(tidyselect::all_of(grp_vars),
-                                        method,
-                                        param_name,
-                                        param_units,
-                                        param_value.nca,
-                                        param_value.fitted)
+    tkstats_df_red <- tkstats_df %>%
+      dplyr::select(model, method,
+                    intersect(names(nca_df), names(tkstats_df))) %>%
+      mutate(Reference = as.numeric(Reference)) %>%
+      rename(AUC_inf.tkstats = "AUC_infinity",
+             CLtot.tkstats = "CLtot",
+             `CLtot/Fgutabs.tkstats` = "CLtot/Fgutabs",
+             Cmax.tkstats = "Cmax",
+             halflife.tkstats = "halflife",
+             tmax.tkstats = "tmax",
+             Vss.tkstats = "Vss")
 
-                        if(!is.null(which_params)){
-                          tmp <- tmp %>%
-                            dplyr::filter(param_name %in% which_params)
-                        }
-                        tmp
-                      },
-                      simplify = FALSE,
-                      USE.NAMES = TRUE)
+
+    tk_eval <- left_join(my_tkstats_red, my_nca_red) %>%
+      group_by(!!!my_pk$settings_data_info$nca_group) %>%
+      ungroup(Dose)
+
+    if (finite_only) {
+      tk_eval <- tk_eval %>%
+        filter(is.finite(AUC_inf.tkstats),
+               is.finite(AUC_inf.nca))
+    }
 
 
     tk_eval
