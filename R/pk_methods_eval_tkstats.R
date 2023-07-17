@@ -61,7 +61,7 @@ eval_tkstats.pk <- function(obj,
                          tk_group = NULL,
                          exclude = TRUE,
                          dose_norm = TRUE,
-                         finite_only = TRUE
+                         finite_only = TRUE,
                          ...){
 
   #ensure that the model has been fitted
@@ -144,7 +144,7 @@ eval_tkstats.pk <- function(obj,
     tkstats_df_red <- tkstats_df %>%
       dplyr::select(model, method,
                     intersect(names(nca_df), names(tkstats_df))) %>%
-      mutate(Reference = as.numeric(Reference)) %>%
+      # mutate(Reference = as.numeric(Reference)) %>%
       rename(AUC_inf.tkstats = "AUC_infinity",
              CLtot.tkstats = "CLtot",
              `CLtot/Fgutabs.tkstats` = "CLtot/Fgutabs",
@@ -153,9 +153,13 @@ eval_tkstats.pk <- function(obj,
              tmax.tkstats = "tmax",
              Vss.tkstats = "Vss")
 
+    if (dose_norm) {
+      tkstats_df_red <- tkstats_df_red %>% dplyr::select(-Dose)
+      message("TK statistics calculated based on dose-normalized value of 1mg/kg")
+    }
 
-    tk_eval <- left_join(my_tkstats_red, my_nca_red) %>%
-      group_by(!!!my_pk$settings_data_info$nca_group) %>%
+    tk_eval <- left_join(tkstats_df_red, nca_df_red) %>%
+      group_by(!!!obj$settings_data_info$nca_group) %>%
       ungroup(Dose)
 
     if (finite_only) {

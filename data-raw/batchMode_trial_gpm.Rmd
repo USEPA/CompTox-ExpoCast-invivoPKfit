@@ -31,7 +31,7 @@ my_predata <- cvt %>%
                                                               "DTXSID5032600",
                                                               "DTXSID2021103"))
 my_predata <- cvt %>%
-  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID5032600")
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID1043881")
 
 my_predata <- cvt %>%
   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID2021103")
@@ -39,6 +39,12 @@ my_predata <- cvt %>%
 # 
 # 
 
+
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID2039336",
+                                                              "DTXSID7029904",
+                                                              "DTXSID1021087",
+                                                              "DTXSID2020682"))
 
 ```
 
@@ -49,14 +55,14 @@ Since I would like to do a "Pooled" analysis,
 I set the `error_group = vars(Chemical, Species)`.
 
 ```{r single_fit}
-my_pk <- pk(data = cvt) +
+my_pk <- pk(data = my_predata) +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE) +
   settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
-  # scale_time() +
+  scale_time(new_units = "days") +
   # stat_model() + 
-  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+  stat_error_model(error_group = vars(Chemical, Species)) 
 # Add Reference for Joint Analysis
 
 my_pk <- do_preprocess(my_pk)
@@ -272,7 +278,8 @@ winmodels <- my_IC %>% group_by(Chemical, Species, method) %>%
                 method, model)
 
 my_preds <- inner_join(winmodels, my_preds)
-my_tkstats <- inner_join(winmodels, my_tkstats)
+my_tkstats <- inner_join(winmodels, my_tkstats) %>%
+  dplyr::select(-TKstats, -Reference) %>% distinct()
 my_nca <- get_nca(my_pk,
                   nca_group = vars(Chemical, Species,))
 my_nca <- my_nca %>% dplyr::select(-param_sd_z, -param_units) %>%
@@ -352,18 +359,122 @@ all_my_data %>%
 
 
 ```{r update_eval_kstats}
+devtools::load_all()
+my_eval <- eval_tkstats(my_pk)
+
+# To give summary RMSEs of Cmax and AUC...
+my_eval <- my_eval %>%
+  group_by(method, model, .add = TRUE) %>%
+  ungroup(Reference) %>%
+  summarize(AUC_inf_RMSE = sqrt((1/n())*(sum(AUC_inf.tkstats - AUC_inf.nca,
+                                             na.rm = TRUE)^2)),
+            Cmax_RMSE = sqrt((1/n())*(sum(Cmax.tkstats - Cmax.nca,
+                                          na.rm = TRUE)^2)),
+            .groups = "keep")
+
+my_eval <- my_eval %>%
+  mutate(dose_norm = TRUE,
+         log10_norm = FALSE,
+         scale_time = FALSE,
+         Analysis_Type = "Pooled")
 
 
-my_eval <- left_join(my_tkstats_red, my_nca_red) %>%
-  filter(is.finite(AUC_inf.tkstats), is.finite(AUC_inf.nca)) %>%
-  group_by(!!!my_pk$settings_data_info$nca_group)
+ggplot(my_eval,
+       aes(x = AUC_inf_RMSE,
+           y = Cmax_RMSE)) +
+  geom_point()
 
-my_eval %>%
-  dplyr::select(AUC_inf.tkstats, AUC_inf.nca, Cmax.tkstats, Cmax.nca) %>%
-  ungroup(Dose) %>%
-  summarize(AUC_inf_RMSE = abs(mean(AUC_inf.tkstats) - mean(AUC_inf.nca)),
-            Cmax_RMSE = abs(mean(Cmax.tkstats) - mean(AUC_inf.nca)))
+ggplot(my_eval,
+       aes(x = -log10(AUC_inf_RMSE))) +
+  geom_histogram(fill = "grey5") +
+  facet_grid(cols = vars(method)) +
+  labs(x = "Accuracy of AUC",
+       y = "Observations") +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        axis.ticks = element_blank(),
+        axis.line = element_blank())
 
+
+```
+
+
+```{r eval_Joint}
+my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
+my_eval_joint <- eval_tkstats(my_pk)
+
+# To give summary RMSEs of Cmax and AUC...
+my_eval_joint <- my_eval_joint %>%
+  group_by(method, model, .add = TRUE) %>%
+  ungroup(Reference) %>%
+  summarize(AUC_inf_RMSE = sqrt((1/n())*(sum(AUC_inf.tkstats - AUC_inf.nca,
+                                             na.rm = TRUE)^2)),
+            Cmax_RMSE = sqrt((1/n())*(sum(Cmax.tkstats - Cmax.nca,
+                                          na.rm = TRUE)^2)),
+            .groups = "keep")
+
+my_eval_joint <- my_eval_joint %>%
+  mutate(dose_norm = TRUE,
+         log10_norm = FALSE,
+         scale_time = FALSE,
+         Analysis_Type = "Joint")
+
+
+ggplot(my_eval_joint,
+       aes(x = AUC_inf_RMSE,
+           y = Cmax_RMSE)) +
+  geom_point()
+
+ggplot(my_eval_joint,
+       aes(x = -log10(AUC_inf_RMSE))) +
+  geom_histogram(fill = "grey5") +
+  facet_grid(cols = vars(method)) +
+  labs(x = "Accuracy of AUC",
+       y = "Observations") +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        axis.ticks = element_blank(),
+        axis.line = element_blank())
+
+
+total_eval <- bind_rows(my_eval, my_eval_joint)
+
+ggplot(total_eval,
+       aes(x = AUC_inf_RMSE,
+           y = Cmax_RMSE)) +
+  geom_point() +
+  facet_grid(rows = vars(Analysis_Type))
+
+total_eval %>%
+  dplyr::select(!Cmax_RMSE) %>%
+  pivot_wider(names_from = Analysis_Type,
+              values_from = AUC_inf_RMSE) %>%
+  ggplot(aes(x = -log10(Pooled),
+             y = -log10(Joint),
+             color = Media)) +
+  geom_point(alpha = 0.3) +
+  geom_abline(slope = 1, linetype = "dashed") +
+  facet_grid(rows = vars(model),
+             cols = vars(method)) +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        axis.ticks = element_blank(),
+        axis.line = element_blank())
+
+
+total_eval %>%
+  dplyr::select(!Cmax_RMSE) %>%
+  pivot_wider(names_from = Analysis_Type,
+              values_from = AUC_inf_RMSE) %>%
+  mutate(ratio = Joint/Pooled) %>%
+  filter(!(ratio == 1)) %>% pull(Chemical) %>% unique()
+  View()
 
 ```
 

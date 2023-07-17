@@ -66,7 +66,8 @@ get_tkstats.pk <- function(obj,
                            model = NULL,
                            method = NULL,
                            exclude = TRUE,
-                           vol_unit = "L"){
+                           vol_unit = "L",
+                           use_scale_conc = TRUE){
 
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -106,6 +107,9 @@ get_tkstats.pk <- function(obj,
     newdata <- subset(newdata, exclude %in% FALSE)
   }
 
+  conc_scale <- conc_scale_use(obj = obj,
+                               use_scale_conc = use_scale_conc)
+
   #check that tk_group is valid: it must produce groups with a unique
   #combination of Chemical, Species, Route, Media, and Dose
 
@@ -135,6 +139,12 @@ get_tkstats.pk <- function(obj,
 
   model_df <- data.frame(model = sapply(obj$stat_model, `[[`, "name"),
                          tk_fun = sapply(obj$stat_model, `[[`, "tkstats_fun"))
+
+  if (conc_scale$dose_norm) {
+    newdata <- newdata %>%
+      dplyr::mutate(Dose = 1) %>%
+      dplyr::distinct()
+  }
 
   tkstats_all <- dplyr::left_join(
     all_coefs,
@@ -173,8 +183,7 @@ get_tkstats.pk <- function(obj,
                                             simplify = FALSE,
                                             USE.NAMES = TRUE
                                           )
-                                        ) %>%
-                                        dplyr::ungroup()
+                                        ) %>% dplyr::ungroup()
                                     })) %>%
     unnest(cols = c(tkstats_df))
 
