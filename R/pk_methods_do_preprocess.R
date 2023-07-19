@@ -32,11 +32,11 @@ do_preprocess.pk <- function(obj){
   objname <- deparse(substitute(obj))
   if(obj$status >= status_preprocess){
     warning(paste0(objname,
-                  " current status is ",
-                  obj$status,
-                  ". do_preprocess() will reset its status to ",
-                  status_preprocess,
-                  ". Any results from later workflow stages will be lost.\n"))
+                   " current status is ",
+                   obj$status,
+                   ". do_preprocess() will reset its status to ",
+                   status_preprocess,
+                   ". Any results from later workflow stages will be lost.\n"))
   }
 
   if(is.null(obj$data_original)){
@@ -106,36 +106,36 @@ do_preprocess.pk <- function(obj){
     #Check to make sure that time units are in allowable list
     if(!all(unique(data$Time.Units %in% time_units))){
       stop(paste0("do_preprocess.pk(): Data has Time.Units ",
-                 unique(data$Time.Units),
-                 " that are not on the list of allowable time units (see built-in data object `time_units`):\n",
-                 paste(time_units, collapse = "\n")))
+                  unique(data$Time.Units),
+                  " that are not on the list of allowable time units (see built-in data object `time_units`):\n",
+                  paste(time_units, collapse = "\n")))
     }
 
     # If data has passed all these initial checks, then proceed with pre-processing
     data_group <- obj$data_group
 
-n_grps <- do.call(dplyr::group_by,
-                  args = c(list(data),
-                           data_group)) %>%
-  dplyr::group_keys() %>%
-  dplyr::n_distinct()
+    n_grps <- do.call(dplyr::group_by,
+                      args = c(list(data),
+                               data_group)) %>%
+      dplyr::group_keys() %>%
+      dplyr::n_distinct()
 
     if(!obj$settings_preprocess$suppress.messages){
       ### display messages describing loaded data
       message(
         paste0(
           paste(
-          paste(nrow(data),
-                "concentration vs. time observations loaded."),
-         paste0("Number of unique data groups ",
-               "(unique combinations of ",
-               paste(sapply(data_group, rlang::as_label),
-                     collapse = ", "),
-               "): ",
-               n_grps),
-          sep = "\n"
-        ),
-        "\n")
+            paste(nrow(data),
+                  "concentration vs. time observations loaded."),
+            paste0("Number of unique data groups ",
+                   "(unique combinations of ",
+                   paste(sapply(data_group, rlang::as_label),
+                         collapse = ", "),
+                   "): ",
+                   n_grps),
+            sep = "\n"
+          ),
+          "\n")
       )
     }
 
@@ -257,9 +257,9 @@ n_grps <- do.call(dplyr::group_by,
 
 
 
-data$Value_orig <- data$Value
-data$LOQ_orig <- data$LOQ
-data$Value_SD_orig <- data$Value_SD
+    data$Value_orig <- data$Value
+    data$LOQ_orig <- data$LOQ
+    data$Value_SD_orig <- data$Value_SD
 
     #Coerce any negative Value to NA
     if(!obj$settings_preprocess$suppress.messages){
@@ -341,13 +341,13 @@ data$Value_SD_orig <- data$Value_SD
                         LOQ = ifelse(is.na(LOQ_orig),
                                      {
                                        if(any((Value > 0) %in% TRUE)){
-                                       min(Value[(Value > 0) %in% TRUE], na.rm = TRUE) *
-                                         obj$settings_preprocess$calc_loq_factor
+                                         min(Value[(Value > 0) %in% TRUE], na.rm = TRUE) *
+                                           obj$settings_preprocess$calc_loq_factor
                                        }else{
                                          NA_real_
                                        }
                                      },
-                                             LOQ_orig)
+                                     LOQ_orig)
           ) %>%
           dplyr::ungroup() %>%
           as.data.frame()
@@ -357,9 +357,9 @@ data$Value_SD_orig <- data$Value_SD
 
     if(!obj$settings_preprocess$suppress.messages){
       if(any((data$Value <  data$LOQ) %in% TRUE)){
-      message(paste0("Converting 'Value' values of less than LOQ to NA. ",
-                     sum((data$Value <  data$LOQ) %in% TRUE),
-                     " values will be converted.\n"))
+        message(paste0("Converting 'Value' values of less than LOQ to NA. ",
+                       sum((data$Value <  data$LOQ) %in% TRUE),
+                       " values will be converted.\n"))
       }
     }
     data[(data$Value < data$LOQ) %in% TRUE, "Value"] <- NA_real_
@@ -443,12 +443,12 @@ data$Value_SD_orig <- data$Value_SD
                                  obj$settings_preprocess$sd_group)) %>%
           dplyr::mutate(Value_SD_orig = Value_SD,
                         Value_SD = ifelse(is.na(Value_SD_orig) &
-                                                    N_Subjects > 1,
-                                                  ifelse(rep(all(is.na(Value_SD_orig)), dplyr::n()),
-                                                                 # 0.3 * Value,
-                                                         0,
-                                                                 min(Value_SD_orig, na.rm = TRUE)),
-                                                  Value_SD_orig)
+                                            N_Subjects > 1,
+                                          ifelse(rep(all(is.na(Value_SD_orig)), dplyr::n()),
+                                                 # 0.3 * Value,
+                                                 0,
+                                                 min(Value_SD_orig, na.rm = TRUE)),
+                                          Value_SD_orig)
           ) %>%
           dplyr::ungroup() %>%
           as.data.frame()
@@ -469,8 +469,8 @@ data$Value_SD_orig <- data$Value_SD
                              data$exclude)
       data$exclude_reason <- ifelse((data$N_Subjects >1) %in% TRUE & is.na(data$Value_SD),
                                     paste2(data$exclude_reason,
-                                            "N_Subjects > 1 and Value_SD is NA",
-                                          sep = "; "),
+                                           "N_Subjects > 1 and Value_SD is NA",
+                                           sep = "; "),
                                     data$exclude_reason)
     }
 
@@ -514,8 +514,8 @@ data$Value_SD_orig <- data$Value_SD
 
       data$exclude_reason <- ifelse((data$N_Subjects >1) %in% TRUE & is.na(data$Value),
                                     paste2(data$exclude_reason,
-                                            "N_Subjects > 1 and Value is NA",
-                                          sep = "; "),
+                                           "N_Subjects > 1 and Value is NA",
+                                           sep = "; "),
                                     data$exclude_reason
       )
 
@@ -559,9 +559,9 @@ data$Value_SD_orig <- data$Value_SD
 
       data$exclude_reason <- ifelse(is.na(data$Time),
                                     paste2(data$exclude_reason,
-                                            "Time is NA",
-                                          sep = "; "),
-                                   data$exclude_reason
+                                           "Time is NA",
+                                           sep = "; "),
+                                    data$exclude_reason
       )
     }
 
@@ -602,9 +602,9 @@ data$Value_SD_orig <- data$Value_SD
 
       data$exclude_reason <- ifelse(data$Dose < .Machine$double.eps,
                                     paste2(data$exclude_reason,
-                                            "Dose == 0",
-                                          sep = "; "),
-                                   data$exclude_reason
+                                           "Dose == 0",
+                                           sep = "; "),
+                                    data$exclude_reason
       )
 
     }
@@ -637,7 +637,7 @@ data$Value_SD_orig <- data$Value_SD
     data$Time.Units_orig <- data$Time.Units
 
     #first, default to identity transformation if none is specified
-    if(is.null(obj$scales$time$new_units)){
+    if (is.null(obj$scales$time$new_units)) {
       obj$scales$time$new_units <- "identity"
     }
 
@@ -648,35 +648,46 @@ data$Value_SD_orig <- data$Value_SD
                        obj$scales$time$new_units)
 
 
-
-    if(obj$scales$time$new_units %in% "auto"){
-      to_units <- auto_units(y = data$Time,
-                             from = from_units)
+    # Needs to be grouped
+    if (obj$scales$time$new_units %in% "auto") {
+      to_units <- data %>%
+        group_by(!!!data_group) %>%
+        mutate(AUTO_UNITS = auto_units(y = Time,
+                             from = Time.Units_orig)) %>%
+        pull(AUTO_UNITS)
     }
 
-    if(!(from_units == to_units)){
-    if(!obj$settings_preprocess$suppress.messages){
-      message(paste("Converting time from",
-                    from_units,
-                    "to",
-                    to_units))
-    }
+    # Needs to be iterated
+    if (!all(unique(to_units) %in% from_units)) {
+      if (!obj$settings_preprocess$suppress.messages) {
+        for (convert_message in as.numeric(which(!(unique(to_units) %in% from_units)))) {
+          message(
+            paste("Converting time from",
+                  from_units,
+                  "to",
+                  unique(to_units)[convert_message]))
+        }
 
-    data$Time_trans <- tryCatch(convert_time(x = data$Time,
-                                             from = from_units,
-                                             to = to_units,
-                                             inverse = FALSE),
-                                error = function(err){
-                                  warning(paste("invivopkfit::do_preprocess.pk():",
-                                                "Error in transforming time using convert_time():",
-                                                err$message))
-                                  return(NA_real_)
-                                })
+      }
+      data$NEW_UNITS <- to_units
+      data <- data %>%
+        dplyr::rowwise() %>%
+        dplyr::mutate(Time_trans = tryCatch(convert_time(x = Time,
+                                         from = from_units,
+                                         to = NEW_UNITS,
+                                         inverse = FALSE),
+                                     error = function(err){
+                                       warning(paste("invivopkfit::do_preprocess.pk():",
+                                                     "Error in transforming time using convert_time():",
+                                                     err$message))
+                                       return(NA_real_)
+                                       })) %>%
+        dplyr::select(-NEW_UNITS)
     }else{
       data$Time_trans <- data$Time
     }
     data$Time_trans.Units <- to_units
-
+    # End grouping
 
 
     #Scale concentration by ratio_conc_dose
@@ -689,23 +700,23 @@ data$Value_SD_orig <- data$Value_SD
 
     if(!obj$settings_preprocess$suppress.messages){
       if(!(ratio_conc_dose %in% 1)){
-      message(paste("Concentrations, LOQs, and concentration SDs are being scaled by",
-                    "ratio_conc_dose = ",
-                    ratio_conc_dose, "\n"))
+        message(paste("Concentrations, LOQs, and concentration SDs are being scaled by",
+                      "ratio_conc_dose = ",
+                      ratio_conc_dose, "\n"))
       }
     }
 
 
-if("Conc" %in% names(data)){
+    if("Conc" %in% names(data)){
       if(!obj$settings_preprocess$suppress.messages){
         message(paste("Harmonized variable `Conc` already exists in data!.",
                       "It will be overwritten as",
                       "`pmax(Value/ratio_conc_dose, LOQ/ratio_conc_dose, na.rm = TRUE)`.\n"))
       }
-}
-      data$Conc <- pmax(data$Value/ratio_conc_dose,
-                        data$LOQ/ratio_conc_dose,
-                        na.rm = TRUE)
+    }
+    data$Conc <- pmax(data$Value/ratio_conc_dose,
+                      data$LOQ/ratio_conc_dose,
+                      na.rm = TRUE)
 
     if("Detect" %in% names(data)){
       if(!obj$settings_preprocess$suppress.messages){
@@ -714,7 +725,7 @@ if("Conc" %in% names(data)){
                       "`is.na(Value)`.\n"))
       }
     }
-      data$Detect <- !is.na(data$Value)
+    data$Detect <- !is.na(data$Value)
 
     if("Conc_SD" %in% names(data)){
       if(!obj$settings_preprocess$suppress.messages){
@@ -725,21 +736,21 @@ if("Conc" %in% names(data)){
                         NA_real_)\n"))
       }
     }
-      data$Conc_SD <- data$Value_SD/ratio_conc_dose
+    data$Conc_SD <- data$Value_SD/ratio_conc_dose
 
-      if("Conc.Units" %in% names(data)){
-        if(!obj$settings_preprocess$suppress.messages){
-          message(paste("Harmonized variable `Conc.Units` already exists in data!",
-                        "It will be overwritten as",
-                       "Value.Units/ratio_conc_dose\n"))
-        }
+    if("Conc.Units" %in% names(data)){
+      if(!obj$settings_preprocess$suppress.messages){
+        message(paste("Harmonized variable `Conc.Units` already exists in data!",
+                      "It will be overwritten as",
+                      "Value.Units/ratio_conc_dose\n"))
       }
+    }
 
     data$Conc.Units <- ifelse(ratio_conc_dose == 1,
                               data$Value.Units,
                               paste0(data$Value.Units,
-                                    "/",
-                                    ratio_conc_dose))
+                                     "/",
+                                     ratio_conc_dose))
 
     #apply concentration transformation.
     #
@@ -785,9 +796,9 @@ if("Conc" %in% names(data)){
     #Record new conc units
     data$Conc_trans.Units <- gsub(
       x = gsub(x = rlang::as_label(obj$scales$conc$expr),
-                                  pattern = ".conc",
-                                  replacement = paste0("(", unique(data$Conc.Units), ")"),
-                                  fixed = TRUE),
+               pattern = ".conc",
+               replacement = paste0("(", unique(data$Conc.Units), ")"),
+               fixed = TRUE),
       pattern = "Dose",
       replacement = paste0("(", unique(data$Dose.Units), ")"),
       fixed = TRUE)

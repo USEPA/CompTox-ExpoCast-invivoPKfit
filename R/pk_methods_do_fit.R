@@ -60,7 +60,7 @@ do_fit.pk <- function(obj){
 
 
   #pull the non-excluded observations for fitting
-  data <- obj$data %>% dplyr::filter(exclude %in% FALSE)
+  data <- subset(obj$data, exclude %in% FALSE)
   #pull the sigma parameter corresponding to each non-excluded observation
   data_sigma_group <- data$data_sigma_group
 
@@ -83,6 +83,7 @@ do_fit.pk <- function(obj){
 
                        #nest the necessary data frames...
                        data_nest <- get_data(obj) %>%
+                         dplyr::filter(exclude %in% FALSE) %>%
                          tidyr::nest(data = !tidyselect::all_of(data_group_vars))
 
                        par_DF_nest <- obj$prefit$par_DF %>%

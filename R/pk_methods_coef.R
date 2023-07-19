@@ -65,6 +65,10 @@ coef.pk <- function(obj,
                                            replace = unique(const_pars[[this_param]]))
   }
 
+  time_group <- get_data(obj = obj) %>%
+    dplyr::select(!!!obj$data_group, Time.Units, Time_trans.Units) %>%
+    dplyr::distinct()
+
   coefs_tidy <- coefs %>%
     tidyr::nest(coefs_tibble = dplyr::any_of(possible_model_params)) %>%
     dplyr::mutate(coefs_vector = map(coefs_tibble,
@@ -73,7 +77,8 @@ coef.pk <- function(obj,
                                                 dplyr::select(!where(is.na))) %>%
                                   unlist()
                               })) %>%
-    tidyr::unnest(coefs_tibble)
+    tidyr::unnest(coefs_tibble) %>%
+    dplyr::left_join(time_group)
 
 
 

@@ -142,7 +142,7 @@ plot.pk <- function(obj,
     }
   }
 
-  common_vars <- ggplot2::vars(Time, Time.Units, Time_trans,
+  common_vars <- ggplot2::vars(Time, Time.Units, Time_trans, Time_trans.Units,
                                Dose, Route, Media)
   obs_vars <- ggplot2::vars(Conc, Conc_SD, Value, Value.Units,
                             Detect, exclude,
@@ -221,6 +221,8 @@ plot.pk <- function(obj,
                                 stroke = 1) + # plots points
                      geom_errorbar(mapping = plot_data_aes)
 
+                   t_units <- unique(x$Time_trans.Units)
+
                    # if alpha = Detect then we have to do some trickery to implement that
                    # that is the objective of plot_point_aes
                    if (rlang::as_label(plot_point_aes$alpha) %in% "Detect") {
@@ -271,7 +273,7 @@ plot.pk <- function(obj,
 
                    p +
                      labs(title = paste(Chemical, Species),
-                          x = "Time",
+                          x = paste0("Time (", t_units , ")"),
                           y = ifelse(conc_scale$dose_norm,
                                      "Concentration/Dose",
                                      "Concentration")) +
@@ -294,16 +296,15 @@ plot.pk <- function(obj,
     interp_data <- interp_data %>%
       mutate(interpolated = map(observations,
                                 \(x) {
-                                  t_units <- unique(x[["Time.Units"]])
+                                  t_units <- unique(x[["Time_trans.Units"]])
                                   x %>%
                                     dplyr::select(!!!common_vars) %>%
                                     dplyr::group_by(Dose, Route, Media) %>%
-                                    dplyr::reframe(Time = max(Time),
-                                                   totalN = n() - 1) %>%
+                                    dplyr::reframe(Time = max(Time_trans),
+                                                   Time_trans.Units) %>%
                                     dplyr::mutate(maxTime = max(Time),
-                                                  totalN = max(totalN),
-                                                  Time.Units = "hours") %>%
-                                    tidyr::uncount(n_interp * totalN) %>%
+                                                  Time.Units = unique(Time_trans.Units)) %>%
+                                    tidyr::uncount(n_interp * maxTime) %>%
                                     dplyr::group_by(Dose, Route, Media) %>%
                                     dplyr::mutate(Time_trans = (maxTime / (n() - 1)) *
                                                     (row_number() - 1))
