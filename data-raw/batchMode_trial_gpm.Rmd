@@ -235,6 +235,28 @@ my_IC %>% group_by(Chemical, Species, method) %>%
 # model_2comp 50
 # model_flat   4
 
+
+
+my_preds <- predict(my_pk,
+                    use_scale_conc = TRUE)
+
+winmodels <- my_IC %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "L-BFGS-B") %>%
+  ungroup() %>%
+  dplyr::select(Chemical, Species,
+                method, model)
+
+my_preds <- inner_join(winmodels, my_preds)
+my_tkstats <- inner_join(winmodels, my_tkstats) %>%
+  dplyr::select(-TKstats) %>% distinct()
+my_nca <- get_nca(my_pk,
+                  nca_group = vars(Chemical, Species,))
+my_nca <- my_nca %>% dplyr::select(-param_sd_z, -param_units) %>%
+  pivot_wider(names_from = param_name,
+              values_from = param_value)
+
+
 all_my_data <- my_pk$data
 all_my_data %>%
   group_by(Chemical,
@@ -298,12 +320,12 @@ all_my_data %>%
            Route,
            Dose, Time) %>%
   filter(n() > 1,
-         sum(is.na(Conc)) != n(),
+         sum(is.na(Conc_trans)) != n(),
          exclude == FALSE) %>%
-  mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
+  mutate(meanConc = mean(Conc_trans, na.rm = TRUE)) %>%
   ungroup() %>%
   rowwise() %>%
-  mutate(foldConc = Conc / meanConc) %>%
+  mutate(foldConc = Conc_trans / meanConc) %>%
   inner_join(my_tkstats %>%
               dplyr::select(Chemical, Species,
                             Route, Media,
@@ -329,11 +351,13 @@ all_my_data %>%
     x = normTime,
     y = foldConc
   )) +
-  geom_point(alpha = 0.2) +
+  geom_point(alpha = 0.2,
+             aes(color = Chemical)) +
   geom_vline(xintercept = 1, color = "blue", linetype = "dashed") +
   geom_vline(xintercept = 2, color = "green4", linetype = "dashed") +
   geom_hline(yintercept = c(0.5, 2), color = "red3", linetype = "dashed") +
   facet_grid(cols = vars(Route),
+             rows = vars(Species),
              scales = "free_x") +
   labs(x = "ADME-Normalized Time",
        y = "Mean-Normalized Concentration") +
@@ -350,10 +374,40 @@ all_my_data %>%
 ggsave(paste0("C:/Users/GPADILLA/",
               "OneDrive - Environmental Protection Agency (EPA)/",
               "Profile/Documents/Figures/",
-              "ADME_NormalizedTime-NormalizedConcentrations_2023-07-19.png"),
+              "ADME_NormalizedTime-NormalizedConcentrations_onlyDetects_2023-07-19.png"),
        height = 4,
        width = 6,
        units = "in")
+
+
+# Per chemical + Species average mean normalized concentration variability over time
+all_my_data %>%
+  group_by(Chemical,
+           Species,
+           Reference,
+           Route,
+           Dose, Time) %>%
+  filter(n() > 1,
+         sum(is.na(Conc)) != n(),
+         LOQ < Conc,
+         exclude == FALSE) %>%
+  mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rowwise() %>%
+  mutate(foldConc = Conc / meanConc) %>%
+  inner_join(my_tkstats %>%
+              dplyr::select(Chemical, Species,
+                            Route, Media,
+                            tmax) %>%
+              filter(!is.na(tmax))) %>%
+  group_by(Chemical, Species, Route, Media, Dose) %>%
+  summarize(sdFC = sd(foldConc)) %>%
+  mutate(maxDose = max(Dose),
+         minDose = min(Dose)) %>%
+  ungroup() %>%
+  add_count(Dose, name = "Unique_Doses") %>%
+  filter(Unique_Doses == 1) %>%
+  arrange(desc(sdFC))
 
 my_tkstats %>%
               dplyr::select(Chemical, Species,
@@ -385,6 +439,117 @@ my_nca <- get_nca(my_pk,
 my_nca <- my_nca %>% dplyr::select(-param_sd_z, -param_units) %>%
   pivot_wider(names_from = param_name,
               values_from = param_value)
+
+
+
+my_preds %>%
+  group_by(Chemical,
+           Species,
+           Route,
+           Dose, Time) %>%
+  filter(n() > 1,
+         sum(is.na(Conc_trans)) != n(),
+         exclude == FALSE,
+         Detect == TRUE) %>%
+  mutate(meanConc = mean(Conc_trans, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rowwise() %>%
+  mutate(foldConc = Conc_trans / meanConc,
+         foldPred = Conc_est / Conc_trans) %>% 
+  # filter(model == "model_2comp") %>%
+  mutate(VAR_DATA = ifelse(
+    (foldPred > 2 | foldPred < 0.5) & (foldConc <= 2 & foldConc >= 0.5),
+    TRUE, FALSE
+  )) %>%
+  filter(VAR_DATA == TRUE) %>%
+  pull(VAR_DATA) %>% table()
+  ggplot(aes(
+    y = foldPred,
+    x = foldConc
+  )) +
+  geom_bin2d(bins = 40, color = NA) +
+  geom_hline(yintercept = c(0.5, 2), linetype = "dashed") +
+  geom_vline(xintercept = c(0.5, 2), linetype = "dashed") +
+  facet_grid(cols = vars(model)) +
+  scale_x_log10(limits = c(0.0001, 50)) +
+  scale_y_log10(limits = c(0.001, 1000)) +
+  scale_fill_viridis_c(option = "cividis",
+                       limits = c(1, 100),
+                       oob = oob_squish) +
+  labs(y = "Model Performance",
+       x = "Data Variability") +
+  theme(aspect.ratio = 1,
+        panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        axis.ticks = element_blank(),
+        axis.line = element_blank())
+
+ggsave(paste0("C:/Users/GPADILLA/",
+              "OneDrive - Environmental Protection Agency (EPA)/",
+              "Profile/Documents/Figures/",
+              "ModelPerformance_vDataVariability_2023-07-20.png"),
+       height = 3.5,
+       width = 7,
+       units = "in")  
+  
+  
+# Why are 38-39% of adequate data have models that are too variable?
+# 
+my_preds %>%
+  group_by(Chemical,
+           Species,
+           Route,
+           Dose, Time) %>%
+  filter(n() > 1,
+         sum(is.na(Conc_trans)) != n(),
+         exclude == FALSE,
+         Detect == TRUE) %>%
+  mutate(meanConc = mean(Conc_trans, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rowwise() %>%
+  mutate(foldConc = Conc_trans / meanConc,
+         foldPred = Conc_est / Conc_trans) %>% 
+  # filter(model == "model_2comp") %>%
+  mutate(VAR_DATA = ifelse(
+    (foldPred > 2 | foldPred < 0.5) & (foldConc <= 2 & foldConc >= 0.5),
+    TRUE, FALSE
+  )) %>%
+  group_by(Chemical, Species) %>%
+  mutate(VAR_TRUE = sum(VAR_DATA %in% TRUE),
+         VAR_FALSE = sum(VAR_DATA %in% FALSE)) %>%
+  dplyr::select(-VAR_DATA) %>% distinct() %>%
+  mutate(PERCENT_TRUE = VAR_TRUE/(VAR_TRUE + VAR_FALSE),
+         MAJOR_TRUE = ifelse(PERCENT_TRUE > 0.6, TRUE, FALSE)) %>%
+  # View("Count")
+  ggplot(aes(
+    x = Time,
+    y = Conc_est,
+    color = paste(Chemical, Species),
+    group = paste(Chemical, Species)
+  )) +
+  geom_point() +
+  geom_line() +
+  facet_grid(cols = vars(MAJOR_TRUE),
+             rows = vars(model)) +
+  labs(y = "Predicted Concentrations",
+       x = "Time") +
+  xlim(0, 78) +
+  theme(aspect.ratio = 1,
+        panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        legend.position = "none",
+        axis.ticks = element_blank(),
+        axis.line = element_blank())
+  
+  
+
+
 
 # Saving some CSVs
 # my_tkstats %>% write_csv(file = "data-raw/Pooled_TKstats.csv")
