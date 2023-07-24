@@ -69,7 +69,6 @@ my_pk <- pk(data = my_predata) +
 my_pk <- do_preprocess(my_pk)
 
 my_pk <- do_data_info(my_pk)
-# summarizes error (Returning more or less than 1 row per summarize)
 
 my_pk <- do_prefit(my_pk)
 
@@ -533,17 +532,10 @@ my_preds %>%
   geom_point() +
   geom_line() +
   facet_grid(cols = vars(MAJOR_TRUE),
-<<<<<<< HEAD
              rows = vars(model)) +
   labs(y = "Predicted Concentrations",
        x = "Time") +
-  xlim(0, 78) +
-=======
-             rows = vars(Route)) +
-  labs(y = "Predicted Concentrations",
-       x = "Time") +
   # xlim(0, 2000) +
->>>>>>> 49b9194681c8499bad5c0f4e6f08d8b320c3b9ad
   theme(aspect.ratio = 1,
         panel.border = element_rect(color = "black", fill = NA, size = 1.5),
         panel.background = element_blank(),

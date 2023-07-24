@@ -47,11 +47,11 @@ data_summary.pk <- function(obj,
                             newdata = NULL,
                             summary_group = NULL){
 
-  if(is.null(summary_group)){
+  if (is.null(summary_group)) {
     summary_group <- obj$data_group
   }
 
-  if(is.null(newdata)) newdata <- obj$data
+  if (is.null(newdata)) newdata <- obj$data
 
   grp_vars <- sapply(summary_group,
                      rlang::as_label)
@@ -75,7 +75,7 @@ data_summary.pk <- function(obj,
   data_summary <- do.call(dplyr::group_by,
                           args =c(list(newdata),
                                   summary_group)) %>%
-    dplyr::summarise(
+    dplyr::reframe(
       n_obs = dplyr::n(), #summary stats on data
       n_exclude = sum(exclude %in% TRUE),
       n_detect = sum(Detect %in% TRUE & exclude %in% FALSE),
