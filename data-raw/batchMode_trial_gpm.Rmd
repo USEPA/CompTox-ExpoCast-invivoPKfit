@@ -27,9 +27,9 @@ cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>%
   length()
 
 my_predata <- cvt %>%
-  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID0020442",
-                                                              "DTXSID5032600",
-                                                              "DTXSID2021103"))
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID8031865"),
+                subjects.species_harmonized %in% "rat",
+                studies.administration_route_normalized %in% "iv")
 my_predata <- cvt %>%
   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID9021924")
 
@@ -75,7 +75,9 @@ my_pk <- do_prefit(my_pk)
 
 my_pk <- do_fit(my_pk)
 
-
+plot(my_pk,
+     method = "L-BFGS-B",
+     print_out = TRUE)
 # Joint
 my_pk <- pk(data = cvt) +
   facet_data(vars(Chemical, Species)) +
@@ -270,7 +272,7 @@ all_my_data %>%
   ungroup() %>%
   rowwise() %>%
   mutate(foldConc = Conc / meanConc) %>%
-  count(foldConc > 2)
+  count(foldConc < 2 & foldConc > 0.5)
 # 88.4% inside twofold
 # 2.4%  above twofold
 # 9.2%  below twofold
@@ -749,5 +751,86 @@ total_eval %>%
   # unique()
   length()
 
+```
+
+
+
+```{r PredictionVariability_overtime}
+my_pk <- readRDS("data-raw/all_cvt_pk.rds")
+winmodels <- AIC(my_pk) %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "L-BFGS-B") %>%
+  ungroup() %>%
+  dplyr::select(Chemical, Species,
+                method, model)
+my_preds <- inner_join(winmodels,
+                       predict(my_pk,
+                               use_scale_conc = TRUE))
+
+my_tkstats <- inner_join(winmodels, get_tkstats(my_pk))
+my_residuals <- residuals(my_pk, use_scale_conc = TRUE)
+
+# my_preds %>%
+#   group_by(Chemical,
+#            Species,
+#            Route,
+#            Dose, Time) %>%
+#   filter(sum(is.na(Conc_trans)) != n(),
+#          exclude == FALSE,
+#          Detect %in% TRUE) %>%
+#          
+my_residuals %>%
+  filter(exclude == FALSE) %>%
+  inner_join(winmodels) %>%
+  inner_join(my_tkstats %>%
+              dplyr::select(Chemical, Species,
+                            Route, Media,
+                            tmax) %>%
+              filter(!is.na(tmax))) %>%
+  group_by(Chemical,
+           Species,
+           Route,
+           Media,
+           Dose) %>%
+  mutate(
+         normTime = ifelse(
+           Route == "iv",
+           1 + Time/max(Time),
+           ifelse(
+             Time > tmax,
+             ((Time - tmax)/max(Time)) + 1,
+             0.5 + Time/(2*tmax)
+           )
+         )) %>%
+  distinct() %>%
+  filter(Detect %in% TRUE) %>%
+  # filter(Route == "iv") %>% View()
+  ggplot(aes(
+    x = normTime,
+    y = Residuals
+  )) +
+  geom_point(alpha = 0.2, size = 0.5) +
+  geom_vline(xintercept = 1, color = "blue", linetype = "dashed") +
+  geom_vline(xintercept = 2, color = "green4", linetype = "dashed") +
+  facet_grid(cols = vars(Route),
+             # rows = vars(model),
+             scales = "free_x") +
+  labs(x = "ADME-Normalized Time",
+       y = "Winning Model Residuals") +
+  theme(aspect.ratio = 1,
+        panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.text.x = element_blank())
+
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "ADME_NormalizedTime-WinModelResiduals_onlyDetects_2023-07-19.png"),
+       height = 4,
+       width = 6,
+       units = "in")
 ```
 

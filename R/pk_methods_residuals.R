@@ -130,7 +130,8 @@ residuals.pk <- function(obj,
                         Conc),
       Residuals = ifelse(Detect %in% FALSE & Conc_est <= Conc_set,
                          0, Conc_est - Conc_set)) %>%
-    dplyr::ungroup()
+    dplyr::ungroup() %>%
+    dplyr::distinct()
 
   return(resids)
 }
