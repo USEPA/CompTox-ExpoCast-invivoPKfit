@@ -22,11 +22,9 @@ Default `NULL` to get the winning model for each method in
 \item{criterion}{The name of a criterion function to use for model comparison.
 Default "AIC". Must be the name of a function that (as for `AIC`) accepts
 arguments `obj`, `newdata`, `method` and `model` (may accept other
-arguments, specified in `...`) and returns output as for `AIC`: a named list
-of numeric vectors (named for each of the model names in `model`), where
-each vector has elements named for each of the method names in `method`,
-containing the criterion value calculated for that model fitted using that
-method.}
+arguments, specified in `...`) and returns output as for `AIC`: a data.frame
+with a column with the same name as `criterion` that has calculated values
+for model comparison. The "winning" value will be the smallest value.}
 
 \item{...}{Optional: Other arguments to `criterion` function.}
 }

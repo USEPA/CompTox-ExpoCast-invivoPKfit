@@ -12,7 +12,7 @@
   tk_group = NULL,
   exclude = TRUE,
   dose_norm = TRUE,
-  which_params = NULL,
+  finite_only = TRUE,
   ...
 )
 }
@@ -64,12 +64,8 @@ local copy of `newdata` with 1's. This doesn't affect the data outside of
 this function. But it means that any values in the `Dose` variable of
 `newdata` will be ignored if `dose_norm %in% TRUE`.)}
 
-\item{which_params}{A character vector specifying the names of one or more TK
-stats to compare. The output will include only the specified TK statistics.
-If `NULL` (the default), then the output will contain all statistics that
-are calculated by both `nca.pk()` and the model `tkstats` function.
-Currently, these are `CLtot`, `CLtot/Fgutabs`, `halflife`, `AUC_infinity`,
-`Cmax`, `tmax`, `Vss`.}
+\item{finite_only}{Logical: `TRUE` (default) returns only rows (observations)
+for which AUC is finite in both `nca` and `tkstats`.}
 }
 \value{
 A `list` of `data.frame` objects, one  named for each model in
@@ -98,6 +94,6 @@ Other methods for fitted pk objects:
 \code{\link{rsq.pk}()}
 }
 \author{
-Caroline Ring, Gilbert Padilla Mercado, John Wambaugh
+Caroline Ring, Gilberto Padilla Mercado, John Wambaugh
 }
 \concept{methods for fitted pk objects}

@@ -11,7 +11,8 @@
   model = NULL,
   method = NULL,
   exclude = TRUE,
-  vol_unit = "L"
+  vol_unit = "L",
+  dose_norm = TRUE
 )
 }
 \arguments{

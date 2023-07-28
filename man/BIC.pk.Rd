@@ -42,7 +42,7 @@ A named list of numeric vectors. There is one list element
   using the data in `newdata`.
 }
 \description{
-Get the Bayesian information criterion (AIC) for a fitted `pk` object
+Get the Bayesian information criterion (BIC) for a fitted `pk` object
 }
 \details{
 The BIC is calculated from the log-likelihood (LL) as follows:

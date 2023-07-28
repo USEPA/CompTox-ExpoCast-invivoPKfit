@@ -27,8 +27,8 @@ cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>%
   length()
 
 my_predata <- cvt %>%
-  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID8031865"),
-                subjects.species_harmonized %in% "rat",
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID0020442"),
+                subjects.species_harmonized %in% "hamster",
                 studies.administration_route_normalized %in% "iv")
 my_predata <- cvt %>%
   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID9021924")
@@ -213,6 +213,12 @@ I will also have to fit these iteratively and manage the memory as part of the l
 # saveRDS(my_pk, file = "data-raw/all_cvt_pk.rds")
 # saveRDS(my_pk, file = "data-raw/all_cvt_pk_JOINT.rds")
 my_pk <- readRDS("data-raw/all_cvt_pk.rds")
+my_coefs <- coef(my_pk, drop_sigma = FALSE)
+get_winning_model(my_pk) %>%
+  filter(model %in% c("model_2comp"),
+         method == "L-BFGS-B") %>%
+  dplyr::select(Chemical, Species) %>% distinct() %>% nrow()
+all_my_data  %>% dplyr::select(Chemical, Species) %>% distinct() %>% nrow()
 my_AIC <- AIC(my_pk)
 my_tkstats <- get_tkstats(my_pk)
 my_IC <- left_join(AIC(my_pk), BIC(my_pk))
@@ -260,10 +266,14 @@ my_nca <- my_nca %>% dplyr::select(-param_sd_z, -param_units) %>%
 
 all_my_data <- my_pk$data
 all_my_data %>%
+  filter(Detect %in% TRUE,
+         exclude %in% FALSE,
+         Dose > 0) %>%
   group_by(Chemical,
            Species,
            Reference,
-           Route,
+           Route, 
+           Media,
            Dose, Time) %>%
   filter(n() > 1,
          sum(is.na(Conc)) != n(),
@@ -272,16 +282,24 @@ all_my_data %>%
   ungroup() %>%
   rowwise() %>%
   mutate(foldConc = Conc / meanConc) %>%
-  count(foldConc < 2 & foldConc > 0.5)
-# 88.4% inside twofold
-# 2.4%  above twofold
-# 9.2%  below twofold
+  filter(Route == "iv") %>%
+  count(foldConc >= 0.5 & foldConc <= 2) %>%
+  {.[[2,2]]/(.[[1,2]] + .[[2,2]])}
+# 88.9% inside twofold
+# 2.2%  above twofold 
+# 8.8%  below twofold
+# 
+# 
 
 all_my_data %>%
+  filter(Detect %in% TRUE,
+         exclude %in% FALSE,
+         Dose > 0) %>%
   group_by(Chemical,
            Species,
            Reference,
-           Route,
+           Route, 
+           Media,
            Dose, Time) %>%
   filter(n() > 1,
          sum(is.na(Conc)) != n(),
@@ -298,9 +316,9 @@ all_my_data %>%
   scale_y_continuous(expand = c(0, 0)) +
   expand_limits(y = 0) +
   geom_vline(xintercept = c(0.5, 2), color = "red3", linetype = "dashed") +
-  annotate(geom= "text",
-           x = 1.25, y = 1800,
-           label = "88.4% of Observations\n within a factor of 2") +
+  # annotate(geom= "text",
+  #          x = 1.25, y = 1800,
+  #          label = "88.9% of Observations\n within a factor of 2") +
   theme_classic() +
   labs(x = "Concentration Normalized to Average",
                 y = "Number of Observations") +
@@ -425,7 +443,7 @@ all_my_data %>%
 my_preds <- predict(my_pk,
                     use_scale_conc = TRUE)
 
-winmodels <- my_IC %>% group_by(Chemical, Species, method) %>%
+winmodels <- AIC(my_pk) %>% group_by(Chemical, Species, method) %>%
   filter(AIC == min(AIC),
          method == "L-BFGS-B") %>%
   ungroup() %>%
@@ -446,24 +464,24 @@ my_nca <- my_nca %>% dplyr::select(-param_sd_z, -param_units) %>%
 my_preds %>%
   group_by(Chemical,
            Species,
-           Route,
+           Route, Media,
            Dose, Time) %>%
   filter(n() > 1,
          sum(is.na(Conc_trans)) != n(),
-         exclude == FALSE,
-         Detect == TRUE) %>%
+         model %in% c("model_flat"),
+         exclude %in% FALSE,
+         Detect %in% TRUE) %>%
   mutate(meanConc = mean(Conc_trans, na.rm = TRUE)) %>%
   ungroup() %>%
   rowwise() %>%
   mutate(foldConc = Conc_trans / meanConc,
          foldPred = Conc_est / Conc_trans) %>% 
-  # filter(model == "model_2comp") %>%
-  mutate(VAR_DATA = ifelse(
-    (foldPred > 2 | foldPred < 0.5) & (foldConc <= 2 & foldConc >= 0.5),
-    TRUE, FALSE
-  )) %>%
-  filter(VAR_DATA == TRUE) %>%
-  pull(VAR_DATA) %>% table()
+  # For percentages
+  ungroup() %>%
+  count(!(foldPred >= 0.5 & foldPred <= 2) &
+          !(foldConc >= 0.5 & foldConc <= 2)) %>%
+  {.[[2,2]]/(.[[1,2]] + .[[2,2]])}
+  # For Plotting
   ggplot(aes(
     y = foldPred,
     x = foldConc
@@ -623,6 +641,38 @@ my_pk$prefit$fit_check %>% filter(fit_decision == "abort") %>%
 all_my_data %>%
   filter(Chemical == "DTXSID2021781")
 
+
+my_coefs %>% inner_join(get_winning_model(my_pk)) -> my_coefs
+my_coefs %>% inner_join(get_data_summary(my_pk)) -> my_coefs
+
+
+my_coefs %>%
+  mutate(model = 
+           case_when(
+             model == "model_1comp" ~ "1-compartment",
+             model == "model_2comp" ~ "2-compartment",
+             model == "model_flat"  ~ "Null"
+           )) %>%
+  ggplot(aes(x = sigma_value/n_obs)) +
+  geom_histogram(bins = 15,
+                 color = NA, fill = "grey5") +
+  scale_x_log10(labels = label_log()) +
+  facet_grid(cols = vars(model)) +
+  labs(x = "Size-normalized Sigma Value",
+       y = "Number of Observations",
+       title = "Distribution of Sigmas in CvTdb data") +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        plot.title = element_text(hjust = 0.5),
+        axis.ticks = element_blank(),
+        axis.line = element_blank())
+
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "NormalizedSigma_Distributions_2023-07.png"),
+       height = 3, width = 5)
 ```
 
 
@@ -768,17 +818,9 @@ my_preds <- inner_join(winmodels,
                                use_scale_conc = TRUE))
 
 my_tkstats <- inner_join(winmodels, get_tkstats(my_pk))
-my_residuals <- residuals(my_pk, use_scale_conc = TRUE)
+my_residuals <- residuals(my_pk, use_scale_conc = FALSE)
 
-# my_preds %>%
-#   group_by(Chemical,
-#            Species,
-#            Route,
-#            Dose, Time) %>%
-#   filter(sum(is.na(Conc_trans)) != n(),
-#          exclude == FALSE,
-#          Detect %in% TRUE) %>%
-#          
+
 my_residuals %>%
   filter(exclude == FALSE) %>%
   inner_join(winmodels) %>%
@@ -803,13 +845,26 @@ my_residuals %>%
            )
          )) %>%
   distinct() %>%
-  filter(Detect %in% TRUE) %>%
-  # filter(Route == "iv") %>% View()
+  filter(Detect %in% TRUE) -> my_residuals2
+my_residuals2 %>%
+  # filter(Route == "oral") %>% View()
   ggplot(aes(
     x = normTime,
     y = Residuals
   )) +
   geom_point(alpha = 0.2, size = 0.5) +
+  geom_point(data = filter(my_residuals2,
+                           Chemical %in% "DTXSID4020533",
+                           Species %in% "rat"),
+             color = "orange2", size = 0.5) +
+  geom_point(data = filter(my_residuals2,
+                           Chemical %in% "DTXSID8031865",
+                           Species %in% "rat"),
+             color = "magenta4", size = 0.5) +
+  geom_point(data = filter(my_residuals2,
+                           Chemical %in% "DTXSID8025337",
+                           Species %in% "rat"),
+             color = "green2", size = 0.5) +
   geom_vline(xintercept = 1, color = "blue", linetype = "dashed") +
   geom_vline(xintercept = 2, color = "green4", linetype = "dashed") +
   facet_grid(cols = vars(Route),
@@ -828,9 +883,406 @@ my_residuals %>%
         axis.text.x = element_blank())
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ADME_NormalizedTime-WinModelResiduals_onlyDetects_2023-07-19.png"),
+              "ADME_NormalizedTime-WinModelResiduals_onlyDetects_Highlighted_2023-07-19.png"),
        height = 4,
        width = 6,
        units = "in")
+```
+
+```{r log10_Pooled}
+devtools::load_all()
+
+my_log10pk <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+# Add Reference for Joint Analysis
+
+my_log10pk <- do_preprocess(my_log10pk)
+
+my_log10pk <- do_data_info(my_log10pk)
+
+my_log10pk <- do_prefit(my_log10pk)
+
+
+my_log10pk <- do_fit(my_log10pk)
+# saveRDS(my_log10pk, file = "data-raw/all_cvt_pklog10.rds")
+
+my_AIC <- AIC(my_log10pk)
+my_tkstats <- get_tkstats(my_log10pk)
+
+my_AIC %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "bobyqa") %>%
+  ungroup() %>%
+  count(model)
+# model_1comp 69
+# model_2comp 35
+# model_flat   7
+
+my_AIC %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "L-BFGS-B") %>%
+  ungroup() %>%
+  count(model)
+# model_1comp 77
+# model_2comp 25
+# model_flat   9
+
+# To give summary RMSEs of Cmax and AUC...
+my_eval <- eval_tkstats(my_log10pk) %>%
+  group_by(method, model, .add = TRUE) %>%
+  ungroup(Reference) %>%
+  summarize(AUC_inf_RMSE = sqrt((1/n())*(sum(AUC_inf.tkstats - AUC_inf.nca,
+                                             na.rm = TRUE)^2)),
+            Cmax_RMSE = sqrt((1/n())*(sum(Cmax.tkstats - Cmax.nca,
+                                          na.rm = TRUE)^2)),
+            .groups = "keep")
+
+my_eval %>%
+  group_by(method) %>%
+  summarize(AUC_meanRMSE = mean(AUC_inf_RMSE),
+            AUC_mediRMSE = median(AUC_inf_RMSE),
+            AUC_sdRMSE = sd(AUC_inf_RMSE),
+            Cmax_meanRMSE = mean(Cmax_RMSE),
+            Cmax_mediRMSE = median(Cmax_RMSE),
+            Cmax_sdRMSE = sd(Cmax_RMSE)) %>% as.data.frame()
+
+```
+
+```{r log10_Joint}
+my_log10pk <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+# Add Reference for Joint Analysis
+
+my_log10pk <- do_preprocess(my_log10pk)
+
+my_log10pk <- do_data_info(my_log10pk)
+
+my_log10pk <- do_prefit(my_log10pk)
+
+
+my_log10pk <- do_fit(my_log10pk)
+
+my_AIC <- AIC(my_log10pk)
+
+my_AIC %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "bobyqa") %>%
+  ungroup() %>%
+  count(model)
+# model_1comp 56
+# model_2comp 54
+# model_flat  1
+
+my_AIC %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "L-BFGS-B") %>%
+  ungroup() %>%
+  count(model)
+# model_1comp 63
+# model_2comp 48
+# model_flat  0
+
+my_eval <- eval_tkstats(my_log10pk)
+
+# To give summary RMSEs of Cmax and AUC...
+my_eval <- my_eval %>%
+  group_by(method, model, .add = TRUE) %>%
+  ungroup(Reference) %>%
+  summarize(AUC_inf_RMSE = sqrt((1/n())*(sum(AUC_inf.tkstats - AUC_inf.nca,
+                                             na.rm = TRUE)^2)),
+            Cmax_RMSE = sqrt((1/n())*(sum(Cmax.tkstats - Cmax.nca,
+                                          na.rm = TRUE)^2)),
+            .groups = "keep")
+
+my_eval %>%
+  group_by(method) %>%
+  summarize(AUC_meanRMSE = mean(AUC_inf_RMSE),
+            AUC_mediRMSE = median(AUC_inf_RMSE),
+            AUC_sdRMSE = sd(AUC_inf_RMSE),
+            Cmax_meanRMSE = mean(Cmax_RMSE),
+            Cmax_mediRMSE = median(Cmax_RMSE),
+            Cmax_sdRMSE = sd(Cmax_RMSE)) %>%
+  as.data.frame()
+
+
+```
+
+```{r boilerplate_RMSE_analysis}
+my_pk <- readRDS("data-raw/all_cvt_pk.rds")
+my_AIC <- AIC(my_pk)
+
+my_AIC %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "bobyqa") %>%
+  ungroup() %>%
+  count(model)
+
+my_AIC %>% group_by(Chemical, Species, method) %>%
+  filter(AIC == min(AIC),
+         method == "L-BFGS-B") %>%
+  ungroup() %>%
+  count(model)
+
+my_eval <- eval_tkstats(my_pk)
+
+# To give summary RMSEs of Cmax and AUC...
+my_eval <- my_eval %>%
+  group_by(method, model, .add = TRUE) %>%
+  ungroup(Reference) %>%
+  summarize(AUC_inf_RMSE = sqrt((1/n())*(sum(AUC_inf.tkstats - AUC_inf.nca,
+                                             na.rm = TRUE)^2)),
+            Cmax_RMSE = sqrt((1/n())*(sum(Cmax.tkstats - Cmax.nca,
+                                          na.rm = TRUE)^2)),
+            .groups = "keep")
+
+my_eval %>%
+  group_by(method) %>%
+  summarize(AUC_meanRMSE = mean(AUC_inf_RMSE),
+            AUC_mediRMSE = median(AUC_inf_RMSE),
+            AUC_sdRMSE = sd(AUC_inf_RMSE),
+            Cmax_meanRMSE = mean(Cmax_RMSE),
+            Cmax_mediRMSE = median(Cmax_RMSE),
+            Cmax_sdRMSE = sd(Cmax_RMSE)) %>%
+  as.data.frame()
+```
+
+
+```{r bad_fits}
+predata_chemical <- my_pk$prefit$fit_check %>%
+  filter(fit_decision == "abort") %>%
+  pull(Chemical) %>%
+  unique()
+
+my_pk <- pk(data = cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% predata_chemical)) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+# Add Reference for Joint Analysis
+
+my_pk <- do_preprocess(my_pk)
+
+get_data(my_pk) %>% View()
+
+plot(my_pk, print_out = TRUE)[[1]] +
+  labs(subtitle = "Dibutyl phthalate (DBP)") +
+  theme(aspect.ratio = 1,
+        plot.subtitle = element_text(hjust = 0.5))
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "DTXSID20211781_rat_badFit.png"),
+       width = 6,
+       height = 4,
+       units = "in")
+
+my_pk <- pk(data = cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID2021315")) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk <- do_fit(my_pk)
+
+plot(my_pk,
+     method = "L-BFGS-B",
+     n_interp = 10,
+     print_out = TRUE)[[1]] +
+  labs(subtitle = "2,3,7,8-tetrachlorodibenzo-p-dioxin") +
+  scale_x_continuous(breaks = c(0, (1:4)*(24*7*4)),
+                     labels = c(0, 1:4),
+                     name = "Time (months)") +
+  guides(color = "none",
+         shape = "none") +
+  theme(aspect.ratio = 1,
+        plot.subtitle = element_text(hjust = 0.5))
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "DTXSID2021315_rat_badFit.png"),
+       width = 8,
+       height = 5,
+       units = "in")
+
+
+
+my_pk <- pk(data = cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID3032179")) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk <- do_fit(my_pk)
+
+plot(my_pk,
+     method = "L-BFGS-B",
+     use_scale_conc = FALSE,
+     log10_C = FALSE,
+     n_interp = 50,
+     print_out = TRUE)[[1]] +
+  labs(subtitle = "3,3',4,4',5-pentachlorobiphenyl (without Dose-Normalized Fit)") +
+  scale_x_continuous(breaks = c(0, (1:14)*(24*7*4)),
+                     labels = c(0, 1:14),
+                     name = "Time (months)") +
+  guides(color = "none",
+         shape = "none") +
+  theme(aspect.ratio = 1,
+        plot.subtitle = element_text(hjust = 0.5))
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "DTXSID3032179_rat_badFit_noDoseNorm.png"),
+       width = 7.5,
+       height = 5,
+       units = "in")
+
+my_pk <- pk(data = cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID3032179")) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk <- do_fit(my_pk)
+
+plot(my_pk,
+     method = "L-BFGS-B",
+     use_scale_conc = FALSE,
+     log10_C = FALSE,
+     n_interp = 50,
+     print_out = TRUE)[[1]] +
+  labs(subtitle = "3,3',4,4',5-pentachlorobiphenyl (Dose-Normalized Fit)") +
+  scale_x_continuous(breaks = c(0, (1:14)*(24*7*4)),
+                     labels = c(0, 1:14),
+                     name = "Time (months)") +
+  guides(color = "none",
+         shape = "none") +
+  theme(aspect.ratio = 1,
+        plot.subtitle = element_text(hjust = 0.5))
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "DTXSID3032179_rat_badFit_DoseNorm.png"),
+       width = 7.5,
+       height = 5,
+       units = "in")
+
+
+my_pk <- pk(data = cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID1034187")) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk <- do_fit(my_pk)
+
+get_data(my_pk) %>% View()
+plot(my_pk,
+     method = "L-BFGS-B",
+     use_scale_conc = TRUE,
+     log10_C = FALSE,
+     n_interp = 100,
+     print_out = TRUE)[[1]] +
+  labs(subtitle = "Tamoxifen") +
+  theme(aspect.ratio = 1,
+        plot.subtitle = element_text(hjust = 0.5))
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "DTXSID1034187_rat_badFit_.png"),
+       width = 7,
+       height = 7,
+       units = "in")
+# Fit is actually ok, but there are lot's of non-Detects in the data
+# There are many doses that are fully non-Detects.
+
+
+problem_dose <- all_my_data %>%
+  group_by(Chemical, Species, Route, Media, Dose) %>%
+  filter(sum(Detect) == 0) %>%
+  dplyr::select(Chemical, Species, Route, Media, Dose) %>%
+  rename(chemicals_analyzed.dsstox_substance_id = Chemical,
+         subjects.species_harmonized = Species,
+         series.conc_medium_normalized = Media,
+         studies.administration_route_normalized = Route,
+         studies.dose_level_normalized_corrected = Dose) %>%
+  distinct()
+
+problem_dose_DTX <- all_my_data %>%
+  group_by(Chemical, Species, Route, Media, Dose) %>%
+  filter(sum(Detect) == 0) %>%
+  ungroup() %>%
+  pull(1) %>% unique()
+
+# Figure out if the fits improve if we exclude Dose groups that do not have
+# any Detects
+
+my_pk_full <- pk(data = cvt %>%
+                   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% 
+                                   "DTXSID1034187")) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk_full <- do_preprocess(my_pk_full)
+my_pk_full <- do_fit(my_pk_full)
+
+plot(my_pk_full,
+     n_interp = 50,
+     use_scale_conc = TRUE,
+     print_out = TRUE)
+
+
+my_pk_trimmed <- pk(data = cvt %>%
+                      dplyr::filter(chemicals_analyzed.dsstox_substance_id %in%
+                                      "DTXSID1034187") %>%
+                      anti_join(problem_dose)) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk_trimmed <- do_preprocess(my_pk_trimmed)
+my_pk_trimmed <- do_fit(my_pk_trimmed)
+
+AIC(my_pk_full) %>% View("full")
+AIC(my_pk_trimmed) %>% View("trimmed")
+
+get_winning_model(my_pk_full)
+get_winning_model(my_pk_trimmed)
+
+eval_tkstats(my_pk_full) %>% View("full_tkstats")
+eval_tkstats(my_pk_trimmed) %>% View("trimmed_tkstats")
+get_tkstats(my_pk_trimmed) %>% View()
+
+plot(my_pk_trimmed,
+     n_interp = 50,
+     method = "L-BFGS-B",
+     print_out = TRUE)
+
 ```
 

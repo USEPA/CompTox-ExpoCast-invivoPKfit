@@ -77,7 +77,7 @@ plot.pk <- function(obj,
                     drop_nonDetect = FALSE,
                     # Predict/interpolation arguments
                     plot_fit_aes = NULL,
-                    n_interp = 10,
+                    n_interp = 100,
                     fit_limits = NULL,
                     print_out = FALSE,
                     ...){
@@ -294,7 +294,7 @@ plot.pk <- function(obj,
   if (get_status(obj = obj) == 5) {
     interp_data <- newdata
     interp_data <- interp_data %>%
-      mutate(interpolated = map(observations,
+      dplyr::mutate(interpolated = purrr::map(observations,
                                 \(x) {
                                   t_units <- unique(x[["Time_trans.Units"]])
                                   x %>%
@@ -304,15 +304,15 @@ plot.pk <- function(obj,
                                                    Time_trans.Units) %>%
                                     dplyr::mutate(maxTime = max(Time),
                                                   Time.Units = unique(Time_trans.Units)) %>%
-                                    tidyr::uncount(n_interp * maxTime) %>%
+                                    tidyr::uncount(n_interp) %>%
                                     dplyr::group_by(Dose, Route, Media) %>%
                                     dplyr::mutate(Time_trans = (maxTime / (n() - 1)) *
                                                     (row_number() - 1))
                                 }))
     interp_data <- interp_data %>%
       dplyr::select(!!!obj$data_group, interpolated) %>%
-      unnest(cols = c(interpolated)) %>%
-      ungroup()
+      tidyr::unnest(cols = c(interpolated)) %>%
+      dplyr::ungroup()
 
     interp_data <- predict(obj = obj,
                            newdata = interp_data,
@@ -320,36 +320,36 @@ plot.pk <- function(obj,
                            model = model,
                            method = method,
                            exclude = FALSE) %>%
-      group_by(!!!obj$data_group) %>%
-      nest(.key = "predicted")
+      dplyr::group_by(!!!obj$data_group) %>%
+      tidyr::nest(.key = "predicted")
 
-    newdata <- left_join(newdata, interp_data)
+    newdata <- dplyr::left_join(newdata, interp_data)
 
     if (limit_predicted) {
       if (log10_C) {
         newdata <- newdata %>%
-          mutate(predicted = map2(observations, predicted,
+          dplyr::mutate(predicted = purrr::map2(observations, predicted,
                                   \(x, y) {
-                                    filter(y,
+                                    dplyr::filter(y,
                                            Conc_est <= (fit_limits[1]*max(x$Conc_set)),
                                            Conc_est >= (fit_limits[2]*min(x$Conc_set)))
                                   }))
       } else {
         newdata <- newdata %>%
-          mutate(predicted = map2(observations, predicted,
+          dplyr::mutate(predicted = purrr::map2(observations, predicted,
                                   \(x, y) {
-                                    filter(y, Conc_est <= (fit_limits[1]*max(x$Conc_set)))
+                                    dplyr::filter(y, Conc_est <= (fit_limits[1]*max(x$Conc_set)))
                                   }))
       }
     }
     newdata <- newdata %>%
-      mutate(predicted_plot = map(predicted,
+      dplyr::mutate(predicted_plot = purrr::map(predicted,
                                   \(x) {
                                     ggplot2::geom_line(data = x,
                                                        plot_fit_aes,
                                                        inherit.aes = FALSE)
                                   })) %>%
-      mutate(final_plot = map2(observation_plot, predicted_plot,
+      dplyr::mutate(final_plot = purrr::map2(observation_plot, predicted_plot,
                                \(x, y) x + y +
                                  guides(color = guide_legend(title = "Dose", order = 1),
                                         fill = "none",
@@ -359,7 +359,7 @@ plot.pk <- function(obj,
 
   } else {
     newdata <- newdata %>%
-      rename(final_plot = "observation_plot")
+      dplyr::rename(final_plot = "observation_plot")
 
     message("Note that the final plots do not contain any fits")
   }

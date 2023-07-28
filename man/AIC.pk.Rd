@@ -4,7 +4,15 @@
 \alias{AIC.pk}
 \title{Akaike information criterion}
 \usage{
-\method{AIC}{pk}(obj, newdata = NULL, model = NULL, method = NULL, exclude = TRUE, k = 2)
+\method{AIC}{pk}(
+  obj,
+  newdata = NULL,
+  model = NULL,
+  method = NULL,
+  exclude = TRUE,
+  drop_obs = TRUE,
+  k = 2
+)
 }
 \arguments{
 \item{obj}{A `pk` object}

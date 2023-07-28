@@ -110,7 +110,7 @@ eval_tkstats.pk <- function(obj,
                                    method = method)
 
 #calc NCA for newdata
-   nca_df <- get_nca(my_pk)
+   nca_df <- get_nca(obj = obj)
    nca_df <- nca_df %>% dplyr::select(-param_sd_z, -param_units) %>%
      pivot_wider(names_from = param_name,
                  values_from = param_value) %>%
