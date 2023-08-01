@@ -43,6 +43,7 @@
 coef_sd.pk <- function(obj,
                        model = NULL,
                        method = NULL,
+                       table_format = FALSE,
                        suppress.messages = TRUE){
 
   #ensure that the model has been fitted
@@ -121,8 +122,7 @@ coef_sd.pk <- function(obj,
     filter(!is.null(observations)) %>%
     mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
     left_join(obj$prefit$par_DF %>%
-                filter(optimize_param == FALSE,
-                       use_param == TRUE) %>%
+                filter(param_name %in% noptim_params) %>%
                 dplyr::select(!!!obj$data_group, param_name, start)) %>%
     distinct() %>%
     mutate(const_pars = setNames(start, param_name)) %>%
@@ -156,8 +156,8 @@ coef_sd.pk <- function(obj,
                  # pseudovariance matrix
                  # see http://gking.harvard.edu/files/help.pdf
                  tryCatch(
-                   diag(chol(MASS::ginv(x),
-                             pivot = TRUE))^(1/2),
+                   suppressWarnings(diag(chol(MASS::ginv(x),
+                             pivot = TRUE))^(1/2)),
                    error = function(err){
                      if (!suppress.messages) {
                        message(paste0("Pseudovariance matrix failed,",
@@ -166,11 +166,49 @@ coef_sd.pk <- function(obj,
                      rep(NA_real_, nrow(x))
                    })
                }) %>%
-        set_names(nm = names(y))
+        set_names(nm = paste0(names(y), "_sd"))
+    }),
+    alerts = map2(hessian_mat, coefs_vector, \(x, y) {
+      tryCatch({
+        diag(solve(x))^(1/2) %>% as.numeric()
+        return(paste0("Hessian successfully inverted"))
+      },
+      error = function(err){
+        tryCatch(
+          suppressWarnings(diag(chol(MASS::ginv(x),
+                                     pivot = TRUE))^(1/2)),
+          error = function(err){
+            paste0("Pseudovariance matrix failed,",
+                   " returning NAs")
+          })
+        paste0("Hessian can't be inverted, ",
+               "using pseudovariance matrix ",
+               "to estimate parameter uncertainty.")
+      })
     }))
 
   newdata <- newdata %>%
-    dplyr::select(model, method, !!!obj$data_group, coefs_vector, sds)
+    dplyr::select(model, method, !!!obj$data_group, coefs_vector, sds, alerts)
+
+  if (table_format) {
+    newdata <- newdata %>%
+    dplyr::mutate(sds_tibble = purrr::map(sds,
+                                          \(x) as.list(x) %>% as.data.frame)) %>%
+      tidyr::unnest(sds_tibble) %>%
+      tidyr::pivot_longer(cols = starts_with("sigma_"),
+                          names_to = "error_group",
+                          values_to = "sigma.value_sd") %>%
+      dplyr::filter(!is.na(sigma.value_sd)) %>%
+      dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) as.list(x) %>% as.data.frame)) %>%
+      tidyr::unnest(coefs_tibble) %>%
+      tidyr::pivot_longer(cols = starts_with("sigma_"),
+                          names_to = "error_group_value",
+                          values_to = "sigma.value") %>%
+      dplyr::filter(!is.na(sigma.value)) %>%
+      dplyr::filter(paste0(error_group_value, "_sd") == error_group) %>%
+      dplyr::select(-coefs_vector, -sds, -error_group_value) %>%
+      dplyr::relocate(error_group, sigma.value, sigma.value_sd, .after = method)
+  }
 
   return(newdata)
 
