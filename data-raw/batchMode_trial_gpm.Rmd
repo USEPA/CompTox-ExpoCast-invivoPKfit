@@ -146,24 +146,13 @@ plot(my_pk, use_scale_conc = TRUE,
 my_plot <- plot(my_pk, use_scale_conc = TRUE)
 
 # This is printable into a one file, multipage pdf
-pdf(file = "C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Code Notes/plotMethod_freeY.pdf",
+pdf(file = paste0(Sys.getenv("FIG_DIR"), "plotMethod_freeY.pdf"),
     width = 10,
     height = 8)
 plot(my_pk, use_scale_conc = TRUE,
      print_out = TRUE)
 dev.off()
 
-png(file = "C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Code Notes/examplePlot.png",
-    width = 8,
-    height = 6,
-    units = "in",
-    res = 150,
-    type = "cairo",
-    antialias = "none")
-plot(my_pk, use_scale_conc = TRUE,
-     method = "L-BFGS-B",
-     print_out = TRUE)[[3]]
-dev.off()
 
 
 ```
@@ -192,6 +181,26 @@ BIC(my_pk)
 
 get_winning_model(my_pk)
 eval_tkstats(my_pk)
+
+
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID0020442")
+my_pk <- pk(data = my_predata) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+my_pk <- do_fit(my_pk)
+
+my_hess <- coef_sd(my_pk)
+
+my_hess %>%
+  rowwise() %>%
+  mutate(sds = list(sds))
+
 
 ```
 
@@ -325,7 +334,7 @@ all_my_data %>%
   theme(panel.border = element_rect(color = "black", fill = NA),
         panel.grid.major = element_line(color = "grey90", linewidth = 0.4))
 
-ggsave(paste0("C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Figures/",
+ggsave(paste0(Sys.getenv("FIG_DIR"),
               "NormalizedConcentrations_2023-07-11.png"),
        height = 3.5,
        width = 5.5,
@@ -390,9 +399,7 @@ all_my_data %>%
         axis.line = element_blank(),
         axis.text.x = element_blank())
 
-ggsave(paste0("C:/Users/GPADILLA/",
-              "OneDrive - Environmental Protection Agency (EPA)/",
-              "Profile/Documents/Figures/",
+ggsave(paste0(Sys.getenv("FIG_DIR"),
               "ADME_NormalizedTime-NormalizedConcentrations_onlyDetects_2023-07-19.png"),
        height = 4,
        width = 6,
@@ -506,9 +513,7 @@ my_preds %>%
         axis.ticks = element_blank(),
         axis.line = element_blank())
 
-ggsave(paste0("C:/Users/GPADILLA/",
-              "OneDrive - Environmental Protection Agency (EPA)/",
-              "Profile/Documents/Figures/",
+ggsave(paste0(Sys.getenv("FIG_DIR"),
               "ModelPerformance_vDataVariability_2023-07-20.png"),
        height = 3.5,
        width = 7,
@@ -603,9 +608,7 @@ my_preds %>%
 # 33.2%  Are above two-fold
 # 50.2% Are within twofold
 
-ggsave(paste0("C:/Users/GPADILLA/",
-              "OneDrive - Environmental Protection Agency (EPA)/",
-              "Profile/Documents/Figures/",
+ggsave(paste0(Sys.getenv("FIG_DIR"),
               "PredictedObserved_compartmentModels_2023-07-11.png"),
        height = 6, width = 7)
 
@@ -629,9 +632,7 @@ all_my_data %>% group_by(Chemical, Species, Reference, Media, Route) %>%
         axis.ticks = element_blank(),
         axis.line = element_blank())
 
-ggsave(paste0("C:/Users/GPADILLA/",
-              "OneDrive - Environmental Protection Agency (EPA)/",
-              "Profile/Documents/Figures/",
+ggsave(paste0(Sys.getenv("FIG_DIR"),
               "OrdersOfMagnitude_2023-07-12.png"),
        height = 4, width = 4)
 

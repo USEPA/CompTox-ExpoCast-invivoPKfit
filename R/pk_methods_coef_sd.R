@@ -58,74 +58,120 @@ coef_sd.pk <- function(obj,
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
 
-  sapply(model,
-         function(this_model){
-           npar <- attr(obj$fit[[this_model]], "npar")
-           fit_par <- as.matrix(obj$fit[[this_model]][method, 1:npar])
-           #Add any "constant" params
-           if(any(obj$prefit[[this_model]]$par_DF$optimize_param %in% FALSE &
-                  obj$prefit[[this_model]]$par_DF$use_param %in% TRUE)){
-             const_parDF <- subset(obj$prefit[[this_model]]$par_DF,
-                                   optimize_param %in% FALSE &
-                                     use_param %in% TRUE)[c("param_name",
-                                                            "start")]
-             const_par <- const_parDF[["start"]]
-             names(const_par) <- const_parDF[["param_name"]]
-           }else{
-             const_par <- NULL
-           }
+  noptim_params <- obj$prefit$par_DF %>%
+    dplyr::filter(optimize_param == FALSE,
+                  use_param == TRUE) %>%
+    dplyr::pull(param_name) %>%
+    unique()
 
-         t(
-           apply(fit_par,
-                 1,
-                 function(this_par){
-                   #Evaluate the Hessian
-                   numhess <- numDeriv::hessian(func = function(x){
-                     log_likelihood(x,
-                                    const_params = const_par,
-                                    data = obj$data,
-                                    data_sigma_group =obj$prefit$stat_error_model$data_sigma_group,
-                                    modelfun = obj$stat_model[[this_model]]$conc_fun,
-                                    dose_norm = obj$scales$conc$dose_norm,
-                                    log10_trans = obj$scales$conc$log10_trans,
-                                    negative = TRUE,
-                                    force_finite = TRUE)
-                   },
-                   x = this_par,
-                   method = 'Richardson')
+  other_vars <- ggplot2::vars(
+    Value,
+    Value.Units,
+    Time_trans.Units,
+    Conc_trans,
+    Conc_trans.Units,
+    data_sigma_group,
+    exclude
+  )
 
-                   #Invert the Hessian to get the SDs
-                   sds <- tryCatch(diag(solve(numhess)) ^ (1/2),
-                                   error = function(err){
-                                     #if hessian can't be inverted
-                                     if (!suppress.messages) {
-                                       message(paste0("Hessian can't be inverted, ",
-                                                      "using pseudovariance matrix ",
-                                                      "to estimate parameter uncertainty."))
-                                     }
-                                     #pseudovariance matrix
-                                     #see http://gking.harvard.edu/files/help.pdf
-                                     suppressWarnings(tmp <- tryCatch(
-                                       diag(chol(MASS::ginv(numhess),
-                                                 pivot = TRUE)) ^ (1/2),
-                                       error = function(err){
-                                         if (!suppress.messages) {
-                                           message(paste0("Pseudovariance matrix failed,",
-                                                          " returning NAs"))
-                                         }
-                                         rep(NA_real_, nrow(numhess))
-                                       }
-                                     )
-                                     )
-                                     return(tmp)
-                                   })
-                   names(sds) <- names(this_par)
-                   const_sd <- rep(NA_real_, length(const_par))
-                   names(const_sd) <- names(const_par)
-                   c(sds, const_sd)
-                 })
-         )
-           },
-         USE.NAMES = TRUE,
-         simplify = FALSE)
+  # get coefs data.frame for each model and method
+  coefs <- coef(
+    obj = obj,
+    model = model,
+    method = method,
+    drop_sigma = FALSE
+  ) %>%
+    dplyr::select(coefs_vector, sigma_value, error_group) %>%
+    dplyr::mutate(coefs_vector = purrr::map(coefs_vector,
+                                            \(x) {
+                                              sigma_transfer <- sigma_value
+                                              names(sigma_transfer) <- error_group
+                                              c(x[!(names(x) %in% noptim_params)], sigma_transfer)
+                                            })) %>%
+    dplyr::select(-sigma_value, -error_group)
+
+
+  req_vars <- ggplot2::vars(Time,
+                            Time.Units,
+                            Time_trans,
+                            Dose,
+                            Route,
+                            Media,
+                            Conc,
+                            Conc_SD,
+                            N_Subjects,
+                            Detect)
+
+  newdata <- obj$data %>%
+    dplyr::select(!!!union(obj$data_group, req_vars),
+                  !!!other_vars) %>%
+    dplyr::mutate(data_sigma_group = factor(data_sigma_group)) %>%
+    dplyr::group_by(!!!obj$data_group) %>%
+    tidyr::nest(.key = "observations") %>%
+    dplyr::ungroup()
+
+  newdata <- tidyr::expand_grid(expand_grid(model, method),
+                                newdata)
+
+  newdata <- dplyr::left_join(coefs, newdata)
+
+
+  newdata <- newdata %>%
+    rowwise() %>%
+    filter(!is.null(observations)) %>%
+    mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
+    left_join(obj$prefit$par_DF %>%
+                filter(optimize_param == FALSE,
+                       use_param == TRUE) %>%
+                dplyr::select(!!!obj$data_group, param_name, start)) %>%
+    distinct() %>%
+    mutate(const_pars = setNames(start, param_name)) %>%
+    ungroup() %>%
+    distinct()
+
+  newdata <- newdata %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(hessian_mat = list(numDeriv::hessian(func = function(x){
+      log_likelihood(par = x,
+                     const_params = const_pars,
+                     data = observations,
+                     data_sigma_group = observations$data_sigma_group,
+                     modelfun = model_fun,
+                     dose_norm = obj$scales$conc$dose_norm,
+                     log10_trans = obj$scales$conc$log10_trans,
+                     negative = TRUE,
+                     force_finite = TRUE)
+    },
+    x = coefs_vector,
+    method = 'Richardson'))) %>%
+    ungroup() %>%
+    mutate(sds = map2(hessian_mat, coefs_vector, \(x, y) {
+      tryCatch(diag(solve(x))^(1/2) %>% as.numeric(),
+               error = function(err){
+                 if (!suppress.messages) {
+                   message(paste0("Hessian can't be inverted, ",
+                                  "using pseudovariance matrix ",
+                                  "to estimate parameter uncertainty."))
+                 }
+                 # pseudovariance matrix
+                 # see http://gking.harvard.edu/files/help.pdf
+                 tryCatch(
+                   diag(chol(MASS::ginv(x),
+                             pivot = TRUE))^(1/2),
+                   error = function(err){
+                     if (!suppress.messages) {
+                       message(paste0("Pseudovariance matrix failed,",
+                                      " returning NAs"))
+                     }
+                     rep(NA_real_, nrow(x))
+                   })
+               }) %>%
+        set_names(nm = names(y))
+    }))
+
+  newdata <- newdata %>%
+    dplyr::select(model, method, !!!obj$data_group, coefs_vector, sds)
+
+  return(newdata)
+
 }
