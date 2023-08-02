@@ -319,7 +319,8 @@ plot.pk <- function(obj,
                            use_scale_conc = conc_scale$dose_norm,
                            model = model,
                            method = method,
-                           exclude = FALSE) %>%
+                           exclude = FALSE,
+                           include_NAs = TRUE) %>%
       dplyr::group_by(!!!obj$data_group) %>%
       tidyr::nest(.key = "predicted")
 

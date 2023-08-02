@@ -27,15 +27,15 @@
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   whose coefficients to return. If NULL (the default), coefficients will be
 #'   returned for all of the models in `obj$settings_optimx$method`.
+#' @param table_format Logical. `FALSE` by default, this determines whether the
+#'   the output is in an unnested format.
 #' @param suppress.messages Logical. `TRUE` (the default) to suppress
 #'   informative messages. `FALSE` to see them.
-#' @return A named list of numeric matrixes. There is one list element named for
-#'   each model in `model`. Each list element is a matrix with as many rows as
-#'   items in `method`. The row names are the method names. The matrix column
-#'   names are the names of the fitted parameters, including any error standard
-#'   deviation hyperparameters (whose names begin with "sigma").
+#' @return A dataframe with one row for each `data_group`, `model` and `method`.
+#'   The remaining columns include the parameters & hyperparameters as returned by
+#'   `coef.pk`, as well as their calculated standard deviations.
 #' @export
-#' @author Caroline Ring
+#' @author Caroline Ring and Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
 #' @references Gill J, King G. (2004) What to Do When Your Hessian is Not
 #'   Invertible: Alternatives to Model Respecification in Nonlinear Estimation.
@@ -205,7 +205,8 @@ coef_sd.pk <- function(obj,
                           names_to = "error_group_value",
                           values_to = "sigma.value") %>%
       dplyr::filter(!is.na(sigma.value)) %>%
-      dplyr::filter(paste0(error_group_value, "_sd") == error_group) %>%
+      dplyr::filter(error_group_value == gsub(x = error_group,
+                                              pattern = "_sd", "")) %>%
       dplyr::select(-coefs_vector, -sds, -error_group_value) %>%
       dplyr::relocate(error_group, sigma.value, sigma.value_sd, .after = method)
   }

@@ -4,7 +4,13 @@
 \alias{coef_sd.pk}
 \title{Get coefficient standard deviations}
 \usage{
-\method{coef_sd}{pk}(obj, model = NULL, method = NULL, suppress.messages = TRUE)
+\method{coef_sd}{pk}(
+  obj,
+  model = NULL,
+  method = NULL,
+  table_format = FALSE,
+  suppress.messages = TRUE
+)
 }
 \arguments{
 \item{obj}{A [pk] object}
@@ -17,15 +23,16 @@ returned for all of the models in `obj$stat_model`.}
 whose coefficients to return. If NULL (the default), coefficients will be
 returned for all of the models in `obj$settings_optimx$method`.}
 
+\item{table_format}{Logical. `FALSE` by default, this determines whether the
+the output is in an unnested format.}
+
 \item{suppress.messages}{Logical. `TRUE` (the default) to suppress
 informative messages. `FALSE` to see them.}
 }
 \value{
-A named list of numeric matrixes. There is one list element named for
-  each model in `model`. Each list element is a matrix with as many rows as
-  items in `method`. The row names are the method names. The matrix column
-  names are the names of the fitted parameters, including any error standard
-  deviation hyperparameters (whose names begin with "sigma").
+A dataframe with one row for each `data_group`, `model` and `method`.
+  The remaining columns include the parameters & hyperparameters as returned by
+  `coef.pk`, as well as their calculated standard deviations.
 }
 \description{
 Extract coefficient/parameter standard deviations from a fitted `pk` object
@@ -69,6 +76,6 @@ Other methods for fitted pk objects:
 \code{\link{rsq.pk}()}
 }
 \author{
-Caroline Ring
+Caroline Ring and Gilberto Padilla Mercado
 }
 \concept{methods for fitted pk objects}

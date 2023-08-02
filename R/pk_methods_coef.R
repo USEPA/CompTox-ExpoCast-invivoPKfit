@@ -26,6 +26,7 @@ coef.pk <- function(obj,
                     model = NULL,
                     method = NULL,
                     drop_sigma = FALSE,
+                    include_NAs = FALSE,
                     ...) {
   # Check fit status
   check <- check_required_status(obj = obj,
@@ -56,7 +57,11 @@ coef.pk <- function(obj,
     tidyr::pivot_longer(cols = starts_with("sigma_"),
                         names_to = "error_group",
                         values_to = "sigma_value") %>%
-    dplyr::filter(!is.na(sigma_value))
+    dplyr::filter(gsub(x = error_group,
+                       pattern = "sigma_",
+                       replacement = "") == paste(Chemical,
+                                                  Species,
+                                                  sep = "."))
 
   coefs <- dplyr::left_join(coefs, const_pars)
 
@@ -97,6 +102,13 @@ coef.pk <- function(obj,
     coefs_tidy <- coefs_tidy %>%
       dplyr::select(!c(sigma_value, error_group)) %>%
       dplyr::distinct()
+  }
+
+  if (!include_NAs) {
+    no_fits <- obj$prefit$fit_check %>%
+      dplyr::filter(fit_decision %in% "abort") %>%
+      dplyr::select(model, Chemical, Species)
+    coefs_tidy <- anti_join(coefs_tidy, no_fits)
   }
 
   return(coefs_tidy)

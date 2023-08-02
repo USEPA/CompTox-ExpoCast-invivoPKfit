@@ -34,10 +34,15 @@ my_predata <- cvt %>%
   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID3032179")
 
 my_predata <- cvt %>%
-  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID2021103")
-# Opt params not found ERROR
-# 
-# 
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID9030258")
+
+
+
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID7030066",
+                                                              "DTXSID0020442",
+                                                              "DTXSID2021315"),
+                subjects.species_harmonized %in% "rat")
 
 
 my_predata <- cvt %>%
@@ -173,8 +178,6 @@ my_logLike_update <- logLik(my_pk)
 
 
 ```{r remaining_methods}
-# coef_sd
-
 devtools::load_all()
 AIC(my_pk2) %>% View()
 BIC(my_pk)
@@ -197,24 +200,11 @@ my_pk <- do_fit(my_pk)
 
 my_hess <- coef_sd(my_pk, table_format = TRUE)
 
-my_hess %>%
-  dplyr::mutate(sds_tibble = purrr::map(sds, \(x) as.list(x) %>% as.data.frame)) %>% 
-  tidyr::unnest(sds_tibble) %>%
-  tidyr::pivot_longer(cols = starts_with("sigma_"),
-                      names_to = "error_group",
-                      values_to = "sigma.value_sd") %>%
-  dplyr::filter(!is.na(sigma.value_sd)) %>%
-  dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) as.list(x) %>% as.data.frame)) %>% 
-  tidyr::unnest(coefs_tibble) %>%
-  tidyr::pivot_longer(cols = starts_with("sigma_"),
-                      names_to = "error_group_value",
-                      values_to = "sigma.value") %>%
-  dplyr::filter(!is.na(sigma.value)) %>%
-  dplyr::filter(paste0(error_group_value, "_sd") == error_group) %>%
-  dplyr::select(-coefs_vector, -sds, -error_group_value) %>%
-  dplyr::relocate(error_group, sigma.value, sigma.value_sd, .after = method) %>%
-  View()
-
+ggplot(inner_join(get_winning_model(my_pk), my_hess),
+       aes(x = Fgutabs,
+           y = V1)) +
+  geom_point() +
+  facet_grid(cols = vars(model))
 
 ```
 

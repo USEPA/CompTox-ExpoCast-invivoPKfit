@@ -55,6 +55,8 @@ predict.pk <- function(obj,
                        type = "conc",
                        exclude = TRUE,
                        use_scale_conc = FALSE,
+                       suppress_messages = TRUE,
+                       include_NAs = FALSE,
                        ...) {
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -75,7 +77,8 @@ predict.pk <- function(obj,
     obj = obj,
     model = model,
     method = method,
-    drop_sigma = TRUE
+    drop_sigma = TRUE,
+    include_NAs = include_NAs
   )
 
   other_vars <- NULL
@@ -164,17 +167,30 @@ predict.pk <- function(obj,
                                   x %>%
                                     dplyr::rowwise() %>%
                                     dplyr::mutate(
-                                      Estimate = sapply(
-                                        coefs_vector,
-                                        FUN = model_fun,
-                                        time = Time_trans,
-                                        dose = ifelse(conc_scale$dose_norm,
-                                                      1, Dose),
-                                        route = Route,
-                                        medium = Media,
-                                        simplify = TRUE,
-                                        USE.NAMES = TRUE
-                                      )
+                                      Estimate = tryCatch(
+                                        sapply(
+                                          coefs_vector,
+                                          FUN = model_fun,
+                                          time = Time_trans,
+                                          dose = ifelse(conc_scale$dose_norm,
+                                                        1, Dose),
+                                          route = Route,
+                                          medium = Media,
+                                          simplify = TRUE,
+                                          USE.NAMES = TRUE
+                                        ),
+                                        error = function(err) {
+                                          if (!suppress_messages) {
+                                            message(paste("Unable to run",
+                                                          model_fun, "for",
+                                                          Chemical, Species,
+                                                          "data grouping.",
+                                                          "Likely an aborted fit,",
+                                                          "it is missing estimated parameters."))
+                                          }
+                                          # Return Value
+                                          NA
+                                        })
                                     )
                                 })) %>%
     tidyr::unnest(predictions)
