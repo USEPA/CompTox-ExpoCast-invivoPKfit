@@ -1291,3 +1291,56 @@ plot(my_pk_trimmed,
 
 ```
 
+
+```{r function_connections}
+fw <- mvbutils::foodweb(where = asNamespace("invivoPKfit"),
+                        border = TRUE, cex = 0.6, lwd = 1.5)
+fun_mat <- fw$funmat
+
+mvbutils::foodweb(where = asNamespace("invivoPKfit"),
+                  prune = "bp_test",
+                  border = TRUE, cex = 1, lwd = 1.5)
+
+fun_mat2 <- fun_mat[rowSums(fun_mat) > 0, ]
+
+library(ComplexHeatmap)
+ComplexHeatmap::Heatmap(fun_mat2, row_names_side = "left", column_names_side = "top",
+                        row_names_gp = gpar(fontsize = 10),
+                        column_names_gp = gpar(fontsize = 10),
+                        col = circlize::colorRamp2(c(0, 1), colors = c("white", "green4")),
+                        rect_gp = gpar(col = "black", lwd = 1),
+                        show_row_dend = FALSE,
+                        show_column_dend = FALSE)
+
+
+fun_mat %>%
+  as_tibble(rownames = NA) %>%
+  rownames_to_column(var = "from") %>%
+  pivot_longer(cols = !from,
+               names_to = "to",
+               values_to = "Call") %>%
+   mutate(
+    from = str_remove(from, pattern = ".pk"),
+    to = str_remove(to, pattern = ".pk")
+  ) %>%
+  filter(from %in% "residuals") %>% View()
+
+fun_mat2 %>%
+  as_tibble(rownames = NA) %>%
+  rownames_to_column(var = "from") %>%
+  pivot_longer(cols = !from,
+               names_to = "to",
+               values_to = "Call") %>%
+  filter(Call != 0) %>% 
+  transmute(
+    from = str_remove(from, pattern = ".pk"),
+    to = str_remove(to, pattern = ".pk")
+  ) %>%
+  filter(from %in% c("residuals"),
+         !(to %in% c("check_model",
+                     "check_method",
+                     "check_newdata",
+                     "check_required_status"))) %>%
+  ggflowchart::ggflowchart(horizontal = TRUE)
+```
+

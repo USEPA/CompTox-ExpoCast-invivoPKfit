@@ -21,7 +21,7 @@
 #'   `model`. As described in [optimx::optimx()]  If only one model is
 #'   specified, the return value will still be a list, but with only one
 #'   element.
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @export
 #' @family methods for fitted pk objects
 get_fit.pk <- function(obj,
@@ -38,7 +38,11 @@ get_fit.pk <- function(obj,
 
   model_ok <- check_model(obj = obj, model = model)
 
-  tmp <- obj$fit[model]
+  tmp <- subset(obj$fit, model %in% model) %>%
+    tidyr::unnest(fit) %>%
+    pivot_longer(cols = starts_with("sigma_"),
+                 names_to = "error_group",
+                 values_to = "sigma_value")
 
   return(tmp)
 }

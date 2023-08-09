@@ -37,35 +37,27 @@ fold_errors.pk <- function(obj,
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
-  if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$settings_optimx$method
-  if(is.null(newdata)) newdata <- obj$data
+  if (is.null(model)) model <- names(obj$stat_model)
+  if (is.null(method)) method <- obj$settings_optimx$method
+
+  if (!is.null(newdata)) {
+    check_newdata(newdata = newdata,
+                  olddata = obj$data,
+                  req_vars = "Conc_trans")
+  }
 
   #get predicted concentrations
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,
                    method = method,
-                   type = "conc")
+                   type = "conc") %>%
+    mutate(Fold_Error = Conc_trans/Conc_est)
 
-  sapply(preds,
-         function(this_pred){
-           apply(this_pred,
-                 2,
-                 function(x){
-                   x <- ifelse(newdata$Detect %in% FALSE &
-                                 (x <= newdata$Conc) %in% TRUE,
-                               newdata$Conc,
-                               x)
-                   newdata$Conc/x
-                 }
-           )
-         },
-         simplify = FALSE,
-         USE.NAMES = TRUE
-  )
+  return(preds)
+
 }

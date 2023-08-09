@@ -133,96 +133,112 @@
 #' @family fit evaluation metrics
 #' @family methods for fitted pk objects
 rsq.pk <- function(obj,
-                    newdata = NULL,
-                    model = NULL,
-                    method = NULL,
-                    exclude = TRUE,
-                    use_scale_conc = TRUE){
-#ensure that the model has been fitted
-check <- check_required_status(obj = obj,
-                               required_status = status_fit)
-if(!(check %in% TRUE)){
-  stop(attr(check, "msg"))
-}
+                   newdata = NULL,
+                   model = NULL,
+                   method = NULL,
+                   exclude = TRUE,
+                   use_scale_conc = TRUE,
+                   rsq_group = vars(Route, Media, Dose, Time)){
+  #ensure that the model has been fitted
+  check <- check_required_status(obj = obj,
+                                 required_status = status_fit)
+  if (!(check %in% TRUE)) {
+    stop(attr(check, "msg"))
+  }
 
-  if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$optimx_settings$method
-  if(is.null(newdata)) newdata <- obj$data
-
+  if (is.null(model)) model <- names(obj$stat_model)
+  if (is.null(method)) method <- obj$optimx_settings$method
+  if (is.null(newdata)) newdata <- obj$data
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
 
+
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
                               req_vars = c("Time",
-                                                 "Time.Units",
-                                                 "Dose",
-                                                 "Route",
-                                                 "Media",
-                                                 "Conc",
-                                                 "Conc_SD",
-                                                 "N_Subjects",
-                                                 "Detect"),
+                                           "Time.Units",
+                                           "Dose",
+                                           "Route",
+                                           "Media",
+                                           "Conc",
+                                           "Conc_SD",
+                                           "N_Subjects",
+                                           "Detect"),
                               exclude = exclude)
 
 
-  #Get predictions WITHOUT any scaling/transformations
+
+  # Conc_trans columns will contain transformed values,
+  conc_scale <- conc_scale_use(obj = obj,
+                               use_scale_conc = use_scale_conc)
+  message("Transformations used: \n",
+          "Dose-normalization ", conc_scale$dose_norm, "\n",
+          "log-transformation ", conc_scale$log10_trans)
+
+  #Get predictions
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,
                    method = method,
                    type = "conc",
                    exclude = exclude,
-                   use_scale_conc = FALSE)
+                   use_scale_conc = use_scale_conc)
+
 
   #remove any excluded observations & corresponding predictions, if so specified
-  if(exclude %in% TRUE){
-    if("exclude" %in% names(newdata)){
-      preds <- sapply(preds,
-                      function(x) x[newdata$exclude %in% FALSE, ],
-                      simplify = FALSE,
-                      USE.NAMES = TRUE)
-      newdata <- subset(newdata,
-                        exclude %in% FALSE)
-
+  if (exclude %in% TRUE) {
+    if ("exclude" %in% names(newdata)) {
+      newdata <- newdata %>% filter(exclude %in% FALSE)
     }
   }
 
+  req_vars <- c(names(preds),
+                "Conc",
+                "Conc_SD",
+                "N_Subjects",
+                "Detect",
+                "exclude")
 
-  #apply transformations if so specified
-  conc_scale <- conc_scale_use(obj = obj,
-                               use_scale_conc = use_scale_conc)
 
-  obs <- newdata$Conc
-  obs_sd <- newdata$Conc_SD
+  new_preds <- dplyr::left_join(preds, newdata) %>%
+    dplyr::select(dplyr::all_of(req_vars)) %>%
+    ungroup()
+
 
   #apply dose-normalization if specified
-  if(conc_scale$dose_norm %in% TRUE){
-    obs <- obs/newdata$Dose
-    obs_sd <- obs_sd/newdata$Dose
-    preds <- sapply(preds,
-                    function(x) x/newdata$Dose,
-                    simplify = FALSE,
-                    USE.NAMES = TRUE)
-  }
+  # conditional mutate ifelse
+  rsq_df <- new_preds %>%
+    # needs to be rowwise first then by
+    dplyr::rowwise() %>%
+    dplyr::mutate(
+      Conc_set = ifelse(conc_scale$dose_norm,
+                        Conc / Dose,
+                        Conc),
+      Conc_set_SD = ifelse(conc_scale$dose_norm,
+                           Conc_SD / Dose,
+                           Conc_SD)) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(!!!obj$data_group,
+                    model, method,
+                    !!!rsq_group) %>%
+    dplyr::summarize(
+      Rsq = calc_rsq(obs = Conc_set,
+                       obs_sd = Conc_set_SD,
+                       pred = Conc_est,
+                       n_subj = N_Subjects,
+                       detect = Detect,
+                       log10_trans = conc_scale$log10_trans)) %>%
+    distinct() %>%
+    ungroup()
 
+  message("Groups: \n",
+          paste(sapply(unlist(obj$data_group), rlang::as_label),
+                collapse = ", "),
+          ", ",
+          paste(sapply(unlist(rsq_group), rlang::as_label),
+                collapse = ", "),
+          ", method, model")
 
-  #do not apply log10 trans yet even if it is specified; it will be handled in
-  #calc_rmse()
-
-  sapply(preds,
-         function(this_pred){
-           apply(this_pred, #loop over columns of this_pred, each one is a method
-                 2,
-                 function(x) calc_rsq( pred = x,
-                                       obs = obs,
-                                       obs_sd = obs_sd,
-                                       n_subj = newdata$N_Subjects,
-                                       detect = newdata$Detect,
-                                       log10_trans = conc_scale$log10_trans)
-           )
-         },
-         simplify = FALSE,
-         USE.NAMES = TRUE)
+  return(rsq_df)
 }
