@@ -29,11 +29,9 @@ for model comparison. The "winning" value will be the smallest value.}
 \item{...}{Optional: Other arguments to `criterion` function.}
 }
 \value{
-A named character array with one element for each item in `method`,
- giving the name of the winning model. The return value has attribute
- `criterion` giving the name of the criterion function used to compare
- models. (If the return value is named `x`, you can access this attribute
- using `attr(x, 'criterion')`.
+A data.frame with one row for each `data_group`, `model` and `method` and
+ The return value has attribute `criterion` giving the name of the criterion function used to compare
+ models.
 }
 \description{
 Get winning model for a fitted `pk` object

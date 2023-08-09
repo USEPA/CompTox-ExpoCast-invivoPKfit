@@ -58,19 +58,24 @@
 #'   for which to calculate log-likelihoods. If NULL (the default),
 #'   log-likelihoods will be returned for all of the models in
 #'   `obj$optimx_settings$method`.
+#'@param force_finite Logical: Whether to force return of a finite value (e.g.
+#'  as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If
+#'  TRUE, then if the log-likelihood works out to be non-finite, then it will be
+#'  replaced with `.Machine$double.xmax`.
+#'@param negative Logical: Whether to return the *negative* log-likelihood
+#'  (i.e., the log-likelihood multiplied by negative 1). Default TRUE, to
+#'  multiply the log-likelihood by negative 1 before returning it. This option
+#'  is useful when treating the log-likelihood as an objective function to be
+#'  *minimized* by an optimization algorithm.
 #' @param exclude Logical: `TRUE` to compute the log-likelihood excluding any
 #'   observations in the data marked for exclusion (if there is a variable
 #'   `exclude` in the data, an observation is marked for exclusion when `exclude
 #'   %in% TRUE`). `FALSE` to include all observations when calculating the
 #'   log-likelihood, regardless of exclusion status. Default `TRUE`.
-#' @return A named list of numeric vectors. There is one list element named for
-#'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
-#'   fitted to the data. Each list element is a numeric vector with as many
-#'   elements as there were [optimx::optimx()] methods (specified in
-#'   [settings_optimx()]). The vector names are the method names.  Each vector
-#'   element contains the log-likelihood of the model fitted by the
-#'   corresponding method, calculated for the data in `newdata` if any has been
-#'   specified, or for the data in `obj$data` if `newdata` is `NULL`.
+#' @param drop_obs Logical: `TRUE` to drop the observations column after calculating log-likelihood.
+#' @return A data.frame with coefficients and log-likelihood values calculated using `newdata`.
+#'   There is one row for each model in `obj`'s [stat_model()] element and
+#'   each [optimx::optimx()] method (specified in [settings_optimx()]).
 #' @export
 #' @importFrom stats logLik
 #' @author Caroline Ring, Gilberto Padilla Mercado

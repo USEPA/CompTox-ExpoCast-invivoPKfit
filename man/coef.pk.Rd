@@ -4,7 +4,14 @@
 \alias{coef.pk}
 \title{Get coefficients}
 \usage{
-\method{coef}{pk}(obj, model = NULL, method = NULL, drop_sigma = FALSE, ...)
+\method{coef}{pk}(
+  obj,
+  model = NULL,
+  method = NULL,
+  drop_sigma = FALSE,
+  include_NAs = FALSE,
+  ...
+)
 }
 \arguments{
 \item{obj}{A [pk()] object}
@@ -17,6 +24,12 @@ coefficients will be returned for all of the models in `obj$stat_model`.}
 [optimx::optimx()] methods whose coefficients to return. If `NULL` (the
 default), coefficients will be returned for all of the models in
 `obj$settings_optimx$method`.}
+
+\item{drop_sigma}{Logical: `FALSE` by default. Determines whether to include
+sigma in the output.}
+
+\item{include_NAs}{Logical: `FALSE` by default. Determines whether to include
+aborted fits which have NAs as coefficients.}
 }
 \value{
 A data.frame with a row for each `data_group` x `method` x `model` combination

@@ -41,17 +41,16 @@ observations in the data marked for exclusion (if there is a variable
 %in% TRUE`). `FALSE` to include all observations, regardless of exclusion
 status. Default `TRUE`.}
 
+\item{drop_obs}{Logical: `TRUE` to drop the observations column in the output
+of [logLik()].}
+
 \item{k}{Default 2. The `k` parameter in the log-likelihood formula (see
 Details).}
 }
 \value{
-A named list of numeric vectors. There is one list element named for
-  each model in `obj`'s [stat_model()] element, i.e. each PK model that was
-  fitted to the data. Each list element is a numeric vector with as many
-  elements as there were [optimx::optimx()] methods (specified in
-  [settings_optimx()]). The vector names are the method names.  Each vector
-  element contains the AIC of the model fitted by the corresponding method,
-  using the data in `newdata`.
+A data.frame with log-likelihood values and calculated AIC using `newdata`.
+  There is one row for each model in `obj`'s [stat_model()] element and
+  each [optimx::optimx()] method (specified in [settings_optimx()]).
 }
 \description{
 Get the Akaike information criterion (AIC) for a fitted `pk` object

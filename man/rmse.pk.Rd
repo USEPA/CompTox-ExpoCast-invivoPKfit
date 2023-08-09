@@ -57,7 +57,7 @@ log10-transformation will be applied.}
 Defaults to `vars(Route, Media, Dose, Time)`.}
 }
 \value{
-A `data.frame` with calculated RMSE as the final row. There is one row per
+A `data.frame` with calculated RMSE as the final column. There is one row per
   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
   fitted to the data, each [optimx::optimx()] methods (specified in
   [settings_optimx()]), `data_group` and `rmse_group` specified.

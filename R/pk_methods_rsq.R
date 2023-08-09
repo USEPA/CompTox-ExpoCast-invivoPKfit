@@ -121,12 +121,8 @@
 #'   R-squared is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
-#' @return A named list of numeric vectors. There is one list element named for
-#'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
-#'   fitted to the data. Each list element is a numeric vector with as many
-#'   elements as there were [optimx::optimx()] methods (specified in
-#'   [settings_optimx()]). The vector names are the method names.  Each vector
-#'   element contains the R-squared of the model fitted by the corresponding
+#' @return  A dataframe with one row for each `data_group`, `model` and `method`.
+#'   The final column contains the R-squared of the model fitted by the corresponding
 #'   method, using the data in `newdata`.
 #' @export
 #' @author Caroline Ring
@@ -137,8 +133,7 @@ rsq.pk <- function(obj,
                    model = NULL,
                    method = NULL,
                    exclude = TRUE,
-                   use_scale_conc = TRUE,
-                   rsq_group = vars(Route, Media, Dose, Time)){
+                   use_scale_conc = TRUE){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -166,7 +161,6 @@ rsq.pk <- function(obj,
                                            "N_Subjects",
                                            "Detect"),
                               exclude = exclude)
-
 
 
   # Conc_trans columns will contain transformed values,
@@ -220,8 +214,7 @@ rsq.pk <- function(obj,
                            Conc_SD)) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(!!!obj$data_group,
-                    model, method,
-                    !!!rsq_group) %>%
+                    model, method) %>%
     dplyr::summarize(
       Rsq = calc_rsq(obs = Conc_set,
                        obs_sd = Conc_set_SD,
@@ -235,10 +228,7 @@ rsq.pk <- function(obj,
   message("Groups: \n",
           paste(sapply(unlist(obj$data_group), rlang::as_label),
                 collapse = ", "),
-          ", ",
-          paste(sapply(unlist(rsq_group), rlang::as_label),
-                collapse = ", "),
-          ", method, model")
+          ", ", " method, model")
 
   return(rsq_df)
 }

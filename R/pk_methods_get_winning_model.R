@@ -22,11 +22,9 @@
 #'  with a column with the same name as `criterion` that has calculated values
 #'  for model comparison. The "winning" value will be the smallest value.
 #'@param ... Optional: Other arguments to `criterion` function.
-#'@return A named character array with one element for each item in `method`,
-#'  giving the name of the winning model. The return value has attribute
-#'  `criterion` giving the name of the criterion function used to compare
-#'  models. (If the return value is named `x`, you can access this attribute
-#'  using `attr(x, 'criterion')`.
+#'@return A data.frame with one row for each `data_group`, `model` and `method` and
+#'  The return value has attribute `criterion` giving the name of the criterion function used to compare
+#'  models.
 #'@export
 #' @author Caroline Ring
 get_winning_model.pk <- function(obj,

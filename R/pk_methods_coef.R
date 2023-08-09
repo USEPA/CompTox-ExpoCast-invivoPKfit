@@ -13,6 +13,10 @@
 #'   [optimx::optimx()] methods whose coefficients to return. If `NULL` (the
 #'   default), coefficients will be returned for all of the models in
 #'   `obj$settings_optimx$method`.
+#' @param drop_sigma Logical: `FALSE` by default. Determines whether to include
+#'  sigma in the output.
+#' @param include_NAs Logical: `FALSE` by default. Determines whether to include
+#'  aborted fits which have NAs as coefficients.
 #' @return A data.frame with a row for each `data_group` x `method` x `model` combination
 #'  in a fitted [pk()] object. When `drop_sigma = TRUE` there is also a row for each
 #'  unique standard deviation hyper-parameter defined by `error_group` in the fitted [pk()] object.

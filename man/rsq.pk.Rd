@@ -52,12 +52,8 @@ log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
 }
 \value{
-A named list of numeric vectors. There is one list element named for
-  each model in `obj`'s [stat_model()] element, i.e. each PK model that was
-  fitted to the data. Each list element is a numeric vector with as many
-  elements as there were [optimx::optimx()] methods (specified in
-  [settings_optimx()]). The vector names are the method names.  Each vector
-  element contains the R-squared of the model fitted by the corresponding
+A dataframe with one row for each `data_group`, `model` and `method`.
+  The final column contains the R-squared of the model fitted by the corresponding
   method, using the data in `newdata`.
 }
 \description{

@@ -155,5 +155,5 @@ This is the overall probability of the observed data, given the model and
 parameters.
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }

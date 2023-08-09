@@ -18,13 +18,8 @@
 #'   for which to make predictions and calculate RMSEs. If NULL (the default),
 #'   fold errors will be returned for all of the models in
 #'   `obj$settings_optimx$method`.
-#' @return A named list of numeric matrices. There is one list element named for
-#'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
-#'   fitted to the data. Each list element is a matrix with the same number of
-#'   rows as the data in `obj$data` (corresponding to the rows in `obj$data`),
-#'   and as many columns as there were [optimx::optimx()] methods (specified in
-#'   [settings_optimx()]). The column names are the method names.  Each column
-#'   contains the fold errors (observed/predicted) of the model fitted by the
+#' @return  A data.frame with one row for each `data_group`, `model` and `method`.
+#'   A column contains the fold errors (observed/predicted) of the model fitted by the
 #'   corresponding method. These residuals are concentrations in the same units
 #'   as `obj$data$Conc.Units`; any concentration transformations (in
 #'   `obj$scale$conc`) are *not* applied.
@@ -55,6 +50,7 @@ fold_errors.pk <- function(obj,
                    newdata = newdata,
                    model = model,
                    method = method,
+                   use_scale_conc = FALSE,
                    type = "conc") %>%
     mutate(Fold_Error = Conc_trans/Conc_est)
 

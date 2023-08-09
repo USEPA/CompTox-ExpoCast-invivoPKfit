@@ -124,7 +124,7 @@
 #'@return A log-likelihood value for the data given the parameter values in
 #'  params
 #'@export
-#'@author Caroline Ring
+#'@author Caroline Ring, Gilberto Padilla Mercado
 log_likelihood <- function(par,
                            const_params = NULL,
                            data = NULL,

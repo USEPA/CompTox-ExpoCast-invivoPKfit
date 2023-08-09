@@ -29,15 +29,13 @@
 #'   `exclude` in the data, an observation is marked for exclusion when `exclude
 #'   %in% TRUE`). `FALSE` to include all observations, regardless of exclusion
 #'   status. Default `TRUE`.
+#' @param drop_obs Logical: `TRUE` to drop the observations column in the output
+#' of [logLik()].
 #' @param k Default 2. The `k` parameter in the log-likelihood formula (see
 #'   Details).
-#' @return A named list of numeric vectors. There is one list element named for
-#'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
-#'   fitted to the data. Each list element is a numeric vector with as many
-#'   elements as there were [optimx::optimx()] methods (specified in
-#'   [settings_optimx()]). The vector names are the method names.  Each vector
-#'   element contains the AIC of the model fitted by the corresponding method,
-#'   using the data in `newdata`.
+#' @return A data.frame with log-likelihood values and calculated AIC using `newdata`.
+#'   There is one row for each model in `obj`'s [stat_model()] element and
+#'   each [optimx::optimx()] method (specified in [settings_optimx()]).
 #' @family fit evaluation metrics
 #' @family log likelihood functions
 #' @family methods for fitted pk objects

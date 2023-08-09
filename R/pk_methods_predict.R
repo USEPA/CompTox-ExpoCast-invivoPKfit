@@ -34,14 +34,12 @@
 #'   log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
-#' @return A named list of numeric matrixes. There is one list element named for
-#'   each model in `obj`'s [stat_model()] element, *i.e.*, each PK model that
-#'   was fitted to the data. Each list element is a matrix with the same number
-#'   of rows as the data in `obj$data` (corresponding to the rows in
-#'   `obj$data`), and as many columns as there were [optimx::optimx()] methods
-#'   (specified in [settings_optimx()]). The column names are the method names.
-#'   Each column contains the predictions of the model fitted by the
-#'   corresponding method. If `use_scale_conc %in% FALSE`, these predictions are
+#' @param include_NAs Logical: `FALSE` by default. Determines whether to include
+#'  aborted fits which have NAs as coefficients.
+#' @return A data.frame with one row for each `data_group`, `model` and `method`.
+#'   A column that contains the predicted concentration or AUC at that timepoint
+#'   given the TK parameters for that `model` and `method` specified in [coefs()].
+#'   If `use_scale_conc %in% FALSE`, these predictions are
 #'   un-transformed concentrations in the same units as `obj$data$Conc.Units`.
 #'   If `use_scale_conc %in% TRUE`, the predictions are transformed
 #'   concentrations in the same units as `obj$data$Conc_trans.Units`.

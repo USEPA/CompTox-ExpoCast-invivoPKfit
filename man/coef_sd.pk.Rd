@@ -32,7 +32,7 @@ informative messages. `FALSE` to see them.}
 \value{
 A dataframe with one row for each `data_group`, `model` and `method`.
   The remaining columns include the parameters & hyperparameters as returned by
-  `coef.pk`, as well as their calculated standard deviations.
+  [coef.pk()], as well as their calculated standard deviations.
 }
 \description{
 Extract coefficient/parameter standard deviations from a fitted `pk` object

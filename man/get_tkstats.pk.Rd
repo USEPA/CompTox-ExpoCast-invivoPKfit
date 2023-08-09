@@ -49,15 +49,17 @@ observations in the data marked for exclusion (if there is a variable
 `exclude` in the data, an observation is marked for exclusion when `exclude
 %in% TRUE`). `FALSE` to include all observations when getting the TK
 groupings, regardless of exclusion status. Default `TRUE`.}
+
+\item{vol_unit}{Character: Specifies the unit of volume. Defaults to "L" for liters.}
+
+\item{dose_norm}{Logical: `TRUE` (default) specifies whether the concentraions are dose-normalized.}
 }
 \value{
-A `list` of `data.frame` objects, one  named for each model in
-  `model`. Each `data.frame` will have the variables in the `data.frame`
-  returned by the `tkstats_fun` for its corresponding model. (For the
-  built-in models `model_flat`, `model_1comp`, and `model_2comp`, these
-  variables are `param_name` and `param_value`.) Additionally, there will be
-  a variable `method` denoting the [optimx::optimx()] method used to optimize
-  the set of model parameters used to derive each set of TK statistics.
+A data.frame with one row for each `data_group`, `model` and `method`
+  with the variables in the `data.frame` returned by the `tkstats_fun` for
+  its corresponding model.
+  (For the built-in models `model_flat`, `model_1comp`, and `model_2comp`, these
+  variables are `param_name` and `param_value`.)
 }
 \description{
 Extract derived TK statistics from a fitted [pk()] model object.

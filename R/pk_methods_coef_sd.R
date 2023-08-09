@@ -33,7 +33,7 @@
 #'   informative messages. `FALSE` to see them.
 #' @return A dataframe with one row for each `data_group`, `model` and `method`.
 #'   The remaining columns include the parameters & hyperparameters as returned by
-#'   `coef.pk`, as well as their calculated standard deviations.
+#'   [coef.pk()], as well as their calculated standard deviations.
 #' @export
 #' @author Caroline Ring and Gilberto Padilla Mercado
 #' @family methods for fitted pk objects

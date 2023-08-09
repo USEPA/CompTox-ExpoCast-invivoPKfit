@@ -68,8 +68,8 @@ this function. But it means that any values in the `Dose` variable of
 for which AUC is finite in both `nca` and `tkstats`.}
 }
 \value{
-A `list` of `data.frame` objects, one  named for each model in
-  `model`. Each `data.frame` will have the variables in the `data.frame`
+A `data.frame` with one  row for each "winning" model in
+  `model` from [get_winning_model()]. Each `data.frame` will have the variables in the `data.frame`
   returned by the `tkstats_fun` for its corresponding model. (For the
   built-in models `model_flat`, `model_1comp`, and `model_2comp`, these
   variables are `param_name` and `param_value`.) Additionally, there will be
