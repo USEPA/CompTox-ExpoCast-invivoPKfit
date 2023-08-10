@@ -147,7 +147,7 @@ summary.pk <- function(obj){
   #things that require pre-fitting (status 4):
   #stat_error_model
   message("Error Model Variables Specified: ")
-  print(as.character(get_error_group(my_pk))[-1])
+  print(as.character(get_error_group(obj))[-1])
   #stat_model par_DFs
   prefit_DF <- obj$prefit$par_DF
 
@@ -156,8 +156,8 @@ summary.pk <- function(obj){
   #things that require fitting (status 5):
   #coefficients
   #get model coefficients
-  outDF <- suppressMessages(left_join(coef(my_pk, include_NAs = TRUE),
-                     coef_sd(my_pk, table_format = TRUE)))
+  outDF <- suppressMessages(left_join(coef(obj, include_NAs = TRUE),
+                     coef_sd(obj, table_format = TRUE)))
 
   #goodness of fit metrics
   aic_all <- suppressMessages(AIC(obj)) # Already includes logLik

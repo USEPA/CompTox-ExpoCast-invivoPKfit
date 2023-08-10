@@ -61,11 +61,8 @@ coef.pk <- function(obj,
     tidyr::pivot_longer(cols = starts_with("sigma_"),
                         names_to = "error_group",
                         values_to = "sigma_value") %>%
-    dplyr::filter(gsub(x = error_group,
-                       pattern = "sigma_",
-                       replacement = "") == paste(Chemical,
-                                                  Species,
-                                                  sep = "."))
+    dplyr::filter(stringr::str_detect(error_group,
+                                      paste(Chemical,Species,sep = ".")))
 
   coefs <- dplyr::left_join(coefs, const_pars)
 

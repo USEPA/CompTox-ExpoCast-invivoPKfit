@@ -23,7 +23,7 @@ First, let us get the subset of the `cvt` database that you'll analyze.
 ```{r cvt_subset}
 # set.seed()
 chemical_set <- sample(unique(cvt$chemicals_analyzed.dsstox_substance_id),
-                       size = 3)
+                       size = 4)
 
 my_predata <- cvt %>%
   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% union("DTXSID2039336",
@@ -53,8 +53,8 @@ my_pk <- pk(data = my_predata) +
   settings_preprocess(keep_data_original = TRUE) +
   settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
   scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
-  scale_time() +
-  stat_model() +
+  # scale_time() +
+  # stat_model() +
   stat_error_model(error_group = vars(Chemical, Species, Reference))
 
 my_pk <- do_preprocess(my_pk)
@@ -104,6 +104,7 @@ get_stat_error_model(my_pk)
 
 get_stat_model(my_pk)
 
+
 ```
 
 Some of the more involved methods calculate the derived statistics.
@@ -123,7 +124,7 @@ BIC(my_pk)
 get_tkstats(my_pk)
 eval_tkstats(my_pk)
 
-coef(my_pk)
+coef(my_pk, include_NAs = TRUE)
 coef_sd(my_pk, table_format = TRUE)
 unlist(coef_sd(my_pk)$alerts)
 
