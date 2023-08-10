@@ -26,6 +26,12 @@ cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>%
   unique() %>%
   length()
 
+# easy fit
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID5020732")
+
+
+
 my_predata <- cvt %>%
   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID0020442"),
                 subjects.species_harmonized %in% "hamster",
@@ -72,6 +78,7 @@ my_pk <- pk(data = my_predata) +
 # Add Reference for Joint Analysis
 
 my_pk <- do_preprocess(my_pk)
+plot(my_pk, print_out = TRUE)
 
 my_pk <- do_data_info(my_pk)
 
@@ -1298,7 +1305,7 @@ fw <- mvbutils::foodweb(where = asNamespace("invivoPKfit"),
 fun_mat <- fw$funmat
 
 mvbutils::foodweb(where = asNamespace("invivoPKfit"),
-                  prune = "bp_test",
+                  prune = "compare_models",
                   border = TRUE, cex = 1, lwd = 1.5)
 
 fun_mat2 <- fun_mat[rowSums(fun_mat) > 0, ]
@@ -1342,5 +1349,24 @@ fun_mat2 %>%
                      "check_newdata",
                      "check_required_status"))) %>%
   ggflowchart::ggflowchart(horizontal = TRUE)
+
+
+
+# Random Bits
+# 
+rmse(my_pk) %>%
+  group_by(!!!my_pk$data_group, model, method, Route, Media, Dose) %>%
+  mutate(avg_rmse = mean(RMSE)) %>%
+  nest(full_rmse = c(Time, RMSE))
+
+fold_errors(my_pk) %>%
+  group_by(!!!my_pk$data_group, model, method, Route, Media, Dose) %>%
+  mutate(avg_FoldErr = mean(Fold_Error),
+         median_FoldErr = median(Fold_Error),
+         within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2)/length(Fold_Error)) %>%
+  dplyr::select(Time, Fold_Error, avg_FoldErr, median_FoldErr, within_2fold) %>%
+  nest(full_fold_errors = c(Time, Fold_Error))
+
+
 ```
 

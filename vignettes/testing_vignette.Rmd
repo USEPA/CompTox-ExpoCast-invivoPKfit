@@ -67,6 +67,9 @@ my_pk <- do_prefit(my_pk)
 my_pk <- do_fit(my_pk) 
 ```
 
+Next, we want to make sure that the output of the
+`get_` family of methods/functions is behaving properly.
+These are used in other methods so it's unlikely these will give issues.
 
 ```{r get_mehods}
 # Add `%>% View` to see the output outside the console
@@ -103,6 +106,8 @@ get_stat_model(my_pk)
 
 ```
 
+Some of the more involved methods calculate the derived statistics.
+
 ```{r derived_statistics}
 
 # I think these functions may be superfluous with compare_models()
@@ -126,9 +131,13 @@ fold_errors(my_pk)
 rmse(my_pk)
 rsq(my_pk)
 
+```
 
+The `summary` method gives us a `list` of `data.frames` and outputs
+for fitted objects. If an object is not fitted, it will alert the user.
 
-
-
+```{r final_summary}
+# Try assigning this to a variable as well!
+summary(my_pk)
 ```
 
