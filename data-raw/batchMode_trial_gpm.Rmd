@@ -1370,3 +1370,69 @@ fold_errors(my_pk) %>%
 
 ```
 
+```{r questions}
+my_pk <- readRDS("data-raw/all_cvt_pk.rds")
+
+
+pk_summary <- summary(my_pk)
+
+
+# Q: What do "bad" fits have in common?
+gof_df <- pk_summary$goodness_of_fit %>%
+  inner_join(suppressMessages(get_winning_model(my_pk))) %>%
+  filter(method == "L-BFGS-B") %>%
+  ungroup()
+
+## Find the within_2fold for each data_group
+gof_df %>%
+  dplyr::select(Chemical, Species, full_fold_errors) %>%
+  unnest(full_fold_errors) %>%
+  group_by(Chemical, Species) %>%
+  summarize(within_2fold = sum(
+    Fold_Error >= 0.5 & Fold_Error <= 2, na.rm = TRUE
+    ) / length(na.omit(Fold_Error))) %>%
+  filter(within_2fold == 0) %>% pull(Chemical) %>% unique()
+  arrange(within_2fold) %>%
+  View()
+  
+gof_df %>%
+  ggplot(aes(
+    x = log2(avg_FoldErr),
+    y = log10(avg_rmse))) +
+  geom_point() +
+  geom_vline(color = "red3", xintercept = c(-1, 1))
+
+
+fe_df <- fold_errors(my_pk)
+# Something wrong with the summary method... maybe only use detects?
+fold_errors_all <- fe_df %>%
+  inner_join(suppressMessages(get_winning_model(my_pk))) %>%
+  dplyr::filter(Detect %in% TRUE) %>%
+  dplyr::group_by(!!!my_pk$data_group, model, method, Route, Media, Dose) %>%
+  dplyr::mutate(avg_FoldErr = mean(Fold_Error, na.rm = TRUE),
+                median_FoldErr = median(Fold_Error, na.rm = TRUE),
+                within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2)/length(Fold_Error)) %>%
+  dplyr::select(Time, Fold_Error,
+                avg_FoldErr, median_FoldErr, within_2fold) %>%
+  tidyr::nest(full_fold_errors = c(Time, Fold_Error))
+  
+
+fold_errors_all %>% 
+  ggplot(aes(x = within_2fold)) +
+  geom_histogram(binwidth = 0.1) +
+  facet_grid(cols = vars(model))
+
+fe_df %>%
+  inner_join(suppressMessages(get_winning_model(my_pk))) %>%
+  dplyr::filter(Detect %in% TRUE) %>%
+  ggplot(aes(x = log2(Fold_Error))) +
+  xlim(-4, 4) +
+  geom_histogram(binwidth = 0.1) +
+  facet_grid(cols = vars(model))
+  
+# Q: What do "great" fits have in common?
+
+
+# Q: Does the dataset have a bias?
+```
+

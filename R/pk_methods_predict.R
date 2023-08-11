@@ -88,6 +88,8 @@ predict.pk <- function(obj,
       Value,
       Value.Units,
       Time_trans.Units,
+      Conc,
+      Conc.Units,
       Conc_trans,
       Conc_trans.Units,
       Detect,
@@ -198,5 +200,10 @@ predict.pk <- function(obj,
   if (type == "auc")
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
 
+  if (conc_scale$dose_norm) {
+    message("Note that the estimated values are Dose-normalized")
+  } else {
+    message("Note these values scale with Dose! (Not Dose-normalized)")
+  }
   return(newdata)
 }

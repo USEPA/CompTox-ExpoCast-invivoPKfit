@@ -162,15 +162,15 @@ summary.pk <- function(obj){
   #goodness of fit metrics
   aic_all <- suppressMessages(AIC(obj)) # Already includes logLik
   bic_all <- suppressMessages(BIC(obj))
-  rmse_all <- suppressMessages(rmse(obj) %>%
+  rmse_all <- suppressMessages(rmse(obj, use_scale_conc = FALSE) %>%
     dplyr::group_by(!!!obj$data_group, model, method, Route, Media, Dose) %>%
-    dplyr::mutate(avg_rmse = mean(RMSE)) %>%
+    dplyr::mutate(avg_rmse = mean(RMSE, na.rm = TRUE)) %>%
     tidyr::nest(full_rmse = c(Time, RMSE)))
 
   fold_errors_all <- suppressMessages(fold_errors(obj) %>%
     dplyr::group_by(!!!obj$data_group, model, method, Route, Media, Dose) %>%
-    dplyr::mutate(avg_FoldErr = mean(Fold_Error),
-                  median_FoldErr = median(Fold_Error),
+    dplyr::mutate(avg_FoldErr = mean(Fold_Error, na.rm = TRUE),
+                  median_FoldErr = median(Fold_Error, na.rm = TRUE),
                   within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2)/length(Fold_Error)) %>%
     dplyr::select(Time, Fold_Error,
                   avg_FoldErr, median_FoldErr, within_2fold) %>%
