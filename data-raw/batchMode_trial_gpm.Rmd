@@ -30,12 +30,24 @@ cvt %>% pull(chemicals_analyzed.dsstox_substance_id) %>%
 my_predata <- cvt %>%
   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID5020732")
 
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID8025337")
+
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID9022360")
 
 
 my_predata <- cvt %>%
   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID0020442"),
                 subjects.species_harmonized %in% "hamster",
                 studies.administration_route_normalized %in% "iv")
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID1043881",
+                                                              "DTXSID8020541",
+                                                              "DTXSID6034849"),
+                subjects.species_harmonized %in% "rat")
+
+
 my_predata <- cvt %>%
   dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% "DTXSID3032179")
 
@@ -56,6 +68,13 @@ my_predata <- cvt %>%
                                                               "DTXSID7029904",
                                                               "DTXSID1021087",
                                                               "DTXSID2020682"))
+
+
+my_predata <- cvt %>%
+  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% c("DTXSID1034187",
+                                                              "DTXSID2021315",
+                                                              "DTXSID3032179",
+                                                              "DTXSID4020533"))
 
 ```
 
@@ -87,8 +106,13 @@ my_pk <- do_prefit(my_pk)
 
 my_pk <- do_fit(my_pk)
 
+plot(my_pk, method = "L-BFGS-B",
+     n_interp = 50) -> pl
+
 plot(my_pk,
      method = "L-BFGS-B",
+     n_interp = 50,
+     
      print_out = TRUE)
 # Joint
 my_pk <- pk(data = cvt) +
@@ -1403,24 +1427,127 @@ gof_df %>%
   geom_vline(color = "red3", xintercept = c(-1, 1))
 
 
-fe_df <- fold_errors(my_pk)
+winning_model <- get_winning_model(my_pk)
+fe_df <- fold_errors(my_pk, method = "L-BFGS-B") %>% inner_join(winning_model)
+# May need to change the use_scale_conc defaults
+r2_df <- rsq(my_pk, method = "L-BFGS-B", use_scale_conc = FALSE) %>%
+  inner_join(winning_model)
+myAIC <- AIC(my_pk, method = "L-BFGS-B") %>% inner_join(winning_model)
+myRMSE <- rmse(my_pk, method = "L-BFGS-B") %>% inner_join(winning_model)
+
 # Something wrong with the summary method... maybe only use detects?
 fold_errors_all <- fe_df %>%
-  inner_join(suppressMessages(get_winning_model(my_pk))) %>%
   dplyr::filter(Detect %in% TRUE) %>%
-  dplyr::group_by(!!!my_pk$data_group, model, method, Route, Media, Dose) %>%
-  dplyr::mutate(avg_FoldErr = mean(Fold_Error, na.rm = TRUE),
+  dplyr::group_by(!!!my_pk$data_group, model, method) %>%
+  dplyr::summarize(avg_FoldErr = mean(Fold_Error, na.rm = TRUE),
                 median_FoldErr = median(Fold_Error, na.rm = TRUE),
-                within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2)/length(Fold_Error)) %>%
-  dplyr::select(Time, Fold_Error,
-                avg_FoldErr, median_FoldErr, within_2fold) %>%
-  tidyr::nest(full_fold_errors = c(Time, Fold_Error))
-  
+                within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2)/length(Fold_Error))
+
+myRMSE <- myRMSE %>%
+  dplyr::group_by(!!!my_pk$data_group, model, method) %>%
+  dplyr::summarize(avg_MSE = mean(RMSE^2, na.rm = TRUE),
+                median_MSE = median(RMSE^2, na.rm = TRUE))
+
+my_df <- left_join(fold_errors_all, r2_df) %>% inner_join(myAIC) %>% inner_join(myRMSE)
+mypl <- ggplot(data = my_df,
+               aes(
+                 x = within_2fold,
+                 y = Rsq,
+                 color = model
+               )) + geom_point() +
+  geom_abline(slope = 1, color = "red4", linetype = "longdash") +
+  scale_color_manual(values = c("#0398FC", "#D68E09", "black")) +
+  theme(aspect.ratio = 1,
+        panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank())
+ggExtra::ggMarginal(mypl, groupFill = TRUE,
+                    type = "histogram",
+                    xparams = list(binwidth = 0.05),
+                    yparams = list(binwidth = 0.05))
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "R2_within2fold_comparison.png"),
+       plot = ggExtra::ggMarginal(mypl, groupFill = TRUE,
+                    type = "histogram",
+                    xparams = list(binwidth = 0.05),
+                    yparams = list(binwidth = 0.05)),
+       height = 5,
+       width = 5,
+       units = "in")
+
+ggplot(data = rmse(my_pk, method = "L-BFGS-B",
+                   rmse_group = vars(Route, Media, Dose),
+                   use_scale_conc = FALSE) %>%
+         inner_join(winning_model) %>%
+         mutate(RMSE = ifelse(RMSE == 0, 1E-6, RMSE)),
+               aes(
+                 x = log10(RMSE),
+                 color = model,
+                 fill = model
+               )) + 
+  geom_histogram(bins = 100) +
+  # geom_freqpoly(aes(groups = paste(Chemical, Species)),
+  #               color = "black",
+  #               bins = 5) +
+  scale_color_manual(values = c("#0398FC", "#D68E09", "grey10")) +
+  scale_fill_manual(values = c("#0398FC", "#D68E09", "grey10")) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  facet_grid(rows = vars(model),
+             cols = vars(Route)) +
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        strip.background = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank())
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RMSEs_winningmodel_LBFGSB_zero1E-6_RouteFacet_notNormalized.png"),
+       height = 4,
+       width = 6,
+       units = "in")
+
+ rmse(my_pk, method = "L-BFGS-B",
+      rmse_group = vars(Route, Media, Dose)) %>%
+   inner_join(get_winning_model(my_pk, method = "L-BFGS-B")) %>%
+   count(model)
+
+rmse(my_pk, method = "L-BFGS-B",
+                   rmse_group = vars(Route, Media, Dose)) %>%
+  inner_join(winning_model) %>%
+  filter(RMSE < 0.01, RMSE > 0.0001, Route == "oral", model == "model_1comp") %>%
+  group_by(Chemical, Species, Route, Media) %>%
+  mutate(group_size = n(),
+         logRMSE = log10(RMSE)) %>%
+  arrange(Chemical, Species, Route, Media, RMSE) %>%
+  View()
+
 
 fold_errors_all %>% 
   ggplot(aes(x = within_2fold)) +
   geom_histogram(binwidth = 0.1) +
   facet_grid(cols = vars(model))
+
+ggplot() +
+  geom_histogram(data = fold_errors_all, 
+                 aes(x = within_2fold),
+                 bins = 100) +
+  geom_vline(xintercept = fold_errors_all %>%
+               filter(Chemical == "DTXSID8025337") %>%
+               pull(within_2fold)) +
+  scale_x_log10()
+  
+
+fold_errors_all %>% ungroup() %>%
+  mutate(per_rank = rank(within_2fold)/n()) %>%
+  filter(Chemical == "DTXSID8025337") %>%
+  dplyr::select(-full_fold_errors)
+  
 
 fe_df %>%
   inner_join(suppressMessages(get_winning_model(my_pk))) %>%
@@ -1430,6 +1557,21 @@ fe_df %>%
   geom_histogram(binwidth = 0.1) +
   facet_grid(cols = vars(model))
   
+# Evaluate at level of Cmax and AUC RMSE
+my_tkstats <- eval_tkstats(my_pk, method = "L-BFGS-B")
+my_tkstats %>%
+  dplyr::select(Chemical, Species, Route, Media, model, method,
+                starts_with("Cmax"),
+                starts_with("AUC")) %>%
+  distinct() %>% 
+  filter(is.finite(Cmax.tkstats), is.finite(AUC_inf.tkstats),
+         is.finite(Cmax.nca), is.finite(AUC_inf.nca)) %>%
+  ggplot(aes(x = Cmax.tkstats/Cmax.nca,
+             y = AUC_inf.tkstats/AUC_inf.nca)) +
+  geom_point() +
+  geom_abline(slope = 1, color = "red4")
+
+
 # Q: What do "great" fits have in common?
 
 
