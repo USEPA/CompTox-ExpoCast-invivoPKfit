@@ -574,27 +574,6 @@ data_summary.default <- function(obj, ...){
              paste(class(obj), collapse = ", ")))
 }
 
-#' get_nca()
-#'
-#' This is the S3 method generic for `get_nca()`
-#'
-#' `get_nca()` is an alias for `nca`
-#'
-#' @param obj An object.
-#' @seealso [nca.pk()] for the method for class [pk()]
-#' @export
-get_nca <- function(obj, ...){
-  UseMethod("nca", obj)
-}
-
-#' Default method for get_nca()
-#'
-#'@param obj An object
-#' @export
-get_nca.default <- function(obj, ...){
-  stop(paste("No 'get_nca' method exists for object of class",
-             paste(class(obj), collapse = ", ")))
-}
 
 #' get_data_summary()
 #'

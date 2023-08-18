@@ -1329,7 +1329,7 @@ fw <- mvbutils::foodweb(where = asNamespace("invivoPKfit"),
 fun_mat <- fw$funmat
 
 mvbutils::foodweb(where = asNamespace("invivoPKfit"),
-                  prune = "compare_models",
+                  prune = "get_nca",
                   border = TRUE, cex = 1, lwd = 1.5)
 
 fun_mat2 <- fun_mat[rowSums(fun_mat) > 0, ]
@@ -1427,13 +1427,17 @@ gof_df %>%
   geom_vline(color = "red3", xintercept = c(-1, 1))
 
 
-winning_model <- get_winning_model(my_pk)
+winning_model <- get_winning_model(my_pk, method = "L-BFGS-B")
 fe_df <- fold_errors(my_pk, method = "L-BFGS-B") %>% inner_join(winning_model)
 # May need to change the use_scale_conc defaults
 r2_df <- rsq(my_pk, method = "L-BFGS-B", use_scale_conc = FALSE) %>%
   inner_join(winning_model)
-myAIC <- AIC(my_pk, method = "L-BFGS-B") %>% inner_join(winning_model)
-myRMSE <- rmse(my_pk, method = "L-BFGS-B") %>% inner_join(winning_model)
+myAIC <- AIC(my_pk, method = "L-BFGS-B") %>%
+  inner_join(winning_model)
+myRMSE <- rmse(my_pk, method = "L-BFGS-B",
+               rmse_group = vars(Route, Media, Dose),
+               use_scale_conc = FALSE) %>% 
+  inner_join(winning_model)
 
 # Something wrong with the summary method... maybe only use detects?
 fold_errors_all <- fe_df %>%
@@ -1443,20 +1447,23 @@ fold_errors_all <- fe_df %>%
                 median_FoldErr = median(Fold_Error, na.rm = TRUE),
                 within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2)/length(Fold_Error))
 
-myRMSE <- myRMSE %>%
+myRMSE_all <- myRMSE %>%
   dplyr::group_by(!!!my_pk$data_group, model, method) %>%
   dplyr::summarize(avg_MSE = mean(RMSE^2, na.rm = TRUE),
                 median_MSE = median(RMSE^2, na.rm = TRUE))
 
-my_df <- left_join(fold_errors_all, r2_df) %>% inner_join(myAIC) %>% inner_join(myRMSE)
+my_df <- left_join(fold_errors_all, r2_df) %>% inner_join(myAIC) %>% inner_join(myRMSE_all)
 mypl <- ggplot(data = my_df,
                aes(
                  x = within_2fold,
                  y = Rsq,
                  color = model
-               )) + geom_point() +
+               )) +
+  geom_point() +
   geom_abline(slope = 1, color = "red4", linetype = "longdash") +
   scale_color_manual(values = c("#0398FC", "#D68E09", "black")) +
+  labs(x = "% Fold Error within 2-fold",
+       y = "R-squared value") +
   theme(aspect.ratio = 1,
         panel.border = element_rect(color = "black", fill = NA, size = 1.5),
         panel.background = element_blank(),
@@ -1464,8 +1471,9 @@ mypl <- ggplot(data = my_df,
         axis.ticks = element_blank(),
         axis.line = element_blank(),
         legend.position = "bottom",
-        legend.title = element_blank())
-ggExtra::ggMarginal(mypl, groupFill = TRUE,
+        legend.title = element_blank(),
+        legend.key = element_blank())
+panelA_plot <- ggExtra::ggMarginal(mypl, groupFill = TRUE,
                     type = "histogram",
                     xparams = list(binwidth = 0.05),
                     yparams = list(binwidth = 0.05))
@@ -1479,26 +1487,23 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        width = 5,
        units = "in")
 
-ggplot(data = rmse(my_pk, method = "L-BFGS-B",
-                   rmse_group = vars(Route, Media, Dose),
-                   use_scale_conc = FALSE) %>%
+panelB_plot <- ggplot(data = myRMSE %>%
          inner_join(winning_model) %>%
-         mutate(RMSE = ifelse(RMSE == 0, 1E-6, RMSE)),
+         mutate(RMSE = ifelse(RMSE == 0, NA, RMSE)),
                aes(
                  x = log10(RMSE),
                  color = model,
                  fill = model
                )) + 
   geom_histogram(bins = 100) +
-  # geom_freqpoly(aes(groups = paste(Chemical, Species)),
-  #               color = "black",
-  #               bins = 5) +
+  labs(y = "Count") +
   scale_color_manual(values = c("#0398FC", "#D68E09", "grey10")) +
   scale_fill_manual(values = c("#0398FC", "#D68E09", "grey10")) +
   scale_y_continuous(breaks = scales::pretty_breaks()) +
   facet_grid(rows = vars(model),
              cols = vars(Route)) +
-  theme(panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+  theme(aspect.ratio = 0.5,
+        panel.border = element_rect(color = "black", fill = NA, size = 1.5),
         panel.background = element_blank(),
         panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
         axis.ticks = element_blank(),
@@ -1510,6 +1515,15 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "RMSEs_winningmodel_LBFGSB_zero1E-6_RouteFacet_notNormalized.png"),
        height = 4,
        width = 6,
+       units = "in")
+
+
+cowplot::plot_grid(panelA_plot, panelB_plot, labels = c("A", "B"))
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "CombinedPlot_Rsquared_RMSE.png"),
+       height = 5,
+       width = 7.45,
+       bg = "white",
        units = "in")
 
  rmse(my_pk, method = "L-BFGS-B",
@@ -1576,5 +1590,270 @@ my_tkstats %>%
 
 
 # Q: Does the dataset have a bias?
+```
+
+
+```{r ALL_fitting_choices}
+# This chunk is to run all the options through a
+# standard pipeline that calculates RMSE for Cmax and AUC_inf
+# for the Chemical Species Route Media grouping...
+
+# Types of Choices:
+## Dose Normalized
+## Log10 transform
+## Scale time
+
+# Pooled
+my_pk_000p <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk_100p <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk_110p <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk_111p <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species))
+
+my_pk_010p <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = TRUE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk_011p <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = TRUE) +
+  scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk_001p <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
+  scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+my_pk_101p <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+
+## Do fits
+my_pk_000p <- do_fit(my_pk_000p)
+my_pk_100p <- do_fit(my_pk_100p)
+my_pk_110p <- do_fit(my_pk_110p)
+my_pk_111p <- do_fit(my_pk_111p)
+my_pk_010p <- do_fit(my_pk_010p)
+my_pk_011p <- do_fit(my_pk_011p)
+my_pk_001p <- do_fit(my_pk_001p)
+my_pk_101p <- do_fit(my_pk_101p)
+
+my_pk_111p <- do_data_info(my_pk_111p)
+my_nca1 <- get_nca(my_pk_111p)
+
+# Joint
+my_pk_000j <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+
+my_pk_100j <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+
+my_pk_110j <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+
+my_pk_111j <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species, Reference))
+
+my_pk_010j <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = TRUE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+
+my_pk_011j <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = TRUE) +
+  scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+
+my_pk_001j <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
+  scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+
+my_pk_101j <- pk(data = cvt) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+
+
+## Do fits
+my_pk_000j <- do_fit(my_pk_000j)
+my_pk_100j <- do_fit(my_pk_100j)
+my_pk_110j <- do_fit(my_pk_110j)
+my_pk_111j <- do_fit(my_pk_111j)
+my_pk_010j <- do_fit(my_pk_010j)
+my_pk_011j <- do_fit(my_pk_011j)
+my_pk_001j <- do_fit(my_pk_001j)
+my_pk_101j <- do_fit(my_pk_101j)
+
+```
+
+
+```{r Evaluating_Choices}
+# Evaluation
+# Current: my_pk_111p
+
+# Number of model fits
+winning_model <- get_winning_model(my_pk_111p)
+winning_model %>%
+  group_by(method, model) %>%
+  count() %>%
+  mutate(Options = "111 Pooled") %>%
+  clipr::write_clip(col.names = FALSE)
+
+clipr::clear_clip()
+
+
+# TKstats/Cmax/AUC analysis... combined!
+final_tkstats <- eval_tkstats(my_pk_111p) %>%
+  mutate(Options = "111 Pooled")
+# Will need to evaluate the best model + method + options
+
+# RMSEs for Cmax and AUC_inf
+final_tkstats %>%
+  dplyr::select(Options,
+                Chemical, Species,
+                Route, Media, Reference,
+                method, model,
+                starts_with("Cmax"),
+                starts_with("AUC_inf")) %>%
+  rowwise() %>%
+  mutate(SE_Cmax = (Cmax.tkstats - Cmax.nca)^2,
+         SE_AUC_inf = (AUC_inf.tkstats - AUC_inf.nca)^2) %>%
+  filter(!is.na(SE_Cmax), !is.na(SE_AUC_inf)) %>%
+  group_by(Options, method, model) %>%
+  summarize(RMSE_Cmax = sqrt(mean(SE_Cmax,
+                             na.rm = FALSE)),
+            RMSE_AUC = sqrt(mean(SE_AUC_inf,
+                            na.rm = FALSE))) %>%
+  clipr::write_clip(col.names = FALSE)
+
+clipr::clear_clip()
+    
+# Other metrics (Rsq, Fold-Error, prediction RMSE)
+# May need to change the use_scale_conc defaults
+r2_df <- rsq(my_pk_111p, use_scale_conc = FALSE) %>%
+  inner_join(winning_model)
+myAIC <- AIC(my_pk_111p) %>%
+  inner_join(winning_model)
+fold_errors_all <- fold_errors(my_pk_111p) %>%
+  inner_join(winning_model) %>%
+  dplyr::filter(Detect %in% TRUE) %>%
+  dplyr::group_by(!!!my_pk_111p$data_group, model, method) %>%
+  dplyr::summarize(avg_FoldErr = mean(Fold_Error, na.rm = TRUE),
+                median_FoldErr = median(Fold_Error, na.rm = TRUE),
+                within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2)/length(Fold_Error))
+
+myRMSE_all <- rmse(my_pk_111p,
+               rmse_group = vars(Route, Media, Dose),
+               use_scale_conc = FALSE) %>% 
+  inner_join(winning_model) %>%
+  dplyr::group_by(!!!my_pk_111p$data_group, model, method) %>%
+  dplyr::summarize(avg_MSE = mean(RMSE^2, na.rm = TRUE),
+                median_MSE = median(RMSE^2, na.rm = TRUE))
+
+my_df <- left_join(fold_errors_all, r2_df) %>%
+  inner_join(myAIC) %>%
+  inner_join(myRMSE_all) %>%
+  mutate(Options = "111 Pooled", .before = Chemical)
+  
+
+my_df %>% clipr::write_clip(col.names = FALSE)
+
+clipr::clear_clip()
+
+hist(my_df$within_2fold)
+
+rm(my_pk_111p)
+gc()
+
+# Last one was 111p
 ```
 

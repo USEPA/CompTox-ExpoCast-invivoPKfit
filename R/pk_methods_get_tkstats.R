@@ -192,7 +192,8 @@ get_tkstats.pk <- function(obj,
                                    tidyr::pivot_wider(names_from = param_name,
                                                       values_from = param_value)
                                })) %>%
-    unnest(cols = c(TKstats_wide))
+    unnest(cols = c(TKstats_wide)) %>%
+    group_by(!!!obj$settings_data_info$nca_group)
 
   return(tkstats_all)
 }

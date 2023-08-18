@@ -54,7 +54,7 @@ do_data_info.pk <- function(obj){
   if (obj$settings_preprocess$suppress.messages %in% FALSE) {
     message("do_data_info.pk(): Doing dose-normalized non-compartmental analysis\n")
   }
-  nca_dose_norm <- nca(obj = obj,
+  nca_dose_norm_long <- nca(obj = obj,
                        newdata = NULL,
                        nca_group = summary_group,
                        exclude = TRUE,
@@ -64,7 +64,7 @@ do_data_info.pk <- function(obj){
   grp_vars <- sapply(summary_group,
                      rlang::as_label)
   #then pivot wider
-  nca_dose_norm <-   nca_dose_norm %>%
+  nca_dose_norm <-   nca_dose_norm_long %>%
     tidyr::pivot_wider(id_cols = tidyselect::all_of(grp_vars),
                        names_from = param_name,
                        values_from = param_value) %>%
@@ -142,7 +142,8 @@ do_data_info.pk <- function(obj){
     ) %>% as.data.frame()
 
   obj$data_info <- list("data_summary" = df,
-                        "dose_norm_check" = dose_norm_check)
+                        "dose_norm_check" = dose_norm_check,
+                        "nca" = nca_dose_norm_long)
 
   obj$status <- status_data_info #data summarization complete
 

@@ -34,7 +34,7 @@
 #'   `nca_group`, `nca_group_id`; `design` (the auto-detected study design for
 #'   this group); `param_name` (the name of the NCA parameter); `param_value`
 #'   (the NCA parameter value); `param_sd_z` (standard deviation of the
-#'   estimated NCA parameter value, if avaialble); `param_units` (the units of
+#'   estimated NCA parameter value, if available); `param_units` (the units of
 #'   the NCA parameter, derived from the units of the data).
 #' @export
 #' @author Caroline Ring
@@ -43,9 +43,12 @@ nca.pk <- function(obj,
                    newdata = NULL,
                    nca_group = NULL,
                    exclude = TRUE,
-                   dose_norm = FALSE){
+                   dose_norm = FALSE,
+                   suppress.messages = NULL){
 
-  suppress.messages <- obj$settings_preprocess$suppress.messages
+  if (is.null(suppress.messages)) {
+    suppress.messages <- obj$settings_preprocess$suppress.messages
+  }
 
   if(is.null(nca_group)){
     nca_group <- obj$settings_data_info$nca_group
