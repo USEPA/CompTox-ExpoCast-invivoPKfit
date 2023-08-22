@@ -70,16 +70,17 @@ do_fit.pk <- function(obj){
                             rlang::as_label)
 
   #For each model:
+  # Parallelize using parallel
 
+  fit_list <- sapply(cl = cl,
+                                  names(obj$stat_model),
+                                  function(this_model){
 
-  fit_list <- sapply(names(obj$stat_model),
-                     function(this_model){
-
-                       if(suppress.messages %in% FALSE){
-                         message(paste("do_fit.pk(): Fitting model",
-                                       this_model,
-                                       "using optimx::optimx()"))
-                       }
+                                    if(suppress.messages %in% FALSE){
+                                      message(paste("do_fit.pk(): Fitting model",
+                                                    this_model,
+                                                    "using optimx::optimx()"))
+                                    }
 
                        #nest the necessary data frames...
                        data_nest <- get_data(obj) %>%
@@ -110,10 +111,8 @@ do_fit.pk <- function(obj){
                          fit_check,
                          by = data_group_vars)
 
-                       #now use purrr::map2() to run the fit for each group
                        fit_out <- info_nest %>%
                          dplyr::group_by(!!!data_group) %>%
-                         # summary() to reframe()
                          dplyr::reframe(fit = {
                            if (suppress.messages %in% FALSE) {
                              cur_data_summary <- dplyr::inner_join(get_data_summary(obj,
@@ -131,7 +130,8 @@ do_fit.pk <- function(obj){
                                            "using optimx::optimx()"))
                              print(cur_data_summary)
                            }
-                          # Changed cur_data() to pick(everything()) because cur_data() is deprecated
+                           # Trying furrr::future_pmap implementation.
+                           # If more time/memory inefficient, revert to purrr::pmap
                            purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
                                        .f = fit_group,
                                        this_model = this_model,
@@ -148,6 +148,7 @@ do_fit.pk <- function(obj){
                      }, #end loop over models
                      simplify = FALSE,
                      USE.NAMES = TRUE)
+
 
   obj$fit <- do.call(dplyr::bind_rows,
                      c(fit_list,
