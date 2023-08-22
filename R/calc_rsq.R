@@ -156,9 +156,9 @@ calc_rsq <- function(pred,
     2 * x_bar * sum(n_subj * obs) +
     sum(n_subj) * x_bar^2)
   #Calculate second denominator term of Pearson correlation coefficient
-  r_denom_2 <- sqrt(sum(n_subj * pred^2) -
+  r_denom_2 <- sqrt(pmax(0,sum(n_subj * pred^2) -
                       2 * pred_bar * sum(n_subj * pred) +
-                      sum(n_subj) * pred_bar^2)
+                      sum(n_subj) * pred_bar^2))
 
   #Put the pieces together to get Pearson correlation coefficient
   if((r_denom_1 > 0) %in% TRUE  &
