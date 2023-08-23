@@ -69,89 +69,79 @@ do_fit.pk <- function(obj){
   data_group_vars <- sapply(data_group,
                             rlang::as_label)
 
-  #For each model:
-  # Parallelize using parallel
+  # Make all the other data prior to loading
+  par_DF <- obj$prefit$par_DF
+  sigma_DF <- obj$prefit$stat_error_model$sigma_DF
+  fit_check_DF <- obj$prefit$fit_check
 
-  fit_list <- sapply(names(obj$stat_model),
-                     function(this_model){
+  # Non-sapply fitting check
+  #
+  data <- subset(obj$data, exclude %in% FALSE)
+  data_sigma_group <- data$data_sigma_group
 
-                       if(suppress.messages %in% FALSE){
-                         message(paste("do_fit.pk(): Fitting model",
-                                       this_model,
-                                       "using optimx::optimx()"))
-                       }
+  data_group <- get_data_group(obj)
+  data_group_vars <- sapply(data_group,
+                               rlang::as_label)
 
-                       #nest the necessary data frames...
-                       data_nest <- get_data(obj) %>%
-                         dplyr::filter(exclude %in% FALSE) %>%
-                         tidyr::nest(data = !tidyselect::all_of(data_group_vars))
-
-                       par_DF_nest <- obj$prefit$par_DF %>%
-                         dplyr::filter(model %in% this_model) %>%
-                         dplyr::select(!model) %>%
-                         tidyr::nest(par_DF = !tidyselect::all_of(data_group_vars))
-
-                       sigma_DF_nest <-  obj$prefit$stat_error_model$sigma_DF %>%
-                         tidyr::nest(sigma_DF = !tidyselect::all_of(data_group_vars))
-
-                       fit_check <- obj$prefit$fit_check %>%
-                         dplyr::filter(model %in% this_model) %>%
-                         dplyr::select(!model) %>%
-                         dplyr::select(!c(n_par, n_sigma, n_detect, n_par_opt, fit_reason))
-
-                       #merge it all together
-                       info_nest <- dplyr::inner_join(
-                         dplyr::inner_join(
-                           dplyr::inner_join(data_nest,
-                                             par_DF_nest,
-                                             by = data_group_vars),
-                           sigma_DF_nest,
-                           by = data_group_vars),
-                         fit_check,
-                         by = data_group_vars)
-
-                       fit_out <- info_nest %>%
-                         dplyr::group_by(!!!data_group) %>%
-                         dplyr::reframe(fit = {
-                           if (suppress.messages %in% FALSE) {
-                             cur_data_summary <- dplyr::inner_join(get_data_summary(obj,
-                                                                                    summary_group = unique(
-                                                                                      c(data_group,
-                                                                                        vars(Route,
-                                                                                             Media)
-                                                                                      )
-                                                                                    )),
-                                                                   dplyr::cur_group(),
-                                                                   by = data_group_vars) %>%
-                               as.data.frame
-                             message(paste("do_fit.pk(): Fitting model",
-                                           this_model,
-                                           "using optimx::optimx()"))
-                             print(cur_data_summary)
-                           }
-                           # Trying furrr::future_pmap implementation.
-                           # If more time/memory inefficient, revert to purrr::pmap
-                           purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
-                                       .f = fit_group,
-                                       this_model = this_model,
-                                       settings_optimx = get_settings_optimx(obj),
-                                       modelfun = obj$stat_model[[this_model]]$conc_fun,
-                                       dose_norm = obj$scales$conc$dose_norm,
-                                       log10_trans = obj$scales$conc$log10_trans,
-                                       suppress.messages = suppress.messages)
-                         }
-                         )
-
-                       fit_out
-
-                     }, #end loop over models
-                     simplify = FALSE,
-                     USE.NAMES = TRUE)
+  # Make all the other data prior to loading
+  par_DF <- obj$prefit$par_DF
+  sigma_DF <- obj$prefit$stat_error_model$sigma_DF
+  fit_check_DF <- obj$prefit$fit_check
 
 
-  obj$fit <- do.call(dplyr::bind_rows,
-                     c(fit_list,
-                       list(.id = "model")))
+  #nest the necessary data frames...
+  data_nest <- data %>%
+    tidyr::nest(data = !tidyselect::all_of(data_group_vars))
+
+  par_DF_nest <- par_DF %>%
+    tidyr::nest(par_DF = !tidyselect::all_of(c("model", data_group_vars)))
+
+  sigma_DF_nest <-  sigma_DF %>%
+    tidyr::nest(sigma_DF = !tidyselect::all_of(data_group_vars))
+
+  fit_check <- fit_check_DF %>%
+    dplyr::select(!c(n_par, n_sigma, n_detect, n_par_opt, fit_reason))
+
+  #merge it all together
+
+  info_nest <- dplyr::inner_join(
+    dplyr::inner_join(
+      dplyr::inner_join(data_nest,
+                        par_DF_nest,
+                        by = c(data_group_vars)),
+      sigma_DF_nest,
+      by = c(data_group_vars)),
+    fit_check,
+    by = c("model", data_group_vars)) %>%
+    relocate(model, .after = data_group_vars[-1])
+
+
+  # Confirms there is only one f each for all these
+  info_nest %>% group_by(!!!data_group, model) %>% count()
+
+  n_cores <- parallel::detectCores() - 2
+  cluster <- new_cluster(n_cores)
+  if ( any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
+    cluster_call(cluster, library(invivoPKfit))
+  } else {
+    cluster_call(cluster, devtools::load_all())
+  }
+
+  cluster_copy(cluster, "obj")
+
+  fit_out <- info_nest %>%
+    dplyr::group_by(!!!data_group, model) %>% partition(cluster)
+  tidy_fit <- fit_out %>% dplyr::summarize(fit = purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
+                                                              .f = fit_group,
+                                                              this_model = model,
+                                                              settings_optimx = get_settings_optimx(obj),
+                                                              modelfun = obj$stat_model[[model]]$conc_fun,
+                                                              dose_norm = obj$scales$conc$dose_norm,
+                                                              log10_trans = obj$scales$conc$log10_trans,
+                                                              suppress.messages = TRUE)) %>% collect()
+
+
+  obj$fit <- tidy_fit %>% ungroup()
 
   obj$status <- status_fit #fitting complete
   return(obj)
