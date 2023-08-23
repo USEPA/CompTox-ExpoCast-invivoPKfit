@@ -72,15 +72,14 @@ do_fit.pk <- function(obj){
   #For each model:
   # Parallelize using parallel
 
-  fit_list <- sapply(cl = cl,
-                                  names(obj$stat_model),
-                                  function(this_model){
+  fit_list <- sapply(names(obj$stat_model),
+                     function(this_model){
 
-                                    if(suppress.messages %in% FALSE){
-                                      message(paste("do_fit.pk(): Fitting model",
-                                                    this_model,
-                                                    "using optimx::optimx()"))
-                                    }
+                       if(suppress.messages %in% FALSE){
+                         message(paste("do_fit.pk(): Fitting model",
+                                       this_model,
+                                       "using optimx::optimx()"))
+                       }
 
                        #nest the necessary data frames...
                        data_nest <- get_data(obj) %>%
