@@ -28,7 +28,7 @@
 #'   results for each model in `stat_model`.
 #' @export
 #' @author Caroline Ring
-do_fit.pk <- function(obj){
+do_fit.pk <- function(obj, n_cores = NULL){
   #check status
   objname <- deparse(substitute(obj))
   status <- obj$status
@@ -115,8 +115,27 @@ do_fit.pk <- function(obj){
     by = c("model", data_group_vars)) %>%
     dplyr::relocate(model, .after = data_group_vars[-1])
 
+  total_cores <- parallel::detectCores()
+  if (is.null(n_cores)) {
+    if (total_cores > 4) {
+      n_cores <- total_cores - 2
+    } else if (total_cores >= 2 & total_cores < 4) {
+      n_cores <- total_cores - 1
+    } else {
+      n_cores <- 1
+    }
+  } else {
+    if (total_cores <= n_cores & total_cores > 1) {
+      n_cores = total_cores - 1
+      message(paste0("To ensure other programs & processes are still to run, ",
+              "n_cores has been set to ", n_cores))
+    } else if (total_cores == 1) {
+      n_cores = total_cores
+    } else {
+      n_cores = n_cores
+    }
+  }
 
-  n_cores <- parallel::detectCores() - 2
   cluster <- multidplyr::new_cluster(n_cores)
   if (any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
     multidplyr::cluster_call(cluster, library(invivoPKfit))
