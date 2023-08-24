@@ -155,7 +155,7 @@ fit_group <- function(data,
                     "kkt1", "kkt2",
                     "xtime")
     tmp <- data.frame(as.list(tmp)) %>%
-      dplyr::slice(rep(1:n(),
+      dplyr::slice(rep(1:dplyr::n(),
                        each = length(method)))
     rownames(tmp) <- method
     tmp$method <- rownames(tmp)

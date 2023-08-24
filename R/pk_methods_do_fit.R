@@ -113,24 +113,21 @@ do_fit.pk <- function(obj){
       by = c(data_group_vars)),
     fit_check,
     by = c("model", data_group_vars)) %>%
-    relocate(model, .after = data_group_vars[-1])
+    dplyr::relocate(model, .after = data_group_vars[-1])
 
-
-  # Confirms there is only one f each for all these
-  info_nest %>% group_by(!!!data_group, model) %>% count()
 
   n_cores <- parallel::detectCores() - 2
-  cluster <- new_cluster(n_cores)
-  if ( any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
-    cluster_call(cluster, library(invivoPKfit))
+  cluster <- multidplyr::new_cluster(n_cores)
+  if (any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
+    multidplyr::cluster_call(cluster, library(invivoPKfit))
   } else {
-    cluster_call(cluster, devtools::load_all())
+    multidplyr::cluster_call(cluster, devtools::load_all())
   }
 
-  cluster_copy(cluster, "obj")
+  multidplyr::cluster_copy(cluster, "obj")
 
   fit_out <- info_nest %>%
-    dplyr::group_by(!!!data_group, model) %>% partition(cluster)
+    dplyr::group_by(!!!data_group, model) %>% multidplyr::partition(cluster)
   tidy_fit <- fit_out %>% dplyr::summarize(fit = purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
                                                               .f = fit_group,
                                                               this_model = model,
@@ -138,10 +135,11 @@ do_fit.pk <- function(obj){
                                                               modelfun = obj$stat_model[[model]]$conc_fun,
                                                               dose_norm = obj$scales$conc$dose_norm,
                                                               log10_trans = obj$scales$conc$log10_trans,
-                                                              suppress.messages = TRUE)) %>% collect()
+                                                              suppress.messages = TRUE)) %>%
+    dplyr::collect()
 
 
-  obj$fit <- tidy_fit %>% ungroup()
+  obj$fit <- tidy_fit %>% dplyr::ungroup()
 
   obj$status <- status_fit #fitting complete
   return(obj)

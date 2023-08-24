@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 set.seed(2023)
 library(tidyverse, quietly = TRUE)
 devtools::load_all() # Loads the invivopkfit package in feature/pkS3obj_facet branch
+library(multidplyr)
 tidyverse_conflicts()
 ```
 
@@ -1826,8 +1827,8 @@ get_choices <- function(obj, PJ = "Pooled") {
 }
 
 # Write into package
-evaluate_choices <- function(obj) {
-  pk_name <- get_choices(obj)
+evaluate_choices <- function(obj, PJ = "Pooled") {
+  pk_name <- get_choices(obj, PJ = PJ)
   
   cli::cli_progress_step("Winning Model...")
   # Wide winning model
@@ -1915,7 +1916,18 @@ my_pk_001p <- do_fit(my_pk_001p) %>% evaluate_choices() # Done
 
 my_pk_101p <- do_data_info(my_pk_101p) # This took 13 min
 
-my_pk_101p <- do_fit(my_pk_101p) %>% evaluate_choices()
+my_pk_101p <- do_fit(my_pk_101p) %>% evaluate_choices() # Done
+
+my_pk_000j <- do_prefit(my_pk_000j)
+my_pk_000j <- do_fit(my_pk_000j) %>% evaluate_choices() # Done (took 16 minutes)
+# WOW! A 2-3X speedup from the previous sapply() implementation
+my_pk_100j <- do_fit(my_pk_100j) %>% evaluate_choices(PJ = "Joint") 
+my_pk_110j <- do_fit(my_pk_110j) %>% evaluate_choices()
+my_pk_111j <- do_fit(my_pk_111j) %>% evaluate_choices()
+my_pk_010j <- do_fit(my_pk_010j) %>% evaluate_choices()
+my_pk_011j <- do_fit(my_pk_011j) %>% evaluate_choices()
+my_pk_001j <- do_fit(my_pk_001j) %>% evaluate_choices()
+my_pk_101j <- do_fit(my_pk_101j) %>% evaluate_choices()
 
 # Run after each evaluation
 # initialization (only run once)
@@ -1925,7 +1937,7 @@ detail_stats <- NULL
 
 # Run all at once
 {
-current_pk <- my_pk_101p # Define current evaluated pk object here
+current_pk <- my_pk_000j # Define current evaluated pk object here
 winning_model_final <- bind_rows(winning_model_final, current_pk[[1]])
 rmse_summary <- bind_rows(rmse_summary, current_pk[[2]])
 detail_stats <- bind_rows(detail_stats, current_pk[[3]])
