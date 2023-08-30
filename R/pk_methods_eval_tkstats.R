@@ -132,8 +132,9 @@ eval_tkstats.pk <- function(obj,
 
     #merge
     nca_df_red <- nca_df %>%
-      dplyr::select(intersect(names(nca_df), names(tkstats_df))) %>%
+      dplyr::select(intersect(names(nca_df), names(tkstats_df)), AUC_tlast) %>%
       rename(AUC_inf.nca = "AUC_infinity",
+             AUC_tlast.nca = "AUC_tlast",
              CLtot.nca = "CLtot",
              `CLtot/Fgutabs.nca` = "CLtot/Fgutabs",
              Cmax.nca = "Cmax",
@@ -159,6 +160,7 @@ eval_tkstats.pk <- function(obj,
     }
 
     tk_eval <- left_join(tkstats_df_red, nca_df_red) %>%
+      relocate(AUC_tlast.nca, .after = AUC_inf.nca) %>%
       group_by(!!!obj$settings_data_info$nca_group) %>%
       ungroup(Dose)
 
