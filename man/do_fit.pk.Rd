@@ -4,7 +4,7 @@
 \alias{do_fit.pk}
 \title{Do fitting}
 \usage{
-\method{do_fit}{pk}(obj)
+\method{do_fit}{pk}(obj, n_cores = NULL, rate_names = NULL)
 }
 \arguments{
 \item{obj}{A [pk] object.}

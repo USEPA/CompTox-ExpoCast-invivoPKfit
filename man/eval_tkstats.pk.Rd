@@ -65,7 +65,8 @@ this function. But it means that any values in the `Dose` variable of
 `newdata` will be ignored if `dose_norm %in% TRUE`.)}
 
 \item{finite_only}{Logical: `TRUE` (default) returns only rows (observations)
-for which AUC is finite in both `nca` and `tkstats`.}
+for which AUC is finite in both `nca` and `tkstats`. This also means it will
+by default never return instances where winning model == `model_flat`.}
 }
 \value{
 A `data.frame` with one  row for each "winning" model in

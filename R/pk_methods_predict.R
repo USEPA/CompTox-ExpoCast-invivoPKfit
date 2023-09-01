@@ -171,7 +171,7 @@ predict.pk <- function(obj,
                                         sapply(
                                           coefs_vector,
                                           FUN = model_fun,
-                                          time = Time_trans,
+                                          time = Time, # Time_trans
                                           dose = ifelse(conc_scale$dose_norm,
                                                         1, Dose),
                                           route = Route,

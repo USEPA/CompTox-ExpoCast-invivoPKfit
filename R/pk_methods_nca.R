@@ -12,8 +12,8 @@
 #'   with an error.
 #' @param newdata Optional: A `data.frame` containing new data for which to
 #'   compute the TK stats. Must contain at least variables `Chemical`,
-#'   `Species`, `Route`, `Dose`, `Conc`, `Dose.Units`, `Conc.Units`, either
-#'   `Time_trans.Units` or `Time.Units`, and any other variables named in
+#'   `Species`, `Route`, `Dose`, `Conc`, `Dose.Units`, `Conc.Units`, and
+#'   `Time.Units`, and any other variables named in
 #'   `tk_grouping`. Default `NULL`, to use the data in `get_data(obj)`.
 #' @param nca_group A list of variables provided using a `dplyr::vars()` call.
 #'   The data (either `newdata` or `obj$data`) will be grouped according to the
@@ -93,7 +93,7 @@ nca.pk <- function(obj,
           args =c(list(newdata),
                   nca_group)) %>%
     dplyr::reframe(Conc.Units = unique(Conc.Units),
-                     Time_trans.Units = unique(Time_trans.Units),
+                     Time.Units = unique(Time.Units),
                      Dose.Units = unique(Dose.Units),
                      {
                        if(suppress.messages %in% FALSE){
@@ -109,7 +109,7 @@ nca.pk <- function(obj,
                                        "NCA for the following data:"))
                          print(cur_data_summary)
                        }
-                       calc_nca(time = Time_trans[exclude %in% FALSE], #calculate NCA
+                       calc_nca(time = Time[exclude %in% FALSE], #calculate NCA
                               dose = Dose[exclude %in% FALSE],
                               conc = Conc[exclude %in% FALSE],
                               detect = Detect[exclude %in% FALSE],
@@ -121,26 +121,26 @@ nca.pk <- function(obj,
       param_name %in% c("AUC_tlast",
                         "AUC_infinity") ~ paste(Conc.Units,
                                                 "*",
-                                                Time_trans.Units),
+                                                Time.Units),
       param_name %in% "AUMC_infinity" ~ paste(Conc.Units,
                                               "*",
-                                              Time_trans.Units,
+                                              Time.Units,
                                               "*",
-                                              Time_trans.Units),
+                                              Time.Units),
       param_name %in% c("MRT",
                         "MTT",
                         "halflife",
-                        "tmax") ~ Time_trans.Units,
+                        "tmax") ~ Time.Units,
       param_name %in% c("CLtot",
                         "CLtot/Fgutabs") ~ paste0("L/",
-                                                  Time_trans.Units),
+                                                  Time.Units),
       param_name %in% "Vss" ~ paste0(Conc.Units,
                                      "/",
                                      Dose.Units),
       param_name %in% "Cmax" ~ Conc.Units
     )) %>%
     dplyr::select(-c(Conc.Units,
-                     Time_trans.Units,
+                     Time.Units,
                      Dose.Units))
 
 

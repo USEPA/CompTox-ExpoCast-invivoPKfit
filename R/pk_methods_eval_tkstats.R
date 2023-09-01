@@ -43,7 +43,8 @@
 #'   this function. But it means that any values in the `Dose` variable of
 #'   `newdata` will be ignored if `dose_norm %in% TRUE`.)
 #' @param finite_only Logical: `TRUE` (default) returns only rows (observations)
-#'   for which AUC is finite in both `nca` and `tkstats`.
+#'   for which AUC is finite in both `nca` and `tkstats`. This also means it will
+#'   by default never return instances where winning model == `model_flat`.
 #' @return A `data.frame` with one  row for each "winning" model in
 #'   `model` from [get_winning_model()]. Each `data.frame` will have the variables in the `data.frame`
 #'   returned by the `tkstats_fun` for its corresponding model. (For the

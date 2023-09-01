@@ -28,7 +28,7 @@
 #'   results for each model in `stat_model`.
 #' @export
 #' @author Caroline Ring
-do_fit.pk <- function(obj, n_cores = NULL){
+do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
   #check status
   objname <- deparse(substitute(obj))
   status <- obj$status
@@ -60,22 +60,6 @@ do_fit.pk <- function(obj, n_cores = NULL){
 
 
   #pull the non-excluded observations for fitting
-  data <- subset(obj$data, exclude %in% FALSE)
-  #pull the sigma parameter corresponding to each non-excluded observation
-  data_sigma_group <- data$data_sigma_group
-
-  suppress.messages <- obj$settings_preprocess$suppress.messages
-  data_group <- get_data_group(obj)
-  data_group_vars <- sapply(data_group,
-                            rlang::as_label)
-
-  # Make all the other data prior to loading
-  par_DF <- obj$prefit$par_DF
-  sigma_DF <- obj$prefit$stat_error_model$sigma_DF
-  fit_check_DF <- obj$prefit$fit_check
-
-  # Non-sapply fitting check
-  #
   data <- subset(obj$data, exclude %in% FALSE)
   data_sigma_group <- data$data_sigma_group
 
@@ -158,7 +142,44 @@ do_fit.pk <- function(obj, n_cores = NULL){
     dplyr::collect()
 
 
-  obj$fit <- tidy_fit %>% dplyr::ungroup()
+  # Need to convert rates to perHour
+  # Take rate_names
+  # Parameter names don't matter, all rates should have consistent param_unit
+  message("Now doing any rate conversions!")
+  rate_names <- par_DF %>% dplyr::select(!!!obj$data_group,
+                                        param_name,
+                                        param_units) %>%
+    dplyr::filter(str_detect(param_units, "^1/")) %>%
+    dplyr::mutate(Time_trans.Units = str_remove(param_units, "^1/")) %>%
+    dplyr::distinct()
+  # Get a simple data_group and conversion rate data frame
+  rate_conversion <- rate_names %>%
+    dplyr::select(-param_name) %>% # Keep Time_trans.Units for a join
+    dplyr::mutate(to_perhour = convert_time(1,
+                                            from = Time_trans.Units,
+                                            to = "hours",
+                                            inverse = TRUE)) %>%
+    dplyr::distinct()
+  # Extract names
+  rate_names <- rate_names %>% dplyr::pull(param_name)
+
+  tidy_fit <- tidy_fit %>%
+    tidyr::unnest(fit)
+  orig_names <- names(tidy_fit) # Saving the original names
+
+  # Convert the rates
+  tidy_fit <- tidy_fit %>%
+    dplyr::left_join(rate_conversion,
+              by = c(data_group_vars)) %>%
+    dplyr::mutate(across(contains(rate_names),
+                         \(x) x * to_perhour)) %>%
+    dplyr::select(contains(orig_names)) %>%
+    dplyr::group_by(!!!obj$data_group, model) %>%
+    tidyr::nest(.key = "fit")
+
+
+  obj$fit <- tidy_fit %>%
+    dplyr::ungroup()
 
   obj$status <- status_fit #fitting complete
   return(obj)

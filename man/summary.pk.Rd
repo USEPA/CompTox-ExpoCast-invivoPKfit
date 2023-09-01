@@ -10,7 +10,7 @@
 \item{obj}{A [pk] object.}
 }
 \value{
-A `data.frame` consisting of a summary table of fitting options and results.
+A list of `data.frame`s consisting of a summary table of fitting options and results.
 }
 \description{
 This summary includes summary information about the data; about any data

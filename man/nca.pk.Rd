@@ -4,7 +4,14 @@
 \alias{nca.pk}
 \title{NCA for a `pk` object}
 \usage{
-\method{nca}{pk}(obj, newdata = NULL, nca_group = NULL, exclude = TRUE, dose_norm = FALSE)
+\method{nca}{pk}(
+  obj,
+  newdata = NULL,
+  nca_group = NULL,
+  exclude = TRUE,
+  dose_norm = FALSE,
+  suppress.messages = NULL
+)
 }
 \arguments{
 \item{obj}{A [pk()] model object. Must be fitted, or the function will exit
@@ -12,8 +19,8 @@ with an error.}
 
 \item{newdata}{Optional: A `data.frame` containing new data for which to
 compute the TK stats. Must contain at least variables `Chemical`,
-`Species`, `Route`, `Dose`, `Conc`, `Dose.Units`, `Conc.Units`, either
-`Time_trans.Units` or `Time.Units`, and any other variables named in
+`Species`, `Route`, `Dose`, `Conc`, `Dose.Units`, `Conc.Units`, and
+`Time.Units`, and any other variables named in
 `tk_grouping`. Default `NULL`, to use the data in `get_data(obj)`.}
 
 \item{nca_group}{A list of variables provided using a `dplyr::vars()` call.
@@ -39,7 +46,7 @@ A `data.frame` with variables including all the grouping variables in
   `nca_group`, `nca_group_id`; `design` (the auto-detected study design for
   this group); `param_name` (the name of the NCA parameter); `param_value`
   (the NCA parameter value); `param_sd_z` (standard deviation of the
-  estimated NCA parameter value, if avaialble); `param_units` (the units of
+  estimated NCA parameter value, if available); `param_units` (the units of
   the NCA parameter, derived from the units of the data).
 }
 \description{

@@ -67,6 +67,7 @@ fit_group <- function(data,
       const_params <- NULL
     }
 
+
     #Now call optimx::optimx() and do the fit
     suppressWarnings(
       optimx_out <- tryCatch({
@@ -138,7 +139,8 @@ fit_group <- function(data,
       }) #end tryCatch()
     ) #end suppressWarnings()
 
-    #Save the fitting results for this model
+    # Need to convert units back
+
     out <- optimx_out
 
   }else{ #if status for this model was "abort", then abort fit and return NULL
