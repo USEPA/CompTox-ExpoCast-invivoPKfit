@@ -300,15 +300,18 @@ plot.pk <- function(obj,
                                   x %>%
                                     dplyr::select(!!!common_vars) %>%
                                     dplyr::group_by(Dose, Route, Media) %>%
-                                    dplyr::reframe(Time = max(Time_trans),
+                                    dplyr::reframe(Time = max(Time), # Change to Time
+                                                   Time.Units,
                                                    Time_trans.Units) %>%
                                     dplyr::mutate(maxTime = max(Time),
-                                                  Time.Units = unique(Time_trans.Units)) %>%
+                                                  Time.Units = unique(Time.Units),
+                                                  Time_trans.Units = unique(Time_trans.Units)) %>%
                                     tidyr::uncount(n_interp) %>%
                                     dplyr::group_by(Dose, Route, Media) %>%
-                                    dplyr::mutate(Time_trans = (maxTime / (n() - 1)) *
+                                    dplyr::mutate(Time = (maxTime / (n() - 1)) *
                                                     (row_number() - 1))
                                 }))
+
     interp_data <- interp_data %>%
       dplyr::select(!!!obj$data_group, interpolated) %>%
       tidyr::unnest(cols = c(interpolated)) %>%
@@ -321,6 +324,13 @@ plot.pk <- function(obj,
                            method = method,
                            exclude = FALSE,
                            include_NAs = TRUE) %>%
+      rowwise()
+    interp_data <- interp_data %>%
+      mutate(Time_trans = convert_time(Time,
+                                       from = Time.Units,
+                                       to = Time_trans.Units))
+
+    interp_data <- interp_data %>%
       dplyr::group_by(!!!obj$data_group) %>%
       tidyr::nest(.key = "predicted")
 

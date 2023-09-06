@@ -113,7 +113,7 @@ tkstats_1comp <- function(pars,
   Cmax <- cp_1comp(params =pars,
   time = tmax,
   dose = dose,
-  route= route,
+  route = route,
   medium = medium)
 
   AUC_inf <- auc_1comp(params =pars,

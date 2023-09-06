@@ -106,7 +106,13 @@ coef_sd.pk <- function(obj,
   newdata <- obj$data %>%
     dplyr::select(!!!union(obj$data_group, req_vars),
                   !!!other_vars) %>%
-    dplyr::mutate(data_sigma_group = factor(data_sigma_group)) %>%
+    # log_likelihood() takes Time_trans so this must be converted to hours
+    # so it is in concordance with coef()
+    dplyr::mutate(data_sigma_group = factor(data_sigma_group),
+                  Time_trans = convert_time(x = Time_trans,
+                                            from = Time_trans.Units,
+                                            to = "hours"),
+                  Time_trans.Units = "hours") %>%
     dplyr::group_by(!!!obj$data_group) %>%
     tidyr::nest(.key = "observations") %>%
     dplyr::ungroup()

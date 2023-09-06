@@ -175,7 +175,7 @@ get_tkstats.pk <- function(obj,
                                             route = Route,
                                             medium = Media,
                                             dose = Dose,
-                                            time_unit = "hours", # Coefs is standardized
+                                            time_unit = "hours", # coef() is standardized now
                                             conc_unit = Conc.Units,
                                             vol_unit = "L",
                                             simplify = FALSE,

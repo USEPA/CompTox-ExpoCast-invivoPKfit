@@ -29,18 +29,15 @@
 #' @export
 #' @author Caroline Ring
 convert_time <- function(x,
-                                   from = "hours",
-                                   to = "identity",
-                                   inverse = FALSE){
+                         from = "hours",
+                         to = "identity",
+                         inverse = FALSE){
 
   period_units <- time_units
 
-
-
-
   if(to %in% "auto"){
     #select units automatically
-    to <- auto_units(y = y,
+    to <- auto_units(y = x,
                      from = from)
   }
 

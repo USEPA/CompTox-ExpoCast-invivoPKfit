@@ -141,7 +141,8 @@ logLik.pk <- function(obj,
   if (!("Time_trans" %in% names(newdata))) {
     newdata$Time_trans <- convert_time(x = newdata$Time,
                                        from = newdata$Time.Units,
-                                       to = obj$scales$time$new_units)
+                                       to = "hours")
+    newdata$Time_trans.Units <- rep("hours", nrow(newdata))
   }
 
   #get transformations to apply
@@ -176,6 +177,7 @@ logLik.pk <- function(obj,
   req_vars <- ggplot2::vars(Time,
                             Time.Units,
                             Time_trans,
+                            Time_trans.Units,
                             Dose,
                             Route,
                             Media,
@@ -184,10 +186,25 @@ logLik.pk <- function(obj,
                             N_Subjects,
                             Detect)
 
+
+
   newdata <- newdata %>%
     dplyr::select(!!!union(obj$data_group, req_vars),
-                  !!!other_vars) %>%
-    dplyr::mutate(data_sigma_group = factor(data_sigma_group)) %>%
+                  !!!other_vars)
+  # time_scale_check
+  message("Scaling these transformed units back into hours")
+
+  print(newdata %>%
+          dplyr::select(!!!obj$data_group, Time.Units, Time_trans.Units) %>%
+          dplyr::filter(Time.Units != Time_trans.Units) %>%
+          dplyr::distinct())
+
+  newdata <- newdata %>%
+    dplyr::mutate(data_sigma_group = factor(data_sigma_group),
+                  Time_trans = convert_time(x = Time_trans,
+                                            from = Time_trans.Units,
+                                            to = "hours"),
+                  Time_trans.Units = "hours") %>%
     dplyr::group_by(!!!obj$data_group) %>%
     tidyr::nest(.key = "observations") %>%
     dplyr::ungroup()

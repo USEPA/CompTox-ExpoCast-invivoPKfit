@@ -87,7 +87,6 @@ predict.pk <- function(obj,
     other_vars <- ggplot2::vars(
       Value,
       Value.Units,
-      Time_trans.Units,
       Conc,
       Conc.Units,
       Conc_trans,
@@ -124,6 +123,7 @@ predict.pk <- function(obj,
   req_vars <- ggplot2::vars(Time,
                             Time.Units,
                             Time_trans,
+                            Time_trans.Units,
                             Dose,
                             Route,
                             Media)
@@ -171,7 +171,7 @@ predict.pk <- function(obj,
                                         sapply(
                                           coefs_vector,
                                           FUN = model_fun,
-                                          time = Time, # Time_trans
+                                          time = Time,
                                           dose = ifelse(conc_scale$dose_norm,
                                                         1, Dose),
                                           route = Route,
@@ -205,5 +205,6 @@ predict.pk <- function(obj,
   } else {
     message("Note these values scale with Dose! (Not Dose-normalized)")
   }
+  message("These predictions have been made using 1/hour rate constants from coefs()")
   return(newdata)
 }

@@ -85,6 +85,7 @@ tkstats_2comp <- function(pars,
   params <- fill_params_2comp(pars)
 
   #get transformed parameters for 2-comp model
+  # these are parameters such alpha, beta
   trans_params <- transformed_params_2comp(params = pars)
 
   #for readability, assign params to variables inside this function
