@@ -52,7 +52,7 @@ coef.pk <- function(obj,
     unlist() %>%
     unique()
 
-  coefs <- obj$fit %>% tidyr::unnest(cols = fit) %>%
+  coefs <- suppressMessages(obj$fit %>% tidyr::unnest(cols = fit) %>%
     dplyr::group_by(model, method, !!!obj$data_group) %>%
     dplyr::select(dplyr::starts_with("sigma_"),
                   dplyr::any_of(possible_model_params)) %>%
@@ -62,9 +62,9 @@ coef.pk <- function(obj,
                         names_to = "error_group",
                         values_to = "sigma_value") %>%
     dplyr::filter(stringr::str_detect(error_group,
-                                      paste(Chemical,Species,sep = ".")))
+                                      paste(Chemical,Species,sep = "."))))
 
-  coefs <- dplyr::left_join(coefs, const_pars)
+  coefs <- suppressMessages(dplyr::left_join(coefs, const_pars))
 
   for (this_param in intersect(names(const_pars), possible_model_params)) {
     coefs[this_param] <- tidyr::replace_na(coefs[[this_param]],
@@ -75,7 +75,7 @@ coef.pk <- function(obj,
     dplyr::select(!!!obj$data_group, Time.Units, Time_trans.Units) %>%
     dplyr::distinct()
 
-  coefs_tidy <- coefs %>%
+  coefs_tidy <- suppressMessages(coefs %>%
     tidyr::nest(coefs_tibble = dplyr::any_of(possible_model_params)) %>%
     dplyr::mutate(coefs_vector = map(coefs_tibble,
                               .f = \(x){
@@ -84,7 +84,7 @@ coef.pk <- function(obj,
                                   unlist()
                               })) %>%
     tidyr::unnest(coefs_tibble) %>%
-    dplyr::left_join(time_group)
+    dplyr::left_join(time_group))
 
 
 
@@ -109,7 +109,7 @@ coef.pk <- function(obj,
     no_fits <- obj$prefit$fit_check %>%
       dplyr::filter(fit_decision %in% "abort") %>%
       dplyr::select(model, Chemical, Species)
-    coefs_tidy <- anti_join(coefs_tidy, no_fits)
+    coefs_tidy <- suppressMessages(anti_join(coefs_tidy, no_fits))
   }
 
   return(coefs_tidy)

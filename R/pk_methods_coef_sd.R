@@ -76,20 +76,22 @@ coef_sd.pk <- function(obj,
   )
 
   # get coefs data.frame for each model and method
-  coefs <- coef(
-    obj = obj,
-    model = model,
-    method = method,
-    drop_sigma = FALSE
-  ) %>%
-    dplyr::select(coefs_vector, sigma_value, error_group) %>%
-    dplyr::mutate(coefs_vector = purrr::map(coefs_vector,
-                                            \(x) {
-                                              sigma_transfer <- sigma_value
-                                              names(sigma_transfer) <- error_group
-                                              c(x[!(names(x) %in% noptim_params)], sigma_transfer)
-                                            })) %>%
-    dplyr::select(-sigma_value, -error_group)
+  coefs <- suppressMessages(
+    coef(
+      obj = obj,
+      model = model,
+      method = method,
+      drop_sigma = FALSE
+    ) %>%
+      dplyr::select(coefs_vector, sigma_value, error_group) %>%
+      dplyr::mutate(coefs_vector = purrr::map(coefs_vector,
+                                              \(x) {
+                                                sigma_transfer <- sigma_value
+                                                names(sigma_transfer) <- error_group
+                                                c(x[!(names(x) %in% noptim_params)], sigma_transfer)
+                                              })) %>%
+      dplyr::select(-sigma_value, -error_group)
+  )
 
 
   req_vars <- ggplot2::vars(Time,
@@ -120,20 +122,21 @@ coef_sd.pk <- function(obj,
   newdata <- tidyr::expand_grid(expand_grid(model, method),
                                 newdata)
 
-  newdata <- dplyr::left_join(coefs, newdata)
+  newdata <- suppressMessages(dplyr::left_join(coefs, newdata))
 
 
-  newdata <- newdata %>%
-    rowwise() %>%
-    filter(!is.null(observations)) %>%
-    mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
-    left_join(obj$prefit$par_DF %>%
-                filter(param_name %in% noptim_params) %>%
-                dplyr::select(!!!obj$data_group, param_name, start)) %>%
-    distinct() %>%
-    mutate(const_pars = setNames(start, param_name)) %>%
-    ungroup() %>%
-    distinct()
+  newdata <- suppressMessages(
+    newdata %>%
+      rowwise() %>%
+      filter(!is.null(observations)) %>%
+      mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
+      left_join(obj$prefit$par_DF %>%
+                  filter(param_name %in% noptim_params) %>%
+                  dplyr::select(!!!obj$data_group, param_name, start)) %>%
+      distinct() %>%
+      mutate(const_pars = setNames(start, param_name)) %>%
+      ungroup() %>%
+      distinct())
 
   newdata <- newdata %>%
     dplyr::rowwise() %>%

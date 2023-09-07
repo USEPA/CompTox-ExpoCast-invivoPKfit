@@ -88,7 +88,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
 
   #merge it all together
 
-  info_nest <- dplyr::inner_join(
+  info_nest <- suppressMessages(dplyr::inner_join(
     dplyr::inner_join(
       dplyr::inner_join(data_nest,
                         par_DF_nest,
@@ -97,49 +97,71 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
       by = c(data_group_vars)),
     fit_check,
     by = c("model", data_group_vars)) %>%
-    dplyr::relocate(model, .after = data_group_vars[-1])
+    dplyr::relocate(model, .after = data_group_vars[-1]) )
 
-  total_cores <- parallel::detectCores()
-  if (is.null(n_cores)) {
-    if (total_cores > 4) {
-      n_cores <- total_cores - 2
-    } else if (total_cores >= 2 & total_cores < 4) {
-      n_cores <- total_cores - 1
+  # Set the options for Parallel Computing
+  # First condition if it is FALSE don't use parallel computing (takes much longer though)
+  #
+
+  if (n_cores == FALSE) {
+    fit_out <- info_nest %>%
+      dplyr::group_by(!!!data_group, model)
+    tidy_fit <- fit_out %>%
+      dplyr::summarize(fit = purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
+                                         .f = fit_group,
+                                         this_model = model,
+                                         settings_optimx = get_settings_optimx(obj),
+                                         modelfun = obj$stat_model[[model]]$conc_fun,
+                                         dose_norm = obj$scales$conc$dose_norm,
+                                         log10_trans = obj$scales$conc$log10_trans,
+                                         suppress.messages = TRUE))
+  } else if (is.null(n_cores) | is.numeric(n_cores)) {
+    total_cores <- parallel::detectCores()
+    if (is.null(n_cores)) {
+      if (total_cores > 5) {
+        n_cores <- total_cores - 3
+      } else if (total_cores >= 2) {
+        n_cores <- total_cores - 1
+      } else {
+        n_cores <- 1
+      }
     } else {
-      n_cores <- 1
+      if (total_cores <= n_cores & total_cores > 1) {
+        n_cores  <- total_cores - 1
+        message(paste0("To ensure other programs & processes are still to run, ",
+                       "n_cores has been set to ", n_cores))
+      } else if (total_cores == 1) {
+        n_cores = total_cores
+      } else {
+        n_cores <- n_cores
+      }
     }
-  } else {
-    if (total_cores <= n_cores & total_cores > 1) {
-      n_cores = total_cores - 1
-      message(paste0("To ensure other programs & processes are still to run, ",
-              "n_cores has been set to ", n_cores))
-    } else if (total_cores == 1) {
-      n_cores = total_cores
+    cluster <- multidplyr::new_cluster(n_cores)
+    if (any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
+      multidplyr::cluster_call(cluster, library(invivoPKfit))
     } else {
-      n_cores = n_cores
+      multidplyr::cluster_call(cluster, devtools::load_all())
     }
+
+    multidplyr::cluster_copy(cluster, "obj")
+
+    fit_out <- info_nest %>%
+      dplyr::group_by(!!!data_group, model) %>% multidplyr::partition(cluster)
+    tidy_fit <- fit_out %>%
+      dplyr::summarize(
+        fit = purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
+                          .f = fit_group,
+                          this_model = model,
+                          settings_optimx = get_settings_optimx(obj),
+                          modelfun = obj$stat_model[[model]]$conc_fun,
+                          dose_norm = obj$scales$conc$dose_norm,
+                          log10_trans = obj$scales$conc$log10_trans,
+                          suppress.messages = TRUE)) %>% dplyr::collect()
   }
 
-  cluster <- multidplyr::new_cluster(n_cores)
-  if (any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
-    multidplyr::cluster_call(cluster, library(invivoPKfit))
-  } else {
-    multidplyr::cluster_call(cluster, devtools::load_all())
-  }
 
-  multidplyr::cluster_copy(cluster, "obj")
 
-  fit_out <- info_nest %>%
-    dplyr::group_by(!!!data_group, model) %>% multidplyr::partition(cluster)
-  tidy_fit <- fit_out %>% dplyr::summarize(fit = purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
-                                                              .f = fit_group,
-                                                              this_model = model,
-                                                              settings_optimx = get_settings_optimx(obj),
-                                                              modelfun = obj$stat_model[[model]]$conc_fun,
-                                                              dose_norm = obj$scales$conc$dose_norm,
-                                                              log10_trans = obj$scales$conc$log10_trans,
-                                                              suppress.messages = TRUE)) %>%
-    dplyr::collect()
+
 
 
   # Need to convert rates to perHour
@@ -168,15 +190,17 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
   orig_names <- names(tidy_fit) # Saving the original names
 
   # Convert the rates
-  tidy_fit <- tidy_fit %>%
-    dplyr::left_join(rate_conversion,
-              by = c(data_group_vars)) %>%
-    dplyr::mutate(across(contains(rate_names),
-                         \(x) x * to_perhour)) %>%
-    dplyr::select(contains(orig_names)) %>%
-    dplyr::group_by(!!!obj$data_group, model) %>%
-    tidyr::nest(.key = "fit")
 
+  tidy_fit <- suppressMessages(
+    tidy_fit %>%
+      dplyr::left_join(rate_conversion,
+                       by = c(data_group_vars)) %>%
+      dplyr::mutate(across(contains(rate_names),
+                           \(x) x * to_perhour)) %>%
+      dplyr::select(contains(orig_names)) %>%
+      dplyr::group_by(!!!obj$data_group, model) %>%
+      tidyr::nest(.key = "fit")
+  )
 
   obj$fit <- tidy_fit %>%
     dplyr::ungroup()

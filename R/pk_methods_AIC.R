@@ -89,11 +89,11 @@ AIC.pk <- function(obj,
                exclude = exclude,
                drop_obs = drop_obs)
 
-  ll <- ll %>%
+  ll <- suppressMessages(ll %>%
     dplyr::select(!!!obj$data_group,
                   model, method,
                   log_likelihood) %>%
-    left_join(params_df)
+    left_join(params_df))
 
 
   #get number of parameters (excluding any constant, non-optimized parameters)

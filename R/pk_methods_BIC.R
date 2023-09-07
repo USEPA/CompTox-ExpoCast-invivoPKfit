@@ -83,12 +83,12 @@ BIC.pk <- function(obj,
   ll <- ll %>% dplyr::rowwise() %>%
     dplyr::mutate(NROW = nrow(observations))
 
-  ll <- ll %>%
+  ll <- suppressMessages(ll %>%
     dplyr::select(!!!obj$data_group,
                   model, method,
                   log_likelihood,
                   NROW) %>%
-    dplyr::left_join(params_df)
+    dplyr::left_join(params_df))
 
 
   #get number of parameters (excluding any constant, non-optimized parameters)

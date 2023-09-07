@@ -164,9 +164,9 @@ if (!(check %in% TRUE)) {
                 "exclude")
 
 
-  new_preds <- dplyr::left_join(preds, newdata) %>%
+  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
     dplyr::select(dplyr::all_of(req_vars)) %>%
-    ungroup()
+    ungroup())
 
 
   #apply dose-normalization if specified

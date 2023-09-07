@@ -158,20 +158,21 @@ logLik.pk <- function(obj,
 
   # get coefs data.frame for each model and method
   #
-  coefs <- coef(
+  coefs <- suppressMessages(coef(
     obj = obj,
     model = model,
     method = method,
-    drop_sigma = FALSE
-  ) %>%
-    dplyr::select(coefs_vector, sigma_value, error_group) %>%
+    drop_sigma = FALSE) %>%
+    dplyr::select(coefs_vector,
+                  sigma_value,
+                  error_group) %>%
     dplyr::mutate(coefs_vector = purrr::map(coefs_vector,
                                             \(x) {
                                               sigma_transfer <- sigma_value
                                               names(sigma_transfer) <- error_group
                                               c(x, sigma_transfer)
                                             })) %>%
-    dplyr::select(-sigma_value, -error_group)
+    dplyr::select(-sigma_value, -error_group))
 
 
   req_vars <- ggplot2::vars(Time,
@@ -191,28 +192,32 @@ logLik.pk <- function(obj,
   newdata <- newdata %>%
     dplyr::select(!!!union(obj$data_group, req_vars),
                   !!!other_vars)
+
   # time_scale_check
-  message("Scaling these transformed units back into hours")
+  if (any(!(newdata$Time_trans.Units %in% "hours"))) {
+    message("Scaling these transformed units back into hours")
 
-  print(newdata %>%
-          dplyr::select(!!!obj$data_group, Time.Units, Time_trans.Units) %>%
-          dplyr::filter(Time.Units != Time_trans.Units) %>%
-          dplyr::distinct())
+    print(newdata %>%
+            dplyr::select(!!!obj$data_group, Time.Units, Time_trans.Units) %>%
+            dplyr::filter(Time.Units != Time_trans.Units) %>%
+            dplyr::distinct())
+  }
 
-  newdata <- newdata %>%
-    dplyr::mutate(data_sigma_group = factor(data_sigma_group),
-                  Time_trans = convert_time(x = Time_trans,
-                                            from = Time_trans.Units,
-                                            to = "hours"),
-                  Time_trans.Units = "hours") %>%
-    dplyr::group_by(!!!obj$data_group) %>%
-    tidyr::nest(.key = "observations") %>%
-    dplyr::ungroup()
+    newdata <- newdata %>%
+      dplyr::mutate(data_sigma_group = factor(data_sigma_group),
+                    Time_trans = convert_time(x = Time_trans,
+                                              from = Time_trans.Units,
+                                              to = "hours"),
+                    Time_trans.Units = "hours") %>%
+      dplyr::group_by(!!!obj$data_group) %>%
+      tidyr::nest(.key = "observations") %>%
+      dplyr::ungroup()
+
 
   newdata <- tidyr::expand_grid(expand_grid(model, method),
                                 newdata)
 
-  newdata <- dplyr::left_join(coefs, newdata)
+  newdata <- suppressMessages(dplyr::left_join(coefs, newdata))
 
 
   newdata <- newdata %>%
