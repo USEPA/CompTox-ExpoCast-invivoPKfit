@@ -1195,9 +1195,9 @@ fw <- mvbutils::foodweb(where = asNamespace("invivoPKfit"),
 fun_mat <- fw$funmat
 
 mvbutils::foodweb(where = asNamespace("invivoPKfit"),
-                  prune = "get_tkstats",
+                  prune = "transformed_params_2comp",
                   # descendents = FALSE,
-                  ancestors = FALSE,
+                  # ancestors = FALSE,
                   border = TRUE, cex = 1, lwd = 1.5)
 
 # Predict dependents: rmse, residuals, rsq, calc_auc, fold_errors, plot

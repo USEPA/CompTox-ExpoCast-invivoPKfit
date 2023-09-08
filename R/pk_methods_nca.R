@@ -88,11 +88,13 @@ nca.pk <- function(obj,
   }
 
   #do NCA
-
-  nca_out <- do.call(dplyr::group_by,
-          args =c(list(newdata),
-                  nca_group)) %>%
-    dplyr::reframe(Conc.Units = unique(Conc.Units),
+#
+#   nca_out <- do.call(dplyr::group_by,
+#           args =c(list(newdata),
+#                   nca_group)) %>%
+    nca_out <- newdata %>%
+      group_by(!!!nca_group) %>%
+      dplyr::reframe(Conc.Units = unique(Conc.Units),
                      Time.Units = unique(Time.Units),
                      Dose.Units = unique(Dose.Units),
                      {
@@ -110,17 +112,17 @@ nca.pk <- function(obj,
                          print(cur_data_summary)
                        }
                        calc_nca(time = Time[exclude %in% FALSE], #calculate NCA
-                              dose = Dose[exclude %in% FALSE],
-                              conc = Conc[exclude %in% FALSE],
-                              detect = Detect[exclude %in% FALSE],
-                              route = unique(Route[exclude %in% FALSE]),
-                              series_id = Series_ID[exclude %in% FALSE])
-                       }
-                     ) %>%
-    dplyr::mutate(param_units = dplyr::case_when( #derive NCA param units from data units
-      param_name %in% c("AUC_tlast",
-                        "AUC_infinity") ~ paste(Conc.Units,
-                                                "*",
+                                dose = Dose[exclude %in% FALSE],
+                                conc = Conc[exclude %in% FALSE],
+                                detect = Detect[exclude %in% FALSE],
+                                route = unique(Route[exclude %in% FALSE]),
+                                series_id = Series_ID[exclude %in% FALSE])
+                     }
+      ) %>%
+      dplyr::mutate(param_units = dplyr::case_when( #derive NCA param units from data units
+        param_name %in% c("AUC_tlast",
+                          "AUC_infinity") ~ paste(Conc.Units,
+                                                  "*",
                                                 Time.Units),
       param_name %in% "AUMC_infinity" ~ paste(Conc.Units,
                                               "*",

@@ -5,14 +5,15 @@
 #'@param ... Additional arguments (not currently used).
 #'@return A named numeric vector of transformed parameters with elements
 #'  "alpha", "beta", "A_iv_unit", "B_iv_unit", "A_oral_unit", "B_oral_unit".
-#' @author Caroline Ring, Gilbert Padilla Mercado, John Wambaugh
+#' @author Caroline Ring, Gilberto Padilla Mercado, John Wambaugh
 #' @export transformed_params_2comp
 #' @family built-in model functions
 #' @family 2-compartment model functions
 transformed_params_2comp <- function(params,
                                      ...){
 
-  params <- fill_params_2comp(params)
+  # This call was redundant, as cp_2comp and auc_2comp already call this
+  # params <- fill_params_2comp(params)
 
   #for readability, assign params to variables inside this function
   for(x in names(params)){
