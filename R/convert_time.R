@@ -31,44 +31,57 @@
 convert_time <- function(x,
                          from = "hours",
                          to = "identity",
-                         inverse = FALSE){
+                         inverse = FALSE,
+                         cct = NULL) {
 
   period_units <- time_units
 
-  if(to %in% "auto"){
+  if (to %in% "auto") {
     #select units automatically
     to <- auto_units(y = x,
                      from = from)
   }
 
 
-  if(to != "identity"){
-
-    if(inverse %in% TRUE){
-      y <- 1/x
-    }else{y <- x}
-
-  if(to %in% period_units){
-  y_new <- as.numeric(
-   lubridate::duration(num = y,
-                       units = from),
-   to)
-    }else{
-      y_new <- NA_real_
-      message(paste("invivopkfit::convert_time(): Allowable values for 'to' are",
-                    paste(c(period_units,
-                            ),
-                          collapse = ", "),
-                    ", but 'to' =", to,
-                    ". Returning NA_real_ for converted times."))
+  if (to != "identity") {
+    if (inverse %in% TRUE) {
+      y <- 1 / x
+    } else{
+      y <- x
     }
 
-  if(inverse %in% TRUE){
-    yout <- 1/y_new
-  }else{
-    yout <- y_new
-  }
-  }else{
+    if (to %in% period_units) {
+      # Legacy Code
+      # y_new <- as.numeric(lubridate::duration(num = y, units = from), to)
+      # New Code (needs to be vectorized)
+      # test with convert_time(c(1, 2, 10), from = "minutes", to = "hours")
+      if (is.null(cct)) {
+        cct <- convert_time_table()
+      }
+      ctt <- cct %>%
+        filter(to == TimeB && unique(from) == TimeA)
+      y_new <- y * ctt$conversion
+
+    } else{
+      y_new <- NA_real_
+      message(
+        paste(
+          "invivopkfit::convert_time(): Allowable values for 'to' are",
+          paste(c(period_units,),
+                collapse = ", "),
+          ", but 'to' =",
+          to,
+          ". Returning NA_real_ for converted times."
+        )
+      )
+    }
+
+    if (inverse %in% TRUE) {
+      yout <- 1 / y_new
+    } else{
+      yout <- y_new
+    }
+  } else{
     #if to == "identity", then just return the input as-is
     yout <- x
   }
@@ -76,3 +89,16 @@ convert_time <- function(x,
   return(yout)
 }
 
+###----------------------------------------------###
+### tiny function outputing conversions to hours ###
+convert_time_table <- function() {
+  # This creates this table from
+  c_table <-expand_grid(TimeA = time_units, TimeB = time_units) %>%
+    mutate(A_fun = paste0("d", TimeA), B_fun = paste0("d", TimeB)) %>%
+    rowwise() %>%
+    mutate(conversion =
+             do.call(A_fun, list(1))/do.call(B_fun, list(1))) %>%
+    dplyr::select(!c(A_fun, B_fun))
+
+  return(c_table)
+}

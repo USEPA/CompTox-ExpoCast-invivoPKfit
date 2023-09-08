@@ -177,10 +177,12 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
   # Get a simple data_group and conversion rate data frame
   rate_conversion <- rate_names %>%
     dplyr::select(-param_name) %>% # Keep Time_trans.Units for a join
+    dplyr::group_by(Time_trans.Units) %>%
     dplyr::mutate(to_perhour = convert_time(1,
                                             from = Time_trans.Units,
                                             to = "hours",
                                             inverse = TRUE)) %>%
+    dplyr::ungroup() %>%
     dplyr::distinct()
   # Extract names
   rate_names <- rate_names %>% dplyr::pull(param_name)

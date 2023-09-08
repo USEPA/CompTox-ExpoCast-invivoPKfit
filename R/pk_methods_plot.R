@@ -77,7 +77,7 @@ plot.pk <- function(obj,
                     drop_nonDetect = FALSE,
                     # Predict/interpolation arguments
                     plot_fit_aes = NULL,
-                    n_interp = 100,
+                    n_interp = 10,
                     fit_limits = NULL,
                     print_out = FALSE,
                     ...){
@@ -323,12 +323,22 @@ plot.pk <- function(obj,
                            model = model,
                            method = method,
                            exclude = FALSE,
-                           include_NAs = TRUE) %>%
-      rowwise()
+                           include_NAs = TRUE)
+
+    # rowwise can be taxing for function calls
+    # This process is inefficient, need to rewrite using a simple
+    # JOIN -> MUTATE -> SELECT
+    cct <- convert_time_table() %>%
+      filter(TimeA %in% interp_data$Time.Units,
+             TimeB %in% interp_data$Time_trans.Units) %>%
+      rename(Time.Units = "TimeA",
+             Time_trans.Units = "TimeB")
+
     interp_data <- interp_data %>%
-      mutate(Time_trans = convert_time(Time,
-                                       from = Time.Units,
-                                       to = Time_trans.Units))
+      dplyr::left_join(cct, by = dplyr::join_by(Time.Units,
+                                                Time_trans.Units)) %>%
+      dplyr::mutate(Time_trans = Time * conversion) %>%
+      dplyr::select(!conversion)
 
     interp_data <- interp_data %>%
       dplyr::group_by(!!!obj$data_group) %>%

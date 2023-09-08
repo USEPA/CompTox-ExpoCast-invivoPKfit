@@ -82,12 +82,15 @@ do_preprocess.pk <- function(obj){
 
 
 
-
+browser()
     #Check to make sure there is only one value for each set of units
     time_units <- unique(data$Time.Units)
     value_units <- unique(data$Value.Units)
     weight_units <- unique(data$Weight.Units)
     dose_units <- unique(data$Dose.Units)
+
+    this_cct <- convert_time_table() %>%
+      dplyr::filter(TimeA %in% time_units)
 
     if(any(sapply(list(time_units,
                        value_units,
@@ -653,7 +656,8 @@ do_preprocess.pk <- function(obj){
       to_units <- data %>%
         group_by(!!!data_group) %>%
         mutate(AUTO_UNITS = auto_units(y = Time,
-                             from = Time.Units_orig)) %>%
+                             from = Time.Units_orig,
+                             cct = this_cct)) %>%
         pull(AUTO_UNITS)
     }
 
@@ -675,7 +679,8 @@ do_preprocess.pk <- function(obj){
         dplyr::mutate(Time_trans = tryCatch(convert_time(x = Time,
                                          from = from_units,
                                          to = NEW_UNITS,
-                                         inverse = FALSE),
+                                         inverse = FALSE,
+                                         cct = this_cct),
                                      error = function(err){
                                        warning(paste("invivopkfit::do_preprocess.pk():",
                                                      "Error in transforming time using convert_time():",

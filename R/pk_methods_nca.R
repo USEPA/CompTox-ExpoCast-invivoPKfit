@@ -79,6 +79,7 @@ nca.pk <- function(obj,
     newdata$exclude <- FALSE
   }
 
+
   if(dose_norm %in% TRUE){
     newdata$Conc <- newdata$Conc/newdata$Dose
     newdata$Dose <- newdata$Dose/newdata$Dose
@@ -99,10 +100,11 @@ nca.pk <- function(obj,
                      Dose.Units = unique(Dose.Units),
                      {
                        if(suppress.messages %in% FALSE){
-                         cur_data_summary <- dplyr::inner_join(get_data_summary(obj,
-                                                                                summary_group = nca_group),
-                                                               dplyr::cur_group(),
-                                                               by = grp_vars) %>%
+                         cur_data_summary <- dplyr::inner_join(
+                           get_data_summary(obj,
+                                            summary_group = nca_group),
+                           dplyr::cur_group(),
+                           by = grp_vars) %>%
                            as.data.frame
                          message(paste("nca.pk(): Doing",
                                        ifelse(dose_norm %in% TRUE,
@@ -119,31 +121,32 @@ nca.pk <- function(obj,
                                 series_id = Series_ID[exclude %in% FALSE])
                      }
       ) %>%
-      dplyr::mutate(param_units = dplyr::case_when( #derive NCA param units from data units
-        param_name %in% c("AUC_tlast",
-                          "AUC_infinity") ~ paste(Conc.Units,
+      dplyr::mutate(
+        param_units = dplyr::case_when( #derive NCA param units from data units
+          param_name %in% c("AUC_tlast",
+                            "AUC_infinity") ~ paste(Conc.Units,
+                                                    "*",
+                                                    Time.Units),
+          param_name %in% "AUMC_infinity" ~ paste(Conc.Units,
                                                   "*",
-                                                Time.Units),
-      param_name %in% "AUMC_infinity" ~ paste(Conc.Units,
-                                              "*",
-                                              Time.Units,
-                                              "*",
-                                              Time.Units),
-      param_name %in% c("MRT",
-                        "MTT",
-                        "halflife",
-                        "tmax") ~ Time.Units,
-      param_name %in% c("CLtot",
-                        "CLtot/Fgutabs") ~ paste0("L/",
+                                                  Time.Units,
+                                                  "*",
                                                   Time.Units),
-      param_name %in% "Vss" ~ paste0(Conc.Units,
-                                     "/",
-                                     Dose.Units),
-      param_name %in% "Cmax" ~ Conc.Units
-    )) %>%
-    dplyr::select(-c(Conc.Units,
-                     Time.Units,
-                     Dose.Units))
+          param_name %in% c("MRT",
+                            "MTT",
+                            "halflife",
+                            "tmax") ~ Time.Units,
+          param_name %in% c("CLtot",
+                            "CLtot/Fgutabs") ~ paste0("L/",
+                                                      Time.Units),
+          param_name %in% "Vss" ~ paste0(Conc.Units,
+                                         "/",
+                                         Dose.Units),
+          param_name %in% "Cmax" ~ Conc.Units
+        )) %>%
+      dplyr::select(-c(Conc.Units,
+                       Time.Units,
+                       Dose.Units))
 
 
 

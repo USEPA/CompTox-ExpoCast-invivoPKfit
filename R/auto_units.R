@@ -30,7 +30,8 @@
 auto_units <- function(y,
                        from,
                        target = 10,
-                       period_units = time_units){
+                       period_units = time_units,
+                       cct = convert_time_table()){
 
 
   #auto-select units based on the midpoint of x
@@ -50,7 +51,6 @@ auto_units <- function(y,
 
   target_dist <- abs(y_mid - target_log10)
 
-
   #first we choose a direction -- up or down
   if(i == 1){
     #if we're at the low end we can only go up
@@ -58,7 +58,8 @@ auto_units <- function(y,
     y_mid_up <- midpt_log10(
         convert_time(y,
                      from = from,
-                     to = period_units[i+1])
+                     to = period_units[i+1],
+                     cct = cct)
     )
 
     target_dist_new <- abs(y_mid_up - target_log10)
@@ -68,7 +69,8 @@ auto_units <- function(y,
     y_mid_down <- midpt_log10(
         convert_time(y,
                      from = from,
-                     to = period_units[i-1])
+                     to = period_units[i-1],
+                     cct = cct)
     )
 
     target_dist_new <- abs(y_mid_down - target_log10)
@@ -77,14 +79,16 @@ auto_units <- function(y,
     y_mid_up <- midpt_log10(
         convert_time(y,
                      from = from,
-                   to = period_units[i+1])
+                   to = period_units[i+1],
+                   cct = cct)
     )
     target_dist_up <- abs(y_mid_up - target_log10)
 
     y_mid_down <- midpt_log10(
         convert_time(y,
                      from = from,
-                     to = period_units[i-1])
+                     to = period_units[i-1],
+                     cct = cct)
     )
 
     target_dist_down <- abs(y_mid_down - target_log10)
@@ -114,8 +118,8 @@ auto_units <- function(y,
     y_mid_new <- midpt_log10(
        convert_time(y,
                     from = from,
-          to = period_units[i_new]
-          )
+          to = period_units[i_new],
+          cct = cct)
       )
     target_dist_new <- abs(y_mid_new - target_log10)
     #are we getting closer (negative delta) or farther away (positive delta)?
