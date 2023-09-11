@@ -125,9 +125,9 @@ my_pk <- do_prefit(my_pk) # needs reframe somewhere
 # Timing for normal fit sapply
 {
   start_t <- Sys.time()
-  my_pk <- do_fit(my_pk, n_cores = 6)
+  my_pk <- do_fit(my_pk, n_cores = 3)
   round(Sys.time() - start_t, 3) # 5.741min (5 data_groups)
-}
+} # 1.639min with only one dataset
 # my_pk <- do_fit(my_pk)
 {
   start_t <- Sys.time()
@@ -1206,7 +1206,7 @@ fw <- mvbutils::foodweb(where = asNamespace("invivoPKfit"),
 fun_mat <- fw$funmat
 
 mvbutils::foodweb(where = asNamespace("invivoPKfit"),
-                  prune = "time_units",
+                  prune = "convert_time",
                   # descendents = FALSE,
                   # ancestors = FALSE,
                   border = TRUE, cex = 1, lwd = 1.5)
@@ -1724,7 +1724,7 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
                        signif(digits = 4),
                      median_MSE = median(RMSE^2, na.rm = TRUE) %>%
                        signif(digits = 4))
-  
+  browser()
   my_df <- left_join(fold_errors_all, r2_df) %>%
     inner_join(myAIC) %>%
     inner_join(myRMSE_all) %>%
@@ -2043,6 +2043,24 @@ expand_grid(TimeA = time_units, TimeB = time_units) %>%
   mutate(conversion = 
            do.call(A_fun, list(1))/do.call(B_fun, list(1))) %>%
   dplyr::select(!c(A_fun, B_fun))
+
+
+
+time_table <- convert_time_table()
+
+time_table$TimeA %>% clipr::write_clip()
+time_table$TimeB %>% clipr::write_clip()
+time_table$conversion %>% MASS::fractions(max.denominator = 1000000000000000)
+
+
+### Plotting for all (2GB file)
+pdf(file = paste0(Sys.getenv("FIG_DIR"),
+              "DoseNormalized_Joint_AllFits.pdf"))
+for (i in 1:nrow(pl)) {
+  print(pl$final_plot[[i]])
+}
+dev.off()
+
 
 
 ```

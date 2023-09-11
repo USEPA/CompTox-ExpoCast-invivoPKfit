@@ -5,6 +5,12 @@
 #' These are the time units understood by [lubridate::period()] and [lubridate::duration()].
 "time_units"
 
+#' Time conversion table
+#'
+#' A `data.frame` that has the converted units from "time_units"
+#'
+"time_conversions"
+
 #' 1-compartment model
 #'
 #' The `pk_model` object defining the 1-compartment model.

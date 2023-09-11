@@ -160,10 +160,6 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
   }
 
 
-
-
-
-
   # Need to convert rates to perHour
   # Take rate_names
   # Parameter names don't matter, all rates should have consistent param_unit

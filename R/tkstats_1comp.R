@@ -82,20 +82,16 @@ tkstats_1comp <- function(pars,
   params <- fill_params_1comp(pars)
 
   #for readability, assign params to variables inside this function
-  for(x in names(params)){
-    assign(x, unname(params[x]))
-  }
+  list2env(as.list(params), envir = as.environment(-1))
 
 
   CLtot <- kelim * Vdist
 
   CLtot_Fgutabs <- kelim / Fgutabs_Vdist
 
-  #convert dose interval of (1/day) into time units
-  dose_int <- convert_time(x = 1,
-               from = "days",
-               to = time_unit,
-               inverse = TRUE)
+  # convert dose interval of (1/day) into time units
+  # this is now standardized because time_units will always be hours
+  dose_int <- 1/24
 
   Css <- dose*ifelse(route %in% "oral",
                       Fgutabs_Vdist / kelim / dose_int,

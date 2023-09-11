@@ -24,7 +24,7 @@ check_params_2comp <- function(params,
 
   msg <- "Parameters OK"
 
-  params <- fill_params_2comp(params)
+  # params <- fill_params_2comp(params)
 
   #check for any missing parameters
   #required params for oral dose

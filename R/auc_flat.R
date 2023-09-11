@@ -66,9 +66,7 @@ auc_flat <- function(time, params, dose, route, medium) {
   }
 
   #for readability, assign params to variables inside this function
-  for(x in names(params)){
-    assign(x, unname(params[x]))
-  }
+  list2env(as.list(params), envir = as.environment(-1))
 
 
   auc <- dose * ifelse(route %in% "iv",

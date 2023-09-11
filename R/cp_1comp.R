@@ -75,10 +75,11 @@ cp_1comp <- function(params, time, dose, route, medium = 'plasma') {
   }
 
   #for readability, assign params to variables inside this function
-  for (x in names(params)) {
-    assign(x, unname(params[x]))
-  }
-
+  # for (x in names(params)) {
+  #   assign(x, unname(params[x]))
+  # }
+  # New way
+  list2env(as.list(params), envir = as.environment(-1))
 
   #compute plasma concentration
   cp <- dose * ifelse(

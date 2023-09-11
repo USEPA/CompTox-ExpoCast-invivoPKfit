@@ -86,17 +86,19 @@ tkstats_2comp <- function(pars,
 
   #get transformed parameters for 2-comp model
   # these are parameters such alpha, beta
-  trans_params <- transformed_params_2comp(params = pars)
+  trans_params <- transformed_params_2comp(params = params)
 
   #for readability, assign params to variables inside this function
-  for(x in names(params)){
-    assign(x, unname(params[x]))
-  }
+  # for(x in names(params)){
+  #   assign(x, unname(params[x]))
+  # }
+  list2env(as.list(params), envir = as.environment(-1))
 
   #for readability, assign transformed params to variables inside this function
-  for(x in names(trans_params)){
-    assign(x, unname(trans_params[x]))
-  }
+  # for(x in names(trans_params)){
+  #   assign(x, unname(trans_params[x]))
+  # }
+  list2env(as.list(trans_params), envir = as.environment(-1))
 
   CLtot <- kelim * V1
 
@@ -112,10 +114,8 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
 
 
   #convert dose interval of (1/day) into time units
-  dose_int <- convert_time(x = 1,
-               from = "days",
-               to = time_unit,
-               inverse = TRUE)
+  # this is now standardized because time_units will always be hours
+  dose_int <- 1/24
 
   Css <- dose * ifelse(route %in% "oral",
                       Fgutabs_V1 / kelim / dose_int,

@@ -30,8 +30,7 @@
 auto_units <- function(y,
                        from,
                        target = 10,
-                       period_units = time_units,
-                       cct = convert_time_table()){
+                       period_units = time_units){
 
 
   #auto-select units based on the midpoint of x
@@ -52,52 +51,48 @@ auto_units <- function(y,
   target_dist <- abs(y_mid - target_log10)
 
   #first we choose a direction -- up or down
-  if(i == 1){
+  if (i == 1) {
     #if we're at the low end we can only go up
     dir <- 1
     y_mid_up <- midpt_log10(
-        convert_time(y,
-                     from = from,
-                     to = period_units[i+1],
-                     cct = cct)
+      convert_time(y,
+                   from = from,
+                   to = period_units[i+1])
     )
 
     target_dist_new <- abs(y_mid_up - target_log10)
-  }else if(i == length(period_units)){
+  } else if (i == length(period_units)) {
     #if we're at the high end we can only go down
     dir <- -1
     y_mid_down <- midpt_log10(
-        convert_time(y,
-                     from = from,
-                     to = period_units[i-1],
-                     cct = cct)
+      convert_time(y,
+                   from = from,
+                   to = period_units[i-1])
     )
 
     target_dist_new <- abs(y_mid_down - target_log10)
-  }else{
+  } else {
     #try both ways and see which one gets closer to a midpoint of target
     y_mid_up <- midpt_log10(
-        convert_time(y,
-                     from = from,
-                   to = period_units[i+1],
-                   cct = cct)
+      convert_time(y,
+                   from = from,
+                   to = period_units[i+1])
     )
     target_dist_up <- abs(y_mid_up - target_log10)
 
     y_mid_down <- midpt_log10(
-        convert_time(y,
-                     from = from,
-                     to = period_units[i-1],
-                     cct = cct)
+      convert_time(y,
+                   from = from,
+                   to = period_units[i-1])
     )
 
     target_dist_down <- abs(y_mid_down - target_log10)
 
-    if(target_dist_up < target_dist_down){
+    if (target_dist_up < target_dist_down) {
       #if up gets closer to target than down does
       dir <- 1
       target_dist_new <- target_dist_up
-    }else if(target_dist_down < target_dist_up){
+    } else if (target_dist_down < target_dist_up) {
       #if down gets closer to target than up does
       dir <- -1
       target_dist_new <- target_dist_down
@@ -110,17 +105,14 @@ auto_units <- function(y,
   delta_target_dist <- target_dist_new - target_dist
   target_dist <- target_dist_new
 
-  while(i > 1 &
-        i < length(period_units) &
-        delta_target_dist < 0){
+  while (i > 1 & i < length(period_units) & delta_target_dist < 0) {
     #try the next step
     i_new <- i + dir
     y_mid_new <- midpt_log10(
-       convert_time(y,
-                    from = from,
-          to = period_units[i_new],
-          cct = cct)
-      )
+      convert_time(y,
+                   from = from,
+                   to = period_units[i_new])
+    )
     target_dist_new <- abs(y_mid_new - target_log10)
     #are we getting closer (negative delta) or farther away (positive delta)?
     delta_target_dist <- target_dist_new - target_dist

@@ -328,14 +328,15 @@ plot.pk <- function(obj,
     # rowwise can be taxing for function calls
     # This process is inefficient, need to rewrite using a simple
     # JOIN -> MUTATE -> SELECT
-    cct <- convert_time_table() %>%
-      filter(TimeA %in% interp_data$Time.Units,
-             TimeB %in% interp_data$Time_trans.Units) %>%
-      rename(Time.Units = "TimeA",
-             Time_trans.Units = "TimeB")
+    browser()
+    conversion_table <- time_conversions %>%
+      filter(TimeFrom %in% interp_data$Time.Units,
+             TimeTo %in% interp_data$Time_trans.Units) %>%
+      rename(Time.Units = "TimeFrom",
+             Time_trans.Units = "TimeTo")
 
     interp_data <- interp_data %>%
-      dplyr::left_join(cct, by = dplyr::join_by(Time.Units,
+      dplyr::left_join(conversion_table, by = dplyr::join_by(Time.Units,
                                                 Time_trans.Units)) %>%
       dplyr::mutate(Time_trans = Time * conversion) %>%
       dplyr::select(!conversion)

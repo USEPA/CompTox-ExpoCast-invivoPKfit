@@ -34,9 +34,7 @@ tkstats_flat <- function(pars,
   }
 
   #for readability, assign params to variables inside this function
-  for(x in names(params)){
-    assign(x, unname(params[x]))
-  }
+  list2env(as.list(params), envir = as.environment(-1))
 
 
   Css <- cp_flat(params = pars,

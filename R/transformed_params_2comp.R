@@ -16,9 +16,11 @@ transformed_params_2comp <- function(params,
   # params <- fill_params_2comp(params)
 
   #for readability, assign params to variables inside this function
-  for(x in names(params)){
-    assign(x, unname(params[x]))
-  }
+  # for(x in names(params)){
+  #   assign(x, unname(params[x]))
+  # }
+  # Another way (testing this)
+  list2env(as.list(params), envir = as.environment(-1))
 
   #see https://www.boomer.org/c/p4/c19/c1902.php
   #for these equations

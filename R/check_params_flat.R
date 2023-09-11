@@ -24,7 +24,7 @@ check_params_flat <- function(params,
 
   msg <- "Parameters OK"
 
-  params <- fill_params_flat(params)
+  # params <- fill_params_flat(params)
 
   #check for any missing parameters
   #required params for oral dose

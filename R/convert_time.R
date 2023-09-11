@@ -31,8 +31,7 @@
 convert_time <- function(x,
                          from = "hours",
                          to = "identity",
-                         inverse = FALSE,
-                         cct = NULL) {
+                         inverse = FALSE) {
 
   period_units <- time_units
 
@@ -55,12 +54,9 @@ convert_time <- function(x,
       # y_new <- as.numeric(lubridate::duration(num = y, units = from), to)
       # New Code (needs to be vectorized)
       # test with convert_time(c(1, 2, 10), from = "minutes", to = "hours")
-      if (is.null(cct)) {
-        cct <- convert_time_table()
-      }
-      ctt <- cct %>%
-        filter(to == TimeB && unique(from) == TimeA)
-      y_new <- y * ctt$conversion
+      conversion_table <- time_conversions %>%
+        filter(to == TimeTo & unique(from) == TimeFrom)
+      y_new <- y * conversion_table$conversion
 
     } else{
       y_new <- NA_real_
@@ -89,16 +85,4 @@ convert_time <- function(x,
   return(yout)
 }
 
-###----------------------------------------------###
-### tiny function outputing conversions to hours ###
-convert_time_table <- function() {
-  # This creates this table from
-  c_table <-expand_grid(TimeA = time_units, TimeB = time_units) %>%
-    mutate(A_fun = paste0("d", TimeA), B_fun = paste0("d", TimeB)) %>%
-    rowwise() %>%
-    mutate(conversion =
-             do.call(A_fun, list(1))/do.call(B_fun, list(1))) %>%
-    dplyr::select(!c(A_fun, B_fun))
 
-  return(c_table)
-}
