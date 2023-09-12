@@ -112,7 +112,7 @@ my_pk <- pk(data = my_predata) +
                       suppress.messages = FALSE) +
   settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
-  scale_time(new_units = "auto") +
+  # scale_time(new_units = "auto") +
   # stat_model() + 
   stat_error_model(error_group = vars(Chemical, Species, Reference)) 
 # Add Reference for Joint Analysis
@@ -1724,7 +1724,7 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
                        signif(digits = 4),
                      median_MSE = median(RMSE^2, na.rm = TRUE) %>%
                        signif(digits = 4))
-  browser()
+  
   my_df <- left_join(fold_errors_all, r2_df) %>%
     inner_join(myAIC) %>%
     inner_join(myRMSE_all) %>%
@@ -2053,14 +2053,23 @@ time_table$TimeB %>% clipr::write_clip()
 time_table$conversion %>% MASS::fractions(max.denominator = 1000000000000000)
 
 
-### Plotting for all (2GB file)
+### Plotting for all (2.5MB file)
+pl <- plot(my_pk, n_interp = 8, use_scale_conc = TRUE)
 pdf(file = paste0(Sys.getenv("FIG_DIR"),
-              "DoseNormalized_Joint_AllFits.pdf"))
+              "DoseNormalized_Pooled_AllFits.pdf"),
+    height = 6, width = 10)
 for (i in 1:nrow(pl)) {
   print(pl$final_plot[[i]])
 }
 dev.off()
 
+
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "DoseNormalized_DTXSID8025337.png"),
+       units = "in",
+       height = 5.05,
+       width = 5.55,
+       dpi = 200)
 
 
 ```

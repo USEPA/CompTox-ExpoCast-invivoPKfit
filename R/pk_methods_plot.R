@@ -328,7 +328,6 @@ plot.pk <- function(obj,
     # rowwise can be taxing for function calls
     # This process is inefficient, need to rewrite using a simple
     # JOIN -> MUTATE -> SELECT
-    browser()
     conversion_table <- time_conversions %>%
       filter(TimeFrom %in% interp_data$Time.Units,
              TimeTo %in% interp_data$Time_trans.Units) %>%

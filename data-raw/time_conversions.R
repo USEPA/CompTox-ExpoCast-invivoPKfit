@@ -1,6 +1,14 @@
 # Time table data frame for quicker access to time conversions
 # This was made in light of recent changes to lubridate::duration()
 # that rendered the convert_time() function unstable
+# Definitions:
+# picoseconds - seconds (classic metric definition)
+# minute = 60 seconds
+# hour = 60 minutes
+# day = 24 hours
+# week = 7 days
+# month = 1/12 of a year
+# year = 365 days
 
 time_conversions <- data.frame(
   TimeFrom = c(
