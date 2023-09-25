@@ -103,9 +103,10 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
   # First condition if it is FALSE don't use parallel computing (takes much longer though)
   #
 
-  if (n_cores == FALSE) {
+  if (is.logical(n_cores) && n_cores == FALSE) {
     fit_out <- info_nest %>%
       dplyr::group_by(!!!data_group, model)
+
     tidy_fit <- fit_out %>%
       dplyr::summarize(fit = purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
                                          .f = fit_group,
@@ -115,7 +116,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
                                          dose_norm = obj$scales$conc$dose_norm,
                                          log10_trans = obj$scales$conc$log10_trans,
                                          suppress.messages = TRUE))
-  } else if (is.null(n_cores) | is.numeric(n_cores)) {
+  } else if (is.null(n_cores) | is.numeric(n_cores) | n_cores == TRUE) {
     total_cores <- parallel::detectCores()
     if (is.null(n_cores)) {
       if (total_cores > 5) {

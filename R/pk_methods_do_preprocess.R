@@ -807,6 +807,9 @@ do_preprocess.pk <- function(obj){
       data$Series_ID <- NA_integer_
     }
 
+    # Make sure that Reference is a list of characters
+    data$Reference <- as.character(data$Reference)
+
     # add data & data info to object
     obj$data <- data
 

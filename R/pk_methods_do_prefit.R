@@ -135,9 +135,8 @@ sigma_DF <- do.call(dplyr::group_by,
     par_DF <- data %>%
       dplyr::filter(exclude %in% FALSE)
 
-    par_DF <- do.call(dplyr::group_by,
-                     args = c(list(par_DF),
-                              obj$data_group)) %>%
+    par_DF <- dplyr::group_by(par_DF,
+                              !!!obj$data_group) %>%
       dplyr::reframe(do.call(obj$stat_model[[this_model]]$params_fun,
                                args = c(list(dplyr::cur_data_all()),
                                         obj$stat_model[[this_model]]$params_fun_args)
