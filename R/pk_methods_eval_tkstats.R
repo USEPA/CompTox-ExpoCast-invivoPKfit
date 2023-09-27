@@ -80,9 +80,10 @@ eval_tkstats.pk <- function(obj,
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
 
-
-  grp_vars <- sapply(tk_group,
-                     rlang::as_label)
+  # Grouping variables
+  grp_vars <- sapply(tk_group, rlang::as_label)
+  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
+  error_grp_vars <- sapply(obj$stat_error_model$error_group, rlang::as_label)
 
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
@@ -105,74 +106,80 @@ eval_tkstats.pk <- function(obj,
     newdata <- subset(newdata, exclude %in% FALSE)
   }
 
+  if (dose_norm %in% TRUE) {
+    newdata$Conc <- newdata$Conc/newdata$Dose
+    newdata$Dose <- newdata$Dose/newdata$Dose
+  } # Need this transformation for get_tkstats
+
   #Get the winning model for filtering
-  #
   winmodel_df <- get_winning_model(obj = obj,
                                    method = method)
 
-#calc NCA for newdata
+  #calc NCA for newdata
    nca_df <- get_nca(obj = obj)
    nca_df <- nca_df %>% dplyr::select(-param_sd_z, -param_units) %>%
      pivot_wider(names_from = param_name,
                  values_from = param_value) %>%
-     right_join(winmodel_df)
+     right_join(winmodel_df) %>%
+     relocate(model, method, .after = Media)
 
-    #get tkstats
-    if (dose_norm %in% TRUE) {
-    newdata$Conc <- newdata$Conc/newdata$Dose
-    newdata$Dose <- newdata$Dose/newdata$Dose
-    }
 
+
+   #get tkstats
    tkstats_df <- get_tkstats(obj = obj,
                              newdata = newdata,
                              model = model,
                              method = method,
                              tk_group = tk_group,
                              exclude = exclude) %>%
-     right_join(winmodel_df)
+     dplyr::right_join(winmodel_df) %>%
+     dplyr::ungroup()
 
-    #merge
-    nca_df_red <- nca_df %>%
-      dplyr::select(intersect(names(nca_df), names(tkstats_df)), AUC_tlast) %>%
-      rename(AUC_inf.nca = "AUC_infinity",
-             AUC_tlast.nca = "AUC_tlast",
-             CLtot.nca = "CLtot",
-             `CLtot/Fgutabs.nca` = "CLtot/Fgutabs",
-             Cmax.nca = "Cmax",
-             halflife.nca = "halflife",
-             tmax.nca = "tmax",
-             Vss.nca = "Vss")
+   # Assess group variables
+   # Are all error_group variables in data_group, error group might be subset
+   if(!all(error_grp_vars %in% data_grp_vars)) {
+     remaining_vars <- error_grp_vars[!(error_grp_vars %in% data_grp_vars)]
 
-    tkstats_df_red <- tkstats_df %>%
-      dplyr::select(model, method,
-                    intersect(names(nca_df), names(tkstats_df))) %>%
-      # mutate(Reference = as.numeric(Reference)) %>%
-      rename(AUC_inf.tkstats = "AUC_infinity",
-             CLtot.tkstats = "CLtot",
-             `CLtot/Fgutabs.tkstats` = "CLtot/Fgutabs",
-             Cmax.tkstats = "Cmax",
-             halflife.tkstats = "halflife",
-             tmax.tkstats = "tmax",
-             Vss.tkstats = "Vss")
+     tkstats_df_refs <- tkstats_df %>%
+       dplyr::group_by(!!!obj$data_group, Route, Media, Dose) %>%
+       dplyr::summarize(across(all_of(remaining_vars),
+                               \(x) {paste0(x, collapse = ",")}))
 
-    if (dose_norm) {
-      tkstats_df_red <- tkstats_df_red %>% dplyr::select(-Dose)
-      message("TK statistics calculated based on dose-normalized value of 1mg/kg")
-    }
-
-    tk_eval <- left_join(tkstats_df_red, nca_df_red) %>%
-      relocate(AUC_tlast.nca, .after = AUC_inf.nca) %>%
-      group_by(!!!obj$settings_data_info$nca_group) %>%
-      ungroup(Dose)
-
-    if (finite_only) {
-      tk_eval <- tk_eval %>%
-        filter(is.finite(AUC_inf.tkstats),
-               is.finite(AUC_inf.nca))
-    }
+     tkstats_df <- dplyr::left_join(tkstats_df_refs,
+                                    tkstats_df %>%
+                                      dplyr::select(!all_of(remaining_vars))) %>%
+       ungroup() %>%
+       dplyr::distinct()
+   }
 
 
-    tk_eval
+
+
+ #merge
+ nca_df_red <- nca_df %>%
+   rename_with(~ paste0(.x, ".nca", recycle0 = TRUE),
+               !any_of(c(grp_vars, "model", "method")))
+
+ tkstats_df_red <- tkstats_df %>%
+   rename_with(~ paste0(.x, ".tkstats", recycle0 = TRUE),
+               !any_of(c(grp_vars, "Dose.Units", "Conc.Units",
+                         "Time.Units", "Time_trans.Units",
+                         "Rblood2plasma", "model", "method")))
+
+ if (dose_norm) {
+   message("TK statistics calculated based on dose-normalized value of 1mg/kg")
+ }
+
+ suppressMessages(tk_eval <- left_join(tkstats_df_red, nca_df_red))
+
+ if (finite_only) {
+   tk_eval <- tk_eval %>%
+     filter(is.finite(AUC_infinity.tkstats),
+            is.finite(AUC_infinity.nca))
+ }
+
+
+    return(tk_eval)
 
 
 }

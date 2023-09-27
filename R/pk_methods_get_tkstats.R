@@ -86,6 +86,7 @@ get_tkstats.pk <- function(obj,
 
   grp_vars <- sapply(tk_group,
                      rlang::as_label)
+  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
 
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
@@ -110,7 +111,6 @@ get_tkstats.pk <- function(obj,
 
   #check that tk_group is valid: it must produce groups with a unique
   #combination of Chemical, Species, Route, Media, and Dose
-
   newdata_grouped <- newdata %>%
     dplyr::group_by(!!!tk_group) %>%
     dplyr::distinct(Chemical, #for each tk_group, take distinct rows by these variables
@@ -120,13 +120,15 @@ get_tkstats.pk <- function(obj,
                     Dose,
                     Time.Units,
                     Dose.Units,
-                    Conc.Units) %>%
+                    Conc.Units)
+
+  newdata_grouped_count <- newdata_grouped %>%
     dplyr::count(name = "N") %>%
     dplyr::ungroup() #how many distinct rows per group?
 
 
   #if more than one distinct row per group, stop
-  if (any(newdata_grouped$N > 1)) {
+  if (any(newdata_grouped_count$N > 1)) {
     stop("tk_group does not produce groups with unique combinations of Chemical, Species, Route, Media, and Dose.")
   }
 
@@ -144,21 +146,13 @@ get_tkstats.pk <- function(obj,
       dplyr::distinct()
   }
 
-  tkstats_all <- dplyr::left_join(
-    all_coefs,
-    newdata %>%
-      dplyr::group_by(!!!tk_group) %>%
-      dplyr::distinct(Chemical,
-                      Species,
-                      Route,
-                      Media,
-                      Dose,
-                      Time.Units,
-                      Dose.Units,
-                      Conc.Units),
-    relationship = "many-to-many") %>%
+  tkstats_all <- dplyr::left_join(all_coefs,
+                                  newdata_grouped,
+                                  by = union(data_grp_vars, "Time.Units"),
+                                  relationship = "many-to-many") %>%
     dplyr::left_join(model_df,
-              relationship = "many-to-many") %>%
+                     by = "model",
+                     relationship = "many-to-many") %>%
     dplyr::group_by(!!!obj$data_group, model, method,
                     coefs_vector, tk_fun) %>%
     tidyr::nest(.key = "c_data")
@@ -183,17 +177,22 @@ get_tkstats.pk <- function(obj,
                                           )
                                         ) %>% dplyr::ungroup()
                                     })) %>%
-    unnest(cols = c(tkstats_df))
+    tidyr::unnest(cols = c(tkstats_df))
 
   tkstats_all <- tkstats_all %>%
-    mutate(TKstats_wide  = map(TKstats,
+    dplyr::mutate(TKstats_wide  = purrr::map(TKstats,
                                \(x) {
                                  dplyr::select(x, -param_units) %>%
                                    tidyr::pivot_wider(names_from = param_name,
                                                       values_from = param_value)
                                })) %>%
-    unnest(cols = c(TKstats_wide)) %>%
-    group_by(!!!obj$settings_data_info$nca_group)
+    tidyr::unnest(cols = c(TKstats_wide)) %>%
+    dplyr::group_by(!!!obj$settings_data_info$nca_group)
+
+
+  # Final filtering of tkstats_all
+  tkstats_all <- tkstats_all[!names(tkstats_all) %in% c("coefs_vector", "tk_fun", "TKstats")] %>%
+    dplyr::relocate(!!!obj$settings_data_info$nca_group, Dose.Units, Conc.Units)
 
   return(tkstats_all)
 }
