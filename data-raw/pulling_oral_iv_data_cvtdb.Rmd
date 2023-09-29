@@ -1,7 +1,7 @@
 ---
 title: "Pulling oral and IV data from CvTdb"
-author: "Caroline Ring"
-date: "2023-05-10"
+author: "Caroline Ring, Gilberto Padilla Mercado"
+date: "2023-09-29"
 output: html_document
 ---
 
@@ -13,8 +13,8 @@ Load necessary package
 
 ```{r}
 library(DBI)
-library(data.table)
-library(ggplot2)
+library(dplyr)
+library(tidyr)
 ```
 
 For connection to CvTdb:
@@ -27,503 +27,333 @@ Doing it this way allows me to not hardcode the password.
 
 # Connect to database
 
-Open a PostGreSQL connection.
+This is largely taken from a `Querying CvTdb` vignette from Taylor Wall and a previous version
+of this vignette authored by Caroline Ring.
 
-```{r}
- con <-  dbConnect(RPostgreSQL::PostgreSQL(),
-            user = Sys.getenv("cvt_user"),
-            password = Sys.getenv("cvt_password"), #
-            host = Sys.getenv("cvt_host"), #
-            dbname = Sys.getenv("cvt_dbname"))
-```
-
-# View the available tables
-
-```{r}
-dbGetQuery(con, "SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'")
-```
-
-I don't fully know what all of this SQL query means, but it filters out various "internal" tables that are not actually part of CvTdb, and shows only the tables that are.
-
-See the EER diagram showing the various tables within CvtDb and the relations between them.
-
-# Formulate a query
-
-In PostGreSQL, you have to refer to tables as "[schema].[table]". Note that in the table above, the schema for CvT tables is always "cvt."
-
-I don't fully understand schemas yet.
-
-I don't have a full data dictionary so I don't yet know how to filter correctly. The most expedient way to do it for me is to pull down each table separately, then filter and merge using e.g. data.table.
-
-Here's how to pull down each table separately.
-
-```{r}
-fpath <- "C:/Users/cring/OneDrive - Environmental Protection Agency (EPA)/CvTdb/"
-this_date <- format(Sys.time(), "%Y_%m_%d")
-
-#list of table names to pull down
-tables <- c("conc_time_values",
-            "series",
-            "subjects",
-            "studies",
-            "chemicals",
-            "documents")
-
-#loop over table names and pull down each one
-for (this_table in tables){
-  print(this_table)
-  this_query <- paste("SELECT * FROM",
-                      paste0("cvt.", this_table))
-  this_item <- dbGetQuery(con, this_query)
-  this_item <- as.data.table(this_item)
-  assign(this_table, this_item)
-  
-  #prepend table name to all variable names in each table
-  #some variable names are repeated in multiple tables
-  #this will let me keep track
-  these_names <- names(eval(parse(text = this_table)))
-  setnames(eval(parse(text = this_table)),
-           these_names,
-           paste(this_table,
-                 these_names,
-                 sep = "."))
+The following are some helpter functions for the database connection
+```{r query_functions}
+postgreSQL_connection <- function() {
+  return(
+    dbConnect(RPostgreSQL::PostgreSQL(),
+              user = Sys.getenv("CVT_USER"),
+              password = Sys.getenv("CVT_PASS"),
+              host = Sys.getenv("CVT_HOST"),
+              dbname = Sys.getenv("CVT_DB_NAME"))
+  )
 }
-```
 
-Disconnect from database
-
-```{r}
-dbDisconnect(con)
-```
-
-Now there are a bunch of `data.table` variables in the environment, one for each CvT table. They are `conc_time_values`, `series`, `studies`, `subjects`, `chemicals`, and `documents`.
-
-# Merge
-
-Merge conc_time_values with series
-
-```{r}
-tmp1 <- series[conc_time_values,
-                         on = c("series.id" = "conc_time_values.fk_series_id"),
-                         nomatch = NA]
-```
-
-
-Merge with studies
-
-```{r}
-tmp2 <- studies[tmp1,
-               on = c("studies.id" = "series.fk_study_id"),
-               nomatch = NA]
-```
-
-
-Merge in subjects info
-
-```{r}
-tmp3 <- subjects[tmp2, on = c("subjects.id" = "series.fk_subject_id"), nomatch = NA]
-```
-
-Merge in chemical info. There are two chemical ID foreign keys.
-
-`series.fk_test_chemical_id` = chemical that was dosed
-
-`series.fk_analyzed_chemical_id`  = chemical that was measured in body media (tissue, blood/plasma, urine, etc.) May be the same as dosed chemical, but may be different if, for example, a metabolite was measured instead of the parent chemical.
-
-To keep track of this, let me create two copies of the `chemicals` table -- one called `chemicals_dosed` and one called `chemicals_analyzed`. That way I can get the DTXSID, CASRN, and preferred names for each one.
-
-```{r}
-chemicals_dosed <- copy(chemicals)
-chemicals_analyzed <- copy(chemicals)
-```
-
-Change the variable-name prefixes from "chemicals.[var]" to "chemicals_dosed.[var]" and "chemicals_analyzed.[var]" .
-```{r}
-setnames(chemicals_dosed,
-         names(chemicals_dosed),
-         gsub(x = names(chemicals_dosed),
-              pattern = "chemicals.",
-              replacement = "chemicals_dosed.",
-              fixed = TRUE))
-
-setnames(chemicals_analyzed,
-         names(chemicals_analyzed),
-         gsub(x = names(chemicals_analyzed),
-              pattern = "chemicals.",
-              replacement = "chemicals_analyzed.",
-              fixed = TRUE))
-```
-
-Now merge
-
-```{r}
-tmp4 <- chemicals_dosed[tmp3,
-                        on = c("chemicals_dosed.id" = "series.fk_test_chemical_id"),
-                        nomatch = NA]
-tmp5 <- chemicals_analyzed[tmp4,
-                           on = c("chemicals_analyzed.id" = "series.fk_analyzed_chemical_id"),
-                           nomatch = NA]
-```
-
-Merge in documents info.
-
-There are both extraction documents and reference documents_reference. Make two copies of documents -- one for each.
-
-```{r}
-documents_reference <- copy(documents)
-documents_extraction <- copy(documents)
-
-setnames(documents_reference,
-         names(documents_reference),
-         gsub(x = names(documents_reference),
-              pattern = "documents.",
-              replacement = "documents_reference.",
-              fixed = TRUE))
-
-setnames(documents_extraction,
-         names(documents_extraction),
-         gsub(x = names(documents_extraction),
-              pattern = "documents.",
-              replacement = "documents_extraction.",
-              fixed = TRUE))
-```
-
-
-```{r}
-tmp6 <- documents_extraction[tmp5,
-                  on = c("documents_extraction.id" ="studies.fk_extraction_document_id"),
-                  nomatch = NA]
-tmp7 <- documents_reference[tmp6,
-                  on = c("documents_reference.id" ="studies.fk_reference_document_id"),
-                  nomatch = NA]
-```
-
-
-
-
-I think this should do it.
-
-```{r}
-cvt_data <- copy(tmp7)
-rm(tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7)
-```
-
-# Exploring the data
-
-How many series per study?
-
-```{r}
-n_series_per_study <- cvt_data[,
-                               .(n_series = length(unique(series.id))),
-                               by = studies.id]
-n_series_per_study[, range(n_series)]
-```
-
-
-# Look at one weird case
-
-DTXSID1034187 had a weird situation where concentrations seemed very low for the "300" dose group. Let's see what is going on there
-
-```{r}
-tmp <- cvt_data[chemicals_analyzed.dsstox_substance_id %in% "DTXSID1034187" &
-                  studies.administration_route_normalized %in% c("oral", "iv") &
-                  series.conc_medium_normalized %in% c("blood", "plasma")]
-```
-
-This should have reference IDs 141 and 142 -- does it?
-
-```{r}
-tmp[, unique(documents_extraction.id)]
-```
-
-OK good, so this is the data we were expecting.
-
-This is tamoxifen. Though it does not have much document info, I traced it to https://doi.org/10.22427/NTP-DATA-DTXSID8021301
-
-(the only curated document info avalable is this:)
-
-```{r}
-unique(tmp[, .(documents_extraction.url, documents_extraction.other_study_identifier)])
-```
-
-That URL is now broken. But if I google "ntp S0916" I get the page at https://doi.org/10.22427/NTP-DATA-DTXSID8021301.
-
-
-Though items are marked below LOD or below LOQ, the original data does not include what the LOD/LOQ actually were. I cannot find a written report with more information anywhere.
-
-The original data does note the dose units as ug/mL and notes that 5 mL/kg were administered, and contains the initial body weight of each subject.
-
-In fact I think these doses have *not* been correctly normalized. There should be values for `studies.dose_volume` and there are not
-
-```{r}
-tmp[, unique(studies.dose_volume)]
-```
-
-```{r}
-unique(tmp[, .(studies.dose_level_original, studies.dose_level_original_units, studies.dose_level_normalized, studies.dose_volume)])
-```
-
-This apepars to be the only document where that original units of ug/mL do not get changed for normalized dose level
-
-```{r}
-cvt_data[studies.dose_level_normalized == studies.dose_level_original &
-           studies.dose_level_original_units %in% "ug/mL",
-         unique(documents_extraction.id)]
-```
-
-Also, there is lots and lots of below-LOD data from study S0917 oral gavage administration that is not included in CvTdb at all.
-
-Incidentally, the one with 300 mg/kg as the original dose level also seems to be wrong. That is study S0916. Looking at the original NTP data, those units are really ug/mL.
-
-Visualize what I mean
-
-```{r}
-ggplot(data = tmp) +
-  geom_point(aes(x = conc_time_values.time_hr,
-                 y = conc_time_values.conc,
-                 shape = factor(documents_extraction.id),
-                 color = as.numeric(studies.dose_level_normalized))) +
-  facet_grid(rows = vars(studies.administration_route_normalized)) +
-  scale_y_log10() + 
-  annotation_logticks(sides = "l") +
-  scale_color_viridis_c(breaks = as.numeric(unique(tmp$studies.dose_level_normalized)))
-```
-
-Or plot dose-normalized
-
-```{r}
-ggplot(data = tmp) +
-  geom_point(aes(x = conc_time_values.time_hr,
-                 y = conc_time_values.conc/as.numeric(studies.dose_level_normalized),
-                 shape = factor(documents_extraction.id),
-                 color = as.numeric(studies.dose_level_normalized))) +
-  facet_grid(rows = vars(studies.administration_route_normalized)) +
-  scale_y_log10() + 
-  annotation_logticks(sides = "l") +
-  scale_color_viridis_c(breaks = as.numeric(unique(tmp$studies.dose_level_normalized)))
-```
-
-
-We need to actually normalize the doses for these, properly. We will have to go to the original NTP data to do this, because the volumes of administration were not properly retained in CvTdb.
-
-for study S0916, the oral gavage volume of administration was 5 mL/kg, and the IV volume of administration was 2 ml/kg.
-
-```{r}
-tmp[, studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_normalized)]
-
-tmp[studies.dose_level_original_units %in% "ug/mL" &
-      studies.administration_route_normalized %in% "oral",
-    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 5 * subjects.weight_kg/1000]
-
-tmp[studies.dose_level_original_units %in% "ug/mL" &
-      studies.administration_route_normalized %in% "iv",
-    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
-
-tmp[studies.dose_level_original_units %in% "mg/kg" &
-      studies.dose_level_original %in% 300 &
-      studies.administration_route_normalized %in% "iv",
-    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
+query_db <- function(query = NULL, schema) {
+  if (is.null(query)) return(cat("\nMust provide a query to send"))
+  con <- postgreSQL_connection()
+  
+  query_result <- tryCatch(
+    return(dbGetQuery(con, query %>%
+                        gsub("FROM ", paste0("FROM ", schema, "."), .) %>%
+                        gsub("JOIN ", paste0("JOIN ", schema, "."), .))),
+  error = function(cond){ 
+    cat(paste0("\nError message: ", cond))
+    return(NULL)
+  },
+  finally = { 
+    dbDisconnect(con)
+    }
+    )
+  return(query_result)
+}
 
 ```
 
-```{r}
-ggplot(data = tmp) +
-  geom_point(aes(x = conc_time_values.time_hr,
-                 y = conc_time_values.conc,
-                 shape = factor(documents_extraction.id),
-                 color = as.numeric(studies.dose_level_normalized_corrected))) +
-  facet_grid(rows = vars(studies.administration_route_normalized)) +
-  scale_y_log10() + 
-  annotation_logticks(sides = "l") +
-  scale_color_viridis_c()
-```
+The following is the new SQL query.
 
-```{r}
-ggplot(data = tmp) +
-  geom_point(aes(x = conc_time_values.time_hr,
-                 y = conc_time_values.conc/as.numeric(studies.dose_level_normalized_corrected),
-                 shape = factor(documents_extraction.id),
-                 color = as.numeric(studies.dose_level_normalized_corrected))) +
-  facet_grid(rows = vars(studies.administration_route_normalized)) +
-  scale_y_log10() + 
-  annotation_logticks(sides = "l") +
-  scale_color_viridis_c()
-```
+```{r SQL_queries}
+# Need to make this in a specified ordered
+# First all IDs (so I can check them quickly)
+# Note that this uses an ALIAS for each table which is later specified in
+# the FROM and LEFT JOIN statments
+query <- paste0(
+  "SELECT distinct ",
+  "a.id, a.time_original,  a.time_hr, a.conc_original, a.conc_sd_original, a.conc, a.conc_sd, ",
+  "b.id, b.analyte_name_original, b.analyte_dtxsid, b.analyte_casrn, ",
+  "b.fk_analyzed_chemical_id, b.fk_test_chemical_id, ",
+  "b.test_substance_dtxsid, b.analyte_name_secondary_original, ",
+  "b.conc_medium_normalized, b.time_units_original, b.conc_units_original, ",
+  "b.loq, b.loq_units, b.n_subjects_in_series, b.radiolabeled, ",
+  "c.id, c.administration_route_normalized, c.fk_dosed_chemical_id, c.dose_volume, c.dose_vehicle, ",
+  "c.dose_duration, c.dose_duration_units, c.dose_frequency, c.fasting_period, ",
+  "c.dose_level_normalized, c.dose_level_original, c.dose_level_original_units, ",
+  "d.id, d.weight_kg, d.species, d.sex, d.age, d.age_units, d.age_category, ",
+  "e.id, e.pmid, e.year, e.other_study_identifier, e.url, e.doi, e.extracted ",
+  
+  # Main Table
+  "FROM conc_time_values a ",
+  
+  # Join with series table by series ID
+  "LEFT JOIN series b ON b.id = a.fk_series_id ",
+  
+  # Join to studies table by study ID
+  "LEFT JOIN studies c ON c.id = b.fk_study_id ",
+  
+  # Join to subjects table by subject ID
+  "LEFT JOIN subjects d ON d.id = b.fk_subject_id ",
+  
+  # Join to documents table by extraction document ID
+  "LEFT JOIN documents e ON e.id = c.fk_extraction_document_id ",
+  
+  # Filtering steps
+  "WHERE b.conc_medium_normalized IN ('blood', 'plasma') AND ",
+  "c.administration_route_normalized IN ('iv', 'oral')"
+)
 
-Apply dose corrections to the full data table
+sql_query <- query_db(query = query,
+         schema = "cvt")
 
-```{r}
-cvt_data[, studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_normalized)]
+names(sql_query)
+# Need to change column names for this
+{
+  names(sql_query)[1] <- "conc_time_id"
+  names(sql_query)[8] <- "series_id"
+  names(sql_query)[23] <- "study_id"
+  names(sql_query)[35] <- "subject_id"
+  names(sql_query)[42] <- "document_id"
+}
 
-cvt_data[documents_extraction.id %in% 141 &
-           studies.dose_level_original_units %in% "ug/mL" &
-      studies.administration_route_normalized %in% "oral",
-    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 5 * subjects.weight_kg/1000]
-
-cvt_data[documents_extraction.id %in% 141 &
-      studies.dose_level_original_units %in% "ug/mL" &
-      studies.administration_route_normalized %in% "iv",
-    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
-
-cvt_data[documents_extraction.id %in% 141 &
-           studies.dose_level_original_units %in% "mg/kg" &
-      studies.dose_level_original %in% 300 &
-      studies.administration_route_normalized %in% "iv",
-    studies.dose_level_normalized_corrected:=as.numeric(studies.dose_level_original) * 2 * subjects.weight_kg/1000]
-```
-
-## Correcting dose level units for PCB-126
-
-Upon examining PCB-126, I think the original dose units should be ng/kg rather than mg/kg. If we look at https://cebs.niehs.nih.gov/cebs/study/002-02863-0008-0000-9 and look at the summary data rather than individual animal data, the dose units are listed as "ng/kg." In the rest of the studies at https://cebs.niehs.nih.gov/cebs/test_article/57465-28-8 all of the dosing units are ng/kg. So I think that is what it should be.
-
-```{r}
-cvt_data[chemicals_dosed.dsstox_substance_id %in% "DTXSID3032179", studies.dose_level_original := "ng/kg"]
-cvt_data[chemicals_dosed.dsstox_substance_id %in% "DTXSID3032179", studies.dose_level_normalized_corrected := as.numeric(studies.dose_level_normalized) * 1e-6] #convert to mg/kg
-```
-
-
-# Missing LOQs
-
-```{r}
-cvt_data[, n_obs_ref := sum(is.finite(conc_time_values.conc) & (conc_time_values.conc > 0) %in% TRUE),
-         by = .(documents_extraction.id, documents_reference.id,
-                chemicals_analyzed.dsstox_substance_id, chemicals_dosed.dsstox_substance_id,
-                series.conc_medium_normalized, subjects.species)]
-
-unique(cvt_data[n_obs_ref==0 &
-                  series.conc_medium_normalized %in% c("blood", "plasma") &
-                  studies.administration_route_normalized %in% c("oral", "iv"), 
-                  #chemicals_dosed.dsstox_substance_id == chemicals_analyzed.dsstox_substance_id,
-                .(documents_extraction.id, documents_reference.id, documents_extraction.pmid, documents_extraction.doi, documents_extraction.other_study_identifier, chemicals_analyzed.dsstox_substance_id, chemicals_dosed.dsstox_substance_id, studies.test_substance_name_original, series.analyte_name_original, series.conc_medium_normalized, studies.administration_route_normalized)])
-```
+# Harmonize values for easier analysis
+sql_query <- sql_query %>%
+  mutate(
+    species = tolower(species),
+    sex = tolower(sex),
+    loq = as.numeric(loq),
+    n_subjects_in_series = as.numeric(n_subjects_in_series),
+    dose_level_normalized = as.numeric(dose_level_normalized),
+    dose_level_original = as.numeric(dose_level_original),
+    dose_volume_units = str_extract(dose_volume,
+                                    pattern = "(?<=[:space:]).+"),
+    dose_volume = as.numeric(str_extract(dose_volume,
+                                         pattern = "^(\\d|\\.)*")),
+    dose_duration_units = str_extract(dose_duration,
+                                      pattern = "(?<=[space]).+"),
+    dose_duration = as.numeric(str_extract(dose_duration,
+                                pattern = "^\\d")),
+    radiolabeled = ifelse(radiolabeled == 1, TRUE, FALSE)
+  )
+sql_query <- sql_query %>%
+  rename_with(~gsub(pattern = "fk_", replacement = "",
+                         .x), .cols = contains("fk_"))
 
 
-# Missing LOQ for documents_extraction.id 136
-
-This is an NTP study. For some reason LOQs were not extracted. I looked up the original data and LOQs are noted. I will add them here. Source: https://cebs.niehs.nih.gov/cebs/test_article/58-08-2 click on "Individual Animal Data" to download spreadsheet. The LOQs are stated in comments like "XX is less than YYY, the ELOQ for [substance]."
-
-```{r}
-cvt_data[documents_extraction.id %in% 136 &
-           series.analyte_name_original %in% "Caffeine",
-         c("series.loq", "series.loq_units") := .(4.00, "ng/mL")]
-
-cvt_data[documents_extraction.id %in% 136 &
-           series.analyte_name_original %in% "L-Ephedrine",
-         c("series.loq", "series.loq_units") := .(4.44, "ng/mL")]
-
-cvt_data[documents_extraction.id %in% 136 &
-           series.analyte_name_original %in% "Pseudoephedrine",
-         c("series.loq", "series.loq_units") := .(4.43, "ng/mL")]
-```
-
-## Missing LOQ for documents_extraction.id 138
-
-```{r}
-cvt_data[documents_extraction.id %in% 138 &
-           series.analyte_name_original %in% "Pentachloroanisole",
-         c("series.loq", "series.loq_units") := .(0.05, "ug/mL")]
-
-```
-
-## Missing LOQ for documents_extraction.if 178
-
-See https://ntp.niehs.nih.gov/publications/reports/tr/500s/tr526/index.html?utm_source=direct&utm_medium=prod&utm_campaign=ntpgolinks&utm_term=tr526abs Appendix F
-
-LOQ in blood for rat was 30 pg/mL. (Individual animal data refers to plasma, but the PDF report refers to blood?)
-
-```{r}
-cvt_data[documents_extraction.id %in% 178 &
-          series.analyte_name_original %in% "2,3,4,7,8-pentachlorodibenzofuran" &
-           series.conc_medium_normalized %in% "plasma",
-         c("series.loq", "series.loq_units") := .(30, "pg/mL")]
-```
-
-# Normalize LOQ units to mg/L
-
-```{r}
-cvt_data[, unique(series.loq_units)]
-```
-
-```{r}
-cvt_data[, series.loq := as.numeric(series.loq)]
-cvt_data[series.loq_units %in% "ug/L", series.loq_normalized := series.loq * 1e-3]
-cvt_data[trimws(series.loq_units) %in% "ug/mL", series.loq_normalized := series.loq]
-cvt_data[series.loq_units %in% "mg/L", series.loq_normalized := series.loq]
-cvt_data[series.loq_units %in% "ng/mL", series.loq_normalized := series.loq * 1e-3]
-cvt_data[series.loq_units %in% "pg/mL", series.loq_normalized := series.loq * 1e-6]
-```
-
-For that with nmol/L we will need the molecular weight. For items with units ug we would need the volume of media analyzed. Both of these are for inhalation data, though, which we aare not analyzing right now. So I will leave it alone for now.
-
-# Concentration SD
-
-These have not been normalized so we need to do it now.
-
-```{r}
-cvt_data[!is.na(conc_time_values.conc_sd_original), unique(series.conc_units_original)]
-```
-
-```{r}
-cvt_data[series.conc_units_original == "ug/L",
-         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original * 1e-3]
-
-cvt_data[series.conc_units_original == "ug/mL",
-         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original]
-
-cvt_data[series.conc_units_original == "mg/L",
-         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original]
-
-cvt_data[series.conc_units_original == "ug/dL",
-         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original * 1e-4]
-
-cvt_data[series.conc_units_original == "ng/mL",
-         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original * 1e-3]
-
-cvt_data[series.conc_units_original == "pg/mL",
-         conc_time_values.conc_sd_normalized := conc_time_values.conc_sd_original * 1e-6]
-
-```
-
-We don't have any cases for oral/IV in blood/plasma where concentration lower/upper bounds are given, so we won't worry about normalizing these bounds right now.
-
-```{r}
-cvt_data[!is.na(conc_time_values.conc_upper_bound_original) & studies.administration_route_normalized %in% c("oral", "iv") & series.conc_medium_normalized %in% c("blood", "plasma")]
-```
-
-To save space, filter CVT data to oral/IV routes and blood/plasma media, because nothing else is implemented right now. Also filter down to cases where administered and analyzed DTXSID are the same.
-
-```{r}
-cvt <- cvt_data[studies.administration_route_normalized %in% c("oral", "iv") &
-                  series.conc_medium_normalized %in% c("blood", "plasma") &
-                  chemicals_dosed.dsstox_substance_id == chemicals_analyzed.dsstox_substance_id]
-```
-
-```{r}
-getwd()
-```
-
-Filter out any variables that are all-NA.
-
-```{r}
-all_na <- cvt[, sapply(.SD, function(x) all(is.na(x)))]
-na_vars <- names(all_na)[all_na %in% TRUE]
-cvt[, (na_vars) := NULL]
-```
-
-Create a harmonized (all lower case) species column.
-
-```{r}
-cvt[, subjects.species_harmonized := tolower(subjects.species)]
+# Copying
+cvt_df <- sql_query # Copy so I don't have to do query again to reset any errors
 ```
 
 
+# Validating data
+
+This step in the loading process allows us to correct some mis-annotations in the
+data, without directly changing CvTdb (the review process there is more rigorous).
+Some of these changes will be sent as a ticket item for the CvTdb team.
+Other times, the annotation is correct, it's just that units need to be standardized
+for `invivoPKfit` specifically.  
+
+To summarize the changes:  
+
+-  Change original dose units for study _S0916_ and convert to mg/kg.  
+-  Change original dose units for study _S0642_ and convert to mg/kg.  
+-  Include a series of isotope tracing experiments from documents _65_, _61_, _46_, and _31_.  
+-  Input the LOQ for studies _S0976_ & _S0361_.  
+-  Infer the LOQ for study _S0328_ as 1, given the values near it deemed above and below LOQ.  
+-  Extraction from PMID:6310077 reflects a _% of Dose_, so we converted this to mg/kg.  
+-  Input DTXSIDs for chemicals that did not have them but were available via CompTox dashboard.  
+-  Standardize all Doses, LOQs, Concentrations, and Concentration standard deviations.  
+-  Filter out chemicals dosed multiple times throughout the experiment.  
+-  Filter out chemicals with very limited information.
+
+
+```{r data_validation}
+# Check other_study_identifier == S0916 so that it has dose_level_original_units == ug/mL
+cvt_df %>% filter(other_study_identifier == "S0916") %>%
+  pull(dose_level_original_units) %>% unique()
+# There are still columns that are mg/kg... changing these to ug/mL
+cvt_df <- cvt_df %>% mutate(
+  dose_level_original_units = ifelse(
+    other_study_identifier == "S0916",
+    "ug/mL",
+    dose_level_original_units
+  )
+)
+
+# Need to convert the units to mg/kg
+# In pulling_oral_iv_data_cvtdb.Rmd, it is noted that oral was 5mL/kg and iv 2mL/kg
+# So I need to do ug/mL * mL/kg * 1mg/1000ug = mg/kg
+cvt_df <- cvt_df %>%
+  mutate(
+    dose_level_corrected = ifelse(
+      other_study_identifier %in% "S0916",
+      ifelse(administration_route_normalized %in% "oral",
+             dose_level_original * 5/1000,
+             dose_level_original * 2/1000),
+      dose_level_normalized),
+    dose_level_corrected_units = "mg/kg",
+    .after = dose_level_original_units)
+
+# For this study, it was in ng/kg not mg/kg
+cvt_df <- cvt_df %>%
+  mutate(
+    dose_level_corrected = ifelse(
+      other_study_identifier %in% "S0624",
+      dose_level_original * 1E-6,
+      dose_level_normalized),
+    .after = dose_level_original_units)
+
+
+
+# The following measured C-14/H-3 but are indicators for the following Chemicals
+# document_id = 65, DTXSID = DTXSID7031290, name = Isocyclemone E or beta-OTNE
+# document_id = 61, DTXSID = DTXSID4022527, DTXSID3020209,
+### name(s) = propylparaben, butylparaben, missing...methylparaben
+# Propylparaben SERIES_ID = 110, Butylparaben SERIES_ID = 112
+# For above, HPLC reviealed a single peak corresponding with p-hydroxybenzoic acid (PHBA, DTXSID3026647)
+# document_id = 46, DTXSID = DTXSID2020139, name = benzo[a]pyrene
+# document_id = 31, DTXSID = DTXSID2020139, name = benzo[a]pyrene
+
+# However, now would be good time to eliminate any ones where they analyte != test chemical
+# Some studies may have dosed with multiple chemicals... important to note
+# cvt_df <- cvt_df %>% filter(analyzed_chemical_id == test_chemical_id)
+# For now, I will change the chemical name and dtxsid
+cvt_df <- cvt_df %>%
+  mutate(analyte_dtxsid = ifelse(document_id %in% 65, "DTXSID7031290",
+                                 analyte_dtxsid),
+         analyte_name_original = ifelse(document_id %in% 65, "beta-OTNE",
+                                        analyte_name_original)) %>%
+  mutate(analyte_dtxsid = ifelse(document_id %in% 61,
+                                 case_when(
+                                   series_id %in% 110 ~ "DTXSID4022527",
+                                   series_id %in% 112 ~ "DTXSID3020209",
+                                   .default = analyte_dtxsid
+                                 ),
+                                 analyte_dtxsid),
+         analyte_name_original = ifelse(document_id %in% 61,
+                                 case_when(
+                                   series_id %in% 110 ~ "Propylparaben",
+                                   series_id %in% 112 ~ "Butylparaben",
+                                   .default = analyte_name_original
+                                 ),
+                                 analyte_name_original)
+         ) %>%
+  mutate(analyte_dtxsid = ifelse(document_id %in% c(46, 31),
+                                 "DTXSID2020139",
+                                 analyte_dtxsid),
+         analyte_name_original = ifelse(document_id %in% c(46, 31),
+                                        "benzo[a]pyrene",
+                                        analyte_name_original))
+
+# For study S0976, Caffeine, L-ephedrine, and psuedoephedrine were dosed
+cvt_df <- cvt_df %>%
+  mutate(loq = ifelse(
+    other_study_identifier %in% "S0976",
+    case_when(
+      analyte_name_original %in% "Caffeine" ~ 4.00,
+      analyte_name_original %in% "L-Ephedrine" ~ 4.44,
+      analyte_name_original %in% "Pseudoephedrine" ~ 4.43
+    ),
+    loq),
+    loq_units = ifelse(
+      other_study_identifier %in% "S0976",
+      "ng/mL",
+      loq_units
+    ))
+
+# Some pentachloranisole studies
+# S0361 seems to have some data that has not been extracted (also for mouse)
+cvt_df <- cvt_df %>%
+  mutate(loq = case_when(
+    other_study_identifier %in% "S0361" ~ 0.05,
+    other_study_identifier %in% "S0328" ~ 1, # This is inferred
+    # Highest value under loq is 0.9
+    # Lowest value above loq is 1.263, but there are differences in GC-EC and HPLC methods
+    .default = loq
+  ),
+  loq_units = case_when(
+    other_study_identifier %in% "S0361" ~ "ug/mL",
+    other_study_identifier %in% "S0328" ~ "ug/mL",
+    .default = loq_units
+  ))
+
+# PMID 6310077 is a tritium tracing of B[a]P and these were given as % of Dose
+# The initial dose was 117 nmol, 2 mCi/kg
+# Molecular Mass of benzo[a]pyrene (C20H12) is 252.316 g/mol
+# The initial dose *I think* is in dose_level_normalized
+cvt_df <- cvt_df %>%
+  mutate(conc = ifelse(document_id %in% 38,
+                       conc_original*dose_level_corrected,
+                       conc))
+
+# NTP-CEB C96019 just has a lot of data below LOQ
+# For S0916, there is no > LOQ data for anything but Tamoxifen
+# N-di-butyl phthalate is only good at the iv dose
+# DTXSID2021315 is only good at 1E-4 Dose
+# S0623 Doesn't have any plasma data
+# There is a maybe control sample for hexachlorobenzene (Dose = 0.0 ) ?
+
+# Give N-desmethyltamoxifen it's due DTXSID501315924
+cvt_df <- cvt_df %>%
+  mutate(analyte_dtxsid = ifelse(
+    analyte_name_original %in% "N-desmethyltamoxifen",
+    "DTXSID501315924",
+    analyte_dtxsid
+  ))
+
+cvt_df <- cvt_df %>%
+  mutate(analyte_dtxsid = ifelse(
+    analyte_name_original %in% "Methemoglobin",
+    "DTXSID301056085",
+    analyte_dtxsid
+  ))
+
+# Standardizing the names (example: glucuronide had two entries)
+cvt_df <- cvt_df %>%
+  mutate(analyte_name_original = tolower(analyte_name_original))
+
+# Eliminate study that gave chemical each day, not single dose
+# This may be used in another type of model, but right now we deal with single bolus
+# Only include those that have NA or 1 for dose frequency
+cvt_df <- cvt_df %>%
+  filter(dose_frequency %in% c("1", NA))
+
+# Normalize LOQ units
+cvt_df <- cvt_df %>%
+  mutate(loq = ifelse(
+    loq_units %in% c("ug/L", "ng/mL"), loq * 1E-3, loq)) # mg/L and ug/mL are same scale
+# Normalize conc_sd and conc units manually
+cvt_df <- cvt_df %>%
+  mutate(conc_sd_normalized = case_when(
+    conc_units_original %in% c("ug/L", "ng/mL", "ng-Eq/mL", "ng/g tissue") ~ conc_sd_original*1E-3,
+    conc_units_original %in% c("g/dL") ~ conc_sd_original*1E-4,
+    conc_units_original %in% c("pg/mL") ~ conc_sd_original*1E-6,
+    .default = conc_sd_original
+  ))
+# Need to normalize the ng-eq/mL sample, conc is generally already normalized
+cvt_df <- cvt_df %>%
+  mutate(conc = case_when(
+    conc_units_original %in% c("ng-eq/mL") ~ conc_original*1E-3,
+    .default = conc
+  ))
+
+cvt_df <- cvt_df %>%
+  dplyr::filter(!(analyte_dtxsid %in% c("DTXSID501315924",
+                                      "DTXSID10169854",
+                                      "DTXSID2021103") )) # These only have 1 or 2 values
+
+# More notes:
+# DTXSID6020438 & DTXSID0020868 rat is from water (top) and oil (bottom curve) gavage
+
+```
 
 Save the pulled CVT data with the edits/normalizations, and also save the current date.
 
 ```{r}
 cvt_date <- Sys.Date()
-save(cvt, file = "../data/cvt.rda", compress = "bzip2")
-save(cvt_date, file = "../data/cvt_download_date.rda")
+save(cvt_df, file = "data/cvt.rda", compress = "bzip2")
+save(cvt_date, file = "data/cvt_download_date.rda")
 ```
 
 
