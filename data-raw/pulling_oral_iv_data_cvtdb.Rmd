@@ -352,7 +352,8 @@ Save the pulled CVT data with the edits/normalizations, and also save the curren
 
 ```{r}
 cvt_date <- Sys.Date()
-save(cvt_df, file = "data/cvt.rda", compress = "bzip2")
+cvt <- cvt_df
+save(cvt, file = "data/cvt.rda", compress = "bzip2")
 save(cvt_date, file = "data/cvt_download_date.rda")
 ```
 
