@@ -6,37 +6,29 @@
 #' @author Caroline Ring
 mapping <- function(
     mapping = ggplot2::aes(
-      Chemical = chemicals_analyzed.dsstox_substance_id,
-      Chemical_Name = series.analyte_name_original,
-      DTXSID = chemicals_analyzed.dsstox_substance_id,
-      CASRN = chemicals_analyzed.dsstox_casrn,
-      Species = subjects.species_harmonized,
-      Reference = as.character(
-        ifelse(
-          is.na(
-            documents_reference.id
-          ),
-          documents_extraction.id,
-          documents_reference.id
-        )
-      ),
-      Media = series.conc_medium_normalized,
-      Route = studies.administration_route_normalized,
-      Dose = studies.dose_level_normalized_corrected,
+      Chemical = analyte_dtxsid,
+      Chemical_Name = analyte_name_original,
+      DTXSID = analyte_dtxsid,
+      CASRN = analyte_casrn,
+      Species = species,
+      Reference = document_id,
+      Media = conc_medium_normalized,
+      Route = administration_route_normalized,
+      Dose = dose_level_normalized,
       Dose.Units = "mg/kg",
-      Subject = subjects.id,
-      Series_ID = series.id,
-      Study_ID = studies.id,
-      ConcTime_ID = conc_time_values.id,
-      N_Subjects =  series.n_subjects_in_series,
-      Weight = subjects.weight_kg,
+      Subject_ID = subject_id,
+      Series_ID = series_id,
+      Study_ID = study_id,
+      ConcTime_ID = conc_time_id,
+      N_Subjects = n_subjects_in_series,
+      Weight = weight_kg,
       Weight.Units = "kg",
-      Time = conc_time_values.time_hr,
+      Time = time_hr,
       Time.Units = "hours",
-      Value = conc_time_values.conc,
+      Value = conc,
       Value.Units = "mg/L",
-      LOQ = series.loq_normalized,
-      Value_SD  = conc_time_values.conc_sd_normalized
+      Value_SD = conc_sd_normalized,
+      LOQ = loq
     ),
 ...
 ){
