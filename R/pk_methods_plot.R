@@ -281,7 +281,7 @@ plot.pk <- function(obj,
                      theme(panel.border = element_rect(color = "black", fill = NA,
                                                        linewidth = 1),
                            plot.title = element_text(hjust = 0.5, face = "bold"),
-                           strip.background = element_rect(fill = "grey95",
+                           strip.background = element_rect(fill = "white",
                                                            color = "black",
                                                            size = 1))
 
