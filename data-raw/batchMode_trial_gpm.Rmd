@@ -264,10 +264,23 @@ my_pk_101j <- minimal_pk +
 
 ### Evaluating fitting options
 
+Here I evaluate the various fitting options by counting the number of fits 
+for each model that "won" based on AIC. This is given by the `get_winning_model`
+method. Furthermore, I also calculate the root mean squared error (RMSE)
+for AUC~inf~ and C~max~ values. The _observed_ values in this calculation are
+the results of the non-compartmental analysis. Importantly,
+all Chemical, Species, Reference, Route, Media, Dose data groups with
+AUC~inf~ values that are non-finite or zero in either
+non-compartmental or _invivoPKfit_ analysis are not included in the 
+calculation for RMSE (of AUC or C~max~). This is to exclude the "incalculable"
+RMSEs such that they won't impact our assessment of each set of options'
+_goodness-of-fit_. Lastly, we calculate more detailed statistics such as R^2^
+and average fold error for each model, method, and set **data_group** for downstream
+analyses.
 
-```{r Evaluating_Choices}
+```{r Evaluation-helpers}
 # Evaluation
-# Current: my_pk_111p
+# Current: 
 
 get_choices <- function(obj, PJ = "Pooled") {
   dose_norm <- obj$scales$conc$dose_norm
@@ -362,7 +375,9 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
   return(full_list)
 }
 gc()
+```
 
+```{r Evaluating choices}
 
 ### Evaluations-----
 my_pk_000p <- do_fit(my_pk_000p, n_cores = 14)  %>% evaluate_choices() # Done
@@ -438,13 +453,14 @@ multiRef_ChemSpec %>% nrow() # Surprisingly only 13 Chem + Species have multiple
 
 ```
 
-
+These finalists will be compared based on their more detailed statistics.
 
 ```{r Plotting_Summary}
 finalist_options <- c("000 Pooled", "000 Joint",
                       "100 Pooled", "100 Joint",
                       "101 Pooled", "101 Joint")
 
+# What are the sheets names
 readxl::excel_sheets(paste(Sys.getenv("OD_DIR"),
                            "DataSummary_9_21_2023.xlsx",
                            sep = "/")) # Predictions Evaluation
@@ -557,7 +573,8 @@ Cmax_AUC %>%
 
 Dose-normalization and a hierarchical model were the options that produced the least
 amount of error in predictions and derived TK stats.
-In addition, _L-GFGS-B_ was the optimizer of choice
+In addition, _L-BFGS-B_ was the optimizer of choice due to some marginally better fits
+(I will note that the run-time for _L-BFGS-B_ is significantly faster).
 
 
 ```{r Final_Options}
@@ -590,6 +607,7 @@ my_pk <- do_prefit(my_pk) # needs reframe somewhere
 
 ## Analysis Plots
 
+Next I will generate the figures for the paper.
 
 ```{r data_aggregation}
 # Need the following data for any of the subsequent plots
@@ -1606,18 +1624,12 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
-
-
-The purpose of the following code is to generate data.frames with information for
-all 103 chemicals in the `cvt` dataset that comes with `invivopkfit`.
-I will need to do append each dataframe to the last for the outputs of the following
-methods:
-
-- `AIC()`
-- `BIC()` left-joined with `AIC` output
-- `get_tkstats()`
-
-I will also have to fit these iteratively and manage the memory as part of the loop.
+Here I decide to investigate data where fits were aborted and how many 
+time-points occurred before non-compartmental t~max~, which essentially
+asks whether there are enough detectable (above LOQ) data points to model absorption.
+As a threshold for whether absorption can be modeled, I count those that have at least
+more than one data point prior to the empirical t~max~. With at least three points
+(including t~max~) we can reasonably begin to assess the absorption of a compound.
 
 
 ```{r more_analysis}
@@ -1742,6 +1754,9 @@ mvbutils::foodweb(where = asNamespace("invivoPKfit"),
 ## Other Plots
 
 ### Plotting ALL fits for Dose-normalized Joint fits (L-BFGS-B)
+
+Here is the code used to generate the CvT data and _invivoPKfit_ fits
+for each chemical, species data group.
 
 ```{r plotting_all_Fits}
 ### Plotting for all (2.5MB file)
@@ -1906,15 +1921,10 @@ ggsave(paste0(Sys.getenv("FIG_DIR"), "Point_Reference_3x5.png"),
        width = 5,
        device = "png",
        dpi = 300)
-  
-
 ```
 
 
-# Notes
-
-Specify that favorable gains in Cmax RMSE not accompanied by gains in AUC RMSE.
-Histogram of Volume of Distributions and half-lifes... other TKstats... Lombardo comparison
+# Notes and future directions
 - Stratified on species... then chemical class (pharma vs non-pharma, Pharmapendium)
 - Classyfier for chemical superclass (talk to Paul) Ranges and Mean for each class...
 
