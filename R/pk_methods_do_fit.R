@@ -103,40 +103,19 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
   # First condition if it is FALSE don't use parallel computing (takes much longer though)
   #
 
-  if (is.logical(n_cores) && n_cores == FALSE) {
-    fit_out <- info_nest %>%
-      dplyr::group_by(!!!data_group, model)
-
-    tidy_fit <- fit_out %>%
-      dplyr::summarize(fit = purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
-                                         .f = fit_group,
-                                         this_model = model,
-                                         settings_optimx = get_settings_optimx(obj),
-                                         modelfun = obj$stat_model[[model]]$conc_fun,
-                                         dose_norm = obj$scales$conc$dose_norm,
-                                         log10_trans = obj$scales$conc$log10_trans,
-                                         suppress.messages = TRUE))
-  } else if (is.null(n_cores) | is.numeric(n_cores) | n_cores == TRUE) {
+  if (is.numeric(n_cores)) {
+    message(paste0("Trying to divide processes into ", n_cores, " processing cores"))
     total_cores <- parallel::detectCores()
-    if (is.null(n_cores)) {
-      if (total_cores > 5) {
-        n_cores <- total_cores - 3
-      } else if (total_cores >= 2) {
-        n_cores <- total_cores - 1
-      } else {
-        n_cores <- 1
-      }
+    if (total_cores <= n_cores & total_cores > 1) {
+      n_cores  <- total_cores - 1
+      message(paste0("To ensure other programs & processes are still to run, ",
+                     "n_cores has been set to ", n_cores))
+    } else if (total_cores == 1) {
+      n_cores = total_cores
     } else {
-      if (total_cores <= n_cores & total_cores > 1) {
-        n_cores  <- total_cores - 1
-        message(paste0("To ensure other programs & processes are still to run, ",
-                       "n_cores has been set to ", n_cores))
-      } else if (total_cores == 1) {
-        n_cores = total_cores
-      } else {
-        n_cores <- n_cores
-      }
+      n_cores <- n_cores
     }
+    message(paste0(n_cores, " processing cores allocated."))
     cluster <- multidplyr::new_cluster(n_cores)
     if (any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
       multidplyr::cluster_call(cluster, library(invivoPKfit))
@@ -158,6 +137,19 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
                           dose_norm = obj$scales$conc$dose_norm,
                           log10_trans = obj$scales$conc$log10_trans,
                           suppress.messages = TRUE)) %>% dplyr::collect()
+  } else {
+    fit_out <- info_nest %>%
+      dplyr::group_by(!!!data_group, model)
+
+    tidy_fit <- fit_out %>%
+      dplyr::summarize(fit = purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
+                                         .f = fit_group,
+                                         this_model = model,
+                                         settings_optimx = get_settings_optimx(obj),
+                                         modelfun = obj$stat_model[[model]]$conc_fun,
+                                         dose_norm = obj$scales$conc$dose_norm,
+                                         log10_trans = obj$scales$conc$log10_trans,
+                                         suppress.messages = TRUE))
   }
 
 
