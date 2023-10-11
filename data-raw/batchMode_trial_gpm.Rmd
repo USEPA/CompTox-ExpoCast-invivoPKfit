@@ -1924,7 +1924,95 @@ ggsave(paste0(Sys.getenv("FIG_DIR"), "Point_Reference_3x5.png"),
 ```
 
 
-# Notes and future directions
-- Stratified on species... then chemical class (pharma vs non-pharma, Pharmapendium)
-- Classyfier for chemical superclass (talk to Paul) Ranges and Mean for each class...
+# Preparing results for CvTdb
+
+```{r cvtdb-prep}
+
+my_cvt <- cvt
+my_tkstats <- eval_tkstats(my_pk)
+  
+my_cvt_unique <- my_cvt %>% dplyr::mutate(
+  preprocess_data_flags = 
+    case_when(
+      (other_study_identifier %in% "S0916") ~ paste("Adjusted dose_level_original_units",
+                                                              "adjusted dose_level_normalized.",
+                                                              sep = " and "),
+      (other_study_identifier %in% "S0624") ~ paste("Adjusted dose_level_normalized."),
+      (document_id %in% c("65", "61", "46", "31")) ~ paste("Adjusted analyte_dtxsid",
+                                                           "adjusted analyte_name_original.",
+                                                           sep = " and "),
+      (other_study_identifier %in% c("S0976",
+                                     "S0361",
+                                     "S0328")) ~ paste("Adjusted loq and loq_units."),
+      (document_id %in% "38") ~ paste("Adjusted conc."),
+      (analyte_name_original %in% c("n-desmethyltamoxifen",
+                                    "methemoglobin")) ~ paste("Adjusted analyte_dtxsid."),
+      .default = NA_character_
+    )) %>%
+  group_by(analyte_dtxsid, species,
+    administration_route_normalized, conc_medium_normalized, preprocess_data_flags) %>%
+  summarize(document_ids = paste0(unique(document_id), collapse = ","))
+
+# Non-compartmental analysis
+my_nca <- get_nca(my_pk) %>% dplyr::select(-param_units) %>%
+  mutate(param_name = paste0(param_name, ".nca")) %>%
+  group_by(Chemical, Species,
+           Route, Media, design) %>%
+  pivot_wider(names_from = param_name,
+              values_from = c(param_value, param_sd_z)) %>%
+  distinct() %>%
+  arrange(Chemical) %>%
+  rename_with(.fn = ~gsub("param_", "", .x)) %>%
+  rename_with(.fn = ~gsub("value_", "", .x)) %>%
+  rename(analyte_dtxsid = Chemical,
+         species = Species,
+         administration_route_normalized = Route,
+         conc_medium_normalized = Media)
+
+
+my_cvt %>%
+  dplyr::select(analyte_dtxsid, species, radiolabeled) %>%
+  distinct() %>%
+  filter(analyte_dtxsid %in% (cvt %>% filter(radiolabeled) %>% pull(analyte_dtxsid)))
+
+# Writing to file
+left_join(my_nca, my_cvt_unique) %>%
+  ungroup() %>%
+  filter(!is.infinite(AUC_infinity.nca), !is.infinite(AUMC_infinity.nca)) %>%
+  distinct() %>%
+  mutate(nca_id = row_number(),
+         .before = analyte_dtxsid) %>% View("NCA-CvTdb")
+  # write_tsv("data-raw/NCA_CvTdb.tsv")
+# Note that this will have more numbers because it still includes AUC_infinity == NA
+
+
+
+# TK stats
+my_tkstats <- my_tkstats %>%
+  dplyr::select(analyte_dtxsid = Chemical, species = Species,
+                administration_route_normalized = Route, 
+                conc_medium_normalized = Media, 
+                Reference,
+                model, method,
+                ends_with("tkstats")) %>%
+  group_by(across(everything())) %>%
+  ungroup(Reference) %>%
+  summarize(document_ids = paste0(unique(Reference), collapse = ",")) %>%
+  ungroup() %>%
+  distinct() %>%
+  arrange(analyte_dtxsid) 
+
+prefit_df <- my_pk$prefit$fit_check %>% inner_join(get_winning_model(my_pk)) %>%
+  dplyr::select(analyte_dtxsid = Chemical, species = Species, model, method, 
+                fit_decision, fit_reason)
+
+left_join(my_tkstats, my_cvt_unique) %>%
+  left_join(prefit_df) %>%
+  ungroup() %>%
+  distinct() %>%
+  mutate(tkstats_id = row_number(), .before = analyte_dtxsid) %>% View("TKstats-CvTdb")
+  # write_tsv("data-raw/tkstats_CvTdb.tsv")
+
+```
+
 
