@@ -113,9 +113,7 @@ do_preprocess.pk <- function(obj){
     # If data has passed all these initial checks, then proceed with pre-processing
     data_group <- obj$data_group
 
-    n_grps <- do.call(dplyr::group_by,
-                      args = c(list(data),
-                               data_group)) %>%
+    n_grps <- dplyr::group_by(data, !!!data_group) %>%
       dplyr::group_keys() %>%
       dplyr::n_distinct()
 
@@ -333,9 +331,7 @@ do_preprocess.pk <- function(obj){
           )
           )
         }
-        data <- do.call(dplyr::group_by,
-                        args =c(list(data),
-                                obj$settings_preprocess$loq_group)) %>%
+        data <- dplyr::group_by(data, !!!obj$settings_preprocess$loq_group) %>%
           dplyr::mutate(LOQ_orig = LOQ,
                         LOQ = ifelse(is.na(LOQ_orig),
                                      {
@@ -437,9 +433,7 @@ do_preprocess.pk <- function(obj){
                          " 0. ",
                          n_sd_est, " missing SDs will be estimated.\n"))
         }
-        data <- do.call(dplyr::group_by,
-                        args = c(list(data),
-                                 obj$settings_preprocess$sd_group)) %>%
+        data <- dplyr::group_by(data, !!!obj$settings_preprocess$sd_group) %>%
           dplyr::mutate(Value_SD_orig = Value_SD,
                         Value_SD = ifelse(is.na(Value_SD_orig) &
                                             N_Subjects > 1,
@@ -476,9 +470,7 @@ do_preprocess.pk <- function(obj){
 
 
     if(!obj$settings_preprocess$suppress.messages){
-      n_grps <- do.call(dplyr::group_by,
-                        args = c(list(data),
-                                 data_group)) %>%
+      n_grps <- dplyr::group_by(data, !!!data_group) %>%
         dplyr::group_keys() %>%
         dplyr::n_distinct()
       ### display messages describing loaded data
@@ -521,9 +513,7 @@ do_preprocess.pk <- function(obj){
     }
 
     if(!obj$settings_preprocess$suppress.messages){
-      n_grps <- do.call(dplyr::group_by,
-                        args = c(list(data),
-                                 data_group)) %>%
+      n_grps <- dplyr::group_by(data, !!!data_group) %>%
         dplyr::group_keys() %>%
         dplyr::n_distinct()
       ### display messages describing loaded data
@@ -565,9 +555,7 @@ do_preprocess.pk <- function(obj){
     }
 
     if(!obj$settings_preprocess$suppress.messages){
-      n_grps <- do.call(dplyr::group_by,
-                        args = c(list(data),
-                                 data_group)) %>%
+      n_grps <- dplyr::group_by(data, !!!data_group) %>%
         dplyr::group_keys() %>%
         dplyr::n_distinct()
       ### display messages describing loaded data
@@ -609,9 +597,7 @@ do_preprocess.pk <- function(obj){
     }
 
     if(!obj$settings_preprocess$suppress.messages){
-      n_grps <- do.call(dplyr::group_by,
-                        args = c(list(data),
-                                 data_group)) %>%
+      n_grps <- dplyr::group_by(data, !!!data_group) %>%
         dplyr::group_keys() %>%
         dplyr::n_distinct()
       ### display messages describing loaded data
@@ -650,10 +636,10 @@ do_preprocess.pk <- function(obj){
     # Needs to be grouped
     if (obj$scales$time$new_units %in% "auto") {
       to_units <- data %>%
-        group_by(!!!data_group) %>%
-        mutate(AUTO_UNITS = auto_units(y = Time,
+        dplyr::group_by(!!!data_group) %>%
+        dplyr::mutate(AUTO_UNITS = auto_units(y = Time,
                              from = Time.Units_orig)) %>%
-        pull(AUTO_UNITS)
+        dplyr::pull(AUTO_UNITS)
     }
 
     # Needs to be iterated

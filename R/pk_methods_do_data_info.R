@@ -119,9 +119,7 @@ do_data_info.pk <- function(obj){
   #Other data flags:
   #Check for obeying dose normalization by summary_group
 
-  dose_norm_check <- do.call(dplyr::group_by,
-                             args = c(list(df),
-                                      summary_group)) %>%
+  dose_norm_check <- dplyr::group_by(df, summary_group) %>%
     dplyr::reframe(
       Cmax_fold_range = {
         tmprange <- suppressWarnings(range(`Cmax`, na.rm = TRUE))

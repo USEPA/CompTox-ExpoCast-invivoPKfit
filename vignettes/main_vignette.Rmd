@@ -15,6 +15,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
+library(invivoPKfit)
 devtools::load_all()
 ```
 
@@ -57,6 +58,7 @@ Now, initialize a `pk` object.  This contains the data, along with a set of inst
 
 ```{r}
 my_pk <- pk(data = my_data) +
+  facet_data(facets = ggplot2::vars(Chemical, Species)) +
   settings_preprocess(suppress.messages = FALSE,
                       keep_data_original = TRUE)
 ```
@@ -178,8 +180,7 @@ By default, the concentration axis is scaled the same way as the data was scaled
 
 ```{r}
 p2 <- plot(my_pk,
-     use_scale_conc = list(dose_norm = TRUE,
-                           log10_trans = FALSE)
+     use_scale_conc = TRUE
      )
 print(p2)
 ```
@@ -615,7 +616,7 @@ Note that it will throw messages about replacing existing instructions. These ar
 ```{r}
 my_pk <- pk(my_data) +
     #instructions to use an error model that puts all observations in the same group
-  stat_error_model(error_group = vars(Chemical, Species)) +
+  stat_error_model(error_group = ggplot2::vars(Chemical, Species)) +
   #instructions for concentration scaling/transformation
   scale_conc(dose_norm = TRUE,
              log10_trans = TRUE) +

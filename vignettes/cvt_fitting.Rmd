@@ -16,16 +16,14 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(invivoPKfit)
+devtools::load_all()
 ```
 
 
 ```{r mininal-pk}
-cvt_df <- dplyr::filter(cvt,
-                        analyte_dxtsid %in% c("DTXSID7020182",
-                                              "DTXSID5020732",
-                                              "DTXSID8031865",
-                                              "DTXSID5032498",
-                                              "DTXSID0020442"))
+cvt_df <- subset(cvt, analyte_dtxsid %in% c("DTXSID8031865",
+                                            "DTXSID5032498",
+                                            "DTXSID0020442"))
 
 minimal_pk <- pk(data = cvt_df)
 ```
@@ -41,7 +39,7 @@ standard deviations from each Chemical, Species, Reference group to model error.
 
 ```{r}
 joint_pk <- minimal_pk +
-  facet_data(vars(Chemical, Species)) +
+  facet_data(ggplot2::vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = FALSE) +
   settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
@@ -76,7 +74,7 @@ the error of all the data during fitting.
 
 ```{r}
 pooled_pk <- minimal_pk +
-  facet_data(vars(Chemical, Species)) +
+  facet_data(ggplot2::vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE,
                       suppress.messages = TRUE) +
   settings_optimx(method = c("L-BFGS-B")) +
@@ -92,7 +90,7 @@ and models the error similarly.
 
 ```{r}
 separate_pk <- minimal_pk +
-  facet_data(vars(Chemical, Species, Reference)) +
+  facet_data(ggplot2::vars(Chemical, Species, Reference)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
   settings_optimx(method = c("L-BFGS-B")) +

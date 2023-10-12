@@ -15,7 +15,9 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
+library(invivoPKfit)
 devtools::load_all()
+library(magrittr)
 ```
 
 # Introduction
@@ -58,9 +60,9 @@ cvt_sub <- cvt %>% dplyr::group_by(analyte_dtxsid,
 
 ```{r}
 my_pk <- pk(data = cvt_sub) +
-  settings_preprocess(suppress.messages = FALSE) +
-  facet_data(vars(analyte_dtxsid,
-                  species))
+  facet_data(ggplot2::vars(Chemical,
+                           Species)) +
+  settings_preprocess(suppress.messages = FALSE)
 ```
 
 The instructions aren't carried out until you explicitly ask for them to be carried out, by calling functions that implement steps in the model fitting workflow.
