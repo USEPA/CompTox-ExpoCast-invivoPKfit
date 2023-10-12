@@ -41,7 +41,7 @@ Other 2-compartment model functions:
 \code{\link{tkstats_2comp}()}
 }
 \author{
-Caroline Ring, Gilbert Padilla Mercado, John Wambaugh
+Caroline Ring, Gilberto Padilla Mercado, John Wambaugh
 }
 \concept{2-compartment model functions}
 \concept{built-in model functions}

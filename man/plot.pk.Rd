@@ -17,7 +17,7 @@
   facet_fun_args = NULL,
   drop_nonDetect = FALSE,
   plot_fit_aes = NULL,
-  n_interp = 100,
+  n_interp = 10,
   fit_limits = NULL,
   print_out = FALSE,
   ...

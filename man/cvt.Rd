@@ -5,7 +5,7 @@
 \alias{cvt}
 \title{CvTdb data}
 \format{
-An object of class \code{data.table} (inherits from \code{data.frame}) with 14805 rows and 105 columns.
+An object of class \code{data.frame} with 18492 rows and 52 columns.
 }
 \usage{
 cvt
