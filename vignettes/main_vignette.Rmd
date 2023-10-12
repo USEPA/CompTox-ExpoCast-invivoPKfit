@@ -48,8 +48,7 @@ First, select data for a single chemical and species. This is the dataset that w
 ```{r}
 #select data for a single chemical and species
 my_data <- subset(cvt,
-                          chemicals_analyzed.dsstox_substance_id %in% "DTXSID1021116" &
-                            subjects.species_harmonized %in% "rat")
+                  analyte_dtxsid %in% "DTXSID1021116" & species %in% "rat")
 ```
 
 ## Initialize a `pk` object
@@ -74,7 +73,7 @@ The first is data pre-processing. Here, variable names are harmonized, and the d
 s
 ```{r}
 #preprocess data
-my_pk <- preprocess_data(my_pk)
+my_pk <- do_preprocess(my_pk)
 ```
 
 This step adds the pre-processed data to the `pk` object in a new element named `data`.
@@ -85,7 +84,7 @@ Next, some summary information is gathered about the data. These are things like
 
 ```{r}
 #get summary data info
-my_pk <- data_info(my_pk)
+my_pk <- do_data_info(my_pk)
 ```
 
 This step adds the data summary info to the `pk` object in a new element named `data_info`.
@@ -100,7 +99,7 @@ Next, a "pre-fitting" step is performed. This step looks at the data, along with
 
 ```{r}
 #pre-fitting (get model parameter bounds & starting values)
-my_pk <- prefit(my_pk)
+my_pk <- do_prefit(my_pk)
 ```
 
 This step adds the parameter lower/upper bounds and starting guesses to the `pk` object.
@@ -111,21 +110,21 @@ Finally, the model fitting can be performed.
 
 ```{r}
 #model fitting
-my_pk <- fit(my_pk)
+my_pk <- do_fit(my_pk)
 ```
 
 This step adds the fitted model parameter values to the `pk` object. If multiple models were fitted, and/or if multiple optimization algorithms ("methods") were used to do the fitting, then one set of fitted model parameter values is added for each model and each optimization algorithm ("method").
 
 ### Skip straight to Step 4
 
-Note that you could just skip straight to the last step. If you call `fit()` on a newly-initialized `pk` object, all of the preceding steps will be done automatically. The following code will give you exactly the same results as going through each step individually as above.
+Note that you could just skip straight to the last step. If you call `do_fit()` on a newly-initialized `pk` object, all of the preceding steps will be done automatically. The following code will give you exactly the same results as going through each step individually as above.
 
 ```{r, eval = FALSE}
 my_pk <- pk(data = my_data) +
   settings_preprocess(suppress.messages = FALSE,
                       keep_data_original = TRUE)
 
-my_pk <- fit(my_pk)
+my_pk <- do_fit(my_pk)
 ```
 
 
@@ -277,10 +276,10 @@ In `ggplot2`, you would specify which variables in your data map to the standard
 
 ```{r, eval = FALSE}
 ggplot(data = my_data, 
-       aes(x = conc_time_values.time_hr,
-           y = conc_time_values.conc,
-           color = studies.dose_level_normalized_corrected,
-           shape = as.factor(documents_extraction.id)
+       aes(x = time_hr,
+           y = conc,
+           color = dose_level_normalized_corrected,
+           shape = as.factor(document_id)
        )
 )
 ```
@@ -290,37 +289,30 @@ In `invivopkfit`, you specify which variables in your data map to the standardiz
 
 ```{r, eval = FALSE}
 pk(data = my_data,
-   ggplot2::aes(Chemical = chemicals_analyzed.dsstox_substance_id,
-                                      Chemical_Name = series.analyte_name_original,
-                             DTXSID = chemicals_analyzed.dsstox_substance_id,
-                             CASRN = chemicals_analyzed.dsstox_casrn,
-                             Species = subjects.species_harmonized,
-                             Reference = as.character(
-                               ifelse(
-                                 is.na(
-                                   documents_reference.id
-                                 ),
-                                 documents_extraction.id,
-                                 documents_reference.id
-                               )
-                             ),
-                             Media = series.conc_medium_normalized,
-                             Route = studies.administration_route_normalized,
-                             Dose = studies.dose_level_normalized_corrected,
-                             Dose.Units = "mg/kg",
-                             Subject = subjects.id,
-                             Series_ID = series.id,
-                             Study_ID = studies.id,
-                             ConcTime_ID = conc_time_values.id,
-                             N_Subjects =  series.n_subjects_in_series,
-                             Weight = subjects.weight_kg,
-                             Weight.Units = "kg",
-                             Time = conc_time_values.time_hr,
-                             Time.Units = "hours",
-                             Value = conc_time_values.conc,
-                             Value.Units = "mg/L",
-                             LOQ = series.loq_normalized,
-                             Value_SD  = conc_time_values.conc_sd_normalized
+   mapping = ggplot2::aes(
+                 Chemical = analyte_dtxsid,
+                 Chemical_Name = analyte_name_original,
+                 DTXSID = analyte_dtxsid,
+                 CASRN = analyte_casrn,
+                 Species = species,
+                 Reference = document_id,
+                 Media = conc_medium_normalized,
+                 Route = administration_route_normalized,
+                 Dose = dose_level_normalized,
+                 Dose.Units = "mg/kg",
+                 Subject_ID = subject_id,
+                 Series_ID = series_id,
+                 Study_ID = study_id,
+                 ConcTime_ID = conc_time_id,
+                 N_Subjects = n_subjects_in_series,
+                 Weight = weight_kg,
+                 Weight.Units = "kg",
+                 Time = time_hr,
+                 Time.Units = "hours",
+                 Value = conc,
+                 Value.Units = "mg/L",
+                 Value_SD = conc_sd_normalized,
+                 LOQ = loq
                ))
 ```
 
@@ -365,10 +357,10 @@ This mapping says "For the standardized variable `Value.Units`: Don't take the v
 This is an integer code representing the current status of the `pk` object in the overall `pk` workflow. The workflow steps are numbered like this:
 
 1. Initialize the `pk` object in `pk()`
-2. Preprocess data in `preprocess_data()`
-3. Get data summary info (including non-compartmental analysis) in `data_info()`
-4. Do pre-fitting (get parameter bounds & starting values) in `prefit()`
-5. Do model fitting in `fit()
+2. Preprocess data in `do_preprocess()`
+3. Get data summary info (including non-compartmental analysis) in `do_data_info()`
+4. Do pre-fitting (get parameter bounds & starting values) in `do_prefit()`
+5. Do model fitting in `do_fit()
 
 You can get the status of a `pk` object at any time using
 
@@ -609,7 +601,7 @@ If you just want to use the default fitting instructions, you can simply do
 
 ```{r, eval = FALSE}
 my_pk <- pk(data = my_data)
-my_pk <- fit(my_pk)
+my_pk <- do_fit(my_pk)
 ```
 
 But if you would like to specify different instructions, you do that by adding settings, scales, and stats using `+`, similarly to the way you add layers in `ggplot2`.
@@ -733,7 +725,7 @@ get_stat_model(my_pk)
 ## Pre-processing data
 
 ```{r}
-my_pk <- preprocess_data(my_pk)
+my_pk <- do_preprocess(my_pk)
 ```
 
 Re-check the names of the `pk` object:
@@ -759,7 +751,7 @@ Notice that missing `LOQ` values have been imputed; compare `LOQ.orig` to `LOQ`.
 ## Data summary info
 
 ```{r}
-my_pk <- data_info(my_pk)
+my_pk <- do_data_info(my_pk)
 ```
 
 ```{r}
@@ -779,7 +771,7 @@ get_nca(my_pk)
 ## Pre-fitting
 
 ```{r}
-my_pk <- prefit(my_pk)
+my_pk <- do_prefit(my_pk)
 ```
 
 ```{r}
@@ -799,13 +791,7 @@ names(my_pk$stat_model)
 # Fitting
 
 
-
-
-
-
-
-
-# Resetting status
+## Resetting status
 
 Note: Status can be "reset".  -- and then you do something like change the concentration scaling, which changes everything from pre-processing the data (step 2) and downstream -- then the object status will be reset back to 1. This tells `invivopkfit` that it needs to re-do all the steps starting from pre-processing the data.
 
@@ -823,10 +809,10 @@ my_pk <- pk(data = my_data) + #initialize a `pk` object
 get_status(my_pk) #status is 1
 ```
 
-Now I do all the steps up to step 5. (If you just call `fit()`, it will fast-forward through all the steps.)
+Now I do all the steps up to step 5. (If you just call `do_fit()`, it will fast-forward through all the steps.)
 
 ```{r}
-my_pk <- fit(my_pk)
+my_pk <- do_fit(my_pk)
 get_status(my_pk)
 ```
 
@@ -859,32 +845,10 @@ get_tkstats(my_pk) #throws an error
 
 But after I re-fit the new model (setting the status back to 5), I can now extract the new coefficients and TK stats.
 ```{r}
-my_pk <- fit(my_pk)
+my_pk <- do_fit(my_pk)
 status(my_pk)
 
 coef(my_pk) 
 get_tkstats(my_pk)
 ```
-
-
-
-
-
-
-# Main analysis
-
-```{r, eval = FALSE}
-cvt %>%
-  dplyr::group_by(chemicals_analyzed.dsstox_substance_id,
-                  subjects.species_harmonized) %>%
-  dplyr::summarise({
-    this_pk <- pk(data = cur_data_all())
-    this_pk <- fit(this_pk)
-    
-  })
-```
-
-
-
-
 

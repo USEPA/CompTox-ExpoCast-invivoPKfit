@@ -1,5 +1,5 @@
 ---
-title: "PK object batch mode trial"
+title: "Figures and Analysis for 2023 Manuscript"
 author: "Gilberto Padilla Mercado"
 date: "`r Sys.Date()`"
 output: html_document
@@ -53,7 +53,7 @@ See `pulling_iv_oral_cvtdb.Rmd`.
 ### Minimal PK Object ###----
 # Minimum pk object, add options later
 # Note that these mappings are now a default mappings, just being verbose here.
-minimal_pk <- pk(data = cvt_df,
+minimal_pk <- pk(data = cvt,
                  mapping = ggplot2::aes(
                    Chemical = analyte_dtxsid,
                    Chemical_Name = analyte_name_original,
