@@ -126,18 +126,18 @@ sql_query <- sql_query %>%
     n_subjects_in_series = as.numeric(n_subjects_in_series),
     dose_level_normalized = as.numeric(dose_level_normalized),
     dose_level_original = as.numeric(dose_level_original),
-    dose_volume_units = str_extract(dose_volume,
+    dose_volume_units = stringr::str_extract(dose_volume,
                                     pattern = "(?<=[:space:]).+"),
-    dose_volume = as.numeric(str_extract(dose_volume,
+    dose_volume = as.numeric(stringr::str_extract(dose_volume,
                                          pattern = "^(\\d|\\.)*")),
-    dose_duration_units = str_extract(dose_duration,
+    dose_duration_units = stringr::str_extract(dose_duration,
                                       pattern = "(?<=[space]).+"),
-    dose_duration = as.numeric(str_extract(dose_duration,
+    dose_duration = as.numeric(stringr::str_extract(dose_duration,
                                 pattern = "^\\d")),
     radiolabeled = ifelse(radiolabeled == 1, TRUE, FALSE)
   )
 sql_query <- sql_query %>%
-  rename_with(~gsub(pattern = "fk_", replacement = "",
+  dplyr::rename_with(~gsub(pattern = "fk_", replacement = "",
                          .x), .cols = contains("fk_"))
 
 
@@ -354,7 +354,7 @@ Save the pulled CVT data with the edits/normalizations, and also save the curren
 cvt_date <- Sys.Date()
 cvt <- cvt_df
 save(cvt, file = "data/cvt.rda", compress = "bzip2")
-save(cvt_date, file = "data/cvt_download_date.rda")
+save(cvt_date, file = "data/cvt_date.rda")
 ```
 
 

@@ -2,8 +2,6 @@
 #'
 #' Convert a vector of times between units
 #'
-#' This helper function uses `lubridate::duration()` to convert between time
-#' units.
 #'
 #' @param x Numeric: one or more time values to be converted.
 #' @param from Character vector: `x` is currently in these units. Must be units
@@ -28,6 +26,7 @@
 #'
 #' @export
 #' @author Caroline Ring
+
 convert_time <- function(x,
                          from = "hours",
                          to = "identity",

@@ -36,10 +36,6 @@ A numeric vector the same length as `x`, converted from the units in
 \description{
 Convert a vector of times between units
 }
-\details{
-This helper function uses `lubridate::duration()` to convert between time
-units.
-}
 \author{
 Caroline Ring
 }

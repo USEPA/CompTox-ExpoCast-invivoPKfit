@@ -39,11 +39,7 @@ do_data_info.pk <- function(obj){
 
   #grouping for data summary:
   #data grouping, plus also Route and Media if not already included in data grouping
-  summary_group <-   unique(
-    c(obj$data_group,
-      vars(Route, Media)
-    )
-  )
+  summary_group <- unique(c(obj$data_group, ggplot2::vars(Route, Media)))
 
   data_summary_out <- data_summary(obj = obj,
                                    newdata = NULL,
@@ -119,7 +115,7 @@ do_data_info.pk <- function(obj){
   #Other data flags:
   #Check for obeying dose normalization by summary_group
 
-  dose_norm_check <- dplyr::group_by(df, summary_group) %>%
+  dose_norm_check <- dplyr::group_by(df, !!!summary_group) %>%
     dplyr::reframe(
       Cmax_fold_range = {
         tmprange <- suppressWarnings(range(`Cmax`, na.rm = TRUE))

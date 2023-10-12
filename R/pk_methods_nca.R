@@ -89,12 +89,8 @@ nca.pk <- function(obj,
   }
 
   #do NCA
-#
-#   nca_out <- do.call(dplyr::group_by,
-#           args =c(list(newdata),
-#                   nca_group)) %>%
     nca_out <- newdata %>%
-      group_by(!!!nca_group) %>%
+      dplyr::group_by(!!!nca_group) %>%
       dplyr::reframe(Conc.Units = unique(Conc.Units),
                      Time.Units = unique(Time.Units),
                      Dose.Units = unique(Dose.Units),

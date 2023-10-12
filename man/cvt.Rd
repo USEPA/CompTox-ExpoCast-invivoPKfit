@@ -15,7 +15,7 @@ Concentration vs. time data from CvTdb
 }
 \details{
 This is concentration vs. time data from CvTdb, most recently downloaded as
-of the date in [`cvt_download_date`].
+of the date in [`cvt_date`].
 
 These data have been filtered to retain only oral and intravenous
 administration, and only measurements in blood and plasma. They have also

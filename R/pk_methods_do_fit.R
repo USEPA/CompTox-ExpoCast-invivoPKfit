@@ -160,8 +160,8 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
   rate_names <- par_DF %>% dplyr::select(!!!obj$data_group,
                                         param_name,
                                         param_units) %>%
-    dplyr::filter(str_detect(param_units, "^1/")) %>%
-    dplyr::mutate(Time_trans.Units = str_remove(param_units, "^1/")) %>%
+    dplyr::filter(stringr::str_detect(param_units, "^1/")) %>%
+    dplyr::mutate(Time_trans.Units = stringr::str_remove(param_units, "^1/")) %>%
     dplyr::distinct()
   # Get a simple data_group and conversion rate data frame
   rate_conversion <- rate_names %>%
