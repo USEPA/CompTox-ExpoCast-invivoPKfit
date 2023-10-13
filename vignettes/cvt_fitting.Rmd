@@ -12,13 +12,19 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+
 ```
 
 ```{r setup}
-library(invivoPKfit)
 devtools::load_all()
 ```
 
+
+```{r time_check, include=FALSE}
+# Quick convert_time() test to save time
+convert_time(12, to = "days", from = "hours")
+
+```
 
 ```{r mininal-pk}
 cvt_df <- subset(cvt, analyte_dtxsid %in% c("DTXSID8031865",

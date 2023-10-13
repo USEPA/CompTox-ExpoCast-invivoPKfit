@@ -58,7 +58,7 @@
 #'   (For the built-in models `model_flat`, `model_1comp`, and `model_2comp`, these
 #'   variables are `param_name` and `param_value`.)
 #' @export
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
 get_tkstats.pk <- function(obj,
                            newdata = NULL,
@@ -158,7 +158,7 @@ get_tkstats.pk <- function(obj,
     tidyr::nest(.key = "c_data")
 
   tkstats_all <- tkstats_all %>%
-    reframe(tkstats_df = purrr::map(c_data,
+    dplyr::reframe(tkstats_df = purrr::map(c_data,
                                     \(x) {
                                       x %>%
                                         dplyr::rowwise() %>%

@@ -12,12 +12,20 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+
 ```
 
 ```{r setup}
-library(invivoPKfit)
 devtools::load_all()
 ```
+
+
+```{r time_check, include=FALSE}
+# Quick convert_time() test to save time
+convert_time(12, to = "days", from = "hours")
+
+```
+
 
 # Introduction
 
@@ -50,6 +58,8 @@ First, select data for a single chemical and species. This is the dataset that w
 #select data for a single chemical and species
 my_data <- subset(cvt,
                   analyte_dtxsid %in% "DTXSID1021116" & species %in% "rat")
+
+
 ```
 
 ## Initialize a `pk` object
@@ -146,25 +156,28 @@ You can extract the residuals using `residuals()` (for the observations in the o
 
 ```{r}
 my_resids <- residuals(my_pk)
-lapply(my_resids, head)
+head(my_resids)
 ```
 
 You can get the predicted values (for the time points, doses, and routes in the original data) using `predict()`. The result is a list of matrices, one for each fitted model, whose columns contain the predictions from the fits by each optimization algorithm.
 
 ```{r}
 my_preds <- predict(my_pk)
-lapply(my_preds, head)
+head(my_preds)
 ```
 
-If instead you want to get predicted values for new data (new timepoints, doses, or routes), you can do this by providing argument `newdata`
+If instead you want to get predicted values for new data (new timepoints, doses, or routes), you can do this by providing argument `newdata`, but you need to include the variables for the data group!
 
 ```{r}
-predict(my_pk, newdata = data.frame(Time = seq(0, 5, by = 0.5),
-                                    Time.Units = "hours",
-                                    Dose = 1,
-                                    Route = "iv",
-                                    Media = "plasma",
-                                    exclude = FALSE))
+predict(my_pk, newdata = data.frame(
+  Chemical = "DTXSID1021116",
+  Species = "rat",
+  Time = seq(0, 5, by = 0.5),
+  Time.Units = "hours",
+  Dose = 1,
+  Route = "iv",
+  Media = "plasma",
+  exclude = FALSE))
 ```
 
 #### Plots
@@ -173,7 +186,7 @@ You can plot the fit using `plot()` (which returns a `ggplot2` plot object):
 
 ```{r}
 p <- plot(my_pk)
-print(p)
+print(p$final_plot)
 ```
 
 By default, the concentration axis is scaled the same way as the data was scaled for fitting. You can specify whether to dose-normalize and/or log-transform the plot y axis using argument `use_scale_conc`:
@@ -182,7 +195,7 @@ By default, the concentration axis is scaled the same way as the data was scaled
 p2 <- plot(my_pk,
      use_scale_conc = TRUE
      )
-print(p2)
+print(p2$final_plot)
 ```
 
 
@@ -240,7 +253,7 @@ And finally, you can compute derived toxicokinetic statistics, such as total cle
 
 ```{r}
 my_tkstats <- get_tkstats(my_pk)
-head(my_tkstats$model_1comp)
+head(my_tkstats)
 ```
 
 We'll walk through the various pieces of this example.
@@ -330,15 +343,16 @@ Just as in `ggplot2`, you can specify expressions inside `aes`. This lets you sp
 For example, the mapping for `Reference` uses an expression:
 
 ```{r, eval = FALSE}
- Reference = as.character(
-                               ifelse(
-                                 is.na(
-                                   documents_reference.id
-                                 ),
-                                 documents_extraction.id,
-                                 documents_reference.id
-                               )
-                             )
+Reference = as.character(
+  ifelse(
+    is.na(
+      documents_reference.id
+    ),
+    documents_extraction.id,
+    documents_reference.id
+  )
+)
+
 ```
 
 This expression says "For the standardized variable `Reference`: First look at the original variable `documents_reference.id`. If that variable is NA, then use the variable `documents_extraction.id`; otherwise, use `documents_reference.id`."
@@ -347,7 +361,7 @@ This mapping for `Reference` occurs because of the way CvTdb handles references.
 
 You can use expressions to specify constant values for standardized variables, as well. The default mapping contains items like this:
 
-```{r}
+```{r, eval=FALSE}
 Value.Units = "mg/L"
 ```
 
@@ -756,7 +770,7 @@ my_pk <- do_data_info(my_pk)
 ```
 
 ```{r}
-names(pk)
+names(my_pk)
 ```
 
 A new element `data_info` has been added. This element is itself a named list containing element "data_summary" and "nca". You can extract these elements using the following functions:
@@ -846,8 +860,9 @@ get_tkstats(my_pk) #throws an error
 
 But after I re-fit the new model (setting the status back to 5), I can now extract the new coefficients and TK stats.
 ```{r}
+my_pk <- do_preprocess(my_pk)
 my_pk <- do_fit(my_pk)
-status(my_pk)
+get_status(my_pk)
 
 coef(my_pk) 
 get_tkstats(my_pk)

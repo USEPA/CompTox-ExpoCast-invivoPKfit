@@ -75,8 +75,9 @@ AIC.pk <- function(obj,
     dplyr::select(!!!obj$data_group, param_name, param_units) %>%
     tidyr::expand_grid(model = unique(param_table$model))
 
-  params_df <- bind_rows(param_table, sigma_table) %>%
-    dplyr::group_by(!!!obj$data_group, model) %>% dplyr::count(name = "npar")
+  params_df <- dplyr::bind_rows(param_table, sigma_table) %>%
+    dplyr::group_by(!!!obj$data_group, model) %>%
+    dplyr::count(name = "npar")
 
 
   #get log-likelihoods
@@ -93,13 +94,13 @@ AIC.pk <- function(obj,
     dplyr::select(!!!obj$data_group,
                   model, method,
                   log_likelihood) %>%
-    left_join(params_df))
+    dplyr::left_join(params_df))
 
 
   #get number of parameters (excluding any constant, non-optimized parameters)
 
   AIC <- ll %>% dplyr::group_by(!!!obj$data_group, model) %>%
-    mutate(AIC = (k * npar) - (2 * log_likelihood))
+    dplyr::mutate(AIC = (k * npar) - (2 * log_likelihood))
 
 
   return(AIC)

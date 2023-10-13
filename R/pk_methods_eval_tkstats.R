@@ -52,18 +52,20 @@
 #'   variables are `param_name` and `param_value`.) Additionally, there will be
 #'   a variable `method` denoting the [optimx::optimx()] method used to optimize
 #'   the set of model parameters used to derive each set of TK statistics.
+#'
+#' @import tidyselect
 #' @export
 #' @family methods for fitted pk objects
 #' @author Caroline Ring, Gilberto Padilla Mercado, John Wambaugh
 eval_tkstats.pk <- function(obj,
-                         newdata = NULL,
-                         model = NULL,
-                         method = NULL,
-                         tk_group = NULL,
-                         exclude = TRUE,
-                         dose_norm = TRUE,
-                         finite_only = TRUE,
-                         ...){
+                            newdata = NULL,
+                            model = NULL,
+                            method = NULL,
+                            tk_group = NULL,
+                            exclude = TRUE,
+                            dose_norm = TRUE,
+                            finite_only = TRUE,
+                            ...){
 
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -116,70 +118,70 @@ eval_tkstats.pk <- function(obj,
                                    method = method)
 
   #calc NCA for newdata
-   nca_df <- get_nca(obj = obj)
-   nca_df <- nca_df %>% dplyr::select(-param_sd_z, -param_units) %>%
-     pivot_wider(names_from = param_name,
-                 values_from = param_value) %>%
-     right_join(winmodel_df) %>%
-     relocate(model, method, .after = Media)
+  nca_df <- get_nca(obj = obj)
+  nca_df <- nca_df %>% dplyr::select(-param_sd_z, -param_units) %>%
+    tidyr::pivot_wider(names_from = param_name,
+                       values_from = param_value) %>%
+    dplyr::right_join(winmodel_df) %>%
+    dplyr::relocate(model, method, .after = Media)
 
 
 
-   #get tkstats
-   tkstats_df <- get_tkstats(obj = obj,
-                             newdata = newdata,
-                             model = model,
-                             method = method,
-                             tk_group = tk_group,
-                             exclude = exclude) %>%
-     dplyr::right_join(winmodel_df) %>%
-     dplyr::ungroup()
+  #get tkstats
+  tkstats_df <- get_tkstats(obj = obj,
+                            newdata = newdata,
+                            model = model,
+                            method = method,
+                            tk_group = tk_group,
+                            exclude = exclude) %>%
+    dplyr::right_join(winmodel_df) %>%
+    dplyr::ungroup()
 
-   # Assess group variables
-   # Are all error_group variables in data_group, error group might be subset
-   if(!all(error_grp_vars %in% data_grp_vars)) {
-     remaining_vars <- error_grp_vars[!(error_grp_vars %in% data_grp_vars)]
+  # Assess group variables
+  # Are all error_group variables in data_group, error group might be subset
+  if(!all(error_grp_vars %in% data_grp_vars)) {
+    remaining_vars <- error_grp_vars[!(error_grp_vars %in% data_grp_vars)]
 
-     tkstats_df_refs <- tkstats_df %>%
-       dplyr::group_by(!!!obj$data_group, Route, Media, Dose) %>%
-       dplyr::summarize(across(all_of(remaining_vars),
-                               \(x) {paste0(x, collapse = ",")}))
+    tkstats_df_refs <- tkstats_df %>%
+      dplyr::group_by(!!!obj$data_group, Route, Media, Dose) %>%
+      dplyr::summarize(dplyr::across(all_of(remaining_vars),
+                                     \(x) {paste0(x, collapse = ",")}))
 
-     tkstats_df <- dplyr::left_join(tkstats_df_refs,
-                                    tkstats_df %>%
-                                      dplyr::select(!all_of(remaining_vars))) %>%
-       ungroup() %>%
-       dplyr::distinct()
-   }
-
-
+    tkstats_df <- dplyr::left_join(tkstats_df_refs,
+                                   tkstats_df %>%
+                                     dplyr::select(!all_of(remaining_vars))) %>%
+      dplyr::ungroup() %>%
+      dplyr::distinct()
+  }
 
 
- #merge
- nca_df_red <- nca_df %>%
-   rename_with(~ paste0(.x, ".nca", recycle0 = TRUE),
-               !any_of(c(grp_vars, "model", "method")))
-
- tkstats_df_red <- tkstats_df %>%
-   rename_with(~ paste0(.x, ".tkstats", recycle0 = TRUE),
-               !any_of(c(grp_vars, "Dose.Units", "Conc.Units",
-                         "Time.Units", "Time_trans.Units",
-                         "Rblood2plasma", "model", "method")))
-
- if (dose_norm) {
-   message("TK statistics calculated based on dose-normalized value of 1mg/kg")
- }
-
- suppressMessages(tk_eval <- left_join(tkstats_df_red, nca_df_red))
-
- if (finite_only) {
-   tk_eval <- tk_eval %>%
-     filter(is.finite(AUC_infinity.tkstats),
-            is.finite(AUC_infinity.nca))
- }
 
 
-    return(tk_eval)
+  #merge
+  nca_df_red <- nca_df %>%
+    dplyr::rename_with(~ paste0(.x, ".nca", recycle0 = TRUE),
+                       !any_of(c(grp_vars, "model", "method")))
+
+  tkstats_df_red <- tkstats_df %>%
+    dplyr::rename_with(~ paste0(.x, ".tkstats", recycle0 = TRUE),
+                       !any_of(c(grp_vars, "Dose.Units", "Conc.Units",
+                                 "Time.Units", "Time_trans.Units",
+                                 "Rblood2plasma", "model", "method")))
+
+  if (dose_norm) {
+    message("TK statistics calculated based on dose-normalized value of 1mg/kg")
+  }
+
+  suppressMessages(tk_eval <- dplyr::left_join(tkstats_df_red, nca_df_red))
+
+  if (finite_only) {
+    tk_eval <- tk_eval %>%
+      filter(is.finite(AUC_infinity.tkstats),
+             is.finite(AUC_infinity.nca))
+  }
+
+
+  return(tk_eval)
 
 
 }

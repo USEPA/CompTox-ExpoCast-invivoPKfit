@@ -127,16 +127,16 @@ coef_sd.pk <- function(obj,
 
   newdata <- suppressMessages(
     newdata %>%
-      rowwise() %>%
-      filter(!is.null(observations)) %>%
-      mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
-      left_join(obj$prefit$par_DF %>%
-                  filter(param_name %in% noptim_params) %>%
+      dplyr::rowwise() %>%
+      dplyr::filter(!is.null(observations)) %>%
+      dplyr::mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
+      dplyr::left_join(obj$prefit$par_DF %>%
+                  dplyr::filter(param_name %in% noptim_params) %>%
                   dplyr::select(!!!obj$data_group, param_name, start)) %>%
-      distinct() %>%
-      mutate(const_pars = setNames(start, param_name)) %>%
-      ungroup() %>%
-      distinct())
+      dplyr::distinct() %>%
+      dplyr::mutate(const_pars = setNames(start, param_name)) %>%
+      dplyr::ungroup() %>%
+      dplyr::distinct())
 
   newdata <- newdata %>%
     dplyr::rowwise() %>%
@@ -153,8 +153,8 @@ coef_sd.pk <- function(obj,
     },
     x = coefs_vector,
     method = 'Richardson'))) %>%
-    ungroup() %>%
-    mutate(sds = map2(hessian_mat, coefs_vector, \(x, y) {
+    dplyr::ungroup() %>%
+    dplyr::mutate(sds = purrr::map2(hessian_mat, coefs_vector, \(x, y) {
       tryCatch(diag(solve(x))^(1/2) %>% as.numeric(),
                error = function(err){
                  if (!suppress.messages) {
@@ -177,7 +177,7 @@ coef_sd.pk <- function(obj,
                }) %>%
         set_names(nm = paste0(names(y), "_sd"))
     }),
-    alerts = map2(hessian_mat, coefs_vector, \(x, y) {
+    alerts = purrr::map2(hessian_mat, coefs_vector, \(x, y) {
       tryCatch({
         diag(solve(x))^(1/2) %>% as.numeric()
         return(paste0("Hessian successfully inverted"))
@@ -204,13 +204,13 @@ coef_sd.pk <- function(obj,
     dplyr::mutate(sds_tibble = purrr::map(sds,
                                           \(x) as.list(x) %>% as.data.frame)) %>%
       tidyr::unnest(sds_tibble) %>%
-      tidyr::pivot_longer(cols = starts_with("sigma_"),
+      tidyr::pivot_longer(cols = tidyselect::starts_with("sigma_"),
                           names_to = "error_group",
                           values_to = "sigma.value_sd") %>%
       dplyr::filter(!is.na(sigma.value_sd)) %>%
       dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) as.list(x) %>% as.data.frame)) %>%
       tidyr::unnest(coefs_tibble) %>%
-      tidyr::pivot_longer(cols = starts_with("sigma_"),
+      tidyr::pivot_longer(cols = tidyselect::starts_with("sigma_"),
                           names_to = "error_group_value",
                           values_to = "sigma.value") %>%
       dplyr::filter(!is.na(sigma.value)) %>%

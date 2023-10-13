@@ -97,4 +97,4 @@ time_conversions <- data.frame(
 
 )
 
-usethis::use_data(time_conversions, overwrite = TRUE)
+save(time_conversions, file = "data/time_conversions.rda")

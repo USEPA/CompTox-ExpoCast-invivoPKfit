@@ -799,7 +799,11 @@ do_preprocess.pk <- function(obj){
     # add data & data info to object
     obj$data <- data
 
-    if (!obj$settings_preprocess$keep_data_original) {
+    if (is.null(obj$settings_preprocess$keep_data_original)) {
+      obj$settings_preprocess$keep_data_original <- TRUE
+    }
+
+    if (obj$settings_preprocess$keep_data_original == FALSE) {
       obj$data_original <- NULL
     }
 

@@ -97,7 +97,7 @@ residuals.pk <- function(obj,
   #remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE) {
     if ("exclude" %in% names(newdata)) {
-      newdata <- newdata %>% filter(exclude %in% FALSE)
+      newdata <- newdata %>% dplyr::filter(exclude %in% FALSE)
     }
   }
 
@@ -106,10 +106,9 @@ residuals.pk <- function(obj,
                 "Detect",
                 "exclude")
 
-
   new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
     dplyr::select(dplyr::all_of(req_vars)) %>%
-    ungroup())
+    dplyr::ungroup())
 
 
   # Conc_trans columns will contain transformed values,

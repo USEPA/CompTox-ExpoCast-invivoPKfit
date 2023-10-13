@@ -210,8 +210,8 @@ plot.pk <- function(obj,
 
 
   newdata <- newdata %>%
-    mutate(observation_plot =
-             map(observations,
+    dplyr::mutate(observation_plot =
+             purrr::map(observations,
                  \(x) {
                    # Need to write this into a mutate + map pattern function
                    #initialize plot
@@ -308,8 +308,8 @@ plot.pk <- function(obj,
                                                   Time_trans.Units = unique(Time_trans.Units)) %>%
                                     tidyr::uncount(n_interp) %>%
                                     dplyr::group_by(Dose, Route, Media) %>%
-                                    dplyr::mutate(Time = (maxTime / (n() - 1)) *
-                                                    (row_number() - 1))
+                                    dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
+                                                    (dplyr::row_number() - 1))
                                 }))
 
     interp_data <- interp_data %>%
@@ -329,10 +329,10 @@ plot.pk <- function(obj,
     # This process is inefficient, need to rewrite using a simple
     # JOIN -> MUTATE -> SELECT
     conversion_table <- time_conversions %>%
-      filter(TimeFrom %in% interp_data$Time.Units,
-             TimeTo %in% interp_data$Time_trans.Units) %>%
-      rename(Time.Units = "TimeFrom",
-             Time_trans.Units = "TimeTo")
+      dplyr::filter(TimeFrom %in% interp_data$Time.Units,
+                    TimeTo %in% interp_data$Time_trans.Units) %>%
+      dplyr::rename(Time.Units = "TimeFrom",
+                    Time_trans.Units = "TimeTo")
 
     interp_data <- interp_data %>%
       dplyr::left_join(conversion_table, by = dplyr::join_by(Time.Units,

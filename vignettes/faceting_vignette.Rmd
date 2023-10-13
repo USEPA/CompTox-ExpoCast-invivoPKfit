@@ -12,13 +12,20 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+
 ```
 
 ```{r setup}
-library(invivoPKfit)
 devtools::load_all()
 library(magrittr)
 ```
+
+```{r time_check, include=FALSE}
+# Quick convert_time() test to save time
+convert_time(12, to = "days", from = "hours")
+
+```
+
 
 # Introduction
 

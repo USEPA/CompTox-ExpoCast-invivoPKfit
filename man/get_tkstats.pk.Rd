@@ -99,6 +99,6 @@ Other methods for fitted pk objects:
 \code{\link{rsq.pk}()}
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }
 \concept{methods for fitted pk objects}

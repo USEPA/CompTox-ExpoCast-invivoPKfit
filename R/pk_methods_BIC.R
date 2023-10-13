@@ -66,7 +66,7 @@ BIC.pk <- function(obj,
     dplyr::select(!!!obj$data_group, param_name, param_units) %>%
     tidyr::expand_grid(model = unique(param_table$model))
 
-  params_df <- bind_rows(param_table, sigma_table) %>%
+  params_df <- dplyr::bind_rows(param_table, sigma_table) %>%
     dplyr::group_by(!!!obj$data_group, model) %>% dplyr::count(name = "npar")
 
 
@@ -95,7 +95,7 @@ BIC.pk <- function(obj,
 
   BIC <- ll %>%
     dplyr::group_by(!!!obj$data_group, model, method) %>%
-    mutate(BIC = (log(NROW) * npar) - (2 * log_likelihood))
+    dplyr::mutate(BIC = (log(NROW) * npar) - (2 * log_likelihood))
 
 
   return(BIC)

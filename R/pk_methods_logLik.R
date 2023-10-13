@@ -214,18 +214,18 @@ logLik.pk <- function(obj,
       dplyr::ungroup()
 
 
-  newdata <- tidyr::expand_grid(expand_grid(model, method),
+  newdata <- tidyr::expand_grid(tidyr::expand_grid(model, method),
                                 newdata)
 
   newdata <- suppressMessages(dplyr::left_join(coefs, newdata))
 
 
   newdata <- newdata %>%
-    rowwise() %>%
-    filter(!is.null(observations)) %>%
-    mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
-    ungroup() %>%
-    distinct
+    dplyr::rowwise() %>%
+    dplyr::filter(!is.null(observations)) %>%
+    dplyr::mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
+    dplyr::ungroup() %>%
+    dplyr::distinct()
 
 
   newdata <- newdata %>%

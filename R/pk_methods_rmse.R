@@ -152,7 +152,8 @@ if (!(check %in% TRUE)) {
   #remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE) {
     if ("exclude" %in% names(newdata)) {
-      newdata <- newdata %>% filter(exclude %in% FALSE)
+      newdata <- newdata %>%
+        dplyr::filter(exclude %in% FALSE)
     }
   }
 
@@ -166,7 +167,7 @@ if (!(check %in% TRUE)) {
 
   new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
     dplyr::select(dplyr::all_of(req_vars)) %>%
-    ungroup())
+    dplyr::ungroup())
 
 
   #apply dose-normalization if specified
@@ -192,8 +193,8 @@ if (!(check %in% TRUE)) {
                        n_subj = N_Subjects,
                        detect = Detect,
                        log10_trans = conc_scale$log10_trans)) %>%
-    distinct() %>%
-    ungroup()
+    dplyr::distinct() %>%
+    dplyr::ungroup()
 
   message("Groups: \n",
           paste(sapply(unlist(obj$data_group), rlang::as_label),

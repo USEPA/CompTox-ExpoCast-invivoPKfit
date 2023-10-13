@@ -77,7 +77,7 @@ coef.pk <- function(obj,
 
   coefs_tidy <- suppressMessages(coefs %>%
     tidyr::nest(coefs_tibble = dplyr::any_of(possible_model_params)) %>%
-    dplyr::mutate(coefs_vector = map(coefs_tibble,
+    dplyr::mutate(coefs_vector = purrr::map(coefs_tibble,
                               .f = \(x){
                                 as.data.frame(x %>%
                                                 dplyr::select(!where(is.na))) %>%
@@ -109,7 +109,7 @@ coef.pk <- function(obj,
     no_fits <- obj$prefit$fit_check %>%
       dplyr::filter(fit_decision %in% "abort") %>%
       dplyr::select(model, Chemical, Species)
-    coefs_tidy <- suppressMessages(anti_join(coefs_tidy, no_fits))
+    coefs_tidy <- suppressMessages(dplyr::anti_join(coefs_tidy, no_fits))
   }
 
   return(coefs_tidy)

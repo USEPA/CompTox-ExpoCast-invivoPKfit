@@ -99,7 +99,9 @@ predict.pk <- function(obj,
   newdata_ok <- check_newdata(
     newdata = newdata,
     olddata = obj$data,
-    req_vars = c("Time",
+    req_vars = c("Chemical",
+                 "Species",
+                 "Time",
                  "Time.Units",
                  "Dose",
                  "Route",
@@ -107,13 +109,26 @@ predict.pk <- function(obj,
     exclude = exclude
   )
 
+
   #scale time if needed
+
+  # If true, this also means that newdata was not NULL and was user input
   if (!("Time_trans" %in% names(newdata))) {
     newdata$Time_trans <- convert_time(
       x = newdata$Time,
       from = newdata$Time.Units,
       to = obj$scales$time$new_units
     )
+
+    trans_unit_data <- obj$data %>%
+      dplyr::select(
+        !!!union(obj$data_group,
+                 ggplot2::vars(Time_trans.Units))) %>%
+      dplyr::distinct()
+
+    newdata <- newdata %>%
+      dplyr::left_join(trans_unit_data) %>%
+      dplyr::distinct()
   }
 
   #apply transformations if so specified
@@ -136,16 +151,16 @@ predict.pk <- function(obj,
     tidyr::nest(.key = "observations") %>%
     dplyr::ungroup()
 
-  newdata <- tidyr::expand_grid(expand_grid(model, method),
+  newdata <- tidyr::expand_grid(tidyr::expand_grid(model, method),
                                 newdata)
 
   newdata <- suppressMessages(dplyr::left_join(coefs, newdata))
 
 
   newdata <- newdata %>%
-    rowwise() %>%
-    filter(!is.null(observations)) %>%
-    ungroup()
+    dplyr::rowwise() %>%
+    dplyr::filter(!is.null(observations)) %>%
+    dplyr::ungroup()
 
   # After join it is joined by model, method, Chemical, Species
   newdata <- newdata %>%

@@ -33,6 +33,7 @@ convert_time <- function(x,
                          inverse = FALSE) {
 
   period_units <- time_units
+  time_conversions <- time_conversions
 
   if (to %in% "auto") {
     #select units automatically
@@ -54,7 +55,7 @@ convert_time <- function(x,
       # New Code (needs to be vectorized)
       # test with convert_time(c(1, 2, 10), from = "minutes", to = "hours")
       conversion_table <- time_conversions %>%
-        filter(to == TimeTo & unique(from) == TimeFrom)
+        dplyr::filter(to == TimeTo & unique(from) == TimeFrom)
       y_new <- y * conversion_table$conversion
 
     } else{
