@@ -50,7 +50,7 @@
 #'   `use_scale_conc` was a named list, then the residuals are in units of
 #'   `obj$data$Conc.Units` transformed as specified in `use_scale_conc`.
 #' @export
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
 residuals.pk <- function(obj,
                          newdata = NULL,

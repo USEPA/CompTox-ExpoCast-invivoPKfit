@@ -32,5 +32,5 @@ Data pre-processing for an object `obj` includes the following steps, in order:
 9. Replace any negative
 }
 \author{
-John Wambaugh, Caroline Ring, Christopher Cook, Gilbert Padilla Mercado
+John Wambaugh, Caroline Ring, Christopher Cook, Gilberto Padilla Mercado
 }

@@ -8,6 +8,7 @@
 #' @param method A user-supplied `character` vector of method names
 #' @return `TRUE` if all `method %in% obj$settings_optimx$method`; otherwise stops with an error
 #' @author Caroline Ring
+
 check_method <- function(obj, method){
   #check that all methods are valid
   if(!(all(method %in% obj$settings_optimx$method))){

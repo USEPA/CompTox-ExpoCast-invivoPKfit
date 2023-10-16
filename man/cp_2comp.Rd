@@ -18,8 +18,8 @@ administered at time 0. Must be same length as other arguments, or
 length 1.}
 
 \item{route}{A character vector, reflecting the route of administration of
-each single bolus dose: `'oral'` or `'iv'`.  Must be same length as `time`
-and `dose`, or length 1.}
+each single bolus dose: \code{'oral'} or \code{'iv'}.  Must be same length as \code{time}
+and \code{dose}, or length 1.}
 
 \item{medium}{A character vector reflecting the medium in which each resulting
 concentration is to be calculated: "blood" or "plasma". Default is "plasma".
@@ -27,7 +27,7 @@ Must be same length as other arguments, or length 1.}
 }
 \value{
 A vector of blood or plasma concentration values (mass chemical/volume media) corresponding to each
- value in \code{time}
+value in \code{time}
 }
 \description{
 Calculates plasma concentration according to the analytical solution for the

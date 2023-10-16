@@ -20,7 +20,7 @@
 #'   about the data, e.g. number of observations by route, media,
 #'   detect/nondetect; empirical tmax, time of peak concentration for oral data;
 #'   number of observations before and after empirical tmax)
-#' @author John Wambaugh, Caroline Ring, Christopher Cook, Gilbert Padilla Mercado
+#' @author John Wambaugh, Caroline Ring, Christopher Cook, Gilberto Padilla Mercado
 #' @importFrom magrittr `%>%`
 #' @export
 do_preprocess.pk <- function(obj){

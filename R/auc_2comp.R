@@ -4,6 +4,7 @@
 #' 1-compartment model, using an analytical equation (the integral of the
 #' 1-compartment model equation with respect to time).
 #'
+#' @md
 #' @param params A named list of parameter values including the following:
 #'   * k12: Rate at which compound moves from central to peripheral
 #'   compartment, 1/h.

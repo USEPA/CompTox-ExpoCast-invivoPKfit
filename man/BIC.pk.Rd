@@ -73,7 +73,7 @@ Other methods for fitted pk objects:
 \code{\link{rsq.pk}()}
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }
 \concept{fit evaluation metrics}
 \concept{log likelihood functions}

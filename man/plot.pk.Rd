@@ -104,3 +104,6 @@ Plot data and model fits from a [pk()] object.
 If the [pk()] object has not been fitted, then only the data will be plotted
 (because no curve fits exist).
 }
+\author{
+Caroline Ring, Gilberto Padilla Mercado
+}

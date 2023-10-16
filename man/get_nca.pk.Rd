@@ -16,5 +16,5 @@ A `data.frame`: the `data` element of `obj`
 Extract non-compartmental analysis results from a [pk()] object
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }

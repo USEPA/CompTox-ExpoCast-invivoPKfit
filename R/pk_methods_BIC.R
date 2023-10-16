@@ -37,7 +37,7 @@
 #' @family methods for fitted pk objects
 #' @importFrom stats BIC
 #' @export
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 BIC.pk <- function(obj,
                    newdata = NULL,
                    model = NULL,

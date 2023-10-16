@@ -63,6 +63,7 @@
 #'@return A [ggplot2::ggplot()]-class plot object.
 #'@import ggplot2
 #'@export
+#'@author Caroline Ring, Gilberto Padilla Mercado
 plot.pk <- function(obj,
                     newdata = NULL,
                     model = NULL,

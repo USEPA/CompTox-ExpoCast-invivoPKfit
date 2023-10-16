@@ -42,7 +42,7 @@ will simply be doing data summary *de novo* (which may be what you want).
 
 Summary statistics include, for each group:
 
- -`n_obs`: the number of observations
+- `n_obs`: the number of observations
 - `n_exclude`: The number of excluded observations
 - `n_detect`: The number of non-excluded detected observations
 - `n_series_id`: The number of unique series IDs

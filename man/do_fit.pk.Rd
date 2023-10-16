@@ -39,5 +39,5 @@ log-likelihood using [logLik()] and the Akaike Information Criterion using
 values.
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }
