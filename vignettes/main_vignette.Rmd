@@ -21,7 +21,7 @@ devtools::load_all()
 
 
 ```{r time_check, include=FALSE}
-# Quick convert_time() test to save time
+# Quick convert_time() test to save time during CMD check
 convert_time(12, to = "days", from = "hours")
 
 ```
@@ -82,7 +82,15 @@ The model fitting workflow has four steps.
 ### Step 1: Pre-processing data
 
 The first is data pre-processing. Here, variable names are harmonized, and the data set is cleaned, filtered, and missing values are imputed when necessary. Instructions for this data pre-processing step are given in `my_pk$settings_preprocess`.
-s
+Some common harmonized variable names that will be referenced in this document are:  
+  
+- Chemical: the DTXSID for the analyte of a CvT experiment  
+- Species: the species of the subject in a CvT experiment  
+- Route: the route by which the Chemical was administered (iv or oral)  
+- Media: the medium which was collected for analysis (blood or plasma)  
+  
+
+
 ```{r}
 #preprocess data
 my_pk <- do_preprocess(my_pk)
@@ -146,20 +154,20 @@ Once fitting has been completed, then you can use some familiar methods to extra
 
 #### Coefficients, residuals, and predictions
 
-For example, you can extract the fitted model parameter values using `coef()`. The result will be a list of matrices, whose columns are model parameters, and whose rows correspond to the optimization algorithms used for fitting.
+For example, you can extract the fitted model parameter values using `coef()`. The result will be a `data.frame`, whose columns include model parameters, and whose rows correspond to the optimization algorithms used for fitting and unique identifiers for each *data_group*, Route, and Media.
 
 ```{r}
 coef(my_pk)
 ```
 
-You can extract the residuals using `residuals()` (for the observations in the original data) using `predict()`. The result is a list of matrices, one for each fitted model, whose columns contain the residuals from the fits by each optimization algorithm.
+You can extract the residuals using `residuals()` (for the observations in the original data) using `predict()`. The result is a `data.frame`, one row for each fitted model, optimization algorithm, and timepoint-value pair given by `predict()`.
 
 ```{r}
 my_resids <- residuals(my_pk)
 head(my_resids)
 ```
 
-You can get the predicted values (for the time points, doses, and routes in the original data) using `predict()`. The result is a list of matrices, one for each fitted model, whose columns contain the predictions from the fits by each optimization algorithm.
+You can get the predicted values (for the time points, doses, and routes in the original data) using `predict()`. The result is a `data.frame`, one for each fitted model, whose columns contain the predictions from the fits by each optimization algorithm.
 
 ```{r}
 my_preds <- predict(my_pk)
@@ -244,12 +252,13 @@ And you can get summary information about the pre-processed data -- including no
 
 ```{r}
 get_data_info(my_pk)
+get_nca(my_pk)
 ```
 
 
 #### Toxicokinetic statistics
 
-And finally, you can compute derived toxicokinetic statistics, such as total clearance rate, half-life, steady-state plasma concentration, etc., using `get_tkstats()`. (The result is a list, one `data.frame` of TK stats for each model that was fitted.)
+And finally, you can compute derived toxicokinetic statistics, such as total clearance rate, half-life, steady-state plasma concentration, etc., using `get_tkstats()`. (The result is a `data.frame` of TK stats, one for each model and optimization algorithm, that was fitted.)
 
 ```{r}
 my_tkstats <- get_tkstats(my_pk)
