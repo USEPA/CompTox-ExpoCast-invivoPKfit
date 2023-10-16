@@ -33,43 +33,6 @@ A vector of blood or plasma concentration values (mass chemical/volume media) co
 Calculates plasma concentration according to the analytical solution for the
 2-compartment model.
 }
-\details{
-`params` must include the following named list elements:
-  \describe{
-  \item{k12}{Rate at which compound moves from central to peripheral
-  compartment, 1/time.}
-  \item{k21}{Rate at which compound moves from peripheral to central
-  compartment, 1/time.}
-  \item{kelim}{Elimination rate, 1/time.}
-  \item{V1}{Apparent volume of central compartment, volume/unit BW. Or see below for
-  `Fgutabs_V1`}
-  }
-
-For oral administration (any `route %in% "oral"`), `params` must also include
-the following named list items:
-  \describe{
-  \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
-  `Fgutabs_V1`}
-  \item{kgutabs}{Rate of absorption from gut, 1/time.}
-  }
-
-For oral administration, in lieu of `V1` and `Fgutabs`, you may instead
-provide `Fgutabs_V1`, the ratio of Fgutabs to V1 (1/volume). This is an alternate
-parameterization for situations where `Fgutabs` and `V1` are not identifiable
-separately (i.e. when oral TK data are available, but IV data are not). If
-`Fgutabs` and `V1` are provided, they will override any value also provided
-for `Fgutabs_V1`.
-
-If both oral and IV administration are specified (i.e., some `route %in% "iv"`
-and some `route %in% "oral"`), then `V1` is required along with either
-`Fgutabs` or `Fgutabs_V1`. (If `V1` and `Fgutabs_V1` are provided, but
-`Fgutabs` is not provided, then `Fgutabs` will be calculated from `V1` and
-`Fgutabs_V1`.)
-
-#'If `any(medium %in% 'blood')`, then `params` must also include
-`Rblood2plasma`, the ratio of chemical concentration in whole blood to the
-chemical concentration in blood plasma.
-}
 \seealso{
 Other built-in model functions: 
 \code{\link{auc_1comp}()},

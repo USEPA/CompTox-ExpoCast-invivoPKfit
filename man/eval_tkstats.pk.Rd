@@ -47,8 +47,8 @@ stats per group.}
 
 \item{exclude}{Logical: `TRUE` to get the TK groupings after removing any
 observations in the data marked for exclusion (if there is a variable
-`exclude` in the data, an observation is marked for exclusion when `exclude
-%in% TRUE`). `FALSE` to include all observations when getting the TK
+`exclude` in the data, an observation is marked for exclusion when `TRUE`).
+`FALSE` to include all observations when getting the TK
 groupings, regardless of exclusion status. Default `TRUE`.}
 
 \item{dose_norm}{Logical: `TRUE` (default) to dose-normalize before
@@ -58,11 +58,11 @@ Cmax, AUC, Css). `FALSE` to calculate NCA and fitted TK stats separately
 for each dose group (you must specify `Dose` as one of the variables in
 `tk_group` for this to work). If `dose_norm` is `TRUE` and you also specify
 `Dose` as one of the `tk_group` variables, then the dose part of the
-grouping will be ignored in the output. (If `dose_norm %in% TRUE`, under
+grouping will be ignored in the output. (If `TRUE`, under
 the hood, this function will temporarily overwrite the `Dose` column in its
 local copy of `newdata` with 1's. This doesn't affect the data outside of
 this function. But it means that any values in the `Dose` variable of
-`newdata` will be ignored if `dose_norm %in% TRUE`.)}
+`newdata` will be ignored if `TRUE`.)}
 
 \item{finite_only}{Logical: `TRUE` (default) returns only rows (observations)
 for which AUC is finite in both `nca` and `tkstats`. This also means it will
@@ -70,7 +70,7 @@ by default never return instances where winning model == `model_flat`.}
 }
 \value{
 A `data.frame` with one  row for each "winning" model in
-  `model` from [get_winning_model()]. Each `data.frame` will have the variables in the `data.frame`
+  `model` from [get_winning_model()]. The `data.frame` will have the variables
   returned by the `tkstats_fun` for its corresponding model. (For the
   built-in models `model_flat`, `model_1comp`, and `model_2comp`, these
   variables are `param_name` and `param_value`.) Additionally, there will be

@@ -47,11 +47,11 @@
 #'   Default `NULL` to return TK stats for all methods.
 #' @param exclude Logical: `TRUE` to get the TK groupings after removing any
 #'   observations in the data marked for exclusion (if there is a variable
-#'   `exclude` in the data, an observation is marked for exclusion when `exclude
-#'   %in% TRUE`). `FALSE` to include all observations when getting the TK
+#'   `exclude` in the data, an observation is marked for exclusion when  `TRUE`).
+#'   `FALSE` to include all observations when getting the TK
 #'   groupings, regardless of exclusion status. Default `TRUE`.
 #' @param vol_unit Character: Specifies the unit of volume. Defaults to "L" for liters.
-#' @param dose_norm Logical: `TRUE` (default) specifies whether the concentraions are dose-normalized.
+#' @param dose_norm Logical: `TRUE` (default) specifies whether the concentrations are dose-normalized.
 #' @return  A data.frame with one row for each `data_group`, `model` and `method`
 #'   with the variables in the `data.frame` returned by the `tkstats_fun` for
 #'   its corresponding model.

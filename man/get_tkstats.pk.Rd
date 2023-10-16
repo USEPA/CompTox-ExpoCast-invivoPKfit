@@ -46,13 +46,13 @@ Default `NULL` to return TK stats for all methods.}
 
 \item{exclude}{Logical: `TRUE` to get the TK groupings after removing any
 observations in the data marked for exclusion (if there is a variable
-`exclude` in the data, an observation is marked for exclusion when `exclude
-%in% TRUE`). `FALSE` to include all observations when getting the TK
+`exclude` in the data, an observation is marked for exclusion when  `TRUE`).
+`FALSE` to include all observations when getting the TK
 groupings, regardless of exclusion status. Default `TRUE`.}
 
 \item{vol_unit}{Character: Specifies the unit of volume. Defaults to "L" for liters.}
 
-\item{dose_norm}{Logical: `TRUE` (default) specifies whether the concentraions are dose-normalized.}
+\item{dose_norm}{Logical: `TRUE` (default) specifies whether the concentrations are dose-normalized.}
 }
 \value{
 A data.frame with one row for each `data_group`, `model` and `method`

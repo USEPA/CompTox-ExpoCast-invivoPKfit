@@ -5,23 +5,15 @@
 #' 1-compartment model equation with respect to time).
 #'
 #' @param params A named list of parameter values including the following:
-#'   \describe{
-#'   \item{k12}{Rate at which compound moves from central to peripheral
-#'   compartment, 1/h.}
-#'   \item{k21}{Rate at which compound moves from peripheral to central
-#'   compartment, 1/h.}
-#'   \item{kelim}{Elimination rate, 1/h.}
-#'   \item{V1}{Apparent volume of central compartment, L/kg BW. Or see below for
-#'   "Fgutabs_V1"}
-#'   }
+#'   * k12: Rate at which compound moves from central to peripheral
+#'   compartment, 1/h.
+#'   * k21: Rate at which compound moves from peripheral to central compartment, 1/h.
+#'   * kelim: Elimination rate, 1/h.
+#'   * V1: Apparent volume of central compartment, L/kg BW. Or see below for "Fgutabs_V1"
 #'
-#'   For oral administration (\code{route} FALSE), \code{params} must also
-#'   include:
-#'   \describe{
-#'   \item{Fgutabs}{Oral bioavailability, unitless fraction. Or see below for
-#'   "Fgutabs_V1"}
-#'   \item{kgutabs}{Rate of absorption from gut, 1/h.}
-#'   }
+#'   For oral administration (\code{route} FALSE), \code{params} must also include:
+#'   * Fgutabs: Oral bioavailability, unitless fraction. Or see below for "Fgutabs_V1"
+#'   * kgutabs: Rate of absorption from gut, 1/h.
 #'
 #'   For oral administration, in lieu of "V1" and "Fgutabs", you may instead
 #'   provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an
