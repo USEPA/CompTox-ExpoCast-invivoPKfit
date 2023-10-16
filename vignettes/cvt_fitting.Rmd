@@ -26,14 +26,18 @@ convert_time(12, to = "days", from = "hours")
 
 ```
 
+
+This vignette demonstrates the differences in setup between the _pooled_,
+_hierarchical/joint_, and _separate_ error modelling fitting options.
+It will also show the various other fitting options that scale concentration
+and time values.
+
 ```{r mininal-pk}
 cvt_df <- subset(cvt, analyte_dtxsid %in% c("DTXSID8031865",
-                                            "DTXSID5032498",
                                             "DTXSID0020442"))
 
 minimal_pk <- pk(data = cvt_df)
 ```
-
 
 
 # "Joint" analysis
@@ -78,7 +82,7 @@ joint_pk <- do_fit(joint_pk)
 This analysis takes all the Chemical and Species data together and models
 the error of all the data during fitting.
 
-```{r}
+```{r, eval=FALSE}
 pooled_pk <- minimal_pk +
   facet_data(ggplot2::vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE,
@@ -94,7 +98,7 @@ pooled_pk <- do_fit(pooled_pk)
 This analysis takes all the Chemical, Species, and Reference data individually
 and models the error similarly.
 
-```{r}
+```{r, eval=FALSE}
 separate_pk <- minimal_pk +
   facet_data(ggplot2::vars(Chemical, Species, Reference)) +
   settings_preprocess(keep_data_original = FALSE,
