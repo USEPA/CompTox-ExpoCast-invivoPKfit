@@ -27,6 +27,7 @@
 #' @return The same [pk] object, with element `fit` containing the fitted
 #'   results for each model in `stat_model`.
 #' @export
+#' @import multidplyr
 #' @author Caroline Ring, Gilberto Padilla Mercado
 do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
   #check status
@@ -56,6 +57,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
     obj <- do_prefit(obj)
   }
 
+  if (rlang::is_installed("multidplyr")) { n_cores <- NULL }
 
 
 

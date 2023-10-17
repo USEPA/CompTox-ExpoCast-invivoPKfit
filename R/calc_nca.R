@@ -80,6 +80,7 @@
 #' @return A `data.frame` with 9 rows and `length(method) + 3` variables. See
 #'   Details.
 #' @export
+#' @import PK
 #' @author Caroline Ring
 calc_nca <- function(time,
                     conc,

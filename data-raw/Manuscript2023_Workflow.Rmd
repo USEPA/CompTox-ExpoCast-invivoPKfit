@@ -1739,13 +1739,31 @@ fw <- mvbutils::foodweb(where = asNamespace("invivoPKfit"),
 fun_mat <- fw$funmat
 
 mvbutils::foodweb(where = asNamespace("invivoPKfit"),
-                  prune = "convert_time",
-                  # descendents = FALSE,
+                  prune = "calc_auc",
+                  # descendants = FALSE,
                   # ancestors = FALSE,
                   border = TRUE, cex = 1, lwd = 1.5)
 
 # Predict dependents: rmse, residuals, rsq, calc_auc, fold_errors, plot
 # Coef dependents: calc_auc, predict, get_tkstats, summary,log_Lik, coef_sd
+
+# list of all functions and methods
+fm <- ls(asNamespace("invivoPKfit"))
+fm <- fm[!grepl(".default", x = fm)]
+
+pdf(file = paste0(Sys.getenv("FIG_DIR"),
+              "NonDefaultFunction_Connections.pdf"),
+    height = 8, width = 8)
+for (i in fm) {
+  mvbutils::foodweb(where = asNamespace("invivoPKfit"),
+                  prune = i,
+                  # descendants = FALSE,
+                  # ancestors = FALSE,
+                  border = TRUE, cex = 1, lwd = 1.5)
+}
+dev.off()
+
+
 
 ```
 

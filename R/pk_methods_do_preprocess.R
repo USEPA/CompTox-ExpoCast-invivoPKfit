@@ -21,6 +21,9 @@
 #'   detect/nondetect; empirical tmax, time of peak concentration for oral data;
 #'   number of observations before and after empirical tmax)
 #' @author John Wambaugh, Caroline Ring, Christopher Cook, Gilberto Padilla Mercado
+#' @import dplyr
+#' @import tidyr
+#' @import purrr
 #' @importFrom magrittr `%>%`
 #' @export
 do_preprocess.pk <- function(obj){

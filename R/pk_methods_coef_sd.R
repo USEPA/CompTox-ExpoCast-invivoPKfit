@@ -35,6 +35,11 @@
 #'   The remaining columns include the parameters & hyperparameters as returned by
 #'   [coef.pk()], as well as their calculated standard deviations.
 #' @export
+#' @importFrom MASS ginv
+#' @import dplyr
+#' @import purrr
+#' @import tidyr
+#' @import numDeriv
 #' @author Caroline Ring and Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
 #' @references Gill J, King G. (2004) What to Do When Your Hessian is Not
