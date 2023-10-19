@@ -694,6 +694,7 @@ pl5A <- all_my_data %>%
   ungroup() %>%
   rowwise() %>%
   mutate(foldConc = Conc / meanConc) %>%
+  # Plotting
   ggplot(aes(x = foldConc)) +
   geom_histogram(binwidth = 0.2,
                  fill = "grey5",
@@ -717,6 +718,8 @@ pl5A <- all_my_data %>%
         axis.line = element_blank(),
         plot.background = element_blank(),
         axis.ticks.y = element_blank())
+
+pl5A
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
               "NormalizedConcentrations_2023-09-29.png"),
