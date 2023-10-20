@@ -972,7 +972,7 @@ pl_7A <- my_preds %>%
   ungroup() %>%
   rowwise() %>%
   mutate(foldConc = Conc_trans / meanConc,
-         foldPred = Conc_est / Conc_trans) %>% 
+         foldPred = Conc_est / Conc_trans) %>%
   # For percentages
   # ungroup() %>%
   # filter(model %in% c("model_flat")) %>%
@@ -987,11 +987,13 @@ pl_7A <- my_preds %>%
   geom_hline(yintercept = c(0.5, 2), linetype = "dashed") +
   geom_vline(xintercept = c(0.5, 2), linetype = "dashed") +
   facet_grid(cols = vars(model)) +
-  scale_x_log10(limits = c(0.0001, 100)) +
-  scale_y_log10(limits = c(0.001, 1000)) +
+  scale_x_log10(labels = scales::label_math(format = log10),
+                limits = c(0.001, 100)) +
+  scale_y_log10(labels = scales::label_math(format = log10),
+                limits = c(0.001, 1000)) +
   scale_fill_viridis_c(option = "cividis",
                        limits = c(1, 100),
-                       oob = oob_squish) +
+                       oob = scales::oob_squish) +
   labs(y = "Model Error",
        x = "Data Variability") +
   theme(aspect.ratio = 1,
@@ -1003,8 +1005,9 @@ pl_7A <- my_preds %>%
         axis.ticks = element_blank(),
         axis.line = element_blank())
 
+pl_7A
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ModelPerformance_vDataVariability_2023-10-02.png"),
+              "ModelPerformance_vDataVariability_2023-10-19.png"),
        height = 3,
        width = 6.5,
        device = "png",
@@ -1253,7 +1256,7 @@ lombardo_comparison <- my_tkstats %>%
 comparable_ids <- lombardo_comparison %>% pull(DTXSID)
 
 lombard_abbr <- lombard_abbr %>%
-  mutate(Species = "human", model = "lombardo") %>%
+  mutate(Species = "human", model = "Lombardo et al.") %>%
   rename(Vss = hVss, CLtot = hCltot) %>%
   mutate(CLtot = CLtot*60/1000) %>% # Lombardo reports this as mL/min/kg, need L/h/kg
   filter(DTXSID %in% comparable_ids)
@@ -1336,12 +1339,15 @@ lombardo_hist <- data.frame(Chemical = c(lombardo$DTXSID,
                                       length.out = nrow(my_tkstats))))
 
 
-sfig4A <- lombardo_hist %>% ggplot(aes(x = log2(Vss), color = Source,
-                             group = Source)) +
+sfig4A <- lombardo_hist %>% 
+  ggplot(aes(x = log2(Vss), color = Source,
+             group = Source)) +
   geom_freqpoly(aes(y = after_stat(ndensity)),
                 linewidth = 2/.pt,
                 bins = 20) +
-  labs(y = "Scaled Frequency") +
+  labs(y = "Scaled Frequency",
+       x = "Vss") +
+  scale_x_continuous(labels = scales::label_math(expr = 2^.x)) +
   scale_color_manual(values = c("black", "#1064c9")) +
   guides(color = guide_legend(nrow = 2, linewidth = 1)) +
   theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
@@ -1358,7 +1364,7 @@ sfig4A <- lombardo_hist %>% ggplot(aes(x = log2(Vss), color = Source,
         legend.title = element_text(face = "bold"),
         legend.text = element_text())
 
-
+sfig4A
 other_meta <- read_csv(
   file = paste0(Sys.getenv("FIG_DIR"), "SupTableInVivoDatandPreds.csv")) %>%
   dplyr::select(DTXSID, fbioh, fbior) %>%
@@ -1375,7 +1381,7 @@ sfig4B <- other_meta %>% left_join(my_tkstats, by = c("DTXSID" = "Chemical")) %>
                names_to = "Source",
                values_to = "Fgutabs") %>%
     mutate(Source = ifelse(str_detect(Source, "tkstats"), "invivoPKfit",
-                           "Caco-2 Paper")) %>%
+                           "Honda et al.")) %>%
     ggplot(mapping = aes(
       x = Fgutabs,
       y = reorder(DTXSID, Fgutabs)
@@ -1385,7 +1391,8 @@ sfig4B <- other_meta %>% left_join(my_tkstats, by = c("DTXSID" = "Chemical")) %>
                position = position_dodge(0.7),
                size = 5/.pt, stroke = 2.5/.pt) +
     scale_color_manual(values = c("black", "green4"),
-                       breaks = c("invivoPKfit", "Caco-2 Paper")) +
+                       breaks = c("invivoPKfit", "Honda et al.")) +
+  labs(x = "Oral Bioavailability") +
   guides(color = guide_legend(nrow = 2)) +
     theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
           panel.background = element_blank(),
