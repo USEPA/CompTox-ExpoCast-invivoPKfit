@@ -456,10 +456,10 @@ This argument instructs `invivopkfit` on how to perform non-compartmental analys
 
 For each NCA group, a few basic summary statistics will also be computed:
 
--number of observations
--number of detects
--time of first and last observations
--time of first and last detected observations
+- number of observations  
+- number of detects  
+- time of first and last observations  
+- time of first and last detected observations  
 
 ## `my_pk$optimx_settings`
 
@@ -555,16 +555,16 @@ The `model` argument is a character vector (or scalar), listing the names of one
 
 Each model is an object of class `pk_model`, which is simply a named list giving:
 
-- `name`: The model name
-- `params`: The model parameter names (listed as a character vector)
-- `conc_fun`: The name of a function that computes concentrations, given model parameters, time, dose, route, and media
-- `auc_fun`: The name of a function that computes AUC (area under the concentration time curve), given model parameters, time, dose, route, and media
-- `params_fun`" The name of a function that returns bounds and starting points for each of the model parameters, given the data
-- `tkstats_fun`: The name of a function that computes derived TK statistics (such as halflife, clearance rate, etc.) given model parameters
-- `conc_fun_args`: Any additional arguments to the function in `conc_fun`
-- `auc_fun_args`: Any additional arguments to the function in `auc_fun`
-- `params_fun_args`: Any additional arguments to the function in `params_fun`
-- `tkstats_fun_args` : Any additional arguments to the function in `tkstats_fun`
+- `name`: The model name  
+- `params`: The model parameter names (listed as a character vector)  
+- `conc_fun`: The name of a function that computes concentrations, given model parameters, time, dose, route, and media  
+- `auc_fun`: The name of a function that computes AUC (area under the concentration time curve), given model parameters, time, dose, route, and media  
+- `params_fun`" The name of a function that returns bounds and starting points for each of the model parameters, given the data  
+- `tkstats_fun`: The name of a function that computes derived TK statistics (such as halflife, clearance rate, etc.) given model parameters  
+- `conc_fun_args`: Any additional arguments to the function in `conc_fun`  
+- `auc_fun_args`: Any additional arguments to the function in `auc_fun`  
+- `params_fun_args`: Any additional arguments to the function in `params_fun`  
+- `tkstats_fun_args` : Any additional arguments to the function in `tkstats_fun`  
 
 For example, here is the built-in model `model_1comp`:
 
@@ -603,13 +603,13 @@ $$ c_{ij} = f(t_{ij}, d_{ij}, r_{ij}, m_{ij}; \theta) + \textrm{Normal}(\mu = 0,
 
 where for observation $j$ within group $i$:
 
-- $c_{ij}$ is the observed concentration
-- $t_{ij}$ is the time for the observed concentration
-- $d_{ij}$ is the dose for the observed concentration
-- $r_{ij}$ is the dose administration route for the observed concentration
-- $m_{ij}$ is the media (tissue) for the observed concentration
-- $f(t, d; \theta)$ is the model function that predicts concentration given time, dose, route, media, and a vector of model parameter values
-- $\theta$ is the vector of model parameters
+- $c_{ij}$ is the observed concentration  
+- $t_{ij}$ is the time for the observed concentration  
+- $d_{ij}$ is the dose for the observed concentration  
+- $r_{ij}$ is the dose administration route for the observed concentration  
+- $m_{ij}$ is the media (tissue) for the observed concentration  
+- $f(t, d; \theta)$ is the model function that predicts concentration given time, dose, route, media, and a vector of model parameter values  
+- $\theta$ is the vector of model parameters  
 
 All groups $i = 1, 2, \ldots, N_i$ share the same vector of model parameters $\theta$, but each different group has its own error standard deviation $\sigma_i$. 
 
