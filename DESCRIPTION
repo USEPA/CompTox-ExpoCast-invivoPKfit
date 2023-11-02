@@ -10,11 +10,24 @@ Description: Takes in vivo toxicokinetic concentration-time data
 License: GPL-3
 LazyData: TRUE
 Depends: R (>= 2.10)
-Imports: PK, MASS, numDeriv, optimx, scales,
-        ggplot2, RColorBrewer, rmarkdown, dplyr, magrittr, tidyr, rlang
+Imports: 
+    PK,
+    MASS,
+    numDeriv,
+    optimx,
+    scales,
+    ggplot2,
+    RColorBrewer,
+    rmarkdown,
+    dplyr,
+    magrittr,
+    tidyr,
+    rlang,
+    multidplyr (>= 0.1.3),
+    purrr,
+    tidyselect
 Suggests: 
     knitr,
-    multidplyr,
     stringr,
     testthat (>= 3.0.0)
 RoxygenNote: 7.2.3

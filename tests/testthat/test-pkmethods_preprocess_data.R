@@ -2,10 +2,10 @@ test_that("data preprocessing works without errors",
           {
             my_pk <- pk(
               data = subset(cvt,
-                            chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
+                            analyte_dtxsid %in% "DTXSID3061635"
               )
             )
-            expect_no_error(preprocess_data(my_pk))
+            expect_no_error(do_preprocess(my_pk))
           }
 )
 
@@ -14,8 +14,8 @@ test_that("data preprocessing handles NULL data as expected",
             my_pk <- pk(
               data = NULL
               )
-            expect_messsage(preprocess_data(my_pk),
-                            regexp = "preprocess_data.pk(): Original data is NULL",
+            expect_messsage(do_preprocess(my_pk),
+                            regexp = "do_preprocess.pk(): Original data is NULL",
                             fixed = TRUE)
           }
 )
@@ -24,9 +24,9 @@ test_that("data preprocessing adds an element 'data'",
           {
             my_pk <- pk(
               data = subset(cvt,
-                            chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
-              )
-            )
+                            analyte_dtxsid %in% "DTXSID3061635"
+              ))
+            my_pk <- do_preprocess(my_pk)
             expect_true("data" %in% names(my_pk))
           }
 )
@@ -35,9 +35,10 @@ test_that("preprocessed data has all of the required harmonized variable names",
           {
             my_pk <- pk(
               data = subset(cvt,
-                            chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
+                            analyte_dtxsid %in% "DTXSID3061635"
               )
             )
+            my_pk <- do_preprocess(my_pk)
             required_vars <- c("Chemical",
                                "Species",
                                "Route",

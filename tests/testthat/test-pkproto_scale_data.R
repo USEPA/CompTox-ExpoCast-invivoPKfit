@@ -22,8 +22,7 @@ test_that("scale_conc() returns an object with the expected names in its element
             obj <- scale_conc()
             expect_true(
               all(
-                c("ratio_conc_dose",
-                  "dose_norm",
+                c("dose_norm",
                   "log10_trans",
                   "expr") %in%
                   names(obj$value)

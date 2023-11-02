@@ -27,7 +27,7 @@
 #' @return The same [pk] object, with element `fit` containing the fitted
 #'   results for each model in `stat_model`.
 #' @export
-#' @import multidplyr
+#' @import multidplyr purrr
 #' @author Caroline Ring, Gilberto Padilla Mercado
 do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
   #check status

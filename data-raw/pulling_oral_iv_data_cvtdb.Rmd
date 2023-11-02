@@ -146,6 +146,49 @@ cvt_df <- sql_query # Copy so I don't have to do query again to reset any errors
 ```
 
 
+```{r counting-replicates}
+count_query <- paste0(
+  "SELECT DISTINCT ",
+  "a.id, a.time_hr, a.conc, ",
+  "b.id, b.analyte_dtxsid, ",
+  "b.test_substance_dtxsid, b.conc_medium_normalized, ",
+  "c.id, c.administration_route_normalized, ",
+  "c.fk_extraction_document_id, c.dose_level_normalized, ",
+  "d.id, d.species ",
+  
+  # Main Table
+  "FROM conc_time_values a ",
+  
+  # Join with series table by series ID
+  "LEFT JOIN series b ON b.id = a.fk_series_id ",
+  
+  # Join to studies table by study ID
+  "LEFT JOIN studies c ON c.id = b.fk_study_id ",
+  
+  # Join to subjects table by subject ID
+  "LEFT JOIN subjects d ON d.id = b.fk_subject_id ",
+  
+  # Filtering steps
+  "WHERE b.conc_medium_normalized IN ('blood', 'plasma') AND ",
+  "c.administration_route_normalized IN ('iv', 'oral')"
+)
+
+query_db(query = count_query,
+         schema = "cvt") %>%
+  select(-id) %>% 
+  filter(!is.na(analyte_dtxsid),
+         analyte_dtxsid == test_substance_dtxsid,
+         conc > 0) %>%
+  distinct() %>%
+  group_by(time_hr, analyte_dtxsid, conc_medium_normalized,
+           administration_route_normalized, species, fk_extraction_document_id,
+           dose_level_normalized) %>%
+  count() %>%
+  pull(n) %>% table()
+```
+
+
+
 # Validating data
 
 This step in the loading process allows us to correct some mis-annotations in the
@@ -157,7 +200,7 @@ for `invivoPKfit` specifically.
 To summarize the changes:  
 
 -  Change original dose units for study _S0916_ and convert to mg/kg.  
--  Change original dose units for study _S0642_ and convert to mg/kg.  
+-  Change original dose units for study _S0624_ and convert to mg/kg.  
 -  Include a series of isotope tracing experiments from documents _65_, _61_, _46_, and _31_.  
 -  Input the LOQ for studies _S0976_ & _S0361_.  
 -  Infer the LOQ for study _S0328_ as 1, given the values near it deemed above and below LOQ.  
@@ -165,7 +208,7 @@ To summarize the changes:
 -  Input DTXSIDs for chemicals that did not have them but were available via CompTox dashboard.  
 -  Standardize all Doses, LOQs, Concentrations, and Concentration standard deviations.  
 -  Filter out chemicals dosed multiple times throughout the experiment.  
--  Filter out chemicals with very limited information.
+-  Filter out chemicals with very limited information.  
 
 
 ```{r data_validation}

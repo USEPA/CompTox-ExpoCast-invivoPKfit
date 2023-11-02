@@ -645,6 +645,23 @@ myRMSE_all <- myRMSE %>%
   dplyr::summarize(avg_MSE = mean(RMSE^2, na.rm = TRUE),
                 median_MSE = median(RMSE^2, na.rm = TRUE))
 
+
+my_coefs <- coef(my_pk) %>% inner_join(winmodel) %>% inner_join(myAIC)
+
+my_coefs %>% dplyr::select(-sigma_value, -error_group, -coefs_vector) %>%
+  ungroup() %>%
+  distinct() %>%
+  inner_join(other_coefs %>% dplyr::select(model, method, Chemical, Species)) ->
+  my_coefs
+
+other_coefs <- read_csv(
+  "C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Figures/CvTdb_fullCoefs_20230906.csv")
+
+other_coefs %>% dplyr::select(model, method, Chemical, Species)
+
+write_csv(my_coefs, "C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Figures/CvTdb_fullCoefsAIC_2023.10.30.csv")
+
+
 ```
 
 
@@ -664,7 +681,7 @@ all_my_data %>%
            Dose, Time) %>%
   filter(n() > 1,
          sum(is.na(Conc)) != n(),
-         LOQ < Conc) %>%
+         Conc > LOQ) %>% nrow()
   mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
   ungroup() %>%
   rowwise() %>%
