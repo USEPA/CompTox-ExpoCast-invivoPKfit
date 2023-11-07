@@ -19,7 +19,7 @@
 #' @param calc_loq_factor  A numeric factor used for imputing missing LOQ.
 #'   Within each group defined in `loq_group`, any missing LOQ values will be
 #'   imputed as the minimum detected Value in the group, multiplied by
-#'   `calc_loq_factor`. Default 0.45.
+#'   `calc_loq_factor`. Default 0.9.
 #' @param impute_sd TRUE or FALSE: Whether to impute missing SD values.
 #' @param sd_group A list of variables, specified using a call to
 #'   [dplyr::vars()]. These should be harmonized variable names. Unique
@@ -40,7 +40,7 @@ settings_preprocess <- function(routes_keep = c("oral", "iv"),
                                 ratio_conc_dose = 1,
                                 impute_loq = TRUE,
                                 loq_group = dplyr::vars(Chemical, Species, Reference, Media),
-                                calc_loq_factor = 0.45,
+                                calc_loq_factor = 0.9,
                                 impute_sd = TRUE,
                                 sd_group = dplyr::vars(Chemical, Species, Reference, Media),
                                 suppress.messages = FALSE,

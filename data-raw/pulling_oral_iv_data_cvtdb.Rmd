@@ -309,10 +309,11 @@ cvt_df <- cvt_df %>%
 # S0361 seems to have some data that has not been extracted (also for mouse)
 cvt_df <- cvt_df %>%
   mutate(loq = case_when(
-    other_study_identifier %in% "S0361" ~ 0.05,
-    other_study_identifier %in% "S0328" ~ 1, # This is inferred
+    # here omitted a change to a value for LOQ that doubles the minimum detected limit
+    other_study_identifier %in% "S0328" ~ 1, # This is inferred from the data
     # Highest value under loq is 0.9
     # Lowest value above loq is 1.263, but there are differences in GC-EC and HPLC methods
+    # The method of imputation for loq may yet need to be improved
     .default = loq
   ),
   loq_units = case_when(
@@ -389,7 +390,47 @@ cvt_df <- cvt_df %>%
 # More notes:
 # DTXSID6020438 & DTXSID0020868 rat is from water (top) and oil (bottom curve) gavage
 
+
+# This is the final filtering so that the dataset is most consistent with the
+# most current near future pull in the new year
+cvt_df <- cvt_df %>%
+  filter(!is.na(analyte_dtxsid),
+         analyte_dtxsid == test_substance_dtxsid,
+         !(document_id %in% c(38, 65, 110, 112, 46, 31)),
+         !(other_study_identifier %in% c("S0916")),
+         !(analyte_name_original %in% "Methemoglobin"),
+         is.na(radiolabeled))
+
+cvt_df %>%
+  filter(conc > 0) %>%
+  group_by(time_hr, analyte_dtxsid, conc_medium_normalized,
+           administration_route_normalized, species, document_id,
+           dose_level_normalized) %>%
+  distinct() %>%
+  count() %>% 
+  ungroup() %>%
+  filter(n >= 10) %>% 
+  distinct(analyte_dtxsid, conc_medium_normalized,
+           administration_route_normalized, species, document_id,
+           dose_level_normalized) %>%
+  arrange(analyte_dtxsid, species, document_id) %>%
+  left_join(cvt_df) %>% 
+  View()
+
+cvt_df %>%
+  filter(conc > 0) %>%
+  group_by(time_hr, analyte_dtxsid, conc_medium_normalized,
+           administration_route_normalized, species, document_id,
+           dose_level_normalized) %>%
+  distinct() %>%
+  count() %>%
+  ungroup() %>%
+  count(n)
 ```
+
+
+This filtered and transformed dataset has 14,486 observations.
+
 
 Save the pulled CVT data with the edits/normalizations, and also save the current date.
 
