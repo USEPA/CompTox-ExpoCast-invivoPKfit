@@ -14,6 +14,7 @@ library(cowplot)
 library(RColorBrewer)
 tidyverse_conflicts()
 # Note I have now saved the RDS file for JOINT model with L-BFGS-B
+# saveRDS(my_pk_100j, "data-raw/all_cvt_pk_JOINT.rds")
 my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 ```
 
