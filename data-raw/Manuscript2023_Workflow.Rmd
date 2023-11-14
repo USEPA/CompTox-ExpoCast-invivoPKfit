@@ -582,7 +582,7 @@ In addition, _L-BFGS-B_ was the optimizer of choice due to some marginally bette
 my_pk <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE,
-                      suppress.messages = TRUE) +
+                      suppress.messages = FALSE) +
   settings_optimx(method = c("L-BFGS-B")) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   stat_error_model(error_group = vars(Chemical, Species, Reference)) 
@@ -772,6 +772,79 @@ all_my_data %>%
   theme(legend.position = "bottom")
 
 ```
+
+
+### Figure 4A-2: Alternate version of Figure 4A
+
+This alternate version of Figure 4A aims to simplify the assessment of replication
+of datasets in invivoPKfit. In contrast to the original 4A, this will also result
+in the inclusion of datasets with recorded standard deviation values
+(i.e. non-indivudual animal data/summarized data).
+
+The way this will work is by calculating the average and standard deviations
+of individual animal data
+(eliminating individual animal data that does not have replicates)
+then testing the following:
+
+$$
+\frac{\mu + 2\sigma}{\mu} \leq 2
+$$
+
+Which essentially tests whether, at least 95% of data is within a factor of 2.
+The result is a bar chart that shows how many timepoints with replicate values
+passed this test. It minimizes the double (or more) counting of timepoints with
+multiple replicates from individual animal data.
+
+
+```{r fig4A-2-alt}
+iad_summary <- cvt %>% filter(conc > 0, n_subjects_in_series == 1) %>%
+  group_by(analyte_dtxsid, species, administration_route_normalized,
+           conc_medium_normalized, dose_level_corrected, document_id,
+           time_hr) %>%
+  filter(n() > 1) %>%
+  summarize(conc_sd_calc = sd(conc),
+            conc_avg_calc = mean(conc),
+            n_subjects_in_series = n())
+
+sud_summary <- cvt %>% filter(conc > 0,
+                              n_subjects_in_series > 1,
+                              !is.na(conc_sd_normalized)) %>%
+  mutate(conc_sd_calc = conc_sd_normalized,
+         conc_avg_calc = conc) %>%
+  distinct(analyte_dtxsid, species, administration_route_normalized,
+           conc_medium_normalized, dose_level_corrected, document_id,
+           time_hr, conc_sd_calc, conc_avg_calc, n_subjects_in_series)
+
+combined_summary <- bind_rows(sud_summary, iad_summary) %>%
+  rowwise() %>%
+  mutate(twofold_95 = ifelse((conc_avg_calc + (2*conc_sd_calc))/conc_avg_calc < 2,
+                             TRUE, FALSE))
+
+# With the mapped column names
+
+iad_summary <- all_my_data %>% filter(Conc > 0, N_Subjects == 1, Dose > 0) %>%
+  group_by(Chemical, Species, Route, Media, Dose, Reference, Time) %>%
+  filter(n() > 1) %>%
+  summarize(conc_sd_calc = sd(Conc),
+            conc_avg_calc = mean(Conc),
+            n_subjects_in_series = n())
+
+sud_summary <- all_my_data %>% filter(Conc > 0, N_Subjects > 1,
+                                      !is.na(Conc_SD), Dose > 0) %>%
+  mutate(conc_sd_calc = Conc_SD,
+         conc_avg_calc = Conc,
+         n_subjects_in_series = N_Subjects) %>%
+  distinct(Chemical, Species, Route, Media, Dose, Reference, Time,
+           conc_sd_calc, conc_avg_calc, n_subjects_in_series)
+
+combined_summary <- bind_rows(sud_summary, iad_summary) %>%
+  rowwise() %>%
+  mutate(twofold_95 = ifelse((conc_avg_calc + (2*conc_sd_calc))/conc_avg_calc < 2,
+                             TRUE, FALSE))
+
+
+```
+
 
 
 ### Figure 4B: Variation over time in CvTdb data
@@ -1095,6 +1168,58 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
        bg = "white",
        dpi = 300,
        units = "in")  
+```
+
+### Figure 5Alt
+
+```{r fig5Alt}
+this_preds <- inner_join(predict(my_pk), winmodel) %>%
+  rowwise() %>% mutate(foldPred = Conc_est/Conc) %>%
+  distinct(model, method, Chemical, Species, Route, Media, Dose, Time, foldPred) %>%
+  group_by(model, method, Chemical, Species, Route, Media, Dose, Time) %>%
+  summarize(avgFE = mean(foldPred, na.rm = TRUE))
+this_preds %>%
+  inner_join(combined_summary, by = join_by(Chemical, Species,
+                                            Route, Media,
+                                            Dose, Time)) %>%
+  filter(!is.na(model), avgFE > 0) %>% 
+  # For percentages
+  # ungroup() %>%
+  # filter(model %in% c("model_flat")) %>%
+  # count((foldPred >= 0.5 & foldPred <= 2) & !(foldConc >= 0.5 & foldConc <= 2)) %>%
+  # {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
+  # For Plotting
+  ggplot(aes(
+    y = avgFE,
+    x = twofold_95
+  )) +
+  geom_bin2d(bins = 40, color = NA) +
+  geom_hline(yintercept = c(0.5, 2), linetype = "dashed") +
+  scale_y_log10(labels = scales::label_math(format = log10),
+                limits = c(0.0001, 10000)) +
+  scale_fill_viridis_c(option = "cividis",
+                       limits = c(1, 200),
+                       oob = scales::oob_squish) +
+  labs(y = "Model Error",
+       x = "95% of data within 2-fold") +
+  theme(aspect.ratio = 1,
+        panel.border = element_rect(color = "black", fill = NA, size = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        axis.ticks = element_blank(),
+        axis.line = element_blank())
+
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "ModelPerformance_vDataVariability_2023-11-14.png"),
+       height = 4.5,
+       width = 4.5,
+       device = "png",
+       bg = "white",
+       dpi = 300,
+       units = "in")  
+
 ```
 
 
