@@ -14,7 +14,7 @@ mapping <- function(
       Reference = document_id,
       Media = conc_medium_normalized,
       Route = administration_route_normalized,
-      Dose = dose_level_normalized,
+      Dose = dose_level_corrected,
       Dose.Units = "mg/kg",
       Subject_ID = subject_id,
       Series_ID = series_id,
