@@ -2175,8 +2175,9 @@ left_join(my_nca, my_cvt_unique) %>%
   filter(!is.infinite(AUC_infinity.nca), !is.infinite(AUMC_infinity.nca)) %>%
   distinct() %>%
   mutate(nca_id = row_number(),
-         .before = analyte_dtxsid) %>% View("NCA-CvTdb")
-  # write_tsv("data-raw/NCA_CvTdb.tsv")
+         .before = analyte_dtxsid) %>%
+  # View("NCA-CvTdb")
+  write_tsv("data-raw/NCA_CvTdb.tsv")
 # Note that this will have more numbers because it still includes AUC_infinity == NA
 
 
@@ -2204,8 +2205,9 @@ left_join(my_tkstats, my_cvt_unique) %>%
   left_join(prefit_df) %>%
   ungroup() %>%
   distinct() %>%
-  mutate(tkstats_id = row_number(), .before = analyte_dtxsid) %>% View("TKstats-CvTdb")
-  # write_tsv("data-raw/tkstats_CvTdb.tsv")
+  mutate(tkstats_id = row_number(), .before = analyte_dtxsid) %>%
+  # View("TKstats-CvTdb")
+  write_tsv("data-raw/tkstats_CvTdb.tsv")
 
 ```
 
