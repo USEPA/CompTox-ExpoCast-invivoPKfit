@@ -14,7 +14,7 @@ test_that("data preprocessing handles NULL data as expected",
             my_pk <- pk(
               data = NULL
               )
-            expect_messsage(do_preprocess(my_pk),
+            expect_message(do_preprocess(my_pk),
                             regexp = "do_preprocess.pk(): Original data is NULL",
                             fixed = TRUE)
           }

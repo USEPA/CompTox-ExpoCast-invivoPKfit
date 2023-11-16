@@ -2,7 +2,7 @@ test_that("creating a pk object works for CvT data for DTXSID3061635",
           {
             expect_no_error(my_pk <- pk(
               data = subset(cvt,
-                            chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
+                            analyte_dtxsid %in% "DTXSID3061635"
               )
             )
             )
@@ -13,7 +13,7 @@ test_that("pk object has the expected default mapping",
           {
             my_pk <- pk(
               data = subset(cvt,
-                            chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
+                            analyte_dtxsid %in% "DTXSID3061635"
               )
             )
             expect_equal(my_pk$mapping,
@@ -26,7 +26,7 @@ test_that("pk object has the expected default mapping",
                            Reference = document_id,
                            Media = conc_medium_normalized,
                            Route = administration_route_normalized,
-                           Dose = dose_level_normalized,
+                           Dose = dose_level_corrected,
                            Dose.Units = "mg/kg",
                            Subject_ID = subject_id,
                            Series_ID = series_id,
@@ -50,7 +50,7 @@ test_that("creating a pk object with a mapping missing all required variables th
             expect_warning(
               pk(
                 data = subset(cvt,
-                              chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
+                              analyte_dtxsid %in% "DTXSID3061635"
                 ),
                 mapping = NULL
               )
@@ -62,7 +62,7 @@ test_that("A newly-created pk object has the expected status of 1",
           {
             my_pk <- pk(
               data = subset(cvt,
-                            chemicals_analyzed.dsstox_substance_id %in% "DTXSID3061635"
+                            analyte_dtxsid %in% "DTXSID3061635"
               )
             )
             expect_equal(my_pk$status, 1L)
