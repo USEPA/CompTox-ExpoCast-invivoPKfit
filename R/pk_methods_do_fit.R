@@ -24,6 +24,8 @@
 #' values.
 #'
 #' @param obj A [pk] object.
+#' @param n_cores Number of cores used for parallel computing.
+#' @param rate_names The names of the rate units. Leave NULL to utilize default 1/hour.
 #' @return The same [pk] object, with element `fit` containing the fitted
 #'   results for each model in `stat_model`.
 #' @export

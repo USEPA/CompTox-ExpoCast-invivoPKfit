@@ -3,7 +3,8 @@
 #' Calculate summary data information, including non-compartmental analysis.
 #'
 #'
-#' @param obj An object of class [pk()]
+#' @param obj An object of class [pk()].
+#'
 #' @export
 #' @importFrom magrittr `%>%`
 #' @author Caroline Ring

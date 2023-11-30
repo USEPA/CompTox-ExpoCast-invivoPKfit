@@ -64,7 +64,7 @@
 #'  "hours"`. This is used to calculate the steady-state plasma/blood
 #'  concentration for long-term daily dosing of 1 mg/kg/day.
 #'@param conc_unit Character: The units of concentration.
-#'@param dose_unit Character: The units of dose.
+#'@param vol_unit Character: The units of dose.
 #'@return A `data.frame` with two variables:
 #' - `param_name` = `c("CLtot", "CLtot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity", "A", "B", "alpha", "beta", "Vbeta", "Vbeta_Fgutabs", "Vss", "Vss_Fgutabs")`
 #' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed; e.g. all of the `"x_Fgutabs"` parameters can only be computed if `route = "oral"` ).

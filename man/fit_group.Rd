@@ -24,7 +24,11 @@ fit_group(
 
 \item{sigma_DF}{sigma_DF for a single group of data}
 
+\item{fit_decision}{Whether the fit is able to be calculated or excluded.}
+
 \item{this_model}{Name of the `pk_model` object to fit}
+
+\item{settings_optimx}{The settings for optimization.}
 
 \item{modelfun}{Name of the model concentration function}
 

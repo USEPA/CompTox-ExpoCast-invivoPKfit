@@ -4,6 +4,8 @@
 #' @param sigma_DF sigma_DF for a single group of data
 #' @param par_DF par_DF for a single group of data
 #' @param this_model Name of the `pk_model` object to fit
+#' @param fit_decision Whether the fit is able to be calculated or excluded.
+#' @param settings_optimx The settings for optimization.
 #' @param modelfun Name of the model concentration function
 #' @param dose_norm TRUE or FALSE -- whether to dose-normalize concentrations
 #'   before evaluating log-likelihood

@@ -7,7 +7,7 @@
 \method{do_data_info}{pk}(obj)
 }
 \arguments{
-\item{obj}{An object of class [pk()]}
+\item{obj}{An object of class [pk()].}
 }
 \description{
 Calculate summary data information, including non-compartmental analysis.

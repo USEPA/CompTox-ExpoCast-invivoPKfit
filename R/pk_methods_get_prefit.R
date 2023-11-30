@@ -3,6 +3,7 @@
 #' Extract pre-fitting results from a [pk()] object
 #'
 #' @param obj A [pk()] object that has had `data_info()` run on it
+#' @param model A vector with the names of model(s) that should be considered in output.
 #' @return A list of `data.frame`s: one for each model in `obj$stat_model`
 #' @export
 #' @author Caroline Ring

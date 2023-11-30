@@ -8,6 +8,10 @@
 }
 \arguments{
 \item{obj}{A [pk] object.}
+
+\item{n_cores}{Number of cores used for parallel computing.}
+
+\item{rate_names}{The names of the rate units. Leave NULL to utilize default 1/hour.}
 }
 \value{
 The same [pk] object, with element `fit` containing the fitted

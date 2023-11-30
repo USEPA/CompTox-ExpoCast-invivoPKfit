@@ -34,6 +34,8 @@ used.}
 \item{dose}{A numeric vector of doses in mg/kg}
 
 \item{route}{A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose}
+
+\item{medium}{A character string that determines the measured media. Default: "plasma".}
 }
 \value{
 A vector of plasma AUC values, evaluated at each time point in \code{time}.

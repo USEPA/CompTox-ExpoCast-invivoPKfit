@@ -26,6 +26,7 @@
 #' @param time A numeric vector of time values, in hours
 #' @param dose A numeric vector of doses in mg/kg
 #' @param route A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose
+#' @param medium A character string that determines the measured media. Default: "plasma".
 #'@return A vector of plasma AUC values, evaluated at each time point in `time`.
 #' @export auc_2comp
 #' @author Caroline Ring, John Wambaugh
