@@ -1,0 +1,51 @@
+---
+title: "Updated invivoPKfit predictions"
+author: "Gilberto Padilla Mercado"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+set.seed(2023)
+library(tidyverse, quietly = TRUE)
+devtools::load_all() # Loads the invivopkfit package in feature/pkS3obj_facet branch
+library(cowplot)
+library(RColorBrewer)
+tidyverse_conflicts()
+# Note I have now saved the RDS file for JOINT model with L-BFGS-B optimization
+my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
+```
+
+
+First we explore the different _settings_ used. These fits were generated using a 
+hierarchical error model. The data group was Chemical and Species and the error
+group additionally included Reference. The optimization algorithm used was **L-BFGS-B**.
+
+```{r settings_output}
+my_pk$settings_preprocess
+my_pk$settings_data_info
+my_pk$settings_optimx
+my_pk$stat_error_model
+my_pk$stat_model
+my_pk$data_group
+```
+
+
+
+The following chunk pulls the *winning model* (with the lowest AIC)
+and pulls the predicted TKstats from this for each chemical and species listed.
+This results in 109 unique observations.
+
+```{r tkstats_predictions}
+winmodel <- get_winning_model(my_pk)
+all_tkstats <- get_tkstats(my_pk) %>% inner_join(winmodel)
+
+all_tkstats <- all_tkstats %>% ungroup() %>%
+  dplyr::select(Chemical, Species, Vdist, V1, Vss, halflife, model) %>%
+  distinct()
+
+
+
+```
+
