@@ -655,12 +655,6 @@ my_coefs %>% dplyr::select(-sigma_value, -error_group, -coefs_vector) %>%
   inner_join(other_coefs %>% dplyr::select(model, method, Chemical, Species)) ->
   my_coefs
 
-other_coefs <- read_csv(
-  "C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Figures/CvTdb_fullCoefs_20230906.csv")
-
-other_coefs %>% dplyr::select(model, method, Chemical, Species)
-
-write_csv(my_coefs, "C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Figures/CvTdb_fullCoefsAIC_2023.10.30.csv")
 
 
 ```
@@ -842,6 +836,31 @@ combined_summary <- bind_rows(sud_summary, iad_summary) %>%
   mutate(twofold_95 = ifelse((conc_avg_calc + (2*conc_sd_calc))/conc_avg_calc < 2,
                              TRUE, FALSE))
 
+table(combined_summary$twofold_95)
+
+pl5A <- combined_summary %>% ungroup() %>%
+  count(twofold_95) %>%
+  ggplot(aes(x = twofold_95, fill = twofold_95, y = n)) +
+  geom_col(position = position_stack(),
+           color = "black", linewidth = 1) +
+  coord_cartesian(ylim = c(0, 4000)) +
+  scale_y_continuous(expand = c(0, 0),
+                     breaks = c(0, 1000, 2000, 3000),
+                     labels = c("0", "1", "2", "3")) +
+  scale_fill_manual(values = c("black", "white")) +
+  theme_classic() +
+  labs(x = "95% of observations\nwithin factor of 2",
+                y = "Observations\n(thousands)") +
+  theme(text = element_text(size = 10),
+        panel.border = element_rect(color = "black", linewidth = 1, fill = NA),
+        panel.background = element_blank(),
+        panel.grid.major.y = element_line(color = "grey90", linewidth = 0.4),
+        axis.title = element_text(face = "bold"),
+        axis.line = element_blank(),
+        plot.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "none")
+
 
 ```
 
@@ -925,14 +944,14 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 # Make the Combination Plot----
 
 plot_grid(pl5A, pl5B, labels = c("A", "B"),
-                     align = "h", axis = "bt", rel_widths = c(1, 1.5))
+                     align = "h", axis = "bt", rel_widths = c(1, 2))
 
 
 figure5 <- plot_grid(pl5A, pl5B, labels = c("A", "B"),
-                     align = "h", axis = "bt", rel_widths = c(1, 1.5))
+                     align = "h", axis = "bt", rel_widths = c(1, 1.75))
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "Figure5_onlyDetects_2023-10-02.png"),
+              "Figure5alt_onlyDetects_2023-10-02.png"),
        plot = figure5,
        bg = "white",
        height = 3.25,
@@ -1058,7 +1077,7 @@ my_preds %>%
 # 50.2% Are within twofold
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "PredictedObserved_compartmentModels_2023-10-02.png"),
+              "PredictedObserved_compartmentModels_2023-11-30.png"),
        height = 6, width = 6)
   
 
@@ -1173,28 +1192,32 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ### Figure 5Alt
 
 ```{r fig5Alt}
+# Redo combined summary
+combined_summary <- bind_rows(sud_summary, iad_summary) %>%
+  rowwise() %>%
+  mutate(twofold_95 = ifelse((conc_avg_calc + (2*conc_sd_calc))/conc_avg_calc < 2,
+                             TRUE, FALSE))
+
+# Now
 this_preds <- inner_join(predict(my_pk), winmodel) %>%
   rowwise() %>% mutate(foldPred = Conc_est/Conc) %>%
   distinct(model, method, Chemical, Species, Route, Media, Dose, Time, foldPred) %>%
   group_by(model, method, Chemical, Species, Route, Media, Dose, Time) %>%
   summarize(avgFE = mean(foldPred, na.rm = TRUE))
-this_preds %>%
+
+pl_7Alt <- this_preds %>%
   inner_join(combined_summary, by = join_by(Chemical, Species,
                                             Route, Media,
                                             Dose, Time)) %>%
   filter(!is.na(model), avgFE > 0) %>% 
-  # For percentages
-  # ungroup() %>%
-  # filter(model %in% c("model_flat")) %>%
-  # count((foldPred >= 0.5 & foldPred <= 2) & !(foldConc >= 0.5 & foldConc <= 2)) %>%
-  # {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
+  # 
   # For Plotting
   ggplot(aes(
     y = avgFE,
     x = twofold_95
   )) +
   geom_bin2d(bins = 40, color = NA) +
-  geom_hline(yintercept = c(0.5, 2), linetype = "dashed") +
+  geom_hline(yintercept = c(0.5, 2), linetype = "dashed", linewidth = 1, color = "red3") +
   scale_y_log10(labels = scales::label_math(format = log10),
                 limits = c(0.0001, 10000)) +
   scale_fill_viridis_c(option = "cividis",
@@ -1215,6 +1238,58 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
               "ModelPerformance_vDataVariability_2023-11-14.png"),
        height = 4.5,
        width = 4.5,
+       device = "png",
+       bg = "white",
+       dpi = 300,
+       units = "in")  
+
+this_preds %>%
+  inner_join(combined_summary, by = join_by(Chemical, Species,
+                                            Route, Media,
+                                            Dose, Time)) %>%
+  filter(!is.na(model), avgFE > 0) %>% ungroup() %>%
+  filter(model == "model_2comp") %>%
+  count(!(avgFE >= 0.5 & avgFE <= 2) & !twofold_95) %>%
+  {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])} %>% round(digits = 1)
+
+# Table
+
+my_table <- data.frame(
+  c("Reasonable model error and observed variability",
+    "Data variability high, model error reasonable",
+    "Model error high, data variation reasonable",
+    "Both model error and data variability are high"),
+  c(37.2, 6.5,  41.4, 14.8),
+  c(53.6, 3.5,  32.4, 10.4),
+  c(11.0, 16.4, 46.6, 26.0),
+  c(44.2, 5.4,  37.4, 13.0))
+
+names(my_table) <- c(" ","1-compartment (%)", "2-compartment (%)", "Flat (%)", "Overall (%)")
+
+library(flextable)
+library(officer)
+
+flextable(my_table) %>%
+  border_inner() %>%
+  fontsize(part = "all", size = 11) %>%
+  bold(part = "all", j = 5)
+
+table_plot <- gen_grob(flextable(my_table) %>%
+                         border_inner() %>%
+                         fontsize(part = "all", size = 10) %>%
+                         bold(part = "all", j = 5) %>%
+                         autofit())
+
+
+dual_plot <- plot_grid(pl_7Alt, table_plot, ncol = 1, align = "v",
+          rel_heights = c(1, 0.5))
+
+dual_plot
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "ModelPerformance_vDataVariability_wTable_2023-11-30.png"),
+       plot = dual_plot,
+       height = 4.5,
+       width = 6.5,
        device = "png",
        bg = "white",
        dpi = 300,
@@ -1334,7 +1409,7 @@ my_coefs %>%
   ggplot(aes(x = sigma_value/n_obs)) +
   geom_histogram(bins = 15,
                  color = NA, fill = "grey5") +
-  scale_x_log10(labels = label_log()) +
+  scale_x_log10(labels = scales::label_math(format = log10)) +
   facet_grid(cols = vars(model)) +
   labs(x = "Size-normalized Sigma Value",
        y = "Number of Observations") +
@@ -1708,9 +1783,9 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 ```{r sfig6-examples-of-fits}
 pl <- plot(my_pk, use_scale_conc = TRUE, n_interp = 10)
-names(pl) # Chemical Species observations oservation_plot predicted predicted_plot final_plot
+names(pl) # Chemical Species observations observation_plot predicted predicted_plot final_plot
 
-s6_plA <- pl %>% filter(Chemical %in% "DTXSID90382620") %>%
+s6_plA <- pl %>% filter(Chemical %in% "DTXSID3031860") %>%
   pull(observation_plot) %>% .[[1]]
 s6_plB_mouse <- pl %>% filter(Chemical %in% "DTXSID4020533",
                               Species %in% "mouse") %>% pull(final_plot) %>% .[[1]]
@@ -1721,7 +1796,7 @@ s6_plC <- pl %>% filter(Chemical %in% "DTXSID8021359") %>%
 s6_plD <- pl %>% filter(Chemical %in% "DTXSID8025337") %>%
   pull(final_plot) %>% .[[1]]
 
-# Set colors palletes for each
+# Set colors palettes for each
 # panel A : Oranges
 panelA_cols <- brewer.pal(8, "Oranges")[3:8]
 # panel B : Greens
@@ -1731,7 +1806,7 @@ panelB_cols <- brewer.pal(9, "Greens")[2:9]
 panelD_cols <- brewer.pal(9, "Purples")[4:9]
 
 s6_plA <- s6_plA + 
-  labs(title = "fluorotelomer acid 7+3") +
+  labs(title = "perfluorodecanoic acid") +
   scale_color_manual(values = panelA_cols, aesthetics = c("color", "fill")) +
   theme(text = element_text(size = 20),
         legend.position = "none",
@@ -1792,7 +1867,7 @@ plot_grid(
 # Am making this 2X the size I need it to be 
 # so the points are a reasonable size when I scale it down
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ExampleFitsPlots.png"),
+              "ExampleFitsPlots_11.30.2023.png"),
        width = 13,
        height = 14,
        units = "in")

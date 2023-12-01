@@ -116,6 +116,8 @@ plot.pk <- function(obj,
     newdata <- subset(newdata, Detect %in% TRUE)
   }
 
+  newdata <- subset(newdata, exclude %in% FALSE)
+
   if (is.null(log10_C)) log10_C <- conc_scale$log10_trans
 
 
@@ -346,6 +348,7 @@ plot.pk <- function(obj,
       tidyr::nest(.key = "predicted")
 
     newdata <- dplyr::left_join(newdata, interp_data)
+
 
     if (limit_predicted) {
       if (log10_C) {
