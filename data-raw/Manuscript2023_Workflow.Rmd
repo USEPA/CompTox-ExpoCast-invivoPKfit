@@ -89,7 +89,7 @@ This chunk is to run all the options through a
 standard pipeline that calculates RMSE for Cmax and AUC_inf
 for the Chemical Species Route Media grouping...
 
-```{r pooled_fitting_choices}
+```{r pooled_fitting_choices, eval=FALSE}
 # Types of Choices:
 ## Dose Normalized
 ## Log10 transform
@@ -179,7 +179,7 @@ my_pk_101p <- minimal_pk +
 ```
 
 
-```{r joint_fitting_choices}
+```{r joint_fitting_choices, eval=FALSE}
 # Joint
 my_pk_000j <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
@@ -279,7 +279,7 @@ _goodness-of-fit_. Lastly, we calculate more detailed statistics such as R^2^
 and average fold error for each model, method, and set **data_group** for downstream
 analyses.
 
-```{r Evaluation-helpers}
+```{r Evaluation-helpers, eval=FALSE}
 # Evaluation
 # Current: 
 
@@ -378,7 +378,7 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
 gc()
 ```
 
-```{r Evaluating choices}
+```{r Evaluating choices, eval=FALSE}
 
 ### Evaluations-----
 my_pk_000p <- do_fit(my_pk_000p, n_cores = 14)  %>% evaluate_choices() # Done
@@ -440,7 +440,7 @@ Now I need to go back and re-analyze the data only for 100, 101, and 000
 Pooled and Joint, L-BFGS-B only. I need to filter the cvt_df to only include Chem + Species combinations
 with multiple references. Then I will join them with the excel sheet of already collected data.
 
-```{r load_multirefs}
+```{r load_multirefs, eval=FALSE}
 # Reference Multiples
 multiRef_ChemSpec <- cvt_df %>%
   ungroup() %>%
@@ -456,7 +456,7 @@ multiRef_ChemSpec %>% nrow() # Surprisingly only 13 Chem + Species have multiple
 
 These finalists will be compared based on their more detailed statistics.
 
-```{r Plotting_Summary}
+```{r Plotting_Summary, eval=FALSE}
 finalist_options <- c("000 Pooled", "000 Joint",
                       "100 Pooled", "100 Joint",
                       "101 Pooled", "101 Joint")
@@ -578,7 +578,7 @@ In addition, _L-BFGS-B_ was the optimizer of choice due to some marginally bette
 (I will note that the run-time for _L-BFGS-B_ is significantly faster).
 
 
-```{r Final_Options}
+```{r Final_Options, eval=FALSE}
 my_pk <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE,
@@ -610,7 +610,7 @@ my_pk <- do_prefit(my_pk) # needs reframe somewhere
 
 Next I will generate the figures for the paper.
 
-```{r data_aggregation}
+```{r data_aggregation, eval=FALSE}
 # Need the following data for any of the subsequent plots
 
 # after fitting pk object for all cvt objects or reading the fitted pk object in `setup`
@@ -662,7 +662,7 @@ my_coefs %>% dplyr::select(-sigma_value, -error_group, -coefs_vector) %>%
 
 
 ### Figure 4A: Replicated timepoint variation in CvTdb
-```{r fig4A}
+```{r fig4A, eval=FALSE}
 
 all_my_data %>%
   filter(Detect %in% TRUE,
@@ -790,7 +790,7 @@ passed this test. It minimizes the double (or more) counting of timepoints with
 multiple replicates from individual animal data.
 
 
-```{r fig4A-2-alt}
+```{r fig4A-2-alt, eval=FALSE}
 iad_summary <- cvt %>% filter(conc > 0, n_subjects_in_series == 1) %>%
   group_by(analyte_dtxsid, species, administration_route_normalized,
            conc_medium_normalized, dose_level_corrected, document_id,
@@ -868,7 +868,7 @@ pl5A <- combined_summary %>% ungroup() %>%
 
 ### Figure 4B: Variation over time in CvTdb data
 
-```{r fig4B-cowplot}
+```{r fig4B-cowplot, eval=FALSE}
 
 pl5B <- all_my_data %>%
   group_by(Chemical,
@@ -965,7 +965,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ### Supp. Figure 1: Concentration and final time-points have wide range
 
 
-```{r cvt_analysis}
+```{r cvt_analysis, eval=FALSE}
 data_range <- all_my_data %>%
   filter(Detect) %>%
   group_by(Chemical, Species, Reference, Media, Route, Dose, Dose.Units) %>%
@@ -1047,7 +1047,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ### Supp Figure 2: invivoPKfit model performance
 
 
-```{r sFig2-model_performance}
+```{r sFig2-model_performance, eval=FALSE}
 my_preds %>%
   right_join(winmodel) %>%
   rowwise() %>%
@@ -1088,7 +1088,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ### Figure 5: Model performance vs Data Variability
 
 
-```{r fig5-modelPerform-v-dataVar}
+```{r fig5-modelPerform-v-dataVar, eval=FALSE}
 
 
 pl_7A <- my_preds %>%
@@ -1191,7 +1191,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 ### Figure 5Alt
 
-```{r fig5Alt}
+```{r fig5Alt, eval=FALSE}
 # Redo combined summary
 combined_summary <- bind_rows(sud_summary, iad_summary) %>%
   rowwise() %>%
@@ -1301,7 +1301,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ### Figure 6: Multiple goodness-of-fit metrics validate model performance
 This should be it's own figure
 
-```{r fig6-goodness-of-fit}
+```{r fig6-goodness-of-fit, eval=FALSE}
 
 
 
@@ -1392,7 +1392,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 
 ### Supp. Fig. 3: Distribution of Sigmas in CvTdb data
 
-```{r sFig3-sigmaDistribution}
+```{r sFig3-sigmaDistribution, eval=FALSE}
 
 
 my_coefs <- inner_join(get_winning_model(my_pk), coef(my_pk))
@@ -1433,7 +1433,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ### Figure 7: Comparing derived TK stats with human TK stats from Lombardo et al.
 
 
-```{r Lombardo_Comparison}
+```{r Lombardo_Comparison, eval=FALSE}
 cvt_DTXSIDs <- unique(my_pk$data$Chemical)
 # First things first, let's load the data from Lombardo et al.
 lombardo <- readxl::read_xlsx(
@@ -1565,7 +1565,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 ### Supp. Fig. 4 Histogram of Lombardo Vss and InvivoPKfit & another meta-analysis
 
 
-```{r otherMeta-analysis}
+```{r otherMeta-analysis, eval=FALSE}
 
 # Histograms
 lombardo_hist <- data.frame(Chemical = c(lombardo$DTXSID,
@@ -1667,7 +1667,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 
 Here I do a bit of benchmarking for the parallel-ized version of do_fit
 
-```{r do_fit-benchmarking}
+```{r do_fit-benchmarking, eval=FALSE}
 
 # Set to 
 single_core <- microbenchmark::microbenchmark(do_fit(my_pk, n_cores = 1), times = 3)
@@ -1781,7 +1781,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 ### Supp. Fig. 6: Example plots for data fits
 
-```{r sfig6-examples-of-fits}
+```{r sfig6-examples-of-fits, eval=FALSE}
 pl <- plot(my_pk, use_scale_conc = TRUE, n_interp = 10)
 names(pl) # Chemical Species observations observation_plot predicted predicted_plot final_plot
 
@@ -1883,7 +1883,7 @@ more than one data point prior to the empirical t~max~. With at least three poin
 (including t~max~) we can reasonably begin to assess the absorption of a compound.
 
 
-```{r more_analysis}
+```{r more_analysis, eval=FALSE}
 
 
 my_pk$prefit$fit_check %>% filter(fit_decision == "abort") %>%
@@ -1911,7 +1911,7 @@ my_nca %>% filter(param_name %in% "tmax") %>%
 
 Here I introduce the notion whether the data is variable compared across time.
 
-```{r PredictionVariability_overtime}
+```{r PredictionVariability_overtime, eval=FALSE}
 my_residuals %>%
   filter(exclude == FALSE) %>%
   inner_join(winmodel) %>%
@@ -1984,7 +1984,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 I try to find the connections between functions in _invivoPKfit_ to best understand
 and represent the structure of the package.
 
-```{r function_connections}
+```{r function_connections, eval=FALSE}
 fw <- mvbutils::foodweb(where = asNamespace("invivoPKfit"),
                         border = TRUE, cex = 0.6, lwd = 1.5)
 fun_mat <- fw$funmat
@@ -2027,7 +2027,7 @@ dev.off()
 Here is the code used to generate the CvT data and _invivoPKfit_ fits
 for each chemical, species data group.
 
-```{r plotting_all_Fits}
+```{r plotting_all_Fits, eval=FALSE}
 ### Plotting for all (2.5MB file)
 pl <- plot(my_pk, n_interp = 8, use_scale_conc = TRUE)
 pdf(file = paste0(Sys.getenv("FIG_DIR"),
@@ -2051,7 +2051,7 @@ dev.off()
 ```
 
 ### Figure 2
-```{r Explain-Heirarchical-Model}
+```{r Explain-Heirarchical-Model, eval=FALSE}
 # Note that the data will run one "Series" of time point at a time
 my_1comp <- function(t, F_V, kelim, kabs, sd = 0) {
   sd + (F_V * (kabs * (exp(-kelim * t) - exp(-kabs * t))) / (kabs - kelim))
@@ -2195,7 +2195,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"), "Point_Reference_3x5.png"),
 
 # Preparing results for CvTdb
 
-```{r cvtdb-prep}
+```{r cvtdb-prep, eval=FALSE}
 
 my_cvt <- cvt
 my_tkstats <- eval_tkstats(my_pk)
