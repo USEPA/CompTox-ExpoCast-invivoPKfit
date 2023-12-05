@@ -27,12 +27,12 @@ my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
   - Head-to-head comparison of pooled vs joint models  
 3. Running dose-normalized joint fits  
 4. Analysis Plots  
-  - CvTdb replicate variation (Figure 4A)  
+  - CvTdb replicate variation (Figure 4A & Alternative)  
   - CvTdb replicate variation over ADME-normalized time (Figure 4B)  
   - CvTdb concentration and final time-point distributions (Supplementary Figure 1)  
   - invivoPKfit fit option selection (Supplementary Table 1)  
   - invivoPKfit model performance (Supplementary Figure 2)  
-  - Model performance vs Data variability (Figure 5)  
+  - Model performance vs Data variability (Figure 5 and Alternative)  
   - Goodness of fit plots (Figure 6)  
   - Fits that may be improved (Supplementary Figure 3)  
 5. Lombardo Analysis  
@@ -47,9 +47,10 @@ my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 
 See `pulling_iv_oral_cvtdb.Rmd`.
 
+The following chunk shows the column/field mapping from the `cvt` object and
+the `pk` object needed for invivoPKfit analysis.
 
-
-```{r pk_obj_fromSQL}
+```{r pk_obj_fromSQL, eval=FALSE}
 
 ### Minimal PK Object ###----
 # Minimum pk object, add options later
@@ -662,6 +663,7 @@ my_coefs %>% dplyr::select(-sigma_value, -error_group, -coefs_vector) %>%
 
 
 ### Figure 4A: Replicated timepoint variation in CvTdb
+
 ```{r fig4A, eval=FALSE}
 
 all_my_data %>%
@@ -2050,7 +2052,9 @@ dev.off()
 
 ```
 
-### Figure 2
+### Figure 2: Example Fits to Explain Joint vs Pooled Models
+
+
 ```{r Explain-Heirarchical-Model, eval=FALSE}
 # Note that the data will run one "Series" of time point at a time
 my_1comp <- function(t, F_V, kelim, kabs, sd = 0) {
