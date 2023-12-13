@@ -541,8 +541,7 @@ filtered_preval %>% group_by(Options) %>%
   View()
 
 
-Cmax_AUC <- readxl::read_xlsx(paste("C:/Users/GPADILLA",
-                                  "OneDrive - Environmental Protection Agency (EPA)",
+Cmax_AUC <- readxl::read_xlsx(paste(Sys.getenv("OD_DIR"),
                                   "DataSummary_8_18_2023.xlsx",
                                   sep = "/"),
                             sheet = "Cmax and AUC_inf Evaluation") %>%
