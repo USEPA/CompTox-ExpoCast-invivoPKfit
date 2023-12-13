@@ -2,7 +2,11 @@
 title: "Figures and Analysis for 2023 Manuscript"
 author: "Gilberto Padilla Mercado"
 date: "`r Sys.Date()`"
-output: html_document
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Manuscript2023_Workflow.Rmd}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
