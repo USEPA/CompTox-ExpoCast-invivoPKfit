@@ -15,16 +15,13 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(invivoPKfit)
-knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 set.seed(2023)
 library(tidyverse, quietly = TRUE)
 devtools::load_all() 
 library(cowplot)
 library(RColorBrewer)
-tidyverse_conflicts()
 # saveRDS(my_pk_100j, "data-raw/all_cvt_pk_JOINT.rds")
-my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
+# my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 ```
 
 
@@ -2300,4 +2297,8 @@ left_join(my_tkstats, my_cvt_unique) %>%
 
 ```
 
+
+```{r information}
+sessionInfo()
+```
 
