@@ -1,26 +1,33 @@
 ---
-title: "Figures and Analysis for 2023 Manuscript"
-author: "Gilberto Padilla Mercado"
-date: "`r Sys.Date()`"
+title: "manuscript2023"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Manuscript2023_Workflow.Rmd}
+  %\VignetteIndexEntry{manuscript2023}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, include=FALSE}
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(invivoPKfit)
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 set.seed(2023)
 library(tidyverse, quietly = TRUE)
-devtools::load_all() # Loads the invivopkfit package in feature/pkS3obj_facet branch
+devtools::load_all() 
 library(cowplot)
 library(RColorBrewer)
 tidyverse_conflicts()
-# Note I have now saved the RDS file for JOINT model with L-BFGS-B
 # saveRDS(my_pk_100j, "data-raw/all_cvt_pk_JOINT.rds")
 my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 ```
+
+
 
 # TOC
 
