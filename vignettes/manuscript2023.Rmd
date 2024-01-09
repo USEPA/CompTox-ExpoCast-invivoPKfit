@@ -2040,7 +2040,7 @@ for each chemical, species data group.
 ### Plotting for all (2.5MB file)
 pl <- plot(my_pk, n_interp = 8, use_scale_conc = TRUE)
 pdf(file = paste0(Sys.getenv("FIG_DIR"),
-              "DoseNormalized_Joint_AllFits_Final.pdf"),
+              "DoseNormalized_Joint_AllFits_Final_20240109.pdf"),
     height = 6, width = 10)
 for (i in 1:nrow(pl)) {
   print(pl$final_plot[[i]])
