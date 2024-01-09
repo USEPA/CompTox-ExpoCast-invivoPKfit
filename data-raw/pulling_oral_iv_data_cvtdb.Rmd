@@ -437,6 +437,7 @@ Save the pulled CVT data with the edits/normalizations, and also save the curren
 ```{r}
 cvt_date <- Sys.Date()
 cvt <- cvt_df
+cvt <- cvt %>% mutate(conc_normalized_units = "mg/L")
 save(cvt, file = "data/cvt.rda", compress = "bzip2")
 save(cvt_date, file = "data/cvt_date.rda")
 ```
