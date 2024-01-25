@@ -80,7 +80,7 @@ query <- paste0(
   "b.loq, b.loq_units, b.n_subjects_in_series, b.radiolabeled, ",
   "c.id, c.administration_route_normalized, c.fk_dosed_chemical_id, c.dose_volume, c.dose_vehicle, ",
   "c.dose_duration, c.dose_duration_units, c.dose_frequency, c.fasting_period, ",
-  "c.dose_level_normalized, c.dose_level_original, c.dose_level_original_units, ",
+  "c.dose_level_normalized, c.dose_level_original, c.dose_level_units_original, ",
   "d.id, d.weight_kg, d.species, d.sex, d.age, d.age_units, d.age_category, ",
   "e.id, e.pmid, e.year, e.other_study_identifier, e.url, e.doi, e.extracted ",
   
