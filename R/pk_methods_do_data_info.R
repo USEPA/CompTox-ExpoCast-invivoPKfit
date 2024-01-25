@@ -20,6 +20,9 @@ do_data_info.pk <- function(obj){
                    ". do_data_info.pk() will reset its status to ",
                    status_data_info,
                    ". Any results from later workflow stages will be lost.\n"))
+    # Here is where I need to implement logic for skipping if same data group
+    prev_summary <- obj$data_info$data_summary %>%
+      dplyr::select(Chemical:tlast_detect)
   }
 
   #if preprocessing not already done, do it
@@ -40,12 +43,22 @@ do_data_info.pk <- function(obj){
 
   #grouping for data summary:
   #data grouping, plus also Route and Media if not already included in data grouping
+
   summary_group <- unique(c(obj$data_group, ggplot2::vars(Route, Media)))
 
   data_summary_out <- data_summary(obj = obj,
                                    newdata = NULL,
                                    summary_group = summary_group
   )
+  # Here is step two of determining whether old data group is the same as "new" one
+  if (status >= status_data_info) {
+    id_summary <- identical(data_summary_out, prev_summary)
+    if (id_summary) {
+      message("Any changes made do not affect the outcome of the non-compartmental analysis!\n")
+      return(obj)
+    }
+  }
+
 
   #do NCA dose-normalized
   if (obj$settings_preprocess$suppress.messages %in% FALSE) {

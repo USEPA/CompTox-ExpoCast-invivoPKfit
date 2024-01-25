@@ -30,7 +30,7 @@ Suggests:
     knitr,
     stringr,
     testthat (>= 3.0.0)
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 VignetteBuilder: knitr
 NeedsCompilation: no
 Encoding: UTF-8

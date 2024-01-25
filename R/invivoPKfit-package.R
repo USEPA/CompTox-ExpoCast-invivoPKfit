@@ -7,7 +7,7 @@
 #'
 #' @name invivoPKfit
 #'
-#' @docType package
+#' @docType _PACKAGE
 #'
 #' @section Main function: fit_all
 #'

@@ -35,6 +35,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
   #check status
   objname <- deparse(substitute(obj))
   status <- obj$status
+
   if(status >= status_fit){
     warning(paste0(objname,
                    " current status is ",
@@ -59,7 +60,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL){
     obj <- do_prefit(obj)
   }
 
-  if (rlang::is_installed("multidplyr")) { n_cores <- NULL }
+  if (!rlang::is_installed("multidplyr")) { n_cores <- NULL }
 
 
 

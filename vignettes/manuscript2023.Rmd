@@ -20,8 +20,9 @@ library(tidyverse, quietly = TRUE)
 devtools::load_all() 
 library(cowplot)
 library(RColorBrewer)
-# saveRDS(my_pk_100j, "data-raw/all_cvt_pk_JOINT.rds")
+# saveRDS(my_pk_100j, "data-raw/all_cvt_pk_JOINT.rds") 
 # my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
+
 ```
 
 
@@ -93,6 +94,7 @@ minimal_pk <- pk(data = cvt,
 
 
 ## Running all possible fitting options
+
 
 This chunk is to run all the options through a
 standard pipeline that calculates RMSE for Cmax and AUC_inf
@@ -324,19 +326,19 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
   # Cmax and AUC_inf RMSEs
   suppressMessages({
     RMSE_eval <- eval_tkstats(obj = obj) %>%
-    mutate(Options = pk_name) %>%
-    dplyr::select(Options,
-                Chemical, Species,
-                Route, Media, Reference,
-                method, model,
-                starts_with("Cmax"),
-                starts_with("AUC_")) %>%
-      filter(abs(AUC_inf.nca / AUC_tlast.nca) < 10,
-             is.finite(AUC_inf.nca), is.finite(AUC_inf.tkstats),
-             AUC_inf.nca > 0, AUC_inf.tkstats > 0) %>%
+      mutate(Options = pk_name) %>%
+      dplyr::select(Options,
+                    Chemical, Species,
+                    Route, Media, Reference,
+                    method, model,
+                    starts_with("Cmax"),
+                    starts_with("AUC_")) %>%
+      filter(abs(AUC_infinity.nca / AUC_tlast.nca) < 10,
+             is.finite(AUC_infinity.nca), is.finite(AUC_infinity.tkstats),
+             AUC_infinity.nca > 0, AUC_infinity.tkstats > 0) %>%
       rowwise() %>%
       mutate(SE_Cmax = (Cmax.tkstats - Cmax.nca)^2,
-             SE_AUC_inf = (AUC_inf.tkstats - AUC_inf.nca)^2) %>%
+             SE_AUC_inf = (AUC_infinity.tkstats - AUC_infinity.nca)^2) %>%
       filter(!is.na(SE_Cmax), !is.na(SE_AUC_inf)) %>%
       group_by(Options, method) %>%
       summarize(RMSE_Cmax = sqrt(mean(SE_Cmax,
@@ -390,39 +392,38 @@ gc()
 ```{r Evaluating choices, eval=FALSE}
 
 ### Evaluations-----
-my_pk_000p <- do_fit(my_pk_000p, n_cores = 14)  %>% evaluate_choices() # Done
-my_pk_100p <- do_fit(my_pk_100p, n_cores = 8) %>% evaluate_choices() # Done
-my_pk_110p <- do_fit(my_pk_110p, n_cores = 8) %>% evaluate_choices() # Done
-my_pk_111p <- do_fit(my_pk_111p, n_cores = 8) %>% evaluate_choices() # Done
-rm(my_pk_100p,my_pk_110p,my_pk_111p)
+my_pk_000p <- do_fit(my_pk_000p, n_cores = 12)  %>% evaluate_choices() # Done
+my_pk_100p <- do_fit(my_pk_100p, n_cores = 12) %>% evaluate_choices() # Done
+my_pk_110p <- do_fit(my_pk_110p, n_cores = 12) %>% evaluate_choices() # Done
+my_pk_111p <- do_fit(my_pk_111p, n_cores = 12) %>% evaluate_choices() # Done
+rm(my_pk_000p, my_pk_100p,my_pk_110p,my_pk_111p)
 gc()
-my_pk_010p <- do_fit(my_pk_010p, n_cores = 8) %>% evaluate_choices() # Done
-my_pk_011p <- do_fit(my_pk_011p, n_cores = 8) %>% evaluate_choices() # Done 
-my_pk_001p <- do_fit(my_pk_001p, n_cores = 8) %>% evaluate_choices() # Done
-my_pk_101p <- do_fit(my_pk_101p, n_cores = 8) %>% evaluate_choices() # Done
+my_pk_010p <- do_fit(my_pk_010p, n_cores = 10) %>% evaluate_choices() # Done
+my_pk_011p <- do_fit(my_pk_011p, n_cores = 10) %>% evaluate_choices() # Done 
+my_pk_001p <- do_fit(my_pk_001p, n_cores = 10) %>% evaluate_choices() # Done
+my_pk_101p <- do_fit(my_pk_101p, n_cores = 10) %>% evaluate_choices() # Done
 
-my_pk_000j <- do_fit(my_pk_000j, n_cores = 8) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_100j <- do_fit(my_pk_100j, n_cores = 8) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_110j <- do_fit(my_pk_110j, n_cores = 8) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_111j <- do_fit(my_pk_111j, n_cores = 8) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_000j <- do_fit(my_pk_000j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_100j <- do_fit(my_pk_100j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_110j <- do_fit(my_pk_110j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_111j <- do_fit(my_pk_111j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
 rm(my_pk_000j, my_pk_100j, my_pk_110j, my_pk_111j)
 gc()
-my_pk_010j <- do_fit(my_pk_010j, n_cores = 8) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_011j <- do_fit(my_pk_011j, n_cores = 8) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_001j <- do_fit(my_pk_001j, n_cores = 8) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_101j <- do_fit(my_pk_101j, n_cores = 8) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_010j <- do_fit(my_pk_010j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_011j <- do_fit(my_pk_011j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_001j <- do_fit(my_pk_001j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_101j <- do_fit(my_pk_101j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
 
 # Run after each evaluation
 # initialization (only run once)
 {
+current_pk <- my_pk_101j # Define current evaluated pk object here
 winning_model_final <- NULL
 rmse_summary <- NULL
 detail_stats <- NULL
-}
 
 # Run all at once
-{
-current_pk <- my_pk_101j # Define current evaluated pk object here
+
 winning_model_final <- bind_rows(winning_model_final, current_pk[[1]])
 rmse_summary <- bind_rows(rmse_summary, current_pk[[2]])
 detail_stats <- bind_rows(detail_stats, current_pk[[3]])
@@ -2038,7 +2039,7 @@ for each chemical, species data group.
 
 ```{r plotting_all_Fits, eval=FALSE}
 ### Plotting for all (2.5MB file)
-pl <- plot(my_pk, n_interp = 8, use_scale_conc = TRUE)
+pl <- plot(my_pk, n_interp = 12, use_scale_conc = TRUE)
 pdf(file = paste0(Sys.getenv("FIG_DIR"),
               "DoseNormalized_Joint_AllFits_Final_20240109.pdf"),
     height = 6, width = 10)
@@ -2048,10 +2049,10 @@ for (i in 1:nrow(pl)) {
 dev.off()
 
 # From my new SQL pull
-pl <- plot(my_pk, n_interp = 8, use_scale_conc = TRUE)
+pl <- plot(my_pk, n_interp = 10, use_scale_conc = FALSE)
 pdf(file = paste0(Sys.getenv("FIG_DIR"),
-              "NormalizedUpdate_NewCvT_SQLquery.pdf"),
-    height = 6, width = 10)
+              "Joint_AllFits_Final_20240109.pdf"),
+    height = 10, width = 10)
 for (i in 1:nrow(pl)) {
   print(pl$final_plot[[i]])
 }
@@ -2300,5 +2301,6 @@ left_join(my_tkstats, my_cvt_unique) %>%
 
 ```{r information}
 sessionInfo()
+
 ```
 
