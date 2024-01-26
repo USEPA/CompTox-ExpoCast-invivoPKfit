@@ -22,6 +22,8 @@ Currently only "blood" and "plasma" are supported.}
 \item{conc_unit}{Character: The units of concentration.}
 
 \item{vol_unit}{Character: The units of dose.}
+
+\item{...}{Additional arguments not currently in use.}
 }
 \value{
 A `data.frame` with two variables:

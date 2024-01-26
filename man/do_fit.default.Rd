@@ -6,6 +6,11 @@
 \usage{
 \method{do_fit}{default}(obj, ...)
 }
+\arguments{
+\item{obj}{an object}
+
+\item{...}{Additional arguments currently not in use.}
+}
 \description{
 do_fit default method
 }

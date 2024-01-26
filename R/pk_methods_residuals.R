@@ -40,6 +40,7 @@
 #'   log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
+#' @param ... Additional arguments not currently used.
 #' @return A data.frame with the final column being calculated residuals.
 #'   There is one row per each [optimx::optimx()] methods (specified in
 #'   [settings_optimx()]), and `data_group`.  The final column

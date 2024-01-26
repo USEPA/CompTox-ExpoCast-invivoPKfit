@@ -4,10 +4,12 @@
 \alias{get_settings_data_info.pk}
 \title{Get settings_data_info}
 \usage{
-\method{get_settings_data_info}{pk}(obj)
+\method{get_settings_data_info}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
+
+\item{...}{Additional arguments. Currently not implemented.}
 }
 \value{
 A named list of the data_info settings

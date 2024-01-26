@@ -46,6 +46,8 @@ listed in Details. Default NULL.}
 
 \item{tkstats_fun_args}{Any additional arguments to `tkstats_fun` other than
 `data`, `medium`, `route` (see Details). Default NULL.}
+
+\item{...}{Additional arguments not currently implement.}
 }
 \value{
 An object of class `pk_model`. Effectively, a named list containing

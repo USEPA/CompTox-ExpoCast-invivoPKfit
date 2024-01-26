@@ -6,6 +6,11 @@
 \usage{
 \method{do_data_info}{default}(obj, ...)
 }
+\arguments{
+\item{obj}{an object}
+
+\item{...}{Additional arguments currently not in use.}
+}
 \description{
 do_data_info default method
 }

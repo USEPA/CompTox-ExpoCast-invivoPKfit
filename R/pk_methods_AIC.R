@@ -31,8 +31,9 @@
 #'   status. Default `TRUE`.
 #' @param drop_obs Logical: `TRUE` to drop the observations column in the output
 #' of [logLik()].
+#' @param ... Additional argument. Not in use.
 #' @param k Default 2. The `k` parameter in the log-likelihood formula (see
-#'   Details).
+#'   Details). Must be named if used.
 #' @return A data.frame with log-likelihood values and calculated AIC using `newdata`.
 #'   There is one row for each model in `obj`'s [stat_model()] element and
 #'   each [optimx::optimx()] method (specified in [settings_optimx()]).
@@ -48,6 +49,7 @@ AIC.pk <- function(obj,
                    method = NULL,
                    exclude = TRUE,
                    drop_obs = TRUE,
+                   ...,
                    k = 2){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,

@@ -6,6 +6,11 @@
 \usage{
 \method{compare_models}{default}(obj, ...)
 }
+\arguments{
+\item{obj}{an object}
+
+\item{...}{Additional arguments currently not in use.}
+}
 \description{
 Default method for compare_models()
 }

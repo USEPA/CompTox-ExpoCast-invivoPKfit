@@ -4,10 +4,12 @@
 \alias{do_preprocess.pk}
 \title{Do pre-processing}
 \usage{
-\method{do_preprocess}{pk}(obj)
+\method{do_preprocess}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A `pk` object}
+
+\item{...}{Additional arguments. Not in use currently.}
 }
 \value{
 The same `pk` object, with added elements `data` (containing the

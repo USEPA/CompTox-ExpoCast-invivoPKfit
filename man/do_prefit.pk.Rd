@@ -4,10 +4,12 @@
 \alias{do_prefit.pk}
 \title{Do pre-fitting}
 \usage{
-\method{do_prefit}{pk}(obj)
+\method{do_prefit}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A `pk` object}
+
+\item{...}{Additional arguments. Not in use.}
 }
 \value{
 The same `pk` object, but with a new element `prefit`, containing the

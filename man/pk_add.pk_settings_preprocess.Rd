@@ -4,10 +4,10 @@
 \alias{pk_add.pk_settings_preprocess}
 \title{Add a `pk_settings_preprocess` object.}
 \usage{
-\method{pk_add}{pk_settings_preprocess}(object, pk_obj, objectname)
+\method{pk_add}{pk_settings_preprocess}(pkproto_obj, pk_obj, objectname)
 }
 \arguments{
-\item{object}{The `pk_settings_preprocess` object to be added.}
+\item{pkproto_obj}{The `pk_settings_preprocess` object to be added.}
 
 \item{pk_obj}{The `pk` object to which the `pk_settings_preprocess` object will be added.}
 

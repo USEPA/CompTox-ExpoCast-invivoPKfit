@@ -4,10 +4,12 @@
 \alias{get_settings_optimx.pk}
 \title{Get settings_optimx}
 \usage{
-\method{get_settings_optimx}{pk}(obj)
+\method{get_settings_optimx}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
+
+\item{...}{Additional arguents not currently in use.}
 }
 \value{
 A named list of the optimx settings

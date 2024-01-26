@@ -6,6 +6,11 @@
 \usage{
 \method{get_tkstats}{default}(obj, ...)
 }
+\arguments{
+\item{obj}{an object}
+
+\item{...}{Additional arguments currently not in use.}
+}
 \description{
 Default method for get_tkstats()
 }

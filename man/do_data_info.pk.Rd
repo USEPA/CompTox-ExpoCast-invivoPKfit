@@ -4,10 +4,12 @@
 \alias{do_data_info.pk}
 \title{calculate summary data info}
 \usage{
-\method{do_data_info}{pk}(obj)
+\method{do_data_info}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{An object of class [pk()].}
+
+\item{...}{Additional arguemnts. Not currently in use.}
 }
 \description{
 Calculate summary data information, including non-compartmental analysis.

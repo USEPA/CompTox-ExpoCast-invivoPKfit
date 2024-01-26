@@ -4,10 +4,12 @@
 \alias{get_scale_conc.pk}
 \title{Get scale_conc}
 \usage{
-\method{get_scale_conc}{pk}(obj)
+\method{get_scale_conc}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
+
+\item{...}{Additional arguments not currently in use.}
 }
 \value{
 A `list`: `obj$scales$conc`

@@ -4,10 +4,12 @@
 \alias{get_error_group.pk}
 \title{Get error group}
 \usage{
-\method{get_error_group}{pk}(obj)
+\method{get_error_group}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
+
+\item{...}{Additional arguments. Not in use currently.}
 }
 \value{
 The stat_error_model error grouping

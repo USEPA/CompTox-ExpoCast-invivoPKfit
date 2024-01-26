@@ -51,6 +51,8 @@ concentration scaling or transformation will be applied before the
 log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
+
+\item{...}{Additional arguments not currently used.}
 }
 \value{
 A data.frame with the final column being calculated residuals.

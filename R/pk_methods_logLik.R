@@ -43,7 +43,7 @@
 #' the model.
 #'
 #'
-#' @param obj A `pk` object
+#' @param object A `pk` object
 #' @param newdata Optional: A `data.frame` with new data for which to compute
 #'   log-likelihood. If NULL (the default), then log-likelihoods will be
 #'   computed for the data in `obj$data`. `newdata` is required to contain at
@@ -73,6 +73,7 @@
 #'   %in% TRUE`). `FALSE` to include all observations when calculating the
 #'   log-likelihood, regardless of exclusion status. Default `TRUE`.
 #' @param drop_obs Logical: `TRUE` to drop the observations column after calculating log-likelihood.
+#' @param ... Additional arguments. Not in use currently.
 #' @return A data.frame with coefficients and log-likelihood values calculated using `newdata`.
 #'   There is one row for each model in `obj`'s [stat_model()] element and
 #'   each [optimx::optimx()] method (specified in [settings_optimx()]).
@@ -82,28 +83,28 @@
 #' @family fit evaluation metrics
 #' @family log likelihood functions
 #' @family methods for fitted pk objects
-logLik.pk <- function(obj,
+logLik.pk <- function(object,
                       newdata = NULL,
                       model = NULL,
                       method = NULL,
                       negative = FALSE,
                       force_finite = FALSE,
                       exclude = TRUE,
-                      drop_obs = TRUE){
+                      drop_obs = TRUE, ...){
 
-  suppress.messages <- obj$settings_preprocess$suppress.messages
+  suppress.messages <- object$settings_preprocess$suppress.messages
 
   #ensure that the model has been fitted
-  check <- check_required_status(obj = obj,
+  check <- check_required_status(obj = object,
                                  required_status = status_fit)
   if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
   other_vars <- NULL
-  if (is.null(model)) model <- names(obj$stat_model)
-  if (is.null(method)) method <- obj$optimx_settings$method
+  if (is.null(model)) model <- names(object$stat_model)
+  if (is.null(method)) method <- object$optimx_settings$method
   if (is.null(newdata)) {
-    newdata <- obj$data
+    newdata <- object$data
 
     other_vars <- ggplot2::vars(
       Value,
@@ -116,16 +117,16 @@ logLik.pk <- function(obj,
     )
   }
 
-  method_ok <- check_method(obj = obj, method = method)
-  model_ok <- check_model(obj = obj, model = model)
+  method_ok <- check_method(obj = object, method = method)
+  model_ok <- check_model(obj = object, model = model)
 
   #check variables in newdata
 #including error grouping variables
-  err_grp_vars <- sapply(eval(get_error_group(obj)),
+  err_grp_vars <- sapply(eval(get_error_group(object)),
                          rlang::as_label)
 
   newdata_ok <- check_newdata(newdata = newdata,
-                              olddata = obj$data,
+                              olddata = object$data,
                               req_vars = union(c("Time",
                                            "Dose",
                                            "Route",
@@ -146,7 +147,7 @@ logLik.pk <- function(obj,
   }
 
   #get transformations to apply
-  conc_scale <- conc_scale_use(obj = obj,
+  conc_scale <- conc_scale_use(obj = object,
                                use_scale_conc = TRUE)
 
   #remove any excluded observations & corresponding predictions, if so specified
@@ -159,7 +160,7 @@ logLik.pk <- function(obj,
   # get coefs data.frame for each model and method
   #
   coefs <- suppressMessages(coef(
-    obj = obj,
+    obj = object,
     model = model,
     method = method,
     drop_sigma = FALSE) %>%
@@ -190,7 +191,7 @@ logLik.pk <- function(obj,
 
 
   newdata <- newdata %>%
-    dplyr::select(!!!union(obj$data_group, req_vars),
+    dplyr::select(!!!union(object$data_group, req_vars),
                   !!!other_vars)
 
   # time_scale_check
@@ -198,7 +199,7 @@ logLik.pk <- function(obj,
     message("Scaling these transformed units back into hours")
 
     print(newdata %>%
-            dplyr::select(!!!obj$data_group, Time.Units, Time_trans.Units) %>%
+            dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
             dplyr::filter(Time.Units != Time_trans.Units) %>%
             dplyr::distinct())
   }
@@ -209,7 +210,7 @@ logLik.pk <- function(obj,
                                               from = Time_trans.Units,
                                               to = "hours"),
                     Time_trans.Units = "hours") %>%
-      dplyr::group_by(!!!obj$data_group) %>%
+      dplyr::group_by(!!!object$data_group) %>%
       tidyr::nest(.key = "observations") %>%
       dplyr::ungroup()
 
@@ -223,7 +224,7 @@ logLik.pk <- function(obj,
   newdata <- newdata %>%
     dplyr::rowwise() %>%
     dplyr::filter(!is.null(observations)) %>%
-    dplyr::mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
+    dplyr::mutate(model_fun = object$stat_model[[model]]$conc_fun) %>%
     dplyr::ungroup() %>%
     dplyr::distinct()
 

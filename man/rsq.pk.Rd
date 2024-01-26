@@ -10,7 +10,8 @@
   model = NULL,
   method = NULL,
   exclude = TRUE,
-  use_scale_conc = TRUE
+  use_scale_conc = TRUE,
+  ...
 )
 }
 \arguments{
@@ -50,6 +51,8 @@ concentration scaling or transformation will be applied before the
 R-squared is computed. If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
+
+\item{...}{Additional arguments. Not currently in use.}
 }
 \value{
 A dataframe with one row for each `data_group`, `model` and `method`.

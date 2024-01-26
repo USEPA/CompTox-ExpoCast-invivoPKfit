@@ -93,6 +93,8 @@ observed concentration values.}
 
 \item{print_out}{For plotting: whether the output of the function should be
 the list of plots. Default `FALSE`.}
+
+\item{...}{Additional arguments not in use.}
 }
 \value{
 A [ggplot2::ggplot()]-class plot object.

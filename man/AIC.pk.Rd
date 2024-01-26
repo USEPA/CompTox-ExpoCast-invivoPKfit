@@ -11,6 +11,7 @@
   method = NULL,
   exclude = TRUE,
   drop_obs = TRUE,
+  ...,
   k = 2
 )
 }
@@ -44,8 +45,10 @@ status. Default `TRUE`.}
 \item{drop_obs}{Logical: `TRUE` to drop the observations column in the output
 of [logLik()].}
 
+\item{...}{Additional argument. Not in use.}
+
 \item{k}{Default 2. The `k` parameter in the log-likelihood formula (see
-Details).}
+Details). Must be named if used.}
 }
 \value{
 A data.frame with log-likelihood values and calculated AIC using `newdata`.

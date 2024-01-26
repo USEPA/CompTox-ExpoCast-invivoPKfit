@@ -40,6 +40,8 @@ also the biased estimator of the combined population SD.}
 \item{na.rm}{Logical. If TRUE (default), then any groups where mean, SD, *or*
 N were NA will be dropped. If FALSE, they will be retained (and the result
 will be NA).}
+
+\item{log}{Logical. If TRUE the standard deviations are from log-transformed values.}
 }
 \value{
 Numeric: the standard deviation of the combined population (i.e. if

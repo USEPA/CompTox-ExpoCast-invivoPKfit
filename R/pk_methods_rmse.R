@@ -87,6 +87,7 @@
 #' @param rmse_group A list of quosures provided in the format
 #'  `vars(...)` that determines the group for which RMSE is calculated.
 #'  Defaults to `vars(Route, Media, Dose, Time)`.
+#' @param ... Additional arguments. Not in use.
 #' @return A `data.frame` with calculated RMSE as the final column. There is one row per
 #'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
 #'   fitted to the data, each [optimx::optimx()] methods (specified in
@@ -101,7 +102,8 @@ rmse.pk <- function(obj,
                     method = NULL,
                     exclude = TRUE,
                     use_scale_conc = TRUE,
-                    rmse_group = vars(Route, Media, Dose, Time)){
+                    rmse_group = vars(Route, Media, Dose, Time),
+                    ...){
 #ensure that the model has been fitted
 check <- check_required_status(obj = obj,
                                required_status = status_fit)

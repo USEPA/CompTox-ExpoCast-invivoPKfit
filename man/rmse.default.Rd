@@ -6,6 +6,11 @@
 \usage{
 \method{rmse}{default}(obj, ...)
 }
+\arguments{
+\item{obj}{an object}
+
+\item{...}{Additional arguments.}
+}
 \description{
 Root mean squared error (RMSE) default method
 }

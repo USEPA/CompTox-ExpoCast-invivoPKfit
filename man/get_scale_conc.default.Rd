@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{obj}{An object}
+
+\item{...}{Additional arguments currently not in use.}
 }
 \description{
 Default method for get_scale_conc()

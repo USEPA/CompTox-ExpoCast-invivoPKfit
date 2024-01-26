@@ -8,6 +8,8 @@ get_stat_error_model(obj, ...)
 }
 \arguments{
 \item{obj}{An object.}
+
+\item{...}{Additional arguments currently not in use.}
 }
 \description{
 This is the S3 method generic for get_stat_error_model()

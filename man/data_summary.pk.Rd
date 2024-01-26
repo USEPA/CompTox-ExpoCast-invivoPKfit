@@ -4,7 +4,7 @@
 \alias{data_summary.pk}
 \title{Data summary for a `pk` object}
 \usage{
-\method{data_summary}{pk}(obj, newdata = NULL, summary_group = NULL)
+\method{data_summary}{pk}(obj, newdata = NULL, summary_group = NULL, ...)
 }
 \arguments{
 \item{obj}{A [pk()] model object. Must be fitted, or the function will exit
@@ -23,6 +23,8 @@ of these variables in the data, a set of summary statistics will be
 computed. The default is `NULL`, to use the same data grouping that was set
 in [stat_nca()] for the `pk` object. However, you may specify a different
 data grouping if you wish.}
+
+\item{...}{Additional arguments. Not in use.}
 }
 \value{
 A `data.frame` with variables including all the grouping variables in

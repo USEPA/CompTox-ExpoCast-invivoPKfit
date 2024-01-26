@@ -4,10 +4,12 @@
 \alias{get_nca.pk}
 \title{Get NCA}
 \usage{
-\method{get_nca}{pk}(obj)
+\method{get_nca}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object that has had `data_info()` run on it}
+
+\item{...}{Additional arguments. Currently not used.}
 }
 \value{
 A `data.frame`: the `data` element of `obj`

@@ -4,7 +4,7 @@
 \alias{do_fit.pk}
 \title{Do fitting}
 \usage{
-\method{do_fit}{pk}(obj, n_cores = NULL, rate_names = NULL)
+\method{do_fit}{pk}(obj, n_cores = NULL, rate_names = NULL, ...)
 }
 \arguments{
 \item{obj}{A [pk] object.}
@@ -12,6 +12,8 @@
 \item{n_cores}{Number of cores used for parallel computing.}
 
 \item{rate_names}{The names of the rate units. Leave NULL to utilize default 1/hour.}
+
+\item{...}{Additional arguments. Not currently in use.}
 }
 \value{
 The same [pk] object, with element `fit` containing the fitted

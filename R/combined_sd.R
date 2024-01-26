@@ -25,6 +25,7 @@
 #' @param na.rm Logical. If TRUE (default), then any groups where mean, SD, *or*
 #'   N were NA will be dropped. If FALSE, they will be retained (and the result
 #'   will be NA).
+#' @param log Logical. If TRUE the standard deviations are from log-transformed values.
 #' @return Numeric: the standard deviation of the combined population (i.e. if
 #'   all the groups were concatenated into one large group).
 #' @author Caroline Ring

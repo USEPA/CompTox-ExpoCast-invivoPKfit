@@ -4,10 +4,12 @@
 \alias{get_data_original.pk}
 \title{Get data_original}
 \usage{
-\method{get_data_original}{pk}(obj)
+\method{get_data_original}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
+
+\item{...}{Additional arguments. Not currently in use.}
 }
 \value{
 A `data.frame` -- the `data_original` element of `obj`

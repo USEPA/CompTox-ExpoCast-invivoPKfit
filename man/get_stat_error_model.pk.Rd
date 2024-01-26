@@ -4,10 +4,12 @@
 \alias{get_stat_error_model.pk}
 \title{Get stat_error_model}
 \usage{
-\method{get_stat_error_model}{pk}(obj)
+\method{get_stat_error_model}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
+
+\item{...}{Additional arguments.}
 }
 \value{
 A named list of the stat_error_model settings

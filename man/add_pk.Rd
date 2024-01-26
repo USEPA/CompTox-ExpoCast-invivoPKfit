@@ -4,12 +4,12 @@
 \alias{add_pk}
 \title{Add various `pkproto` objects to a `pk` object}
 \usage{
-add_pk(pk_obj, object, objectname)
+add_pk(pk_obj, pkproto_obj, objectname)
 }
 \arguments{
 \item{pk_obj}{The `pk` object}
 
-\item{object}{The `pkproto` object to be added}
+\item{pkproto_obj}{The `pkproto` object to be added}
 
 \item{objectname}{The name of the `pkproto` object to be added}
 }

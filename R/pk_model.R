@@ -105,6 +105,7 @@
 #'  `data` (see Details). Default NULL.
 #'@param tkstats_fun_args Any additional arguments to `tkstats_fun` other than
 #'  `data`, `medium`, `route` (see Details). Default NULL.
+#'@param ... Additional arguments not currently implement.
 #'@return An object of class `pk_model`. Effectively, a named list containing
 #'  all of the arguments provided to this function.
 #'@author Caroline Ring

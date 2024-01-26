@@ -4,6 +4,7 @@
 #'   should be the names of objects of class `pk_model`. Built-in options are
 #'   [`model_flat`], [`model_1comp`], and [`model_2comp`]. You may add your own
 #'   model by using [pk_model()].
+#' @param ... Additional arguments not currently in use.
 
 stat_model <- function(model = c("model_flat", "model_1comp", "model_2comp"),
                       ...){

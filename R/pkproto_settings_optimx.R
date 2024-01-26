@@ -5,6 +5,7 @@
 #' @param itnmax The maximum number of iterations; as in [optimx::optimx()].
 #' @param hessian Whether to compute the Hessian at the final set of parameters; as in [optimx::optimx()].
 #' @param control A list of control parameters for the optimizer; see [optimx::optimx()] for options and details.
+#' @param ... Additional arguments not currently implemented.
 #' @return An object of class `pk_settings`.
 #' @author Caroline Ring
 settings_optimx <- function(method = c("bobyqa", "L-BFGS-B"),

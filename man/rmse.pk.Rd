@@ -11,7 +11,8 @@
   method = NULL,
   exclude = TRUE,
   use_scale_conc = TRUE,
-  rmse_group = vars(Route, Media, Dose, Time)
+  rmse_group = vars(Route, Media, Dose, Time),
+  ...
 )
 }
 \arguments{
@@ -55,6 +56,8 @@ log10-transformation will be applied.}
 \item{rmse_group}{A list of quosures provided in the format
 `vars(...)` that determines the group for which RMSE is calculated.
 Defaults to `vars(Route, Media, Dose, Time)`.}
+
+\item{...}{Additional arguments. Not in use.}
 }
 \value{
 A `data.frame` with calculated RMSE as the final column. There is one row per

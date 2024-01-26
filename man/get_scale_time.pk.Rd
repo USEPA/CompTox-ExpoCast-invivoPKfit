@@ -4,10 +4,12 @@
 \alias{get_scale_time.pk}
 \title{Get scale_time}
 \usage{
-\method{get_scale_time}{pk}(obj)
+\method{get_scale_time}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
+
+\item{...}{Additional arguments not in use.}
 }
 \value{
 A `list`: `obj$scales$time`

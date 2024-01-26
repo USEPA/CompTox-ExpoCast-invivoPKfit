@@ -5,18 +5,19 @@
 \title{Log-likelihood}
 \usage{
 \method{logLik}{pk}(
-  obj,
+  object,
   newdata = NULL,
   model = NULL,
   method = NULL,
   negative = FALSE,
   force_finite = FALSE,
   exclude = TRUE,
-  drop_obs = TRUE
+  drop_obs = TRUE,
+  ...
 )
 }
 \arguments{
-\item{obj}{A `pk` object}
+\item{object}{A `pk` object}
 
 \item{newdata}{Optional: A `data.frame` with new data for which to compute
 log-likelihood. If NULL (the default), then log-likelihoods will be
@@ -53,6 +54,8 @@ observations in the data marked for exclusion (if there is a variable
 log-likelihood, regardless of exclusion status. Default `TRUE`.}
 
 \item{drop_obs}{Logical: `TRUE` to drop the observations column after calculating log-likelihood.}
+
+\item{...}{Additional arguments. Not in use currently.}
 }
 \value{
 A data.frame with coefficients and log-likelihood values calculated using `newdata`.

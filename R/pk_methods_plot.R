@@ -60,6 +60,7 @@
 #'  observed concentration values.
 #'@param print_out For plotting: whether the output of the function should be
 #'  the list of plots. Default `FALSE`.
+#'@param ... Additional arguments not in use.
 #'@return A [ggplot2::ggplot()]-class plot object.
 #'@import ggplot2
 #'@export

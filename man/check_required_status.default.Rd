@@ -4,7 +4,12 @@
 \alias{check_required_status.default}
 \title{Default method for checking required status}
 \usage{
-\method{check_required_status}{default}(obj)
+\method{check_required_status}{default}(obj, ...)
+}
+\arguments{
+\item{obj}{An object.}
+
+\item{...}{Additional arguments currently not in use.}
 }
 \description{
 Default method for checking required status

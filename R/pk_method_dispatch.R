@@ -1,5 +1,6 @@
 #' Preprocess data generic
-#'
+#' @param obj the pk object.
+#' @param ... Additional arguments currently not in use.
 #' @export
 #' @seealso [do_preprocess.pk()] for the `do_preprocess` method for class [pk()]
 do_preprocess <- function(obj, ...){
@@ -7,7 +8,8 @@ do_preprocess <- function(obj, ...){
 }
 
 #' do_preprocess default method
-#'
+#' @param obj an object
+#'@param ... Additional arguments currently not in use.
 #' @export
 do_preprocess.default <- function(obj, ...){
   stop(paste("No 'do_preprocess' method exists for object of class",
@@ -15,7 +17,8 @@ do_preprocess.default <- function(obj, ...){
 }
 
 #' do_data_info generic
-#'
+#' @param obj the pk object
+#'@param ... Additional arguments currently not in use.
 #' @export
 #' @seealso [do_data_info.pk()] for the `do_data_info` method for class [pk()]
 do_data_info <- function(obj, ...){
@@ -23,7 +26,8 @@ do_data_info <- function(obj, ...){
 }
 
 #' do_data_info default method
-#'
+#' @param obj an object
+#' @param ... Additional arguments currently not in use.
 #' @export
 do_data_info.default <- function(obj, ...){
   stop(paste("No 'do_data_info' method exists for object of class",
@@ -31,13 +35,16 @@ do_data_info.default <- function(obj, ...){
 }
 
 #' Prefitting
-#'
+#' @param obj the pk object
+#' @param ... Additional arguments currently not in use.
 #' @export
 do_prefit <- function(obj, ...){
   UseMethod("do_prefit", obj)
 }
 
 #' do_prefit default method
+#' @param obj an object
+#' @param ... Additional arguments currently not in use.
 #'
 #' @export
 do_prefit.default <- function(obj, ...){
@@ -48,6 +55,8 @@ do_prefit.default <- function(obj, ...){
 #' Fitting
 #'
 #' This is the S3 generic method for `do_fit`.
+#' @param obj the pk object
+#' @param ... Additional arguments currently not in use.
 #' @export
 #' @seealso [do_fit.pk()] for the `do_fit` method for class [pk()]
 do_fit <- function(obj, ...){
@@ -55,7 +64,8 @@ do_fit <- function(obj, ...){
 }
 
 #' do_fit default method
-#'
+#' @param obj an object
+#' @param ... Additional arguments currently not in use.
 #' @export
 do_fit.default <- function(obj, ...){
   stop(paste("No 'do_fit' method exists for object of class",
@@ -65,6 +75,8 @@ do_fit.default <- function(obj, ...){
 #' Root mean squared error (RMSE)
 #'
 #' This is the S3 method generic for `rmse`.
+#' @param obj the pk object
+#' @param ... Additional arguments currently not in use.
 #' @export
 #' @seealso [rmse.pk()] for the `rmse` method for class [pk()]
 rmse <- function(obj, ...){
@@ -72,7 +84,8 @@ rmse <- function(obj, ...){
 }
 
 #' Root mean squared error (RMSE) default method
-#'
+#' @param obj an object
+#' @param ... Additional arguments.
 #' @export
 rmse.default <- function(obj, ...){
   stop(paste("No 'rmse' method exists for object of class",
@@ -84,21 +97,27 @@ rmse.default <- function(obj, ...){
 #' This is the S3 method generic for `coef_sd`.
 #'
 #' @param obj An object
+#' @param model The TK model used.
+#' @param method Optimizer method used.
+#' @param table_format Defines output format.
+#' @param suppress.messages Boolean. Whether messages will be printed.
+#' @param ... Additional arguments currently not in use.
 #' @export
 #' @seealso [coef_sd.pk()] for the `coef_sd` method for class [pk()]
 coef_sd <- function(obj,
                     model,
                     method,
                     table_format,
-                    supress.messages){
+                    suppress.messages, ...){
   UseMethod("coef_sd", obj)
 }
 
 #' Coefficient standard deviation default
 #'
 #' @param obj An object
+#' @param ... Additional arguments currently not in use.
 #' @export
-coef_sd.default <- function(obj){
+coef_sd.default <- function(obj, ...){
   stop(paste("No 'coef_sd' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
@@ -107,7 +126,8 @@ coef_sd.default <- function(obj){
 #'
 #' This is the S3 method generic.
 #'
-#' @param obj An object.
+#' @param obj an object
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_status.pk()] for the `get_status` method for class [pk()]
 #' @export
 get_status <- function(obj, ...){
@@ -115,7 +135,8 @@ get_status <- function(obj, ...){
 }
 
 #' Default method for getting status
-#'
+#' @param obj an object
+#' @param ... Additional arguments currently not in use.
 #' @export
 get_status.default <- function(obj, ...){
   stop(paste("No 'get_status' method exists for object of class",
@@ -125,6 +146,8 @@ get_status.default <- function(obj, ...){
 #' Fold error
 #'
 #' This is the S3 method generic for `fold_errors`.
+#' @param obj an object
+#' @param ... Additional arguments currently not in use.
 #' @export
 #' @seealso [fold_errors.pk()] for the `fold_errors` method for class [pk()]
 fold_errors <- function(obj, ...){
@@ -132,7 +155,8 @@ fold_errors <- function(obj, ...){
 }
 
 #' Fold_error default method
-#'
+#' @param obj an object
+#' @param ... Additional arguments currently not in use.
 #' @export
 fold_errors.default <- function(obj, ...){
   stop(paste("No 'fold_errors' method exists for object of class",
@@ -144,6 +168,7 @@ fold_errors.default <- function(obj, ...){
 #' This is the S3 method generic.
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [check_required_status.pk()] for the method for class [pk()]
 #' @export
 check_required_status <- function(obj, ...){
@@ -152,8 +177,10 @@ check_required_status <- function(obj, ...){
 
 #' Default method for checking required status
 #'
+#' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @export
-check_required_status.default <- function(obj){
+check_required_status.default <- function(obj, ...){
   stop(paste("No 'check_required_status' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
@@ -162,7 +189,8 @@ check_required_status.default <- function(obj){
 #'
 #' This is the S3 method generic for get_tkstats(0)
 #'
-#' @param obj An object.
+#' @param obj an object
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_tkstats.pk()] for the method for class [pk()]
 #' @export
 get_tkstats <- function(obj, ...){
@@ -170,7 +198,8 @@ get_tkstats <- function(obj, ...){
 }
 
 #' Default method for get_tkstats()
-#'
+#' @param obj an object
+#' @param ... Additional arguments currently not in use.
 #' @export
 get_tkstats.default <- function(obj, ...){
   stop(paste("No 'get_tkstats' method exists for object of class",
@@ -182,6 +211,7 @@ get_tkstats.default <- function(obj, ...){
 #' This is the S3 method generic for compare_models()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [compare_models.pk()] for the method for class [pk()]
 #' @export
 compare_models <- function(obj, ...){
@@ -189,7 +219,8 @@ compare_models <- function(obj, ...){
 }
 
 #' Default method for compare_models()
-#'
+#' @param obj an object
+#' @param ... Additional arguments currently not in use.
 #' @export
 compare_models.default <- function(obj, ...){
   stop(paste("No 'compare_models' method exists for object of class",
@@ -202,6 +233,7 @@ compare_models.default <- function(obj, ...){
 #' This is the S3 method generic for get_data()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_data.pk()] for the method for class [pk()]
 #' @export
 get_data <- function(obj, ...){
@@ -211,6 +243,7 @@ get_data <- function(obj, ...){
 #' Default method for get_data()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_data.default <- function(obj, ...){
   stop(paste("No 'get_data' method exists for object of class",
@@ -222,6 +255,7 @@ get_data.default <- function(obj, ...){
 #' This is the S3 method generic for get_nca()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_nca.pk()] for the method for class [pk()]
 #' @export
 get_nca <- function(obj, ...){
@@ -231,6 +265,7 @@ get_nca <- function(obj, ...){
 #' Default method for get_nca()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_nca.default <- function(obj, ...){
   stop(paste("No 'get_nca' method exists for object of class",
@@ -242,6 +277,7 @@ get_nca.default <- function(obj, ...){
 #' This is the S3 method generic for get_data_info()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_data_info.pk()] for the method for class [pk()]
 #' @export
 get_data_info <- function(obj, ...){
@@ -251,6 +287,7 @@ get_data_info <- function(obj, ...){
 #' Default method for get_data_info()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_data_info.default <- function(obj, ...){
   stop(paste("No 'get_data_info' method exists for object of class",
@@ -262,6 +299,7 @@ get_data_info.default <- function(obj, ...){
 #' This is the S3 method generic for get_prefit()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_prefit.pk()] for the method for class [pk()]
 #' @export
 get_prefit <- function(obj, ...){
@@ -271,6 +309,7 @@ get_prefit <- function(obj, ...){
 #' Default method for get_prefit()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_prefit.default <- function(obj, ...){
   stop(paste("No 'get_prefit' method exists for object of class",
@@ -282,6 +321,7 @@ get_prefit.default <- function(obj, ...){
 #' This is the S3 method generic for get_settings_preprocess()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_settings_preprocess.pk()] for the method for class [pk()]
 #' @export
 get_settings_preprocess <- function(obj, ...){
@@ -291,6 +331,7 @@ get_settings_preprocess <- function(obj, ...){
 #' Default method for get_settings_preprocess()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_settings_preprocess.default <- function(obj, ...){
   stop(paste("No 'get_settings_preprocess' method exists for object of class",
@@ -302,6 +343,7 @@ get_settings_preprocess.default <- function(obj, ...){
 #' This is the S3 method generic for get_settings_data_info()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_settings_data_info.pk()] for the method for class [pk()]
 #' @export
 get_settings_data_info <- function(obj, ...){
@@ -311,6 +353,7 @@ get_settings_data_info <- function(obj, ...){
 #' Default method for get_settings_data_info()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_settings_data_info.default <- function(obj, ...){
   stop(paste("No 'get_settings_data_info' method exists for object of class",
@@ -322,6 +365,7 @@ get_settings_data_info.default <- function(obj, ...){
 #' This is the S3 method generic for get_stat_error_model()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_stat_error_model.pk()] for the method for class [pk()]
 #' @export
 get_stat_error_model <- function(obj, ...){
@@ -331,6 +375,7 @@ get_stat_error_model <- function(obj, ...){
 #' Default method for get_stat_error_model()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_stat_error_model.default <- function(obj, ...){
   stop(paste("No 'get_stat_error_model' method exists for object of class",
@@ -342,6 +387,7 @@ get_stat_error_model.default <- function(obj, ...){
 #' This is the S3 method generic for get_data_sigma_group()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_data_sigma_group.pk()] for the method for class [pk()]
 #' @export
 get_data_sigma_group <- function(obj, ...){
@@ -351,6 +397,7 @@ get_data_sigma_group <- function(obj, ...){
 #' Default method for get_data_sigma_group()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_data_sigma_group.default <- function(obj, ...){
   stop(paste("No 'get_data_sigma_group' method exists for object of class",
@@ -362,6 +409,7 @@ get_data_sigma_group.default <- function(obj, ...){
 #' This is the S3 method generic for get_settings_optimx()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_settings_optimx.pk()] for the method for class [pk()]
 #' @export
 get_settings_optimx <- function(obj, ...){
@@ -371,6 +419,7 @@ get_settings_optimx <- function(obj, ...){
 #' Default method for get_settings_optimx()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_settings_optimx.default <- function(obj, ...){
   stop(paste("No 'get_settings_optimx' method exists for object of class",
@@ -382,6 +431,7 @@ get_settings_optimx.default <- function(obj, ...){
 #' This is the S3 method generic for get_scale_conc()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_scale_conc.pk()] for the method for class [pk()]
 #' @export
 get_scale_conc <- function(obj, ...){
@@ -391,6 +441,7 @@ get_scale_conc <- function(obj, ...){
 #' Default method for get_scale_conc()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_scale_conc.default <- function(obj, ...){
   stop(paste("No 'get_scale_conc' method exists for object of class",
@@ -402,6 +453,7 @@ get_scale_conc.default <- function(obj, ...){
 #' This is the S3 method generic for get_scale_time()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_scale_time.pk()] for the method for class [pk()]
 #' @export
 get_scale_time <- function(obj, ...){
@@ -411,6 +463,7 @@ get_scale_time <- function(obj, ...){
 #' Default method for get_scale_time()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_scale_time.default <- function(obj, ...){
   stop(paste("No 'get_scale_time' method exists for object of class",
@@ -422,6 +475,7 @@ get_scale_time.default <- function(obj, ...){
 #' This is the S3 method generic for get_error_group()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_error_group.pk()] for the method for class [pk()]
 #' @export
 get_error_group <- function(obj, ...){
@@ -431,6 +485,7 @@ get_error_group <- function(obj, ...){
 #' Default method for get_error_group()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_error_group.default <- function(obj, ...){
   stop(paste("No 'get_error_group' method exists for object of class",
@@ -442,6 +497,7 @@ get_error_group.default <- function(obj, ...){
 #' This is the S3 method generic for get_stat_model()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_stat_model.pk()] for the method for class [pk()]
 #' @export
 get_stat_model <- function(obj, ...){
@@ -451,6 +507,7 @@ get_stat_model <- function(obj, ...){
 #' Default method for get_stat_model()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_stat_model.default <- function(obj, ...){
   stop(paste("No 'get_stat_model' method exists for object of class",
@@ -462,6 +519,7 @@ get_stat_model.default <- function(obj, ...){
 #' This is the S3 method generic for get_data_original()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_data_original.pk()] for the method for class [pk()]
 #' @export
 get_data_original <- function(obj, ...){
@@ -471,6 +529,7 @@ get_data_original <- function(obj, ...){
 #' Default method for get_data_original()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_data_original.default <- function(obj, ...){
   stop(paste("No 'get_data_original' method exists for object of class",
@@ -482,6 +541,7 @@ get_data_original.default <- function(obj, ...){
 #' This is the S3 method generic for get_mapping()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_mapping.pk()] for the method for class [pk()]
 #' @export
 get_mapping <- function(obj, ...){
@@ -491,6 +551,7 @@ get_mapping <- function(obj, ...){
 #' Default method for get_mapping()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_mapping.default <- function(obj, ...){
   stop(paste("No 'get_mapping' method exists for object of class",
@@ -502,6 +563,7 @@ get_mapping.default <- function(obj, ...){
 #' This is the S3 method generic for rsq()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [rsq.pk()] for the method for class [pk()]
 #' @export
 rsq <- function(obj, ...){
@@ -511,6 +573,7 @@ rsq <- function(obj, ...){
 #' Default method for rsq()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 rsq.default <- function(obj, ...){
   stop(paste("No 'rsq' method exists for object of class",
@@ -522,6 +585,7 @@ rsq.default <- function(obj, ...){
 #' This is the S3 method generic for get_winning_model()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [get_winning_model.pk()] for the method for class [pk()]
 #' @export
 get_winning_model <- function(obj, ...){
@@ -531,6 +595,7 @@ get_winning_model <- function(obj, ...){
 #' Default method for get_winning_model()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_winning_model.default <- function(obj, ...){
   stop(paste("No 'get_winning_model' method exists for object of class",
@@ -542,6 +607,7 @@ get_winning_model.default <- function(obj, ...){
 #' This is the S3 method generic for nca()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [nca.pk()] for the method for class [pk()]
 #' @export
 nca <- function(obj, ...){
@@ -551,6 +617,7 @@ nca <- function(obj, ...){
 #' Default method for nca()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 nca.default <- function(obj, ...){
   stop(paste("No 'nca' method exists for object of class",
@@ -562,6 +629,7 @@ nca.default <- function(obj, ...){
 #' This is the S3 method generic for data_summary()
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [data_summary.pk()] for the method for class [pk()]
 #' @export
 data_summary <- function(obj, ...){
@@ -571,6 +639,7 @@ data_summary <- function(obj, ...){
 #' Default method for data_summary()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 data_summary.default <- function(obj, ...){
   stop(paste("No 'data_summary' method exists for object of class",
@@ -585,6 +654,7 @@ data_summary.default <- function(obj, ...){
 #' `get_data_summary()` is an alias for `data_summary()`
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [data_summary.pk()] for the method for class [pk()]
 #' @export
 get_data_summary <- function(obj, ...){
@@ -594,6 +664,7 @@ get_data_summary <- function(obj, ...){
 #' Default method for get_data_summary()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_data_summary.default <- function(obj, ...){
   stop(paste("No 'get_data_summary' method exists for object of class",
@@ -607,6 +678,7 @@ get_data_summary.default <- function(obj, ...){
 #' `eval_tkstats()` is an alias for `data_summary()`
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [data_summary.pk()] for the method for class [pk()]
 #' @export
 eval_tkstats <- function(obj, ...){
@@ -616,6 +688,7 @@ eval_tkstats <- function(obj, ...){
 #' Default method for eval_tkstats()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 eval_tkstats.default <- function(obj, ...){
   stop(paste("No 'eval_tkstats' method exists for object of class",
@@ -629,6 +702,7 @@ eval_tkstats.default <- function(obj, ...){
 #' `get_fit()` is an alias for `data_summary()`
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [data_summary.pk()] for the method for class [pk()]
 #' @export
 get_fit <- function(obj, ...){
@@ -638,6 +712,7 @@ get_fit <- function(obj, ...){
 #' Default method for get_fit()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_fit.default <- function(obj, ...){
   stop(paste("No 'get_fit' method exists for object of class",
@@ -651,6 +726,7 @@ get_fit.default <- function(obj, ...){
 #' `get_data_group()` is an alias for `data_summary()`
 #'
 #' @param obj An object.
+#' @param ... Additional arguments currently not in use.
 #' @seealso [data_summary.pk()] for the method for class [pk()]
 #' @export
 get_data_group <- function(obj, ...){
@@ -660,6 +736,7 @@ get_data_group <- function(obj, ...){
 #' Default method for get_data_group()
 #'
 #'@param obj An object
+#'@param ... Additional arguments currently not in use.
 #' @export
 get_data_group.default <- function(obj, ...){
   stop(paste("No 'get_data_group' method exists for object of class",

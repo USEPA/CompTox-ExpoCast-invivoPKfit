@@ -17,6 +17,7 @@
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   make predictions. If NULL (the default), predictions will be returned for
 #'   all of the models in `obj$stat_model`.
+#' @param ... Additional arguments. Not in use.
 #' @return A named list of objects of class `optimx`, named for the models in
 #'   `model`. As described in [optimx::optimx()]  If only one model is
 #'   specified, the return value will still be a list, but with only one

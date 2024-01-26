@@ -39,15 +39,15 @@
 #' Add various `pkproto` objects to a `pk` object
 #'
 #'@param pk_obj The `pk` object
-#'@param object The `pkproto` object to be added
+#'@param pkproto_obj The `pkproto` object to be added
 #'@param objectname The name of the `pkproto` object to be added
 #'
 #'@return The `pk` object modified by the addition.
 #' @export
-add_pk <- function(pk_obj, object, objectname) {
-  if (is.null(object)) return(pk_obj)
+add_pk <- function(pk_obj, pkproto_obj, objectname) {
+  if (is.null(pkproto_obj)) return(pk_obj)
 
-  p <- pk_add(object, pk_obj, objectname)
+  p <- pk_add(pkproto_obj, pk_obj, objectname)
   p
 }
 
@@ -74,11 +74,13 @@ pk_add <- function(pkproto_obj, pk_obj, objectname){
 }
 
 #' Add pkproto object default method
-#'
+#' @param pkproto_obj The `pkproto` object to be added
+#' @param pk_obj The `pk` object to which the `pkproto` object is to be added
+#' @param objectname The object name
 #' @export
-pk_add.default <- function(object, pk_obj, objectname){
+pk_add.default <- function(pkproto_obj, pk_obj, objectname){
   stop(paste("No 'pk_add' method exists for object of class",
-             object))
+             pkproto_obj))
 }
 
 #'Subtract a `pkproto` object from a `pk` object
@@ -98,24 +100,26 @@ pk_subtract <- function(pkproto_obj, pk_obj, objectname){
 }
 
 #' Subtract pkproto object default method
-#'
+#' @param pkproto_obj The `pkproto` object to be subtracted
+#' @param pk_obj The `pk` object to which the `pkproto` object is to be subtracted
+#' @param objectname The object name
 #' @export
-pk_subtract.default <- function(object, pk_obj, objectname){
+pk_subtract.default <- function(pkproto_obj, pk_obj, objectname){
   stop(paste("No 'pk_subtract' method exists for object of class",
-             object))
+             pkproto_obj))
 }
 
 #' Add a `pk_scales` object to a `pk` object.
 #'
-#' @param object The `pk_scales` object to be added.
+#' @param pkproto_obj The `pk_scales` object to be added.
 #' @param pk_obj The `pk` object to which the `pk_scales` object will be added.
 #' @param objectname The name of the `pk_scales` object.
 #'
 #' @return The `pk` object, modified by the `pk_scales` object.
 #' @author Caroline Ring
 #' @export
-pk_add.pk_scales <- function(object, pk_obj, objectname){
-  pk_obj$scales[[object$name]] <- object$value
+pk_add.pk_scales <- function(pkproto_obj, pk_obj, objectname){
+  pk_obj$scales[[pkproto_obj$name]] <- pkproto_obj$value
   if(pk_obj$status > (status_preprocess - 1)){
     #with new scaling, everything will change starting from data pre-processing
     #with new data pre-processing settings, everything will change starting from
@@ -134,14 +138,14 @@ pk_add.pk_scales <- function(object, pk_obj, objectname){
 
 #' Add a `pk_settings_preprocess` object.
 #'
-#' @param object The `pk_settings_preprocess` object to be added.
+#' @param pkproto_obj The `pk_settings_preprocess` object to be added.
 #' @param pk_obj The `pk` object to which the `pk_settings_preprocess` object will be added.
 #' @param objectname The name of the `pk_settings_preprocess` object.
 #'
 #' @return The `pk` object, modified by the `pk_settings_preprocess` object.
 #' @author Caroline Ring
 #' @export
-pk_add.pk_settings_preprocess <- function(object, pk_obj, objectname){
+pk_add.pk_settings_preprocess <- function(pkproto_obj, pk_obj, objectname){
 
   #New settings_preprocess will *replace* existing ones
   if(!is.null(pk_obj$settings_preprocess)){
@@ -150,7 +154,7 @@ pk_add.pk_settings_preprocess <- function(object, pk_obj, objectname){
     )
   }
 
-  pk_obj$settings_preprocess <- object
+  pk_obj$settings_preprocess <- pkproto_obj
   if(pk_obj$status > (status_preprocess - 1)){
     #with new data pre-processing settings, everything will change starting from
     #data pre-processing
@@ -166,14 +170,14 @@ pk_add.pk_settings_preprocess <- function(object, pk_obj, objectname){
 
 #' Add a `pk_settings_data_info` object.
 #'
-#' @param object The `pk_settings_data_info` object to be added.
+#' @param pkproto_obj The `pk_settings_data_info` object to be added.
 #' @param pk_obj The `pk` object to which the `pk_settings_data_info` object will be added.
 #' @param objectname The name of the `pk_settings_data_info` object.
 #'
 #' @return The `pk` object, modified by the `pk_settings_data_info` object.
 #' @author Caroline Ring
 #' @export
-pk_add.pk_settings_data_info <- function(object, pk_obj, objectname){
+pk_add.pk_settings_data_info <- function(pkproto_obj, pk_obj, objectname){
 
   #New settings_data_info will *replace* existing ones
   if(!is.null(pk_obj$settings_data_info)){
@@ -182,7 +186,7 @@ pk_add.pk_settings_data_info <- function(object, pk_obj, objectname){
     )
   }
 
-  pk_obj$settings_data_info <- object
+  pk_obj$settings_data_info <- pkproto_obj
   if(pk_obj$status > (status_preprocess - 1)){
     #with new data info settings, everything will change starting from
     #data info
@@ -198,14 +202,14 @@ pk_add.pk_settings_data_info <- function(object, pk_obj, objectname){
 
 #' Add a `pk_settings_optimx` object.
 #'
-#' @param object The `pk_settings_optimx` object to be added.
+#' @param pkproto_obj The `pk_settings_optimx` object to be added.
 #' @param pk_obj The `pk` object to which the `pk_settings_optimx` object will be added.
 #' @param objectname The name of the `pk_settings_optimx` object.
 #'
 #' @return The `pk` object, modified by adding the settings.
 #' @author Caroline Ring
 #' @export
-pk_add.pk_settings_optimx <- function(object, pk_obj, objectname){
+pk_add.pk_settings_optimx <- function(pkproto_obj, pk_obj, objectname){
 
   #New settings_optimx will *replace* existing ones
   if(!is.null(pk_obj$settings_optimx)){
@@ -214,7 +218,7 @@ pk_add.pk_settings_optimx <- function(object, pk_obj, objectname){
     )
   }
 
-  pk_obj$settings_optimx <- object
+  pk_obj$settings_optimx <- pkproto_obj
   if(pk_obj$status > (status_prefit - 1)){
     #with new optimizer settings, data pre=processing and model pre-fitting
     #should not change, but model fitting will change
@@ -231,18 +235,18 @@ pk_add.pk_settings_optimx <- function(object, pk_obj, objectname){
 
 #' Add a `pk_stat_model` object.
 #'
-#' @param object The `pk_stat_model` object to be added.
+#' @param pkproto_obj The `pk_stat_model` object to be added.
 #' @param pk_obj The `pk` object to which the `pk_stat_model` object will be added.
 #' @param objectname The name of the `pk_stat_model` object.
 #'
 #' @return The `pk` object, modified by adding the `stat_model`.
 #' @author Caroline Ring
 #' @export
-pk_add.pk_stat_model <- function(object, pk_obj, objectname){
+pk_add.pk_stat_model <- function(pkproto_obj, pk_obj, objectname){
   #New stat_model will *replace* existing stat_model
   if(!is.null(pk_obj$stat_model)){
     old_models <- names(pk_obj$stat_model)
-    new_models <- names(object)
+    new_models <- names(pkproto_obj)
     message(paste0(objectname,
                    ": stat_model already present; ",
                    "new stat_model will replace the existing one.",
@@ -252,7 +256,7 @@ pk_add.pk_stat_model <- function(object, pk_obj, objectname){
                    paste("New models: ", paste(new_models, collapse = ", "))
                    ))
   }
-  pk_obj$stat_model <- object
+  pk_obj$stat_model <- pkproto_obj
 
   #data pre-processing won't change with addition of new model, but model
   #pre-fit and fit will change
@@ -270,14 +274,14 @@ pk_add.pk_stat_model <- function(object, pk_obj, objectname){
 
 #' Add a `pk_stat_error_model` object.
 #'
-#' @param object The `pk_stat_error_model` object to be added.
+#' @param pkproto_obj The `pk_stat_error_model` object to be added.
 #' @param pk_obj The `pk` object to which the `pk_stat_error_model` object will be added.
 #' @param objectname The name of the `pk_stat_error_model` object.
 #'
 #' @return The `pk` object, modified by adding the `stat_error_model`.
 #' @author Caroline Ring
 #' @export
-pk_add.pk_stat_error_model <- function(object, pk_obj, objectname){
+pk_add.pk_stat_error_model <- function(pkproto_obj, pk_obj, objectname){
 
   if(!is.null(pk_obj$stat_error_model)){
     message(paste0(objectname,
@@ -285,7 +289,7 @@ pk_add.pk_stat_error_model <- function(object, pk_obj, objectname){
     )
   }
 
-  pk_obj$stat_error_model <- object
+  pk_obj$stat_error_model <- pkproto_obj
 
   #data pre-processing won't change with addition of a new error model, but
   #model pre-fit and fit will change
@@ -309,21 +313,21 @@ pk_add.pk_stat_error_model <- function(object, pk_obj, objectname){
 #'
 #' The new mapping will completely replace any existing mapping.
 #'
-#' @param object The `uneval` (mapping) object to be added.
+#' @param pkproto_obj The `uneval` (mapping) object to be added.
 #' @param pk_obj The [pk()] object to which the `uneval` object will be added.
 #' @param objectname The name of the `uneval` object.
 #'
 #' @return The [pk()] object, modified by adding the new mapping.
 #' @author Caroline Ring
 #' @export
-pk_add.uneval <- function(object, pk_obj, objectname){
+pk_add.uneval <- function(pkproto_obj, pk_obj, objectname){
   if(!is.null(pk_obj$mapping)){
     message(paste0(objectname,
                    ": mapping already present; new mapping will replace the existing one")
     )
   }
 
-  pk_obj$mapping <- object
+  pk_obj$mapping <- pkproto_obj
 
   #data pre-processing and everything downstream will change
   if(pk_obj$status > (status_preprocess - 1)){
@@ -339,10 +343,10 @@ pk_add.uneval <- function(object, pk_obj, objectname){
 
 #' Add facet_data()
 #'
-#' @param object The `pk_facet_data` object to be added.
+#' @param pkproto_obj The `pk_facet_data` object to be added.
 #' @param pk_obj The [pk()] object to which the `pk_facet_data` object will be added.
 #' @param objectname The name of the `pk_facet_data` object.
-pk_add.pk_facet_data <- function(object, pk_obj, objectname){
+pk_add.pk_facet_data <- function(pkproto_obj, pk_obj, objectname){
 
   #data pre-processing and everything downstream will change
   if(pk_obj$status > (status_preprocess - 1)){
@@ -355,7 +359,7 @@ pk_add.pk_facet_data <- function(object, pk_obj, objectname){
 
   # this will become the data_group
   # this takes the harmonized variables in the pk object
-    pk_obj$data_group <- object$facets
+    pk_obj$data_group <- pkproto_obj$facets
     return(pk_obj)
 
 }

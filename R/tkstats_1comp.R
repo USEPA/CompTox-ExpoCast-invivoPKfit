@@ -65,6 +65,7 @@
 #'  concentration for long-term daily dosing of 1 mg/kg/day.
 #'@param conc_unit Character: The units of concentration.
 #'@param vol_unit Character: The units of dose.
+#'@param ... Additional arguments not currently in use.
 #'@return A `data.frame` with two variables:
 #' - `param_name` = `c("CLtot", "CLtot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity")`
 #' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed).

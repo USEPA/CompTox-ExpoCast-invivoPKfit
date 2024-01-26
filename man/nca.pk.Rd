@@ -42,6 +42,8 @@ NCA, regardless of exclusion status. Default `TRUE`.}
 concentrations. `FALSE` (default) to perform NCA on un-transformed
 concentrations.}
 
+\item{suppress.messages}{Logical.}
+
 \item{...}{Additional arguments. Currently not in use.}
 }
 \value{

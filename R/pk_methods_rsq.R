@@ -121,6 +121,7 @@
 #'   R-squared is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
+#' @param ... Additional arguments. Not currently in use.
 #' @return  A dataframe with one row for each `data_group`, `model` and `method`.
 #'   The final column contains the R-squared of the model fitted by the corresponding
 #'   method, using the data in `newdata`.
@@ -133,7 +134,8 @@ rsq.pk <- function(obj,
                    model = NULL,
                    method = NULL,
                    exclude = TRUE,
-                   use_scale_conc = TRUE){
+                   use_scale_conc = TRUE,
+                   ...){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)

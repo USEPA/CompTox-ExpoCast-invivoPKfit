@@ -6,6 +6,11 @@
 \usage{
 fold_errors(obj, ...)
 }
+\arguments{
+\item{obj}{an object}
+
+\item{...}{Additional arguments currently not in use.}
+}
 \description{
 This is the S3 method generic for `fold_errors`.
 }

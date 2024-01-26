@@ -52,6 +52,7 @@
 #'   groupings, regardless of exclusion status. Default `TRUE`.
 #' @param vol_unit Character: Specifies the unit of volume. Defaults to "L" for liters.
 #' @param dose_norm Logical: `TRUE` (default) specifies whether the concentrations are dose-normalized.
+#' @param ... Additional arguments not currently in use.
 #' @return  A data.frame with one row for each `data_group`, `model` and `method`
 #'   with the variables in the `data.frame` returned by the `tkstats_fun` for
 #'   its corresponding model.
@@ -67,7 +68,7 @@ get_tkstats.pk <- function(obj,
                            method = NULL,
                            exclude = TRUE,
                            vol_unit = "L",
-                           dose_norm = TRUE){
+                           dose_norm = TRUE, ...){
 
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,

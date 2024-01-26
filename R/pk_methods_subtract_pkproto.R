@@ -43,7 +43,7 @@ subtract_pk <- function(pk_obj, object, objectname) {
 
 #' Subtract a `pk_stat_model` object.
 #'
-#' @param object The `pk_stat_model` object to be subtracted.
+#' @param pkproto_obj The `pk_stat_model` object to be subtracted.
 #' @param pk_obj The `pk` object from which the `pk_stat_model` object will be subtracted.
 #' @param objectname The name of the `pk_stat_model` object.
 #'

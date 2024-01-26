@@ -6,6 +6,11 @@
 \usage{
 do_data_info(obj, ...)
 }
+\arguments{
+\item{obj}{the pk object}
+
+\item{...}{Additional arguments currently not in use.}
+}
 \description{
 do_data_info generic
 }

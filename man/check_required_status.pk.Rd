@@ -4,13 +4,15 @@
 \alias{check_required_status.pk}
 \title{Check required status}
 \usage{
-\method{check_required_status}{pk}(obj, required_status)
+\method{check_required_status}{pk}(obj, required_status, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
 
 \item{required_status}{Integer: The required status. 1 = initialized; 2 =
 pre-processed; 3 = pre-fitted; 4 = fitted.}
+
+\item{...}{Additional arguments. Not in use.}
 }
 \value{
 If the [pk()] object has the required status or greater, returns

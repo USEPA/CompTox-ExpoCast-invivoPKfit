@@ -1,10 +1,11 @@
 #' Get settings_data_info
 
 #' @param obj A [pk()] object
+#' @param ... Additional arguments. Currently not implemented.
 #' @return A named list of the data_info settings
 #' @export
 #' @author Caroline Ring
-get_settings_data_info.pk <- function(obj){
+get_settings_data_info.pk <- function(obj, ...){
   out <- obj$settings_data_info
   #convert lists of quosures into "vars(...)"
   out$nca_group <- rlang::parse_expr(

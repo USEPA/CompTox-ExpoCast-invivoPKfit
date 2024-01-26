@@ -50,6 +50,8 @@ is useful when treating the log-likelihood as an objective function to be
 as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If
 TRUE, then if the log-likelihood works out to be non-finite, then it will be
 replaced with `.Machine$double.xmax`.}
+
+\item{suppress.messages}{Logical.}
 }
 \value{
 A log-likelihood value for the data given the parameter values in

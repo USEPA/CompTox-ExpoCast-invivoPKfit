@@ -9,7 +9,8 @@
   model = NULL,
   method = NULL,
   table_format = FALSE,
-  suppress.messages = TRUE
+  suppress.messages = TRUE,
+  ...
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ the output is in an unnested format.}
 
 \item{suppress.messages}{Logical. `TRUE` (the default) to suppress
 informative messages. `FALSE` to see them.}
+
+\item{...}{Additional arguments. Not in use right now.}
 }
 \value{
 A dataframe with one row for each `data_group`, `model` and `method`.

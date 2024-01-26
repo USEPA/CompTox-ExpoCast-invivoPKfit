@@ -174,6 +174,14 @@
 #'  provide a fixed/constant value for a `new_variable` rather than taking its
 #'  value from a variable in `data`, simply supply that fixed/constant value in
 #'  the `old_variable` position.
+#'@param settings_preprocess_args A list of preprocessing settings.
+#'@param settings_data_info_args A list of data_info settings.
+#'@param settings_optimx_args A list of optimx settings.
+#'@param scale_conc_args A list of concentration value scaling arguments.
+#'@param scale_time_args A list of time scaling arguments
+#'@param stat_model_args A list of TK model arguments.
+#'@param stat_error_model_args A list of error modeling arguments
+#'@param facet_data_args A list of data grouping settings.
 #'@return An object of class `pk`. The initial `pk` object is a list with
 #'  elements `data_orig`, `data_settings`, `scales` and `optimx_settings`.
 #'  `data_orig` is the original data set to be fitted, as supplied in the

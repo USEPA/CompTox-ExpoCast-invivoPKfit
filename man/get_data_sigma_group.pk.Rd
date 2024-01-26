@@ -4,7 +4,7 @@
 \alias{get_data_sigma_group.pk}
 \title{Get data_sigma_group}
 \usage{
-\method{get_data_sigma_group}{pk}(obj, newdata = NULL)
+\method{get_data_sigma_group}{pk}(obj, newdata = NULL, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
@@ -12,6 +12,8 @@
 \item{newdata}{Optional: A `data.frame` with new data for which to get the
 `data_sigma_group`s. If NULL (the default), then the groups will be
 evaluated for the `obj$data`.}
+
+\item{...}{Additional arguments. Not currently in use.}
 }
 \value{
 A `factor` vector giving the error SD group ID for each observation,

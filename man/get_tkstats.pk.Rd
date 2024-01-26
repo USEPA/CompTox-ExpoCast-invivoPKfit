@@ -12,7 +12,8 @@
   method = NULL,
   exclude = TRUE,
   vol_unit = "L",
-  dose_norm = TRUE
+  dose_norm = TRUE,
+  ...
 )
 }
 \arguments{
@@ -53,6 +54,8 @@ groupings, regardless of exclusion status. Default `TRUE`.}
 \item{vol_unit}{Character: Specifies the unit of volume. Defaults to "L" for liters.}
 
 \item{dose_norm}{Logical: `TRUE` (default) specifies whether the concentrations are dose-normalized.}
+
+\item{...}{Additional arguments not currently in use.}
 }
 \value{
 A data.frame with one row for each `data_group`, `model` and `method`

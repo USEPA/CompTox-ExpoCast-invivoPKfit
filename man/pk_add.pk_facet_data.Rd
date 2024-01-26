@@ -4,10 +4,10 @@
 \alias{pk_add.pk_facet_data}
 \title{Add facet_data()}
 \usage{
-\method{pk_add}{pk_facet_data}(object, pk_obj, objectname)
+\method{pk_add}{pk_facet_data}(pkproto_obj, pk_obj, objectname)
 }
 \arguments{
-\item{object}{The `pk_facet_data` object to be added.}
+\item{pkproto_obj}{The `pk_facet_data` object to be added.}
 
 \item{pk_obj}{The [pk()] object to which the `pk_facet_data` object will be added.}
 

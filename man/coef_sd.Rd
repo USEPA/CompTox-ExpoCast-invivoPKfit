@@ -4,10 +4,20 @@
 \alias{coef_sd}
 \title{Coefficient standard deviations}
 \usage{
-coef_sd(obj, model, method, table_format, supress.messages)
+coef_sd(obj, model, method, table_format, suppress.messages, ...)
 }
 \arguments{
 \item{obj}{An object}
+
+\item{model}{The TK model used.}
+
+\item{method}{Optimizer method used.}
+
+\item{table_format}{Defines output format.}
+
+\item{suppress.messages}{Boolean. Whether messages will be printed.}
+
+\item{...}{Additional arguments currently not in use.}
 }
 \description{
 This is the S3 method generic for `coef_sd`.

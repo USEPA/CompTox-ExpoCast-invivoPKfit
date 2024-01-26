@@ -7,11 +7,12 @@
 #' e.g. halflife; clearance; tmax; Cmax; AUC; Css.
 #'
 #' @param obj A [pk] object.
+#' @param ... Additional arguments. Currently not in use.
 #' @return A list of `data.frame`s consisting of a summary table of fitting options and results.
 #' @export
 #' @author Caroline Ring
 #'
-summary.pk <- function(obj){
+summary.pk <- function(obj, ...){
   objname <- deparse(substitute(obj))
   status <- get_status(obj)
 

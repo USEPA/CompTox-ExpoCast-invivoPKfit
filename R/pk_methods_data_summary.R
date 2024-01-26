@@ -36,6 +36,7 @@
 #'   computed. The default is `NULL`, to use the same data grouping that was set
 #'   in [stat_nca()] for the `pk` object. However, you may specify a different
 #'   data grouping if you wish.
+#' @param ... Additional arguments. Not in use.
 #' @return A `data.frame` with variables including all the grouping variables in
 #'   `summary_group`, `group_id`; `param_name` (the name of the summary
 #'   statistic; see Details); `param_value` (the summary statistic value);  `param_units`
@@ -45,7 +46,8 @@
 
 data_summary.pk <- function(obj,
                             newdata = NULL,
-                            summary_group = NULL){
+                            summary_group = NULL,
+                            ...){
 
   if (is.null(summary_group)) {
     summary_group <- obj$data_group

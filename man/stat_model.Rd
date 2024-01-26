@@ -11,6 +11,8 @@ stat_model(model = c("model_flat", "model_1comp", "model_2comp"), ...)
 should be the names of objects of class `pk_model`. Built-in options are
 [`model_flat`], [`model_1comp`], and [`model_2comp`]. You may add your own
 model by using [pk_model()].}
+
+\item{...}{Additional arguments not currently in use.}
 }
 \description{
 Add PK model(s) to be fitted

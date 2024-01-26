@@ -4,10 +4,10 @@
 \alias{pk_add.pk_scales}
 \title{Add a `pk_scales` object to a `pk` object.}
 \usage{
-\method{pk_add}{pk_scales}(object, pk_obj, objectname)
+\method{pk_add}{pk_scales}(pkproto_obj, pk_obj, objectname)
 }
 \arguments{
-\item{object}{The `pk_scales` object to be added.}
+\item{pkproto_obj}{The `pk_scales` object to be added.}
 
 \item{pk_obj}{The `pk` object to which the `pk_scales` object will be added.}
 

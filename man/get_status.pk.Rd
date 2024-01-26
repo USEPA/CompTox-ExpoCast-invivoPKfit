@@ -4,10 +4,12 @@
 \alias{get_status.pk}
 \title{Check status of a `pk` object}
 \usage{
-\method{get_status}{pk}(obj)
+\method{get_status}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A `pk` object}
+
+\item{...}{Additional arguments.}
 }
 \value{
 The status of the `pk` object as an integer.

@@ -21,6 +21,8 @@ settings_optimx(
 \item{hessian}{Whether to compute the Hessian at the final set of parameters; as in [optimx::optimx()].}
 
 \item{control}{A list of control parameters for the optimizer; see [optimx::optimx()] for options and details.}
+
+\item{...}{Additional arguments not currently implemented.}
 }
 \value{
 An object of class `pk_settings`.

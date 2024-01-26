@@ -4,10 +4,12 @@
 \alias{get_data_group.pk}
 \title{Get data groupingh}
 \usage{
-\method{get_data_group}{pk}(obj)
+\method{get_data_group}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{An initialized `pk` object}
+
+\item{...}{Additional arguments not currently in use.}
 }
 \value{
 An object of class `call` giving the data grouping as a `dplyr::vars()` specification

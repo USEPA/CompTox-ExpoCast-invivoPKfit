@@ -4,7 +4,14 @@
 \alias{pk_subtract.default}
 \title{Subtract pkproto object default method}
 \usage{
-\method{pk_subtract}{default}(object, pk_obj, objectname)
+\method{pk_subtract}{default}(pkproto_obj, pk_obj, objectname)
+}
+\arguments{
+\item{pkproto_obj}{The `pkproto` object to be subtracted}
+
+\item{pk_obj}{The `pk` object to which the `pkproto` object is to be subtracted}
+
+\item{objectname}{The object name}
 }
 \description{
 Subtract pkproto object default method

@@ -4,10 +4,10 @@
 \alias{pk_add.pk_stat_model}
 \title{Add a `pk_stat_model` object.}
 \usage{
-\method{pk_add}{pk_stat_model}(object, pk_obj, objectname)
+\method{pk_add}{pk_stat_model}(pkproto_obj, pk_obj, objectname)
 }
 \arguments{
-\item{object}{The `pk_stat_model` object to be added.}
+\item{pkproto_obj}{The `pk_stat_model` object to be added.}
 
 \item{pk_obj}{The `pk` object to which the `pk_stat_model` object will be added.}
 

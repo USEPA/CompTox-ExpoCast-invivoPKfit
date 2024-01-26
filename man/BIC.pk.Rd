@@ -4,7 +4,7 @@
 \alias{BIC.pk}
 \title{Bayesian information criterion}
 \usage{
-\method{BIC}{pk}(obj, newdata = NULL, model = NULL, method = NULL, exclude = TRUE)
+\method{BIC}{pk}(obj, newdata = NULL, model = NULL, method = NULL, exclude = TRUE, ...)
 }
 \arguments{
 \item{obj}{A `pk` object}
@@ -31,6 +31,8 @@ observations in the data marked for exclusion (if there is a variable
 `exclude` in the data, an observation is marked for exclusion when `exclude
 %in% TRUE`). `FALSE` to include all observations, regardless of exclusion
 status. Default `TRUE`.}
+
+\item{...}{Additional arguments. Not in use.}
 }
 \value{
 A data.frame with log-likelihood values and calculated BIC using `newdata`.

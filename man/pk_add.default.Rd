@@ -4,7 +4,14 @@
 \alias{pk_add.default}
 \title{Add pkproto object default method}
 \usage{
-\method{pk_add}{default}(object, pk_obj, objectname)
+\method{pk_add}{default}(pkproto_obj, pk_obj, objectname)
+}
+\arguments{
+\item{pkproto_obj}{The `pkproto` object to be added}
+
+\item{pk_obj}{The `pk` object to which the `pkproto` object is to be added}
+
+\item{objectname}{The object name}
 }
 \description{
 Add pkproto object default method

@@ -4,11 +4,11 @@
 #'
 #'
 #' @param obj An object of class [pk()].
-#'
+#' @param ... Additional arguemnts. Not currently in use.
 #' @export
 #' @importFrom magrittr `%>%`
 #' @author Caroline Ring
-do_data_info.pk <- function(obj){
+do_data_info.pk <- function(obj, ...){
 
   #check status
   objname <- deparse(substitute(obj))

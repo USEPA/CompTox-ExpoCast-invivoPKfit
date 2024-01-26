@@ -4,10 +4,10 @@
 \alias{pk_add.uneval}
 \title{Add an `uneval` object}
 \usage{
-\method{pk_add}{uneval}(object, pk_obj, objectname)
+\method{pk_add}{uneval}(pkproto_obj, pk_obj, objectname)
 }
 \arguments{
-\item{object}{The `uneval` (mapping) object to be added.}
+\item{pkproto_obj}{The `uneval` (mapping) object to be added.}
 
 \item{pk_obj}{The [pk()] object to which the `uneval` object will be added.}
 

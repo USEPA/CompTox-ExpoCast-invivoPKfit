@@ -6,6 +6,11 @@
 \usage{
 \method{fold_errors}{default}(obj, ...)
 }
+\arguments{
+\item{obj}{an object}
+
+\item{...}{Additional arguments currently not in use.}
+}
 \description{
 Fold_error default method
 }

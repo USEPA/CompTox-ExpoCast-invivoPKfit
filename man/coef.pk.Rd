@@ -30,6 +30,8 @@ sigma in the output.}
 
 \item{include_NAs}{Logical: `FALSE` by default. Determines whether to include
 aborted fits which have NAs as coefficients.}
+
+\item{...}{Additional arguments currently not in use.}
 }
 \value{
 A data.frame with a row for each `data_group` x `method` x `model` combination

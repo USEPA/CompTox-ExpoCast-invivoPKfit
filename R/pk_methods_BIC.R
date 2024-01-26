@@ -29,6 +29,7 @@
 #'   `exclude` in the data, an observation is marked for exclusion when `exclude
 #'   %in% TRUE`). `FALSE` to include all observations, regardless of exclusion
 #'   status. Default `TRUE`.
+#' @param ... Additional arguments. Not in use.
 #' @return A data.frame with log-likelihood values and calculated BIC using `newdata`.
 #'   There is one row for each model in `obj`'s [stat_model()] element and
 #'   each [optimx::optimx()] method (specified in [settings_optimx()]).
@@ -42,7 +43,8 @@ BIC.pk <- function(obj,
                    newdata = NULL,
                    model = NULL,
                    method = NULL,
-                   exclude = TRUE){
+                   exclude = TRUE,
+                   ...){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = 5)

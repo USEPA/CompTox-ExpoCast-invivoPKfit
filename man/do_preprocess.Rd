@@ -6,6 +6,11 @@
 \usage{
 do_preprocess(obj, ...)
 }
+\arguments{
+\item{obj}{the pk object.}
+
+\item{...}{Additional arguments currently not in use.}
+}
 \description{
 Preprocess data generic
 }

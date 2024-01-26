@@ -31,6 +31,7 @@
 #'   the output is in an unnested format.
 #' @param suppress.messages Logical. `TRUE` (the default) to suppress
 #'   informative messages. `FALSE` to see them.
+#' @param ... Additional arguments. Not in use right now.
 #' @return A dataframe with one row for each `data_group`, `model` and `method`.
 #'   The remaining columns include the parameters & hyperparameters as returned by
 #'   [coef.pk()], as well as their calculated standard deviations.
@@ -49,7 +50,7 @@ coef_sd.pk <- function(obj,
                        model = NULL,
                        method = NULL,
                        table_format = FALSE,
-                       suppress.messages = TRUE){
+                       suppress.messages = TRUE, ...){
 
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,

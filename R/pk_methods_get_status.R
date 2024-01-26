@@ -21,10 +21,11 @@
 #' for this `pk` object, and the integer status will be returned.
 #'
 #' @param obj A `pk` object
+#' @param ... Additional arguments.
 #' @return The status of the `pk` object as an integer.
 #' @export
 #' @author Caroline Ring
-get_status.pk <- function(obj){
+get_status.pk <- function(obj, ...){
   objname <- deparse(substitute(obj))
   obj_status <- obj$status
   steps <- c("1/5. Object has been initialized",

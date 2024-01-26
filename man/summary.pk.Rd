@@ -4,10 +4,12 @@
 \alias{summary.pk}
 \title{Print summary of a `pk` object}
 \usage{
-\method{summary}{pk}(obj)
+\method{summary}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk] object.}
+
+\item{...}{Additional arguments. Currently not in use.}
 }
 \value{
 A list of `data.frame`s consisting of a summary table of fitting options and results.

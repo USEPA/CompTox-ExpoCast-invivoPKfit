@@ -67,6 +67,8 @@ this function. But it means that any values in the `Dose` variable of
 \item{finite_only}{Logical: `TRUE` (default) returns only rows (observations)
 for which AUC is finite in both `nca` and `tkstats`. This also means it will
 by default never return instances where winning model == `model_flat`.}
+
+\item{...}{Additional arguments. Currently not in use.}
 }
 \value{
 A `data.frame` with one  row for each "winning" model in

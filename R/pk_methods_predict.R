@@ -34,8 +34,11 @@
 #'   log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
+#' @param suppress_messages Whether to suppress warnings and other
+#'  diagnostic messages during plotting
 #' @param include_NAs Logical: `FALSE` by default. Determines whether to include
 #'  aborted fits which have NAs as coefficients.
+#' @param ... Additional arguments.
 #' @return A data.frame with one row for each `data_group`, `model` and `method`.
 #'   A column that contains the predicted concentration or AUC at that timepoint
 #'   given the TK parameters for that `model` and `method` specified in [coefs()].

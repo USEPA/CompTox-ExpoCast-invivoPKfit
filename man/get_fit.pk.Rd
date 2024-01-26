@@ -12,6 +12,8 @@
 \item{model}{Optional: Specify one or more of the fitted models for which to
 make predictions. If NULL (the default), predictions will be returned for
 all of the models in `obj$stat_model`.}
+
+\item{...}{Additional arguments. Not in use.}
 }
 \value{
 A named list of objects of class `optimx`, named for the models in

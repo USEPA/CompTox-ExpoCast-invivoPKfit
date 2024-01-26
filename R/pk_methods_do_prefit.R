@@ -22,12 +22,13 @@
 #' The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
 #'
 #' @param obj A `pk` object
+#' @param ... Additional arguments. Not in use.
 #' @return The same `pk` object, but with a new element `prefit`, containing the
 #'   results of pre-fit calculations and checks for each model and for the error
 #'   model.
 #' @export
 #' @author Caroline Ring
-do_prefit.pk <- function(obj){
+do_prefit.pk <- function(obj, ...){
 
   objname <- deparse(substitute(obj))
   status <- obj$status

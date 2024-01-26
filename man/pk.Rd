@@ -35,6 +35,22 @@ harmonized variable name that will be used within `invivopkfit`;
 provide a fixed/constant value for a `new_variable` rather than taking its
 value from a variable in `data`, simply supply that fixed/constant value in
 the `old_variable` position.}
+
+\item{settings_preprocess_args}{A list of preprocessing settings.}
+
+\item{settings_data_info_args}{A list of data_info settings.}
+
+\item{settings_optimx_args}{A list of optimx settings.}
+
+\item{scale_conc_args}{A list of concentration value scaling arguments.}
+
+\item{scale_time_args}{A list of time scaling arguments}
+
+\item{stat_model_args}{A list of TK model arguments.}
+
+\item{stat_error_model_args}{A list of error modeling arguments}
+
+\item{facet_data_args}{A list of data grouping settings.}
 }
 \value{
 An object of class `pk`. The initial `pk` object is a list with

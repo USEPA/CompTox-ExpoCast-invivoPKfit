@@ -15,6 +15,7 @@
 #'
 #'
 #' @param obj A `pk` object
+#' @param ... Additional arguments. Not in use currently.
 #' @return The same `pk` object, with added elements `data` (containing the
 #'   cleaned, gap-filled data) and `data_info` (containing summary information
 #'   about the data, e.g. number of observations by route, media,
@@ -26,7 +27,7 @@
 #' @import purrr
 #' @importFrom magrittr `%>%`
 #' @export
-do_preprocess.pk <- function(obj){
+do_preprocess.pk <- function(obj, ...){
 
   if(!obj$settings_preprocess$suppress.messages){
     message("do_preprocess.pk(): Pre-processing data\n")
