@@ -18,6 +18,7 @@
 #'   for which to make predictions and calculate RMSEs. If NULL (the default),
 #'   fold errors will be returned for all of the models in
 #'   `obj$settings_optimx$method`.
+#' @param ... Additional arguments. Currently not in use.
 #' @return  A data.frame with one row for each `data_group`, `model` and `method`.
 #'   A column contains the fold errors (observed/predicted) of the model fitted by the
 #'   corresponding method. These residuals are concentrations in the same units
@@ -28,7 +29,8 @@
 fold_errors.pk <- function(obj,
                           newdata = NULL,
                           model = NULL,
-                          method = NULL){
+                          method = NULL,
+                          ...){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)

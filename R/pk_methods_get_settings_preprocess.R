@@ -1,10 +1,11 @@
 #' Get settings_preprocess
 
 #' @param obj A [pk()] object
+#' @param ... Additional arguments. Currently not in use.
 #' @return A named list of the preprocessing settings
 #' @export
 #' @author Caroline Ring
-get_settings_preprocess.pk <- function(obj){
+get_settings_preprocess.pk <- function(obj, ...){
   out <- obj$settings_preprocess
   #convert char vectors into "c(...)
   out$routes_keep <- rlang::parse_expr(paste0("c(",

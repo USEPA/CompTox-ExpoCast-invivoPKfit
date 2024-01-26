@@ -10,7 +10,8 @@
   nca_group = NULL,
   exclude = TRUE,
   dose_norm = FALSE,
-  suppress.messages = NULL
+  suppress.messages = NULL,
+  ...
 )
 }
 \arguments{
@@ -40,6 +41,8 @@ NCA, regardless of exclusion status. Default `TRUE`.}
 \item{dose_norm}{Logical: `TRUE` to perform NCA after dose-normalizing
 concentrations. `FALSE` (default) to perform NCA on un-transformed
 concentrations.}
+
+\item{...}{Additional arguments. Currently not in use.}
 }
 \value{
 A `data.frame` with variables including all the grouping variables in

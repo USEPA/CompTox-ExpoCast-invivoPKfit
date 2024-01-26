@@ -18,6 +18,9 @@ summary.pk <- function(obj){
   cat(paste0(objname, ":", "\n"))
   cat(paste0(attr(status, "msg"), "\n"))
 
+  coef <- model <- method <- RMSE <- Fold_Error <- NULL
+  avg_FoldErr <- median_FoldErr <- within_2fold <- NULL
+
   if(status < 5){
     return(message("Please fit the object above before running, or try get_data_summary()"))
   }

@@ -56,6 +56,7 @@
 #'@export
 stat_error_model <- function(error_group = vars(Chemical, Species, Reference, Media),
                              ...){
+  Chemical <- NULL
   #get arguments and values as a list
   argg <- c(as.list(environment()), list(...))
   this_error_model <- argg

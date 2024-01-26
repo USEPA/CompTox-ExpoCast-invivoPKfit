@@ -4,10 +4,12 @@
 \alias{get_data_info.pk}
 \title{Get data_info}
 \usage{
-\method{get_data_info}{pk}(obj)
+\method{get_data_info}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object that has had `data_info()` run on it}
+
+\item{...}{Additional arguments. Currently not in use.}
 }
 \value{
 A `data.frame`: the `data` element of `obj`

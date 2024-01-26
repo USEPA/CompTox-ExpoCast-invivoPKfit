@@ -45,6 +45,7 @@ settings_preprocess <- function(routes_keep = c("oral", "iv"),
                                 sd_group = dplyr::vars(Chemical, Species, Reference, Media),
                                 suppress.messages = FALSE,
                                 ...){
+  Chemical <- NULL
   #get arguments and values
   argg <- c(as.list(environment()), list(...))
   this_settings_preprocess <- argg

@@ -4,10 +4,12 @@
 \alias{get_settings_preprocess.pk}
 \title{Get settings_preprocess}
 \usage{
-\method{get_settings_preprocess}{pk}(obj)
+\method{get_settings_preprocess}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
+
+\item{...}{Additional arguments. Currently not in use.}
 }
 \value{
 A named list of the preprocessing settings

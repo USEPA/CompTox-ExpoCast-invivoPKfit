@@ -4,7 +4,7 @@
 \alias{fold_errors.pk}
 \title{Fold errors}
 \usage{
-\method{fold_errors}{pk}(obj, newdata = NULL, model = NULL, method = NULL)
+\method{fold_errors}{pk}(obj, newdata = NULL, model = NULL, method = NULL, ...)
 }
 \arguments{
 \item{obj}{A `pk` object}
@@ -24,6 +24,8 @@ returned for all of the models in `obj$stat_model`.}
 for which to make predictions and calculate RMSEs. If NULL (the default),
 fold errors will be returned for all of the models in
 `obj$settings_optimx$method`.}
+
+\item{...}{Additional arguments. Currently not in use.}
 }
 \value{
 A data.frame with one row for each `data_group`, `model` and `method`.

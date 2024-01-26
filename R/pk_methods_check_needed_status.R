@@ -10,6 +10,7 @@
 #' @param obj A [pk()] object
 #' @param required_status Integer: The required status. 1 = initialized; 2 =
 #'   pre-processed; 3 = pre-fitted; 4 = fitted.
+#'
 #' @return If the [pk()] object has the required status or greater, returns
 #'   TRUE. If the [pk()] object has less than the required status, returns
 #'   FALSE. Returned value has an attribute `msg`, containing an informative

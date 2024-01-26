@@ -4,10 +4,12 @@
 \alias{get_mapping.pk}
 \title{Get mapping}
 \usage{
-\method{get_mapping}{pk}(obj)
+\method{get_mapping}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
+
+\item{...}{Additional arguments. Currently not in use.}
 }
 \value{
 A list of `quosure`s -- the `mapping` element of `obj`

@@ -12,8 +12,7 @@
 transformed_params_2comp <- function(params,
                                      ...){
 
-  # This call was redundant, as cp_2comp and auc_2comp already call this
-  # params <- fill_params_2comp(params)
+  Fgutabs_V1 <- NULL
 
   #for readability, assign params to variables inside this function
   # for(x in names(params)){

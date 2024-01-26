@@ -4,7 +4,7 @@
 \alias{coef_sd.default}
 \title{Coefficient standard deviation default}
 \usage{
-\method{coef_sd}{default}(obj, ...)
+\method{coef_sd}{default}(obj)
 }
 \arguments{
 \item{obj}{An object}

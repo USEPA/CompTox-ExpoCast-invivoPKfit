@@ -4,7 +4,7 @@
 \alias{coef_sd}
 \title{Coefficient standard deviations}
 \usage{
-coef_sd(obj, ...)
+coef_sd(obj, model, method, table_format, supress.messages)
 }
 \arguments{
 \item{obj}{An object}

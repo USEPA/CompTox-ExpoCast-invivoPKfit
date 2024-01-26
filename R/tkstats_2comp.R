@@ -81,6 +81,7 @@ tkstats_2comp <- function(pars,
                           vol_unit,
                           ...){
 
+  Fgutabs_V1 <- Rblood2plasma <- NULL
 
   params <- fill_params_2comp(pars)
 

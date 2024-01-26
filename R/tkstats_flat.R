@@ -22,6 +22,8 @@ tkstats_flat <- function(pars,
                          conc_unit,
                          vol_unit,
                          ...){
+
+  Fgutabs_Vdist <- NULL
   params <- fill_params_flat(pars)
 
   check_msg <- check_params_flat(params = params,

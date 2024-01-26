@@ -50,9 +50,9 @@ subtract_pk <- function(pk_obj, object, objectname) {
 #' @return The `pk` object, modified by subtracting the `stat_model`.
 #' @author Caroline Ring
 #' @export
-pk_subtract.pk_stat_model <- function(object, pk_obj, objectname){
+pk_subtract.pk_stat_model <- function(pkproto_obj, pk_obj, objectname){
 
-  for(this_model in names(object)){
+  for(this_model in names(pkproto_obj)){
     if(!is.null(pk_obj$stat_model[[this_model]])){
       #if this_model is present, remove it, and say so
       message(paste0(objectname,

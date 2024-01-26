@@ -4,10 +4,12 @@
 \alias{get_stat_model.pk}
 \title{Get stat_model}
 \usage{
-\method{get_stat_model}{pk}(obj)
+\method{get_stat_model}{pk}(obj, ...)
 }
 \arguments{
 \item{obj}{A [pk()] object}
+
+\item{...}{Additional arguments. Currently not in use.}
 }
 \value{
 A `list` -- the `stat_model` element of `obj`

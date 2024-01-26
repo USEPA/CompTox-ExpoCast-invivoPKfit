@@ -4,11 +4,13 @@
 #'
 #' @param obj A [pk()] object that has had `data_info()` run on it
 #' @param model A vector with the names of model(s) that should be considered in output.
+#' @param ... Additional arguments. Currently not in use.
 #' @return A list of `data.frame`s: one for each model in `obj$stat_model`
 #' @export
 #' @author Caroline Ring
 get_prefit.pk <- function(obj,
-                          model = NULL){
+                          model = NULL,
+                          ...){
 
   #check if data has been prefit
   check <- check_required_status(obj = obj,

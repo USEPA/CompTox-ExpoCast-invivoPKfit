@@ -87,7 +87,10 @@ rmse.default <- function(obj, ...){
 #' @export
 #' @seealso [coef_sd.pk()] for the `coef_sd` method for class [pk()]
 coef_sd <- function(obj,
-                    ...){
+                    model,
+                    method,
+                    table_format,
+                    supress.messages){
   UseMethod("coef_sd", obj)
 }
 
@@ -95,7 +98,7 @@ coef_sd <- function(obj,
 #'
 #' @param obj An object
 #' @export
-coef_sd.default <- function(obj, ...){
+coef_sd.default <- function(obj){
   stop(paste("No 'coef_sd' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }
@@ -150,7 +153,7 @@ check_required_status <- function(obj, ...){
 #' Default method for checking required status
 #'
 #' @export
-check_required_status.default <- function(obj, ...){
+check_required_status.default <- function(obj){
   stop(paste("No 'check_required_status' method exists for object of class",
              paste(class(obj), collapse = ", ")))
 }

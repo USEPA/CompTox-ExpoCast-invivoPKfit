@@ -4,14 +4,14 @@
 \alias{pk_subtract.pk_stat_model}
 \title{Subtract a `pk_stat_model` object.}
 \usage{
-\method{pk_subtract}{pk_stat_model}(object, pk_obj, objectname)
+\method{pk_subtract}{pk_stat_model}(pkproto_obj, pk_obj, objectname)
 }
 \arguments{
-\item{object}{The `pk_stat_model` object to be subtracted.}
-
 \item{pk_obj}{The `pk` object from which the `pk_stat_model` object will be subtracted.}
 
 \item{objectname}{The name of the `pk_stat_model` object.}
+
+\item{object}{The `pk_stat_model` object to be subtracted.}
 }
 \value{
 The `pk` object, modified by subtracting the `stat_model`.
