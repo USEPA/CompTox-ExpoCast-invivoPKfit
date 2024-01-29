@@ -6,7 +6,8 @@
 #'
 #' @name invivoPKfit
 #'
-#' @docType _PACKAGE
+#' @keywords internal
+"_PACKAGE"
 #'
 #' @author Caroline Ring, Chris Cook, John Wambaugh, Mitchell Teague, Gilberto Padilla Mercado
 NULL

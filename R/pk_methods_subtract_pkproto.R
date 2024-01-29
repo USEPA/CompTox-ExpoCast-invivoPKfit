@@ -33,6 +33,7 @@
 #'@param objectname The name of the `pkproto` object to be subtracted
 #'
 #'@return The `pk` object modified by the subtraction.
+#' @import cli
 #' @export
 subtract_pk <- function(pk_obj, object, objectname) {
   if (is.null(object)) return(pk_obj)

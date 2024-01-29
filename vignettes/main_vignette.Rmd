@@ -255,7 +255,7 @@ predict(my_pk, newdata = data.frame(
 You can plot the fit using `plot()` (which returns a `ggplot2` plot object):
 
 ```{r}
-p <- plot(my_pk)
+p <- plot(x = my_pk)
 print(p$final_plot)
 ```
 

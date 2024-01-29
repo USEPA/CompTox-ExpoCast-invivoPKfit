@@ -5,7 +5,7 @@
 \title{Akaike information criterion}
 \usage{
 \method{AIC}{pk}(
-  obj,
+  object,
   newdata = NULL,
   model = NULL,
   method = NULL,
@@ -16,7 +16,7 @@
 )
 }
 \arguments{
-\item{obj}{A `pk` object}
+\item{object}{A `pk` object}
 
 \item{newdata}{Optional: A `data.frame` with new data for which to compute
 log-likelihood. If NULL (the default), then log-likelihoods will be

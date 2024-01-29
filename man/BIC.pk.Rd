@@ -4,10 +4,10 @@
 \alias{BIC.pk}
 \title{Bayesian information criterion}
 \usage{
-\method{BIC}{pk}(obj, newdata = NULL, model = NULL, method = NULL, exclude = TRUE, ...)
+\method{BIC}{pk}(object, newdata = NULL, model = NULL, method = NULL, exclude = TRUE, ...)
 }
 \arguments{
-\item{obj}{A `pk` object}
+\item{object}{A `pk` object}
 
 \item{newdata}{Optional: A `data.frame` with new data for which to compute
 log-likelihood. If NULL (the default), then BICs will be

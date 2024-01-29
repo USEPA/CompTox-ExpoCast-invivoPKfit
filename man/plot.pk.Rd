@@ -5,7 +5,7 @@
 \title{Plot a [pk()] object.}
 \usage{
 \method{plot}{pk}(
-  obj,
+  x,
   newdata = NULL,
   model = NULL,
   method = NULL,
@@ -24,7 +24,7 @@
 )
 }
 \arguments{
-\item{obj}{A [pk()] object}
+\item{x}{A [pk()] object. In this case `x` is used to align with generic method.}
 
 \item{newdata}{Optional: A `data.frame` containing new data to plot. Must
 contain at least variables `Chemical`, `Species`, `Route`, `Media`, `Dose`,
@@ -33,17 +33,17 @@ the data in `obj$data`.}
 
 \item{model}{Character: One or more of the models fitted. Curve fits will be
 plotted for these models. Default `NULL` to plot fits for all models in
-`obj$stat_model`.}
+`x$stat_model`.}
 
 \item{method}{Character: One or more of the [optimx::optimx()] methods used.
-Default `NULL` to plot fits for all methods in `obj$settings_optimx$method`.}
+Default `NULL` to plot fits for all methods in `x$settings_optimx$method`.}
 
 \item{use_scale_conc}{Possible values: `TRUE`, `FALSE`, or a named list with
 elements `dose_norm` and `log10_trans` which themselves should be either
 `TRUE` or `FALSE`.  If `use_scale_conc = FALSE` (the default for this
 function), then the data and fits will be plotted without any
 dose-normalization or log-transformation. If `use_scale_conc = TRUE` , then
-the concentration scaling/transformations in `obj` will be applied to the
+the concentration scaling/transformations in `x` will be applied to the
 y-axis (concentration axis). If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied to the y-axis (concentration axis) of

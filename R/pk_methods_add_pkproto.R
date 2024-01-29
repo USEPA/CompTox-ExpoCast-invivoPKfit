@@ -12,6 +12,7 @@
 #' @param e2 A `pkproto` object
 #' @return The `pk` object, modified by adding the `pkproto` object
 #'@export
+#'@import cli
 #' @author Caroline Ring
 "+.pk" <- function(e1, e2) {
   #throw error if only one argument

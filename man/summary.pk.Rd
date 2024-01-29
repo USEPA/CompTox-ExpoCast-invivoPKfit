@@ -4,10 +4,10 @@
 \alias{summary.pk}
 \title{Print summary of a `pk` object}
 \usage{
-\method{summary}{pk}(obj, ...)
+\method{summary}{pk}(object, ...)
 }
 \arguments{
-\item{obj}{A [pk] object.}
+\item{object}{A [pk] object.}
 
 \item{...}{Additional arguments. Currently not in use.}
 }

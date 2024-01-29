@@ -9,7 +9,7 @@
 #'
 #' Note that the BIC is just the AIC with \eqn{k = \(n_{obs})}.
 #'
-#' @param obj A `pk` object
+#' @param object A `pk` object
 #' @param newdata Optional: A `data.frame` with new data for which to compute
 #'   log-likelihood. If NULL (the default), then BICs will be
 #'   computed for the data in `obj$data`. `newdata` is required to contain at
@@ -39,41 +39,41 @@
 #' @importFrom stats BIC
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
-BIC.pk <- function(obj,
+BIC.pk <- function(object,
                    newdata = NULL,
                    model = NULL,
                    method = NULL,
                    exclude = TRUE,
                    ...){
   #ensure that the model has been fitted
-  check <- check_required_status(obj = obj,
+  check <- check_required_status(obj = object,
                                  required_status = 5)
   if(!(check %in% TRUE)){
     stop(attr(check, "msg"))
   }
-  if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$settings_optimx$method
+  if(is.null(model)) model <- names(object$stat_model)
+  if(is.null(method)) method <- object$settings_optimx$method
 
   # Get the number of parameters
 
-  param_table <- obj$prefit$par_DF %>%
+  param_table <- object$prefit$par_DF %>%
     dplyr::filter(optimize_param %in% TRUE) %>%
-    dplyr::select(model, !!!obj$data_group, param_name, param_units)
+    dplyr::select(model, !!!object$data_group, param_name, param_units)
 
 
 
 
-  sigma_table <- obj$prefit$stat_error_model$sigma_DF %>%
+  sigma_table <- object$prefit$stat_error_model$sigma_DF %>%
     tibble::rownames_to_column("error_group") %>%
-    dplyr::select(!!!obj$data_group, param_name, param_units) %>%
+    dplyr::select(!!!object$data_group, param_name, param_units) %>%
     tidyr::expand_grid(model = unique(param_table$model))
 
   params_df <- dplyr::bind_rows(param_table, sigma_table) %>%
-    dplyr::group_by(!!!obj$data_group, model) %>% dplyr::count(name = "npar")
+    dplyr::group_by(!!!object$data_group, model) %>% dplyr::count(name = "npar")
 
 
   #get log-likelihoods
-  ll <- logLik(obj = obj,
+  ll <- logLik(obj = object,
                newdata = newdata,
                model = model,
                method = method,
@@ -86,7 +86,7 @@ BIC.pk <- function(obj,
     dplyr::mutate(NROW = nrow(observations))
 
   ll <- suppressMessages(ll %>%
-    dplyr::select(!!!obj$data_group,
+    dplyr::select(!!!object$data_group,
                   model, method,
                   log_likelihood,
                   NROW) %>%
@@ -96,7 +96,7 @@ BIC.pk <- function(obj,
   #get number of parameters (excluding any constant, non-optimized parameters)
 
   BIC <- ll %>%
-    dplyr::group_by(!!!obj$data_group, model, method) %>%
+    dplyr::group_by(!!!object$data_group, model, method) %>%
     dplyr::mutate(BIC = (log(NROW) * npar) - (2 * log_likelihood))
 
 

@@ -5,22 +5,22 @@
 #'If the [pk()] object has not been fitted, then only the data will be plotted
 #'(because no curve fits exist).
 #'
-#'@param obj A [pk()] object
+#'@param x A [pk()] object. In this case `x` is used to align with generic method.
 #'@param newdata Optional: A `data.frame` containing new data to plot. Must
 #'  contain at least variables `Chemical`, `Species`, `Route`, `Media`, `Dose`,
 #'  `Time`, `Time.Units`, `Conc`, `Detect`, `Conc_SD`.  Default `NULL`, to use
 #'  the data in `obj$data`.
 #'@param model Character: One or more of the models fitted. Curve fits will be
 #'  plotted for these models. Default `NULL` to plot fits for all models in
-#'  `obj$stat_model`.
+#'  `x$stat_model`.
 #'@param method Character: One or more of the [optimx::optimx()] methods used.
-#'  Default `NULL` to plot fits for all methods in `obj$settings_optimx$method`.
+#'  Default `NULL` to plot fits for all methods in `x$settings_optimx$method`.
 #'@param use_scale_conc Possible values: `TRUE`, `FALSE`, or a named list with
 #'  elements `dose_norm` and `log10_trans` which themselves should be either
 #'  `TRUE` or `FALSE`.  If `use_scale_conc = FALSE` (the default for this
 #'  function), then the data and fits will be plotted without any
 #'  dose-normalization or log-transformation. If `use_scale_conc = TRUE` , then
-#'  the concentration scaling/transformations in `obj` will be applied to the
+#'  the concentration scaling/transformations in `x` will be applied to the
 #'  y-axis (concentration axis). If `use_scale_conc = list(dose_norm = ...,
 #'  log10_trans = ...)`, then the specified dose normalization and/or
 #'  log10-transformation will be applied to the y-axis (concentration axis) of
@@ -65,7 +65,7 @@
 #'@import ggplot2
 #'@export
 #'@author Caroline Ring, Gilberto Padilla Mercado
-plot.pk <- function(obj,
+plot.pk <- function(x,
                     newdata = NULL,
                     model = NULL,
                     method = NULL,
@@ -85,19 +85,19 @@ plot.pk <- function(obj,
                     ...){
 
   #ensure that the model has at least been preprocessed
-  check <- check_required_status(obj = obj,
+  check <- check_required_status(obj = x,
                                  required_status = status_preprocess)
   if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
-  if (is.null(model)) model <- names(obj$stat_model)
-  if (is.null(method)) method <- obj$settings_optimx$method
-  if (is.null(newdata)) newdata <- obj$data
+  if (is.null(model)) model <- names(x$stat_model)
+  if (is.null(method)) method <- x$settings_optimx$method
+  if (is.null(newdata)) newdata <- x$data
 
 
   newdata_ok <- check_newdata(newdata = newdata,
-                              olddata = obj$data,
+                              olddata = x$data,
                               req_vars = c("Time",
                                            "Time.Units",
                                            "Dose",
@@ -106,11 +106,11 @@ plot.pk <- function(obj,
                               exclude = FALSE)
 
   #check method and model
-  method_ok <- check_method(obj = obj, method = method)
-  model_ok <- check_model(obj = obj, model = model)
+  method_ok <- check_method(obj = x, method = method)
+  model_ok <- check_model(obj = x, model = model)
 
   #apply transformations if so specified
-  conc_scale <- conc_scale_use(obj = obj,
+  conc_scale <- conc_scale_use(obj = x,
                                use_scale_conc = use_scale_conc)
 
   if (drop_nonDetect %in% TRUE) {
@@ -193,7 +193,7 @@ plot.pk <- function(obj,
   # I think ideally there should be required variables and
   # a way to ensure all the aes() variables get added
   newdata <- newdata %>%
-    dplyr::select(!!!union(union(obj$data_group,
+    dplyr::select(!!!union(union(x$data_group,
                                  common_vars),
                            obs_vars)) %>%
     dplyr::rowwise() %>%
@@ -208,7 +208,7 @@ plot.pk <- function(obj,
                                   "Non-Detect"),
                   Dose = Dose) %>%
     dplyr::ungroup() %>%
-    dplyr::group_by(!!!obj$data_group) %>%
+    dplyr::group_by(!!!x$data_group) %>%
     tidyr::nest(.key = "observations")
 
 
@@ -295,7 +295,7 @@ plot.pk <- function(obj,
 
   # For predictions, I will interpolate the time
 
-  if (get_status(obj = obj) == 5) {
+  if (get_status(obj = x) == 5) {
     interp_data <- newdata
     interp_data <- interp_data %>%
       dplyr::mutate(interpolated = purrr::map(observations,
@@ -317,11 +317,11 @@ plot.pk <- function(obj,
                                 }))
 
     interp_data <- interp_data %>%
-      dplyr::select(!!!obj$data_group, interpolated) %>%
+      dplyr::select(!!!x$data_group, interpolated) %>%
       tidyr::unnest(cols = c(interpolated)) %>%
       dplyr::ungroup()
 
-    interp_data <- predict(obj = obj,
+    interp_data <- predict(obj = x,
                            newdata = interp_data,
                            use_scale_conc = conc_scale$dose_norm,
                            model = model,
@@ -345,7 +345,7 @@ plot.pk <- function(obj,
       dplyr::select(!conversion)
 
     interp_data <- interp_data %>%
-      dplyr::group_by(!!!obj$data_group) %>%
+      dplyr::group_by(!!!x$data_group) %>%
       tidyr::nest(.key = "predicted")
 
     newdata <- dplyr::left_join(newdata, interp_data)

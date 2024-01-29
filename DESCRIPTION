@@ -25,7 +25,11 @@ Imports:
     rlang,
     multidplyr (>= 0.1.3),
     purrr,
-    tidyselect
+    tidyselect,
+    cli,
+    pracma,
+    tibble,
+    devtools
 Suggests: 
     knitr,
     stringr,
