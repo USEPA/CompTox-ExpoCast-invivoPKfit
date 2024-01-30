@@ -11,19 +11,19 @@
 #' @param object A `pk` object
 #' @param newdata Optional: A `data.frame` with new data for which to compute
 #'   log-likelihood. If NULL (the default), then log-likelihoods will be
-#'   computed for the data in `obj$data`. `newdata` is required to contain at
+#'   computed for the data in `object$data`. `newdata` is required to contain at
 #'   least the following variables: `Time`, `Time.Units`, `Dose`,
 #'   `Route`,`Media`, `Conc`, `Detect`, `N_Subjects`. Before log-likelihood is
 #'   calculated, `Time` will be transformed according to the transformation in
-#'   `obj$scales$time` and `Conc` will be transformed according to the
-#'   transformation in `obj$scales$conc`.
+#'   `object$scales$time` and `Conc` will be transformed according to the
+#'   transformation in `object$scales$conc`.
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   calculate log-likelihood. If NULL (the default), log-likelihoods will be
-#'   returned for all of the models in `obj$stat_model`.
+#'   returned for all of the models in `object$stat_model`.
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   for which to make predictions and calculate AICs. If NULL (the default),
 #'   log-likelihoods will be returned for all of the models in
-#'   `obj$settings_optimx$method`.
+#'   `object$settings_optimx$method`.
 #' @param exclude Logical: `TRUE` to compute the AIC after removing any
 #'   observations in the data marked for exclusion (if there is a variable
 #'   `exclude` in the data, an observation is marked for exclusion when `exclude
@@ -83,7 +83,7 @@ AIC.pk <- function(object,
 
 
   #get log-likelihoods
-  ll <- logLik(obj = object,
+  ll <- logLik(object = object,
                newdata = newdata,
                model = model,
                method = method,

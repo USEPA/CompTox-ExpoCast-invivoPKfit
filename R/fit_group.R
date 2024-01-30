@@ -123,9 +123,9 @@ fit_group <- function(data,
         attr(tmp, "follow.on") <- FALSE
 
         details <- cbind(method = as.list(method),
-                                           ngatend = as.list(rep(NA_real, length(method))),
-                                           nhatend = as.list(rep(NA_real, length(method))),
-                                           hev = as.list(rep(NA_real, length(method))),
+                                           ngatend = as.list(rep(NA_real_, length(method))),
+                                           nhatend = as.list(rep(NA_real_, length(method))),
+                                           hev = as.list(rep(NA_real_, length(method))),
                                            message = as.list(rep(err$message,
                                                                  length(method)
                                                                  )

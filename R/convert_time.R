@@ -63,7 +63,7 @@ convert_time <- function(x,
       message(
         paste(
           "invivopkfit::convert_time(): Allowable values for 'to' are",
-          paste(c(period_units,),
+          paste(c(period_units),
                 collapse = ", "),
           ", but 'to' =",
           to,

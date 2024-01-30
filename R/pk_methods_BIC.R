@@ -73,7 +73,7 @@ BIC.pk <- function(object,
 
 
   #get log-likelihoods
-  ll <- logLik(obj = object,
+  ll <- logLik(object = object,
                newdata = newdata,
                model = model,
                method = method,
@@ -100,6 +100,5 @@ BIC.pk <- function(object,
     dplyr::mutate(BIC = (log(NROW) * npar) - (2 * log_likelihood))
 
 
-  return(BIC)
   return(BIC)
 }
