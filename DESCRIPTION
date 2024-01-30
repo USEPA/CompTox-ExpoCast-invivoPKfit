@@ -1,7 +1,7 @@
 Package: invivoPKfit
 Type: Package
 Title: Fits HTTK Models to In Vivo PK Data Sets
-Version: 1.6.1
+Version: 2.0.0
 Date: 2022-10-29
 Author: Caroline Ring, John Wambaugh, Chris Cook
 Maintainer: John Wambaugh <wambaugh.john@epa.gov>
