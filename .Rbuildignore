@@ -2,3 +2,5 @@
 ^\.Rproj\.user$
 ^doc$
 ^Meta$
+^pk_object_tree\.txt$
+^data-raw$

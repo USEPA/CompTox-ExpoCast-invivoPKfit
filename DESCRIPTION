@@ -17,8 +17,6 @@ Imports:
     optimx,
     scales,
     ggplot2,
-    RColorBrewer,
-    rmarkdown,
     dplyr,
     magrittr,
     tidyr,
@@ -31,9 +29,13 @@ Imports:
     tibble,
     devtools
 Suggests: 
+    cowplot,
     knitr,
     stringr,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    RColorBrewer,
+    rmarkdown,
+    tidyverse
 RoxygenNote: 7.3.1
 VignetteBuilder: knitr
 NeedsCompilation: no
