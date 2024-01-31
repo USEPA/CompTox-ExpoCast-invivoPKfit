@@ -1,6 +1,6 @@
-#'Get parameters for 1-compartment model
+#' Get parameters for 1-compartment model
 #'
-#'Get parameters for 1-compartment model and determine whether each is to be
+#' Get parameters for 1-compartment model and determine whether each is to be
 #'estimated from the data
 #'
 #'The full set of model parameters for the 1-compartment model includes `Vdist`,
@@ -86,6 +86,11 @@
 #' By default, the lower bound for the blood:plasma partition coefficient
 #' `Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
 #' based on professional judgment.
+#'
+#' # Starting values for each parameter
+#'
+#' Starting values for each parameter (starting guesses for the numerical
+#' optimizer) are derived from the data using [get_starts_1comp()].
 #'
 #'@param data The data set to be fitted (e.g. the result of [preprocess_data()])
 #'@param lower_bound A mapping specified using a call to [ggplot2::aes()],

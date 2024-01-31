@@ -43,7 +43,7 @@ A `data.frame`with the following variables:
 }
 \description{
 The full set of model parameters for the flat model includes
-`Vdist`, and `Fgutabs`. Whether each one can be estimated
+`Vdist`, `Fgutabs`, and `Rblood2plasma`. Whether each one can be estimated
 from the data depends on what routes of administration are included in the
 data.
 }
@@ -51,23 +51,20 @@ data.
 ## IV data, no oral data
 
 If IV dosing data are available, but no oral dosing data are available, then
-only the parameters `Vdist` and `kelim` will be estimated from the data. The
-parameters `kgutabs` and `Fgutabs` cannot be estimated from IV data alone and will not be used to evaluate the model.
+only the parameter `Vdist` and will be estimated from the data. The
+parameter `Fgutabs` cannot be estimated from IV data alone and will not be used to evaluate the model.
 
 ## Oral data, no IV data
 
 If oral dosing data are available, but no IV dosing data are available, then
-the parameters `kelim` and `kgutabs` can be estimated from the data. However,
 the parameters `Fgutabs` and `Vdist` cannot be identified separately. From
 oral data alone, only the ratio `Fgutabs/Vdist` can be identified. This ratio
 is represented by a single parameter named `Fgutabs_Vdist`. `Fgutabs` and
-`Vdist` will not be estimated nor used in model evaluation, but `Fgutabs_Vdist` will be estimated, along
-with `kelim` and `kgutabs`.
+`Vdist` will not be estimated nor used in model evaluation, but `Fgutabs_Vdist` will be estimated.
 
 ## Oral data and IV data
 
-If both oral and IV dosing data are available, then `Vdist`, `kelim`,
-`kgutabs`, and `Fgutabs` will all be estimated from the data.
+If both oral and IV dosing data are available, then `Vdist` and `Fgutabs` will both be estimated from the data.
 
 # Blood and plasma data
 
@@ -77,11 +74,41 @@ If both blood and plasma data are available, then `Rblood2plasma` will be estima
 
 If only one of blood or plasma data are available, then `Rblood2plasma` will be
 held constant at 1, not estimated from the data.
+
+# Default lower and upper bounds for each parameter
+
+## Default lower and upper bounds for `Vdist`
+
+By default, the lower bound for `Vdist` is 0.01, and the upper bound for
+`Vdist` is 100. These values were chosen based on professional judgment.
+
+## Default lower and upper bounds for `Fgutabs`
+
+By default, the lower bound for `Fgutabs` is 0, and the upper bound for
+`Fgutabs` is 1. These are simply the bounds of the physically-meaningful
+range for a fraction.
+
+## Default lower and upper bounds for `Fgutabs_Vdist`
+
+By default, the lower bound for the ratio `Fgutabs_Vdist` is 0.01, and the
+upper bound is 100. These values were chosen based on professional judgment.
+
+## Default lower and upper bounds for `Rblood2plasma`
+
+By default, the lower bound for the blood:plasma partition coefficient
+`Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
+based on professional judgment.
+
+# Starting values for each parameter
+
+Starting values for each parameter (starting guesses for the numerical
+optimizer) are derived from the data using [get_starts_flat()].
 }
 \seealso{
 Other flat model functions: 
 \code{\link{auc_flat}()},
-\code{\link{cp_flat}()}
+\code{\link{cp_flat}()},
+\code{\link{get_starts_flat}()}
 
 Other get_params functions: 
 \code{\link{get_params_1comp}()},
@@ -97,6 +124,9 @@ Other built-in model functions:
 \code{\link{cp_flat}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_2comp}()},
+\code{\link{get_starts_1comp}()},
+\code{\link{get_starts_2comp}()},
+\code{\link{get_starts_flat}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 }

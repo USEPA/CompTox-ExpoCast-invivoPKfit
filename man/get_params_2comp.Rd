@@ -51,8 +51,10 @@ Get parameters for 2-compartment model and determine whether each is to be
 estimated from the data
 }
 \details{
-The full set of model parameters for the 1-compartment model includes `V1`,
-`kelim`, `k12`, `k21`, `kgutabs`, and `Fgutabs`.
+The full set of model parameters for the 2-compartment model includes `V1`,
+`kelim`, `k12`, `k21`, `kgutabs`,`Fgutabs`, and `Rblood2plasma`. Whether each one can be
+estimated from the data depends on what routes of administration are included
+in the data.
 
 ## IV data, no oral data
 
@@ -134,12 +136,18 @@ upper bound is 100. These values were chosen based on professional judgment.
 By default, the lower bound for the blood:plasma partition coefficient
 `Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
 based on professional judgment.
+
+# Starting values for each parameter
+
+Starting values for each parameter (starting guesses for the numerical
+optimizer) are derived from the data using [get_starts_2comp()].
 }
 \seealso{
 Other 2-compartment model functions: 
 \code{\link{auc_2comp}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
+\code{\link{get_starts_2comp}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 
@@ -157,6 +165,9 @@ Other built-in model functions:
 \code{\link{cp_flat}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_starts_1comp}()},
+\code{\link{get_starts_2comp}()},
+\code{\link{get_starts_flat}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 }

@@ -3,8 +3,10 @@
 #' Get parameters for 2-compartment model and determine whether each is to be
 #' estimated from the data
 #'
-#' The full set of model parameters for the 1-compartment model includes `V1`,
-#' `kelim`, `k12`, `k21`, `kgutabs`, and `Fgutabs`.
+#' The full set of model parameters for the 2-compartment model includes `V1`,
+#' `kelim`, `k12`, `k21`, `kgutabs`,`Fgutabs`, and `Rblood2plasma`. Whether each one can be
+#'estimated from the data depends on what routes of administration are included
+#'in the data.
 #'
 #' ## IV data, no oral data
 #'
@@ -86,6 +88,11 @@
 #' By default, the lower bound for the blood:plasma partition coefficient
 #' `Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
 #' based on professional judgment.
+#'
+#' # Starting values for each parameter
+#'
+#' Starting values for each parameter (starting guesses for the numerical
+#' optimizer) are derived from the data using [get_starts_2comp()].
 #'
 #'
 #'@param data The data set to be fitted (e.g. the result of [preprocess_data()])
