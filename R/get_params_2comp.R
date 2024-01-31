@@ -74,7 +74,7 @@
 #'
 #' ## Default lower and upper bounds for `Fgutabs`
 #'
-#' By default, the lower bound for `Fgutabs` is 0, and the upper bound for
+#' By default, the lower bound for `Fgutabs` is 0.01, and the upper bound for
 #' `Fgutabs` is 1. These are simply the bounds of the physically-meaningful
 #' range for a fraction.
 #'
@@ -123,7 +123,7 @@ get_params_2comp <- function(data,
                                                         k12 = log(2)/(2*max(Time_trans)),
                                                         k21 = log(2)/(2*max(Time_trans)),
                                                         V1 = 0.01,
-                                                        Fgutabs = 0,
+                                                        Fgutabs = 0.01,
                                                         kgutabs = log(2)/(2*max(Time_trans)),
                                                         Fgutabs_V1 = 0.01,
                                                         Rblood2plasma = 1e-2),
