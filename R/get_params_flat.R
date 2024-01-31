@@ -61,6 +61,9 @@
 #' Starting values for each parameter (starting guesses for the numerical
 #' optimizer) are derived from the data using [get_starts_flat()].
 #'
+#' If the starting values returned by [get_starts_flat()] fall outside the
+#' bounds for any parameter(s), then the starting value will be reset to a value
+#' halfway between the lower and upper bounds for that parameter.
 #'
 #'@param data The data set to be fitted (e.g. the result of [preprocess_data()])
 #'@param lower_bound A mapping specified using a call to [ggplot2::aes()],
