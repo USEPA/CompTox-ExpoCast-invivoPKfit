@@ -6,12 +6,12 @@
 \usage{
 get_params_1comp(
   data,
-  lower_bound = ggplot2::aes(kelim = 0.5 * log(2)/max(Time_trans), Vdist = 0.01, Fgutabs
-    = 0, kgutabs = 0.5 * log(2)/max(Time_trans), Fgutabs_Vdist = 0.01, Rblood2plasma =
+  lower_bound = ggplot2::aes(kelim = log(2)/(2 * max(Time_trans)), Vdist = 0.01, Fgutabs
+    = 0, kgutabs = log(2)/(2 * max(Time_trans)), Fgutabs_Vdist = 0.01, Rblood2plasma =
     0.01),
-  upper_bound = ggplot2::aes(kelim = 2 * log(2)/min(Time_trans[Time_trans > 0]), Vdist =
-    100, Fgutabs = 1, kgutabs = 2 * log(2)/min(Time_trans[Time_trans > 0]), Fgutabs_Vdist
-    = 100, Rblood2plasma = 100),
+  upper_bound = ggplot2::aes(kelim = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
+    Vdist = 100, Fgutabs = 1, kgutabs = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
+    Fgutabs_Vdist = 100, Rblood2plasma = 100),
   param_units = ggplot2::aes(kelim = paste0("1/", unique(Time_trans.Units)), Vdist =
     paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units), ")"), Fgutabs =
     "unitless fraction", kgutabs = paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist
@@ -85,6 +85,53 @@ estimated from the data.
 
 If only one of blood or plasma data are available, then `Rblood2plasma` will be
 held constant at 1, not estimated from the data.
+
+# Default lower and upper bounds for each parameter
+
+## Default lower and upper bounds for `kelim` and `kgutabs`
+
+Default bounds for time constants `kelim` and `kgutabs` are set based on
+the time scale of the available data.
+
+The lower bounds are based on the assumption that elimination and absorption
+are very slow compared to the time scale of the study. Specifically, the
+lower bounds assume that elimination and absorption half-lives are twice as
+long as the duration of the available study data, or `2*max(Time_trans)`.
+Under this assumption, the corresponding elimination and absorption time
+constants would be `log(2)/(2*max(Time_trans))`. Therefore, the default lower
+bounds for `kelim` and `kgutabs` are `log(2)/(2*max(Time_trans))`.
+
+Upper bounds are based on the opposite assumption: that elimination and
+absorption are very fast compared to the time scale of the study.
+Specifically, the upper bounds assume that the elimination and absorption
+half-lives are half as long as the time of the first observation after time
+0, or `0.5*min(Time_trans[Time_trans>0])`. Under this asumption, the
+corresponding elimination and absorption time constants would be
+`log(2)/(0.5*min(Time_trans[Time_trans>0]))`. Therefore, the default lower
+bounds for `kelim` and `kgutabs` are
+`log(2)/(0.5*min(Time_trans[Time_trans>0]))`.
+
+## Default lower and upper bounds for `Vdist`
+
+By default, the lower bound for `Vdist` is 0.01, and the upper bound for
+`Vdist` is 100. These values were chosen based on professional judgment.
+
+## Default lower and upper bounds for `Fgutabs`
+
+By default, the lower bound for `Fgutabs` is 0, and the upper bound for
+`Fgutabs` is 1. These are simply the bounds of the physically-meaningful
+range for a fraction.
+
+## Default lower and upper bounds for `Fgutabs_Vdist`
+
+By default, the lower bound for the ratio `Fgutabs_Vdist` is 0.01, and the
+upper bound is 100. These values were chosen based on professional judgment.
+
+## Default lower and upper bounds for `Rblood2plasma`
+
+By default, the lower bound for the blood:plasma partition coefficient
+`Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
+based on professional judgment.
 }
 \seealso{
 Other 1-compartment model functions: 
