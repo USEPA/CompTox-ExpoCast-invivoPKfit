@@ -21,7 +21,7 @@ devtools::load_all()
 library(cowplot)
 library(RColorBrewer)
 # saveRDS(my_pk_100j, "data-raw/all_cvt_pk_JOINT.rds") 
- my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
+# my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 
 ```
 
