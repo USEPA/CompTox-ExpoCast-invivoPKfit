@@ -103,6 +103,10 @@ based on professional judgment.
 
 Starting values for each parameter (starting guesses for the numerical
 optimizer) are derived from the data using [get_starts_flat()].
+
+If the starting values returned by [get_starts_flat()] fall outside the
+bounds for any parameter(s), then the starting value will be reset to a value
+halfway between the lower and upper bounds for that parameter.
 }
 \seealso{
 Other flat model functions: 
