@@ -6,13 +6,13 @@
 \usage{
 get_params_2comp(
   data,
-  lower_bound = ggplot2::aes(kelim = 0.5 * log(2)/max(Time_trans), k12 = 0.5 *
-    log(2)/max(Time_trans), k21 = 0.5 * log(2)/max(Time_trans), V1 = 0.01, Fgutabs = 0,
-    kgutabs = 0.5 * log(2)/max(Time_trans), Fgutabs_V1 = 0.01, Rblood2plasma = 0.01),
-  upper_bound = ggplot2::aes(kelim = 2 * log(2)/min(Time_trans[Time_trans > 0]), k12 = 2
-    * log(2)/min(Time_trans[Time_trans > 0]), k21 = 2 * log(2)/min(Time_trans[Time_trans
-    > 0]), V1 = 100, Fgutabs = 1, kgutabs = 2 * log(2)/min(Time_trans[Time_trans > 0]),
-    Fgutabs_V1 = 100, Rblood2plasma = 100),
+  lower_bound = ggplot2::aes(kelim = log(2)/(2 * max(Time_trans)), k12 = log(2)/(2 *
+    max(Time_trans)), k21 = log(2)/(2 * max(Time_trans)), V1 = 0.01, Fgutabs = 0, kgutabs
+    = log(2)/(2 * max(Time_trans)), Fgutabs_V1 = 0.01, Rblood2plasma = 0.01),
+  upper_bound = ggplot2::aes(kelim = log(2)/(0.5 * min(Time_trans[Time_trans > 0])), k12
+    = log(2)/(0.5 * min(Time_trans[Time_trans > 0])), k21 = log(2)/(0.5 *
+    min(Time_trans[Time_trans > 0])), V1 = 100, Fgutabs = 1, kgutabs = log(2)/(0.5 *
+    min(Time_trans[Time_trans > 0])), Fgutabs_V1 = 100, Rblood2plasma = 100),
   param_units = ggplot2::aes(kelim = paste0("1/", unique(Time_trans.Units)), V1 =
     paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units), ")"), k21 =
     paste0("1/", unique(Time_trans.Units)), k12 = paste0("1/", unique(Time_trans.Units)),
@@ -78,12 +78,62 @@ If both oral and IV dosing data are available, then `V1`, `kelim`, `k12`,
 
 # Blood and plasma data
 
-If both blood and plasma data are available, then `Rblood2plasma` will be estimated from the data.
+If both blood and plasma data are available, then `Rblood2plasma` will be
+estimated from the data.
 
 # Only one of blood or plasma data
 
 If only one of blood or plasma data are available, then `Rblood2plasma` will be
 held constant at 1, not estimated from the data.
+
+# Default lower and upper bounds for each parameter
+
+## Default lower and upper bounds for time constants `kelim`, `kgutabs`,
+`k12`, and `k21`.
+
+Default bounds for time constants `kelim` and `kgutabs` are set based on
+the time scale of the available data.
+
+The lower bounds are based on the assumption that elimination, absorption,
+and distribution are very slow compared to the time scale of the study.
+Specifically, the lower bounds assume thatelimination, absorption, and
+distribution half-lives are twice as long as the duration of the available
+study data, or `2*max(Time_trans)`. Under this assumption, the corresponding
+elimination, absorption, and distribution time constants would be
+`log(2)/(2*max(Time_trans))`. Therefore, the default lower bounds for
+`kelim`, `kgutabs`, `k12`, and `k21` are `log(2)/(2*max(Time_trans))`.
+
+Upper bounds are based on the opposite assumption: that elimination,
+absorption, and distribution are very fast compared to the time scale of the
+study. Specifically, the upper bounds assume that the elimination,
+absorption, and distribution half-lives are half as long as the time of the
+first observation after time 0, or `0.5*min(Time_trans[Time_trans>0])`. Under
+this assumption, the correspondingelimination, absorption, and distribution
+time constants would be `log(2)/(0.5*min(Time_trans[Time_trans>0]))`.
+Therefore, the default lower bounds for `kelim`, `kgutabs`, `k12`, and `k21`
+are `log(2)/(0.5*min(Time_trans[Time_trans>0]))`.
+
+## Default lower and upper bounds for `V1`
+
+By default, the lower bound for `V1` is 0.01, and the upper bound for
+`V1` is 100. These values were chosen based on professional judgment.
+
+## Default lower and upper bounds for `Fgutabs`
+
+By default, the lower bound for `Fgutabs` is 0, and the upper bound for
+`Fgutabs` is 1. These are simply the bounds of the physically-meaningful
+range for a fraction.
+
+## Default lower and upper bounds for `Fgutabs_V1`
+
+By default, the lower bound for the ratio `Fgutabs_V1` is 0.01, and the
+upper bound is 100. These values were chosen based on professional judgment.
+
+## Default lower and upper bounds for `Rblood2plasma`
+
+By default, the lower bound for the blood:plasma partition coefficient
+`Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
+based on professional judgment.
 }
 \seealso{
 Other 2-compartment model functions: 
