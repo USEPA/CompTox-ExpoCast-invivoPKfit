@@ -104,17 +104,17 @@
 #' points (after concentration has peaked), the concentration vs. time
 #' relationship will approach a straight line with slope `-kelim`.
 #'
-#'  If this straight line is
-#' extrapolated back to time 0, then the resulting intercept (call it `A_log10`) is equal to
+#' If this straight line is extrapolated back to time 0, then the resulting
+#' intercept (call it `A`), expressed on the natural scale, is equal to
 #' `Fgutabs_Vdist * kgutabs/(kgutabs-kelim)`. See
 #' https://www.boomer.org/c/p4/c09/c0902.php .
 #'
-#' Roughly, we approximate `A_log10` by extrapolating back from the peak along a
+#' Roughly, we approximate `A` on the log10 scale by extrapolating back from the peak along a
 #' straight line with slope `-kelim`, using the previously-derived starting
-#' value for `kelim`. So `A_log10 = (Cmax_log10 + kelim*tmax)`.
+#' value for `kelim`. So `log10(A) = Cmax_log10 + kelim*tmax`.
 #'
 #' Using the previously-derived starting values for `kgutabs` and `kelim`, then,
-#' the starting value for `Fgutabs_Vdist` can be derived as `10^(A_log10) * (kgutabs-kelim)/kgutabs`.
+#' the starting value for `Fgutabs_Vdist` can be derived as `A * (kgutabs-kelim)/kgutabs`.
 #'
 #'# Starting value for `Fgutabs`
 #'
