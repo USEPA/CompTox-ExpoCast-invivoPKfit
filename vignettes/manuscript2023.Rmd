@@ -20,7 +20,7 @@ library(tidyverse, quietly = TRUE)
 devtools::load_all() 
 library(cowplot)
 library(RColorBrewer)
-# saveRDS(my_pk_100j, "data-raw/all_cvt_pk_JOINT.rds") 
+#saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds") 
 # my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 
 ```
@@ -409,18 +409,19 @@ my_pk_110j <- do_fit(my_pk_110j, n_cores = 10) %>% evaluate_choices(PJ = "Joint"
 my_pk_111j <- do_fit(my_pk_111j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
 rm(my_pk_000j, my_pk_100j, my_pk_110j, my_pk_111j)
 gc()
-my_pk_010j <- do_fit(my_pk_010j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_011j <- do_fit(my_pk_011j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_001j <- do_fit(my_pk_001j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_101j <- do_fit(my_pk_101j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_010j <- do_fit(my_pk_010j, n_cores = 12) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_011j <- do_fit(my_pk_011j, n_cores = 12) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_001j <- do_fit(my_pk_001j, n_cores = 12) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_101j <- do_fit(my_pk_101j, n_cores = 12) %>% evaluate_choices(PJ = "Joint") # Done
 
 # Run after each evaluation
 # initialization (only run once)
 {
-current_pk <- my_pk_101j # Define current evaluated pk object here
+
 winning_model_final <- NULL
 rmse_summary <- NULL
 detail_stats <- NULL
+current_pk <- my_pk_101j # Current evaluated pk object here
 
 # Run all at once
 
@@ -447,12 +448,12 @@ gc()
 ## Head-to-head comparison of pooled vs joint models
 
 Now I need to go back and re-analyze the data only for 100, 101, and 000
-Pooled and Joint, L-BFGS-B only. I need to filter the cvt_df to only include Chem + Species combinations
+Pooled and Joint, L-BFGS-B only. I need to filter the cvt to only include Chem + Species combinations
 with multiple references. Then I will join them with the excel sheet of already collected data.
 
 ```{r load_multirefs, eval=FALSE}
 # Reference Multiples
-multiRef_ChemSpec <- cvt_df %>%
+multiRef_ChemSpec <- cvt %>%
   ungroup() %>%
   distinct(analyte_dtxsid, species, document_id) %>%
   group_by(analyte_dtxsid, species) %>%
@@ -657,12 +658,6 @@ myRMSE_all <- myRMSE %>%
 
 
 my_coefs <- coef(my_pk) %>% inner_join(winmodel) %>% inner_join(myAIC)
-
-my_coefs %>% dplyr::select(-sigma_value, -error_group, -coefs_vector) %>%
-  ungroup() %>%
-  distinct() %>%
-  inner_join(other_coefs %>% dplyr::select(model, method, Chemical, Species)) ->
-  my_coefs
 
 
 
@@ -1087,7 +1082,7 @@ my_preds %>%
 # 50.2% Are within twofold
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "PredictedObserved_compartmentModels_2023-11-30.png"),
+              "PredictedObserved_compartmentModels_2024-02-01.png"),
        height = 6, width = 6)
   
 
@@ -1101,7 +1096,8 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ```{r fig5-modelPerform-v-dataVar, eval=FALSE}
 
 
-pl_7A <- my_preds %>%
+pl_7A <-
+my_preds %>%
   group_by(Chemical,
            Species,
            Route, Media,
@@ -1118,8 +1114,8 @@ pl_7A <- my_preds %>%
          foldPred = Conc_est / Conc_trans) %>%
   # For percentages
   # ungroup() %>%
-  # filter(model %in% c("model_flat")) %>%
-  # count((foldPred >= 0.5 & foldPred <= 2) & !(foldConc >= 0.5 & foldConc <= 2)) %>%
+  # filter(model %in% c("model_1comp")) %>%
+  # count((foldPred >= 0.5 & foldPred <= 2) & (foldConc >= 0.5 & foldConc <= 2)) %>%
   # {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
   # For Plotting
   ggplot(aes(
@@ -1150,7 +1146,7 @@ pl_7A <- my_preds %>%
 
 pl_7A
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ModelPerformance_vDataVariability_2023-10-19.png"),
+              "ModelPerformance_vDataVariability_2024-02-01.png"),
        height = 3,
        width = 6.5,
        device = "png",
@@ -1162,10 +1158,11 @@ my_table <- data.frame(
     "Model too variable",
     "Data too variable",
     "Both outside a factor of 2"),
-  c(46.3, 39.5, 2.3, 12),
-  c(46, 44, 1.8, 7.4),
-  c(26, 60, 5, 8.5),
-  c(45, 42.7, 2.3, 10))
+  c(55.0, 34.9, 1.9, 8.2),
+  c(49.9, 40.2, 1.7, 8.1),
+  c(42.9, 57.1, 0, 0),
+  c(52.3, 37.7, 1.7, 8.1))
+
 
 names(my_table) <- c(" ","1-compartment (%)", "2-compartment (%)", "Flat (%)", "Overall (%)")
 
@@ -1189,7 +1186,7 @@ dual_plot <- plot_grid(pl_7A, table_plot, ncol = 1, align = "v",
 
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ModelPerformance_vDataVariability_wTable_2023-10-02.png"),
+              "ModelPerformance_vDataVariability_wTable_2024-02-01.png"),
        plot = dual_plot,
        height = 4.5,
        width = 6.5,
@@ -1245,7 +1242,7 @@ pl_7Alt <- this_preds %>%
         axis.line = element_blank())
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ModelPerformance_vDataVariability_2023-11-14.png"),
+              "ModelPerformance_vDataVariability_2024-02-05.png"),
        height = 4.5,
        width = 4.5,
        device = "png",
@@ -1263,16 +1260,6 @@ this_preds %>%
   {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])} %>% round(digits = 1)
 
 # Table
-
-my_table <- data.frame(
-  c("Reasonable model error and observed variability",
-    "Data variability high, model error reasonable",
-    "Model error high, data variation reasonable",
-    "Both model error and data variability are high"),
-  c(37.2, 6.5,  41.4, 14.8),
-  c(53.6, 3.5,  32.4, 10.4),
-  c(11.0, 16.4, 46.6, 26.0),
-  c(44.2, 5.4,  37.4, 13.0))
 
 names(my_table) <- c(" ","1-compartment (%)", "2-compartment (%)", "Flat (%)", "Overall (%)")
 
@@ -1296,7 +1283,7 @@ dual_plot <- plot_grid(pl_7Alt, table_plot, ncol = 1, align = "v",
 
 dual_plot
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ModelPerformance_vDataVariability_wTable_2023-11-30.png"),
+              "ModelPerformance_vDataVariability_wTable_2024-02-05.png"),
        plot = dual_plot,
        height = 4.5,
        width = 6.5,
@@ -1433,7 +1420,7 @@ my_coefs %>%
         axis.line = element_blank())
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "NormalizedSigma_Distributions_2023-07.png"),
+              "NormalizedSigma_Distributions_2024-02.png"),
        height = 3, width = 5)
 
 ```
@@ -1877,7 +1864,7 @@ plot_grid(
 # Am making this 2X the size I need it to be 
 # so the points are a reasonable size when I scale it down
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ExampleFitsPlots_11.30.2023.png"),
+              "ExampleFitsPlots_02.05.2024.png"),
        width = 13,
        height = 14,
        units = "in")

@@ -118,7 +118,7 @@ By default, the lower bound for `Vdist` is 0.01, and the upper bound for
 
 ## Default lower and upper bounds for `Fgutabs`
 
-By default, the lower bound for `Fgutabs` is 0, and the upper bound for
+By default, the lower bound for `Fgutabs` is 0.0, and the upper bound for
 `Fgutabs` is 1. These are simply the bounds of the physically-meaningful
 range for a fraction.
 
