@@ -956,7 +956,7 @@ figure5 <- plot_grid(pl5A, pl5B, labels = c("A", "B"),
                      align = "h", axis = "bt", rel_widths = c(1, 1.75))
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "Figure5alt_onlyDetects_2023-10-02.png"),
+              "Figure5alt_onlyDetects_2024-02-05.png"),
        plot = figure5,
        bg = "white",
        height = 3.25,
@@ -967,7 +967,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
-### Supp. Figure 1: Concentration and final time-points have wide range
+### Supp. Figure 2: Concentration and final time-points have wide range
 
 
 ```{r cvt_analysis, eval=FALSE}
@@ -978,8 +978,33 @@ data_range <- all_my_data %>%
          concRange = log10(max(Conc)/min(Conc))) %>%
   ungroup()
   
+sf_2A <- all_my_data %>%
+  filter(Detect, N_Subjects == 1) %>%
+  group_by(Chemical, Species, Reference, Media, Route, Dose, Dose.Units, Time) %>%
+  mutate(normConc = Conc/mean(Conc)) %>%
+  ggplot(aes(x = normConc)) +
+  scale_y_continuous(expand = expansion(mult = c(0,0.15))) +
+  xlim(0, 4) +
+  geom_histogram(,
+                 bins = 25,
+                 color = "grey5",
+                 fill = "grey5") +
+  geom_vline(xintercept = c(0.5, 2), color = "red3", linetype = "dashed") +
+  labs(x = "Normalized concentrations",
+       y = "Observations") +
+  theme(aspect.ratio = 1,
+        panel.border = element_rect(color = "black", fill = NA, size = 1),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 11))
+   
   
-sf_2B <- data_range %>%
+sf_2C <- data_range %>%
   ggplot(aes(x = maxT)) +
   geom_histogram(fill = "grey5",
                  bins = 40,
@@ -1000,14 +1025,14 @@ sf_2B <- data_range %>%
         axis.line = element_blank())
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "SFig2B_TimePoints_2023-10-02.png"),
+              "SFig2B_TimePoints_2024-02-05.png"),
        height = 4,
        width = 4,
        units = "in",
        dpi = 300)
 
 
-sf_2A <- data_range %>%
+sf_2B <- data_range %>%
   ggplot(aes(x = concRange)) +
   geom_histogram(fill = "grey5",
                  bins = 40,
@@ -1029,18 +1054,27 @@ sf_2A <- data_range %>%
         axis.title = element_text(size = 11))
   
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "SFig2A_ConcRange_2023-09-29.png"),
+              "SFig2A_ConcRange_2024-02-05.png"),
        height = 4,
        width = 4,
        units = "in",
        dpi = 300)
 
+sf_2BC <- plot_grid(sf_2B, sf_2C,
+                    labels = c("B", "C"), 
+                    nrow = 2,
+                    label_size = 20)
 
-plot_grid(sf_2A, sf_2B, labels = "AUTO", align = "h", axis = "bt")
+
+
+plot_grid(sf_2A, sf_2BC,
+          labels = c("A", ""),
+          label_size = 20,
+          align = "h")
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "SFig2_ConcTimeRanges_2023-10-02.png"),
-       height = 3.25,
+              "SFig2_ConcTimeRanges_2024-02-06.png"),
+       height = 4,
        width = 6,
        units = "in",
        dpi = 300)
@@ -1049,7 +1083,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 
 
-### Supp Figure 2: invivoPKfit model performance
+### Supp Figure 3: invivoPKfit model performance
 
 
 ```{r sFig2-model_performance, eval=FALSE}
@@ -1096,7 +1130,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ```{r fig5-modelPerform-v-dataVar, eval=FALSE}
 
 
-pl_7A <-
+# pl_5A <-
 my_preds %>%
   group_by(Chemical,
            Species,
@@ -1113,10 +1147,10 @@ my_preds %>%
   mutate(foldConc = Conc_trans / meanConc,
          foldPred = Conc_est / Conc_trans) %>%
   # For percentages
-  # ungroup() %>%
-  # filter(model %in% c("model_1comp")) %>%
-  # count((foldPred >= 0.5 & foldPred <= 2) & (foldConc >= 0.5 & foldConc <= 2)) %>%
-  # {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
+  ungroup() %>%
+  filter(model %in% c("model_flat")) %>%
+  count(!(foldPred >= 0.5 & foldPred <= 2) & (foldConc >= 0.5 & foldConc <= 2)) #%>%
+  {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
   # For Plotting
   ggplot(aes(
     y = foldPred,
@@ -1158,10 +1192,10 @@ my_table <- data.frame(
     "Model too variable",
     "Data too variable",
     "Both outside a factor of 2"),
-  c(55.0, 34.9, 1.9, 8.2),
-  c(49.9, 40.2, 1.7, 8.1),
-  c(42.9, 57.1, 0, 0),
-  c(52.3, 37.7, 1.7, 8.1))
+  c(53.8, 35.5, 1.9, 8.79),
+  c(44.2, 44.7, 2.1, 8.95),
+  c(0.0, 100, 0.0, 0.0),
+  c(48.9, 40.2, 2.0, 8.86))
 
 
 names(my_table) <- c(" ","1-compartment (%)", "2-compartment (%)", "Flat (%)", "Overall (%)")
@@ -1181,7 +1215,7 @@ table_plot <- gen_grob(flextable(my_table) %>%
                          autofit())
 
 
-dual_plot <- plot_grid(pl_7A, table_plot, ncol = 1, align = "v",
+dual_plot <- plot_grid(pl_5A, table_plot, ncol = 1, align = "v",
           rel_heights = c(1, 0.5))
 
 
@@ -1212,7 +1246,7 @@ this_preds <- inner_join(predict(my_pk), winmodel) %>%
   group_by(model, method, Chemical, Species, Route, Media, Dose, Time) %>%
   summarize(avgFE = mean(foldPred, na.rm = TRUE))
 
-pl_7Alt <- this_preds %>%
+pl_5Alt <- this_preds %>%
   inner_join(combined_summary, by = join_by(Chemical, Species,
                                             Route, Media,
                                             Dose, Time)) %>%
@@ -1278,7 +1312,7 @@ table_plot <- gen_grob(flextable(my_table) %>%
                          autofit())
 
 
-dual_plot <- plot_grid(pl_7Alt, table_plot, ncol = 1, align = "v",
+dual_plot <- plot_grid(pl_5Alt, table_plot, ncol = 1, align = "v",
           rel_heights = c(1, 0.5))
 
 dual_plot
@@ -1549,7 +1583,7 @@ lombardo_comparison %>%
         legend.text = element_text())
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "lombardoComparison_Figure8.png"),
+                         "lombardoComparison_Figure8_2024.png"),
        height = 4,
        width = 6.5,
        device = "png", dpi = 300)
@@ -1650,7 +1684,7 @@ sfig4B <- other_meta %>% left_join(my_tkstats, by = c("DTXSID" = "Chemical")) %>
 
 plot_grid(sfig4A, sfig4B, align = "h", axis = "bt")
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "metaAnalysis_Comparisons_SuppFigure4.png"),
+                         "metaAnalysis_Comparisons_SuppFigure4_2024.png"),
        height = 3,
        width = 5,
        device = "png", dpi = 300)
