@@ -202,6 +202,28 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   obj$fit <- tidy_fit %>%
     dplyr::ungroup()
 
+  # Add optimx bad fits
+  obj$conv_not_zero <- obj$fit %>%
+    tidyr::unnest(fit) %>%
+    dplyr::select(-tidyselect::starts_with("sigma")) %>%
+    dplyr::filter(convcode != 0)
+
+  # Add parameter fit flags
+  obj$params_atBounds <- obj$fit %>%
+    tidyr::unnest(fit) %>%
+    dplyr::select(-(value:xtime), -tidyselect::starts_with("sigma")) %>%
+    tidyr::pivot_longer(cols = tidyselect::where(is.numeric),
+                        names_to = "param_name",
+                        values_to = "param_value") %>%
+    dplyr::inner_join(obj$prefit$par_DF) %>% filter(optimize_param) %>%
+    mutate(at_bound = ifelse(
+      param_value != lower_bound & param_value != upper_bound,
+      "Not at bound", ifelse(
+        param_value == lower_bound, "LOWER BOUND",
+        "UPPER BOUND")
+      ))
+
+
   obj$status <- status_fit #fitting complete
   return(obj)
 }

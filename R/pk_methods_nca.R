@@ -85,7 +85,7 @@ nca.pk <- function(obj,
 
   if(dose_norm %in% TRUE){
     newdata$Conc <- newdata$Conc/newdata$Dose
-    newdata$Dose <- newdata$Dose/newdata$Dose
+    # newdata$Dose <- newdata$Dose/newdata$Dose
     newdata$Conc.units <- paste0(newdata$Conc.Units,
                                  "/",
                                  newdata$Dose.Units)
@@ -113,7 +113,7 @@ nca.pk <- function(obj,
                          print(cur_data_summary)
                        }
                        calc_nca(time = Time[exclude %in% FALSE], #calculate NCA
-                                dose = Dose[exclude %in% FALSE],
+                                dose = ifelse(dose_norm == TRUE, 1, Dose[exclude %in% FALSE]),
                                 conc = Conc[exclude %in% FALSE],
                                 detect = Detect[exclude %in% FALSE],
                                 route = unique(Route[exclude %in% FALSE]),

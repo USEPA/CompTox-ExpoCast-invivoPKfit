@@ -143,10 +143,21 @@ eval_tkstats.pk <- function(obj,
   if(!all(error_grp_vars %in% data_grp_vars)) {
     remaining_vars <- error_grp_vars[!(error_grp_vars %in% data_grp_vars)]
 
-    tkstats_df_refs <- tkstats_df %>%
-      dplyr::group_by(!!!obj$data_group, Route, Media, Dose) %>%
-      dplyr::summarize(dplyr::across(all_of(remaining_vars),
-                                     \(x) {paste0(x, collapse = ",")}))
+    if (dose_norm) {
+      tkstats_df_refs <- tkstats_df %>%
+        dplyr::group_by(!!!obj$data_group, Route, Media) %>%
+        dplyr::summarize(dplyr::across(all_of(remaining_vars),
+                                       \(x) {paste0(x, collapse = ",")}))
+      nca_df <- nca_df %>%
+        dplyr::ungroup() %>%
+        dplyr::select(!c(Dose, design))
+    } else {
+      tkstats_df_refs <- tkstats_df %>%
+        dplyr::group_by(!!!obj$data_group, Route, Media, Dose) %>%
+        dplyr::summarize(dplyr::across(all_of(remaining_vars),
+                                       \(x) {paste0(x, collapse = ",")}))
+    }
+
 
     tkstats_df <- dplyr::left_join(tkstats_df_refs,
                                    tkstats_df %>%
@@ -173,7 +184,8 @@ eval_tkstats.pk <- function(obj,
     message("TK statistics calculated based on dose-normalized value of 1mg/kg")
   }
 
-  suppressMessages(tk_eval <- dplyr::left_join(tkstats_df_red, nca_df_red))
+  suppressMessages(tk_eval <- dplyr::left_join(tkstats_df_red,
+                                               nca_df_red))
 
   if (finite_only) {
     tk_eval <- tk_eval %>%

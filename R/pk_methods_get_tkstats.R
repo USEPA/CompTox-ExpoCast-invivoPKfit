@@ -141,12 +141,6 @@ get_tkstats.pk <- function(obj,
   model_df <- data.frame(model = sapply(obj$stat_model, `[[`, "name"),
                          tk_fun = sapply(obj$stat_model, `[[`, "tkstats_fun"))
 
-  if (dose_norm) {
-    newdata <- newdata %>%
-      dplyr::mutate(Dose = 1) %>%
-      dplyr::distinct()
-  }
-
   tkstats_all <- dplyr::left_join(all_coefs,
                                   newdata_grouped,
                                   by = union(data_grp_vars, "Time.Units"),
@@ -169,7 +163,7 @@ get_tkstats.pk <- function(obj,
                                             FUN = tk_fun,
                                             route = Route,
                                             medium = Media,
-                                            dose = Dose,
+                                            dose = ifelse(dose_norm == TRUE, 1, Dose),
                                             time_unit = "hours", # coef() is standardized now
                                             conc_unit = Conc.Units,
                                             vol_unit = "L",
@@ -192,8 +186,19 @@ get_tkstats.pk <- function(obj,
 
 
   # Final filtering of tkstats_all
+
   tkstats_all <- tkstats_all[!names(tkstats_all) %in% c("coefs_vector", "tk_fun", "TKstats")] %>%
-    dplyr::relocate(!!!obj$settings_data_info$nca_group, Dose.Units, Conc.Units)
+    dplyr::relocate(!!!obj$settings_data_info$nca_group, Dose.Units, Conc.Units) %>%
+    dplyr::ungroup()
+
+  if (dose_norm) {
+    tkstats_all <- tkstats_all %>%
+      dplyr::select(!Dose)
+
+    message("Dose column removed because these TK statistics are dose normalized")
+  }
+
+  tkstats_all <- tkstats_all %>% dplyr::distinct()
 
   return(tkstats_all)
 }
