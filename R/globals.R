@@ -199,6 +199,9 @@ utils::globalVariables(
     "n_subjects_in_series",
     "npar",
     "use_param",
-    "administration_route_normalized"
+    "administration_route_normalized",
+    "convcode",
+    "xtime",
+    "design"
   )
 )
