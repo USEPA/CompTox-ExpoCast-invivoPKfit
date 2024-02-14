@@ -20,7 +20,7 @@ library(tidyverse, quietly = TRUE)
 devtools::load_all() 
 library(cowplot)
 library(RColorBrewer)
-#saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds") 
+# saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds")
 # my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 
 ```
@@ -603,7 +603,7 @@ cvt_DTXSIDs <- unique(my_pk$data$Chemical)
 
 my_pk <- do_data_info(my_pk)
 
-my_pk <- do_prefit(my_pk) # needs reframe somewhere
+my_pk <- do_prefit(my_pk)
 
 
 {
@@ -618,7 +618,9 @@ my_pk <- do_prefit(my_pk) # needs reframe somewhere
 
 ## Analysis Plots
 
-Next I will generate the figures for the paper.
+Next I will generate the figures for the paper. I will begin by collating the data
+that I need. This data are generally accessible using functions/methods for evaluating
+fitted `pk` objects.
 
 ```{r data_aggregation, eval=FALSE}
 # Need the following data for any of the subsequent plots
@@ -659,13 +661,55 @@ myRMSE_all <- myRMSE %>%
 
 my_coefs <- coef(my_pk) %>% inner_join(winmodel) %>% inner_join(myAIC)
 
+# The following section of code summarizes the non-compartmental analysis tkstats
+# and summarizes them into mean and standard deviation to make comparison with
+# fitted statistics much easier!
 
+summarized_tkstats <- my_tkstats %>% 
+  dplyr::select(1:30) %>%
+  distinct() %>%
+  inner_join(my_tkstats %>%
+              dplyr::select(Chemical:method, ends_with(".nca")) %>%
+              group_by(Chemical, Species, Route, Media, Reference) %>%
+              summarize(across(where(is.numeric), 
+                               list(mean = mean, sd = sd))))
+
+
+summarized_tkstats <- summarized_tkstats %>%
+  group_by(Chemical, Species, Route, Media) %>%
+  dplyr::select(where(is.numeric)) %>% 
+  pivot_longer(cols = ends_with(".tkstats"),
+               names_to = "stat_name",
+               values_to = "stat_value") %>%
+  pivot_longer(cols = ends_with(".nca_mean"),
+               names_to = "nca_name",
+               values_to = "nca_mean") %>%
+  pivot_longer(cols = ends_with(".nca_sd"),
+               names_to = "nca_sd_name",
+               values_to = "nca_sd") %>%
+  mutate(stat_name = stringr::str_extract(stat_name, "^.*(?=\\.)"),
+         nca_name = stringr::str_extract(nca_name, "^.*(?=\\.)"),
+         nca_sd_name = stringr::str_extract(nca_sd_name, "^.*(?=\\.)")) %>%
+  filter(stat_name == nca_name, stat_name == nca_sd_name) %>%
+  distinct() %>% 
+  select(!c(nca_name, nca_sd_name))
 
 ```
 
 
 
 ### Figure 4A: Replicated timepoint variation in CvTdb
+
+The purpose of Figure 4 is to illustrate the variability among replicate
+time points per Chemical/Species/Reference/Route/Media/Dose group. 
+This characterization is important as it can serve as a pre-fitting data check
+and if the data are too variable it is likely `invivoPKfit` will struggle to
+find an appropriate fit. One thing to consider is that there may be various factors
+that contribute to data variability including but not limited to:  
+-  Experimental design  
+-  Technical precision  
+-  Biological variation between subjects in different studies  
+
 
 ```{r fig4A, eval=FALSE}
 
@@ -694,7 +738,7 @@ all_my_data %>%
 # 2.23%  above twofold  | 2.52%   | 1.70%
 # 9.11%  below twofold  | 10.25%  | 7.04%
 
-pl5A <- all_my_data %>%
+pl4A <- all_my_data %>%
   filter(Detect %in% TRUE,
          exclude %in% FALSE,
          Dose > 0) %>%
@@ -736,11 +780,11 @@ pl5A <- all_my_data %>%
         plot.background = element_blank(),
         axis.ticks.y = element_blank())
 
-pl5A
+pl4A
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
               "NormalizedConcentrations_2023-09-29.png"),
-       plot = pl5A,
+       plot = pl4A,
        height = 2.2,
        width = 2.5,
        units = "in",
@@ -843,7 +887,7 @@ combined_summary <- bind_rows(sud_summary, iad_summary) %>%
 
 table(combined_summary$twofold_95)
 
-pl5A <- combined_summary %>% ungroup() %>%
+pl4A <- combined_summary %>% ungroup() %>%
   count(twofold_95) %>%
   ggplot(aes(x = twofold_95, fill = twofold_95, y = n)) +
   geom_col(position = position_stack(),
@@ -875,7 +919,7 @@ pl5A <- combined_summary %>% ungroup() %>%
 
 ```{r fig4B-cowplot, eval=FALSE}
 
-pl5B <- all_my_data %>%
+pl4B <- all_my_data %>%
   group_by(Chemical,
            Species,
            Reference,
@@ -948,16 +992,16 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 # Make the Combination Plot----
 
-plot_grid(pl5A, pl5B, labels = c("A", "B"),
+plot_grid(pl4A, pl4B, labels = c("A", "B"),
                      align = "h", axis = "bt", rel_widths = c(1, 2))
 
 
-figure5 <- plot_grid(pl5A, pl5B, labels = c("A", "B"),
+figure4 <- plot_grid(pl4A, pl4B, labels = c("A", "B"),
                      align = "h", axis = "bt", rel_widths = c(1, 1.75))
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
               "Figure5alt_onlyDetects_2024-02-05.png"),
-       plot = figure5,
+       plot = figure4,
        bg = "white",
        height = 3.25,
        width = 6.5,
@@ -1126,12 +1170,13 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 ### Figure 5: Model performance vs Data Variability
 
+Here we examine the performance of "best fit" models with relation to data variability.
 
 ```{r fig5-modelPerform-v-dataVar, eval=FALSE}
 
 
-# pl_5A <-
-my_preds %>%
+pl_5A <-
+  my_preds %>%
   group_by(Chemical,
            Species,
            Route, Media,
@@ -1178,7 +1223,7 @@ my_preds %>%
         axis.ticks = element_blank(),
         axis.line = element_blank())
 
-pl_7A
+pl_5A
 ggsave(paste0(Sys.getenv("FIG_DIR"),
               "ModelPerformance_vDataVariability_2024-02-01.png"),
        height = 3,
@@ -1330,7 +1375,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 
 ### Figure 6: Multiple goodness-of-fit metrics validate model performance
-This should be it's own figure
+Here we analyze and validate model performance per data group.
 
 ```{r fig6-goodness-of-fit, eval=FALSE}
 
@@ -1462,6 +1507,8 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 
 ### Figure 7: Comparing derived TK stats with human TK stats from Lombardo et al.
+
+This meta-analysis compares the TK stats from model fits with other published studies.
 
 
 ```{r Lombardo_Comparison, eval=FALSE}
@@ -1700,112 +1747,222 @@ Here I do a bit of benchmarking for the parallel-ized version of do_fit
 
 ```{r do_fit-benchmarking, eval=FALSE}
 
-# Set to 
-single_core <- microbenchmark::microbenchmark(do_fit(my_pk, n_cores = 1), times = 3)
-four_core <- microbenchmark::microbenchmark(do_fit(my_pk, n_cores = 4), times = 3)
-# eight_core <- microbenchmark::microbenchmark(do_fit(my_pk, n_cores = 8), times = 3) # Only for four_DG
-ten_core <- microbenchmark::microbenchmark(do_fit(my_pk, n_cores = 10), times = 3)
-fourteen_core <- microbenchmark::microbenchmark(do_fit(my_pk, n_cores = 14), times = 3)
 
-single_core
-four_core
-# eight_core
-ten_core
-fourteen_core
-
-four_DG <- bind_rows(summary(single_core),
-                     summary(four_core),
-                     summary(eight_core),
-                     summary(ten_core),
-                     summary(fourteen_core)) # Done ~ 140s
-
-eight_DG <- bind_rows(summary(single_core),
-                      summary(four_core),
-                      summary(ten_core),
-                      summary(fourteen_core)) # Done
-
-sixteen_DG <- bind_rows(summary(single_core),
-                        summary(four_core),
-                        summary(ten_core),
-                        summary(fourteen_core)) # Done
-
-
-my_pk %>% get_data() %>% dplyr::select(Chemical, Species) %>%
-  distinct() %>% nrow()
-my_pk %>% get_data() %>% pull(Chemical) %>% unique() -> used_chemicals
-
-unused_cvt <- cvt %>%
-  dplyr::filter(!(chemicals_analyzed.dsstox_substance_id %in% used_chemicals))
-
-new_chemicals <- sample(unique(unused_cvt$chemicals_analyzed.dsstox_substance_id),
-                       size = 8)
+new_chemicals <- sample(unique(cvt %>% 
+                                 filter(species %in% "rat") %>%
+                                 pull(analyte_dtxsid)),
+                       size = 4)
 
 my_predata <- cvt %>%
-  dplyr::filter(chemicals_analyzed.dsstox_substance_id %in% union(used_chemicals,
-                                                                  new_chemicals))
-my_predata %>%
-  dplyr::select(chemicals_analyzed.dsstox_substance_id, subjects.species_harmonized) %>%
-  distinct() %>% nrow()
+  dplyr::filter(analyte_dtxsid %in% new_chemicals)
 
-my_pk <- pk(data = my_predata) +
+# Do each optimizer separately
+my_pk_l <- pk(data = my_predata) +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE,
-                      suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+                      suppress.messages = FALSE) +
+  settings_optimx(method = c("L-BFGS-B")) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
-  # scale_time(new_units = "auto") +
-  # stat_model() + 
   stat_error_model(error_group = vars(Chemical, Species))
-my_pk <- do_prefit(my_pk) # Then run again
+my_pk_b <- pk(data = my_predata) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE,
+                      suppress.messages = FALSE) +
+  settings_optimx(method = c("bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  stat_error_model(error_group = vars(Chemical, Species))
+my_pk_l <- do_prefit(my_pk_l) # Then run again
+my_pk_b <- do_prefit(my_pk_b)
+
+
+# Set to one of the pre-fitted pk objects
+
+single_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l), times = 3)
+four_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l, n_cores = 4), times = 3)
+ten_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l, n_cores = 10), times = 3)
+fourteen_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l, n_cores = 14), times = 3)
+
+single_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b), times = 3)
+four_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b, n_cores = 4), times = 3)
+ten_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b, n_cores = 10), times = 3)
+fourteen_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b, n_cores = 14), times = 3)
+
+# Choose the data group number below and then re-run...
+
+four_DG_L <- bind_rows(summary(single_core_l),
+                     summary(four_core_l),
+                     summary(ten_core_l),
+                     summary(fourteen_core_l))
+
+four_DG_B <- bind_rows(summary(single_core_b),
+                     summary(four_core_b),
+                     summary(ten_core_b),
+                     summary(fourteen_core_b))
+
+
+
+
+new_chemicals <- sample(unique(cvt %>% 
+                                 filter(species %in% "rat") %>%
+                                 pull(analyte_dtxsid)),
+                       size = 16)
+
+my_predata <- cvt %>%
+  dplyr::filter(analyte_dtxsid %in% new_chemicals)
+
+# Do each optimizer separately
+my_pk_l <- pk(data = my_predata) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE,
+                      suppress.messages = FALSE) +
+  settings_optimx(method = c("L-BFGS-B")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  stat_error_model(error_group = vars(Chemical, Species))
+my_pk_b <- pk(data = my_predata) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE,
+                      suppress.messages = FALSE) +
+  settings_optimx(method = c("bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  stat_error_model(error_group = vars(Chemical, Species))
+my_pk_l <- do_prefit(my_pk_l) # Then run again
+my_pk_b <- do_prefit(my_pk_b)
+
+
+# Set to one of the pre-fitted pk objects
+
+single_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l), times = 3)
+four_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l, n_cores = 4), times = 3)
+ten_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l, n_cores = 10), times = 3)
+fourteen_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l, n_cores = 14), times = 3)
+
+single_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b), times = 3)
+four_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b, n_cores = 4), times = 3)
+ten_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b, n_cores = 10), times = 3)
+fourteen_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b, n_cores = 14), times = 3)
+
+
+sixteen_DG_L <- bind_rows(summary(single_core_l),
+                        summary(four_core_l),
+                        summary(ten_core_l),
+                        summary(fourteen_core_l)) # Done
+
+sixteen_DG_B <- bind_rows(summary(single_core_b),
+                        summary(four_core_b),
+                        summary(ten_core_b),
+                        summary(fourteen_core_b)) # Done
+
+new_chemicals <- sample(unique(cvt %>% 
+                                 filter(species %in% "rat") %>%
+                                 pull(analyte_dtxsid)),
+                       size = 32)
+
+my_predata <- cvt %>%
+  dplyr::filter(analyte_dtxsid %in% new_chemicals)
+
+# Do each optimizer separately
+my_pk_l <- pk(data = my_predata) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE,
+                      suppress.messages = FALSE) +
+  settings_optimx(method = c("L-BFGS-B")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  stat_error_model(error_group = vars(Chemical, Species))
+my_pk_b <- pk(data = my_predata) +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE,
+                      suppress.messages = FALSE) +
+  settings_optimx(method = c("bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  stat_error_model(error_group = vars(Chemical, Species))
+my_pk_l <- do_prefit(my_pk_l) # Then run again
+my_pk_b <- do_prefit(my_pk_b)
+
+
+# Set to one of the pre-fitted pk objects
+
+single_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l), times = 3)
+four_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l, n_cores = 4), times = 3)
+ten_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l, n_cores = 10), times = 3)
+fourteen_core_l <- microbenchmark::microbenchmark(do_fit(my_pk_l, n_cores = 14), times = 3)
+
+single_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b), times = 3)
+four_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b, n_cores = 4), times = 3)
+ten_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b, n_cores = 10), times = 3)
+fourteen_core_b <- microbenchmark::microbenchmark(do_fit(my_pk_b, n_cores = 14), times = 3)
+
+
+thirtytwo_DG_L <- bind_rows(summary(single_core_l),
+                        summary(four_core_l),
+                        summary(ten_core_l),
+                        summary(fourteen_core_l)) 
+
+
+thirtytwo_DG_B <- bind_rows(summary(single_core_b),
+                        summary(four_core_b),
+                        summary(ten_core_b),
+                        summary(fourteen_core_b)) # Done
+
 
 ##
 ##
 # After getting all of them
 full_df <- bind_rows(
-  four_DG %>% mutate(data_group_N = 4),
-  eight_DG %>% mutate(data_group_N = 8),
-  sixteen_DG %>% mutate(data_group_N = 16)
+  four_DG_L %>% mutate(data_group_N = 4, method = "L-BFGS-B"),
+  sixteen_DG_L %>% mutate(data_group_N = 16, method = "L-BFGS-B"),
+  thirtytwo_DG_L %>% mutate(data_group_N = 32, method = "L-BFGS-B"),
+  four_DG_B %>% mutate(data_group_N = 4, method = "bobyqa"),
+  sixteen_DG_B %>% mutate(data_group_N = 16, method = "bobyqa"),
+  thirtytwo_DG_B %>% mutate(data_group_N = 32, method = "bobyqa")
 )
 
 full_df <- full_df %>%
-  mutate(N_cores = as.numeric(str_extract(expr, pattern = "[:digit:]+")))
+  mutate(N_cores = as.numeric(str_extract(expr, pattern = "[:digit:]+"))) %>%
+  mutate(N_cores = ifelse(is.na(N_cores), 1, N_cores))
 
 full_long <- full_df %>% 
-         dplyr::select(expr, N_cores, data_group_N, min, median, max) %>%
+         dplyr::select(expr, N_cores, data_group_N, method, min, median, max) %>%
          pivot_longer(cols = c(min, median, max)) %>%
   dplyr::select(-name)
 
 df_long <- full_df %>% 
-         dplyr::select(expr, N_cores, data_group_N, min, median, max) %>%
+         dplyr::select(expr, N_cores, data_group_N, method, min, median, max) %>%
          pivot_longer(cols = c(min, median, max)) %>%
-  dplyr::select(-name) %>% group_by(N_cores, data_group_N) %>%
+  dplyr::select(-name) %>% 
+  group_by(N_cores, data_group_N, method) %>%
   summarize(avg_val = mean(value),
             sd_val = sd(value))
+
+
 
 ggplot(full_long,
        aes(x = N_cores,
            y = value,
-           color = factor(data_group_N))) +
-  
+           color = paste(data_group_N))) +
   geom_point() +
   geom_line(data = df_long,
             aes(x = N_cores,
                 y = avg_val)) +
-  scale_x_continuous(breaks = c(0, 1, 4, 8, 10, 14)) +
+  scale_x_continuous(breaks = c(0, 1, 4, 10, 14)) +
+  facet_grid(rows = vars(method), scales = "free_y") +
   labs(x = "Number of Cores",
        y = "Runtime (seconds)",
-       color = "Data Groups",
-       title = "Parallelization diminishes runtime at scale") +
+       color = "Data Groups") +
   theme(panel.border = element_rect(color = "black", fill = NA, size = 1.5),
         panel.background = element_blank(),
         panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
         legend.key = element_rect(fill = "white"),
         axis.ticks = element_blank(),
-        axis.line = element_blank())
+        axis.line = element_blank(),
+        strip.background = element_blank())
+
+
+
+
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "Parallelization_Benchmarking.png"),
+              "Parallelization_Benchmarking_20240213.png"),
        width = 4.5,
-       height = 3.5,
+       height = 4.5,
        units = "in")
 
 ```
@@ -2062,7 +2219,7 @@ for each chemical, species data group.
 ### Plotting for all (2.5MB file)
 pl <- plot(my_pk, n_interp = 12, use_scale_conc = TRUE)
 pdf(file = paste0(Sys.getenv("FIG_DIR"),
-              "DoseNormalized_Joint_AllFits_Final_20240109.pdf"),
+              "DoseNormalized_Joint_AllFits_Final_202402_08.pdf"),
     height = 6, width = 10)
 for (i in 1:nrow(pl)) {
   print(pl$final_plot[[i]])
@@ -2080,6 +2237,17 @@ for (i in 1:nrow(pl)) {
 dev.off()
 
 ```
+
+It is also possible to plot only one plot
+
+```{r Single-Plot, eval=FALSE}
+pl <- plot(my_pk, n_interp = 10, use_scale_conc = FALSE)
+pl %>%
+  filter(Chemical %in% "DTXSID5020029") %>%
+  pull(final_plot) %>% .[[1]]
+
+```
+
 
 ### Figure 2: Example Fits to Explain Joint vs Pooled Models
 
@@ -2318,6 +2486,40 @@ left_join(my_tkstats, my_cvt_unique) %>%
   write_tsv("data-raw/tkstats_CvTdb.tsv")
 
 ```
+
+```{r data_flagging, eval=FALSE}
+get_status(my_pk)
+my_data <- get_data(my_pk)
+# Do dose normalized NCA
+my_pk_doseNorm <- my_pk + 
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE)
+my_pk_doseNorm <- do_preprocess(my_pk_doseNorm)
+my_pk_doseNorm <- do_data_info(my_pk_doseNorm)
+my_nca <- nca(my_pk_doseNorm, dose_norm = TRUE)
+my_nca <- my_nca %>% select(Chemical:param_value) %>%
+  pivot_wider(names_from = param_name,
+              values_from = param_value)
+my_data_summary <- my_data %>%
+  group_by(!!!my_pk_doseNorm$settings_data_info$nca_group) %>%
+  summarize(t_first = min(Time), t_last = max(Time))
+
+full_summary <- my_nca %>% inner_join(my_data_summary)
+
+full_summary %>%
+  rowwise() %>% 
+  mutate(sufficient_abs_phase = ifelse(Route %in% "iv", NA,
+                                       ifelse(t_first == tmax, 
+                                              FALSE, TRUE)),
+         sufficient_elim_phase = ifelse(t_last == tmax, FALSE, TRUE)) %>%
+  View()
+
+full_summary %>%
+  group_by(!!!my_pk$settings_data_info$nca_group) %>%
+  reframe(AUC_inf_range = range(AUC_infinity))
+
+```
+
+
 
 
 ```{r information}
