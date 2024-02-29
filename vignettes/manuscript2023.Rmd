@@ -725,18 +725,18 @@ all_my_data %>%
            Dose, Time) %>%
   filter(n() > 1,
          sum(is.na(Conc)) != n(),
-         Conc > LOQ) %>% nrow()
+         Conc > LOQ) %>%
   mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
   ungroup() %>%
   rowwise() %>%
   mutate(foldConc = Conc / meanConc) %>%
-  filter(Route == "iv") %>%
-  count(foldConc < 0.5) %>%
+  # filter(Route == "oral") %>%
+  count(foldConc >= 0.5 & foldConc <= 2) %>%
   {.[[2,2]]/(.[[1,2]] + .[[2,2]])}
 # Stats for ALL | ORAL | IV
-# 88.64% inside twofold | 87.20%  | 91.23%
-# 2.23%  above twofold  | 2.52%   | 1.70%
-# 9.11%  below twofold  | 10.25%  | 7.04%
+# 89.01% inside twofold | 87.13%  | 92.27%
+# 2.21%  above twofold  | 2.63%   | 1.4%
+# 8.77%  below twofold  | 10.24%  | 6.23%
 
 pl4A <- all_my_data %>%
   filter(Detect %in% TRUE,
@@ -840,31 +840,7 @@ multiple replicates from individual animal data.
 
 
 ```{r fig4A-2-alt, eval=FALSE}
-iad_summary <- cvt %>% filter(conc > 0, n_subjects_in_series == 1) %>%
-  group_by(analyte_dtxsid, species, administration_route_normalized,
-           conc_medium_normalized, dose_level_corrected, document_id,
-           time_hr) %>%
-  filter(n() > 1) %>%
-  summarize(conc_sd_calc = sd(conc),
-            conc_avg_calc = mean(conc),
-            n_subjects_in_series = n())
-
-sud_summary <- cvt %>% filter(conc > 0,
-                              n_subjects_in_series > 1,
-                              !is.na(conc_sd_normalized)) %>%
-  mutate(conc_sd_calc = conc_sd_normalized,
-         conc_avg_calc = conc) %>%
-  distinct(analyte_dtxsid, species, administration_route_normalized,
-           conc_medium_normalized, dose_level_corrected, document_id,
-           time_hr, conc_sd_calc, conc_avg_calc, n_subjects_in_series)
-
-combined_summary <- bind_rows(sud_summary, iad_summary) %>%
-  rowwise() %>%
-  mutate(twofold_95 = ifelse((conc_avg_calc + (2*conc_sd_calc))/conc_avg_calc < 2,
-                             TRUE, FALSE))
-
 # With the mapped column names
-
 iad_summary <- all_my_data %>% filter(Conc > 0, N_Subjects == 1, Dose > 0) %>%
   group_by(Chemical, Species, Route, Media, Dose, Reference, Time) %>%
   filter(n() > 1) %>%
@@ -1130,19 +1106,22 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ### Supp Figure 3: invivoPKfit model performance
 
 
-```{r sFig2-model_performance, eval=FALSE}
+```{r sFig3-model_performance, eval=FALSE}
+
+
 my_preds %>%
-  right_join(winmodel) %>%
   rowwise() %>%
-  mutate(Pred_Obs = Conc_trans/Conc_est) %>%
+  mutate(Pred_Obs = Conc_est / Conc_trans) %>%
   filter(is.finite(Pred_Obs),
          model %in% c("model_1comp", "model_2comp")) %>%
-  # mutate(pass = ifelse(Pred_Obs < 0.5, TRUE, FALSE)) %>%
-  # pull(pass) %>% table()
+  ungroup() %>%
+  mutate(pass = ifelse(Pred_Obs > 2, TRUE, FALSE)) %>%
+  pull(pass) %>% table() %>% {100*.[[2]]/(.[[1]] + .[[2]])}
   ggplot(aes(x = Pred_Obs)) +
-  geom_histogram(binwidth = 0.5,
+  geom_histogram(binwidth = 0.25,
                  fill = "grey5") +
-  scale_x_log10(limits = c(NA, 1E6)) +
+  scale_x_log10(labels = scales::label_math(format = log10),
+                limits = c(0.01, 100)) +
   expand_limits(y = 0) +
   geom_vline(xintercept = c(0.5, 2), color = "red3", linetype = "dashed") +
   facet_grid(cols = vars(model),
@@ -1155,12 +1134,12 @@ my_preds %>%
         panel.grid.major = element_line(color = "grey90", linewidth = 0.4))
 
 # 91.1% of Pred_Obs are finite
-# 16.6% Are below two-fold
-# 33.2%  Are above two-fold
-# 50.2% Are within twofold
+# 16.5% Are above two-fold
+# 40%  Are below two-fold
+# 43.4% Are within twofold
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "PredictedObserved_compartmentModels_2024-02-01.png"),
+              "PredictedObserved_compartmentModels_2024-02-28.png"),
        height = 6, width = 6)
   
 
@@ -1171,11 +1150,14 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ### Figure 5: Model performance vs Data Variability
 
 Here we examine the performance of "best fit" models with relation to data variability.
+Please note that in supplemental Figure 3, the data with summarized observations
+(mean and sd) were included. Here, because we are trying to specifically compare
+data variability with model performance, we look at data with replicated timepoint observations, which are largely data with individual animal data.
 
 ```{r fig5-modelPerform-v-dataVar, eval=FALSE}
 
 
-pl_5A <-
+# pl_5A <-
   my_preds %>%
   group_by(Chemical,
            Species,
@@ -1183,7 +1165,6 @@ pl_5A <-
            Dose, Time) %>%
   filter(n() > 1,
          sum(is.na(Conc_trans)) != n(),
-         # model %in% c("model_flat"),
          exclude %in% FALSE,
          Detect %in% TRUE) %>%
   mutate(meanConc = mean(Conc_trans, na.rm = TRUE)) %>%
@@ -1193,9 +1174,9 @@ pl_5A <-
          foldPred = Conc_est / Conc_trans) %>%
   # For percentages
   ungroup() %>%
-  filter(model %in% c("model_flat")) %>%
-  count(!(foldPred >= 0.5 & foldPred <= 2) & (foldConc >= 0.5 & foldConc <= 2)) #%>%
-  {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
+  # filter(model %in% c("model_1comp")) %>%
+  # count(!(foldPred >= 0.5 & foldPred <= 2) & !(foldConc >= 0.5 & foldConc <= 2)) %>%
+  # {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
   # For Plotting
   ggplot(aes(
     y = foldPred,
@@ -1466,9 +1447,9 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
-### Supp. Fig. 3: Distribution of Sigmas in CvTdb data
+### Supp. Fig. 4: Distribution of Sigmas in CvTdb data
 
-```{r sFig3-sigmaDistribution, eval=FALSE}
+```{r sFig4-sigmaDistribution, eval=FALSE}
 
 
 my_coefs <- inner_join(get_winning_model(my_pk), coef(my_pk))
