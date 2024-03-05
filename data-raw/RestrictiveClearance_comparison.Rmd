@@ -1,0 +1,103 @@
+---
+title: "Restrictive Clearance Comparison"
+author: "Gilberto Padilla Mercado"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This vignette describes comparisons between invivoPKfit predicted and those from httk.
+
+```{r library_loading}
+devtools::load_all()
+library(httk)
+my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
+```
+
+
+The first thing I need to do is get the chemicals included in both the CvTdb subset
+and the httk empirical data for pbpk.
+
+```{r chems_in_common}
+common_chems <- cvt %>%
+  subset(analyte_dtxsid %in% get_cheminfo(info = "DTXSID", model = "pbtk")) %>%
+  pull(analyte_dtxsid) %>%
+  unique()
+
+```
+
+Next I need to get the clearances using the `calc_total_clearance(dtxsid, restrictive.clearance)`
+function from httk. Also need the clearances from invivoPKfit's winning models.
+
+
+```{r get_clearances}
+clearance_df <- data.frame(Chemical = common_chems) %>%
+  rowwise() %>%
+  mutate(Restrict_Cl = calc_total_clearance(dtxsid = Chemical,
+                                            restrictive.clearance = TRUE,
+                                            suppress.messages = TRUE),
+         nonRestrict_Cl = calc_total_clearance(dtxsid = Chemical,
+                                            restrictive.clearance = FALSE,
+                                            suppress.messages = TRUE)) %>%
+  ungroup()
+
+my_tkstats <- eval_tkstats(my_pk) %>%
+  dplyr::select(Chemical, Species, CLtot.tkstats, CLtot.nca) %>%
+  distinct() %>%
+  filter(Chemical %in% common_chems,
+         !is.na(CLtot.tkstats), !is.na(CLtot.nca)) %>%
+  group_by(Chemical, Species, CLtot.tkstats) %>%
+  summarize(CLtot.nca_mean = mean(CLtot.nca),
+            CLtot.nca_sd = sd(CLtot.nca))
+
+# Combine these two
+combined_clearance_df <- my_tkstats %>% inner_join(clearance_df)
+
+```
+
+
+Finally, let's visualize where the tkstats predictions land.
+
+```{r viz}
+
+# Preliminary viz, plot all clearances
+combined_clearance_df %>%
+  relocate(CLtot.nca_mean, CLtot.nca_sd, .after = tidyselect::last_col()) %>%
+  pivot_longer(cols = 3:6,
+               names_to = "Clearance_Source",
+               values_to = "Value") %>%
+  ggplot(aes(x = Value,
+             y = Chemical,
+             fill = Clearance_Source)) +
+  geom_point(shape = 21, alpha = 0.7) +
+  scale_x_log10() +
+  scale_fill_manual(breaks = c("nonRestrict_Cl", "CLtot.tkstats",
+                               "CLtot.nca_mean",
+                               "Restrict_Cl"),
+                    labels = c("non-restrictive clearance (httk)",
+                               "predicted clearance (invivoPKfit)",
+                               "mean non-compartmental total clearance (invivoPKfit)",
+                               "restrictive clearance (httk)"),
+                    values = c("orange2", "grey5", "skyblue3",  "green4")) +
+  facet_grid(rows = vars(Species), scales = "free", space = "free") +
+  theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        legend.position = "bottom",
+        legend.direction = "vertical",
+        axis.ticks = element_blank(),
+        axis.line = element_blank())
+
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "initial_tkClearance_comparison_httk.png"),
+       height = 14,
+       width = 5,
+       device = "png")
+```
+
