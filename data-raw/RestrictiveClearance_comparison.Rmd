@@ -23,10 +23,11 @@ and the httk empirical data for pbpk.
 
 ```{r chems_in_common}
 common_chems <- cvt %>%
-  subset(analyte_dtxsid %in% get_cheminfo(info = "DTXSID", model = "pbtk")) %>%
+  subset(analyte_dtxsid %in% get_cheminfo(info = "DTXSID", model = "gas_pbtk")) %>%
   pull(analyte_dtxsid) %>%
   unique()
 
+common_chems[!(common_chems %in% get_cheminfo(info = "DTXSID", model = "pbtk"))] %>% unique() %>% sort()
 ```
 
 Next I need to get the clearances using the `calc_total_clearance(dtxsid, restrictive.clearance)`
@@ -95,7 +96,7 @@ combined_clearance_df %>%
 
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "initial_tkClearance_comparison_httk.png"),
+                         "tkClearance_comparison_httk_gasPBPK.png"),
        height = 14,
        width = 5,
        device = "png")
