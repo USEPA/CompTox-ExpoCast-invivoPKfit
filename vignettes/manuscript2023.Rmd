@@ -694,6 +694,11 @@ summarized_tkstats <- summarized_tkstats %>%
   distinct() %>% 
   select(!c(nca_name, nca_sd_name))
 
+
+chem_name_translate <- all_my_data %>%
+  dplyr::select(Chemical, Chemical_Name) %>%
+  dplyr::distinct()
+
 ```
 
 
@@ -1557,11 +1562,14 @@ l_batch_search <- l_batch_search %>%
 lombardo <- lombardo %>%
   right_join(l_batch_search, by = c("Name" = "INPUT"))
 
+
+####
 lombard_abbr <- lombardo %>% dplyr::select(DTXSID,
                                            hVss = `human VDss (L/kg)`,
                                            hCltot = `human CL (mL/min/kg)`,
                                            halflife = `terminal  t1/2 (h)` ) %>%
-  filter(DTXSID %in% cvt_DTXSIDs)
+  filter(DTXSID %in% cvt_DTXSIDs) %>%
+  left_join(chem_name_translate, by = join_by(DTXSID == Chemical))
 
 # 15 chemicals in common with values for both
 lombardo_comparison <- my_tkstats %>%
@@ -1578,24 +1586,27 @@ lombard_abbr <- lombard_abbr %>%
   mutate(Species = "human", model = "Lombardo et al.") %>%
   rename(Vss = hVss, CLtot = hCltot) %>%
   mutate(CLtot = CLtot*60/1000) %>% # Lombardo reports this as mL/min/kg, need L/h/kg
-  filter(DTXSID %in% comparable_ids)
+  filter(DTXSID %in% comparable_ids) %>%
+  mutate(Chemical_Name = reorder(Chemical_Name, halflife))
 
 lombardo_comparison <- my_tkstats %>%
   dplyr::select(DTXSID = Chemical, Species,
                 model, Vss.tkstats, CLtot.tkstats, halflife.tkstats) %>%
   filter(DTXSID %in% comparable_ids) %>%
+  left_join(chem_name_translate, by = join_by(DTXSID == Chemical)) %>%
   distinct() %>%
   rename(Vss = Vss.tkstats, CLtot = CLtot.tkstats, halflife = halflife.tkstats) %>%
   bind_rows(lombard_abbr) %>%
   mutate(model = ifelse(str_detect(model, "^model"), "invivoPKfit", model),
-         DTXSID = factor(DTXSID, levels = unique(comparable_ids)))
+         Chemical_Name = factor(Chemical_Name,
+                                levels = levels(lombard_abbr$Chemical_Name)))
 
 lombardo_comparison %>%
   pivot_longer(cols = c("Vss", "CLtot", "halflife")) %>%
   mutate(name = factor(name, levels = c("halflife", "Vss", "CLtot"))) %>%
   ggplot(mapping = aes(
     x = value,
-    y = DTXSID
+    y = Chemical_Name
   )) +
   geom_point(aes(color = model,
                  shape = Species),
@@ -1630,7 +1641,7 @@ lombardo_comparison %>%
         legend.text = element_text())
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "lombardoComparison_Figure8_2024.png"),
+                         "lombardoComparison_Figure8_2024_named.png"),
        height = 4,
        width = 6.5,
        device = "png", dpi = 300)
@@ -1701,39 +1712,42 @@ sfig4B <- other_meta %>% left_join(my_tkstats, by = c("DTXSID" = "Chemical")) %>
                values_to = "Fgutabs") %>%
     mutate(Source = ifelse(str_detect(Source, "tkstats"), "invivoPKfit",
                            "Honda et al.")) %>%
-    ggplot(mapping = aes(
-      x = Fgutabs,
-      y = reorder(DTXSID, Fgutabs)
-    )) +
-    geom_point(aes(color = Source),
-               shape = 24,
-               position = position_dodge(0.7),
-               size = 5/.pt, stroke = 2.5/.pt) +
-    scale_color_manual(values = c("black", "green4"),
-                       breaks = c("invivoPKfit", "Honda et al.")) +
+  left_join(chem_name_translate, by = join_by(DTXSID == Chemical)) %>%
+  ggplot(mapping = aes(
+    x = Fgutabs,
+    y = reorder(Chemical_Name, Fgutabs)
+  )) +
+  geom_point(aes(color = Source),
+             shape = 24,
+             position = position_dodge(0.7),
+             size = 5/.pt, stroke = 2.5/.pt) +
+  scale_color_manual(values = c("black", "green4"),
+                     breaks = c("invivoPKfit", "Honda et al.")) +
   labs(x = "Oral Bioavailability") +
   guides(color = guide_legend(nrow = 2)) +
-    theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
-          panel.background = element_blank(),
-          panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
-          strip.background = element_rect(fill = "white"),
-          strip.text = element_text(face = "bold", size = 12),
-          text = element_text(size = 10),
-          axis.ticks = element_blank(),
-          axis.line = element_blank(),
-          axis.text = element_text(face = "bold"),
-          axis.title.y = element_blank(),
-          legend.position = "bottom",
-          legend.key = element_blank(),
-          legend.title = element_text(face = "bold"),
-          legend.text = element_text())
-  
+  theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold", size = 12),
+        text = element_text(size = 10),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.text = element_text(face = "bold"),
+        axis.title.y = element_blank(),
+        legend.position = "bottom",
+        legend.key = element_blank(),
+        legend.title = element_text(face = "bold"),
+        legend.text = element_text())
 
-plot_grid(sfig4A, sfig4B, align = "h", axis = "bt")
+
+plot_grid(sfig4A, sfig4B, align = "h", axis = "bt",
+          rel_widths = c(1,2),
+          labels = c("A", "B"))
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "metaAnalysis_Comparisons_SuppFigure4_2024.png"),
+                         "metaAnalysis_Comparisons_SuppFigure4_2024_named.png"),
        height = 3,
-       width = 5,
+       width = 5.75,
        device = "png", dpi = 300)
 
 ```
