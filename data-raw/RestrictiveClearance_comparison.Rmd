@@ -27,7 +27,9 @@ common_chems <- cvt %>%
   pull(analyte_dtxsid) %>%
   unique()
 
-common_chems[!(common_chems %in% get_cheminfo(info = "DTXSID", model = "pbtk"))] %>% unique() %>% sort()
+common_chems[!(common_chems %in% get_cheminfo(info = "DTXSID", model = "gas_pbtk"))] %>%
+  unique() %>%
+  sort()
 ```
 
 Next I need to get the clearances using the `calc_total_clearance(dtxsid, restrictive.clearance)`
@@ -41,6 +43,16 @@ clearance_df <- data.frame(Chemical = common_chems) %>%
                                             restrictive.clearance = TRUE,
                                             suppress.messages = TRUE),
          nonRestrict_Cl = calc_total_clearance(dtxsid = Chemical,
+                                            restrictive.clearance = FALSE,
+                                            suppress.messages = TRUE)) %>%
+  ungroup()
+
+hep_clearance_df <- data.frame(Chemical = common_chems) %>%
+  rowwise() %>%
+  mutate(Restrict_Cl = calc_hep_clearance(dtxsid = Chemical,
+                                            restrictive.clearance = TRUE,
+                                            suppress.messages = TRUE),
+         nonRestrict_Cl = calc_hep_clearance(dtxsid = Chemical,
                                             restrictive.clearance = FALSE,
                                             suppress.messages = TRUE)) %>%
   ungroup()
@@ -100,5 +112,65 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        height = 14,
        width = 5,
        device = "png")
+```
+
+Finally, what I want to analyze is how good the fits for these chemicals are relative to the rest of the chemicals.
+
+```{r fit_analysis}
+wm <- get_winning_model(my_pk)
+ingroup_rmse <- rsq(my_pk) %>% inner_join(wm) %>%
+  filter(Chemical %in% combined_clearance_df$Chemical) %>%
+  mutate(Group = "in httk")
+
+outgroup_rmse <- rsq(my_pk) %>% inner_join(wm) %>%
+  filter(!(Chemical %in% combined_clearance_df$Chemical)) %>%
+  mutate(Group = "not in httk")
+
+all_group_rmse <- bind_rows(ingroup_rmse, outgroup_rmse)
+
+
+all_group_rmse %>%
+  filter(Species == "rat") %>%
+  ggplot(aes(x = Rsq, y = Chemical,
+             shape = Group)) +
+  geom_point() +
+  facet_grid(rows = vars(Group), scales = "free", space = "free") +
+  theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        legend.direction = "vertical",
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.text.y = element_blank())
+
+ggsave(paste0(Sys.getenv("FIG_DIR"), "Rsq_gaspbtk.png"),
+       height = 5,
+       width = 5)
+  
+
+```
+
+## Exploring _httk_ parameters and solved values for `gas_pbtk`
+
+```{r httk_solution}
+httk::calc_tkstats(dtxsid = unique(combined_clearance_df$Chemical)[[5]])
+httk::parameterize_gas_pbtk(restrictive.clearance = TRUE,
+                            dtxsid = unique(combined_clearance_df$Chemical)[[5]])
+
+httk::solve_gas_pbtk(dtxsid = unique(combined_clearance_df$Chemical)[[5]],
+                     parameters = httk::parameterize_gas_pbtk(
+                       restrictive.clearance = TRUE,
+                       dtxsid = unique(combined_clearance_df$Chemical)[[5]]
+                       ),
+                     dose = 10,
+                     exp.conc = 0,
+                     input.units = "mg",
+                     output.units = "mg",
+                     days = 3,
+                     plots = TRUE)
+
+
 ```
 
