@@ -172,5 +172,107 @@ httk::solve_gas_pbtk(dtxsid = unique(combined_clearance_df$Chemical)[[5]],
                      plots = TRUE)
 
 
+# For the invivoPKfit functions, we will hold kelim constant
+# This constant will be calculated as CLtot/Vdist (or V1, if 2-compartment)
+# This constant is derived by httk in the following way:
+calc_total_clearance(dtxsid = common_chems[[10]],
+                             restrictive.clearance = FALSE) /
+  calc_vdist(dtxsid = common_chems[[10]])
+
+```
+
+I have modified the starts of the 1- and 2-compartment models,
+as well as adding a restrictive_clearance argument in stat_model.
+
+```{r running-invivoPKfit}
+minimal_pk <- pk(data = cvt %>%
+                   filter(analyte_dtxsid %in% unique(combined_clearance_df$Chemical)),
+                 mapping = ggplot2::aes(
+                   Chemical = analyte_dtxsid,
+                   Chemical_Name = analyte_name_original,
+                   DTXSID = analyte_dtxsid,
+                   CASRN = analyte_casrn,
+                   Species = species,
+                   Reference = document_id,
+                   Media = conc_medium_normalized,
+                   Route = administration_route_normalized,
+                   Dose = dose_level_normalized,
+                   Dose.Units = "mg/kg",
+                   Subject_ID = subject_id,
+                   Series_ID = series_id,
+                   Study_ID = study_id,
+                   ConcTime_ID = conc_time_id,
+                   N_Subjects = n_subjects_in_series,
+                   Weight = weight_kg,
+                   Weight.Units = "kg",
+                   Time = time_hr,
+                   Time.Units = "hours",
+                   Value = conc,
+                   Value.Units = "mg/L",
+                   Value_SD = conc_sd_normalized,
+                   LOQ = loq
+                 ))
+
+
+new_pk <- minimal_pk +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE,
+                      suppress.messages = FALSE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+new_pk <- do_data_info(new_pk)
+
+rest_pk <- do_prefit(new_pk, restrictive_clearance = TRUE)
+rest_pk <- do_fit(rest_pk, n_cores = 6) # Worked!
+
+nonrest_pk <- do_prefit(new_pk, restrictive_clearance = FALSE)
+nonrest_pk <- do_fit(nonrest_pk, n_cores = 6) # Worked!
+
+old_pk <- do_prefit(new_pk, restrictive_clearance = NULL)
+old_pk <- do_fit(old_pk, n_cores = 6)
+
+# Unfortunately, it seems the optimizer fails 
+# Need to investigate why!!
+# Are the kelims calculated too far from those estimated from the data?
+
+rest_wm <- get_winning_model(rest_pk)
+rest_AIC <- AIC(rest_pk)
+rest_rsq <- rsq(rest_pk)
+
+eval_tkstats(rest_pk) %>% View()
+residuals(rest_pk) %>% View()
+
+
+
+pl <- plot(rest_pk, n_interp = 12, use_scale_conc = TRUE)
+pdf(file = paste0(Sys.getenv("FIG_DIR"),
+              "RestrictiveCL_AllFits_Final_202402_08.pdf"),
+    height = 6, width = 10)
+for (i in 1:nrow(pl)) {
+  print(pl$final_plot[[i]])
+}
+dev.off()
+
+
+
+
+# Non-restrictive fits (constant kelim)
+
+pl <- plot(nonrest_pk, n_interp = 12, use_scale_conc = TRUE)
+pdf(file = paste0(Sys.getenv("FIG_DIR"),
+              "Non-restrictiveCL_AllFits_Final_202402_08.pdf"),
+    height = 6, width = 10)
+for (i in 1:nrow(pl)) {
+  print(pl$final_plot[[i]])
+}
+dev.off()
+
+
+
+
+# try dawson
+httk::load_dawson2021()
+
 ```
 
