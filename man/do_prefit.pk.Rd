@@ -4,10 +4,14 @@
 \alias{do_prefit.pk}
 \title{Do pre-fitting}
 \usage{
-\method{do_prefit}{pk}(obj, ...)
+\method{do_prefit}{pk}(obj, restrictive_clearance = NULL, ...)
 }
 \arguments{
 \item{obj}{A `pk` object}
+
+\item{restrictive_clearance}{Logical. When NULL (default) it estimates `kelim`
+but when set to TRUE or FALSE it uses a constant definition of `kelim` by
+dividing total clearance by volume of distribution calculated by `httk`.}
 
 \item{...}{Additional arguments. Not in use.}
 }

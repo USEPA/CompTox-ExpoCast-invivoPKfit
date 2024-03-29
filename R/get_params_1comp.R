@@ -106,6 +106,9 @@
 #'@param param_units A mapping specified using a call to [ggplot2::aes()],
 #'  giving the units for each variable, as expressions which may include
 #'  variables in `data`.
+#' @param restrictive_clearance Logical. When NULL (default) it estimates `kelim`
+#' but when set to TRUE or FALSE it uses a constant definition of `kelim` by
+#' dividing total clearance by volume of distribution calculated by `httk`.
 #'@return A `data.frame`with the following variables:
 #' - `param_name`: Character: Names of the model parameters
 #' - `param_units`: Character: Units of the model parameters
@@ -131,28 +134,29 @@ get_params_1comp <- function(data,
                                                         Fgutabs = 1,
                                                         kgutabs = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                                         Fgutabs_Vdist = 1e2,
-                                                        Rblood2plasma = 100),
-param_units = ggplot2::aes(kelim = paste0("1/", #kelim
-                                  unique(Time_trans.Units)),
-                           Vdist = paste0("(", #Vdist
-                                  unique(Dose.Units),
-                                  ")",
-                                  "/",
-                                  "(",
-                                  unique(Conc.Units),
-                                  ")"),
-                           Fgutabs = "unitless fraction", #Fgutabs
-                           kgutabs = paste0("1/", #kgutabs
-                                  unique(Time_trans.Units)),
-                           Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
-                                  unique(Conc.Units),
-                                  ")",
-                                  "/",
-                                  "(",
-                                  unique(Dose.Units),
-                                  ")"),
-                           Rblood2plasma = "unitless ratio")
-                             ){
+                                                        Rblood2plasma = 100,),
+                             param_units = ggplot2::aes(kelim = paste0("1/", #kelim
+                                                                       unique(Time_trans.Units)),
+                                                        Vdist = paste0("(", #Vdist
+                                                                       unique(Dose.Units),
+                                                                       ")",
+                                                                       "/",
+                                                                       "(",
+                                                                       unique(Conc.Units),
+                                                                       ")"),
+                                                        Fgutabs = "unitless fraction", #Fgutabs
+                                                        kgutabs = paste0("1/", #kgutabs
+                                                                         unique(Time_trans.Units)),
+                                                        Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
+                                                                               unique(Conc.Units),
+                                                                               ")",
+                                                                               "/",
+                                                                               "(",
+                                                                               unique(Dose.Units),
+                                                                               ")"),
+                                                        Rblood2plasma = "unitless ratio"),
+                             restrictive_clearance = NULL
+){
   #param names
   param_name <- c("kelim",
                    "Vdist",
@@ -223,6 +227,10 @@ if(!("oral" %in% data$Route)){
     use_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
   }
 }
+  # if we want to use constant kelim as calculated by httk
+  if (is.logical(restrictive_clearance) && !is.na(restrictive_clearance)) {
+    optimize_param[param_name %in% "kelim"] <- FALSE
+  }
 
   #if both "blood" and "plasma" are not in data,
   #then Rblood2plasma will not be optimized
@@ -266,7 +274,9 @@ if(!("oral" %in% data$Route)){
 
   # now get starting values
   par_DF <-  get_starts_1comp(data = data,
-                            par_DF = par_DF)
+                              par_DF = par_DF,
+                              restrictive_clearance = restrictive_clearance)
+
 
   #check to ensure starting values are within bounds
   #if not, then replace them by a value halfway between bounds

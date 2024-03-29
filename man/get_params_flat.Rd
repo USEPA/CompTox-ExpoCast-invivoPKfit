@@ -13,7 +13,8 @@ get_params_flat(
   param_units = ggplot2::aes(Vdist = paste0("(", unique(Dose.Units), ")", "/", "(",
     unique(Conc.Units), ")"), Fgutabs = "unitless fraction", Fgutabs_Vdist = paste0("(",
     unique(Conc.Units), ")", "/", "(", unique(Dose.Units), ")"), Rblood2plasma =
-    "unitless ratio")
+    "unitless ratio"),
+  restrictive_clearance = NULL
 )
 }
 \arguments{

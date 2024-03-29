@@ -45,32 +45,39 @@ coef.pk <- function(obj,
                                                                 !!!obj$data_group,
                                                                 param_name,
                                                                 start)
+
   const_pars <- const_pars %>%
     tidyr::pivot_wider(names_from = param_name,
-                values_from = start)
+                       values_from = start)
 
   possible_model_params <- sapply(obj$stat_model, `[[`, "params") %>%
     unlist() %>%
     unique()
 
-  coefs <- suppressMessages(obj$fit %>% tidyr::unnest(cols = fit) %>%
-    dplyr::group_by(model, method, !!!obj$data_group) %>%
-    dplyr::select(dplyr::starts_with("sigma_"),
-                  dplyr::any_of(possible_model_params)) %>%
-    # If user wants sigmas
-    # this pivot_longer provides the sigmas per error group
-    tidyr::pivot_longer(cols = starts_with("sigma_"),
-                        names_to = "error_group",
-                        values_to = "sigma_value") %>%
-    dplyr::filter(stringr::str_detect(error_group,
-                                      paste(Chemical,Species,sep = "."))))
 
-  coefs <- suppressMessages(dplyr::left_join(coefs, const_pars))
+  coefs <- obj$fit %>% tidyr::unnest(cols = fit) %>%
+    dplyr::group_by(model, method, !!!obj$data_group)
 
-  for (this_param in intersect(names(const_pars), possible_model_params)) {
-    coefs[this_param] <- tidyr::replace_na(coefs[[this_param]],
-                                           replace = unique(const_pars[[this_param]]))
-  }
+  coefs <- dplyr::left_join(coefs, const_pars,
+                                             by = c(sapply(obj$data_group,
+                                                           rlang::as_label),
+                                                    "model")) %>%
+    mutate(Rblood2plasma = coalesce(Rblood2plasma.x, Rblood2plasma.y))
+
+
+  # this pivot_longer provides the sigmas per error group
+  coefs <- suppressMessages(coefs  %>%
+                              dplyr::select(dplyr::starts_with("sigma_"),
+                                            dplyr::any_of(possible_model_params)) %>%
+                               tidyr::pivot_longer(cols = starts_with("sigma_"),
+                                                   names_to = "error_group",
+                                                   values_to = "sigma_value") %>%
+                               dplyr::filter(stringr::str_detect(error_group,
+                                                                 paste(Chemical,Species,sep = "."))) %>%
+
+                               dplyr::relocate(tidyselect::all_of(c("error_group", "sigma_value")),
+                                               .after = tidyselect::last_col()))
+
 
   time_group <- get_data(obj = obj) %>%
     dplyr::select(!!!obj$data_group, Time.Units, Time_trans.Units) %>%

@@ -108,6 +108,9 @@
 #'@param param_units A mapping specified using a call to [ggplot2::aes()],
 #'  giving the units for each variable, as expressions which may include
 #'  variables in `data`.
+#' @param restrictive_clearance Logical. When NULL (default) it estimates `kelim`
+#' but when set to TRUE or FALSE it uses a constant definition of `kelim` by
+#' dividing total clearance by volume of distribution calculated by `httk`.
 #'@return A `data.frame`with the following variables:
 #' - `param_name`: Character: Names of the model parameters
 #' - `param_units`: Character: Units of the model parameters
@@ -161,7 +164,8 @@ get_params_2comp <- function(data,
                                                                  "(",
                                                                  unique(Dose.Units),
                                                                  ")"),
-                                          Rblood2plasma = "unitless ratio")){
+                                          Rblood2plasma = "unitless ratio"),
+                             restrictive_clearance = NULL){
   #param names
   param_name <-c("kelim",
                   "V1",
@@ -221,23 +225,27 @@ get_params_2comp <- function(data,
   use_param <- rep(TRUE, length(param_name))
 
   #now follow the logic described in the documentation for this function:
-if(!("oral" %in% data$Route)){
-  #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_V1,
-  #and they won't be used.
-  optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
-  use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
-}else{ #if yes oral data:
-  if("iv" %in% data$Route){
-    #if both oral and IV data, Fgutabs and V1 can be fit separately, so turn off Fgutabs_V1
-    optimize_param[param_name %in% c("Fgutabs_V1")] <- FALSE
-    use_param[param_name %in% c("Fgutabs_V1")] <- FALSE
-  }else{
-    #if oral ONLY:
-    #cannot fit Fgutabs and V1 separately, so turn them off.
-    optimize_param[param_name %in% c("Fgutabs", "V1")] <- FALSE
-    use_param[param_name %in% c("Fgutabs", "V1")] <- FALSE
+  if(!("oral" %in% data$Route)){
+    #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_V1,
+    #and they won't be used.
+    optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
+    use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
+  }else{ #if yes oral data:
+    if("iv" %in% data$Route){
+      #if both oral and IV data, Fgutabs and V1 can be fit separately, so turn off Fgutabs_V1
+      optimize_param[param_name %in% c("Fgutabs_V1")] <- FALSE
+      use_param[param_name %in% c("Fgutabs_V1")] <- FALSE
+    }else{
+      #if oral ONLY:
+      #cannot fit Fgutabs and V1 separately, so turn them off.
+      optimize_param[param_name %in% c("Fgutabs", "V1")] <- FALSE
+      use_param[param_name %in% c("Fgutabs", "V1")] <- FALSE
+    }
   }
-}
+
+  if (is.logical(restrictive_clearance) && !is.na(restrictive_clearance)) {
+    optimize_param[param_name %in% "kelim"] <- FALSE
+  }
 
   #if both "blood" and "plasma" are not in data,
   #then Rblood2plasma will not be optimized
@@ -281,7 +289,8 @@ if(!("oral" %in% data$Route)){
                        "lower_bound" = lower_bound_vect,
                        "upper_bound" = upper_bound_vect)
   par_DF <- get_starts_2comp(data = data,
-                             par_DF = par_DF)
+                             par_DF = par_DF,
+                             restrictive_clearance = restrictive_clearance)
 
   #check to ensure starting values are within bounds
   #if not, then replace them by a value halfway between bounds

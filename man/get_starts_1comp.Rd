@@ -4,7 +4,7 @@
 \alias{get_starts_1comp}
 \title{Get starting values for 1-compartment model}
 \usage{
-get_starts_1comp(data, par_DF)
+get_starts_1comp(data, par_DF, restrictive_clearance)
 }
 \arguments{
 \item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}

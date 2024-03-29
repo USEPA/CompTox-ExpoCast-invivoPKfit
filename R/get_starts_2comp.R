@@ -150,13 +150,14 @@
 #'  `starts` containing the derived starting value for each parameter. If a
 #'  parameter cannot be estimated from the available data, then its starting value
 #'  will be `NA_real_`
-#'
+#' @import httk
 #' @author Caroline Ring
 #' @family 2-compartment model functions
 #' @family get_starts functions
 #' @family built-in model functions
 get_starts_2comp <- function(data,
-                             par_DF){
+                             par_DF,
+                             restrictive_clearance){
 
   kelim <- NA_real_
   kgutabs <- NA_real_
@@ -186,8 +187,16 @@ get_starts_2comp <- function(data,
   if(nrow(ivdat)>0){
 
     #assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
-    halflife <- mean(range(ivdat$Time))
-    kelim <- log(2)/halflife
+    if (is.logical(restrictive_clearance) && !is.na(restrictive_clearance)) {
+      kelim <- httk::calc_total_clearance(dtxsid = unique(ivdat$Chemical),
+                                              restrictive.clearance = restrictive_clearance,
+                                              suppress.messages = TRUE) /
+                     httk::calc_vdist(dtxsid = unique(ivdat$Chemical),
+                                      suppress.messages = TRUE)
+    } else {
+      halflife <- mean(range(ivdat$Time))
+      kelim <- log(2)/halflife
+    }
 
     #V1: extrapolate back from conc at min time at a slope of -kelim to get the intercept
     #then V1 = 1/intercept
@@ -212,8 +221,16 @@ get_starts_2comp <- function(data,
     #if no IV data, then calculate kelim from oral data
     if(nrow(ivdat)==0){
       #and assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
-      halflife <- mean(range(podat$Time))
-      kelim <- log(2)/halflife
+      if (is.logical(restrictive_clearance) && !is.na(restrictive_clearance)) {
+        kelim <- httk::calc_total_clearance(dtxsid = unique(podat$Chemical),
+                                                restrictive.clearance = restrictive_clearance,
+                                                suppress.messages = TRUE) /
+                       httk::calc_vdist(dtxsid = unique(podat$Chemical),
+                                        suppress.messages = TRUE)
+      } else {
+        halflife <- mean(range(podat$Time))
+        kelim <- log(2)/halflife
+      }
     }
 
     #then extrapolate back from Cmax to time 0 with slope -kelim
@@ -239,6 +256,14 @@ get_starts_2comp <- function(data,
               "Rblood2plasma" = Rblood2plasma)
 
 par_DF$start <- starts[par_DF$param_name]
+
+if (is.logical(restrictive_clearance) && !is.na(restrictive_clearance)) {
+  par_DF <- par_DF %>%
+    mutate(lower_bound = ifelse(param_name %in% "kelim",
+                                start*0.9, start),
+           upper_bound = ifelse(param_name %in% "kelim",
+                                start*1.1, start))
+}
 
   return(par_DF)
 }

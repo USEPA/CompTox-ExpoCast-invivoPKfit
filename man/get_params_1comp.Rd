@@ -11,12 +11,13 @@ get_params_1comp(
     0.01),
   upper_bound = ggplot2::aes(kelim = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
     Vdist = 100, Fgutabs = 1, kgutabs = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
-    Fgutabs_Vdist = 100, Rblood2plasma = 100),
+    Fgutabs_Vdist = 100, Rblood2plasma = 100, ),
   param_units = ggplot2::aes(kelim = paste0("1/", unique(Time_trans.Units)), Vdist =
     paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units), ")"), Fgutabs =
     "unitless fraction", kgutabs = paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist
     = paste0("(", unique(Conc.Units), ")", "/", "(", unique(Dose.Units), ")"),
-    Rblood2plasma = "unitless ratio")
+    Rblood2plasma = "unitless ratio"),
+  restrictive_clearance = NULL
 )
 }
 \arguments{
@@ -33,6 +34,10 @@ variables in `data`.}
 \item{param_units}{A mapping specified using a call to [ggplot2::aes()],
 giving the units for each variable, as expressions which may include
 variables in `data`.}
+
+\item{restrictive_clearance}{Logical. When NULL (default) it estimates `kelim`
+but when set to TRUE or FALSE it uses a constant definition of `kelim` by
+dividing total clearance by volume of distribution calculated by `httk`.}
 }
 \value{
 A `data.frame`with the following variables:
