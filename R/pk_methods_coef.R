@@ -24,6 +24,7 @@
 #'  There is a column for all parameter estimates given each model in `model`.
 #'  A list-column `coefs_vector` summarizes all estimated parameters into a named vector.
 #'  This named vector is used in functions that call upon the model functions, such as [predict()].
+#' @import glue
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
@@ -57,7 +58,7 @@ coef.pk <- function(obj,
 #### Adding sigmas and constant parameters
 
   coefs <- suppressMessages(obj$fit %>% tidyr::unnest(cols = fit) %>%
-                              dplyr::group_by(model,method, !!!data_group) %>%
+                              dplyr::group_by(model,method, !!!obj$data_group) %>%
                               dplyr::select(dplyr::starts_with("sigma_"),
                                             tidyselect::any_of(possible_model_params)) %>%
                               tidyr::pivot_longer(cols = starts_with("sigma_"),
@@ -68,12 +69,30 @@ coef.pk <- function(obj,
                                                                       Species,
                                                                       sep = ".")))
                             )
-  coefs <- suppressMessages(dplyr::left_join(coefs, const_pars))
 
-  # This next thing should replace NAs with the constant value...
-  for (this_param in intersect(names(const_pars), possible_model_params)) {
-    coefs[this_param] <- tidy::replace_na(coefs[[this_param]],
-                                          replace = unique(const_pars[[this_param]]))
+
+
+
+  coefs <- suppressMessages(dplyr::left_join(coefs, const_pars,
+                                             by = c("model",
+                                                    sapply(obj$data_group,
+                                                           rlang::as_label))))
+
+  if (any(stringr::str_detect(names(coefs), pattern = "\\.(x|y)$"))) {
+    message("Coalescing parameter values...")
+    # This next thing should replace NAs with the constant value...
+    for (this_param in intersect(names(const_pars), possible_model_params)) {
+      if (sum(stringr::str_detect(names(coefs), pattern = this_param)) > 1) {
+        coefs <- dplyr::mutate(coefs,
+                               {{this_param}} := coalesce(
+                                 .data[[paste(this_param, "x",
+                                              sep = ".")]],
+                                 .data[[paste(this_param, "y",
+                                              sep = ".")]]),
+                               .keep = "unused")
+      }
+    }
+
   }
 
 ####

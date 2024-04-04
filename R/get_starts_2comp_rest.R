@@ -39,22 +39,9 @@
 #'
 #'# Starting value for `kelim`
 #'
-#'If IV data exist, then only IV data are used to derive starting estimates for
-#'`kelim`, even if oral data also exist.
-#'
-#'If only oral data exist, then the oral data are used to derive a starting
-#'estimate for `kelim`.
-#'
-#'Whichever data set is used (IV or oral), the starting value for `kelim` is
-#'derived by assuming that the range of observed time values in the data set
-#'spans two elimination half-lives. This implies that the elimination half-life
-#'is equal to the midpoint of observed time values, and that the starting value
-#'for the elimination time constant `kelim` is therefore `log(2)` divided by the
-#'midpoint of observed time values.
-#'
-#'Of course, this assumption is unlikely to be correct. However, we hope that it
-#'will yield a starting guess for `kelim` that is at least on the right order of
-#'magnitude.
+#'This value is held constant such that it equals `CLtot`/`Vdist` as calculated
+#'by _httk_. It is not optimized in this case and `CLtot` is calculated assuming
+#'`restrictive.clearance = TRUE`.
 #'
 #' # Starting value for `V1`
 #'
@@ -155,10 +142,14 @@
 #' @family 2-compartment model functions
 #' @family get_starts functions
 #' @family built-in model functions
-get_starts_2comp <- function(data,
+get_starts_2comp_rest <- function(data,
                              par_DF){
 
-  kelim <- NA_real_
+  kelim <- httk::calc_total_clearance(dtxsid = unique(data$Chemical),
+                                      restrictive.clearance = TRUE,
+                                      suppress.messages = TRUE) /
+    httk::calc_vdist(dtxsid = unique(data$Chemical),
+                     suppress.messages = TRUE)
   kgutabs <- NA_real_
   V1 <- NA_real_
   Fgutabs_V1 <- NA_real_
@@ -169,7 +160,6 @@ get_starts_2comp <- function(data,
 
   # Get starting Concs from data
 
-  # Get starting Concs from data
 
   #Work only with detects for these rough estimates
   tmpdat <- subset(data,
@@ -184,11 +174,6 @@ get_starts_2comp <- function(data,
   # Quick and dirty:
   #IV data estimates, if IV data exist
   if(nrow(ivdat)>0){
-
-    #assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
-
-    halflife <- mean(range(ivdat$Time))
-    kelim <- log(2)/halflife
 
     #V1: extrapolate back from conc at min time at a slope of -kelim to get the intercept
     #then V1 = 1/intercept
@@ -210,13 +195,6 @@ get_starts_2comp <- function(data,
     #so kgutabs = log(2)/tmax
     kgutabs <- log(2)/tmax
 
-    #if no IV data, then calculate kelim from oral data
-    if(nrow(ivdat)==0){
-      #and assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
-
-      halflife <- mean(range(podat$Time))
-      kelim <- log(2)/halflife
-    }
 
     #then extrapolate back from Cmax to time 0 with slope -kelim
     Fgutabs_V1 <- 10^((Cmax + kelim*tmax))*(kgutabs - kelim)/(kgutabs)
@@ -240,7 +218,7 @@ get_starts_2comp <- function(data,
               "Fgutabs" = Fgutabs,
               "Rblood2plasma" = Rblood2plasma)
 
-par_DF$start <- starts[par_DF$param_name]
+  par_DF$start <- starts[par_DF$param_name]
 
 
   return(par_DF)

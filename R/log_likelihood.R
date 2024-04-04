@@ -199,7 +199,6 @@ log_likelihood <- function(par,
     data$conc_sd_natural <- data$Conc_SD_trans
   }
 
-  browser()
 
   #residual error SDs
   #defined by data_sigma_group

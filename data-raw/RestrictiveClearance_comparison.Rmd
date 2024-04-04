@@ -186,7 +186,7 @@ as well as adding a restrictive_clearance argument in stat_model.
 
 ```{r running-invivoPKfit}
 minimal_pk <- pk(data = cvt %>%
-                   filter(analyte_dtxsid %in% "DTXSID0020442"),
+                   filter(analyte_dtxsid %in% common_chems[1:8]),
                  mapping = ggplot2::aes(
                    Chemical = analyte_dtxsid,
                    Chemical_Name = analyte_name_original,
@@ -220,22 +220,32 @@ new_pk <- minimal_pk +
                       suppress.messages = FALSE) +
   settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
-  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) +
+  stat_model(model = c("model_flat", "model_1comp",
+                       "model_1comp_rest", "model_1comp_nonrest"))
 new_pk <- do_data_info(new_pk)
 
-rest_pk <- do_prefit(new_pk, restrictive_clearance = TRUE)
-rest_pk <- do_fit(rest_pk, n_cores = 6) # Worked!
 
-nonrest_pk <- do_prefit(new_pk, restrictive_clearance = FALSE)
-nonrest_pk <- do_fit(nonrest_pk, n_cores = 6) # Worked!
+new_pk <- do_prefit(new_pk)
 
-old_pk <- do_prefit(new_pk, restrictive_clearance = NULL)
-old_pk <- do_fit(old_pk, n_cores = 6)
+new_pk$prefit$par_DF %>% View()
 
-# Unfortunately, it seems the optimizer fails 
-# Need to investigate why!!
-# Are the kelims calculated too far from those estimated from the data?
+new_pk <- do_fit(new_pk) # For troubleshooting
 
+
+
+new_pk <- do_fit(new_pk, n_cores = 6) 
+# Multidplyr error because of forgotten browser() call within log_likelihood
+new_pk$fit %>% unnest(fit) %>% View()
+
+coef(new_pk) %>% View()
+eval_tkstats(new_pk) %>% View()
+
+
+AIC(new_pk) %>% filter(method %in% "L-BFGS-B") %>% arrange(Chemical, Species) %>%
+  View()
+
+pl <- plot(new_pk, use_scale_conc = TRUE, method = "L-BFGS-B", n_interp = 10)
 
 ```
 

@@ -4,7 +4,7 @@
 \alias{get_starts_2comp}
 \title{Get starting values for 2-compartment model}
 \usage{
-get_starts_2comp(data, par_DF, restrictive_clearance)
+get_starts_2comp(data, par_DF)
 }
 \arguments{
 \item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}
@@ -168,11 +168,19 @@ Other 2-compartment model functions:
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{get_params_2comp}()},
+\code{\link{get_params_2comp_nonrest}()},
+\code{\link{get_params_2comp_rest}()},
+\code{\link{get_starts_2comp_nonrest}()},
+\code{\link{get_starts_2comp_rest}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 
 Other get_starts functions: 
 \code{\link{get_starts_1comp}()},
+\code{\link{get_starts_1comp_nonrest}()},
+\code{\link{get_starts_1comp_rest}()},
+\code{\link{get_starts_2comp_nonrest}()},
+\code{\link{get_starts_2comp_rest}()},
 \code{\link{get_starts_flat}()}
 
 Other built-in model functions: 
@@ -184,9 +192,17 @@ Other built-in model functions:
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
 \code{\link{get_params_1comp}()},
+\code{\link{get_params_1comp_nonrest}()},
+\code{\link{get_params_1comp_rest}()},
 \code{\link{get_params_2comp}()},
+\code{\link{get_params_2comp_nonrest}()},
+\code{\link{get_params_2comp_rest}()},
 \code{\link{get_params_flat}()},
 \code{\link{get_starts_1comp}()},
+\code{\link{get_starts_1comp_nonrest}()},
+\code{\link{get_starts_1comp_rest}()},
+\code{\link{get_starts_2comp_nonrest}()},
+\code{\link{get_starts_2comp_rest}()},
 \code{\link{get_starts_flat}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
