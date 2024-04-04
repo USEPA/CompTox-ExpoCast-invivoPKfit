@@ -124,8 +124,8 @@
 #' @family get_params functions
 #' @family built-in model functions
 
-get_params_2comp <- function(data,
-                             lower_bound = ggplot2::aes(kelim = log(2)/(2*max(Time_trans)),
+get_params_2comp_rest <- function(data,
+                             lower_bound = ggplot2::aes(kelim = 0,
                                                         k12 = log(2)/(2*max(Time_trans)),
                                                         k21 = log(2)/(2*max(Time_trans)),
                                                         V1 = 0.01,
@@ -133,7 +133,7 @@ get_params_2comp <- function(data,
                                                         kgutabs = log(2)/(2*max(Time_trans)),
                                                         Fgutabs_V1 = 0.01,
                                                         Rblood2plasma = 1e-2),
-                             upper_bound = ggplot2::aes(kelim = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+                             upper_bound = ggplot2::aes(kelim = 1E6,
                                                         k12 = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                                         k21 = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                                         V1 = 100,
@@ -142,45 +142,45 @@ get_params_2comp <- function(data,
                                                         Fgutabs_V1 = 1e2,
                                                         Rblood2plasma = 100),
                              param_units = ggplot2::aes(kelim = paste0("1/", #kelim
-                                                         unique(Time_trans.Units)),
-                                          V1 = paste0("(", #V1
-                                                         unique(Dose.Units),
-                                                         ")",
-                                                         "/",
-                                                         "(",
-                                                         unique(Conc.Units),
-                                                         ")"),
-                                          k21 = paste0("1/", #k21
-                                                         unique(Time_trans.Units)),
-                                          k12 = paste0("1/", #k12
-                                                         unique(Time_trans.Units)),
-                                          Fgutabs = "unitless fraction", #Fgutabs
-                                          kgutabs = paste0("1/", #kgutabs
-                                                           unique(Time_trans.Units)),
-                                          Fgutabs_V1 = paste0("(", #Fgutabs_V1
-                                                                 unique(Conc.Units),
-                                                                 ")",
-                                                                 "/",
-                                                                 "(",
-                                                                 unique(Dose.Units),
-                                                                 ")"),
-                                          Rblood2plasma = "unitless ratio")){
+                                                                       unique(Time_trans.Units)),
+                                                        V1 = paste0("(", #V1
+                                                                    unique(Dose.Units),
+                                                                    ")",
+                                                                    "/",
+                                                                    "(",
+                                                                    unique(Conc.Units),
+                                                                    ")"),
+                                                        k21 = paste0("1/", #k21
+                                                                     unique(Time_trans.Units)),
+                                                        k12 = paste0("1/", #k12
+                                                                     unique(Time_trans.Units)),
+                                                        Fgutabs = "unitless fraction", #Fgutabs
+                                                        kgutabs = paste0("1/", #kgutabs
+                                                                         unique(Time_trans.Units)),
+                                                        Fgutabs_V1 = paste0("(", #Fgutabs_V1
+                                                                            unique(Conc.Units),
+                                                                            ")",
+                                                                            "/",
+                                                                            "(",
+                                                                            unique(Dose.Units),
+                                                                            ")"),
+                                                        Rblood2plasma = "unitless ratio")){
   #param names
   param_name <-c("kelim",
-                  "V1",
-                  "k21",
-                  "k12",
-                  "Fgutabs",
-                  "kgutabs",
-                  "Fgutabs_V1",
-                  "Rblood2plasma")
+                 "V1",
+                 "k21",
+                 "k12",
+                 "Fgutabs",
+                 "kgutabs",
+                 "Fgutabs_V1",
+                 "Rblood2plasma")
 
   #Default lower bounds, to be used in case the user specified a non-default
   #value for the `lower_bound` argument, but did not specify expressions for all
   #parameters. Any parameters not specified in the `lower_bound` argument will
   #take their default lower bounds defined here. This should be the same as the
   #default value for the `lower_bound` argument.
-  lower_bound_default = ggplot2::aes(kelim =log(2)/(2*max(Time_trans)),
+  lower_bound_default = ggplot2::aes(kelim = 0,
                                      k12 = log(2)/(2*max(Time_trans)),
                                      k21 = log(2)/(2*max(Time_trans)),
                                      V1 = 0.01,
@@ -201,7 +201,7 @@ get_params_2comp <- function(data,
   #parameters. Any parameters not specified in the `upper_bound` argument will
   #take their default upper bounds defined here. This should be the same as the
   #default value for the `upper_bound` argument.
-  upper_bound_default =ggplot2::aes(kelim = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+  upper_bound_default =ggplot2::aes(kelim = 1E6,
                                     k12 = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                     k21 = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                     V1 = 100,
@@ -222,6 +222,9 @@ get_params_2comp <- function(data,
 
   #initialize whether each param is used: start with use = TRUE for all params
   use_param <- rep(TRUE, length(param_name))
+
+  # Use constant kelim as calculated by httk
+  optimize_param[param_name %in% "kelim"] <- FALSE
 
   #now follow the logic described in the documentation for this function:
   if(!("oral" %in% data$Route)){
@@ -284,7 +287,8 @@ get_params_2comp <- function(data,
                        "use_param" = use_param,
                        "lower_bound" = lower_bound_vect,
                        "upper_bound" = upper_bound_vect)
-  par_DF <- get_starts_2comp(data = data,
+
+  par_DF <- get_starts_2comp_rest(data = data,
                              par_DF = par_DF)
 
   #check to ensure starting values are within bounds
@@ -296,7 +300,7 @@ get_params_2comp <- function(data,
   par_DF[start_low | start_high | start_nonfin,
          "start"] <- rowMeans(cbind(par_DF[start_low | start_high | start_nonfin,
                                            c("lower_bound",
-                                                                   "upper_bound")]))
+                                             "upper_bound")]))
 
   return(par_DF)
 

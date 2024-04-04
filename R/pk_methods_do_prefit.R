@@ -141,8 +141,7 @@ sigma_DF <- do.call(dplyr::group_by,
                               !!!obj$data_group) %>%
       dplyr::reframe(do.call(obj$stat_model[[this_model]]$params_fun,
                                args = c(list(dplyr::cur_data_all()),
-                                        obj$stat_model[[this_model]]$params_fun_args,
-                                        restrictive_clearance = restrictive_clearance)
+                                        obj$stat_model[[this_model]]$params_fun_args)
                                )
       ) %>% as.data.frame()
 

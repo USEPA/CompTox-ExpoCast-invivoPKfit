@@ -1,12 +1,12 @@
-#' Get starting values for 2-compartment model
+#' Get starting values for 1-compartment model assuming non-restrictive clearance
 #'
-#' Derive starting values for 2-compartment model parameters from available data
+#' Derive starting values for 1-compartment model parameters from available data
 #'
-#' This function is called internally by [get_params_2comp()] and should
+#' This function is called internally by [get_params_1comp()] and should
 #' generally not be called directly by the user.
 #'
-#' The full set of model parameters for the 2-compartment model includes `V1`,
-#' `kelim`, `k12`, `k21`, `kgutabs`, and `Fgutabs`. Whether each one can be
+#'The full set of model parameters for the 1-compartment model includes `Vdist`,
+#'`kelim`, `kgutabs`, `Fgutabs`, and `Rblood2plasma`. Whether each one can be
 #'estimated from the data depends on what routes of administration are included
 #'in the data.
 #'
@@ -17,19 +17,7 @@
 #'is extremely naive. This function is not itself intended to produce valid
 #'estimates for any of the model parameters, and it is highly unlikely to do so.
 #'
-#'At present, the starting guesses for the 2-compartment model are derived in
-#'the same way as for the 1-compartment model, for the parameters that are
-#'common to both. That is, the data are assumed to obey a 1-compartment model to
-#'derive starting guesses for `kelim`, `V1`, `kgutabs`, `Fgutabs_V1`, and
-#'`Fgutabs`.
-#'
-#'Then, starting values for `k12` and `k21` are arbitrarily set to
-#'0.1 and 0.5, respectively.
-#'
-#'The following description of the derivation process is therefore identical to
-#'that for [get_starts_1comp()].
-#'
-#'The derivation process
+#'The derivation process is as follows.
 #'
 #'First, data are filtered to exclude any non-detects.
 #'
@@ -39,27 +27,14 @@
 #'
 #'# Starting value for `kelim`
 #'
-#'If IV data exist, then only IV data are used to derive starting estimates for
-#'`kelim`, even if oral data also exist.
+#'This value is held constant such that it equals `CLtot`/`Vdist` as calculated
+#'by _httk_. It is not optimized in this case and `CLtot` is calculated assuming
+#'`restrictive.clearance = TRUE`.
 #'
-#'If only oral data exist, then the oral data are used to derive a starting
-#'estimate for `kelim`.
-#'
-#'Whichever data set is used (IV or oral), the starting value for `kelim` is
-#'derived by assuming that the range of observed time values in the data set
-#'spans two elimination half-lives. This implies that the elimination half-life
-#'is equal to the midpoint of observed time values, and that the starting value
-#'for the elimination time constant `kelim` is therefore `log(2)` divided by the
-#'midpoint of observed time values.
-#'
-#'Of course, this assumption is unlikely to be correct. However, we hope that it
-#'will yield a starting guess for `kelim` that is at least on the right order of
-#'magnitude.
-#'
-#' # Starting value for `V1`
+#' # Starting value for `Vdist`
 #'
 #' If IV data exist, then only IV data are used to derive a starting estimate
-#' for `V1`.
+#' for `Vdist`.
 #'
 #' This starting estimate is derived by assuming that the IV data obey a
 #' one-compartment model, which means that when concentrations are
@@ -83,12 +58,12 @@
 #' represents the expected body concentration immediately after IV injection of
 #' a unit dose (under the assumption that TK obeys a one-compartment model).
 #'
-#' Then, the volume of distribution `V1` is derived as `1/(10^A_log10)`. In
-#' other words, `V1` is the volume that would be required to produce a
+#' Then, the volume of distribution `Vdist` is derived as `1/(10^A_log10)`. In
+#' other words, `Vdist` is the volume that would be required to produce a
 #' concentration equal to `A_log10` after injecting a unit dose.
 #'
-#' (No starting value for `V1` can be derived with only oral data,
-#'but none is needed, because with only oral data, `V1` will not be estimated
+#' (No starting value for `Vdist` can be derived with only oral data,
+#'but none is needed, because with only oral data, `Vdist` will not be estimated
 #'from the data).
 #'
 #' # Starting value for `kgutabs`
@@ -106,10 +81,10 @@
 #' occur at one absorption half-life. Under this assumption, `kgutabs` is equal
 #' to `log(2)/tmax`, and this is taken as the starting value.
 #'
-#' # Starting value for `Fgutabs_V1`
+#' # Starting value for `Fgutabs_Vdist`
 #'
 #'If any oral data exist (whether or not IV data also exist), then the oral data
-#'are used to derive a starting value for `Fgutabs_V1`.
+#'are used to derive a starting value for `Fgutabs_Vdist`.
 #'
 #' If the kinetics obey a one-compartment model, then if concentrations are
 #' dose-normalized, log-transformed, and plotted vs. time, then at late time
@@ -118,7 +93,7 @@
 #'
 #' If this straight line is extrapolated back to time 0, then the resulting
 #' intercept (call it `A`), expressed on the natural scale, is equal to
-#' `Fgutabs_V1 * kgutabs/(kgutabs-kelim)`. See
+#' `Fgutabs_Vdist * kgutabs/(kgutabs-kelim)`. See
 #' https://www.boomer.org/c/p4/c09/c0902.php .
 #'
 #' Roughly, we approximate `A` on the log10 scale by extrapolating back from the peak along a
@@ -126,19 +101,20 @@
 #' value for `kelim`. So `log10(A) = Cmax_log10 + kelim*tmax`.
 #'
 #' Using the previously-derived starting values for `kgutabs` and `kelim`, then,
-#' the starting value for `Fgutabs_V1` can be derived as `A * (kgutabs-kelim)/kgutabs`.
+#' the starting value for `Fgutabs_Vdist` can be derived as `A * (kgutabs-kelim)/kgutabs`.
 #'
 #'# Starting value for `Fgutabs`
 #'
-#'If both oral and IV data exist, then the derived starting values for `V1`
-#'(from the IV data) and `Fgutabs_V1` (from the oral data) are multiplied to
+#'If both oral and IV data exist, then the derived starting values for `Vdist`
+#'(from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
 #'yield a derived starting value for `Fgutabs`.
+#'
 #'#Starting value for `Rblood2plasma`
 #'
 #'The starting value for `Rblood2plasma` is always set at a constant 1.
 #'
 #'@param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#' @param par_DF A `data.frame` with the following variables (e.g., as produced by [get_params_2comp()])
+#' @param par_DF A `data.frame` with the following variables (e.g., as produced by [get_params_1comp()])
 #' - `param_name`: Character: Names of the model parameters
 #' - `param_units`: Character: Units of the model parameters
 #' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
@@ -152,22 +128,27 @@
 #'  will be `NA_real_`
 #' @import httk
 #' @author Caroline Ring
-#' @family 2-compartment model functions
+#' @family 1-compartment model functions
 #' @family get_starts functions
 #' @family built-in model functions
-get_starts_2comp <- function(data,
-                             par_DF){
+#'
+get_starts_1comp_nonrest <- function(data, par_DF){
+  #initialize starting values for each parameter.
+  #if no IV data exist, then Vdist starting value will remain NA.
+  # if no oral data exist, then Fgutabs_Vdist and Fgutabs starting values will remain NA.
+  #if only one of IV or oral data exist, then Fgutabs starting value will remain NA.
 
-  kelim <- NA_real_
+  # kelim is constant will be the same regardless of present data
+  kelim <- httk::calc_total_clearance(dtxsid = unique(data$Chemical),
+                                      restrictive.clearance = FALSE,
+                                      suppress.messages = TRUE) /
+    httk::calc_vdist(dtxsid = unique(data$Chemical),
+                     suppress.messages = TRUE)
   kgutabs <- NA_real_
-  V1 <- NA_real_
-  Fgutabs_V1 <- NA_real_
-  k12 <- NA_real_
-  k21 <- NA_real_
+  Vdist <- NA_real_
+  Fgutabs_Vdist <- NA_real_
   Fgutabs <- NA_real_
   Rblood2plasma <- 1
-
-  # Get starting Concs from data
 
   # Get starting Concs from data
 
@@ -182,24 +163,21 @@ get_starts_2comp <- function(data,
                   Route %in% "oral")
 
   # Quick and dirty:
+
+
   #IV data estimates, if IV data exist
   if(nrow(ivdat)>0){
 
-    #assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
-
-    halflife <- mean(range(ivdat$Time))
-    kelim <- log(2)/halflife
-
-    #V1: extrapolate back from conc at min time at a slope of -kelim to get the intercept
-    #then V1 = 1/intercept
+    #Vdist: extrapolate back from conc at min time at a slope of -kelim to get the intercept
+    #then Vdist = 1/intercept
     C_tmin <- with(subset(ivdat, Time == min(Time)),
                    median(log10(Conc/Dose)))
     A_log10 <- C_tmin + kelim*min(ivdat$Time)
-    V1 <- 1/(10^A_log10)
+    Vdist <- 1/(10^A_log10)
   }
 
   if(nrow(podat)>0){
-    #if PO data exist, then we can get ka and Fgutabs/V1
+    #if PO data exist, then we can get ka and Fgutabs/Vdist
     #get peak time
     tCmax <- get_peak(x = podat$Time,
                       y = log10(podat$Conc/podat$Dose))
@@ -210,38 +188,25 @@ get_starts_2comp <- function(data,
     #so kgutabs = log(2)/tmax
     kgutabs <- log(2)/tmax
 
-    #if no IV data, then calculate kelim from oral data
-    if(nrow(ivdat)==0){
-      #and assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
-
-      halflife <- mean(range(podat$Time))
-      kelim <- log(2)/halflife
-    }
-
     #then extrapolate back from Cmax to time 0 with slope -kelim
-    Fgutabs_V1 <- 10^((Cmax + kelim*tmax))*(kgutabs - kelim)/(kgutabs)
+    Fgutabs_Vdist <- 10^((Cmax + kelim*tmax))*(kgutabs - kelim)/(kgutabs)
 
     if(nrow(ivdat)>0){
-      #if we had IV data, then we had a V1 estimate, so we can estimate Fgutabs too
-      Fgutabs <- Fgutabs_V1 * V1
+      #if we had IV data, then we had a Vdist estimate, so we can estimate Fgutabs too
+      Fgutabs <- Fgutabs_Vdist * Vdist
     }
   }
 
-  #arbitrary until I implement something more sophisticated
-  k21 <- 0.1
-  k12 <- 0.5
-
   starts <- c("kelim" = kelim,
               "kgutabs" = kgutabs,
-              "k12" = k12,
-              "k21" = k21,
-              "V1" = V1,
-              "Fgutabs_V1" = Fgutabs_V1,
+              "Vdist" = Vdist,
+              "Fgutabs_Vdist" = Fgutabs_Vdist,
               "Fgutabs" = Fgutabs,
               "Rblood2plasma" = Rblood2plasma)
 
-par_DF$start <- starts[par_DF$param_name]
-
+  par_DF$start <- starts[par_DF$param_name]
 
   return(par_DF)
 }
+
+

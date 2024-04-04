@@ -146,8 +146,7 @@
 #' @family built-in model functions
 #'
 get_starts_1comp <- function(data,
-                             par_DF,
-                             restrictive_clearance){
+                             par_DF){
  #initialize starting values for each parameter.
   #if no IV data exist, then Vdist starting value will remain NA.
   # if no oral data exist, then Fgutabs_Vdist and Fgutabs starting values will remain NA.
@@ -202,16 +201,8 @@ if(nrow(ivdat)>0){
     #if no IV data, then calculate kelim from oral data
     if(nrow(ivdat)==0){
       #and assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
-      if (is.logical(restrictive_clearance) && !is.na(restrictive_clearance)) {
-        kelim <- httk::calc_total_clearance(dtxsid = unique(podat$Chemical),
-                                            restrictive.clearance = restrictive_clearance,
-                                            suppress.messages = TRUE) /
-          httk::calc_vdist(dtxsid = unique(podat$Chemical),
-                           suppress.messages = TRUE)
-      } else {
-        halflife <- mean(range(podat$Time))
-        kelim <- log(2)/halflife
-      }
+      halflife <- mean(range(podat$Time))
+      kelim <- log(2)/halflife
     }
 
     #then extrapolate back from Cmax to time 0 with slope -kelim
