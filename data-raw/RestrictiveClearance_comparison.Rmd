@@ -218,17 +218,19 @@ new_pk <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE,
                       suppress.messages = FALSE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c("L-BFGS-B")) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   stat_error_model(error_group = vars(Chemical, Species, Reference)) +
-  stat_model(model = c("model_flat", "model_1comp",
-                       "model_1comp_rest", "model_1comp_nonrest"))
+  stat_model(model = c("model_flat", "model_1comp", "model_2comp",
+                       "model_1comp_rest", "model_1comp_nonrest",
+                       "model_2comp_rest", "model_2comp_nonrest"))
 new_pk <- do_data_info(new_pk)
 
 
 new_pk <- do_prefit(new_pk)
 
-new_pk$prefit$par_DF %>% View()
+new_pk$prefit$par_DF %>% arrange(Chemical, Species) %>% filter(param_name == "kelim") %>%
+  View()
 
 new_pk <- do_fit(new_pk) # For troubleshooting
 
@@ -245,8 +247,13 @@ eval_tkstats(new_pk) %>% View()
 AIC(new_pk) %>% filter(method %in% "L-BFGS-B") %>% arrange(Chemical, Species) %>%
   View()
 
-pl <- plot(new_pk, use_scale_conc = TRUE, method = "L-BFGS-B", n_interp = 10)
+pl2comp <- plot(new_pk, use_scale_conc = FALSE,
+           model = "model_2comp_nonrest",
+           n_interp = 10)
 
+
+pl2comp %>%
+  filter(Chemical %in% "DTXSID0021383") %>% pull(final_plot) %>% .[[1]]
 ```
 
 
