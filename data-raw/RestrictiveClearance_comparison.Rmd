@@ -186,7 +186,7 @@ as well as adding a restrictive_clearance argument in stat_model.
 
 ```{r running-invivoPKfit}
 minimal_pk <- pk(data = cvt %>%
-                   filter(analyte_dtxsid %in% unique(combined_clearance_df$Chemical)),
+                   filter(analyte_dtxsid %in% "DTXSID0020442"),
                  mapping = ggplot2::aes(
                    Chemical = analyte_dtxsid,
                    Chemical_Name = analyte_name_original,
@@ -235,6 +235,117 @@ old_pk <- do_fit(old_pk, n_cores = 6)
 # Unfortunately, it seems the optimizer fails 
 # Need to investigate why!!
 # Are the kelims calculated too far from those estimated from the data?
+
+
+```
+
+
+Why are so many fits failing?
+Well, we should take a look at the parameter which we are holding constant,
+`kelim` and whether the new starting points vastly differ from those in the
+starting points based on the data.
+
+For this I will just use the PK object I have saved `my_pk` and take the
+_prefit_ parameter estimations and first compare that with eventual optimized `kelim`.
+
+```{r kelim-questions}
+
+# Original data, filtered for common_chems
+# par_DF
+my_kelim_prefit <- my_pk$prefit$par_DF %>%
+  filter(param_name %in% "kelim",
+         Chemical %in% common_chems) %>%
+  distinct(Chemical, Species, param_name, lower_bound, upper_bound, start)
+
+my_kelim_fit <- coef(my_pk) %>%
+  inner_join(get_winning_model(my_pk)) %>%
+  ungroup() %>%
+  distinct(model, Chemical, Species, kelim) %>%
+  rename(fit_kelim = "kelim") %>%
+  filter(Chemical %in% common_chems)
+
+my_kelim_df <- inner_join(my_kelim_fit, my_kelim_prefit)
+
+
+httk_df <- rest_pk$prefit$par_DF %>%
+  filter(param_name %in% "kelim") %>%
+  distinct(Chemical, Species, param_name, start) %>%
+  rename(init_restrictive = "start") %>%
+  inner_join(
+    nonrest_pk$prefit$par_DF %>%
+  filter(param_name %in% "kelim") %>%
+  distinct(Chemical, Species, param_name, start) %>%
+  rename(init_nonrestrictive = "start"))
+
+
+full_df <- inner_join(my_kelim_df, httk_df) %>%
+  relocate(fit_kelim, .after = last_col())
+
+
+full_df %>%
+  ggplot(aes(x = Chemical)) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey30") +
+  geom_errorbar(aes(ymax = upper_bound, ymin = lower_bound)) +
+  geom_point(aes(y = fit_kelim, color = "Original Optimized")) +
+  geom_point(aes(y = init_restrictive, color = "Restrictive")) +
+  geom_point(aes(y = init_nonrestrictive, color = "Non-restrictive")) +
+  geom_point(aes(y = start, shape = "Original Initialized")) +
+  facet_grid(rows = vars(Species), scales = "free", space = "free") +
+  scale_color_manual(name = "kelim",
+                     breaks = c("Original Optimized", "Restrictive", "Non-restrictive"),
+                     values = c("Original Optimized" = "skyblue4", 
+                                "Restrictive" = "orange2",
+                                "Non-restrictive" = "green4")) +
+  scale_shape_manual(name = "",
+                     values = 4) +
+  coord_flip() +
+  scale_y_log10(labels = scales::label_math(format = log10)) +
+  theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        legend.direction = "vertical",
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.text.y = element_blank(),
+        strip.text.y = element_text(angle = 0))
+
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "kelim_compare_2024_0329.png"),
+       height = 11,
+       width = 8.5)
+```
+
+```{r testing_optimx}
+test_optimx <- do.call(
+          optimx::optimx,
+          args = c(
+            list(par = opt_params,
+                 fn = log_likelihood,
+                 lower = lower_params,
+                 upper = upper_params),
+            #method and control
+            settings_optimx,
+            #... additional args to log_likelihood
+            list(
+              const_params = const_params,
+              data = data,
+              data_sigma_group = data$data_sigma_group,
+              modelfun = modelfun,
+              dose_norm = dose_norm,
+              log10_trans = log10_trans,
+              negative = TRUE,
+              force_finite = TRUE,
+              suppress.messages = FALSE
+            ) #end list()
+          ) #end args = c()
+        ) #end do.call
+```
+
+
+
+```{r}
 
 rest_wm <- get_winning_model(rest_pk)
 rest_AIC <- AIC(rest_pk)
