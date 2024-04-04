@@ -54,30 +54,29 @@ coef.pk <- function(obj,
     unlist() %>%
     unique()
 
+#### Adding sigmas and constant parameters
 
-  coefs <- obj$fit %>% tidyr::unnest(cols = fit) %>%
-    dplyr::group_by(model, method, !!!obj$data_group)
-
-  coefs <- dplyr::left_join(coefs, const_pars,
-                                             by = c(sapply(obj$data_group,
-                                                           rlang::as_label),
-                                                    "model")) %>%
-    mutate(Rblood2plasma = coalesce(Rblood2plasma.x, Rblood2plasma.y))
-
-
-  # this pivot_longer provides the sigmas per error group
-  coefs <- suppressMessages(coefs  %>%
+  coefs <- suppressMessages(obj$fit %>% tidyr::unnest(cols = fit) %>%
+                              dplyr::group_by(model,method, !!!data_group) %>%
                               dplyr::select(dplyr::starts_with("sigma_"),
-                                            dplyr::any_of(possible_model_params)) %>%
-                               tidyr::pivot_longer(cols = starts_with("sigma_"),
-                                                   names_to = "error_group",
-                                                   values_to = "sigma_value") %>%
-                               dplyr::filter(stringr::str_detect(error_group,
-                                                                 paste(Chemical,Species,sep = "."))) %>%
+                                            tidyselect::any_of(possible_model_params)) %>%
+                              tidyr::pivot_longer(cols = starts_with("sigma_"),
+                                                  names_to = "error_group",
+                                                  values_to = "sigma_value") %>%
+                              dplyr::filter(stringr::str_detect(error_group,
+                                                                paste(Chemical,
+                                                                      Species,
+                                                                      sep = ".")))
+                            )
+  coefs <- suppressMessages(dplyr::left_join(coefs, const_pars))
 
-                               dplyr::relocate(tidyselect::all_of(c("error_group", "sigma_value")),
-                                               .after = tidyselect::last_col()))
+  # This next thing should replace NAs with the constant value...
+  for (this_param in intersect(names(const_pars), possible_model_params)) {
+    coefs[this_param] <- tidy::replace_na(coefs[[this_param]],
+                                          replace = unique(const_pars[[this_param]]))
+  }
 
+####
 
   time_group <- get_data(obj = obj) %>%
     dplyr::select(!!!obj$data_group, Time.Units, Time_trans.Units) %>%

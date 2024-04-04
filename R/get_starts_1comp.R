@@ -176,17 +176,8 @@ get_starts_1comp <- function(data,
 if(nrow(ivdat)>0){
 
   #assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
-  # Unless you want to use estimate from httk (for comparing restrictive or non-restrictive clearance)
-  if (is.logical(restrictive_clearance) && !is.na(restrictive_clearance)) {
-    kelim <- httk::calc_total_clearance(dtxsid = unique(ivdat$Chemical),
-                                        restrictive.clearance = restrictive_clearance,
-                                        suppress.messages = TRUE) /
-      httk::calc_vdist(dtxsid = unique(ivdat$Chemical),
-                       suppress.messages = TRUE)
-  } else {
-    halflife <- mean(range(ivdat$Time))
-    kelim <- log(2)/halflife
-  }
+  halflife <- mean(range(ivdat$Time))
+  kelim <- log(2)/halflife
 
   #Vdist: extrapolate back from conc at min time at a slope of -kelim to get the intercept
   #then Vdist = 1/intercept
@@ -240,15 +231,6 @@ if(nrow(ivdat)>0){
               "Rblood2plasma" = Rblood2plasma)
 
 par_DF$start <- starts[par_DF$param_name]
-
-# Need to set highs and lows if we set kelim as constant
-if (is.logical(restrictive_clearance) && !is.na(restrictive_clearance)) {
-  par_DF <- par_DF %>%
-    mutate(lower_bound = ifelse(param_name %in% "kelim",
-                                start*0.9, start),
-           upper_bound = ifelse(param_name %in% "kelim",
-                                start*1.1, start))
-}
 
   return(par_DF)
 }

@@ -22,9 +22,6 @@
 #' The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
 #'
 #' @param obj A `pk` object
-#' @param restrictive_clearance Logical. When NULL (default) it estimates `kelim`
-#' but when set to TRUE or FALSE it uses a constant definition of `kelim` by
-#' dividing total clearance by volume of distribution calculated by `httk`.
 #' @param ... Additional arguments. Not in use.
 #' @return The same `pk` object, but with a new element `prefit`, containing the
 #'   results of pre-fit calculations and checks for each model and for the error
@@ -32,7 +29,6 @@
 #' @export
 #' @author Caroline Ring
 do_prefit.pk <- function(obj,
-                         restrictive_clearance = NULL,
                          ...){
 
   objname <- deparse(substitute(obj))

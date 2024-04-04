@@ -68,6 +68,7 @@ fit_group <- function(data,
     }else{
       const_params <- NULL
     }
+
     #Now call optimx::optimx() and do the fit
     suppressWarnings(
       optimx_out <- tryCatch({
@@ -76,6 +77,7 @@ fit_group <- function(data,
           args = c(
             list(par = opt_params,
                  fn = log_likelihood,
+                 # save.failures = TRUE,
                  lower = lower_params,
                  upper = upper_params),
             #method and control

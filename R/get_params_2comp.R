@@ -164,8 +164,7 @@ get_params_2comp <- function(data,
                                                                  "(",
                                                                  unique(Dose.Units),
                                                                  ")"),
-                                          Rblood2plasma = "unitless ratio"),
-                             restrictive_clearance = NULL){
+                                          Rblood2plasma = "unitless ratio")){
   #param names
   param_name <-c("kelim",
                   "V1",

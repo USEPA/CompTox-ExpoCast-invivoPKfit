@@ -156,8 +156,7 @@
 #' @family get_starts functions
 #' @family built-in model functions
 get_starts_2comp <- function(data,
-                             par_DF,
-                             restrictive_clearance){
+                             par_DF){
 
   kelim <- NA_real_
   kgutabs <- NA_real_
@@ -257,13 +256,6 @@ get_starts_2comp <- function(data,
 
 par_DF$start <- starts[par_DF$param_name]
 
-if (is.logical(restrictive_clearance) && !is.na(restrictive_clearance)) {
-  par_DF <- par_DF %>%
-    mutate(lower_bound = ifelse(param_name %in% "kelim",
-                                start*0.9, start),
-           upper_bound = ifelse(param_name %in% "kelim",
-                                start*1.1, start))
-}
 
   return(par_DF)
 }
