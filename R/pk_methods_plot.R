@@ -82,6 +82,7 @@ plot.pk <- function(x,
                     n_interp = 10,
                     fit_limits = NULL,
                     print_out = FALSE,
+                    best_fit = FALSE,
                     ...){
 
   #ensure that the model has at least been preprocessed
@@ -125,6 +126,7 @@ plot.pk <- function(x,
   if (is.null(fit_limits)) {
     fit_limits <- c(1.5, 0.05)
   }
+
   if (is.numeric(fit_limits) & length(fit_limits) <= 2) {
     limit_predicted <- TRUE
     if (log10_C) {
@@ -328,6 +330,10 @@ plot.pk <- function(x,
                            method = method,
                            exclude = FALSE,
                            include_NAs = TRUE)
+    if (best_fit) {
+      interp_data <- dplyr::left_join(get_winning_model(obj = x),
+                                      interp_data)
+    }
 
     # rowwise can be taxing for function calls
     # This process is inefficient, need to rewrite using a simple

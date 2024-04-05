@@ -135,8 +135,11 @@ eval_tkstats.pk <- function(obj,
                             method = method,
                             tk_group = tk_group,
                             exclude = exclude) %>%
-    dplyr::right_join(winmodel_df) %>%
-    dplyr::ungroup()
+    ungroup()
+
+  tkstats_df <- dplyr::left_join(winmodel_df %>% dplyr::ungroup(),
+                                 tkstats_df,
+                                 by = c(data_grp_vars, "method", "model"))
 
   # Assess group variables
   # Are all error_group variables in data_group, error group might be subset

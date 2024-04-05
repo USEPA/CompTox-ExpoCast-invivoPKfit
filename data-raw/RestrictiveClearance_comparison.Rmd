@@ -14,6 +14,7 @@ This vignette describes comparisons between invivoPKfit predicted and those from
 ```{r library_loading}
 devtools::load_all()
 library(httk)
+library(tidyverse)
 my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 ```
 
@@ -186,7 +187,7 @@ as well as adding a restrictive_clearance argument in stat_model.
 
 ```{r running-invivoPKfit}
 minimal_pk <- pk(data = cvt %>%
-                   filter(analyte_dtxsid %in% common_chems[1:8]),
+                   filter(analyte_dtxsid %in% common_chems),
                  mapping = ggplot2::aes(
                    Chemical = analyte_dtxsid,
                    Chemical_Name = analyte_name_original,
@@ -236,12 +237,13 @@ new_pk <- do_fit(new_pk) # For troubleshooting
 
 
 
-new_pk <- do_fit(new_pk, n_cores = 6) 
+new_pk <- do_fit(new_pk, n_cores = 10) 
 # Multidplyr error because of forgotten browser() call within log_likelihood
 new_pk$fit %>% unnest(fit) %>% View()
 
 coef(new_pk) %>% View()
-eval_tkstats(new_pk) %>% View()
+eval_tkstats(new_pk, finite_only = FALSE) %>% View()
+get_winning_model(new_pk) %>% View("winning_model")
 
 
 AIC(new_pk) %>% filter(method %in% "L-BFGS-B") %>% arrange(Chemical, Species) %>%
@@ -332,50 +334,28 @@ full_df %>%
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "kelim_compare_2024_0329.png"),
        height = 11,
        width = 8.5)
-```
 
-```{r testing_optimx}
-test_optimx <- do.call(
-          optimx::optimx,
-          args = c(
-            list(par = opt_params,
-                 fn = log_likelihood,
-                 lower = lower_params,
-                 upper = upper_params),
-            #method and control
-            settings_optimx,
-            #... additional args to log_likelihood
-            list(
-              const_params = const_params,
-              data = data,
-              data_sigma_group = data$data_sigma_group,
-              modelfun = modelfun,
-              dose_norm = dose_norm,
-              log10_trans = log10_trans,
-              negative = TRUE,
-              force_finite = TRUE,
-              suppress.messages = FALSE
-            ) #end list()
-          ) #end args = c()
-        ) #end do.call
+
 ```
 
 
 
 ```{r}
 
-rest_wm <- get_winning_model(rest_pk)
-rest_AIC <- AIC(rest_pk)
-rest_rsq <- rsq(rest_pk)
+new_wm <- get_winning_model(new_pk)
+new_AIC <- AIC(new_pk)
+new_rsq <- rsq(new_pk)
 
-eval_tkstats(rest_pk) %>% View()
-residuals(rest_pk) %>% View()
-
+new_tkstats <- eval_tkstats(new_pk, finite_only = FALSE)
 
 
-pl <- plot(rest_pk, n_interp = 12, use_scale_conc = TRUE)
+residuals(new_pk) %>% View()
+
+
+
+pl <- plot(new_pk, n_interp = 12, use_scale_conc = TRUE, best_fit = TRUE)
 pdf(file = paste0(Sys.getenv("FIG_DIR"),
-              "RestrictiveCL_AllFits_Final_202402_08.pdf"),
+              "BestFits_Final_2024_0405.pdf"),
     height = 6, width = 10)
 for (i in 1:nrow(pl)) {
   print(pl$final_plot[[i]])
@@ -383,22 +363,163 @@ for (i in 1:nrow(pl)) {
 dev.off()
 
 
+```
+
+Comparing total clearance estimates for those where a restrictive or non-restrictive model
+was the "best fit" as determined by AIC.
+
+```{r cltot-comparison}
+new_cltot2 <- new_tkstats %>% 
+  # filter(str_detect(model, "rest")) %>%
+  select(Chemical, Species, Media, Route, 
+         model, method,
+         CLtot.tkstats, CLtot.nca) %>%
+  filter(!is.na(CLtot.tkstats)) %>%
+  mutate(clearance_type = ifelse(str_detect(model, "nonrest"),
+                                "NonRestrictive",
+                                ifelse(str_detect(model, "rest"),
+                                       "Restrictive",
+                                       "optimized kelim"))) %>%
+  rowwise() %>%
+  mutate(CLtot.httk_rest = calc_total_clearance(dtxsid = Chemical,
+                                           restrictive.clearance = TRUE),
+         CLtot.httk_nonrest = calc_total_clearance(dtxsid = Chemical,
+                                           restrictive.clearance = FALSE))
 
 
-# Non-restrictive fits (constant kelim)
 
-pl <- plot(nonrest_pk, n_interp = 12, use_scale_conc = TRUE)
-pdf(file = paste0(Sys.getenv("FIG_DIR"),
-              "Non-restrictiveCL_AllFits_Final_202402_08.pdf"),
-    height = 6, width = 10)
-for (i in 1:nrow(pl)) {
-  print(pl$final_plot[[i]])
-}
-dev.off()
+new_cltot2 %>%
+  ggplot(aes(x = Chemical)) +
+  geom_point(aes(y = CLtot.httk_rest),shape = 19, size = 2, color = "green4") +
+  geom_point(aes(y = CLtot.httk_nonrest),shape = 19, size = 2, color = "orange2") +
+  geom_point(aes(y = CLtot.tkstats), shape = 1, size = 3, color = "black", stroke = 1) +
+  scale_y_log10(labels = scales::label_math(format = log10)) +
+  geom_hline(yintercept = c(0.01, 0.1, 1, 10)) +
+  coord_flip() +
+  facet_grid(rows = vars(clearance_type),
+             scales = "free", space = "free") +
+  labs(title = "Total Clearance for constant kelim \"best fits\" (empty)\nand httk calculations (filled)") +
+  theme_bw() +
+  theme(axis.line = element_line(linewidth = 1),
+        axis.text = element_text(size = 12),
+        axis.title = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        plot.background = element_rect(fill = "white"))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "Cltot_backcompare_2024_0405.png"),
+       height = 4,
+       width = 6)
+
+
+```
+
+```{r chemical-correlation}
+new_AIC %>%
+  ungroup() %>%
+  filter(model %in% c("model_1comp", "model_2comp"),
+         Species %in% "rat") %>%
+  group_by(Chemical) %>%
+  filter(AIC == min(AIC)) %>%
+  mutate(estimate = "nonConst") %>%
+  distinct(Chemical, model, estimate) -> nAIC_nonConst
+new_AIC %>%
+  ungroup() %>%
+  filter(model %in% c("model_1comp_rest", "model_2comp_rest"),
+         Species %in% "rat") %>%
+  group_by(Chemical) %>%
+  filter(AIC == min(AIC)) %>%
+  mutate(estimate = "Rest") %>%
+  distinct(Chemical, model, estimate) -> nAIC_rest
+new_AIC %>%
+  ungroup() %>%
+  filter(model %in% c("model_1comp_nonrest", "model_2comp_nonrest"),
+         Species %in% "rat") %>%
+  group_by(Chemical) %>%
+  filter(AIC == min(AIC)) %>%
+  mutate(estimate = "nonRest") %>%
+  distinct(Chemical, model, estimate) -> nAIC_nonrest
+
+full_nAIC <- bind_rows(nAIC_nonConst, nAIC_rest) %>%
+  bind_rows(nAIC_nonrest)
+
+new_tkstats_full <- get_tkstats(new_pk)
+
+new_tkstats_full %>%
+  filter(Species %in% "rat", !(model %in% "model_flat")) %>%
+  distinct(Chemical, model, CLtot) %>%
+  inner_join(full_nAIC) %>%
+  na.omit() %>% 
+  distinct(Chemical, estimate, CLtot) %>%
+  pivot_wider(names_from = estimate,
+              values_from = CLtot) %>%
+  rowwise() %>%
+  mutate(CLtot.httk_rest = calc_total_clearance(dtxsid = Chemical,
+                                           restrictive.clearance = TRUE),
+         CLtot.httk_nonrest = calc_total_clearance(dtxsid = Chemical,
+                                           restrictive.clearance = FALSE)) %>%
+  ungroup() %>%
+  mutate(A_rest = log(nonConst) - log(CLtot.httk_rest),
+         A_nonrest = log(nonConst) - log(CLtot.httk_nonrest),
+         B_rest = log(Rest) - log(CLtot.httk_rest),
+         B_nonrest = log(Rest) - log(CLtot.httk_nonrest),
+         C_rest = log(nonRest) - log(CLtot.httk_rest),
+         C_nonrest = log(nonRest) - log(CLtot.httk_nonrest)) %>%
+  select(Chemical, A_rest:C_nonrest) -> df_valcomp
+
+df_valcomp %>% 
+  column_to_rownames(var = "Chemical") %>%
+  t() %>%
+  as.matrix() %>%
+  cor() %>%
+  round(digits = 3) -> val_cormat
+
+hclust(d = as.dist(1-abs(val_cormat)), method = "complete") %>% plot()
+
+hclust(d = as.dist(1-abs(val_cormat)), method = "complete") -> val_hclust
+
+corrplot::corrplot(abs(val_cormat))
+
+#reorder the Chemical names prior to plotting
+df_valcomp %>%
+  mutate(Chemical = factor(x = Chemical,
+                           levels = val_hclust$labels[val_hclust$order])) %>%
+  pivot_longer(cols = A_rest:C_nonrest,
+               names_to = "comparison", values_to = "logres") %>%
+  mutate(comparison = case_when(
+    comparison == "A_nonrest" ~ "free kelim vs httk nonrestrictive",
+    comparison == "A_rest" ~ "free kelim vs httk restrictive",
+    comparison == "B_nonrest" ~ "restrictive kelim vs httk nonrestrictive",
+    comparison == "B_rest" ~ "restrictive kelim vs httk restrictive",
+    comparison == "C_nonrest" ~ "nonrestrictive kelim vs httk nonrestrictive",
+    comparison == "C_rest" ~ "nonrestrictive kelim vs httk restrictive",
+  ),
+  comparison = factor(comparison,
+  levels = c("free kelim vs httk nonrestrictive",
+             "free kelim vs httk restrictive",
+             "restrictive kelim vs httk nonrestrictive",
+             "restrictive kelim vs httk restrictive",
+             "nonrestrictive kelim vs httk nonrestrictive",
+             "nonrestrictive kelim vs httk restrictive"))) %>%
+  ggplot(aes(x = comparison, y = Chemical, fill = logres)) +
+  geom_tile() +
+  scale_fill_gradient2(mid = "grey5", high = "magenta", low = "green",
+                       name = "Total Clearance\nlog-scale difference") +
+  coord_fixed(ratio = 0.3) +
+  theme_bw() +
+  theme(axis.text.x = element_text(hjust = 1, angle = 45),
+        axis.ticks.y = element_blank(),
+        panel.grid = element_blank(),
+        axis.title.x = element_blank())
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "Cltot_compare_heatmap_2024_0405.png"),
+       height = 14,
+       width = 8)
+
+```
 
 
 
-
+```{r dawson}
 # try dawson
 httk::load_dawson2021()
 
