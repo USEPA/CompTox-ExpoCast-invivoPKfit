@@ -128,20 +128,28 @@
 #' @family built-in model functions
 
 get_params_1comp_cl <- function(data,
-                             lower_bound = ggplot2::aes(kelim = log(2)/(2*max(Time_trans)),
+                             lower_bound = ggplot2::aes(Q_totli = NA,
+                                                        Q_gfr = NA,
+                                                        Fup = 0,
+                                                        Clint = 0,
                                                         Vdist = 0.01,
                                                         Fgutabs = 0.0,
                                                         kgutabs = log(2)/(2*max(Time_trans)),
                                                         Fgutabs_Vdist = 0.01,
                                                         Rblood2plasma = 1e-2),
-                             upper_bound = ggplot2::aes(kelim = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+                             upper_bound = ggplot2::aes(Q_totli = NA,
+                                                        Q_gfr = NA,
+                                                        Fup = 1,
+                                                        Clint = 1E5,
                                                         Vdist = 100,
                                                         Fgutabs = 1,
                                                         kgutabs = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                                         Fgutabs_Vdist = 1e2,
                                                         Rblood2plasma = 100,),
-                             param_units = ggplot2::aes(kelim = paste0("1/", #kelim
-                                                                       unique(Time_trans.Units)),
+                             param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4",
+                                                        Q_gfr = "L/h/kg ^3/4",
+                                                        Fup = "unitless fraction",
+                                                        Clint = "L/h/kg",
                                                         Vdist = paste0("(", #Vdist
                                                                        unique(Dose.Units),
                                                                        ")",
@@ -159,7 +167,8 @@ get_params_1comp_cl <- function(data,
                                                                                "(",
                                                                                unique(Dose.Units),
                                                                                ")"),
-                                                        Rblood2plasma = "unitless ratio")){
+                                                        Rblood2plasma = "unitless ratio"),
+                             restrictive = FALSE){
   #param names
   param_name <- c("Q_totli",
                   "Q_gfr",
@@ -172,28 +181,18 @@ get_params_1comp_cl <- function(data,
                   "Rblood2plasma")
 
 
-  # May just make a static version of this?
-  # Or combine it with another table
-  init_Q_gfr <- httk::physiology.data %>%
-    filter(Parameter %in% "GFR") %>%
-    pivot_longer(cols = Mouse:Monkey,
-                 names_to = "Species",
-                 values_to = "param_value") %>%
-    mutate(Species = tolower(Species))
 
-  if (init_Q_gfr$Species %in% data$Species) {
-    init_Q_gfr <- init_Q_gfr %>%
-      dplyr::filter(Species == unique(data$Species)) %>%
-      dplyr::pull(param_value)
-  } else {
 
-  }
+
   #Default lower bounds, to be used in case the user specified a non-default
   #value for the `lower_bound` argument, but did not specify expressions for all
   #parameters. Any parameters not specified in the `lower_bound` argument will
   #take their default lower bounds defined here. This should be the same as the
   #default value for the `lower_bound` argument.
-  lower_bound_default = ggplot2::aes(kelim = log(2)/(2*max(Time_trans)),
+  lower_bound_default = ggplot2::aes(Q_totli = NA,
+                                     Q_gfr = NA,
+                                     Fup = 0,
+                                     Clint = 0,
                                      Vdist = 0.01,
                                      Fgutabs = 0,
                                      kgutabs = log(2)/(2*max(Time_trans)),
@@ -212,7 +211,10 @@ get_params_1comp_cl <- function(data,
   #parameters. Any parameters not specified in the `upper_bound` argument will
   #take their default upper bounds defined here. This should be the same as the
   #default value for the `upper_bound` argument.
-  upper_bound_default = ggplot2::aes(kelim = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+  upper_bound_default = ggplot2::aes(Q_totli = NA,
+                                     Q_gfr = NA,
+                                     Fup = 1,
+                                     Clint = 1E5,
                                      Vdist = 100,
                                      Fgutabs = 1,
                                      kgutabs = log(2)/(0.5*min(Time_trans[Time_trans>0])),
@@ -295,11 +297,14 @@ get_params_1comp_cl <- function(data,
 
   # now get starting values
   par_DF <-  get_starts_1comp(data = data,
-                              par_DF = par_DF)
+                              par_DF = par_DF,
+                              restrictive = restrictive)
 
 
   #check to ensure starting values are within bounds
   #if not, then replace them by a value halfway between bounds
+  # Note here that parameter lower and upper bounds can be EQUAL to start value
+  # This is useful for non-optimized parameters
   start_low <- (par_DF$start < par_DF$lower_bound) %in% TRUE
   start_high <- (par_DF$start > par_DF$upper_bound) %in% TRUE
   start_nonfin <- !is.finite(par_DF$start)

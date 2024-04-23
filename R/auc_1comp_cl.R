@@ -1,14 +1,15 @@
-#'Analytical 1-compartment model
+
+#' Analytic AUC for 1-compartment model
 #'
-#'Calculates plasma concentrations vs. time according to the analytical solution
-#'for the 1-compartment model, for single bolus doses (IV and/or oral).
-#'
+#' Calculate area under the plasma concentration vs. time curve for the
+#' 1-compartment model, using an analytical equation (the integral of the
+#' 1-compartment model equation with respect to time).
 #'
 #'# Required parameters
 #'
 #'`params` must include the following named items:
 #'   \describe{
-#'   \item{Clint}{intrinsic clearance by hepatocytes, 1/time.}
+#'   \item{kelim}{Elimination rate, 1/time.}
 #'   \item{Vdist}{Apparent volume of central compartment, volume/unit BW. Or see below for
 #'   `Fgutabs_Vdist`}
 #'   }
@@ -52,63 +53,73 @@
 #'@param medium A character vector reflecting the medium in which each resulting
 #'  concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 #'  Must be same length as `time` and `dose`, or length 1.
-#'@param restrictive A logical value (TRUE or FALSE. Default: FALSE) that says whether the
-#'assumption is that the clearance is restrictive or non-restrictive
 #'
-#'@return A vector of blood or plasma concentration values  corresponding
-#'  to `time`.
+#'
+#'@return A vector of plasma AUC values (concentration*time) corresponding to `time`.
 #'
 #'@author Caroline Ring, John Wambaugh
-#'
-#'@export cp_1comp
+#' @export auc_1comp
 #' @family built-in model functions
 #' @family 1-compartment model functions
-#' @family model concentration functions
-cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
-                        restrictive = FALSE) {
+#' @family model AUC functions
+
+auc_1comp_cl <- function(params,
+                      time,
+                      dose,
+                      route,
+                      medium){
+
   params <- fill_params_1comp_cl(params)
 
   check_msg <- check_params_1comp_cl(params = params,
-                                     route = route,
-                                     medium = medium)
+                                  route = route,
+                                  medium = medium)
 
-  if (!(check_msg %in% "Parameters OK")) {
-    stop(paste("cp_1comp():",
+  if(!(check_msg %in% "Parameters OK")){
+    stop(paste("cp_1comp_cl():",
                check_msg))
   }
 
-
+  #for readability, assign params to variables inside this function
+  # for(x in names(params)){
+  #   assign(x, unname(params[x]))
+  # }
   list2env(as.list(params), envir = as.environment(-1))
 
-  # compute total clearance
-  Clhep <- (Q_totli * Fup * Clint)/(Q_totli + (Fup * Clint/Rblood2plasma))
-  Cltot <- Q_gfr + Clhep
-  Cltot_Vdist <- Cltot/Vdist
 
-  #compute plasma concentration
-  cp <- dose * ifelse(
-    route %in% "iv",
-    exp(-Cltot_Vdist * time) / Vdist,
-    #iv route
-    ifelse(
-      rep(Cltot_Vdist != kgutabs, #oral route
-          length(route)),
-      #equation when kelim != kgutabs
-      (Fgutabs_Vdist *
-         kgutabs) /
-        (kgutabs - Cltot_Vdist) *
-        (exp(-Cltot_Vdist * time) -
-           exp(-kgutabs * time)),
-      #alternate equation when kelim == kgutabs
-      Fgutabs_Vdist  * Cltot_Vdist *
-        time *
-        exp(-Cltot_Vdist * time)
-    )
+  Cl_hep <- Q_totli*Fup*Clint/(Q_totli + (Fup*Clint/Rblood2plasma))
+  Cl_tot <- Q_gfr + Cl_hep
+
+  auc <- dose * ifelse(route %in% "iv",
+                       1/(Vdist*kelim) - #IV model
+                         exp(-time*kelim)/
+                         (Vdist*kelim), #iv route
+                       ifelse(rep(kelim != kgutabs, #oral route
+                                  length(route)),
+                              #equation when kelim != kgutabs
+                              -1*
+                                Fgutabs_Vdist*kgutabs*
+                                (1/kgutabs - 1/kelim)/
+                                ((-kelim + kgutabs)) +
+                                1*
+                                Fgutabs_Vdist*kgutabs*
+                                (exp(-time*kgutabs)/kgutabs -
+                                   exp(-time*kelim)/kelim)/
+                                ((-kelim + kgutabs)),
+                              #alternate equation when kelim == kgutabs
+                              1*Fgutabs_Vdist/
+                                (kelim) +
+                                (-1*Fgutabs_Vdist*
+                                   time*kelim -
+                                   1*Fgutabs)*
+                                exp(-time*kelim)/
+                                (kelim)
+                       )
   )
 
-  cp <- ifelse(medium %in% "blood",
-               Rblood2plasma * cp,
-               cp)
+  auc <- ifelse(medium %in% "blood",
+                Rblood2plasma * auc,
+                auc)
 
-  return(cp)
+  return(auc)
 }

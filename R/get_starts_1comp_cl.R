@@ -146,20 +146,63 @@
 #' @family built-in model functions
 #'
 get_starts_1comp_cl <- function(data,
-                             par_DF){
+                             par_DF,
+                             restrictive){
   #initialize starting values for each parameter.
   #if no IV data exist, then Vdist starting value will remain NA.
   # if no oral data exist, then Fgutabs_Vdist and Fgutabs starting values will remain NA.
   #if only one of IV or oral data exist, then Fgutabs starting value will remain NA.
-  Q_totli <- httk::tissue.data
-
-
+  # May just make a static version of this?
+  # Or combine it with another table
   kelim <- NA_real_
   kgutabs <- NA_real_
   Vdist <- NA_real_
-  Fgutabs_Vdist <- NA_real_
   Fgutabs <- NA_real_
-  Rblood2plasma <- 1
+  Fgutabs_Vdist <- NA_real_
+  init_Fup <- 1
+
+
+
+  Q_gfr <- httk::physiology.data %>%
+    dplyr::filter(Parameter %in% "GFR") %>%
+    tidyr::pivot_longer(cols = Mouse:Monkey,
+                        names_to = "Species",
+                        values_to = "param_value")
+  Q_gfr <- setNames(object = init_Q_gfr[["param_value"]],
+                         nm = tolower(init_Q_gfr[["Species"]]))
+
+  Q_totli <- httk::tissue.data %>%
+    dplyr::filter(variable %in% "Flow (mL/min/kg^(3/4))",
+                  Tissue %in% "liver")
+  Q_totli <- setNames(object = init_Q_totli[["value"]],
+                           nm = tolower(init_Q_totli[["Species"]]))
+
+  this_species <- unique(data$Species)
+  if (names_Q_gfr %in% this_species) {
+    init_Q_gfr <- init_Q_gfr[[this_species]]
+    init_Q_totli <- init_Q_totli[[this_species]]
+  } else {
+    init_Q_gfr <- init_Q_gfr[["human"]]
+    init_Q_totli <- init_Q_totli[["human"]]
+    message("Species not in database, using human values for Q_gfr & Q_totli")
+
+  }
+
+  if (!restrictive) {
+
+    Fup <- supressWarnings(httk::parameterize_1comp(
+      dtxsid = unique(data[["Chemical"]]),
+      restrictive.clearance = restrictive)[["Funbound.plasma"]])
+  }
+
+  Rblood2plasma <- supressWarnings(httk::parameterize_1comp(
+    dtxsid = unique(data[["Chemical"]]),
+    restrictive.clearance = restrictive)[["Rblood2plasma"]])
+
+  Clint <- supressWarnings(httk::parameterize_1comp(
+    dtxsid = unique(data[["Chemical"]]),
+    restrictive.clearance = restrictive)[["Clint"]])
+
 
   # Get starting Concs from data
 
@@ -173,6 +216,10 @@ get_starts_1comp_cl <- function(data,
   podat <- subset(tmpdat,
                   Route %in% "oral")
 
+  Cl_hep <- Q_totli*Fup*Clint/(Q_totli + (Fup*Clint/Rblood2plasma))
+  Cl_tot <- Q_gfr + Cl_hep
+
+
   # Quick and dirty:
   #IV data estimates, if IV data exist
   if(nrow(ivdat)>0){
@@ -181,12 +228,8 @@ get_starts_1comp_cl <- function(data,
     halflife <- mean(range(ivdat$Time))
     kelim <- log(2)/halflife
 
-    #Vdist: extrapolate back from conc at min time at a slope of -kelim to get the intercept
-    #then Vdist = 1/intercept
-    C_tmin <- with(subset(ivdat, Time == min(Time)),
-                   median(log10(Conc/Dose)))
-    A_log10 <- C_tmin + kelim*min(ivdat$Time)
-    Vdist <- 1/(10^A_log10)
+    #Vdist: calculate this based on Cltot/kelim
+    Vdist <- Cl_tot/kelim
   }
 
   if(nrow(podat)>0){
@@ -206,18 +249,21 @@ get_starts_1comp_cl <- function(data,
       #and assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
       halflife <- mean(range(podat$Time))
       kelim <- log(2)/halflife
+      Vdist <- Cl_tot/kelim
     }
+
 
     #then extrapolate back from Cmax to time 0 with slope -kelim
     Fgutabs_Vdist <- 10^((Cmax + kelim*tmax))*(kgutabs - kelim)/(kgutabs)
-
-    if(nrow(ivdat)>0){
-      #if we had IV data, then we had a Vdist estimate, so we can estimate Fgutabs too
-      Fgutabs <- Fgutabs_Vdist * Vdist
-    }
+    #if we had IV data, then we had a Vdist estimate, so we can estimate Fgutabs too
+    Fgutabs <- Fgutabs_Vdist * Vdist
   }
 
-  starts <- c("kelim" = kelim,
+
+  starts <- c("Q_totli" = Q_totli,
+              "Q_gfr" = Q_gfr,
+              "Fup" = Fup,
+              "Clint" = Clint,
               "kgutabs" = kgutabs,
               "Vdist" = Vdist,
               "Fgutabs_Vdist" = Fgutabs_Vdist,
