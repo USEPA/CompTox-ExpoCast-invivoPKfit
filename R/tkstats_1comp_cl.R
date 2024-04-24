@@ -71,7 +71,7 @@
 #' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed).
 #'@export
 #'@author John Wambaugh, Caroline Ring
-tkstats_1comp <- function(pars,
+tkstats_1comp_cl <- function(pars,
                           route,
                           medium,
                           dose,
@@ -80,7 +80,6 @@ tkstats_1comp <- function(pars,
                           vol_unit,
                           ...){
 
-  Fgutabs_Vdist <- Rblood2plasma <- NULL
   params <- fill_params_1comp(pars)
 
   #for readability, assign params to variables inside this function
@@ -114,7 +113,7 @@ tkstats_1comp <- function(pars,
                    route = route,
                    medium = medium)
 
-  AUC_inf <- auc_1comp_cl(params =pars,
+  AUC_inf <- auc_1comp_cl(params = pars,
                        time = Inf,
                        dose = dose,
                        route = route,

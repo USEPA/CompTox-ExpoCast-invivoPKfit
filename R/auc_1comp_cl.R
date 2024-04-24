@@ -87,33 +87,33 @@ auc_1comp_cl <- function(params,
   list2env(as.list(params), envir = as.environment(-1))
 
 
-  Cl_hep <- Q_totli*Fup*Clint/(Q_totli + (Fup*Clint/Rblood2plasma))
-  Cl_tot <- Q_gfr + Cl_hep
+  CL_hep <- Q_totli*Fup*Clint/(Q_totli + (Fup*Clint/Rblood2plasma))
+  CLtot <- Q_gfr + CL_hep
 
   auc <- dose * ifelse(route %in% "iv",
-                       1/(Vdist*kelim) - #IV model
-                         exp(-time*kelim)/
-                         (Vdist*kelim), #iv route
-                       ifelse(rep(kelim != kgutabs, #oral route
+                       1/(CLtot*Vdist) - #IV model
+                         exp(-time*CLtot*Vdist)/
+                         (CLtot), #iv route
+                       ifelse(rep(CLtot*Vdist != kgutabs, #oral route
                                   length(route)),
                               #equation when kelim != kgutabs
                               -1*
                                 Fgutabs_Vdist*kgutabs*
-                                (1/kgutabs - 1/kelim)/
-                                ((-kelim + kgutabs)) +
+                                (1/kgutabs - 1/CLtot*Vdist)/
+                                ((-CLtot*Vdist + kgutabs)) +
                                 1*
                                 Fgutabs_Vdist*kgutabs*
                                 (exp(-time*kgutabs)/kgutabs -
-                                   exp(-time*kelim)/kelim)/
-                                ((-kelim + kgutabs)),
+                                   exp(-time*CLtot*Vdist)/CLtot*Vdist)/
+                                ((-CLtot*Vdist + kgutabs)),
                               #alternate equation when kelim == kgutabs
                               1*Fgutabs_Vdist/
                                 (kelim) +
                                 (-1*Fgutabs_Vdist*
-                                   time*kelim -
+                                   time*CLtot*Vdist -
                                    1*Fgutabs)*
-                                exp(-time*kelim)/
-                                (kelim)
+                                exp(-time*CLtot*Vdist)/
+                                (CLtot*Vdist)
                        )
   )
 

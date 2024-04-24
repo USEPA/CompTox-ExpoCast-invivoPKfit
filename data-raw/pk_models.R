@@ -75,7 +75,7 @@ model_1comp_cl_rest <- pk_model(name = "model_1comp_cl_rest",
                              auc_fun_args = NULL,
                              params_fun_args = list(restrictive = TRUE),
                              tkstats_fun_args = NULL)
-model_1comp_cl_nonrest <- pk_model(name = "model_1comp_cl_rest",
+model_1comp_cl_nonrest <- pk_model(name = "model_1comp_cl_nonrest",
                                 params = c("Clint",
                                            "Q_gfr",
                                            "Q_totli",
