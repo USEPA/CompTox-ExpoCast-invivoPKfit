@@ -10,7 +10,7 @@
 fill_params_1comp_cl <- function(params){
 
   #fill in missing params with NAs
-  missing_params <- setdiff(model_1comp_cl$params,
+  missing_params <- setdiff(model_1comp_cl_rest$params,
                             names(params))
   params[missing_params] <- NA_real_
 

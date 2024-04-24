@@ -87,7 +87,7 @@ tkstats_1comp <- function(pars,
   list2env(as.list(params), envir = as.environment(-1))
 
   Cl_hep <- Q_totli*Fup*Clint/(Q_totli + (Fup*Clint/Rblood2plasma))
-  Cltot <- Q_gfr + Cl_hep
+  CLtot <- Q_gfr + Cl_hep
 
   CLtot_Fgutabs <- (CLtot/Vdist) / Fgutabs_Vdist
 
@@ -96,16 +96,16 @@ tkstats_1comp <- function(pars,
   dose_int <- 1/24
 
   Css <- dose*ifelse(route %in% "oral",
-                     Fgutabs_Vdist / kelim / dose_int,
-                     1/(kelim * Vdist * dose_int)) *
+                     Fgutabs_Vdist / (CLtot/Vdist) / dose_int,
+                     1/(CLtot * dose_int)) *
     ifelse(medium %in% "blood",
            Rblood2plasma,
            1)
 
-  halflife <- log(2) / kelim
+  halflife <- log(2) / (CLtot/Vdist)
 
   tmax <- ifelse(route %in% "oral",
-                 log(kgutabs / kelim) / (kgutabs - kelim),
+                 log(kgutabs / (CLtot/Vdist)) / (kgutabs - (CLtot/Vdist)),
                  0)
 
   Cmax <- cp_1comp_cl(params = pars,

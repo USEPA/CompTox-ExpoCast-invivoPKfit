@@ -296,7 +296,7 @@ get_params_1comp_cl <- function(data,
                        "upper_bound" = upper_bound_vect)
 
   # now get starting values
-  par_DF <-  get_starts_1comp(data = data,
+  par_DF <-  get_starts_1comp_cl(data = data,
                               par_DF = par_DF,
                               restrictive = restrictive)
 

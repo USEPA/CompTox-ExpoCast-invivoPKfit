@@ -159,7 +159,7 @@ get_starts_1comp_cl <- function(data,
   Vdist <- NA_real_
   Fgutabs <- NA_real_
   Fgutabs_Vdist <- NA_real_
-  init_Fup <- 1
+  Fup <- 1
 
 
 
@@ -168,40 +168,42 @@ get_starts_1comp_cl <- function(data,
     tidyr::pivot_longer(cols = Mouse:Monkey,
                         names_to = "Species",
                         values_to = "param_value")
-  Q_gfr <- setNames(object = init_Q_gfr[["param_value"]],
-                         nm = tolower(init_Q_gfr[["Species"]]))
+  Q_gfr <- setNames(object = Q_gfr[["param_value"]],
+                         nm = tolower(Q_gfr[["Species"]]))
 
   Q_totli <- httk::tissue.data %>%
     dplyr::filter(variable %in% "Flow (mL/min/kg^(3/4))",
                   Tissue %in% "liver")
-  Q_totli <- setNames(object = init_Q_totli[["value"]],
-                           nm = tolower(init_Q_totli[["Species"]]))
+  Q_totli <- setNames(object = Q_totli[["value"]],
+                           nm = tolower(Q_totli[["Species"]]))
 
+  names_Q_gfr <- names(Q_gfr)
   this_species <- unique(data$Species)
-  if (names_Q_gfr %in% this_species) {
-    init_Q_gfr <- init_Q_gfr[[this_species]]
-    init_Q_totli <- init_Q_totli[[this_species]]
+  message("Converting mL/min/kg to L/h/kg for Q_gfr & Q_totli")
+
+  if (this_species %in% names_Q_gfr) {
+    Q_gfr <- Q_gfr[[this_species]] * (60/1000) # Assumes L/h/kg are standard units
+    Q_totli <- Q_totli[[this_species]] * (60/1000)
   } else {
-    init_Q_gfr <- init_Q_gfr[["human"]]
-    init_Q_totli <- init_Q_totli[["human"]]
+    Q_gfr <- Q_gfr[["human"]]* (60/1000)
+    Q_totli <- Q_totli[["human"]]* (60/1000)
     message("Species not in database, using human values for Q_gfr & Q_totli")
 
   }
 
-  if (!restrictive) {
+  parm_1comp <- suppressMessages(
+    suppressWarnings(
+      httk::parameterize_1comp(
+        dtxsid = unique(data[["Chemical"]]),
+        restrictive.clearance = restrictive)))
 
-    Fup <- supressWarnings(httk::parameterize_1comp(
-      dtxsid = unique(data[["Chemical"]]),
-      restrictive.clearance = restrictive)[["Funbound.plasma"]])
+  if (restrictive) {
+    Fup <- parm_1comp[["Funbound.plasma"]]
   }
 
-  Rblood2plasma <- supressWarnings(httk::parameterize_1comp(
-    dtxsid = unique(data[["Chemical"]]),
-    restrictive.clearance = restrictive)[["Rblood2plasma"]])
+  Rblood2plasma <- parm_1comp[["Rblood2plasma"]]
 
-  Clint <- supressWarnings(httk::parameterize_1comp(
-    dtxsid = unique(data[["Chemical"]]),
-    restrictive.clearance = restrictive)[["Clint"]])
+  Clint <- parm_1comp[["Clint"]]
 
 
   # Get starting Concs from data

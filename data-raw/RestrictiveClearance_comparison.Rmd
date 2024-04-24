@@ -263,24 +263,22 @@ new_pk <- minimal_pk +
   settings_preprocess(keep_data_original = TRUE,
                       suppress.messages = FALSE) +
   settings_optimx(method = c("L-BFGS-B")) +
-  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
   stat_error_model(error_group = vars(Chemical, Species, Reference)) +
-  stat_model(model = c("model_flat", "model_1comp", "model_2comp",
-                       "model_1comp_rest", "model_1comp_nonrest",
-                       "model_2comp_rest", "model_2comp_nonrest"))
+  stat_model(model = c("model_1comp", "model_1comp_cl_rest", "model_1comp_cl_nonrest"))
 new_pk <- do_data_info(new_pk)
 
 
 new_pk <- do_prefit(new_pk)
 
-new_pk$prefit$par_DF %>% arrange(Chemical, Species) %>% filter(param_name == "kelim") %>%
+new_pk$prefit$par_DF %>% arrange(Chemical, Species) %>% filter(param_name == "Clint") %>%
   View()
 
 new_pk <- do_fit(new_pk) # For troubleshooting only
 
 
 
-new_pk <- do_fit(new_pk, n_cores = 12) 
+new_pk <- do_fit(new_pk, n_cores = 12)
 
 
 # Multidplyr error because of forgotten browser() call within log_likelihood
@@ -298,12 +296,12 @@ AIC(new_pk) %>% filter(method %in% "L-BFGS-B") %>% arrange(Chemical, Species) %>
   View()
 
 pl2comp <- plot(new_pk, use_scale_conc = FALSE,
-           model = "model_2comp_nonrest",
+           # model = "model_2comp_nonrest",
            n_interp = 10)
 
 
 pl2comp %>%
-  filter(Chemical %in% "DTXSID0021383") %>% pull(final_plot) %>% .[[1]]
+  filter(Chemical %in% "DTXSID1043881") %>% pull(final_plot) %>% .[[1]]
 ```
 
 
@@ -409,7 +407,7 @@ my_data <- get_data(new_pk) %>%
 
 pl <- plot(new_pk, n_interp = 12, use_scale_conc = FALSE)
 pdf(file = paste0(Sys.getenv("FIG_DIR"),
-              "AllFits_noScaleConc_newPK_2024_0412.pdf"),
+              "AllFits_nonDoseNorm_newPK_reParametizedModels_2024_0412.pdf"),
     height = 6, width = 10)
 for (i in 1:nrow(pl)) {
   print(pl$final_plot[[i]])
@@ -827,5 +825,26 @@ unique(my_tkstats$Chemical)[unique(my_tkstats$Chemical) %in% pesticides]
 
 
 ```
+
+## New reformulated models that estimate Clint!
+
+```{r reformMod}
+new_pk$fit %>% unnest(fit) %>%
+  mutate(Clint = ifelse(model == "model_1comp", kelim/Vdist, Clint)) %>%
+  select(Chemical, Species, model, Clint) %>%
+  pivot_wider(names_from = model, values_from = Clint) %>%
+  left_join(new_pk$prefit$par_DF %>%
+              filter(param_name == "Clint") %>%
+              select(Chemical, Species, model, start) %>%
+              mutate(model = paste0("start_", model)) %>%
+              pivot_wider(names_from = model,
+                          values_from = start)) %>% View()
+
+
+get_tkstats(new_pk)
+
+
+```
+
 
 
