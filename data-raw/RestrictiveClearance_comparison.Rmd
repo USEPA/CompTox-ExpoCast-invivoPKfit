@@ -263,7 +263,7 @@ new_pk <- minimal_pk +
   settings_preprocess(keep_data_original = TRUE,
                       suppress.messages = FALSE) +
   settings_optimx(method = c("L-BFGS-B")) +
-  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   stat_error_model(error_group = vars(Chemical, Species, Reference)) +
   stat_model(model = c("model_1comp", "model_1comp_cl_rest", "model_1comp_cl_nonrest"))
 new_pk <- do_data_info(new_pk)
@@ -282,9 +282,9 @@ new_pk <- do_fit(new_pk, n_cores = 12)
 
 
 # Multidplyr error because of forgotten browser() call within log_likelihood
-new_pk$fit %>% unnest(fit) %>% View()
+new_pk$fit %>% unnest(fit) %>% select(!starts_with("sigma_")) %>% View()
 
-saveRDS(new_pk, "data-raw/someCVT_wHTTK_JOINT.rds")
+saveRDS(new_pk, "data-raw/someCVT_wHTTK_reform_JOINT.rds")
 
 
 coef(new_pk) %>% View()
@@ -296,7 +296,6 @@ AIC(new_pk) %>% filter(method %in% "L-BFGS-B") %>% arrange(Chemical, Species) %>
   View()
 
 pl2comp <- plot(new_pk, use_scale_conc = FALSE,
-           # model = "model_2comp_nonrest",
            n_interp = 10)
 
 
@@ -319,7 +318,7 @@ _prefit_ parameter estimations and first compare that with eventual optimized `k
 # par_DF
 my_kelim_prefit <- my_pk$prefit$par_DF %>%
   filter(param_name %in% "kelim",
-         Chemical %in% common_chems) %>%
+         Chemical %in% common_chems_dawson) %>%
   distinct(Chemical, Species, param_name, lower_bound, upper_bound, start)
 
 my_kelim_fit <- coef(my_pk) %>%
@@ -327,12 +326,12 @@ my_kelim_fit <- coef(my_pk) %>%
   ungroup() %>%
   distinct(model, Chemical, Species, kelim) %>%
   rename(fit_kelim = "kelim") %>%
-  filter(Chemical %in% common_chems)
+  filter(Chemical %in% common_chems_dawson)
 
 my_kelim_df <- inner_join(my_kelim_fit, my_kelim_prefit)
 
 
-httk_df <- rest_pk$prefit$par_DF %>%
+httk_df <- new_pk$prefit$par_DF %>%
   filter(param_name %in% "kelim") %>%
   distinct(Chemical, Species, param_name, start) %>%
   rename(init_restrictive = "start") %>%
@@ -805,45 +804,32 @@ grouped_tkstats %>%
 ```
 
 
-
-```{r}
-my_tkstats <- eval_tkstats(my_pk, finite_only = FALSE)
-
-my_tkstats %>% filter(Species %in% "rat",
-                      Route %in% "oral") %>%
-  distinct(Chemical, Species, Route, Media, model, Fgutabs.tkstats) %>%
-  filter(Fgutabs.tkstats > 0) %>%
-  left_join(distinct(cas_convert)) %>% 
-  arrange(Chemical) %>% clipr::write_clip()
-
-
-pesticides <- read_csv("C:/Users/GPADILLA/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/Chemical List EPAPCS-2024-04-17.csv") %>%
-  pull(DTXSID) %>% str_extract("DTXSID\\d+")
-
-
-unique(my_tkstats$Chemical)[unique(my_tkstats$Chemical) %in% pesticides]
-
-
-```
-
 ## New reformulated models that estimate Clint!
 
 ```{r reformMod}
-new_pk$fit %>% unnest(fit) %>%
-  mutate(Clint = ifelse(model == "model_1comp", kelim/Vdist, Clint)) %>%
-  select(Chemical, Species, model, Clint) %>%
-  pivot_wider(names_from = model, values_from = Clint) %>%
+get_tkstats(new_pk) %>% 
+  distinct(Chemical, Species, model, CLtot) %>%
+  pivot_wider(names_from = model, values_from = CLtot) %>%
   left_join(new_pk$prefit$par_DF %>%
-              filter(param_name == "Clint") %>%
+              filter(param_name == "CLtot") %>%
               select(Chemical, Species, model, start) %>%
               mutate(model = paste0("start_", model)) %>%
               pivot_wider(names_from = model,
-                          values_from = start)) %>% View()
+                          values_from = start)) %>% View("Clearance")
 
 
-get_tkstats(new_pk)
+new_cl_tkstats <- get_tkstats(new_pk)
+my_tkstats <- my_pk %>%
+  get_winning_model() %>%
+  left_join(coef(my_pk)) %>%
+  left_join(rsq(my_pk)) %>% distinct()
+my_tkstats %>% select(-coefs_vector) %>% clipr::write_clip()
+#Send the R2 too.
 
 
+## Need to parameterize with gas_pbpk or new 3compartment
+## To add into total clearance 
+# Rb2p * Qalv/Kblood2air
 ```
 
 

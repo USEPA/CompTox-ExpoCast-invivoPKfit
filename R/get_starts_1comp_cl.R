@@ -191,19 +191,23 @@ get_starts_1comp_cl <- function(data,
 
   }
 
-  parm_1comp <- suppressMessages(
+  parm_gas <- suppressMessages(
     suppressWarnings(
-      httk::parameterize_1comp(
+      httk::parameterize_gas_pbtk(
         dtxsid = unique(data[["Chemical"]]),
         restrictive.clearance = restrictive)))
 
   if (restrictive) {
-    Fup <- parm_1comp[["Funbound.plasma"]]
+    Fup <- parm_gas[["Funbound.plasma"]]
   }
 
-  Rblood2plasma <- parm_1comp[["Rblood2plasma"]]
+  Rblood2plasma <- parm_gas[["Rblood2plasma"]]
 
-  Clint <- parm_1comp[["Clint"]]
+  Clint <- parm_gas[["Clint"]]
+
+  Kblood2air <- parm_gas[["Kblood2air"]]
+
+  Qalvc <- parm_gas[["Qalvc"]]
 
 
   # Get starting Concs from data
@@ -219,7 +223,7 @@ get_starts_1comp_cl <- function(data,
                   Route %in% "oral")
 
   Cl_hep <- Q_totli*Fup*Clint/(Q_totli + (Fup*Clint/Rblood2plasma))
-  Cl_tot <- Q_gfr + Cl_hep
+  Cl_tot <- Q_gfr + Cl_hep + (Rblood2plasma * Qalvc/Kblood2air)
 
 
   # Quick and dirty:

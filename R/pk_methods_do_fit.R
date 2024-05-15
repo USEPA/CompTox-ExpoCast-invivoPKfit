@@ -193,24 +193,16 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
       dplyr::left_join(rate_conversion,
                        by = c(data_group_vars)) %>%
       dplyr::mutate(across(contains(rate_names),
-                           \(x) x * to_perhour)) %>%
-      dplyr::select(contains(orig_names)) %>%
-      dplyr::group_by(!!!obj$data_group, model) %>%
-      tidyr::nest(.key = "fit")
-  )
+                           \(x) x * to_perhour)))
 
-  obj$fit <- tidy_fit %>%
-    dplyr::ungroup()
 
   # Add optimx bad fits
-  obj$conv_not_zero <- obj$fit %>%
-    tidyr::unnest(fit) %>%
+  obj$conv_not_zero <- tidy_fit %>%
     dplyr::select(-tidyselect::starts_with("sigma")) %>%
     dplyr::filter(convcode != 0)
 
   # Add parameter fit flags
-  obj$params_atBounds <- obj$fit %>%
-    tidyr::unnest(fit) %>%
+  obj$params_atBounds <- tidy_fit %>%
     dplyr::select(-(value:xtime), -tidyselect::starts_with("sigma")) %>%
     tidyr::pivot_longer(cols = tidyselect::where(is.numeric),
                         names_to = "param_name",
@@ -221,7 +213,13 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
       "Not at bound", ifelse(
         param_value == lower_bound, "LOWER BOUND",
         "UPPER BOUND")
-      ))
+    ))
+
+  obj$fit <- suppressMessages(tidy_fit %>%
+                                 dplyr::select(contains(orig_names)) %>%
+                                 dplyr::filter(convcode != -9999) %>%
+                                 dplyr::group_by(!!!obj$data_group, model) %>%
+                                 tidyr::nest(.key = "fit") %>% ungroup())
 
 
   obj$status <- status_fit #fitting complete
