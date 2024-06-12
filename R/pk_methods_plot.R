@@ -124,14 +124,14 @@ plot.pk <- function(x,
 
 
   if (is.null(fit_limits)) {
-    fit_limits <- c(1.5, 0.05)
+    fit_limits <- c(2.25, 0.01)
   }
 
   if (is.numeric(fit_limits) & length(fit_limits) <= 2) {
     limit_predicted <- TRUE
     if (log10_C) {
       if (length(fit_limits) == 1) {
-        fit_limits[2] <- 0.05
+        fit_limits[2] <- 0.01
         warning("Lower Bound not defined, setting it to the default.")
       } else {
         message("Lower and Upper Bounds supplied will be used.")
@@ -325,19 +325,22 @@ plot.pk <- function(x,
 
     interp_data <- predict(obj = x,
                            newdata = interp_data,
-                           use_scale_conc = conc_scale$dose_norm,
+                           use_scale_conc = use_scale_conc,
                            model = model,
                            method = method,
                            exclude = FALSE,
                            include_NAs = TRUE)
+
     if (best_fit) {
       interp_data <- dplyr::left_join(get_winning_model(obj = x),
                                       interp_data)
     }
+    # browser()
 
     # rowwise can be taxing for function calls
     # This process is inefficient, need to rewrite using a simple
     # JOIN -> MUTATE -> SELECT
+
     conversion_table <- time_conversions %>%
       dplyr::filter(TimeFrom %in% interp_data$Time.Units,
                     TimeTo %in% interp_data$Time_trans.Units) %>%
@@ -374,11 +377,12 @@ plot.pk <- function(x,
                                   }))
       }
     }
+    # browser()
     newdata <- newdata %>%
       dplyr::mutate(predicted_plot = purrr::map(predicted,
                                   \(x) {
                                     ggplot2::geom_line(data = x,
-                                                       plot_fit_aes,
+                                                       mapping = plot_fit_aes,
                                                        inherit.aes = FALSE)
                                   })) %>%
       dplyr::mutate(final_plot = purrr::map2(observation_plot, predicted_plot,
