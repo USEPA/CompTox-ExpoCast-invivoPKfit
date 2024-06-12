@@ -1424,7 +1424,8 @@ Here we analyze and validate model performance per data group.
 my_df <- left_join(fold_errors_all, r2_df) %>% inner_join(myAIC) %>% inner_join(myRMSE_all) %>%
   inner_join(winmodel)
 
-mypl <- ggplot(data = my_df,
+mypl <-
+  ggplot(data = my_df,
                aes(
                  x = within_2fold,
                  y = Rsq,
@@ -1433,7 +1434,8 @@ mypl <- ggplot(data = my_df,
   geom_point() +
   geom_abline(slope = 1, color = "red4", linetype = "longdash") +
   scale_color_manual(values = c("#0398FC", "#D68E09", "black")) +
-  labs(x = "% Fold Error within 2-fold",
+    coord_cartesian(xlim = c(0,1), ylim = c(0,1)) +
+  labs(x = "Fraction of predictions within 2-fold",
        y = "R-squared value") +
   theme(aspect.ratio = 1,
         panel.border = element_rect(color = "black", fill = NA, size = 1),
@@ -1444,6 +1446,7 @@ mypl <- ggplot(data = my_df,
         legend.position = "none",
         legend.title = element_blank(),
         legend.key = element_blank())
+  
 panelA_plot <- ggExtra::ggMarginal(mypl, groupFill = TRUE,
                     type = "histogram",
                     xparams = list(binwidth = 0.1),
@@ -1515,14 +1518,40 @@ clFire <- readxl::read_xlsx(paste("C:/Users/GPADILLA",
 my_df %>%
   left_join(clFire %>% distinct(Identifier, superclass, class),
             by = c("Chemical" = "Identifier")) %>%
-  ggplot(aes(x = log10(median_MSE), color = superclass)) +
-  geom_freqpoly(bins = 20) 
+  ggplot(aes(x = within_2fold, y = Rsq, color = superclass)) +
+  geom_point() +
+  facet_wrap(~superclass) +
+  theme_bw()
 
 
 winmodel %>%
   left_join(clFire %>% distinct(Identifier, superclass, class),
             by = c("Chemical" = "Identifier")) %>% View()
 ```
+
+
+```{r goodness-of-fit_exampleFits}
+pl <- plot(my_pk, use_scale_conc = TRUE, best_fit = TRUE,
+           drop_nonDetect = FALSE, log10_C = FALSE)
+
+ex_fits <- pl %>%
+  filter(Chemical %in% c("DTXSID3020833",
+                         "DTXSID00216205",
+                         "DTXSID3038305",
+                         "DTXSID1022845")) %>%
+  pull(final_plot)
+
+
+cowplot::plot_grid(plotlist = list(ex_fits[[2]], ex_fits[[3]],
+                                   ex_fits[[1]], ex_fits[[4]]))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "exampleFits_Rsq_within2fold.png"),
+       height = 12,
+       width = 12)
+
+```
+
 
 
 ### Supp. Fig. 3: Distribution of Sigmas in CvTdb data
