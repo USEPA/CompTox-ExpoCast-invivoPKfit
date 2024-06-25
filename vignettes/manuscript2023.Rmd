@@ -2077,7 +2077,7 @@ s6_plB_mouse <- pl %>% filter(Chemical %in% "DTXSID4020533",
                               Species %in% "mouse") %>% pull(final_plot) %>% .[[1]]
 s6_plB_rat <- pl %>% filter(Chemical %in% "DTXSID4020533",
                               Species %in% "rat") %>% pull(final_plot) %>% .[[1]]
-s6_plC <- pl %>% filter(Chemical %in% "DTXSID8021359") %>%
+s6_plC <- pl %>% filter(Chemical %in% "DTXSID00216205") %>%
   pull(final_plot) %>% .[[1]]
 s6_plD <- pl %>% filter(Chemical %in% "DTXSID8025337") %>%
   pull(final_plot) %>% .[[1]]
@@ -2086,7 +2086,7 @@ s6_plD <- pl %>% filter(Chemical %in% "DTXSID8025337") %>%
 # panel A : Oranges
 panelA_cols <- brewer.pal(8, "Oranges")[3:8]
 # panel B : Greens
-panelB_cols <- brewer.pal(9, "Greens")[2:9]
+panelB_cols <- brewer.pal(9, "Greens")[2:10]
 # panel C : Blue (only 2 values) 
 # panel D : Purple (6 values)
 panelD_cols <- brewer.pal(9, "Purples")[4:9]
@@ -2108,15 +2108,15 @@ s6_plB_mouse <- s6_plB_mouse +
 
 s6_plB_rat <- s6_plB_rat + 
   labs(title = "1,4-dioxane\nRat") +
-  scale_color_manual(values = panelB_cols[c(1, 2, 3, 4, 6,8)],
+  scale_color_manual(values = panelB_cols[c(1, 2, 3, 4, 5, 6,7, 8)],
                      aesthetics = c("color", "fill")) +
   theme(text = element_text(size = 20),
         legend.position = "none",
         strip.background = element_rect(fill = "white"))
 
 s6_plC <- s6_plC +
-  labs(title = "tolbutamide") +
-  scale_color_manual(values = c("#6BAED6", "#08519C"),
+  labs(title = "psoralen") +
+  scale_color_manual(values = c("#6BAED6", "#08519C", "darkblue"),
                      aesthetics = c("color", "fill")) +
   theme(text = element_text(size = 20),
         legend.position = "none",
@@ -2145,7 +2145,7 @@ plot_grid(
   s6_plCD,
   align = "v",
   ncol = 1,
-  rel_heights = c(1.25, 1, 1.25),
+  rel_heights = c(1.25, 1.2, 1.25),
   labels = c("A", "B", ""),
   label_size = 24
 )
@@ -2153,7 +2153,7 @@ plot_grid(
 # Am making this 2X the size I need it to be 
 # so the points are a reasonable size when I scale it down
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ExampleFitsPlots_02.05.2024.png"),
+              "ExampleFitsPlots_06.12.2024.png"),
        width = 13,
        height = 14,
        units = "in")
