@@ -1527,6 +1527,30 @@ my_df %>%
 winmodel %>%
   left_join(clFire %>% distinct(Identifier, superclass, class),
             by = c("Chemical" = "Identifier")) %>% View()
+
+my_data <- get_data(my_pk)
+my_data %>% 
+  filter(N_Subjects == 1) %>%
+  group_by(Chemical, Species, Reference,
+           Route, Media,
+           Dose, Time) %>%
+  summarize(meanConc = Conc/mean(Conc/Dose)/Dose)
+
+
+my_tkstats %>%
+  left_join(clFire, by = c("Chemical" = "DTXSID")) %>%
+  distinct(Chemical, Species, Route, Media, Reference, method, model,
+           halflife.tkstats, halflife.nca,
+           superclass) %>%
+  ggplot(aes(y = Chemical,
+             fill = superclass)) +
+  geom_point(aes(x = halflife.tkstats), shape = 21) +
+  geom_point(aes(x = halflife.nca), shape = 22) +
+  scale_x_log10() +
+  facet_grid(rows = vars(superclass), scales = "free", space = "free") +
+  theme_bw() +
+  theme(strip.text.y = element_text(hjust = 0, angle = 0))
+
 ```
 
 
