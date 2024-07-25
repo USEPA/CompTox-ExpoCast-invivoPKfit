@@ -391,7 +391,7 @@ cvt_df <- cvt_df %>%
   filter(!is.na(analyte_dtxsid),
          fk_analyzed_chemical_id == fk_dosed_chemical_id, # sometimes test chemical id is not filled out :/
          !(document_id %in% c(38, 65, 110, 112, 46, 31)),
-         !(other_study_identifier %in% c("S0916")),
+         !(other_study_identifier %in% c("S0916") & is.na(conc)),
          !(analyte_name_original %in% "methemoglobin"),
          radiolabeled %in% c(NA, FALSE) # Legacy left as NA, other curations explicitly state FALSE
          )
@@ -403,7 +403,7 @@ cvt_df %>%
   pull(conc_units_original) %>%
   table()
 cvt_df %>%
-  filter(conc_units_original %in% "molar percentage") %>% View()
+  filter(conc_units_original %in% "molar percentage") %>%
 
 cvt_df <- cvt_df %>%
   filter(!is.na(conc)) %>%
@@ -427,7 +427,7 @@ cvt_df %>% distinct(analyte_dtxsid, curation_set_tag) %>% count(curation_set_tag
 ```
 
 
-This filtered and transformed dataset has 14,486 observations.
+This filtered and transformed dataset has 14,152 observations.
 
 
 Save the pulled CVT data with the edits/normalizations, and also save the current date.
