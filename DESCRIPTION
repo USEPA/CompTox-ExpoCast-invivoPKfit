@@ -27,7 +27,9 @@ Imports:
     cli,
     pracma,
     tibble,
-    devtools
+    devtools,
+    httk,
+    glue
 Suggests: 
     cowplot,
     knitr,

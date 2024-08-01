@@ -112,8 +112,8 @@ get_params_flat <- function(data,
                                                                               "(",
                                                                               unique(Dose.Units),
                                                                               ")"),
-                                                       Rblood2plasma = "unitless ratio"),
-                            restrictive_clearance = NULL){
+                                                       Rblood2plasma = "unitless ratio")
+                            ){
   #param names
   param_name <-c("Vdist",
                   "Fgutabs",

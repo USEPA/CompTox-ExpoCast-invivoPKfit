@@ -114,6 +114,8 @@
 #'@param param_units A mapping specified using a call to [ggplot2::aes()],
 #'  giving the units for each variable, as expressions which may include
 #'  variables in `data`.
+#'@param restrictive A boolean value (Default: FALSE) that determines whether
+#'  to assume restrictive clearance when setting starting values for parameters.
 #'@return A `data.frame`with the following variables:
 #' - `param_name`: Character: Names of the model parameters
 #' - `param_units`: Character: Units of the model parameters

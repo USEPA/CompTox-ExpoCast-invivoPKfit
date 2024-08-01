@@ -4,8 +4,6 @@
 #'   should be the names of objects of class `pk_model`. Built-in options are
 #'   [`model_flat`], [`model_1comp`], and [`model_2comp`]. You may add your own
 #'   model by using [pk_model()].
-#' @param restrictive_CL Logical. Defines whether or not to use a static value
-#' for clearance given by httk (when available). NULL by default.
 #' @param ... Additional arguments not currently in use.
 
 stat_model <- function(model = c("model_flat", "model_1comp", "model_2comp"),

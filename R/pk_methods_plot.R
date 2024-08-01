@@ -60,6 +60,8 @@
 #'  observed concentration values.
 #'@param print_out For plotting: whether the output of the function should be
 #'  the list of plots. Default `FALSE`.
+#'@param best_fit Default FALSE. Determines whether fit plot outputs only the
+#'  best fit from `get_winning_model()`
 #'@param ... Additional arguments not in use.
 #'@return A [ggplot2::ggplot()]-class plot object.
 #'@import ggplot2

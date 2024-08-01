@@ -134,6 +134,8 @@
 #' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
 #' -`lower_bounds`: Numeric: The lower bounds for each parameter
 #' - `upper_bounds`: Numeric: The upper bounds for each parameter
+#' @param restrictive A boolean value determinining whether to assume restrictive
+#'   or non-restrictive clearance when getting starting values.
 #'
 #'@return The same `data.frame` as `par_DF`, with an additional variable
 #'  `starts` containing the derived starting value for each parameter. If a

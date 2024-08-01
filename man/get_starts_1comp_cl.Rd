@@ -16,6 +16,9 @@ get_starts_1comp_cl(data, par_DF, restrictive)
 - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
 -`lower_bounds`: Numeric: The lower bounds for each parameter
 - `upper_bounds`: Numeric: The upper bounds for each parameter}
+
+\item{restrictive}{A boolean value determinining whether to assume restrictive
+or non-restrictive clearance when getting starting values.}
 }
 \value{
 The same `data.frame` as `par_DF`, with an additional variable

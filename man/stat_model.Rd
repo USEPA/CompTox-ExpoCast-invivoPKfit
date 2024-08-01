@@ -13,9 +13,6 @@ should be the names of objects of class `pk_model`. Built-in options are
 model by using [pk_model()].}
 
 \item{...}{Additional arguments not currently in use.}
-
-\item{restrictive_CL}{Logical. Defines whether or not to use a static value
-for clearance given by httk (when available). NULL by default.}
 }
 \description{
 Add PK model(s) to be fitted

@@ -36,30 +36,6 @@ model_flat <- pk_model(name = "model_flat",
                    tkstats_fun_args = NULL)
 
 
-model_1comp_rest <- pk_model(name = "model_1comp_rest",
-                             params = c("kelim", "Vdist", "Fgutabs", "kgutabs",
-                                        "Fgutabs_Vdist", "Rblood2plasma"),
-                             conc_fun = "cp_1comp",
-                             auc_fun = "auc_1comp",
-                             params_fun = "get_params_1comp_rest",
-                             tkstats_fun = "tkstats_1comp",
-                             conc_fun_args = NULL,
-                             auc_fun_args = NULL,
-                             params_fun_args = NULL,
-                             tkstats_fun_args = NULL)
-
-model_1comp_nonrest <- pk_model(name = "model_1comp_nonrest",
-                             params = c("kelim", "Vdist", "Fgutabs", "kgutabs",
-                                        "Fgutabs_Vdist", "Rblood2plasma"),
-                             conc_fun = "cp_1comp",
-                             auc_fun = "auc_1comp",
-                             params_fun = "get_params_1comp_nonrest",
-                             tkstats_fun = "tkstats_1comp",
-                             conc_fun_args = NULL,
-                             auc_fun_args = NULL,
-                             params_fun_args = NULL,
-                             tkstats_fun_args = NULL)
-
 model_1comp_cl_rest <- pk_model(name = "model_1comp_cl_rest",
                              params = c("Clint",
                                         "Q_gfr",
@@ -91,40 +67,15 @@ model_1comp_cl_nonrest <- pk_model(name = "model_1comp_cl_nonrest",
                                 params_fun_args = list(restrictive = FALSE),
                                 tkstats_fun_args = NULL)
 
-model_2comp_rest <- pk_model(name = "model_2comp_rest",
-                        params = c("kelim", "k12", "k21", "V1", "Fgutabs", "kgutabs", "Fgutabs_V1", "Rblood2plasma"),
-                        conc_fun = "cp_2comp",
-                        auc_fun = "auc_2comp",
-                        params_fun = "get_params_2comp_rest",
-                        tkstats_fun = "tkstats_2comp",
-                        conc_fun_args = NULL,
-                        auc_fun_args = NULL,
-                        params_fun_args = NULL,
-                        tkstats_fun_args = NULL)
-
-model_2comp_nonrest <- pk_model(name = "model_2comp_nonrest",
-                        params = c("kelim", "k12", "k21", "V1", "Fgutabs", "kgutabs", "Fgutabs_V1", "Rblood2plasma"),
-                        conc_fun = "cp_2comp",
-                        auc_fun = "auc_2comp",
-                        params_fun = "get_params_2comp_nonrest",
-                        tkstats_fun = "tkstats_2comp",
-                        conc_fun_args = NULL,
-                        auc_fun_args = NULL,
-                        params_fun_args = NULL,
-                        tkstats_fun_args = NULL)
 
 
 
 
 
 usethis::use_data(model_1comp,
-                  model_1comp_rest,
-                  model_1comp_nonrest,
                   model_1comp_cl_rest,
                   model_1comp_cl_nonrest,
                   model_2comp,
-                  model_2comp_rest,
-                  model_2comp_nonrest,
                   model_flat,
                   internal = FALSE,
                   overwrite = TRUE)

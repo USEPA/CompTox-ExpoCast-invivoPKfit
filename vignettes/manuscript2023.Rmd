@@ -17,9 +17,13 @@ knitr::opts_chunk$set(
 ```{r setup}
 set.seed(2023)
 library(tidyverse, quietly = TRUE)
-devtools::load_all() 
 library(cowplot)
 library(RColorBrewer)
+devtools::load_all() 
+
+```
+
+``` {r file_load, eval=FALSE}
 # saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds")
 my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 
@@ -1554,7 +1558,7 @@ my_tkstats %>%
 ```
 
 
-```{r goodness-of-fit_exampleFits}
+```{r goodness-of-fit_exampleFits, eval = FALSE}
 pl <- plot(my_pk, use_scale_conc = TRUE, best_fit = TRUE,
            drop_nonDetect = FALSE, log10_C = FALSE)
 
@@ -2644,7 +2648,7 @@ full_summary %>%
 
 
 
-```{r information}
+```{r information, eval=FALSE, echo=FALSE}
 my_tkstats <- eval_tkstats(my_pk)
 tk_summary <- my_tkstats %>%
   distinct(Chemical, Species, Media, Route) %>%
@@ -2677,7 +2681,10 @@ get_nca(my_pk) %>%
 
 # Check the time-scaled data (are plots odd?)
 
+```
 
+
+```{r}
 sessionInfo()
 
 ```

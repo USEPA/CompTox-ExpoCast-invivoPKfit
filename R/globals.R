@@ -145,6 +145,8 @@ utils::globalVariables(
     "model_1comp",
     "model_2comp",
     "model_flat",
+    "model_1comp_cl_rest",
+    "model_1comp_cl_nonrest",
     "model_fun",
     "n_detect",
     "n_par",
@@ -202,6 +204,10 @@ utils::globalVariables(
     "administration_route_normalized",
     "convcode",
     "xtime",
-    "design"
+    "design",
+    "Q_totli",
+    "Fup",
+    "Clint",
+    "Q_gfr"
   )
 )

@@ -108,9 +108,6 @@
 #'@param param_units A mapping specified using a call to [ggplot2::aes()],
 #'  giving the units for each variable, as expressions which may include
 #'  variables in `data`.
-#' @param restrictive_clearance Logical. When NULL (default) it estimates `kelim`
-#' but when set to TRUE or FALSE it uses a constant definition of `kelim` by
-#' dividing total clearance by volume of distribution calculated by `httk`.
 #'@return A `data.frame`with the following variables:
 #' - `param_name`: Character: Names of the model parameters
 #' - `param_units`: Character: Units of the model parameters
