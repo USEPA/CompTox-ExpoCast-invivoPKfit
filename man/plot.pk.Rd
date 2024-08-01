@@ -20,6 +20,7 @@
   n_interp = 10,
   fit_limits = NULL,
   print_out = FALSE,
+  best_fit = FALSE,
   ...
 )
 }

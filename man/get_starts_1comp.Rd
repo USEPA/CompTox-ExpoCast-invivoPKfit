@@ -154,41 +154,34 @@ The starting value for `Rblood2plasma` is always set at a constant 1.
 \seealso{
 Other 1-compartment model functions: 
 \code{\link{auc_1comp}()},
+\code{\link{auc_1comp_cl}()},
 \code{\link{cp_1comp}()},
+\code{\link{cp_1comp_cl}()},
 \code{\link{get_params_1comp}()},
-\code{\link{get_params_1comp_nonrest}()},
-\code{\link{get_params_1comp_rest}()},
-\code{\link{get_starts_1comp_nonrest}()},
-\code{\link{get_starts_1comp_rest}()}
+\code{\link{get_params_1comp_cl}()},
+\code{\link{get_starts_1comp_cl}()}
 
 Other get_starts functions: 
-\code{\link{get_starts_1comp_nonrest}()},
-\code{\link{get_starts_1comp_rest}()},
+\code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_2comp}()},
-\code{\link{get_starts_2comp_nonrest}()},
-\code{\link{get_starts_2comp_rest}()},
 \code{\link{get_starts_flat}()}
 
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
+\code{\link{auc_1comp_cl}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
+\code{\link{cp_1comp_cl}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
 \code{\link{get_params_1comp}()},
-\code{\link{get_params_1comp_nonrest}()},
-\code{\link{get_params_1comp_rest}()},
+\code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_2comp}()},
-\code{\link{get_params_2comp_nonrest}()},
-\code{\link{get_params_2comp_rest}()},
 \code{\link{get_params_flat}()},
-\code{\link{get_starts_1comp_nonrest}()},
-\code{\link{get_starts_1comp_rest}()},
+\code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_2comp}()},
-\code{\link{get_starts_2comp_nonrest}()},
-\code{\link{get_starts_2comp_rest}()},
 \code{\link{get_starts_flat}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
