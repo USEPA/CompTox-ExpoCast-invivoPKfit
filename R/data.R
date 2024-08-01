@@ -63,6 +63,43 @@
 #' See [params_flat()] for the function that determines bounds and starting guesses for model parameters, based on the data.
 "model_flat"
 
+#' 1-compartment model that assumes restrictive clearance
+#'
+#' The `pk_model` object defining the 1-compartment model.
+#'
+#' A `pk_model` object: under the hood, a `list` object with named elements
+#' corresponding to the arguments of [pk_model()]. See that function
+#' documentation for the definition of each element.
+#'
+#' See [cp_1comp_cl()] for the function that predicts blood/plasma concentration for a bolus dose (oral or IV).
+#'
+#' See [auc_1comp_cl()] for the function that predicts area under the concentration-time curve.
+#'
+#' See [tkstats_1comp_cl()] for the function that calculates summary toxicokinetic statistics from 1-compartment model parameters.
+#'
+#' See [params_1comp_cl()] for the function that determines bounds and starting guesses for model parameters, based on the data.
+#'
+"model_1comp_cl_rest"
+
+#' 1-compartment model that assumes non-restrictive clearance
+#'
+#' The `pk_model` object defining the 1-compartment model.
+#'
+#' A `pk_model` object: under the hood, a `list` object with named elements
+#' corresponding to the arguments of [pk_model()]. See that function
+#' documentation for the definition of each element.
+#'
+#' See [cp_1comp_cl()] for the function that predicts blood/plasma concentration for a bolus dose (oral or IV).
+#'
+#' See [auc_1comp_cl()] for the function that predicts area under the concentration-time curve.
+#'
+#' See [tkstats_1comp_cl()] for the function that calculates summary toxicokinetic statistics from 1-compartment model parameters.
+#'
+#' See [params_1comp_cl()] for the function that determines bounds and starting guesses for model parameters, based on the data.
+#'
+"model_1comp_cl_nonrest"
+
+
 #' CvTdb data
 #'
 #' Concentration vs. time data from CvTdb

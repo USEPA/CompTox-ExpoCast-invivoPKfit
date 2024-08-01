@@ -150,7 +150,7 @@
 #'  `starts` containing the derived starting value for each parameter. If a
 #'  parameter cannot be estimated from the available data, then its starting value
 #'  will be `NA_real_`
-#'
+#' @import httk
 #' @author Caroline Ring
 #' @family 2-compartment model functions
 #' @family get_starts functions
@@ -186,6 +186,7 @@ get_starts_2comp <- function(data,
   if(nrow(ivdat)>0){
 
     #assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
+
     halflife <- mean(range(ivdat$Time))
     kelim <- log(2)/halflife
 
@@ -212,6 +213,7 @@ get_starts_2comp <- function(data,
     #if no IV data, then calculate kelim from oral data
     if(nrow(ivdat)==0){
       #and assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
+
       halflife <- mean(range(podat$Time))
       kelim <- log(2)/halflife
     }
@@ -239,6 +241,7 @@ get_starts_2comp <- function(data,
               "Rblood2plasma" = Rblood2plasma)
 
 par_DF$start <- starts[par_DF$param_name]
+
 
   return(par_DF)
 }

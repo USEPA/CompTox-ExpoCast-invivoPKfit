@@ -139,7 +139,7 @@
 #'  `starts` containing the derived starting value for each parameter. If a
 #'  parameter cannot be estimated from the available data, then its starting value
 #'  will be `NA_real_`
-#'
+#' @import httk
 #' @author Caroline Ring
 #' @family 1-compartment model functions
 #' @family get_starts functions

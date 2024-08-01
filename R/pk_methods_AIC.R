@@ -61,16 +61,12 @@ AIC.pk <- function(object,
   if(is.null(method)) method <- object$settings_optimx$method
 
   # Get the number of parameters
+  # Need to filter for USED parameters
   #
-  #
-
 
   param_table <- object$prefit$par_DF %>%
-    dplyr::filter(optimize_param %in% TRUE) %>%
+    dplyr::filter(use_param %in% TRUE) %>%
     dplyr::select(model, !!!object$data_group, param_name, param_units)
-
-
-
 
   sigma_table <- object$prefit$stat_error_model$sigma_DF %>%
     tibble::rownames_to_column("error_group") %>%

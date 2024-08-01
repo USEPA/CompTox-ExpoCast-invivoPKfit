@@ -159,14 +159,16 @@ logLik.pk <- function(object,
 
   # get coefs data.frame for each model and method
   #
-  coefs <- suppressMessages(coef(
+  coefs <- coef(
     obj = object,
     model = model,
     method = method,
-    drop_sigma = FALSE) %>%
+    drop_sigma = FALSE)
+  coefs <- coefs %>%
     dplyr::select(coefs_vector,
                   sigma_value,
-                  error_group) %>%
+                  error_group)
+  coefs <- suppressMessages(coefs %>%
     dplyr::mutate(coefs_vector = purrr::map(coefs_vector,
                                             \(x) {
                                               sigma_transfer <- sigma_value

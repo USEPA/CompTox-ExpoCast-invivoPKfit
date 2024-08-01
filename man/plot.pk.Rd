@@ -20,6 +20,7 @@
   n_interp = 10,
   fit_limits = NULL,
   print_out = FALSE,
+  best_fit = FALSE,
   ...
 )
 }
@@ -93,6 +94,9 @@ observed concentration values.}
 
 \item{print_out}{For plotting: whether the output of the function should be
 the list of plots. Default `FALSE`.}
+
+\item{best_fit}{Default FALSE. Determines whether fit plot outputs only the
+best fit from `get_winning_model()`}
 
 \item{...}{Additional arguments not in use.}
 }

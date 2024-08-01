@@ -282,11 +282,11 @@ do_preprocess.pk <- function(obj, ...){
     }
     data[(data$LOQ<0) %in% TRUE, "LOQ"] <- NA_real_
 
-    #Coerce any negative Value_SD to NA
+    #Coerce any non-positive Value_SD to NA
     if(!obj$settings_preprocess$suppress.messages){
-      if(any((data$Value_SD<0) %in% TRUE)){
-        message(paste('If value_SD < 0, replacing Value_SD with NA.',
-                      sum((data$Value_SD < 0) %in% TRUE),
+      if(any((data$Value_SD<=0) %in% TRUE)){
+        message(paste('If value_SD <= 0, replacing Value_SD with NA.',
+                      sum((data$Value_SD <= 0) %in% TRUE),
                       "Value_SDs will be replaced with NA.\n"))
       }
     }

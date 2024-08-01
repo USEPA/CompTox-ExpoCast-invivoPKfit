@@ -131,28 +131,27 @@ get_params_1comp <- function(data,
                                                         Fgutabs = 1,
                                                         kgutabs = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                                         Fgutabs_Vdist = 1e2,
-                                                        Rblood2plasma = 100),
-param_units = ggplot2::aes(kelim = paste0("1/", #kelim
-                                  unique(Time_trans.Units)),
-                           Vdist = paste0("(", #Vdist
-                                  unique(Dose.Units),
-                                  ")",
-                                  "/",
-                                  "(",
-                                  unique(Conc.Units),
-                                  ")"),
-                           Fgutabs = "unitless fraction", #Fgutabs
-                           kgutabs = paste0("1/", #kgutabs
-                                  unique(Time_trans.Units)),
-                           Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
-                                  unique(Conc.Units),
-                                  ")",
-                                  "/",
-                                  "(",
-                                  unique(Dose.Units),
-                                  ")"),
-                           Rblood2plasma = "unitless ratio")
-                             ){
+                                                        Rblood2plasma = 100,),
+                             param_units = ggplot2::aes(kelim = paste0("1/", #kelim
+                                                                       unique(Time_trans.Units)),
+                                                        Vdist = paste0("(", #Vdist
+                                                                       unique(Dose.Units),
+                                                                       ")",
+                                                                       "/",
+                                                                       "(",
+                                                                       unique(Conc.Units),
+                                                                       ")"),
+                                                        Fgutabs = "unitless fraction", #Fgutabs
+                                                        kgutabs = paste0("1/", #kgutabs
+                                                                         unique(Time_trans.Units)),
+                                                        Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
+                                                                               unique(Conc.Units),
+                                                                               ")",
+                                                                               "/",
+                                                                               "(",
+                                                                               unique(Dose.Units),
+                                                                               ")"),
+                                                        Rblood2plasma = "unitless ratio")){
   #param names
   param_name <- c("kelim",
                    "Vdist",
@@ -205,24 +204,24 @@ param_units = ggplot2::aes(kelim = paste0("1/", #kelim
   #initialize whether each param is used: start with use = TRUE for all params
   use_param <- rep(TRUE, length(param_name))
 
-#now follow the logic described in the documentation for this function:
-if(!("oral" %in% data$Route)){
-  #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_Vdist,
-  #and they won't be used.
-  optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
-  use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
-}else{ #if yes oral data:
-  if("iv" %in% data$Route){
-    #if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
-    optimize_param[param_name %in% c("Fgutabs_Vdist")] <- FALSE
-    use_param[param_name %in% c("Fgutabs_Vdist")] <- FALSE
-  }else{
-    #if oral ONLY:
-    #cannot fit Fgutabs and Vdist separately, so turn them off.
-    optimize_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
-    use_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
+  #now follow the logic described in the documentation for this function:
+  if(!("oral" %in% data$Route)){
+    #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_Vdist,
+    #and they won't be used.
+    optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
+    use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
+  }else{ #if yes oral data:
+    if("iv" %in% data$Route){
+      #if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
+      optimize_param[param_name %in% c("Fgutabs_Vdist")] <- FALSE
+      use_param[param_name %in% c("Fgutabs_Vdist")] <- FALSE
+    }else{
+      #if oral ONLY:
+      #cannot fit Fgutabs and Vdist separately, so turn them off.
+      optimize_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
+      use_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
+    }
   }
-}
 
   #if both "blood" and "plasma" are not in data,
   #then Rblood2plasma will not be optimized
@@ -266,7 +265,8 @@ if(!("oral" %in% data$Route)){
 
   # now get starting values
   par_DF <-  get_starts_1comp(data = data,
-                            par_DF = par_DF)
+                              par_DF = par_DF)
+
 
   #check to ensure starting values are within bounds
   #if not, then replace them by a value halfway between bounds

@@ -17,11 +17,15 @@ knitr::opts_chunk$set(
 ```{r setup}
 set.seed(2023)
 library(tidyverse, quietly = TRUE)
-devtools::load_all() 
 library(cowplot)
 library(RColorBrewer)
+devtools::load_all() 
+
+```
+
+``` {r file_load, eval=FALSE}
 # saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds")
-# my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
+my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 
 ```
 
@@ -206,7 +210,7 @@ my_pk_100j <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c("L-BFGS-B")) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   # scale_time(new_units = "auto") +
   # stat_model() + 
@@ -381,7 +385,17 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
     inner_join(myRMSE_all) %>%
     mutate(Options = pk_name, .before = Chemical)
   
-  full_list <- list(wide_winning_model, RMSE_eval, my_df)
+  winmodel_conflict <- rmse(obj, use_scale_conc = FALSE) %>%
+    group_by(Chemical, Species, Route, Media, Dose, Time) %>%
+    filter(RMSE == min(RMSE)) %>%
+    group_by(Chemical, Species) %>%
+    count(model) %>%
+    filter(n == max(n)) %>%
+    inner_join(winning_model %>% rename("winmodel" = "model")) %>%
+    filter(!(model == winmodel))
+  
+  
+  full_list <- list(wide_winning_model, RMSE_eval, my_df, winmodel_conflict)
   })
   
   return(full_list)
@@ -392,16 +406,18 @@ gc()
 ```{r Evaluating choices, eval=FALSE}
 
 ### Evaluations-----
-my_pk_000p <- do_fit(my_pk_000p, n_cores = 12)  %>% evaluate_choices() # Done
+my_pk_000p <- do_fit(my_pk_000p, n_cores = 10)  %>% evaluate_choices() # Done
 my_pk_100p <- do_fit(my_pk_100p, n_cores = 12) %>% evaluate_choices() # Done
 my_pk_110p <- do_fit(my_pk_110p, n_cores = 12) %>% evaluate_choices() # Done
 my_pk_111p <- do_fit(my_pk_111p, n_cores = 12) %>% evaluate_choices() # Done
 rm(my_pk_000p, my_pk_100p,my_pk_110p,my_pk_111p)
 gc()
-my_pk_010p <- do_fit(my_pk_010p, n_cores = 10) %>% evaluate_choices() # Done
-my_pk_011p <- do_fit(my_pk_011p, n_cores = 10) %>% evaluate_choices() # Done 
-my_pk_001p <- do_fit(my_pk_001p, n_cores = 10) %>% evaluate_choices() # Done
-my_pk_101p <- do_fit(my_pk_101p, n_cores = 10) %>% evaluate_choices() # Done
+my_pk_010p <- do_fit(my_pk_010p, n_cores = 12) %>% evaluate_choices() # Done
+my_pk_011p <- do_fit(my_pk_011p, n_cores = 12) %>% evaluate_choices() # Done 
+my_pk_001p <- do_fit(my_pk_001p, n_cores = 12) %>% evaluate_choices() # Done
+my_pk_101p <- do_fit(my_pk_101p, n_cores = 12) %>% evaluate_choices() # Done
+rm(my_pk_010p, my_pk_011p,my_pk_001p,my_pk_101p)
+gc()
 
 my_pk_000j <- do_fit(my_pk_000j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
 my_pk_100j <- do_fit(my_pk_100j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
@@ -421,6 +437,7 @@ my_pk_101j <- do_fit(my_pk_101j, n_cores = 12) %>% evaluate_choices(PJ = "Joint"
 winning_model_final <- NULL
 rmse_summary <- NULL
 detail_stats <- NULL
+
 current_pk <- my_pk_101j # Current evaluated pk object here
 
 # Run all at once
@@ -441,7 +458,7 @@ detail_stats %>% clipr::write_clip(col.names = FALSE)
 clipr::clear_clip()
 gc()
 
-
+rm(winning_model_final, rmse_summary, detail_stats)
 ```
 
 
@@ -461,7 +478,7 @@ multiRef_ChemSpec <- cvt %>%
   arrange(desc(n)) %>%
   filter(n > 1) %>%
   dplyr::select(!n)
-multiRef_ChemSpec %>% nrow() # Surprisingly only 13 Chem + Species have multiple references
+multiRef_ChemSpec %>% nrow() # Surprisingly only 15 Chem + Species have multiple references
 
 ```
 
@@ -470,22 +487,23 @@ These finalists will be compared based on their more detailed statistics.
 ```{r Plotting_Summary, eval=FALSE}
 finalist_options <- c("000 Pooled", "000 Joint",
                       "100 Pooled", "100 Joint",
-                      "101 Pooled", "101 Joint")
+                      "111 Pooled", "111 Joint")
 
 # What are the sheets names
-readxl::excel_sheets(paste(Sys.getenv("OD_DIR"),
-                           "DataSummary_9_21_2023.xlsx",
-                           sep = "/")) # Predictions Evaluation
+summary_dir <- paste("C:/Users/GPADILLA",
+                           "OneDrive - Environmental Protection Agency (EPA)/Profile/Documents",
+                           "Manuscript",
+                           "DataSummary_2024_05_10.xlsx",
+                           sep = "/")
+readxl::excel_sheets(summary_dir) # Predictions Evaluation
 
-preval <- readxl::read_xlsx(paste(Sys.getenv("OD_DIR"),
-                                  "DataSummary_9_21_2023.xlsx",
-                                  sep = "/"),
+preval <- readxl::read_xlsx(summary_dir,
                             sheet = "Predictions Evaluation") %>%
-  left_join(multiRef_ChemSpec,
-            by = join_by(Chemical == analyte_dtxsid,
-                         Species == species)) %>%
-  filter(method %in% "L-BFGS-B", 
-         Options %in% finalist_options) %>%
+  # left_join(multiRef_ChemSpec,
+  #           by = join_by(Chemical == analyte_dtxsid,
+  #                        Species == species)) %>%
+  # filter(method %in% "L-BFGS-B", 
+  #        Options %in% finalist_options) %>%
   distinct()
 
 
@@ -503,17 +521,6 @@ preval %>%
   group_by(Options, Error_Model) %>%
   summarize(totalFoldError = sum(avg_FoldErr))
 
-readxl::read_xlsx(paste(Sys.getenv("OD_DIR"),
-                                  "DataSummary_9_21_2023.xlsx",
-                                  sep = "/"),
-                            sheet = "Fit_Counts") %>%
-  filter(Options %in% finalist_options, method %in% "L-BFGS-B")
-
-readxl::read_xlsx(paste(Sys.getenv("OD_DIR"),
-                                  "DataSummary_9_21_2023.xlsx",
-                                  sep = "/"),
-                            sheet = "Cmax and AUC_inf Evaluation") %>%
-  filter(Options %in% finalist_options, method %in% "L-BFGS-B")
 
 
 library(broom)
@@ -551,33 +558,71 @@ filtered_preval %>% group_by(Options) %>%
   View()
 
 
-Cmax_AUC <- readxl::read_xlsx(paste(Sys.getenv("OD_DIR"),
-                                  "DataSummary_8_18_2023.xlsx",
-                                  sep = "/"),
+Cmax_AUC <- readxl::read_xlsx(summary_dir,
                             sheet = "Cmax and AUC_inf Evaluation") %>%
-  dplyr::select(1:4) %>%
+  dplyr::select(3:6) %>%
   distinct()
 
-
+# DFO = difference from origin
+# OLS = ordinary least squares
 Cmax_AUC %>%
   mutate(DFO = rank(sqrt(RMSE_Cmax^2 + signif(RMSE_AUC, 5)^2)),
-         OLS = rank(abs(RMSE_Cmax + signif(RMSE_AUC, 5))/sqrt(2))) %>%
+         OLS = rank(sqrt(2)*abs(RMSE_Cmax - signif(RMSE_AUC, 5))/2)) %>%
   #filter(DFO < 11 | OLS < 11) %>%
   arrange(DFO, OLS) %>%
   dplyr::select(-RMSE_Cmax, -RMSE_AUC) %>% View()
   clipr::write_clip()
 
 
-Cmax_AUC %>%
+Cmax_AUC %>% na.omit() %>%
   mutate(DFO = rank(sqrt(RMSE_Cmax^2 + RMSE_AUC^2)),
-         OLS = rank(abs(RMSE_Cmax + RMSE_AUC)/sqrt(2))) %>%
+         OLS = rank(sqrt(2)*abs(RMSE_Cmax - RMSE_AUC)/2)) %>%
+  separate(Options, into = c("Norms", "ErrModel")) %>% View()
   ggplot(aes(
     x = DFO,
     y = OLS,
-    fill = Options
-  )) + geom_point(shape = 21)
+    fill = Norms
+  )) + geom_point(shape = 21) +
+  facet_grid(rows = vars(ErrModel),
+             cols = vars(method))
+
+  
+preval %>% group_by(Chemical, Species, model, method, Options) %>%
+    filter(AIC == min(AIC)) %>%
+  ggplot(aes(x = log10(median_MSE), fill = model)) +
+  geom_histogram(position = position_dodge()) +
+  facet_grid(rows = vars(Options),
+             cols = vars(method)) +
+  scale_fill_manual(values = c("orange3", "green4", "black")) +
+  theme_bw() +
+  theme(strip.text.y = element_text(angle = 0))
+  
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "SquaredError_SummaryEvaluations_20240515.png"),
+       height = 8,
+       width = 5)
 
 
+preval %>% filter(Options %in% c("000 Joint", "000 Pooled", "111 Joint"),
+                  method %in% "bobyqa") %>%
+  mutate(median_MSE = ifelse(Options == "111 Joint",
+                             median_MSE*2, median_MSE)) %>% View()
+  group_by(Chemical, Species, model, method, Options) %>%
+    filter(AIC == min(AIC)) %>%
+  ggplot(aes(x = log10(median_MSE))) +
+  geom_histogram(position = position_dodge(), fill = "grey5") +
+  facet_grid(rows = vars(Options),
+             cols = vars(method)) +
+  theme_bw() +
+  theme(strip.text.y = element_text(angle = 0),
+        strip.clip = "off",
+        axis.line.x.bottom = element_line(color = "black", linewidth = 1))
+  
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "SquaredError_SummaryEvaluations_Selective_20240515.png"),
+       height = 4,
+       width = 4)
 ```
 
 ## Running dose-normalized joint fits
@@ -593,8 +638,9 @@ my_pk <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE,
                       suppress.messages = FALSE) +
-  settings_optimx(method = c("L-BFGS-B")) +
-  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  settings_optimx(method = c("bobyqa")) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  scale_time(new_units = "auto") +
   stat_error_model(error_group = vars(Chemical, Species, Reference)) 
 
 my_pk <- do_preprocess(my_pk)
@@ -609,11 +655,14 @@ my_pk <- do_prefit(my_pk)
 {
   start <- Sys.time()
   my_pk <- do_fit(my_pk, 
-                  n_cores = 12)
+                  n_cores = 14)
   round(Sys.time() - start, 4)
 }
 
-
+my_pk$fit %>% unnest(fit) %>%
+  # pull(convcode) %>% table()
+  # pull(xtime) %>% as.numeric() %>% `/`(60) %>% hist(breaks = 25)
+  View()
 ```
 
 ## Analysis Plots
@@ -627,20 +676,20 @@ fitted `pk` objects.
 
 # after fitting pk object for all cvt objects or reading the fitted pk object in `setup`
 winmodel <- get_winning_model(my_pk)
-my_preds <- inner_join(predict(my_pk, use_scale_conc = TRUE), winmodel)
+my_preds <- inner_join(predict(my_pk, use_scale_conc = FALSE), winmodel)
 my_residuals <- residuals(my_pk, use_scale_conc = FALSE) %>%
   inner_join(winmodel)
 my_tkstats <- eval_tkstats(my_pk)
 my_nca <- get_nca(my_pk)
 all_my_data <- get_data(my_pk)
 
-fe_df <- fold_errors(my_pk, method = "L-BFGS-B") %>% inner_join(winmodel)
+fe_df <- fold_errors(my_pk) %>% inner_join(winmodel)
 # May need to change the use_scale_conc defaults
-r2_df <- rsq(my_pk, method = "L-BFGS-B", use_scale_conc = FALSE) %>%
+r2_df <- rsq(my_pk, use_scale_conc = FALSE) %>%
   inner_join(winmodel)
-myAIC <- AIC(my_pk, method = "L-BFGS-B") %>%
+myAIC <- AIC(my_pk) %>%
   inner_join(winmodel)
-myRMSE <- rmse(my_pk, method = "L-BFGS-B",
+myRMSE <- rmse(my_pk, method = "bobyqa",
                rmse_group = vars(Route, Media, Dose),
                use_scale_conc = FALSE) %>% 
   inner_join(winmodel)
@@ -694,6 +743,11 @@ summarized_tkstats <- summarized_tkstats %>%
   distinct() %>% 
   select(!c(nca_name, nca_sd_name))
 
+
+chem_name_translate <- all_my_data %>%
+  dplyr::select(Chemical, Chemical_Name) %>%
+  dplyr::distinct()
+
 ```
 
 
@@ -725,11 +779,16 @@ all_my_data %>%
            Dose, Time) %>%
   filter(n() > 1,
          sum(is.na(Conc)) != n(),
+<<<<<<< HEAD
          Conc > LOQ) %>%
+=======
+         Conc > LOQ) %>% 
+>>>>>>> feature/Rclearance_comparison
   mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
   ungroup() %>%
   rowwise() %>%
   mutate(foldConc = Conc / meanConc) %>%
+<<<<<<< HEAD
   # filter(Route == "oral") %>%
   count(foldConc >= 0.5 & foldConc <= 2) %>%
   {.[[2,2]]/(.[[1,2]] + .[[2,2]])}
@@ -737,6 +796,15 @@ all_my_data %>%
 # 89.01% inside twofold | 87.13%  | 92.27%
 # 2.21%  above twofold  | 2.63%   | 1.4%
 # 8.77%  below twofold  | 10.24%  | 6.23%
+=======
+  filter(Route == "oral") %>%
+  count((foldConc > 2)) %>%
+  {.[[2,2]]/(.[[1,2]] + .[[2,2]])}
+# Stats for ALL | ORAL | IV
+# 88.99% inside twofold | 87.08%  | 92.28%
+# 2.23%  above twofold  | 2.66%   | 1.51%
+# 8.7%  below twofold  | 10.25%  | 6.20%
+>>>>>>> feature/Rclearance_comparison
 
 pl4A <- all_my_data %>%
   filter(Detect %in% TRUE,
@@ -783,7 +851,7 @@ pl4A <- all_my_data %>%
 pl4A
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "NormalizedConcentrations_2023-09-29.png"),
+              "NormalizedConcentrations_2023-05-08.png"),
        plot = pl4A,
        height = 2.2,
        width = 2.5,
@@ -804,10 +872,11 @@ all_my_data %>%
            Dose, Time) %>%
   count() %>%
   mutate(Replicated = ifelse(n > 1, TRUE, FALSE)) %>%
-  distinct() %>% .$Replicated %>% table()
-  ggplot(aes(fill = Replicated)) +
+  distinct() %>%
+  # .$Replicated %>% table()
+  ggplot(aes(fill = Replicated, x = "")) +
   geom_bar(position = "stack",
-           color = "black")
+           color = "black") +
   labs(x = "", y = "Timepoints") +
   scale_fill_manual(values = c("black", "white")) +
   scale_y_continuous(expand = c(0, NA)) +
@@ -861,17 +930,17 @@ combined_summary <- bind_rows(sud_summary, iad_summary) %>%
   mutate(twofold_95 = ifelse((conc_avg_calc + (2*conc_sd_calc))/conc_avg_calc < 2,
                              TRUE, FALSE))
 
-table(combined_summary$twofold_95)
+table(combined_summary$twofold_95) # 86.57% have z-score within +/-2
 
 pl4A <- combined_summary %>% ungroup() %>%
   count(twofold_95) %>%
   ggplot(aes(x = twofold_95, fill = twofold_95, y = n)) +
   geom_col(position = position_stack(),
            color = "black", linewidth = 1) +
-  coord_cartesian(ylim = c(0, 4000)) +
-  scale_y_continuous(expand = c(0, 0),
-                     breaks = c(0, 1000, 2000, 3000),
-                     labels = c("0", "1", "2", "3")) +
+  coord_cartesian(ylim = c(0, 5000)) +
+  scale_y_continuous(expand = c(0, NA),
+                     breaks = c(0, 1000, 2000, 3000, 4000, 5000),
+                     labels = c("0", "1", "2", "3", "4", "5")) +
   scale_fill_manual(values = c("black", "white")) +
   theme_classic() +
   labs(x = "95% of observations\nwithin factor of 2",
@@ -902,12 +971,12 @@ pl4B <- all_my_data %>%
            Route,
            Dose, Time) %>%
   filter(n() > 1,
-         sum(is.na(Conc_trans)) != n(),
+         sum(is.na(Conc)) != n(),
          exclude == FALSE) %>%
-  mutate(meanConc = mean(Conc_trans, na.rm = TRUE)) %>%
+  mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
   ungroup() %>%
   rowwise() %>%
-  mutate(foldConc = Conc_trans / meanConc) %>%
+  mutate(foldConc = Conc / meanConc) %>%
   inner_join(my_tkstats %>%
               dplyr::select(Chemical, Species,
                             Route, Media,
@@ -958,8 +1027,10 @@ pl4B <- all_my_data %>%
         plot.background = element_blank(),
         legend.position = "none")
 
+pl4B
+
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ADME_NormTime-NormConcs_onlyDetects_2023-09-29.png"),
+              "ADME_NormTime-NormConcs_onlyDetects_2024-05-16.png"),
        height = 4,
        width = 5,
        units = "in",
@@ -976,7 +1047,7 @@ figure4 <- plot_grid(pl4A, pl4B, labels = c("A", "B"),
                      align = "h", axis = "bt", rel_widths = c(1, 1.75))
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "Figure5alt_onlyDetects_2024-02-05.png"),
+              "Figure5alt_onlyDetects_2024-05-08.png"),
        plot = figure4,
        bg = "white",
        height = 3.25,
@@ -1031,9 +1102,9 @@ sf_2C <- data_range %>%
                  color = "grey5") +
   scale_x_log10(labels = scales::number,
                 breaks = c(0.1, 1, 7, 30, 365)) +
-  scale_y_continuous(expand = c(0, 0),
-                     limits = c(0, 60),
-                     breaks = c(0, 10, 20, 30, 40, 50)) +
+  # scale_y_continuous(expand = c(0, 0),
+  #                    limits = c(0, 60),
+  #                    breaks = c(0, 10, 20, 30, 40, 50)) +
   labs(x = "Day of final Timepoint",
        y = "Count") +
   theme(aspect.ratio = 1,
@@ -1044,8 +1115,11 @@ sf_2C <- data_range %>%
         axis.ticks = element_blank(),
         axis.line = element_blank())
 
+sf_2C
+
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "SFig2B_TimePoints_2024-02-05.png"),
+              "SFig2C_TimePoints_2024-05-08.png"),
+       plot = sf_2C,
        height = 4,
        width = 4,
        units = "in",
@@ -1058,8 +1132,8 @@ sf_2B <- data_range %>%
                  bins = 40,
                  color = "grey5") +
   scale_y_continuous(expand = c(0, 0),
-                     limits = c(0, 25),
-                     breaks = c(0, 5, 10, 15, 20)) +
+                     limits = c(0, 50),
+                     breaks = c(0, 25, 50)) +
   labs(x = "log10(Concentration Range)",
        y = "Count") +
   theme(aspect.ratio = 1,
@@ -1072,9 +1146,11 @@ sf_2B <- data_range %>%
         axis.line = element_blank(),
         axis.text = element_text(size = 10),
         axis.title = element_text(size = 11))
-  
+
+
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "SFig2A_ConcRange_2024-02-05.png"),
+              "SFig2B_ConcRange_2024-05-08.png"),
+       plot = sf2B,
        height = 4,
        width = 4,
        units = "in",
@@ -1093,7 +1169,7 @@ plot_grid(sf_2A, sf_2BC,
           align = "h")
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "SFig2_ConcTimeRanges_2024-02-06.png"),
+              "SFig2_ConcTimeRanges_2024-05-08.png"),
        height = 4,
        width = 6,
        units = "in",
@@ -1111,6 +1187,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 my_preds %>%
   rowwise() %>%
+<<<<<<< HEAD
   mutate(Pred_Obs = Conc_est / Conc_trans) %>%
   filter(is.finite(Pred_Obs),
          model %in% c("model_1comp", "model_2comp")) %>%
@@ -1122,6 +1199,19 @@ my_preds %>%
                  fill = "grey5") +
   scale_x_log10(labels = scales::label_math(format = log10),
                 limits = c(0.01, 100)) +
+=======
+  mutate(Pred_Obs = Conc_est/Conc) %>%
+  filter(is.finite(Pred_Obs),
+         model %in% c("model_1comp", "model_2comp")) %>%
+  mutate(pass = ifelse(Pred_Obs < 0.5, TRUE, FALSE)) %>%
+  pull(pass) %>% table() %>%
+  {.[[2]]/(.[[1]] + .[[2]])}
+  ggplot(aes(x = Pred_Obs)) +
+  geom_histogram(binwidth = 0.25,
+                 fill = "grey5") +
+  scale_x_log10(limits = c(1E-5, 1E5),
+                labels = scales::label_math(format = log10)) +
+>>>>>>> feature/Rclearance_comparison
   expand_limits(y = 0) +
   geom_vline(xintercept = c(0.5, 2), color = "red3", linetype = "dashed") +
   facet_grid(cols = vars(model),
@@ -1133,6 +1223,7 @@ my_preds %>%
         panel.border = element_rect(color = "black", fill = NA),
         panel.grid.major = element_line(color = "grey90", linewidth = 0.4))
 
+<<<<<<< HEAD
 # 91.1% of Pred_Obs are finite
 # 16.5% Are above two-fold
 # 40%  Are below two-fold
@@ -1140,6 +1231,15 @@ my_preds %>%
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
               "PredictedObserved_compartmentModels_2024-02-28.png"),
+=======
+# 99.18% of Pred_Obs are finite
+# 18.89% Are above two-fold
+# 21.52%  Are below two-fold
+# 59.62% Are within twofold
+
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "PredictedObserved_compartmentModels_2024-05-08.png"),
+>>>>>>> feature/Rclearance_comparison
        height = 6, width = 6)
   
 
@@ -1158,25 +1258,42 @@ data variability with model performance, we look at data with replicated timepoi
 
 
 # pl_5A <-
+<<<<<<< HEAD
   my_preds %>%
+=======
+  my_preds %>% 
+  right_join(winmodel) %>%
+>>>>>>> feature/Rclearance_comparison
   group_by(Chemical,
            Species,
            Route, Media,
            Dose, Time) %>%
   filter(n() > 1,
+<<<<<<< HEAD
          sum(is.na(Conc_trans)) != n(),
+=======
+         sum(is.na(Conc)) != n(),
+         # model %in% c("model_flat"),
+>>>>>>> feature/Rclearance_comparison
          exclude %in% FALSE,
          Detect %in% TRUE) %>%
-  mutate(meanConc = mean(Conc_trans, na.rm = TRUE)) %>%
+  mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
   ungroup() %>%
+  distinct() %>%
   rowwise() %>%
-  mutate(foldConc = Conc_trans / meanConc,
-         foldPred = Conc_est / Conc_trans) %>%
+  mutate(foldConc = Conc / meanConc,
+         foldPred = Conc_est / Conc) %>% 
   # For percentages
   ungroup() %>%
+<<<<<<< HEAD
   # filter(model %in% c("model_1comp")) %>%
   # count(!(foldPred >= 0.5 & foldPred <= 2) & !(foldConc >= 0.5 & foldConc <= 2)) %>%
   # {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
+=======
+  # filter(model %in% c("model_flat")) %>%
+  count((foldPred >= 0.5 & foldPred <= 2) & (foldConc >= 0.5 & foldConc <= 2)) %>%
+  {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
+>>>>>>> feature/Rclearance_comparison
   # For Plotting
   ggplot(aes(
     y = foldPred,
@@ -1189,7 +1306,7 @@ data variability with model performance, we look at data with replicated timepoi
   scale_x_log10(labels = scales::label_math(format = log10),
                 limits = c(0.001, 100)) +
   scale_y_log10(labels = scales::label_math(format = log10),
-                limits = c(0.001, 1000)) +
+                limits = c(0.0001, 10000)) +
   scale_fill_viridis_c(option = "cividis",
                        limits = c(1, 100),
                        oob = scales::oob_squish) +
@@ -1206,7 +1323,7 @@ data variability with model performance, we look at data with replicated timepoi
 
 pl_5A
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ModelPerformance_vDataVariability_2024-02-01.png"),
+              "ModelPerformance_vDataVariability_2024-05-08.png"),
        height = 3,
        width = 6.5,
        device = "png",
@@ -1218,10 +1335,10 @@ my_table <- data.frame(
     "Model too variable",
     "Data too variable",
     "Both outside a factor of 2"),
-  c(53.8, 35.5, 1.9, 8.79),
-  c(44.2, 44.7, 2.1, 8.95),
-  c(0.0, 100, 0.0, 0.0),
-  c(48.9, 40.2, 2.0, 8.86))
+  c(50.15, 36.28, 3.34, 10.23),
+  c(68.45, 20.94, 3.14, 7.46),
+  c(16.28, 71.29, 1.07, 11.35),
+  c(62.36, 26.53, 3.01, 8.09))
 
 
 names(my_table) <- c(" ","1-compartment (%)", "2-compartment (%)", "Flat (%)", "Overall (%)")
@@ -1246,7 +1363,7 @@ dual_plot <- plot_grid(pl_5A, table_plot, ncol = 1, align = "v",
 
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ModelPerformance_vDataVariability_wTable_2024-02-01.png"),
+              "ModelPerformance_vDataVariability_wTable_2024-05-16.png"),
        plot = dual_plot,
        height = 4.5,
        width = 6.5,
@@ -1301,8 +1418,9 @@ pl_5Alt <- this_preds %>%
         axis.ticks = element_blank(),
         axis.line = element_blank())
 
+pl_5Alt
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ModelPerformance_vDataVariability_2024-02-05.png"),
+              "ModelPerformance_vDataVariability_2024-05-16.png"),
        height = 4.5,
        width = 4.5,
        device = "png",
@@ -1343,7 +1461,7 @@ dual_plot <- plot_grid(pl_5Alt, table_plot, ncol = 1, align = "v",
 
 dual_plot
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ModelPerformance_vDataVariability_wTable_2024-02-05.png"),
+              "ModelPerformance_vDataVariability_wTable_2024-05-16.png"),
        plot = dual_plot,
        height = 4.5,
        width = 6.5,
@@ -1362,9 +1480,11 @@ Here we analyze and validate model performance per data group.
 
 
 
-my_df <- left_join(fold_errors_all, r2_df) %>% inner_join(myAIC) %>% inner_join(myRMSE_all)
+my_df <- left_join(fold_errors_all, r2_df) %>% inner_join(myAIC) %>% inner_join(myRMSE_all) %>%
+  inner_join(winmodel)
 
-mypl <- ggplot(data = my_df,
+mypl <-
+  ggplot(data = my_df,
                aes(
                  x = within_2fold,
                  y = Rsq,
@@ -1373,7 +1493,8 @@ mypl <- ggplot(data = my_df,
   geom_point() +
   geom_abline(slope = 1, color = "red4", linetype = "longdash") +
   scale_color_manual(values = c("#0398FC", "#D68E09", "black")) +
-  labs(x = "% Fold Error within 2-fold",
+    coord_cartesian(xlim = c(0,1), ylim = c(0,1)) +
+  labs(x = "Fraction of predictions within 2-fold",
        y = "R-squared value") +
   theme(aspect.ratio = 1,
         panel.border = element_rect(color = "black", fill = NA, size = 1),
@@ -1384,10 +1505,11 @@ mypl <- ggplot(data = my_df,
         legend.position = "none",
         legend.title = element_blank(),
         legend.key = element_blank())
+  
 panelA_plot <- ggExtra::ggMarginal(mypl, groupFill = TRUE,
                     type = "histogram",
-                    xparams = list(binwidth = 0.05),
-                    yparams = list(binwidth = 0.05))
+                    xparams = list(binwidth = 0.1),
+                    yparams = list(binwidth = 0.1))
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "R2_within2fold_comparison.png"),
        plot = ggExtra::ggMarginal(mypl, groupFill = TRUE,
@@ -1398,19 +1520,18 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        width = 5,
        units = "in")
 
-panelB_plot <- ggplot(data = myRMSE %>%
-         mutate(RMSE = ifelse(RMSE == 0, NA, RMSE)),
+panelB_plot <- ggplot(data = myRMSE,
                aes(
                  x = log10(RMSE),
                  color = model,
                  fill = model
                )) + 
-  geom_histogram(bins = 100) +
+  geom_histogram(bins = 50) +
   labs(y = "Count") +
   scale_color_manual(values = c("#0398FC", "#D68E09", "grey10")) +
   scale_fill_manual(values = c("#0398FC", "#D68E09", "grey10")) +
-  scale_y_continuous(breaks = scales::pretty_breaks(n = 4),
-                     expand = c(0,NA)) +
+  # scale_y_continuous(breaks = scales::pretty_breaks(n = 5),
+  #                    expand = c(0,0.1)) +
   facet_grid(rows = vars(model),
              cols = vars(Route)) +
   theme(text = element_text(size = 10),
@@ -1424,6 +1545,7 @@ panelB_plot <- ggplot(data = myRMSE %>%
     panel.spacing.y = unit(0.125, units = "in"),
         legend.position = "bottom",
         legend.title = element_blank())
+panelB_plot
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "RMSEs_winningmodel_LBFGSB_zero1E-6_RouteFacet_notNormalized.png"),
@@ -1444,10 +1566,82 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        width = 6.5,
        bg = "white",
        units = "in")
+
+
+# Classification analysis
+clFire <- readxl::read_xlsx(paste("C:/Users/GPADILLA",
+                                  "OneDrive - Environmental Protection Agency (EPA)",
+                                  "Profile/Documents",
+                                  "classified_cvt_2024_05_09.xlsx", sep = "/"))
+
+my_df %>%
+  left_join(clFire %>% distinct(Identifier, superclass, class),
+            by = c("Chemical" = "Identifier")) %>%
+  ggplot(aes(x = within_2fold, y = Rsq, color = superclass)) +
+  geom_point() +
+  facet_wrap(~superclass) +
+  theme_bw()
+
+
+winmodel %>%
+  left_join(clFire %>% distinct(Identifier, superclass, class),
+            by = c("Chemical" = "Identifier")) %>% View()
+
+my_data <- get_data(my_pk)
+my_data %>% 
+  filter(N_Subjects == 1) %>%
+  group_by(Chemical, Species, Reference,
+           Route, Media,
+           Dose, Time) %>%
+  summarize(meanConc = Conc/mean(Conc/Dose)/Dose)
+
+
+my_tkstats %>%
+  left_join(clFire, by = c("Chemical" = "DTXSID")) %>%
+  distinct(Chemical, Species, Route, Media, Reference, method, model,
+           halflife.tkstats, halflife.nca,
+           superclass) %>%
+  ggplot(aes(y = Chemical,
+             fill = superclass)) +
+  geom_point(aes(x = halflife.tkstats), shape = 21) +
+  geom_point(aes(x = halflife.nca), shape = 22) +
+  scale_x_log10() +
+  facet_grid(rows = vars(superclass), scales = "free", space = "free") +
+  theme_bw() +
+  theme(strip.text.y = element_text(hjust = 0, angle = 0))
+
 ```
 
 
+<<<<<<< HEAD
 ### Supp. Fig. 4: Distribution of Sigmas in CvTdb data
+=======
+```{r goodness-of-fit_exampleFits, eval = FALSE}
+pl <- plot(my_pk, use_scale_conc = TRUE, best_fit = TRUE,
+           drop_nonDetect = FALSE, log10_C = FALSE)
+
+ex_fits <- pl %>%
+  filter(Chemical %in% c("DTXSID3020833",
+                         "DTXSID00216205",
+                         "DTXSID3038305",
+                         "DTXSID1022845")) %>%
+  pull(final_plot)
+
+
+cowplot::plot_grid(plotlist = list(ex_fits[[2]], ex_fits[[3]],
+                                   ex_fits[[1]], ex_fits[[4]]))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "exampleFits_Rsq_within2fold.png"),
+       height = 12,
+       width = 12)
+
+```
+
+
+
+### Supp. Fig. 3: Distribution of Sigmas in CvTdb data
+>>>>>>> feature/Rclearance_comparison
 
 ```{r sFig4-sigmaDistribution, eval=FALSE}
 
@@ -1529,20 +1723,24 @@ l_curatedDTX <- read_tsv(paste0(Sys.getenv("FIG_DIR"),
 l_batch_search <- l_batch_search %>%
   left_join(l_noNamesCASRN, by = "CASRN") %>%
   mutate(DTXSID = coalesce(DTXSID.x, DTXSID.y)) %>%
-  dplyr::select(-DTXSID.x, -DTXSID.y) %>%
-  left_join(l_curatedDTX, by = "INPUT") %>%
-  mutate(DTXSID = coalesce(DTXSID.x, DTXSID.y)) %>%
   dplyr::select(-DTXSID.x, -DTXSID.y)
+  # View()
+  # left_join(l_curatedDTX, by = "INPUT") %>%
+  # mutate(DTXSID = coalesce(DTXSID.x, DTXSID.y)) %>%
+  # dplyr::select(-DTXSID.x, -DTXSID.y)
 # Now all but two of the IDs are unidentified
 
 lombardo <- lombardo %>%
   right_join(l_batch_search, by = c("Name" = "INPUT"))
 
+
+####
 lombard_abbr <- lombardo %>% dplyr::select(DTXSID,
                                            hVss = `human VDss (L/kg)`,
                                            hCltot = `human CL (mL/min/kg)`,
                                            halflife = `terminal  t1/2 (h)` ) %>%
-  filter(DTXSID %in% cvt_DTXSIDs)
+  filter(DTXSID %in% cvt_DTXSIDs) %>%
+  left_join(chem_name_translate, by = c("DTXSID" = "Chemical"))
 
 # 15 chemicals in common with values for both
 lombardo_comparison <- my_tkstats %>%
@@ -1550,7 +1748,7 @@ lombardo_comparison <- my_tkstats %>%
                 model, Vss.tkstats, CLtot.tkstats) %>%
   distinct() %>%
   inner_join(lombard_abbr, by = "DTXSID") %>%
-  filter(!is.na(Vss.tkstats)) %>%
+  # filter(!is.na(Vss.tkstats)) %>%
   arrange(halflife)
 
 comparable_ids <- lombardo_comparison %>% pull(DTXSID)
@@ -1559,24 +1757,27 @@ lombard_abbr <- lombard_abbr %>%
   mutate(Species = "human", model = "Lombardo et al.") %>%
   rename(Vss = hVss, CLtot = hCltot) %>%
   mutate(CLtot = CLtot*60/1000) %>% # Lombardo reports this as mL/min/kg, need L/h/kg
-  filter(DTXSID %in% comparable_ids)
+  filter(DTXSID %in% comparable_ids) %>%
+  mutate(Chemical_Name = reorder(Chemical_Name, halflife))
 
 lombardo_comparison <- my_tkstats %>%
   dplyr::select(DTXSID = Chemical, Species,
                 model, Vss.tkstats, CLtot.tkstats, halflife.tkstats) %>%
   filter(DTXSID %in% comparable_ids) %>%
+  left_join(chem_name_translate, by = join_by(DTXSID == Chemical)) %>%
   distinct() %>%
   rename(Vss = Vss.tkstats, CLtot = CLtot.tkstats, halflife = halflife.tkstats) %>%
   bind_rows(lombard_abbr) %>%
   mutate(model = ifelse(str_detect(model, "^model"), "invivoPKfit", model),
-         DTXSID = factor(DTXSID, levels = unique(comparable_ids)))
+         Chemical_Name = factor(Chemical_Name,
+                                levels = levels(lombard_abbr$Chemical_Name)))
 
 lombardo_comparison %>%
   pivot_longer(cols = c("Vss", "CLtot", "halflife")) %>%
   mutate(name = factor(name, levels = c("halflife", "Vss", "CLtot"))) %>%
   ggplot(mapping = aes(
-    x = value,
-    y = DTXSID
+    x = log10(value),
+    y = Chemical_Name
   )) +
   geom_point(aes(color = model,
                  shape = Species),
@@ -1602,7 +1803,7 @@ lombardo_comparison %>%
         text = element_text(size = 10),
         axis.ticks = element_blank(),
         axis.line = element_blank(),
-        axis.text = element_text(face = "bold"),
+        axis.text = element_text(face = "bold", size = 6),
         axis.title.y = element_blank(),
         axis.title.x = element_blank(),
         legend.position = "bottom",
@@ -1611,8 +1812,8 @@ lombardo_comparison %>%
         legend.text = element_text())
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "lombardoComparison_Figure8_2024.png"),
-       height = 4,
+                         "lombardoComparison_Figure8_2024_named.png"),
+       height = 7,
        width = 6.5,
        device = "png", dpi = 300)
   
@@ -1682,39 +1883,42 @@ sfig4B <- other_meta %>% left_join(my_tkstats, by = c("DTXSID" = "Chemical")) %>
                values_to = "Fgutabs") %>%
     mutate(Source = ifelse(str_detect(Source, "tkstats"), "invivoPKfit",
                            "Honda et al.")) %>%
-    ggplot(mapping = aes(
-      x = Fgutabs,
-      y = reorder(DTXSID, Fgutabs)
-    )) +
-    geom_point(aes(color = Source),
-               shape = 24,
-               position = position_dodge(0.7),
-               size = 5/.pt, stroke = 2.5/.pt) +
-    scale_color_manual(values = c("black", "green4"),
-                       breaks = c("invivoPKfit", "Honda et al.")) +
+  left_join(chem_name_translate, by = join_by(DTXSID == Chemical)) %>%
+  ggplot(mapping = aes(
+    x = Fgutabs,
+    y = reorder(Chemical_Name, Fgutabs)
+  )) +
+  geom_point(aes(color = Source),
+             shape = 24,
+             position = position_dodge(0.7),
+             size = 5/.pt, stroke = 2.5/.pt) +
+  scale_color_manual(values = c("black", "green4"),
+                     breaks = c("invivoPKfit", "Honda et al.")) +
   labs(x = "Oral Bioavailability") +
   guides(color = guide_legend(nrow = 2)) +
-    theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
-          panel.background = element_blank(),
-          panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
-          strip.background = element_rect(fill = "white"),
-          strip.text = element_text(face = "bold", size = 12),
-          text = element_text(size = 10),
-          axis.ticks = element_blank(),
-          axis.line = element_blank(),
-          axis.text = element_text(face = "bold"),
-          axis.title.y = element_blank(),
-          legend.position = "bottom",
-          legend.key = element_blank(),
-          legend.title = element_text(face = "bold"),
-          legend.text = element_text())
-  
+  theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold", size = 12),
+        text = element_text(size = 10),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.text = element_text(face = "bold"),
+        axis.title.y = element_blank(),
+        legend.position = "bottom",
+        legend.key = element_blank(),
+        legend.title = element_text(face = "bold"),
+        legend.text = element_text())
 
-plot_grid(sfig4A, sfig4B, align = "h", axis = "bt")
+
+plot_grid(sfig4A, sfig4B, align = "h", axis = "bt",
+          rel_widths = c(1,2),
+          labels = c("A", "B"))
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "metaAnalysis_Comparisons_SuppFigure4_2024.png"),
+                         "metaAnalysis_Comparisons_SuppFigure4_2024_named.png"),
        height = 3,
-       width = 5,
+       width = 5.75,
        device = "png", dpi = 300)
 
 ```
@@ -1960,7 +2164,7 @@ s6_plB_mouse <- pl %>% filter(Chemical %in% "DTXSID4020533",
                               Species %in% "mouse") %>% pull(final_plot) %>% .[[1]]
 s6_plB_rat <- pl %>% filter(Chemical %in% "DTXSID4020533",
                               Species %in% "rat") %>% pull(final_plot) %>% .[[1]]
-s6_plC <- pl %>% filter(Chemical %in% "DTXSID8021359") %>%
+s6_plC <- pl %>% filter(Chemical %in% "DTXSID00216205") %>%
   pull(final_plot) %>% .[[1]]
 s6_plD <- pl %>% filter(Chemical %in% "DTXSID8025337") %>%
   pull(final_plot) %>% .[[1]]
@@ -1969,7 +2173,7 @@ s6_plD <- pl %>% filter(Chemical %in% "DTXSID8025337") %>%
 # panel A : Oranges
 panelA_cols <- brewer.pal(8, "Oranges")[3:8]
 # panel B : Greens
-panelB_cols <- brewer.pal(9, "Greens")[2:9]
+panelB_cols <- brewer.pal(9, "Greens")[2:10]
 # panel C : Blue (only 2 values) 
 # panel D : Purple (6 values)
 panelD_cols <- brewer.pal(9, "Purples")[4:9]
@@ -1991,15 +2195,15 @@ s6_plB_mouse <- s6_plB_mouse +
 
 s6_plB_rat <- s6_plB_rat + 
   labs(title = "1,4-dioxane\nRat") +
-  scale_color_manual(values = panelB_cols[c(1, 2, 3, 4, 6,8)],
+  scale_color_manual(values = panelB_cols[c(1, 2, 3, 4, 5, 6,7, 8)],
                      aesthetics = c("color", "fill")) +
   theme(text = element_text(size = 20),
         legend.position = "none",
         strip.background = element_rect(fill = "white"))
 
 s6_plC <- s6_plC +
-  labs(title = "tolbutamide") +
-  scale_color_manual(values = c("#6BAED6", "#08519C"),
+  labs(title = "psoralen") +
+  scale_color_manual(values = c("#6BAED6", "#08519C", "darkblue"),
                      aesthetics = c("color", "fill")) +
   theme(text = element_text(size = 20),
         legend.position = "none",
@@ -2028,7 +2232,7 @@ plot_grid(
   s6_plCD,
   align = "v",
   ncol = 1,
-  rel_heights = c(1.25, 1, 1.25),
+  rel_heights = c(1.25, 1.2, 1.25),
   labels = c("A", "B", ""),
   label_size = 24
 )
@@ -2036,7 +2240,7 @@ plot_grid(
 # Am making this 2X the size I need it to be 
 # so the points are a reasonable size when I scale it down
 ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ExampleFitsPlots_02.05.2024.png"),
+              "ExampleFitsPlots_06.12.2024.png"),
        width = 13,
        height = 14,
        units = "in")
@@ -2200,7 +2404,7 @@ for each chemical, species data group.
 ### Plotting for all (2.5MB file)
 pl <- plot(my_pk, n_interp = 12, use_scale_conc = TRUE)
 pdf(file = paste0(Sys.getenv("FIG_DIR"),
-              "DoseNormalized_Joint_AllFits_Final_202402_08.pdf"),
+              "Transformed_Joint_AllFits_Final_2024_05_16.pdf"),
     height = 6, width = 10)
 for (i in 1:nrow(pl)) {
   print(pl$final_plot[[i]])
@@ -2208,9 +2412,9 @@ for (i in 1:nrow(pl)) {
 dev.off()
 
 # From my new SQL pull
-pl <- plot(my_pk, n_interp = 10, use_scale_conc = FALSE)
+pl <- plot(my_pk, n_interp = 12, use_scale_conc = FALSE, best_fit = TRUE)
 pdf(file = paste0(Sys.getenv("FIG_DIR"),
-              "Joint_AllFits_Final_20240109.pdf"),
+              "Joint_bobyqa_AllFits_Final_20240514.pdf"),
     height = 10, width = 10)
 for (i in 1:nrow(pl)) {
   print(pl$final_plot[[i]])
@@ -2503,7 +2707,43 @@ full_summary %>%
 
 
 
-```{r information}
+```{r information, eval=FALSE, echo=FALSE}
+my_tkstats <- eval_tkstats(my_pk)
+tk_summary <- my_tkstats %>%
+  distinct(Chemical, Species, Media, Route) %>%
+  group_by(Chemical, Species, Media) %>%
+  summarize(Route = paste(Route, collapse = "-"))
+
+
+shortlist <- tk_summary %>% filter(str_detect(Route, pattern = "\\-")) %>%
+  distinct(Chemical, Species, Media, "cRoute" = Route)
+
+plus_doses <- my_pk$data %>% 
+  distinct(Chemical, Species, Media, Route, Dose) %>%
+  group_by(Chemical, Species, Media, Route) %>%
+  summarize(nDose = n()) %>%
+  filter(nDose > 1)
+
+
+inner_join(shortlist, plus_doses) %>%
+  distinct(Chemical, Species, Media) -> shortlist
+  inner_join(my_tkstats %>%
+               distinct(Chemical, Species, Media, model, Fgutabs.tkstats))
+
+get_nca(my_pk) %>%
+  filter(param_name %in% "AUC_infinity") %>%
+  inner_join(shortlist) %>%
+  distinct(Chemical, Species, Route, Media, Dose, param_name, param_value) %>%
+  pivot_wider(names_from = param_name,
+              values_from = param_value) %>%
+  mutate(DoseAUC = AUC_infinity/Dose)
+
+# Check the time-scaled data (are plots odd?)
+
+```
+
+
+```{r}
 sessionInfo()
 
 ```
