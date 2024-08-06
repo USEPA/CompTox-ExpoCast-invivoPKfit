@@ -7,12 +7,23 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r init, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 ```
+
+
+# Overview
+
+This vignette outlines the 2023 manuscript that describes _invivoPKfit_'s use 
+in a case study with CvT data from over 200 Chemicals. The main inquiry is to
+assess whether we can estimate parameters for one- and two-compartment models
+such that the majority of predicted values are "within a factor of two" -- a
+common metric used to evaluate physiologically-based pharmacokinetic 
+(PBPK) models.
+
 
 ```{r setup}
 set.seed(2023)
@@ -23,6 +34,9 @@ devtools::load_all()
 
 ```
 
+To speed up analysis in sections 4 and beyond, we can load an `.rds` file 
+that includes the fitted models used in much of the publication.
+
 ``` {r file_load, eval=FALSE}
 # saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds")
 my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
@@ -31,20 +45,20 @@ my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 
 
 
-# TOC
+# Table of Contents
 
 1. Pulling Data from CvTdb  
   - Minimal `pk` object  
 2. Running all possible fitting options  
   - Evaluating fitting options  
   - Head-to-head comparison of pooled vs joint models  
-3. Running dose-normalized joint fits  
+3. Running dose-normalized, log-transformed, joint fits  
 4. Analysis Plots  
-  - CvTdb replicate variation (Figure 4A & Alternative)  
+  - CvTdb replicate variation (Figure 4A & Supp. Figure 2A)  
   - CvTdb replicate variation over ADME-normalized time (Figure 4B)  
-  - CvTdb concentration and final time-point distributions (Supplementary Figure 1)  
-  - invivoPKfit fit option selection (Supplementary Table 1)  
-  - invivoPKfit model performance (Supplementary Figure 2)  
+  - CvTdb concentration and final time-point distributions (Supp. Figure 2B)  
+  - invivoPKfit fit option selection (Supp. Table 1)  
+  - invivoPKfit model performance (Supp. Figure 2)  
   - Model performance vs Data variability (Figure 5 and Alternative)  
   - Goodness of fit plots (Figure 6)  
   - Fits that may be improved (Supplementary Figure 3)  
@@ -60,8 +74,14 @@ my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
 
 See `pulling_iv_oral_cvtdb.Rmd`.
 
+### Minimal PK object
+
 The following chunk shows the column/field mapping from the `cvt` object and
 the `pk` object needed for invivoPKfit analysis.
+The `cvt` object is data from the CvTdb database that includes chemicals with
+oral or intravenous routes of administration and takes measurements from
+blood or plasma. The data has been processed and cleaned to facilitate its use
+with _invivoPKfit_.
 
 ```{r pk_obj_fromSQL, eval=FALSE}
 
@@ -99,10 +119,10 @@ minimal_pk <- pk(data = cvt,
 
 ## Running all possible fitting options
 
-
-This chunk is to run all the options through a
-standard pipeline that calculates RMSE for Cmax and AUC_inf
-for the Chemical Species Route Media grouping...
+Here we setup the PK object with the various options for fitting and data
+transformations. As shown in this vignette, it is possible to setup multiple
+distinct options for fitting and data transformation at once prior to processing
+and fitting the data.
 
 ```{r pooled_fitting_choices, eval=FALSE}
 # Types of Choices:
@@ -482,6 +502,8 @@ multiRef_ChemSpec %>% nrow() # Surprisingly only 15 Chem + Species have multiple
 
 ```
 
+
+### Evaluating error in finalist options
 These finalists will be compared based on their more detailed statistics.
 
 ```{r Plotting_Summary, eval=FALSE}
@@ -603,6 +625,8 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "SquaredError_SummaryEvaluations
        width = 5)
 
 
+# Supplemental Figure 3
+
 preval %>% filter(Options %in% c("000 Joint", "000 Pooled", "111 Joint"),
                   method %in% "bobyqa") %>%
   mutate(median_MSE = ifelse(Options == "111 Joint",
@@ -625,12 +649,13 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        width = 4)
 ```
 
-## Running dose-normalized joint fits
+## Running dose-normalized, log-transformed, joint fits  
 
-Dose-normalization and a hierarchical model were the options that produced the least
+Dose-normalization, log10 transformation, time-scaling,
+and a hierarchical model were the options that produced the least
 amount of error in predictions and derived TK stats.
-In addition, _L-BFGS-B_ was the optimizer of choice due to some marginally better fits
-(I will note that the run-time for _L-BFGS-B_ is significantly faster).
+In addition, _L-BFGS-B_ ran significantly faster,
+but _bobyqa_ produced predictions with slightly less error.
 
 
 ```{r Final_Options, eval=FALSE}
@@ -660,9 +685,8 @@ my_pk <- do_prefit(my_pk)
 }
 
 my_pk$fit %>% unnest(fit) %>%
-  # pull(convcode) %>% table()
+  pull(convcode) %>% table()
   # pull(xtime) %>% as.numeric() %>% `/`(60) %>% hist(breaks = 25)
-  View()
 ```
 
 ## Analysis Plots
@@ -764,8 +788,10 @@ that contribute to data variability including but not limited to:
 -  Technical precision  
 -  Biological variation between subjects in different studies  
 
+Additionally, this also contributes to supplemental figure 2.
 
-```{r fig4A, eval=FALSE}
+
+```{r fig4A_supp2A, eval=FALSE}
 
 all_my_data %>%
   filter(Detect %in% TRUE,
@@ -779,16 +805,11 @@ all_my_data %>%
            Dose, Time) %>%
   filter(n() > 1,
          sum(is.na(Conc)) != n(),
-<<<<<<< HEAD
-         Conc > LOQ) %>%
-=======
          Conc > LOQ) %>% 
->>>>>>> feature/Rclearance_comparison
   mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
   ungroup() %>%
   rowwise() %>%
   mutate(foldConc = Conc / meanConc) %>%
-<<<<<<< HEAD
   # filter(Route == "oral") %>%
   count(foldConc >= 0.5 & foldConc <= 2) %>%
   {.[[2,2]]/(.[[1,2]] + .[[2,2]])}
@@ -796,15 +817,6 @@ all_my_data %>%
 # 89.01% inside twofold | 87.13%  | 92.27%
 # 2.21%  above twofold  | 2.63%   | 1.4%
 # 8.77%  below twofold  | 10.24%  | 6.23%
-=======
-  filter(Route == "oral") %>%
-  count((foldConc > 2)) %>%
-  {.[[2,2]]/(.[[1,2]] + .[[2,2]])}
-# Stats for ALL | ORAL | IV
-# 88.99% inside twofold | 87.08%  | 92.28%
-# 2.23%  above twofold  | 2.66%   | 1.51%
-# 8.7%  below twofold  | 10.25%  | 6.20%
->>>>>>> feature/Rclearance_comparison
 
 pl4A <- all_my_data %>%
   filter(Detect %in% TRUE,
@@ -959,8 +971,11 @@ pl4A <- combined_summary %>% ungroup() %>%
 ```
 
 
+### Figure 4B: Variation over time in CvTdb data.
 
-### Figure 4B: Variation over time in CvTdb data
+Here the goal is to evaluate whether particular timepoints throughout CvT data
+are particularly susceptible to high variability. To do this, we create a 
+relative time scale anchored by $t_{max}$ and $t_{last}$.
 
 ```{r fig4B-cowplot, eval=FALSE}
 
@@ -1247,7 +1262,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 
 
-### Figure 5: Model performance vs Data Variability
+### Figures 5 and Supplemental Figures 4 & 5: Model performance vs Data Variability
 
 Here we examine the performance of "best fit" models with relation to data variability.
 Please note that in supplemental Figure 3, the data with summarized observations
@@ -1258,23 +1273,15 @@ data variability with model performance, we look at data with replicated timepoi
 
 
 # pl_5A <-
-<<<<<<< HEAD
-  my_preds %>%
-=======
   my_preds %>% 
   right_join(winmodel) %>%
->>>>>>> feature/Rclearance_comparison
   group_by(Chemical,
            Species,
            Route, Media,
            Dose, Time) %>%
   filter(n() > 1,
-<<<<<<< HEAD
-         sum(is.na(Conc_trans)) != n(),
-=======
          sum(is.na(Conc)) != n(),
          # model %in% c("model_flat"),
->>>>>>> feature/Rclearance_comparison
          exclude %in% FALSE,
          Detect %in% TRUE) %>%
   mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
@@ -1285,15 +1292,9 @@ data variability with model performance, we look at data with replicated timepoi
          foldPred = Conc_est / Conc) %>% 
   # For percentages
   ungroup() %>%
-<<<<<<< HEAD
-  # filter(model %in% c("model_1comp")) %>%
-  # count(!(foldPred >= 0.5 & foldPred <= 2) & !(foldConc >= 0.5 & foldConc <= 2)) %>%
-  # {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
-=======
   # filter(model %in% c("model_flat")) %>%
-  count((foldPred >= 0.5 & foldPred <= 2) & (foldConc >= 0.5 & foldConc <= 2)) %>%
-  {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
->>>>>>> feature/Rclearance_comparison
+  # count((foldPred >= 0.5 & foldPred <= 2) & (foldConc >= 0.5 & foldConc <= 2)) %>%
+  # {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
   # For Plotting
   ggplot(aes(
     y = foldPred,
@@ -1474,12 +1475,11 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 
 ### Figure 6: Multiple goodness-of-fit metrics validate model performance
-Here we analyze and validate model performance per data group.
+Here we analyze and validate model performance per data group using R-squared,
+RMSE, and fraction of predictions that are within 2-fold for each Chemical,
+Species, Route, Media, and Dose groupings.
 
 ```{r fig6-goodness-of-fit, eval=FALSE}
-
-
-
 my_df <- left_join(fold_errors_all, r2_df) %>% inner_join(myAIC) %>% inner_join(myRMSE_all) %>%
   inner_join(winmodel)
 
@@ -1613,9 +1613,7 @@ my_tkstats %>%
 ```
 
 
-<<<<<<< HEAD
-### Supp. Fig. 4: Distribution of Sigmas in CvTdb data
-=======
+### Supp. Fig. 6 Examples fits for chemicals with R-squared and within 2-fold
 ```{r goodness-of-fit_exampleFits, eval = FALSE}
 pl <- plot(my_pk, use_scale_conc = TRUE, best_fit = TRUE,
            drop_nonDetect = FALSE, log10_C = FALSE)
@@ -1640,8 +1638,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 
 
 
-### Supp. Fig. 3: Distribution of Sigmas in CvTdb data
->>>>>>> feature/Rclearance_comparison
+### Supp. Fig. 7: Distribution of Sigmas in CvTdb data
 
 ```{r sFig4-sigmaDistribution, eval=FALSE}
 
@@ -1822,7 +1819,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
-### Supp. Fig. 4 Histogram of Lombardo Vss and InvivoPKfit & another meta-analysis
+### Supp. Fig. 7 Histogram of Lombardo Vss and InvivoPKfit & another meta-analysis
 
 
 ```{r otherMeta-analysis, eval=FALSE}
@@ -1926,7 +1923,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 
 
 
-### Supp. Fig. 5: Parallelization decreases runtime of invivoPKfit
+### Supp. Fig. 9: Parallelization decreases runtime of invivoPKfit
 
 Here I do a bit of benchmarking for the parallel-ized version of do_fit
 
@@ -2152,7 +2149,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 ```
 
-### Supp. Fig. 6: Example plots for data fits
+### Supp. Fig. 10: Example plots for data fits
 
 ```{r sfig6-examples-of-fits, eval=FALSE}
 pl <- plot(my_pk, use_scale_conc = TRUE, n_interp = 10)
@@ -2578,169 +2575,6 @@ ggsave(paste0(Sys.getenv("FIG_DIR"), "Point_Reference_3x5.png"),
        dpi = 300)
 ```
 
-
-# Preparing results for CvTdb
-
-```{r cvtdb-prep, eval=FALSE}
-
-my_cvt <- cvt
-my_tkstats <- eval_tkstats(my_pk)
-  
-my_cvt_unique <- my_cvt %>% dplyr::mutate(
-  preprocess_data_flags = 
-    case_when(
-      (other_study_identifier %in% "S0916") ~ paste("Adjusted dose_level_original_units",
-                                                              "adjusted dose_level_normalized.",
-                                                              sep = " and "),
-      (other_study_identifier %in% "S0624") ~ paste("Adjusted dose_level_normalized."),
-      (document_id %in% c("65", "61", "46", "31")) ~ paste("Adjusted analyte_dtxsid",
-                                                           "adjusted analyte_name_original.",
-                                                           sep = " and "),
-      (other_study_identifier %in% c("S0976",
-                                     "S0361",
-                                     "S0328")) ~ paste("Adjusted loq and loq_units."),
-      (document_id %in% "38") ~ paste("Adjusted conc."),
-      (analyte_name_original %in% c("n-desmethyltamoxifen",
-                                    "methemoglobin")) ~ paste("Adjusted analyte_dtxsid."),
-      .default = NA_character_
-    )) %>%
-  group_by(analyte_dtxsid, species,
-    administration_route_normalized, conc_medium_normalized, preprocess_data_flags) %>%
-  summarize(document_ids = paste0(unique(document_id), collapse = ","))
-
-# Non-compartmental analysis
-my_nca <- get_nca(my_pk) %>% dplyr::select(-param_units) %>%
-  mutate(param_name = paste0(param_name, ".nca")) %>%
-  group_by(Chemical, Species,
-           Route, Media, design) %>%
-  pivot_wider(names_from = param_name,
-              values_from = c(param_value, param_sd_z)) %>%
-  distinct() %>%
-  arrange(Chemical) %>%
-  rename_with(.fn = ~gsub("param_", "", .x)) %>%
-  rename_with(.fn = ~gsub("value_", "", .x)) %>%
-  rename(analyte_dtxsid = Chemical,
-         species = Species,
-         administration_route_normalized = Route,
-         conc_medium_normalized = Media)
-
-
-my_cvt %>%
-  dplyr::select(analyte_dtxsid, species, radiolabeled) %>%
-  distinct() %>%
-  filter(analyte_dtxsid %in% (cvt %>% filter(radiolabeled) %>% pull(analyte_dtxsid)))
-
-# Writing to file
-left_join(my_nca, my_cvt_unique) %>%
-  ungroup() %>%
-  filter(!is.infinite(AUC_infinity.nca), !is.infinite(AUMC_infinity.nca)) %>%
-  distinct() %>%
-  mutate(nca_id = row_number(),
-         .before = analyte_dtxsid) %>%
-  # View("NCA-CvTdb")
-  write_tsv("data-raw/NCA_CvTdb.tsv")
-# Note that this will have more numbers because it still includes AUC_infinity == NA
-
-
-
-# TK stats
-my_tkstats <- my_tkstats %>%
-  dplyr::select(analyte_dtxsid = Chemical, species = Species,
-                administration_route_normalized = Route, 
-                conc_medium_normalized = Media, 
-                Reference,
-                model, method,
-                ends_with("tkstats")) %>%
-  group_by(across(everything())) %>%
-  ungroup(Reference) %>%
-  summarize(document_ids = paste0(unique(Reference), collapse = ",")) %>%
-  ungroup() %>%
-  distinct() %>%
-  arrange(analyte_dtxsid) 
-
-prefit_df <- my_pk$prefit$fit_check %>% inner_join(get_winning_model(my_pk)) %>%
-  dplyr::select(analyte_dtxsid = Chemical, species = Species, model, method, 
-                fit_decision, fit_reason)
-
-left_join(my_tkstats, my_cvt_unique) %>%
-  left_join(prefit_df) %>%
-  ungroup() %>%
-  distinct() %>%
-  mutate(tkstats_id = row_number(), .before = analyte_dtxsid) %>%
-  # View("TKstats-CvTdb")
-  write_tsv("data-raw/tkstats_CvTdb.tsv")
-
-```
-
-```{r data_flagging, eval=FALSE}
-get_status(my_pk)
-my_data <- get_data(my_pk)
-# Do dose normalized NCA
-my_pk_doseNorm <- my_pk + 
-  scale_conc(dose_norm = TRUE, log10_trans = FALSE)
-my_pk_doseNorm <- do_preprocess(my_pk_doseNorm)
-my_pk_doseNorm <- do_data_info(my_pk_doseNorm)
-my_nca <- nca(my_pk_doseNorm, dose_norm = TRUE)
-my_nca <- my_nca %>% select(Chemical:param_value) %>%
-  pivot_wider(names_from = param_name,
-              values_from = param_value)
-my_data_summary <- my_data %>%
-  group_by(!!!my_pk_doseNorm$settings_data_info$nca_group) %>%
-  summarize(t_first = min(Time), t_last = max(Time))
-
-full_summary <- my_nca %>% inner_join(my_data_summary)
-
-full_summary %>%
-  rowwise() %>% 
-  mutate(sufficient_abs_phase = ifelse(Route %in% "iv", NA,
-                                       ifelse(t_first == tmax, 
-                                              FALSE, TRUE)),
-         sufficient_elim_phase = ifelse(t_last == tmax, FALSE, TRUE)) %>%
-  View()
-
-full_summary %>%
-  group_by(!!!my_pk$settings_data_info$nca_group) %>%
-  reframe(AUC_inf_range = range(AUC_infinity))
-
-```
-
-
-
-
-```{r information, eval=FALSE, echo=FALSE}
-my_tkstats <- eval_tkstats(my_pk)
-tk_summary <- my_tkstats %>%
-  distinct(Chemical, Species, Media, Route) %>%
-  group_by(Chemical, Species, Media) %>%
-  summarize(Route = paste(Route, collapse = "-"))
-
-
-shortlist <- tk_summary %>% filter(str_detect(Route, pattern = "\\-")) %>%
-  distinct(Chemical, Species, Media, "cRoute" = Route)
-
-plus_doses <- my_pk$data %>% 
-  distinct(Chemical, Species, Media, Route, Dose) %>%
-  group_by(Chemical, Species, Media, Route) %>%
-  summarize(nDose = n()) %>%
-  filter(nDose > 1)
-
-
-inner_join(shortlist, plus_doses) %>%
-  distinct(Chemical, Species, Media) -> shortlist
-  inner_join(my_tkstats %>%
-               distinct(Chemical, Species, Media, model, Fgutabs.tkstats))
-
-get_nca(my_pk) %>%
-  filter(param_name %in% "AUC_infinity") %>%
-  inner_join(shortlist) %>%
-  distinct(Chemical, Species, Route, Media, Dose, param_name, param_value) %>%
-  pivot_wider(names_from = param_name,
-              values_from = param_value) %>%
-  mutate(DoseAUC = AUC_infinity/Dose)
-
-# Check the time-scaled data (are plots odd?)
-
-```
 
 
 ```{r}
