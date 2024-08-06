@@ -2,7 +2,7 @@
 % Please edit documentation in R/auc_1comp_cl.R
 \name{auc_1comp_cl}
 \alias{auc_1comp_cl}
-\title{Analytic AUC for 1-compartment model}
+\title{Analytic AUC for 1-compartment model with specific clearance}
 \usage{
 auc_1comp_cl(params, time, dose, route, medium)
 }
@@ -39,7 +39,10 @@ Calculate area under the plasma concentration vs. time curve for the
 
 `params` must include the following named items:
   \describe{
-  \item{kelim}{Elimination rate, 1/time.}
+  \item{Fup}{Fraction of compound unbound in plasma. Unitless.}
+  \item{Clint}{Intrinsic clearance by hepatocytes. Units: 1/hr}
+  \item{Q_totli}{Total blood flow through the liver. Units: L/h/kg body weight ^ (3/4)}
+  \item{Q_gfr}{Glomerular filtration rate, how quickly do kidneys filter. Units: L/h/kg body weight ^ (3/4)}
   \item{Vdist}{Apparent volume of central compartment, volume/unit BW. Or see below for
   `Fgutabs_Vdist`}
   }

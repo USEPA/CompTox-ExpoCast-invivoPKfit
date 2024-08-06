@@ -2,7 +2,7 @@
 % Please edit documentation in R/tkstats_1comp_cl.R
 \name{tkstats_1comp_cl}
 \alias{tkstats_1comp_cl}
-\title{Toxicokinetic statistics for 1-compartment model}
+\title{Toxicokinetic statistics for 1-compartment model with specific clearance}
 \usage{
 tkstats_1comp_cl(
   pars,
@@ -45,6 +45,8 @@ A `data.frame` with two variables:
 }
 \description{
 Calculate predicted toxicokinetic statistics for a 1-compartment model.
+This does use the parameters for the `model_1comp_cl` that are taken from
+[httk] estimates.
 }
 \details{
 # Statistics computed
@@ -84,15 +86,15 @@ For intravenous route, time of peak concentration is always 0.
 
 ## Peak concentration
 
-Evaluate [cp_1comp()] at the time of peak concentration.
+Evaluate [cp_1comp_cl()] at the time of peak concentration.
 
 ## AUC evaluated at infinite time
 
-Evaluate [auc_1comp()] at time = `Inf`.
+Evaluate [auc_1comp_cl()] at time = `Inf`.
 
 ## AUC evaluated at the time of the last observation
 
-Evaluate [auc_1comp()] at time = `tlast`.
+Evaluate [auc_1comp_cl()] at time = `tlast`.
 }
 \author{
 John Wambaugh, Caroline Ring

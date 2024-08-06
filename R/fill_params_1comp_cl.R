@@ -1,4 +1,4 @@
-#' Fill parameters for 1-compartment model
+#' Fill parameters for 1-compartment model with specific clearance
 #'
 #' @param params Named numeric vector of parameters for the 1-compartment model
 #' @return A named numeric vector of parameters, with any 1-compartment model

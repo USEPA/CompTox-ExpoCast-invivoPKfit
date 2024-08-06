@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_starts_1comp_cl.R
 \name{get_starts_1comp_cl}
 \alias{get_starts_1comp_cl}
-\title{Get starting values for 1-compartment model}
+\title{Get starting values for 1-compartment model with specific clearance}
 \usage{
 get_starts_1comp_cl(data, par_DF, restrictive)
 }
@@ -36,7 +36,11 @@ generally not be called directly by the user.
 The full set of model parameters for the 1-compartment model includes `Vdist`,
 `kelim`, `kgutabs`, `Fgutabs`, and `Rblood2plasma`. Whether each one can be
 estimated from the data depends on what routes of administration are included
-in the data.
+in the data. However, in this version of the one-compartment model,
+we use the liver and glomerular flow rates (`Q_totli` and `Q_gfr`, respectively)
+provided by [httk] as well as intrisic clearance `Clint` and fraction unbound
+in plasma, `Fup`. These starting values are established and then are used
+to calculate the other parameters in the 1-compartment model.
 
 The numerical optimizer requires starting guesses for the value of each
 parameter to be estimated from the data. Default starting guesses are derived from the available data.
@@ -74,38 +78,8 @@ magnitude.
 
 # Starting value for `Vdist`
 
-If IV data exist, then only IV data are used to derive a starting estimate
-for `Vdist`.
-
-This starting estimate is derived by assuming that the IV data obey a
-one-compartment model, which means that when concentrations are
-dose-normalized and log10-transformed and plotted against time, they will
-follow a straight line with slope `-kelim`.
-
-First, concentrations are dose-normalized by dividing them by their corresponding
-doses. Then the normalized concentrations are log10-transformed.
-
-From all observations at the earliest observed time point in the data set
-(call it `tmin`), the median of the dose-normalized, log10-transformed
-concentrations is calculated; call it `C_tmin`. (The median is used, rather
-than the mean, in an attempt to be more robust to outliers.)
-
-If the earliest observed time point is not at time = 0, then the
-dose-normalized, log10-transformed concentration at time = 0 is extrapolated
-by drawing a straight line with slope `-kelim` back from `C_tmin`, where the
-value of `kelim` is the starting value derived as in the previous section.
-
-This extrapolated concentration at time t = 0 is called `A_log10`. `A_log10`
-represents the expected body concentration immediately after IV injection of
-a unit dose (under the assumption that TK obeys a one-compartment model).
-
-Then, the volume of distribution `Vdist` is derived as `1/(10^A_log10)`. In
-other words, `Vdist` is the volume that would be required to produce a
-concentration equal to `A_log10` after injecting a unit dose.
-
-(No starting value for `Vdist` can be derived with only oral data,
-but none is needed, because with only oral data, `Vdist` will not be estimated
-from the data).
+Using a calculated value for total clearance, `Cl_tot`, `Vdist` is estimated
+by dividing this by the estimation of `kelim`.
 
 # Starting value for `kgutabs`
 
@@ -152,7 +126,7 @@ yield a derived starting value for `Fgutabs`.
 
 #Starting value for `Rblood2plasma`
 
-The starting value for `Rblood2plasma` is always set at a constant 1.
+The starting value for `Rblood2plasma` is set to the value given by [httk::parameterize_gas_pbtk()].
 }
 \seealso{
 Other 1-compartment model functions: 

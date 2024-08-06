@@ -1,6 +1,8 @@
-#'Toxicokinetic statistics for 1-compartment model
+#'Toxicokinetic statistics for 1-compartment model with specific clearance
 #'
 #'Calculate predicted toxicokinetic statistics for a 1-compartment model.
+#'This does use the parameters for the `model_1comp_cl` that are taken from
+#'[httk] estimates.
 #'
 #'# Statistics computed
 #'
@@ -39,15 +41,15 @@
 #'
 #'## Peak concentration
 #'
-#'Evaluate [cp_1comp()] at the time of peak concentration.
+#'Evaluate [cp_1comp_cl()] at the time of peak concentration.
 #'
 #'## AUC evaluated at infinite time
 #'
-#'Evaluate [auc_1comp()] at time = `Inf`.
+#'Evaluate [auc_1comp_cl()] at time = `Inf`.
 #'
 #'## AUC evaluated at the time of the last observation
 #'
-#'Evaluate [auc_1comp()] at time = `tlast`.
+#'Evaluate [auc_1comp_cl()] at time = `tlast`.
 #'
 #'
 #'

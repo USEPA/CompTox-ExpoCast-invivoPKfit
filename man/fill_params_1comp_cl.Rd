@@ -2,7 +2,7 @@
 % Please edit documentation in R/fill_params_1comp_cl.R
 \name{fill_params_1comp_cl}
 \alias{fill_params_1comp_cl}
-\title{Fill parameters for 1-compartment model}
+\title{Fill parameters for 1-compartment model with specific clearance}
 \usage{
 fill_params_1comp_cl(params)
 }
@@ -16,7 +16,7 @@ A named numeric vector of parameters, with any 1-compartment model
   be imputed to agree with the other two.
 }
 \description{
-Fill parameters for 1-compartment model
+Fill parameters for 1-compartment model with specific clearance
 }
 \author{
 Caroline Ring

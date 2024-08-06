@@ -2,7 +2,7 @@
 % Please edit documentation in R/cp_1comp_cl.R
 \name{cp_1comp_cl}
 \alias{cp_1comp_cl}
-\title{Analytical 1-compartment model}
+\title{Analytical 1-compartment model with specific clearance}
 \usage{
 cp_1comp_cl(params, time, dose, route, medium = "plasma", restrictive = FALSE)
 }
@@ -42,7 +42,10 @@ for the 1-compartment model, for single bolus doses (IV and/or oral).
 
 `params` must include the following named items:
   \describe{
-  \item{Clint}{intrinsic clearance by hepatocytes, 1/time.}
+  \item{Fup}{Fraction of compound unbound in plasma. Unitless.}
+  \item{Clint}{Intrinsic clearance by hepatocytes. Units: 1/hr}
+  \item{Q_totli}{Total blood flow through the liver. Units: L/h/kg body weight ^ (3/4)}
+  \item{Q_gfr}{Glomerular filtration rate, how quickly do kidneys filter. Units: L/h/kg body weight ^ (3/4)}
   \item{Vdist}{Apparent volume of central compartment, volume/unit BW. Or see below for
   `Fgutabs_Vdist`}
   }
