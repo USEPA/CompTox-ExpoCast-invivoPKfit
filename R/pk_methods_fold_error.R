@@ -48,6 +48,7 @@ fold_errors.pk <- function(obj,
   }
 
   #get predicted concentrations
+  # Note that these are given in original concentration units, not transformed values
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,

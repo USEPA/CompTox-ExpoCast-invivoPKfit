@@ -85,7 +85,7 @@ represents the mean of \eqn{n_{ijk}} individual measurements. It has a
 corresponding sample standard deviation, \eqn{s_{ijk}}. In the harmonized
 data,  \eqn{s_{ijk}} is contained in variable `Conc_SD`.
 
-\eqn{\bar{theta}_i} represents the vector of model parameters supplied in
+\eqn{\bar{\theta}_i} represents the vector of model parameters supplied in
 argument `params` for chemical-species combination \eqn{i}.
 
 \eqn{\mu_{ijk}} is the model-predicted concentration for dose \eqn{d_{ijk}}

@@ -56,6 +56,7 @@ compare_models.pk <- function(obj,
                sep = "\n"))
   }
 
+  # Call the criterion method (AIC or BIC)
   crit_list <- do.call(criterion,
           args = c(list(obj = obj),
                       list(newdata = newdata,

@@ -90,12 +90,15 @@ if(suppress.messages %in% FALSE){
                 "Getting bounds and starting guesses for each error SD to be fitted"))
 }
 
+# Set a value to square root of lowest possible value 'x' where 1+x != 1
 sigma_lower <- sqrt(.Machine$double.eps)
 
+# Add the data_sigma_group and filter out all excluded values
 sigma_DF <- data %>%
   dplyr::mutate(data_sigma_group = data_sigma_group) %>%
   dplyr::filter(exclude %in% FALSE)
 
+# Set values for sigma upper/lower-bounds and start
 sigma_DF <- do.call(dplyr::group_by,
                     args = c(list(sigma_DF),
                              obj$stat_error_model$error_group)) %>%

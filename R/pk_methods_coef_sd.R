@@ -82,6 +82,7 @@ coef_sd.pk <- function(obj,
   )
 
   # get coefs data.frame for each model and method
+  # but exclude non-optimized parameters and sigma values for error_group
   coefs <- suppressMessages(
     coef(
       obj = obj,
@@ -100,6 +101,7 @@ coef_sd.pk <- function(obj,
   )
 
 
+  # Get required variables for log_likelihood()
   req_vars <- ggplot2::vars(Time,
                             Time.Units,
                             Time_trans,
@@ -111,6 +113,7 @@ coef_sd.pk <- function(obj,
                             N_Subjects,
                             Detect)
 
+  # Convert Time_trans to hours
   newdata <- obj$data %>%
     dplyr::select(!!!union(obj$data_group, req_vars),
                   !!!other_vars) %>%
@@ -202,9 +205,11 @@ coef_sd.pk <- function(obj,
       })
     }))
 
+  # Limit data.frame columns to those that unique identify needed values
   newdata <- newdata %>%
     dplyr::select(model, method, !!!obj$data_group, coefs_vector, sds, alerts)
 
+  # Pivot data.frame so that each parameter has a row
   if (table_format) {
     newdata <- newdata %>%
     dplyr::mutate(sds_tibble = purrr::map(sds,

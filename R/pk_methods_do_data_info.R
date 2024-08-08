@@ -90,10 +90,12 @@ do_data_info.pk <- function(obj, ...){
   grp_vars <- sapply(summary_group,
                      rlang::as_label)
 
+  # Assess various flags
   df <- dplyr::inner_join(data_summary_out,
                           nca_dose_norm,
                           by = grp_vars) %>%
     dplyr::mutate(
+      # Is tmax for oral data the first or last detected timepoint?
       data_flag = ifelse(
         Route %in% "oral" &
           (abs(tmax - tfirst_detect) < sqrt(.Machine$double.eps)) %in% TRUE &
@@ -110,6 +112,7 @@ do_data_info.pk <- function(obj, ...){
                  sep = " | "),
           data_flag
         )) %>% dplyr::mutate(
+          # CLtot/Fgutabs must be positive and AUC_infinity must also be positive
           data_flag = ifelse(
             (CLtot < 0) %in% TRUE |
               (`CLtot/Fgutabs` < 0) %in% TRUE,

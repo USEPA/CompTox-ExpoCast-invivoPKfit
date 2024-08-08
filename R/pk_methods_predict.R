@@ -138,6 +138,7 @@ predict.pk <- function(obj,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
 
+  # Get variables required for model functions
   req_vars <- ggplot2::vars(Time,
                             Time.Units,
                             Time_trans,
@@ -146,6 +147,7 @@ predict.pk <- function(obj,
                             Route,
                             Media)
 
+  # Make observations into nested list-column
   newdata <- newdata %>%
     dplyr::select(!!!union(obj$data_group, req_vars),
                   !!!other_vars) %>%
@@ -154,18 +156,21 @@ predict.pk <- function(obj,
     tidyr::nest(.key = "observations") %>%
     dplyr::ungroup()
 
+  # Set each observation per data group with a model and method used
   newdata <- tidyr::expand_grid(tidyr::expand_grid(model, method),
                                 newdata)
 
+  # Add the coefs
   newdata <- suppressMessages(dplyr::left_join(coefs, newdata))
 
-
+  # Remove any NULL observations
   newdata <- newdata %>%
     dplyr::rowwise() %>%
     dplyr::filter(!is.null(observations)) %>%
     dplyr::ungroup()
 
   # After join it is joined by model, method, Chemical, Species
+  # Set a new column for the model function
   newdata <- newdata %>%
     dplyr::group_by(model, method,
                     !!!obj$data_group,
@@ -178,6 +183,9 @@ predict.pk <- function(obj,
       )
     )
 
+  # Get predictions
+  # Note that the model functions only need Time, Dose, Route, and Medium
+  # AND this will NOT give log10-transformed values... that is a data independent transformation of scale
   newdata <- newdata %>%
     dplyr::reframe(predictions =
                      purrr::map(observations,
@@ -218,7 +226,7 @@ predict.pk <- function(obj,
   if (type == "auc")
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
 
-  if (conc_scale$dose_norm) {
+  if (!suppress_messages && conc_scale$dose_norm) {
     message("Note that the estimated values are Dose-normalized")
   } else {
     message("Note these values scale with Dose! (Not Dose-normalized)")

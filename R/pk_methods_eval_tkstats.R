@@ -172,7 +172,7 @@ eval_tkstats.pk <- function(obj,
 
 
 
-  #merge
+  # prepare for merge
   nca_df_red <- nca_df %>%
     dplyr::rename_with(~ paste0(.x, ".nca", recycle0 = TRUE),
                        !any_of(c(grp_vars, "model", "method")))
@@ -187,9 +187,13 @@ eval_tkstats.pk <- function(obj,
     message("TK statistics calculated based on dose-normalized value of 1mg/kg")
   }
 
-  suppressMessages(tk_eval <- dplyr::left_join(tkstats_df_red,
-                                               nca_df_red))
+  # Merge the tkstats and the nca data.frames
+  suppressMessages(
+    tk_eval <- dplyr::left_join(tkstats_df_red,
+                                               nca_df_red)
+    )
 
+  # Filter out infinite values for AUC_infinity
   if (finite_only) {
     tk_eval <- tk_eval %>%
       filter(is.finite(AUC_infinity.tkstats),

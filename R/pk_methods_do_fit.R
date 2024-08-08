@@ -79,7 +79,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   fit_check_DF <- obj$prefit$fit_check
 
 
-  #nest the necessary data frames...
+  # nest the necessary data frames...
   data_nest <- data %>%
     tidyr::nest(data = !tidyselect::all_of(data_group_vars))
 
@@ -92,7 +92,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   fit_check <- fit_check_DF %>%
     dplyr::select(!c(n_par, n_sigma, n_detect, n_par_opt, fit_reason))
 
-  #merge it all together
+  # merge it all together
 
   info_nest <- suppressMessages(dplyr::inner_join(
     dplyr::inner_join(
