@@ -219,10 +219,10 @@ predict.pk <- function(obj,
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
 
   if (conc_scale$dose_norm) {
-    message("Note that the estimated values are Dose-normalized")
+    message("predict.pk(): Note that the predicted values are for dose 1 (dose-normalized)")
   } else {
-    message("Note these values scale with Dose! (Not Dose-normalized)")
+    message("predict.pk(): Note that the predicted values are not dose-normalized")
   }
-  message("These predictions have been made using 1/hour rate constants from coefs()")
+  message("predict.pk(): These predictions have been made using 1/hour rate constants from coefs()")
   return(newdata)
 }
