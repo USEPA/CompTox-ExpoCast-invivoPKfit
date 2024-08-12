@@ -60,7 +60,7 @@
 #' @param time A numeric vector of time points.
 #' @param conc A numeric vector of concentrations. If detected (above limit of
 #'   detection/quantification), contains the measured value; if not detected
-#'   (below lLOD/LOQ), contains the LOD/LOQ.
+#'   (below LOD/LOQ), contains the LOD/LOQ.
 #' @param detect A logical vector: Whether each concentration was detected
 #'   (above LOD/LOQ) or not.
 #' @param series_id Optional: A variable that can be coerced to a factor,

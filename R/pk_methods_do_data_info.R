@@ -65,16 +65,17 @@ do_data_info.pk <- function(obj, ...){
   }
   nca_dose_norm_long <- nca(obj = obj,
                        newdata = NULL,
-                       nca_group = obj$settings_data_info$nca_group,
+                       nca_group = obj$settings_data_info$summary_group,
                        exclude = TRUE,
                        dose_norm = TRUE)
   #pivot wider
   #first get names of grouping vars
-  grp_vars_nca <- sapply(obj$settings_data_info$nca_group,
-                     rlang::as_label)
+  grp_vars_summary <- sapply(summary_group,
+                             rlang::as_label)
+
   #then pivot wider
   nca_dose_norm <-   nca_dose_norm_long %>%
-    tidyr::pivot_wider(id_cols = tidyselect::all_of(c(grp_vars_nca,
+    tidyr::pivot_wider(id_cols = tidyselect::all_of(c(grp_vars_summary,
                                                       "dose_norm")),
                        names_from = param_name,
                        values_from = param_value) %>%
@@ -93,8 +94,7 @@ do_data_info.pk <- function(obj, ...){
 
   df <- dplyr::inner_join(data_summary_out,
                           nca_dose_norm,
-                          by = intersect(grp_vars_nca,
-                                         grp_vars_summary)) %>%
+                          by = grp_vars_summary) %>%
     dplyr::mutate(
       data_flag = ifelse(
         Route %in% "oral" &

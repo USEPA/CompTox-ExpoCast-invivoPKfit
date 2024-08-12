@@ -7,14 +7,9 @@
 #' @param ... Other arguments (currently ignored).
 #' @return An object of class `c(pkproto, pk_settings_data_info)`
 #' @export
-settings_data_info <- function(nca_group = dplyr::vars(Chemical,
-                                                       Species,
-                                                       Reference,
-                                                       Route,
-                                                       Media,
-                                                       Dose),
-                               summary_group = dplyr::vars(Chemical,
+settings_data_info <- function(summary_group = dplyr::vars(Chemical,
                                                            Species,
+                                                           Reference,
                                                            Route,
                                                            Media,
                                                            Dose),
