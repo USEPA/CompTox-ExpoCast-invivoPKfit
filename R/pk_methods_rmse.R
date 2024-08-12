@@ -137,11 +137,14 @@ if (!(check %in% TRUE)) {
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  message("Transformations used: \n",
+  if(use_scale_conc %in% TRUE){
+  message("rmse.pk(): Computing RMSE on transformed concentration scale. Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
+  }
 
   #Get predictions
+  #on transformed scale, if so requested
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,
@@ -159,6 +162,10 @@ if (!(check %in% TRUE)) {
     }
   }
 
+  #Requested variables
+  #Note that we take the NON-transformed concentrations.
+  #Any dose-normalization will be done in the next step.
+  #Any log10 transformations will be handled within the calc_rmse() function.
   req_vars <- c(names(preds),
                 "Conc",
                 "Conc_SD",
@@ -185,9 +192,9 @@ if (!(check %in% TRUE)) {
                            Conc_SD / Dose,
                            Conc_SD)) %>%
     dplyr::ungroup() %>%
-    dplyr::group_by(!!!obj$data_group,
-                    model, method,
-                    !!!rmse_group) %>%
+    dplyr::group_by(!!!union(obj$data_group,
+                             rmse_group),
+                    model, method) %>%
     dplyr::summarize(
       RMSE = calc_rmse(obs = Conc_set,
                        obs_sd = Conc_set_SD,
@@ -198,13 +205,11 @@ if (!(check %in% TRUE)) {
     dplyr::distinct() %>%
     dplyr::ungroup()
 
-  message("Groups: \n",
-          paste(sapply(unlist(obj$data_group), rlang::as_label),
-                collapse = ", "),
-          ", ",
-          paste(sapply(unlist(rmse_group), rlang::as_label),
+  message("rmse.pk(): RMSE calculated by groups: \n",
+          paste(sapply(unlist(union(obj$data_group, rmse_group), rlang::as_label),
                 collapse = ", "),
           ", method, model")
+  )
 
   return(rmse_df)
 }
