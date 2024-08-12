@@ -42,9 +42,9 @@
 #'  requirements.
 #'@param time A numeric vector of times, reflecting the time point when
 #'  concentration is measured after the corresponding single bolus dose. Must be
-#'  same length as `dose` and `iv.dose`, or length 1.
+#'  same length as `dose` and `route`, or length 1.
 #'@param dose A numeric vector of doses, reflecting single bolus doses
-#'  administered at time 0. Must be same length as `time` and `iv.dose`, or
+#'  administered at time 0. Must be same length as `time` and `route`, or
 #'  length 1.
 #'@param route A character vector, reflecting the route of administration of
 #'  each single bolus dose: `'oral'` or `'iv'`.  Must be same length as `time`
@@ -81,6 +81,19 @@ cp_1comp <- function(params, time, dose, route, medium = 'plasma') {
   # New way
   list2env(as.list(params), envir = as.environment(-1))
 
+  #repeat route, time, dose, and medium to be all the same length
+  tmp <- data.frame(time = time,
+                    route = route,
+                    dose = dose,
+                    medium = medium)
+
+  time <- tmp$time
+  dose <- tmp$dose
+  route <- tmp$route
+  medium <- tmp$medium
+
+  rm(tmp)
+
   #compute plasma concentration
   cp <- dose * ifelse(
     route %in% "iv",
@@ -88,7 +101,7 @@ cp_1comp <- function(params, time, dose, route, medium = 'plasma') {
     #iv route
     ifelse(
       rep(kelim != kgutabs, #oral route
-          length(route)),
+          length(time)),
       #equation when kelim != kgutabs
       (Fgutabs_Vdist *
          kgutabs) /
