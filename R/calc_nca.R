@@ -179,7 +179,8 @@ series_id <- series_id[ord]
           tmp <- do.call(PK::nca,
                          args = c(list(data = data,
                                        dose = dose,
-                                       design = design),
+                                       design = design,
+                                       method = method),
                                   list(...)))
         )
       )
