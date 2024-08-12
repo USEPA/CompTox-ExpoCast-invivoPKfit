@@ -93,9 +93,24 @@ sigma_lower <- sqrt(.Machine$double.eps)
 
 sigma_DF <- data %>%
   dplyr::mutate(data_sigma_group = data_sigma_group) %>%
-  dplyr::filter(exclude %in% FALSE)
-
-#
+  dplyr::filter(exclude %in% FALSE) %>%
+  #temporarily undo log10-trans, if it has been used
+  dplyr::mutate(Conc_tmp = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
+                                              NROW(Conc_trans)),
+                                  10^Conc_trans,
+                                  Conc_trans),
+                Conc_SD_tmp = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
+                                                 NROW(Conc_trans)),
+                                     10^Conc_SD_trans,
+                                     Conc_SD_trans),
+                Conc_tmp.Units = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
+                                                    NROW(Conc_trans)),
+                                                gsub(pattern = "\\)$",
+                                                     replacement = "",
+                                                     x = gsub(pattern = "^log10\\(",
+                                                     replacement = "",
+                                                     x = Conc_trans.Units)),
+                                                Conc_trans.Units))
 
 sigma_DF <- do.call(dplyr::group_by,
                     args = c(list(sigma_DF),
@@ -103,17 +118,13 @@ sigma_DF <- do.call(dplyr::group_by,
   dplyr::summarise(param_name = paste("sigma",
                                       unique(data_sigma_group),
                                       sep = "_"),
-                   param_units = unique(Conc_trans.Units),
+                   param_units = unique(Conc_tmp.Units),
                    optimize_param = TRUE,
                    use_param = TRUE,
                    lower_bound = sigma_lower,
                    upper_bound = combined_sd(
-                     group_mean = ifelse(obj$scales$conc$log10_trans %in% TRUE,
-                                         10^Conc_trans,
-                                         Conc_trans),
-                     group_sd = ifelse(obj$scales$conc$log10_trans %in% TRUE,
-                                       10^Conc_SD_trans,
-                                       Conc_SD_trans),
+                     group_mean = Conc_tmp,
+                     group_sd = Conc_SD_tmp,
                      group_n = N_Subjects,
                      unbiased = TRUE,
                      na.rm = TRUE,
