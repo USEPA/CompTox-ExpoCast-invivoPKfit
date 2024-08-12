@@ -1,0 +1,159 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-08-12"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+set.seed(2023)
+library(tidyverse, quietly = TRUE)
+devtools::load_all() 
+library(cowplot)
+library(RColorBrewer)
+# saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds")
+# my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
+
+```
+
+```{r}
+### Minimal PK Object ###----
+# Minimum pk object, add options later
+# Note that these mappings are now a default mappings, just being verbose here.
+minimal_pk <- pk(data = cvt,
+                 mapping = ggplot2::aes(
+                   Chemical = analyte_dtxsid,
+                   Chemical_Name = analyte_name_original,
+                   DTXSID = analyte_dtxsid,
+                   CASRN = analyte_casrn,
+                   Species = species,
+                   Reference = document_id,
+                   Media = conc_medium_normalized,
+                   Route = administration_route_normalized,
+                   Dose = dose_level_normalized,
+                   Dose.Units = "mg/kg",
+                   Subject_ID = subject_id,
+                   Series_ID = series_id,
+                   Study_ID = study_id,
+                   ConcTime_ID = conc_time_id,
+                   N_Subjects = n_subjects_in_series,
+                   Weight = weight_kg,
+                   Weight.Units = "kg",
+                   Time = time_hr,
+                   Time.Units = "hours",
+                   Value = conc,
+                   Value.Units = "mg/L",
+                   Value_SD = conc_sd_normalized,
+                   LOQ = loq
+                 ))
+```
+
+```{r}
+my_pk_000p <- minimal_pk +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE,
+                      suppress.messages = TRUE) +
+  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  # stat_model() + 
+  stat_error_model(error_group = vars(Chemical, Species)) 
+```
+
+```{r}
+system.time(my_pk_000p <- do_fit(my_pk_000p, n_cores = 12))
+```
+
+We want to do the following by data group (Chemical, Species):
+
+1. Get the winning model
+2. Get tkstats
+3. Get goodness of fit metrics: RMSE, R-squared, AIC
+
+```{r}
+this_rmse <- rmse(my_pk_000p,
+                  rmse_group = NULL,
+                  use_scale_conc = FALSE #get rmse in original concentration units
+                  )
+```
+
+```{r}
+this_tkstats_dose_norm <- get_tkstats(my_pk_000p,
+                            dose_norm = TRUE,
+                            tk_group = vars(Chemical, Species))
+```
+
+
+
+# Loop over fitting options
+
+```{r}
+#set up table of fitting options
+fitopts <- expand.grid(error_model = c("pooled",
+                                       "hier"),
+                       dose_norm = c(TRUE, FALSE),
+            log10_trans = c(TRUE, FALSE),
+            time_scale = c(TRUE, FALSE),
+            stringsAsFactors = FALSE)
+
+```
+
+Function to loop over fitting options
+
+```{r}
+fit_data <- function(this_error_model,
+                     this_dose_norm,
+                     this_log10_trans,
+                     this_time_scale,
+                     n_cores = 12){
+  this_pk <-   minimal_pk +
+    facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = FALSE,
+                      suppress.messages = TRUE) +
+     scale_conc(dose_norm = this_dose_norm, log10_trans = this_log10_trans) +
+    settings_optimx(method = c("L-BFGS-B", "bobyqa"))
+  
+  if(this_error_model %in% "pooled"){
+    this_pk <- this_pk +
+      stat_error_model(error_group = vars(Chemical, Species)) 
+  }else{
+    this_pk <- this_pk +
+      stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+  }
+  
+  if(this_time_scale %in% TRUE){
+    this_pk <- this_pk +
+      scale_time(new_units = "auto")
+  }
+  
+  return(do_fit(this_pk, n_cores = n_cores))
+}
+
+```
+
+We want to do the following by data group (Chemical, Species):
+
+1. Get the winning model
+2. Get tkstats
+3. Get goodness of fit metrics: RMSE, R-squared, AIC
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
