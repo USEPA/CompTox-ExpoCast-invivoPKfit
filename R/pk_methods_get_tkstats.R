@@ -182,13 +182,13 @@ get_tkstats.pk <- function(obj,
                                                       values_from = param_value)
                                })) %>%
     tidyr::unnest(cols = c(TKstats_wide)) %>%
-    dplyr::group_by(!!!obj$settings_data_info$nca_group)
+    dplyr::group_by(!!!tk_group)
 
 
   # Final filtering of tkstats_all
 
   tkstats_all <- tkstats_all[!names(tkstats_all) %in% c("coefs_vector", "tk_fun", "TKstats")] %>%
-    dplyr::relocate(!!!obj$settings_data_info$nca_group, Dose.Units, Conc.Units) %>%
+    dplyr::relocate(!!!tk_group, Dose.Units, Conc.Units) %>%
     dplyr::ungroup()
 
   if (dose_norm) {
