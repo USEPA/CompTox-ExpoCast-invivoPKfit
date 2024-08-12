@@ -42,9 +42,8 @@ do_data_info.pk <- function(obj, ...){
   }
 
   #grouping for data summary:
-  #data grouping, plus also Route and Media if not already included in data grouping
 
-  summary_group <- unique(c(obj$data_group, ggplot2::vars(Route, Media, Dose)))
+  summary_group <- obj$settings_data_info$summary_group
 
   data_summary_out <- data_summary(obj = obj,
                                    newdata = NULL,
@@ -66,16 +65,17 @@ do_data_info.pk <- function(obj, ...){
   }
   nca_dose_norm_long <- nca(obj = obj,
                        newdata = NULL,
-                       nca_group = summary_group,
+                       nca_group = obj$settings_data_info$nca_group,
                        exclude = TRUE,
                        dose_norm = TRUE)
   #pivot wider
   #first get names of grouping vars
-  grp_vars <- sapply(summary_group,
+  grp_vars_nca <- sapply(obj$settings_data_info$nca_group,
                      rlang::as_label)
   #then pivot wider
   nca_dose_norm <-   nca_dose_norm_long %>%
-    tidyr::pivot_wider(id_cols = tidyselect::all_of(grp_vars),
+    tidyr::pivot_wider(id_cols = tidyselect::all_of(c(grp_vars_nca,
+                                                      "dose_norm")),
                        names_from = param_name,
                        values_from = param_value) %>%
     as.data.frame()
@@ -85,14 +85,16 @@ do_data_info.pk <- function(obj, ...){
     message("do_data_info.pk(): Getting data flags\n")
   }
 
-  #get grouping variables
+  #get grouping variables for data summary
 
-  grp_vars <- sapply(summary_group,
+  grp_vars_summary <- sapply(summary_group,
                      rlang::as_label)
+
 
   df <- dplyr::inner_join(data_summary_out,
                           nca_dose_norm,
-                          by = grp_vars) %>%
+                          by = intersect(grp_vars_nca,
+                                         grp_vars_summary)) %>%
     dplyr::mutate(
       data_flag = ifelse(
         Route %in% "oral" &

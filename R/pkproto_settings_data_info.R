@@ -13,6 +13,11 @@ settings_data_info <- function(nca_group = dplyr::vars(Chemical,
                                                        Route,
                                                        Media,
                                                        Dose),
+                               summary_group = dplyr::vars(Chemical,
+                                                           Species,
+                                                           Route,
+                                                           Media,
+                                                           Dose),
                                ...){
   Chemical <- NULL
   #get arguments and values

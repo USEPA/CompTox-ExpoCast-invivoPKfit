@@ -50,7 +50,7 @@ data_summary.pk <- function(obj,
                             ...){
 
   if (is.null(summary_group)) {
-    summary_group <- obj$data_group
+    summary_group <- obj$settings_data_info$summary_group
   }
 
   if (is.null(newdata)) newdata <- obj$data
