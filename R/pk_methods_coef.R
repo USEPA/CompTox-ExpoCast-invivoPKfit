@@ -87,7 +87,7 @@ coef.pk <- function(obj,
 
   # Use coalesce to combine columns and replace NA values with constant value
   if (any(stringr::str_detect(names(coefs), pattern = "\\.(x|y)$"))) {
-    message("Coalescing parameter values...")
+    message("coef.pk(): Coalescing parameter values...")
     # This next thing should replace NAs with the constant value...
     for (this_param in intersect(names(const_pars), possible_model_params)) {
       if (sum(stringr::str_detect(names(coefs), pattern = this_param)) > 1) {
@@ -123,13 +123,13 @@ coef.pk <- function(obj,
   # By optimization method
   if (is.character(method)) {
     method_vector <- method
-    message("Filtering by method(s): ", paste(method, collapse = " "))
+    message("coef.pk(): Filtering by method(s): ", paste(method, collapse = " "))
     coefs_tidy <- coefs_tidy %>% dplyr::filter(method %in% method_vector)
   }
   # By models used
   if (is.character(model)) {
     model_vector <- model
-    message("Filtering by model(s): ", paste(model, collapse = " "))
+    message("coef.pk(): Filtering by model(s): ", paste(model, collapse = " "))
     coefs_tidy <- coefs_tidy %>% dplyr::filter(model %in% model_vector)
   }
 

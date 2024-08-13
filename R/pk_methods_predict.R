@@ -230,7 +230,7 @@ predict.pk <- function(obj,
   if (type == "auc")
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
 
-  if (suppress.messages %in% FALSE & conc_scale$dose_norm) {
+  if (suppress_messages %in% FALSE & conc_scale$dose_norm) {
     message("predict.pk(): Note that the predicted values are for dose 1 (dose-normalized)")
   } else {
     message("predict.pk(): Note that the predicted values are not dose-normalized")
