@@ -83,15 +83,17 @@
 #'   concentration scaling or transformation will be applied before the
 #'   log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
-#'   log10-transformation will be applied.
-#' @param rmse_group A list of quosures provided in the format
-#'  `vars(...)` that determines the group for which RMSE is calculated.
-#'  Defaults to `vars(Route, Media, Dose, Time)`.
-#' @param ... Additional arguments. Not in use.
+#'   log10-transformation will be applied before the log-likelihood is computed.
+#' @param rmse_group A list of quosures provided in the format `vars(...)` that
+#'   determines the data groupings for which RMSE is calculated. Default NULL,
+#'   in which case RMSE is calculated for each data group defined in the
+#'   object's `data_group` element (use [get_data_group.pk()] to access the
+#'   object's `data_group`).
+#' @param ... Additional arguments. Not currently used.
 #' @return A `data.frame` with calculated RMSE as the final column. There is one row per
 #'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
 #'   fitted to the data, each [optimx::optimx()] methods (specified in
-#'   [settings_optimx()]), `data_group` and `rmse_group` specified.
+#'   [settings_optimx()]), `rmse_group` specified.
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family fit evaluation metrics
@@ -102,7 +104,7 @@ rmse.pk <- function(obj,
                     method = NULL,
                     exclude = TRUE,
                     use_scale_conc = TRUE,
-                    rmse_group = vars(Route, Media, Dose, Time),
+                    rmse_group = NULL,
                     ...){
 #ensure that the model has been fitted
 check <- check_required_status(obj = obj,
@@ -114,6 +116,7 @@ if (!(check %in% TRUE)) {
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
   if (is.null(newdata)) newdata <- obj$data
+  if(is.null(rmse_group)) rmse_group <- obj$data_group
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -140,7 +143,7 @@ if (!(check %in% TRUE)) {
   if(use_scale_conc %in% TRUE){
   message("rmse.pk(): Computing RMSE on transformed concentration scale. Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
-          "log-transformation ", conc_scale$log10_trans)
+          "log10-transformation ", conc_scale$log10_trans)
   }
 
   #Get predictions

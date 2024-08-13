@@ -391,7 +391,7 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
                        signif(digits = 4))
   
   myRMSE_all <- rmse(obj,
-                     rmse_group = vars(Route, Media, Dose),
+                     rmse_group = vars(Chemical, Species, Route, Media, Dose),
                      use_scale_conc = FALSE) %>% 
     inner_join(winning_model) %>%
     dplyr::group_by(!!!obj$data_group, model, method) %>%
@@ -405,7 +405,8 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
     inner_join(myRMSE_all) %>%
     mutate(Options = pk_name, .before = Chemical)
   
-  winmodel_conflict <- rmse(obj, use_scale_conc = FALSE) %>%
+  winmodel_conflict <- rmse(obj, use_scale_conc = FALSE,
+                            rmse_group =vars(Chemical, Species, Route, Media, Dose, Time)) %>%
     group_by(Chemical, Species, Route, Media, Dose, Time) %>%
     filter(RMSE == min(RMSE)) %>%
     group_by(Chemical, Species) %>%
@@ -714,7 +715,7 @@ r2_df <- rsq(my_pk, use_scale_conc = FALSE) %>%
 myAIC <- AIC(my_pk) %>%
   inner_join(winmodel)
 myRMSE <- rmse(my_pk, method = "bobyqa",
-               rmse_group = vars(Route, Media, Dose),
+               rmse_group = vars(Chemical, Species, Route, Media, Dose),
                use_scale_conc = FALSE) %>% 
   inner_join(winmodel)
 
