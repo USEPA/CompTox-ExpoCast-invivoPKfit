@@ -132,7 +132,7 @@ sigma_DF <- do.call(dplyr::group_by,
                      group_n = N_Subjects,
                      unbiased = TRUE,
                      na.rm = TRUE,
-                     log = obj$scales$conc$log10_trans),
+                     log10 = obj$scales$conc$log10_trans),
                    start = 0.1 * upper_bound) %>%
   as.data.frame()
 
