@@ -214,6 +214,8 @@ fit_data <- function(this_error_model,
                      errmodel_indic,
                      ".Rds")
   
+  print(file_str)
+  
   tryCatch({
   this_pk <-   minimal_pk +
     facet_data(vars(Chemical, Species)) +
@@ -225,10 +227,10 @@ fit_data <- function(this_error_model,
   if(this_error_model %in% "pooled"){
     this_pk <- this_pk +
       stat_error_model(error_group = vars(Chemical, Species)) 
-  }elseif(this_error_model %in% "hierarchical"){
+  } else if(this_error_model %in% "hierarchical"){
     this_pk <- this_pk +
       stat_error_model(error_group = vars(Chemical, Species, Reference)) 
-  }else{
+  } else{
     stop("this_error_model must be either 'pooled' or 'hierarchical'")
   }
   
@@ -238,7 +240,9 @@ fit_data <- function(this_error_model,
   }
   
   #do the fit
-  this_fit <- do_fit(this_pk, n_cores = n_cores)
+  this_time <- system.time(this_fit <- do_fit(this_pk, n_cores = n_cores))
+  
+  print(this_time)
   
   #save the result
   saveRDS(this_fit,
@@ -260,16 +264,92 @@ fit_data <- function(this_error_model,
 
 ```
 
-We want to do the following by data group (Chemical, Species):
-
-1. Get the winning model
-2. Get tkstats
-3. Get goodness of fit metrics: RMSE, R-squared, AIC
-
 
 ```{r}
-
+system.time(tmp <- mapply(fit_data,
+              this_error_model = fitopts$error_model,
+                     this_dose_norm = fitopts$dose_norm,
+                     this_log10_trans = fitopts$log10_trans,
+                     this_time_scale = fitopts$time_scale))
 ```
+
+# Compare R-squared
+
+Load in each fitted pk object in turn, and calculate R-squared.
+
+```{r}
+get_gof_win <- function(this_error_model,
+                     this_dose_norm,
+                     this_log10_trans,
+                     this_time_scale){
+   dose_indic <- as.numeric(this_dose_norm)
+  log10_indic <- as.numeric(this_log10_trans)
+  time_indic <- as.numeric(this_time_scale)
+  errmodel_indic <- substr(this_error_model, 1, 1)
+  
+  file_str <- paste0("pkfit_",
+                     dose_indic,
+                     log10_indic,
+                     time_indic,
+                     errmodel_indic,
+                     ".Rds")
+  
+  this_pk <- readRDS(paste0(datadir, "/",
+                 file_str))
+  
+  this_rsq <- rsq(this_pk,
+                  rsq_group = vars(Chemical, Species))
+  this_rmse <- rmse(this_pk,
+                    rmse_group = vars(Chemical, Species))
+  
+  this_aic <- AIC(this_pk)
+  
+  this_win <- get_winning_model(this_pk)
+  this_win <- this_win %>% dplyr::mutate(winning_model = TRUE)
+  
+  this_gof <- dplyr::left_join(
+    dplyr::left_join(this_rsq,
+                              this_aic),
+    this_rmse)
+  
+  this_gof_win <- dplyr::left_join(this_gof,
+                               this_win,
+                              by = join_by(Chemical, Species, method, model))
+  
+  return(this_gof_win)
+  
+}
+```
+
+```{r}
+system.time(gof_tbl <- fitopts %>%
+              dplyr::group_by(error_model,
+                              dose_norm,
+                              log10_trans,
+                              time_scale) %>%
+              dplyr::reframe(gof_win = purrr::pmap(get_gof_win)) %>%
+              tidyr::unnest())
+```
+
+Plot
+
+Distributions of R-squared values (for winning models) across data groups (Chemical + Species), by combinations of fitting options. I chose R-squared here because it's on the same scale across data groups, unlike RMSE or even AIC.
+
+```{r}
+ggplot(gof_tbl[winning_model %in% TRUE]) +
+  geom_violin(x = interaction(error_model,
+                              dose_norm,
+                              log10_trans,
+                              time_scale),
+              y = Rsq)
+```
+
+
+
+
+
+
+
 
 
 
