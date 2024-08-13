@@ -135,6 +135,7 @@ rsq.pk <- function(obj,
                    method = NULL,
                    exclude = TRUE,
                    use_scale_conc = TRUE,
+                   rsq_group = NULL,
                    ...){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -146,6 +147,7 @@ rsq.pk <- function(obj,
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
   if (is.null(newdata)) newdata <- obj$data
+  if(is.null(rsq_group)) rsq_group <- obj$data_group
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -216,7 +218,7 @@ rsq.pk <- function(obj,
                            Conc_SD / Dose,
                            Conc_SD)) %>%
     dplyr::ungroup() %>%
-    dplyr::group_by(!!!obj$data_group,
+    dplyr::group_by(!!!rsq_group,
                     model, method) %>%
     dplyr::summarize(
       Rsq = calc_rsq(obs = Conc_set,
@@ -229,7 +231,7 @@ rsq.pk <- function(obj,
     dplyr::ungroup()
 
   message("rsq.pk)(): Groups: \n",
-          paste(sapply(unlist(obj$data_group), rlang::as_label),
+          paste(sapply(unlist(rsq_group), rlang::as_label),
                 collapse = ", "),
           ", ", " method, model")
 
