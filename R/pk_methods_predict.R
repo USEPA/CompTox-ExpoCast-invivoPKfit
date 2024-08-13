@@ -183,6 +183,8 @@ predict.pk <- function(obj,
       )
     )
 
+
+
   # Get predictions
   # Note that the model functions only need Time, Dose, Route, and Medium
   # AND this will NOT give log10-transformed values... that is a data independent transformation of scale
@@ -198,8 +200,10 @@ predict.pk <- function(obj,
                                           coefs_vector,
                                           FUN = model_fun,
                                           time = Time,
-                                          dose = ifelse(conc_scale$dose_norm,
-                                                        1, Dose),
+                                          dose = ifelse(rep(conc_scale$dose_norm,
+                                                            NROW(Dose)),
+                                                        rep(1, NROW(Dose)),
+                                                        Dose),
                                           route = Route,
                                           medium = Media,
                                           simplify = TRUE,
