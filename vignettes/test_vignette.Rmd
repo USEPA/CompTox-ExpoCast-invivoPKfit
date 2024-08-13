@@ -22,6 +22,13 @@ library(RColorBrewer)
 
 ```
 
+Set data directory
+
+```{r}
+datadir <- "C:/Users/cring/OneDrive - Environmental Protection Agency (EPA)/invivopkfit work/fitfiles"
+```
+
+
 ```{r}
 ### Minimal PK Object ###----
 # Minimum pk object, add options later
@@ -61,13 +68,12 @@ my_pk_000p <- minimal_pk +
                       suppress.messages = TRUE) +
   settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
   scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
-  # scale_time(new_units = "auto") +
-  # stat_model() + 
   stat_error_model(error_group = vars(Chemical, Species)) 
 ```
 
 ```{r}
 system.time(my_pk_000p <- do_fit(my_pk_000p, n_cores = 12))
+#takes about 1000 seconds on my machine
 ```
 
 We want to do the following by data group (Chemical, Species):
@@ -77,32 +83,115 @@ We want to do the following by data group (Chemical, Species):
 3. Get goodness of fit metrics: RMSE, R-squared, AIC
 
 ```{r}
-this_rmse <- rmse(my_pk_000p,
-                  rmse_group = NULL,
-                  use_scale_conc = FALSE #get rmse in original concentration units
-                  )
+this_win_model <- get_winning_model(my_pk_000p)
 ```
+
+
+
+```{r}
+this_rsq <- rsq(my_pk_000p,
+                use_scale_conc = FALSE) #get rsq in original concentration units
+```
+
+Filter Rsq for the winning models only
+
+```{r}
+this_rsq_win <- dplyr::inner_join(this_rsq,
+                                  this_win_model)
+```
+
+```{r}
+ggplot(this_rsq_win) + geom_violin(aes(x = method, y = Rsq))
+```
+
 
 ```{r}
 this_tkstats_dose_norm <- get_tkstats(my_pk_000p,
                             dose_norm = TRUE,
-                            tk_group = vars(Chemical, Species))
+                            tk_group = vars(Chemical, Species, Reference, Route, Media, Dose))
+```
+
+```{r}
+this_tkstats_dose_norm_win <- dplyr::inner_join(this_tkstats_dose_norm,
+                                                this_win_model)
+```
+Pivot the tkstats longer
+
+```{r}
+this_tkstats_long <- tidyr::pivot_longer(data = this_tkstats_dose_norm_win,
+                    cols = -any_of(c(names(my_pk_000p$data),
+                                     "model",
+                                     "method")))
 ```
 
 
+
+
+```{r}
+this_nca_dose_norm <- nca(my_pk_000p,
+                          nca_group = vars(Chemical, Species, Reference, Route, Media, Dose),
+                          dose_norm = TRUE)
+```
+
+```{r}
+this_tkstats_long <- this_tkstats_long %>% 
+  dplyr::rename(param_name = name,
+                tkstats_value = value) %>%
+  dplyr::mutate(tkstats_dose_norm = TRUE,
+                tkstats_value = dplyr::if_else(is.finite(tkstats_value),
+                                           tkstats_value,
+                                           NA_real_))
+
+this_nca_dose_norm <- this_nca_dose_norm %>%
+  dplyr::rename(nca_value = param_value,
+                nca_dose_norm = dose_norm,
+                nca_design = design) %>%
+  dplyr::mutate(nca_value = dplyr::if_else(is.finite(nca_value),
+                                           nca_value,
+                                           NA_real_)) %>%
+    dplyr::mutate(nca_value = dplyr::if_else(abs(nca_value) < 1e8,
+                                           nca_value,
+                                           NA_real_)) %>%
+  dplyr::select(-param_sd_z)
+```
+
+
+Merge the TK stats and the NCA, keeping only the ones with matches in both
+
+```{r}
+tkstats_nca <- inner_join(this_tkstats_long,
+                          this_nca_dose_norm,
+                          by = join_by(Chemical,
+                                       Species,
+                                       Reference,
+                                       Route,
+                                       Media,
+                                       param_name
+                                       ))
+```
+Calculate differences 
+
+```{r}
+tkstats_nca_summary <- tkstats_nca %>%
+  dplyr::group_by(method, param_name) %>%
+  dplyr::summarise(rmse = sqrt(mean((tkstats_value - nca_value)^2,
+                                    na.rm = TRUE)))
+```
 
 # Loop over fitting options
 
 ```{r}
 #set up table of fitting options
 fitopts <- expand.grid(error_model = c("pooled",
-                                       "hier"),
+                                       "hierarchical"),
                        dose_norm = c(TRUE, FALSE),
             log10_trans = c(TRUE, FALSE),
             time_scale = c(TRUE, FALSE),
             stringsAsFactors = FALSE)
 
 ```
+
+There are 16 combinations of fitting options. At about 1000 seconds per combination, this means it will take about 16000 seconds, or about 4.5 hours, to run them all. Maybe a little longer.
 
 Function to loop over fitting options
 
@@ -112,6 +201,20 @@ fit_data <- function(this_error_model,
                      this_log10_trans,
                      this_time_scale,
                      n_cores = 12){
+  retval <- -9
+   dose_indic <- as.numeric(this_dose_norm)
+  log10_indic <- as.numeric(this_log10_trans)
+  time_indic <- as.numeric(this_time_scale)
+  errmodel_indic <- substr(this_error_model, 1, 1)
+  
+  file_str <- paste0("pkfit_",
+                     dose_indic,
+                     log10_indic,
+                     time_indic,
+                     errmodel_indic,
+                     ".Rds")
+  
+  tryCatch({
   this_pk <-   minimal_pk +
     facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
@@ -122,9 +225,11 @@ fit_data <- function(this_error_model,
   if(this_error_model %in% "pooled"){
     this_pk <- this_pk +
       stat_error_model(error_group = vars(Chemical, Species)) 
-  }else{
+  }elseif(this_error_model %in% "hierarchical"){
     this_pk <- this_pk +
       stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+  }else{
+    stop("this_error_model must be either 'pooled' or 'hierarchical'")
   }
   
   if(this_time_scale %in% TRUE){
@@ -132,7 +237,25 @@ fit_data <- function(this_error_model,
       scale_time(new_units = "auto")
   }
   
-  return(do_fit(this_pk, n_cores = n_cores))
+  #do the fit
+  this_fit <- do_fit(this_pk, n_cores = n_cores)
+  
+  #save the result
+  saveRDS(this_fit,
+          paste0(datadir, "/",
+                 file_str))
+  retval <- 0
+  },
+  error = function(e){
+    message(paste("Analysis",
+                  file_str,
+                  "failed with error",
+                  e))
+    retval <- -1
+  }
+)
+  
+  return(retval)
 }
 
 ```
