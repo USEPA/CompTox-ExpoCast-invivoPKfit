@@ -168,7 +168,7 @@ rsq.pk <- function(obj,
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  message("Transformations used: \n",
+  message("rsq.pk(): Calculating R-squared on transformed concentration scale. Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
 
@@ -228,7 +228,7 @@ rsq.pk <- function(obj,
     dplyr::distinct() %>%
     dplyr::ungroup()
 
-  message("Groups: \n",
+  message("rsq.pk)(): Groups: \n",
           paste(sapply(unlist(obj$data_group), rlang::as_label),
                 collapse = ", "),
           ", ", " method, model")

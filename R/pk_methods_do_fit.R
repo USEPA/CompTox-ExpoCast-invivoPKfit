@@ -110,18 +110,18 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   #
 
   if (is.numeric(n_cores)) {
-    message(paste0("Trying to divide processes into ", n_cores, " processing cores"))
+    message(paste0("do_fit.pk(): Trying to divide processes into ", n_cores, " processing cores"))
     total_cores <- parallel::detectCores()
     if (total_cores <= n_cores & total_cores > 1) {
       n_cores  <- total_cores - 1
-      message(paste0("To ensure other programs & processes are still to run, ",
+      message(paste0("do_fit.pk():To ensure other programs & processes are still able to run, ",
                      "n_cores has been set to ", n_cores))
     } else if (total_cores == 1) {
       n_cores = total_cores
     } else {
       n_cores <- n_cores
     }
-    message(paste0(n_cores, " processing cores allocated."))
+    message(paste0("do_fit.pk(): ", n_cores, " processing cores allocated."))
     cluster <- multidplyr::new_cluster(n_cores)
     if (any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
       multidplyr::cluster_call(cluster, library(invivoPKfit))
@@ -162,7 +162,8 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   # Need to convert rates to perHour
   # Take rate_names
   # Parameter names don't matter, all rates should have consistent param_unit
-  message("Now doing any rate conversions!")
+  message(paste0("do_fit.pk(): Now converting all rate constants to units of 1/hour, ",
+                 "in case time has been scaled to units other than hours before fitting"))
   rate_names <- par_DF %>% dplyr::select(!!!obj$data_group,
                                         param_name,
                                         param_units) %>%
@@ -223,5 +224,6 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
 
 
   obj$status <- status_fit #fitting complete
+  message("do_fit.pk: Fitting complete")
   return(obj)
 }

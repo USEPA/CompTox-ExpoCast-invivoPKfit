@@ -87,25 +87,25 @@
 #'stats compiled across models will not be easy to compare if the models use
 #'different names for the statistics.
 #'
-#'@param name Character: The name of the model
-#'@param params Character vector: Parameter names of the model
-#'@param conc_fun Name of a function to predict tissue concentrations. See
+#'@param name Character: The name of the model.
+#'@param params Character vector: Parameter names of the model.
+#'@param conc_fun Character: Name of the function to predict tissue concentrations using this model. See
 #'  Details for requirements.
-#'@param auc_fun Name of the function to predict AUC (area under the
-#'  concentration-time curve). See Details for requirements.
-#'@param params_fun Name of the function that produces the `data.frame` of
-#'  parameter info (see Details)
-#'@param tkstats_fun Name of the function that produces a`data.frame` of derived
-#'  TK statistics (see Details)
-#'@param conc_fun_args Any additional arguments to `conc_fun` other than those
-#'  listed in Details. Default NULL.
-#'@param auc_fun_args Any additional arguments to `auc_fun` other those those
-#'  listed in Details. Default NULL.
-#'@param params_fun_args Any additional arguments to `params_fun` other than
-#'  `data` (see Details). Default NULL.
-#'@param tkstats_fun_args Any additional arguments to `tkstats_fun` other than
+#'@param auc_fun Character: Name of the function to predict AUC (area under the
+#'  concentration-time curve) using this model. See Details for requirements.
+#'@param params_fun Character: Name of the function that produces the `data.frame` of
+#'  parameter info for this model (see Details)
+#'@param tkstats_fun Character: Name of the function that produces a`data.frame` of derived
+#'  TK statistics for this model (see Details)
+#'@param conc_fun_args A named list: any additional arguments to `conc_fun` other than those
+#'  listed in Details. Default `NULL`.
+#'@param auc_fun_args A named list: any additional arguments to `auc_fun` other those those
+#'  listed in Details. Default `NULL`.
+#'@param params_fun_args A named list: any additional arguments to `params_fun` other than
+#'  `data` (see Details). Default `NULL`.
+#'@param tkstats_fun_args A named list: any additional arguments to `tkstats_fun` other than
 #'  `data`, `medium`, `route` (see Details). Default NULL.
-#'@param ... Additional arguments not currently implement.
+#'@param ... Additional arguments (not currently implemented).
 #'@return An object of class `pk_model`. Effectively, a named list containing
 #'  all of the arguments provided to this function.
 #'@author Caroline Ring
