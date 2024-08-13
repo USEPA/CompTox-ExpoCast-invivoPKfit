@@ -136,6 +136,7 @@ coef.pk <- function(obj,
   # Include sigma values
   if (drop_sigma) {
     coefs_tidy <- coefs_tidy %>%
+      dplyr::ungroup() %>%
       dplyr::select(!c(sigma_value, error_group)) %>%
       dplyr::distinct()
   }

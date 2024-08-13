@@ -115,6 +115,8 @@ predict.pk <- function(obj,
 
   #scale time if needed
 
+  # time_scale_check
+
   # If true, this also means that newdata was not NULL and was user input
   if (!("Time_trans" %in% names(newdata))) {
     newdata$Time_trans <- convert_time(
@@ -211,7 +213,7 @@ predict.pk <- function(obj,
                                         ),
                                         error = function(err) {
                                           if (!suppress_messages) {
-                                            message(paste("Unable to run",
+                                            message(paste("predict.pk(): Unable to run",
                                                           model_fun, "for",
                                                           Chemical, Species,
                                                           "data grouping.",
@@ -230,11 +232,14 @@ predict.pk <- function(obj,
   if (type == "auc")
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
 
-  if (suppress_messages %in% FALSE & conc_scale$dose_norm) {
+  if (suppress_messages %in% FALSE){
+    if(conc_scale$dose_norm) {
     message("predict.pk(): Note that the predicted values are for dose 1 (dose-normalized)")
   } else {
     message("predict.pk(): Note that the predicted values are not dose-normalized")
   }
+  }
+
   message("predict.pk(): These predictions have been made using 1/hour rate constants from coefs()")
   return(newdata)
 }

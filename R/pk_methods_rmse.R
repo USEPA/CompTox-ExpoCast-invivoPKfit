@@ -195,8 +195,7 @@ if (!(check %in% TRUE)) {
                            Conc_SD / Dose,
                            Conc_SD)) %>%
     dplyr::ungroup() %>%
-    dplyr::group_by(!!!union(obj$data_group,
-                             rmse_group),
+    dplyr::group_by(!!!rmse_group,
                     model, method) %>%
     dplyr::summarize(
       RMSE = calc_rmse(obs = Conc_set,
@@ -209,10 +208,10 @@ if (!(check %in% TRUE)) {
     dplyr::ungroup()
 
   message("rmse.pk(): RMSE calculated by groups: \n",
-          paste(sapply(unlist(union(obj$data_group, rmse_group), rlang::as_label),
+          paste(sapply(unlist(rmse_group), rlang::as_label),
                 collapse = ", "),
           ", method, model")
-  )
+
 
   return(rmse_df)
 }
