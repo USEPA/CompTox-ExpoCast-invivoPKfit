@@ -2481,7 +2481,7 @@ my_nca <- my_nca %>% select(Chemical:param_value) %>%
   pivot_wider(names_from = param_name,
               values_from = param_value)
 my_data_summary <- my_data %>%
-  group_by(!!!my_pk_doseNorm$settings_data_info$nca_group) %>%
+  group_by(!!!my_pk_doseNorm$settings_data_info$summary_group) %>%
   summarize(t_first = min(Time), t_last = max(Time))
 
 full_summary <- my_nca %>% inner_join(my_data_summary)
@@ -2495,7 +2495,7 @@ full_summary %>%
   View()
 
 full_summary %>%
-  group_by(!!!my_pk$settings_data_info$nca_group) %>%
+  group_by(!!!my_pk$settings_data_info$summary_group) %>%
   reframe(AUC_inf_range = range(AUC_infinity))
 
 ```
