@@ -11,7 +11,7 @@ get_params_1comp(
     0.01),
   upper_bound = ggplot2::aes(kelim = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
     Vdist = 100, Fgutabs = 1, kgutabs = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
-    Fgutabs_Vdist = 100, Rblood2plasma = 100),
+    Fgutabs_Vdist = 100, Rblood2plasma = 100, ),
   param_units = ggplot2::aes(kelim = paste0("1/", unique(Time_trans.Units)), Vdist =
     paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units), ")"), Fgutabs =
     "unitless fraction", kgutabs = paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist
@@ -145,24 +145,33 @@ halfway between the lower and upper bounds for that parameter.
 \seealso{
 Other 1-compartment model functions: 
 \code{\link{auc_1comp}()},
+\code{\link{auc_1comp_cl}()},
 \code{\link{cp_1comp}()},
-\code{\link{get_starts_1comp}()}
+\code{\link{cp_1comp_cl}()},
+\code{\link{get_params_1comp_cl}()},
+\code{\link{get_starts_1comp}()},
+\code{\link{get_starts_1comp_cl}()}
 
 Other get_params functions: 
+\code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()}
 
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
+\code{\link{auc_1comp_cl}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
+\code{\link{cp_1comp_cl}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
 \code{\link{get_starts_1comp}()},
+\code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
 \code{\link{tkstats_2comp}()},

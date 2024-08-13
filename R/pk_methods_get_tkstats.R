@@ -138,6 +138,7 @@ get_tkstats.pk <- function(obj,
                     method = method,
                     drop_sigma = TRUE)
 
+
   model_df <- data.frame(model = sapply(obj$stat_model, `[[`, "name"),
                          tk_fun = sapply(obj$stat_model, `[[`, "tkstats_fun"))
 

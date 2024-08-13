@@ -61,22 +61,21 @@ AIC.pk <- function(object,
   if(is.null(method)) method <- object$settings_optimx$method
 
   # Get the number of parameters
-  #
-  #
-
-
+  # Need to filter for parameters that were used in model
+  # Then only need some columns for param table
   param_table <- object$prefit$par_DF %>%
-    dplyr::filter(optimize_param %in% TRUE) %>%
+    dplyr::filter(use_param %in% TRUE) %>%
     dplyr::select(model, !!!object$data_group, param_name, param_units)
 
-
-
-
+  # Sigma values for error groups
+  # Make sure to have each combination of error group-data group
+  # which is possible with tidyr::expand_grid
   sigma_table <- object$prefit$stat_error_model$sigma_DF %>%
     tibble::rownames_to_column("error_group") %>%
     dplyr::select(!!!object$data_group, param_name, param_units) %>%
     tidyr::expand_grid(model = unique(param_table$model))
 
+  # Create a "long" data.frame with both parameters and sigma values
   params_df <- dplyr::bind_rows(param_table, sigma_table) %>%
     dplyr::group_by(!!!object$data_group, model) %>%
     dplyr::count(name = "npar")
@@ -92,6 +91,7 @@ AIC.pk <- function(object,
                exclude = exclude,
                drop_obs = drop_obs)
 
+  # Combining log-likelihood table with parameters table
   ll <- suppressMessages(ll %>%
     dplyr::select(!!!object$data_group,
                   model, method,

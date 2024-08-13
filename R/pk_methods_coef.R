@@ -24,6 +24,7 @@
 #'  There is a column for all parameter estimates given each model in `model`.
 #'  A list-column `coefs_vector` summarizes all estimated parameters into a named vector.
 #'  This named vector is used in functions that call upon the model functions, such as [predict()].
+#' @import glue
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
@@ -39,39 +40,70 @@ coef.pk <- function(obj,
 
   if (check %in% FALSE) stop(attr(check, "msg")) # Stop if not fitted
 
+  # Get the parameters that were held constant from par_DF
+  # And only keep the name and starting value for the parameter
+  # along with the unique identifying columns model and data_group
   const_pars <- subset(obj$prefit$par_DF,
                        optimize_param %in% FALSE &
-                         use_param %in% TRUE) %>% dplyr::select(model,
-                                                                !!!obj$data_group,
-                                                                param_name,
-                                                                start)
+                         use_param %in% TRUE) %>%
+    dplyr::select(model,
+                  !!!obj$data_group,
+                  param_name,
+                  start)
+
+  # Pivot the data.frame such that each parameter has a column (this will create NA values)
   const_pars <- const_pars %>%
     tidyr::pivot_wider(names_from = param_name,
-                values_from = start)
+                       values_from = start)
 
+  # Get a unique list of possible parameters for each model used
   possible_model_params <- sapply(obj$stat_model, `[[`, "params") %>%
     unlist() %>%
     unique()
 
+  # Adding sigmas to a table of possible model parameter values
+  #
   coefs <- suppressMessages(obj$fit %>% tidyr::unnest(cols = fit) %>%
-    dplyr::group_by(model, method, !!!obj$data_group) %>%
-    dplyr::select(dplyr::starts_with("sigma_"),
-                  dplyr::any_of(possible_model_params)) %>%
-    # If user wants sigmas
-    # this pivot_longer provides the sigmas per error group
-    tidyr::pivot_longer(cols = starts_with("sigma_"),
-                        names_to = "error_group",
-                        values_to = "sigma_value") %>%
-    dplyr::filter(stringr::str_detect(error_group,
-                                      paste(Chemical,Species,sep = "."))))
+                              dplyr::group_by(model,method, !!!obj$data_group) %>%
+                              dplyr::select(dplyr::starts_with("sigma_"),
+                                            tidyselect::any_of(possible_model_params)) %>%
+                              tidyr::pivot_longer(cols = starts_with("sigma_"),
+                                                  names_to = "error_group",
+                                                  values_to = "sigma_value") %>%
+                              dplyr::filter(stringr::str_detect(error_group,
+                                                                paste(Chemical,
+                                                                      Species,
+                                                                      sep = ".")))
+                            )
 
-  coefs <- suppressMessages(dplyr::left_join(coefs, const_pars))
 
-  for (this_param in intersect(names(const_pars), possible_model_params)) {
-    coefs[this_param] <- tidyr::replace_na(coefs[[this_param]],
-                                           replace = unique(const_pars[[this_param]]))
+
+  # Add constant parameters to coef table
+  # However this produces NAs
+  coefs <- suppressMessages(dplyr::left_join(coefs, const_pars,
+                                             by = c("model",
+                                                    sapply(obj$data_group,
+                                                           rlang::as_label))))
+
+  # Use coalesce to combine columns and replace NA values with constant value
+  if (any(stringr::str_detect(names(coefs), pattern = "\\.(x|y)$"))) {
+    message("Coalescing parameter values...")
+    # This next thing should replace NAs with the constant value...
+    for (this_param in intersect(names(const_pars), possible_model_params)) {
+      if (sum(stringr::str_detect(names(coefs), pattern = this_param)) > 1) {
+        coefs <- dplyr::mutate(coefs,
+                               {{this_param}} := coalesce(
+                                 .data[[paste(this_param, "x",
+                                              sep = ".")]],
+                                 .data[[paste(this_param, "y",
+                                              sep = ".")]]),
+                               .keep = "unused")
+      }
+    }
+
   }
 
+  # Get the columns describing time units and their (possibly) transformed units
   time_group <- get_data(obj = obj) %>%
     dplyr::select(!!!obj$data_group, Time.Units, Time_trans.Units) %>%
     dplyr::distinct()
@@ -87,25 +119,28 @@ coef.pk <- function(obj,
     tidyr::unnest(coefs_tibble) %>%
     dplyr::left_join(time_group))
 
-
-
+  # Various filtering steps and checks
+  # By optimization method
   if (is.character(method)) {
     method_vector <- method
     message("Filtering by method(s): ", paste(method, collapse = " "))
     coefs_tidy <- coefs_tidy %>% dplyr::filter(method %in% method_vector)
   }
+  # By models used
   if (is.character(model)) {
     model_vector <- model
     message("Filtering by model(s): ", paste(model, collapse = " "))
     coefs_tidy <- coefs_tidy %>% dplyr::filter(model %in% model_vector)
   }
 
+  # Include sigma values
   if (drop_sigma) {
     coefs_tidy <- coefs_tidy %>%
       dplyr::select(!c(sigma_value, error_group)) %>%
       dplyr::distinct()
   }
 
+  # include NA values from aborted fits
   if (!include_NAs) {
     no_fits <- obj$prefit$fit_check %>%
       dplyr::filter(fit_decision %in% "abort") %>%

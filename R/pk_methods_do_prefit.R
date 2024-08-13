@@ -28,7 +28,8 @@
 #'   model.
 #' @export
 #' @author Caroline Ring
-do_prefit.pk <- function(obj, ...){
+do_prefit.pk <- function(obj,
+                         ...){
 
   objname <- deparse(substitute(obj))
   status <- obj$status
@@ -89,8 +90,10 @@ if(suppress.messages %in% FALSE){
                 "Getting bounds and starting guesses for each error SD to be fitted"))
 }
 
+# Set a value to square root of lowest possible value 'x' where 1+x != 1
 sigma_lower <- sqrt(.Machine$double.eps)
 
+# Add the data_sigma_group and filter out all excluded values
 sigma_DF <- data %>%
   dplyr::mutate(data_sigma_group = data_sigma_group) %>%
   dplyr::filter(exclude %in% FALSE) %>%
@@ -112,6 +115,7 @@ sigma_DF <- data %>%
                                                      x = Conc_trans.Units)),
                                                 Conc_trans.Units))
 
+# Set values for sigma upper/lower-bounds and start
 sigma_DF <- do.call(dplyr::group_by,
                     args = c(list(sigma_DF),
                              obj$stat_error_model$error_group)) %>%
@@ -175,56 +179,56 @@ sigma_DF <- do.call(dplyr::group_by,
                            function(this_model){
     #check whether there are enough observations to optimize the requested parameters plus sigmas
     #number of parameters to optimize
-     if(suppress.messages %in% FALSE){
-       message(paste("do_prefit.pk():",
-                     "Checking whether sufficient observations to fit models"))
-     }
+                             if(suppress.messages %in% FALSE){
+                               message(paste("do_prefit.pk():",
+                                             "Checking whether sufficient observations to fit models"))
+                             }
 
                              n_par_DF <- par_DF_out %>%
                                dplyr::filter(model %in% this_model) %>%
                                dplyr::group_by(!!!obj$data_group) %>%
                                dplyr::summarise(n_par = sum(optimize_param))
 
-     n_sigma_DF <- sigma_DF %>%
-       dplyr::group_by(!!!obj$data_group) %>%
-       dplyr::summarise(n_sigma = sum(optimize_param))
+                             n_sigma_DF <- sigma_DF %>%
+                               dplyr::group_by(!!!obj$data_group) %>%
+                               dplyr::summarise(n_sigma = sum(optimize_param))
 
 
-     n_detect_DF <- get_data_summary(obj) %>%
-       dplyr::group_by(!!!obj$data_group) %>%
-       dplyr::summarise(n_detect = sum(n_detect))
+                             n_detect_DF <- get_data_summary(obj) %>%
+                               dplyr::group_by(!!!obj$data_group) %>%
+                               dplyr::summarise(n_detect = sum(n_detect))
 
 
-     #merge all of these together
-     fit_check_DF <- dplyr::inner_join(
-       dplyr::inner_join(n_par_DF,
-                                       n_sigma_DF,
-                                       by = sapply(obj$data_group,
-                                                   rlang::as_label)),
-       n_detect_DF,
-       by = sapply(obj$data_group,
-                   rlang::as_label)
-     )
+                             #merge all of these together
+                             fit_check_DF <- dplyr::inner_join(
+                               dplyr::inner_join(n_par_DF,
+                                                 n_sigma_DF,
+                                                 by = sapply(obj$data_group,
+                                                             rlang::as_label)),
+                               n_detect_DF,
+                               by = sapply(obj$data_group,
+                                           rlang::as_label)
+                             )
 
-     #get fit decision & reasoning
-     fit_check_DF <- fit_check_DF %>%
-       dplyr::mutate(n_par_opt = n_par + n_sigma,
-                     fit_decision = ifelse(n_par_opt < n_detect,
-                                           "continue",
-                                           "abort"),
-                     fit_reason = ifelse(n_par_opt < n_detect,
-                                         "Number of parameters to estimate is less than number of non-excluded detected observations",
-                                         "Number of parameters to estimate is greater than or equal to number of non-excluded detected observations")) %>%
-       as.data.frame()
+                             #get fit decision & reasoning
+                             fit_check_DF <- fit_check_DF %>%
+                               dplyr::mutate(n_par_opt = n_par + n_sigma,
+                                             fit_decision = ifelse(n_par_opt < n_detect,
+                                                                   "continue",
+                                                                   "abort"),
+                                             fit_reason = ifelse(n_par_opt < n_detect,
+                                                                 "Number of parameters to estimate is less than number of non-excluded detected observations",
+                                                                 "Number of parameters to estimate is greater than or equal to number of non-excluded detected observations")) %>%
+                               as.data.frame()
 
- fit_check_DF
-     },
- simplify = FALSE,
- USE.NAMES = TRUE)
+                             fit_check_DF
+                           },
+    simplify = FALSE,
+    USE.NAMES = TRUE)
 
   fit_check_out <- do.call(dplyr::bind_rows,
-                        c(fit_check_out,
-                        list(.id = "model")))
+                           c(fit_check_out,
+                             list(.id = "model")))
 
   obj$prefit$par_DF <- par_DF_out
   obj$prefit$fit_check <- fit_check_out

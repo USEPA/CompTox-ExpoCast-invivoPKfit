@@ -115,9 +115,9 @@ residuals.pk <- function(obj,
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  message("Transformations used: \n",
+  message("Transformations used in fitting: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
-          "log-transformation ", conc_scale$log10_trans)
+          "log-transformation (Not used in residual calculation)", conc_scale$log10_trans)
 
   #apply dose-normalization if specified
   # conditional mutate ifelse

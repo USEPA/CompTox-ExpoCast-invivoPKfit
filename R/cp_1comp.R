@@ -74,11 +74,7 @@ cp_1comp <- function(params, time, dose, route, medium = 'plasma') {
                check_msg))
   }
 
-  #for readability, assign params to variables inside this function
-  # for (x in names(params)) {
-  #   assign(x, unname(params[x]))
-  # }
-  # New way
+
   list2env(as.list(params), envir = as.environment(-1))
 
   #repeat route, time, dose, and medium to be all the same length

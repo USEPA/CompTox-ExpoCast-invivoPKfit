@@ -221,23 +221,24 @@ get_params_2comp <- function(data,
   use_param <- rep(TRUE, length(param_name))
 
   #now follow the logic described in the documentation for this function:
-if(!("oral" %in% data$Route)){
-  #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_V1,
-  #and they won't be used.
-  optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
-  use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
-}else{ #if yes oral data:
-  if("iv" %in% data$Route){
-    #if both oral and IV data, Fgutabs and V1 can be fit separately, so turn off Fgutabs_V1
-    optimize_param[param_name %in% c("Fgutabs_V1")] <- FALSE
-    use_param[param_name %in% c("Fgutabs_V1")] <- FALSE
-  }else{
-    #if oral ONLY:
-    #cannot fit Fgutabs and V1 separately, so turn them off.
-    optimize_param[param_name %in% c("Fgutabs", "V1")] <- FALSE
-    use_param[param_name %in% c("Fgutabs", "V1")] <- FALSE
+  if(!("oral" %in% data$Route)){
+    #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_V1,
+    #and they won't be used.
+    optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
+    use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
+  }else{ #if yes oral data:
+    if("iv" %in% data$Route){
+      #if both oral and IV data, Fgutabs and V1 can be fit separately, so turn off Fgutabs_V1
+      optimize_param[param_name %in% c("Fgutabs_V1")] <- FALSE
+      use_param[param_name %in% c("Fgutabs_V1")] <- FALSE
+    }else{
+      #if oral ONLY:
+      #cannot fit Fgutabs and V1 separately, so turn them off.
+      optimize_param[param_name %in% c("Fgutabs", "V1")] <- FALSE
+      use_param[param_name %in% c("Fgutabs", "V1")] <- FALSE
+    }
   }
-}
+
 
   #if both "blood" and "plasma" are not in data,
   #then Rblood2plasma will not be optimized

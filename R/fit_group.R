@@ -69,17 +69,15 @@ fit_group <- function(data,
       const_params <- NULL
     }
 
-
     #Now call optimx::optimx() and do the fit
     suppressWarnings(
       optimx_out <- tryCatch({
-
         tmp <- do.call(
           optimx::optimx,
           args = c(
-            #
             list(par = opt_params,
                  fn = log_likelihood,
+                 # save.failures = TRUE,
                  lower = lower_params,
                  upper = upper_params),
             #method and control
@@ -102,19 +100,23 @@ fit_group <- function(data,
         tmp
       },
       error = function(err){
-        method <- settings_optimx$method
-        tmp <- data.frame(c(rep(NA_real_,
-                              length(opt_params)),
-                          rep(NA_real_, 4),
-                          -9999,
-                          rep(NA, 2),
-                          NA_real_))
+        method <- rlang::eval_tidy(settings_optimx$method)
+        tmp <- c(rep(NA_real_, length(opt_params)),
+                 rep(NA_real_, 4),
+                 -9999,
+                 rep(NA, 2),
+                 NA_real_)
 
         names(tmp) <- c(names(opt_params),
                         "value", "fevals", "gevals", "niter",
                         "convcode",
                         "kkt1", "kkt2",
                         "xtime")
+
+        tmp <- data.frame(as.list(tmp)) %>%
+          dplyr::slice(rep(1:dplyr::n(),
+                           each = length(method)))
+
         rownames(tmp) <- method
         tmp$method <- rownames(tmp)
 
@@ -140,19 +142,14 @@ fit_group <- function(data,
         return(tmp)
       }) #end tryCatch()
     ) #end suppressWarnings()
-
-    # Need to convert units back
-
     out <- optimx_out
-
   }else{ #if status for this model was "abort", then abort fit and return NULL
     method <- rlang::eval_tidy(settings_optimx$method)
-    tmp <- c(rep(NA_real_,
-                            length(opt_params)),
-                        rep(NA_real_, 4),
-                        -9999,
-                        rep(NA, 2),
-                        NA_real_)
+    tmp <- c(rep(NA_real_, length(opt_params)),
+             rep(NA_real_, 4),
+             -9999,
+             rep(NA, 2),
+             NA_real_)
     names(tmp) <- c(names(opt_params),
                     "value", "fevals", "gevals", "niter",
                     "convcode",

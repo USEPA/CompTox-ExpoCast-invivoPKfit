@@ -26,7 +26,7 @@
 #'corresponding sample standard deviation, \eqn{s_{ijk}}. In the harmonized
 #'data,  \eqn{s_{ijk}} is contained in variable `Conc_SD`.
 #'
-#'\eqn{\bar{theta}_i} represents the vector of model parameters supplied in
+#'\eqn{\bar{\theta}_i} represents the vector of model parameters supplied in
 #'argument `params` for chemical-species combination \eqn{i}.
 #'
 #'\eqn{\mu_{ijk}} is the model-predicted concentration for dose \eqn{d_{ijk}}
@@ -144,6 +144,7 @@ log_likelihood <- function(par,
   model.params <- params[!grepl(x = names(params),
                                 pattern = "sigma")]
 
+
   #get un-transformed predicted plasma concentration vs. time for the current parameter
   #values, by dose and route
   pred <- do.call(
@@ -156,6 +157,7 @@ log_likelihood <- function(par,
       medium = data$Media
     )
   )
+
 
 
   data$pred <- pred
@@ -196,6 +198,7 @@ log_likelihood <- function(par,
     data$conc_natural <- data$Conc_trans
     data$conc_sd_natural <- data$Conc_SD_trans
   }
+
 
   #residual error SDs
   #defined by data_sigma_group
