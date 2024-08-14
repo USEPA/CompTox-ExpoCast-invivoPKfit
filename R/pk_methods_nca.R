@@ -117,6 +117,17 @@ nca.pk <- function(obj,
     newdata$Conc_nca.Units <- newdata$Conc.Units
   }
 
+  if(suppress.messages %in% FALSE){
+    message(paste("nca.pk(): Doing",
+                                  ifelse(dose_norm %in% TRUE,
+                                         "dose-normalized",
+                                         "non-dose-normalized"),
+                                  "NCA by the following grouping:",
+                  paste(grp_vars, collapse = ", ")
+                  )
+            )
+  }
+
   #do NCA
     nca_out <- newdata %>%
       dplyr::group_by(!!!nca_group) %>%
@@ -125,20 +136,21 @@ nca.pk <- function(obj,
                      Dose.Units = unique(Dose.Units),
                      dose_norm = dose_norm,
                      {
-                       if(suppress.messages %in% FALSE){
-                         cur_data_summary <- dplyr::inner_join(
-                           get_data_summary(obj,
-                                            summary_group = nca_group),
-                           dplyr::cur_group(),
-                           by = grp_vars) %>%
-                           as.data.frame
-                         message(paste("nca.pk(): Doing",
-                                       ifelse(dose_norm %in% TRUE,
-                                              "dose-normalized",
-                                              "non-dose-normalized"),
-                                       "NCA for the following data:"))
-                         print(cur_data_summary)
-                       }
+                       # if(suppress.messages %in% FALSE){
+                       #   cur_data_summary <- dplyr::inner_join(
+                       #     get_data_summary(obj,
+                       #                      summary_group = nca_group),
+                       #     dplyr::cur_group(),
+                       #     by = grp_vars) %>%
+                       #     as.data.frame
+                       #   message(paste("nca.pk(): Doing",
+                       #                 ifelse(dose_norm %in% TRUE,
+                       #                        "dose-normalized",
+                       #                        "non-dose-normalized"),
+                       #                 "NCA for the following data:\n"),
+                       #           paste0(capture.output(cur_data_summary),
+                       #                  collapse = "\n"))
+                       # }
                        calc_nca(time = Time[exclude %in% FALSE], #calculate NCA
                                 dose = Dose_nca[exclude %in% FALSE],
                                 conc = Conc_nca[exclude %in% FALSE],
@@ -150,12 +162,12 @@ nca.pk <- function(obj,
       dplyr::mutate(
         param_units = dplyr::case_when( #derive NCA param units from data units
           param_name %in% c("AUC_tlast",
-                            "AUC_infinity") ~ paste("(",
+                            "AUC_infinity") ~ paste0("(",
                                                     Conc.Units,
                                                     ")",
                                                     "*",
                                                     Time.Units),
-          param_name %in% "AUMC_infinity" ~ paste("(",
+          param_name %in% "AUMC_infinity" ~ paste0("(",
                                                   Conc.Units,
                                                   ")",
                                                   "*",

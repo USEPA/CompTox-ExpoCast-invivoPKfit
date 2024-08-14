@@ -98,6 +98,9 @@ sigma_DF <- data %>%
   dplyr::mutate(data_sigma_group = data_sigma_group) %>%
   dplyr::filter(exclude %in% FALSE) %>%
   #temporarily undo log10-trans, if it has been used
+  #this is because combined_sd() requires NON log transformed concs
+  #but we want to keep dose-normalization if it has been applied
+  #so we un-log Conc_trans
   dplyr::mutate(Conc_tmp = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
                                               NROW(Conc_trans)),
                                   10^Conc_trans,
