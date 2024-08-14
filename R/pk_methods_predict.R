@@ -6,10 +6,7 @@
 #' @param newdata Optional: A `data.frame` with new data for which to make
 #'   predictions. If NULL (the default), then predictions will be made for the
 #'   data in `obj$data`. `newdata` is required to contain at least the following
-#'   variables: `Time`, `Time.Units`, `Dose`, `Route`, and `Media`. If variable
-#'   `Time_trans` is not present, then `Time` will be transformed according to
-#'   the transformation in `obj$scales$time` before making predictions;
-#'   otherwise, `Time_trans` will be used to make predictions.
+#'   variables: `Time`, `Time.Units`, `Dose`, `Route`, and `Media`.
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   make predictions. If NULL (the default), predictions will be returned for
 #'   all of the models in `obj$stat_model`.
@@ -112,30 +109,6 @@ predict.pk <- function(obj,
     exclude = exclude
   )
 
-
-  #scale time if needed
-
-  # time_scale_check
-
-  # If true, this also means that newdata was not NULL and was user input
-  if (!("Time_trans" %in% names(newdata))) {
-    newdata$Time_trans <- convert_time(
-      x = newdata$Time,
-      from = newdata$Time.Units,
-      to = obj$scales$time$new_units
-    )
-
-    trans_unit_data <- obj$data %>%
-      dplyr::select(
-        !!!union(obj$data_group,
-                 ggplot2::vars(Time_trans.Units))) %>%
-      dplyr::distinct()
-
-    newdata <- newdata %>%
-      dplyr::left_join(trans_unit_data) %>%
-      dplyr::distinct()
-  }
-
   #apply transformations if so specified
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
@@ -143,8 +116,6 @@ predict.pk <- function(obj,
   # Get variables required for model functions
   req_vars <- ggplot2::vars(Time,
                             Time.Units,
-                            Time_trans,
-                            Time_trans.Units,
                             Dose,
                             Route,
                             Media)
@@ -175,8 +146,7 @@ predict.pk <- function(obj,
   # Set a new column for the model function
   newdata <- newdata %>%
     dplyr::group_by(model, method,
-                    !!!obj$data_group,
-                    Route, Media) %>%
+                    !!!obj$data_group) %>% #need not group by Route and Media for this
     dplyr::mutate(
       model_fun = dplyr::case_when(
         type == "conc" ~ obj$stat_model[[model]]$conc_fun,
@@ -184,8 +154,6 @@ predict.pk <- function(obj,
         .default = obj$stat_model[[model]]$conc_fun
       )
     )
-
-
 
   # Get predictions
   # Note that the model functions only need Time, Dose, Route, and Medium
@@ -204,7 +172,7 @@ predict.pk <- function(obj,
                                           time = Time,
                                           dose = ifelse(rep(conc_scale$dose_norm,
                                                             NROW(Dose)),
-                                                        rep(1, NROW(Dose)),
+                                                        rep(1.0, NROW(Dose)),
                                                         Dose),
                                           route = Route,
                                           medium = Media,
@@ -221,25 +189,38 @@ predict.pk <- function(obj,
                                                           "it is missing estimated parameters."))
                                           }
                                           # Return Value
-                                          NA
+                                          NA_real_
                                         })
                                     )
                                 })) %>%
     tidyr::unnest(predictions)
 
-  if (type == "conc")
+  #If log10 transformation was specified, then apply it now
+
+
+  if (type %in% "conc"){
     newdata <- dplyr::rename(newdata, Conc_est = "Estimate")
-  if (type == "auc")
+  #apply log10-trans to predicted conc, if so specified
+  if(conc_scale$log10_trans %in% TRUE){
+    newdata <- newdata %>%
+      dplyr::mutate(Conc_est = log10(Conc_est))
+  }
+  } else if (type %in% "auc"){
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
+  #note that it doesn't make sense to log10-trans AUC
+    if (suppress_messages %in% FALSE){
+      message("predict.pk(): Log10 transformation was specified, but was not used because `type == 'AUC'`.")
+    }
+  }
 
   if (suppress_messages %in% FALSE){
     if(conc_scale$dose_norm) {
-    message("predict.pk(): Note that the predicted values are for dose 1 (dose-normalized)")
+    message("predict.pk(): Note that the predicted values are for dose 1.0 (dose-normalized)")
   } else {
     message("predict.pk(): Note that the predicted values are not dose-normalized")
   }
   }
 
-  message("predict.pk(): These predictions have been made using 1/hour rate constants from coefs()")
+  message("predict.pk(): These predictions have been made using un-scaled Time and 1/hour rate constants from coefs()")
   return(newdata)
 }

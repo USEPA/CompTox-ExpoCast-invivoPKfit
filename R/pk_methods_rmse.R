@@ -44,24 +44,31 @@
 #' that the effective error is the difference between the LOQ and the predicted
 #' value).
 #'
-#' # Transformations
+#' # Log10 transformation
 #'
-#' RMSE is calculated using *un-transformed* concentrations and predictions.
-#' Compare this to the behavior of [logLik.pk()], [AIC.pk()], and [BIC.pk()],
-#' which all calculate the log-likelihood using *transformed* observations and
-#' predictions. The goal is for the log-likelihood-based functions to reflect
-#' the log-likelihood function that was actually used to fit the model, whereas
-#' RMSE reflects the average error in predicting concentrations.
+#' If `log10_trans %in% TRUE`, then both the observed and predicted values will be
+#' log10-transformed before calculating the RMSE. In the case where
+#' observed values are reported in summary format, each sample mean and sample
+#' SD (reported on the natural scale, i.e. the mean and SD of natural-scale
+#' individual observations) are used to produce an estimate of the log10-scale
+#' sample mean and sample SD (i.e., the mean and SD of log10-transformed
+#' individual observations), using [convert_summary_to_log10()].
+#'
+#' The formulas are as follows. Again, \eqn{\bar{y}_i} is the sample mean for
+#' group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.
+#'
+#' \deqn{\textrm{log10-scale sample mean}_i = \log_{10}
+#' \left(\frac{\bar{y}_i^2}{\sqrt{\bar{y}_i^2 + s_i^2}} \right)}
+#'
+#' \deqn{\textrm{log10-scale sample SD}_i = \sqrt{\log_{10} \left(1 +
+#' \frac{s_i^2}{\bar{y}_i^2} \right)}}
 #'
 #' @param obj A `pk` object
 #' @param newdata Optional: A `data.frame` with new data for which to make
 #'   predictions and compute RMSEs. If NULL (the default), then RMSEs will be
 #'   computed for the data in `obj$data`. `newdata` is required to contain at
 #'   least the following variables: `Time`, `Time.Units`, `Dose`, `Route`,
-#'   `Media`, `Conc`, `Conc_SD`, `N_Subjects`, `Detect`. If variable
-#'   `Time_trans` is not present, then `Time` will be transformed according to
-#'   the transformation in `obj$scales$time` before making predictions;
-#'   otherwise, `Time_trans` will be used to make predictions.
+#'   `Media`, `Conc`, `Conc_SD`, `N_Subjects`, `Detect`.
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   make predictions and calculate RMSEs. If NULL (the default), RMSEs will be
 #'   returned for all of the models in `obj$stat_model`.
@@ -74,16 +81,16 @@
 #'   data, an observation is marked for exclusion when `exclude %in% TRUE`).
 #'   `FALSE` to include all observations, regardless of exclusion status.
 #'   Default `TRUE`.
-#' @param use_scale_conc Possible values: `TRUE`, `FALSE`, or a named list with
+#' @param use_scale_conc Possible values: `FALSE` (default, `TRUE`, or a named list with
 #'   elements `dose_norm` and `log10_trans` which themselves should be either
-#'   `TRUE` or `FALSE`. If `use_scale_conc = TRUE` (the default for this
-#'   function), then the concentration scaling/transformations in `obj` will be
-#'   applied to both predicted and observed concentrations before the
-#'   log-likelihood is computed. If `use_scale_conc = FALSE`, then no
-#'   concentration scaling or transformation will be applied before the
-#'   log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
+#'   `TRUE` or `FALSE`.  If `use_scale_conc = FALSE` (the default for this
+#'   function), then no concentration scaling or transformation will be applied
+#'   when the RMSE is computed. If `use_scale_conc = TRUE, then the
+#'   concentration scaling/transformations in `obj` will be applied to both
+#'   predicted and observed concentrations when the RMSE is computed (see
+#'   [calc_rmse()] for details).If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
-#'   log10-transformation will be applied before the log-likelihood is computed.
+#'   log10-transformation will be applied when the RMSE is computed.
 #' @param rmse_group A list of quosures provided in the format `vars(...)` that
 #'   determines the data groupings for which RMSE is calculated. Default NULL,
 #'   in which case RMSE is calculated for each data group defined in the
@@ -98,12 +105,13 @@
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family fit evaluation metrics
 #' @family methods for fitted pk objects
+#' @seealso [calc_rmse()]
 rmse.pk <- function(obj,
                     newdata = NULL,
                     model = NULL,
                     method = NULL,
                     exclude = TRUE,
-                    use_scale_conc = TRUE,
+                    use_scale_conc = FALSE,
                     rmse_group = NULL,
                     ...){
 #ensure that the model has been fitted
@@ -147,14 +155,14 @@ if (!(check %in% TRUE)) {
   }
 
   #Get predictions
-  #on transformed scale, if so requested
+  #do NOT apply transformations at this stage
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,
                    method = method,
                    type = "conc",
                    exclude = exclude,
-                   use_scale_conc = use_scale_conc)
+                   use_scale_conc = FALSE)
 
 
   #remove any excluded observations & corresponding predictions, if so specified
@@ -193,7 +201,11 @@ if (!(check %in% TRUE)) {
                         Conc),
       Conc_set_SD = ifelse(conc_scale$dose_norm,
                            Conc_SD / Dose,
-                           Conc_SD)) %>%
+                           Conc_SD),
+      Conc_est = ifelse(conc_scale$dose_norm,
+                        Conc_est / Dose,
+                        Conc)
+                        ) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(!!!rmse_group,
                     model, method) %>%
