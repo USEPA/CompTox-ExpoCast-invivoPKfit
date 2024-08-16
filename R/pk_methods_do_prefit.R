@@ -121,10 +121,11 @@ sigma_DF <- data %>%
                                                 Conc_trans.Units))
 
 # Set values for sigma upper/lower-bounds and start
-sigma_DF <- do.call(dplyr::group_by,
-                    args = c(list(sigma_DF),
-                             obj$stat_error_model$error_group)) %>%
-  dplyr::summarise(param_name = paste("sigma",
+sigma_DF <- sigma_DF %>%
+  dplyr::group_by(!!!obj$stat_error_model$error_group) %>%
+  dplyr::summarise(max_conc =  max(Conc_tmp,
+                                   na.rm = TRUE),
+                   param_name = paste("sigma",
                                       unique(data_sigma_group),
                                       sep = "_"),
                    param_units = unique(Conc_tmp.Units),
@@ -140,8 +141,7 @@ sigma_DF <- do.call(dplyr::group_by,
                      log10 = obj$scales$conc$log10_trans)) %>%
   dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
                                                upper_bound <= lower_bound,
-                                             max(Conc_tmp,
-                                                 na.rm = TRUE),
+                                             max_conc,
                                              upper_bound)) %>%
   dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
                                                upper_bound <= lower_bound,
