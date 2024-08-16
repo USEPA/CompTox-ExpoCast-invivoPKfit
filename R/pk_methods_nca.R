@@ -54,7 +54,7 @@ nca.pk <- function(obj,
   }
 
   if(is.null(nca_group)){
-    nca_group <- obj$settings_data_info$nca_group
+    nca_group <- obj$settings_data_info$summary_group
   }
 
   if(is.null(newdata)) newdata <- obj$data
@@ -65,8 +65,34 @@ nca.pk <- function(obj,
   #Create a new dose variable to handle dose-normalization or not
   #If dose-normalized, grouping need not include original Dose column
 
+  if(dose_norm %in% TRUE){
+    #check_nca_group to ensure it includes  Route, and Media
+    #since we can only do NCA for a single Route, and a single Media at a time
+    #(when dose_norm is TRUE, Dose = 1, so we already have a single Dose)
+    if(!(all(c("Route",
+               "Media") %in%
+             grp_vars))){
+      stop(paste0("When dose_norm == TRUE, nca_group must include all of Route, Media.\n",
+                  "nca_group is: ",
+                  paste(grp_vars,
+                        collapse = ", ")
+      ))
+    }
+  }else{
+    #check_nca_group to ensure it includes Dose, Route, and Media
+    #since we can only do NCA for a single Dose, a single Route, and a single Media at a time
+    if(!(all(c("Dose",
+               "Route",
+               "Media") %in%
+             grp_vars))){
+      stop(paste0("When dose_norm == FALSE, nca_group must include all of Dose, Route, Media.\n",
+                 "nca_group is: ",
+                 paste(grp_vars,
+                       collapse = ", ")
+      ))
+    }
+  }
 
-  if(dose_norm %in% FALSE){
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
                               req_vars = union(
@@ -108,9 +134,13 @@ nca.pk <- function(obj,
   if(dose_norm %in% TRUE){
     newdata$Conc_nca <- newdata$Conc/newdata$Dose
     newdata$Dose_nca <- 1.0
-    newdata$Conc_nca.Units <- paste0(newdata$Conc.Units,
+    newdata$Conc_nca.Units <- paste0("(",
+                                     newdata$Conc.Units,
+                                     ")",
                                  "/",
-                                 newdata$Dose.Units)
+                                 "(",
+                                 newdata$Dose.Units,
+                                 ")")
   }else{
     newdata$Conc_nca <- newdata$Conc
     newdata$Dose_nca <- Dose
