@@ -14,10 +14,12 @@
 #'
 #' Upper bounds for each "sigma" hyperparameter are calculated as the standard
 #' deviation of observations in the corresponding error SD group (see
-#' [combined_sd()]). If the combined SD is non-finite or less than the sigma
-#' lower bound, then the combined SD of all non-excluded data is substituted. If
-#' that is still non-finite or less then the sigma lower bound, then a constant
-#' value of 100 is substituted.
+#' [combined_sd()]), with any specified transformations applied
+#' (dose-normalization and/or log10-transformation). If the combined SD is
+#' non-finite or less than the sigma lower bound, then the maximum concentration
+#' is used as an upper bound; if this still returns a non-finite value or a
+#' value less than the lower bound, then a constant value of 1000 is
+#' substituted.
 #'
 #' The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
 #'
@@ -135,8 +137,17 @@ sigma_DF <- do.call(dplyr::group_by,
                      group_n = N_Subjects,
                      unbiased = TRUE,
                      na.rm = TRUE,
-                     log10 = obj$scales$conc$log10_trans),
-                   start = 0.1 * upper_bound) %>%
+                     log10 = obj$scales$conc$log10_trans)) %>%
+  dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
+                                               upper_bound <= lower_bound,
+                                             max(Conc_tmp,
+                                                 na.rm = TRUE),
+                                             upper_bound)) %>%
+  dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
+                                               upper_bound <= lower_bound,
+                                             1000,
+                                             upper_bound))
+                start = 0.1 * upper_bound) %>%
   as.data.frame()
 
   #assign rownames to sigma_DF
