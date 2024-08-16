@@ -4,7 +4,7 @@
 #'
 #' @param obj A [pk()] object that has had `data_info()` run on it
 #' @param ... Additional arguments. Currently not in use.
-#' @return A `data.frame`: the `data` element of `obj`
+#' @return A `list` of `tibble`s: the `data_info` element of `obj`
 #' @export
 #' @author Caroline Ring
 get_data_info.pk <- function(obj, ...){
