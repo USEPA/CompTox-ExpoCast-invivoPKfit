@@ -124,38 +124,65 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
     message(paste0("do_fit.pk(): ", n_cores, " processing cores allocated."))
     cluster <- multidplyr::new_cluster(n_cores)
     if (any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
-      multidplyr::cluster_call(cluster, library(invivoPKfit))
+      multidplyr::cluster_send(cluster, library(invivoPKfit))
     } else {
-      multidplyr::cluster_call(cluster, devtools::load_all())
+      multidplyr::cluster_send(cluster, devtools::load_all())
     }
 
-    multidplyr::cluster_copy(cluster, "obj")
+    this_settings_optimx <- get_settings_optimx(obj)
+    dose_norm <- obj$scales$conc$dose_norm
+    log10_trans <- obj$scales$conc$log10_trans
 
-    fit_out <- info_nest %>%
-      dplyr::group_by(!!!data_group, model) %>% multidplyr::partition(cluster)
-    tidy_fit <- fit_out %>%
-      dplyr::summarize(
-        fit = purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
-                          .f = fit_group,
-                          this_model = model,
-                          settings_optimx = get_settings_optimx(obj),
-                          modelfun = obj$stat_model[[model]]$conc_fun,
-                          dose_norm = obj$scales$conc$dose_norm,
-                          log10_trans = obj$scales$conc$log10_trans,
-                          suppress.messages = TRUE)) %>% dplyr::collect()
+    multidplyr::cluster_copy(cluster, "this_settings_optimx")
+    multidplyr::cluster_copy(cluster, "dose_norm")
+    multidplyr::cluster_copy(cluster, "log10_trans")
+
+
+    #multidplyr::cluster_copy(cluster, "obj")
+    #we can likely save some memory by only passing what we need from obj
+    #like this
+
+    info_nest <- info_nest %>% dplyr::rowwise() %>%
+      dplyr::mutate(modelfun = obj$stat_model[[model]]$conc_fun)
+
+
+    tidy_fit <- info_nest %>%
+      dplyr::rowwise(!!!data_group, model) %>%
+      multidplyr::partition(cluster) %>%
+      dplyr::summarise(
+        fit = list(fit_group(data = data,
+                             par_DF = par_DF,
+                             sigma_DF = sigma_DF,
+                             fit_decision = fit_decision,
+                             this_model = model,
+                             settings_optimx = this_settings_optimx,
+                             modelfun = modelfun,
+                             dose_norm = dose_norm,
+                             log10_trans = log10_trans,
+                             suppress.messages = TRUE)
+                   )
+        ) %>%
+      dplyr::collect() #undo the multidplyr::partition()
+
+    rm(cluster)
   } else {
-    fit_out <- info_nest %>%
-      dplyr::group_by(!!!data_group, model)
 
-    tidy_fit <- fit_out %>%
-      dplyr::summarize(fit = purrr::pmap(.l = dplyr::pick(tidyselect::everything()),
-                                         .f = fit_group,
-                                         this_model = model,
-                                         settings_optimx = get_settings_optimx(obj),
-                                         modelfun = obj$stat_model[[model]]$conc_fun,
-                                         dose_norm = obj$scales$conc$dose_norm,
-                                         log10_trans = obj$scales$conc$log10_trans,
-                                         suppress.messages = TRUE))
+    tidy_fit <- info_nest %>%
+      dplyr::rowwise(!!!data_group, model) %>%
+      dplyr::mutate(modelfun = obj$stat_model[[model]]$conc_fun) %>%
+      dplyr::mutate(
+        fit = list(fit_group(data = data,
+                             par_DF = par_DF,
+                             sigma_DF = sigma_DF,
+                             fit_decision = fit_decision,
+                             this_model = model,
+                             settings_optimx = this_settings_optimx,
+                             modelfun = modelfun,
+                             dose_norm = dose_norm,
+                             log10_trans = log10_trans,
+                             suppress.messages = TRUE)
+        )
+      )
   }
 
 
