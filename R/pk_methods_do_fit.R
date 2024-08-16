@@ -109,6 +109,10 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   # First condition if it is FALSE don't use parallel computing (takes much longer though)
   #
 
+  this_settings_optimx <- get_settings_optimx(obj)
+  dose_norm <- obj$scales$conc$dose_norm
+  log10_trans <- obj$scales$conc$log10_trans
+
   if (is.numeric(n_cores)) {
     message(paste0("do_fit.pk(): Trying to divide processes into ", n_cores, " processing cores"))
     total_cores <- parallel::detectCores()
@@ -128,10 +132,6 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
     } else {
       multidplyr::cluster_send(cluster, devtools::load_all())
     }
-
-    this_settings_optimx <- get_settings_optimx(obj)
-    dose_norm <- obj$scales$conc$dose_norm
-    log10_trans <- obj$scales$conc$log10_trans
 
     multidplyr::cluster_copy(cluster, "this_settings_optimx")
     multidplyr::cluster_copy(cluster, "dose_norm")
