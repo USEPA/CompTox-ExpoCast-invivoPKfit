@@ -73,6 +73,7 @@ plot.pk <- function(x,
                     method = NULL,
                     use_scale_conc = FALSE,
                     # Plotting arguments
+                    time_trans = FALSE,
                     log10_C = NULL,
                     plot_data_aes = NULL,
                     plot_point_aes = NULL,
@@ -150,8 +151,23 @@ plot.pk <- function(x,
     }
   }
 
-  common_vars <- ggplot2::vars(Time, Time.Units, Time_trans, Time_trans.Units,
+
+  time_var <- ifelse(time_trans,
+                     as.name("Time_trans"),
+                     as.name("Time"))
+
+  time_units_var <- ifelse(time_trans,
+                           as.name("Time_trans.Units"),
+                           as.name("Time.Units"))
+
+  common_vars <- ggplot2::vars(Time, Time.Units,
                                Dose, Route, Media)
+
+  if(time_trans){
+    common_vars <- union(common_vars,
+                         ggplot2::vars( Time_trans, Time_trans.Units))
+  }
+
   obs_vars <- ggplot2::vars(Conc, Conc_SD, Value, Value.Units,
                             Detect, exclude,
                             Conc_trans, Conc_trans.Units,
@@ -159,7 +175,7 @@ plot.pk <- function(x,
 
 
   # Default arguments and functions
-  plot_data_aes_default <- ggplot2::aes(x = Time_trans,
+  plot_data_aes_default <- ggplot2::aes(x = !!time_var,
                                         y = Conc_set,
                                         ymin = Conc_set - Conc_set_SD,
                                         ymax = Conc_set + Conc_set_SD,
@@ -169,7 +185,7 @@ plot.pk <- function(x,
   plot_point_aes_default <- ggplot2::aes(fill = factor(Dose),
                                          alpha = Detect)
 
-  plot_fit_aes_default <- ggplot2::aes(x = Time_trans,
+  plot_fit_aes_default <- ggplot2::aes(x = !!time_var,
                                        y = Conc_est,
                                        linetype = interaction(model, method))
 
@@ -201,6 +217,8 @@ plot.pk <- function(x,
                                  common_vars),
                            obs_vars)) %>%
     dplyr::rowwise() %>%
+    #apply dose-norm if specified, but do not apply log10-trans even if specified
+    #(if log10-trans specified, the y axis will be log10-scaled)
     dplyr::mutate(Conc_set = ifelse(conc_scale$dose_norm,
                                     Conc / Dose,
                                     Conc),
@@ -229,7 +247,9 @@ plot.pk <- function(x,
                                 stroke = 1) + # plots points
                      geom_errorbar(mapping = plot_data_aes)
 
-                   t_units <- unique(x$Time_trans.Units)
+                   t_units <- x %>%
+                     dplyr::pull(!!time_units_var) %>%
+                     unique()
 
                    # if alpha = Detect then we have to do some trickery to implement that
                    # that is the objective of plot_point_aes
@@ -297,14 +317,20 @@ plot.pk <- function(x,
 
                  }))
 
-  # For predictions, I will interpolate the time
+  # For predictions, interpolate time
 
   if (get_status(obj = x) == 5) {
     interp_data <- newdata
     interp_data <- interp_data %>%
       dplyr::mutate(interpolated = purrr::map(observations,
                                 \(x) {
-                                  t_units <- unique(x[["Time_trans.Units"]])
+                                  #if needed and not present, add Time_trans.Units column
+                                  if(time_trans %in% TRUE){
+                                    if(!("Time_trans.Units" %in% names(x))){
+                                      x <- x %>%
+                                       dplyr::mutate(Time_trans.Units = Time.Units)
+                                    }
+
                                   x %>%
                                     dplyr::select(!!!common_vars) %>%
                                     dplyr::group_by(Dose, Route, Media) %>%
@@ -318,16 +344,39 @@ plot.pk <- function(x,
                                     dplyr::group_by(Dose, Route, Media) %>%
                                     dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
                                                     (dplyr::row_number() - 1))
-                                }))
+                                  }else if(time_trans %in% FALSE){
+                                    x %>%
+                                      dplyr::select(!!!common_vars) %>%
+                                      dplyr::group_by(Dose, Route, Media) %>%
+                                      dplyr::reframe(Time = max(Time), # Change to Time
+                                                     Time.Units) %>%
+                                      dplyr::mutate(maxTime = max(Time),
+                                                    Time.Units = unique(Time.Units)
+                                                   ) %>%
+                                      tidyr::uncount(n_interp) %>%
+                                      dplyr::group_by(Dose, Route, Media) %>%
+                                      dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
+                                                      (dplyr::row_number() - 1))
+                                  }
+                                }
+                                )
+                    )
 
     interp_data <- interp_data %>%
       dplyr::select(!!!x$data_group, interpolated) %>%
       tidyr::unnest(cols = c(interpolated)) %>%
       dplyr::ungroup()
 
+
+    #Make predictions --
+    #apply dose-normalization if it has been specified --
+    #but do not use log10-transformation for now, even if it has been specified
+    conc_scale_tmp <- conc_scale
+    conc_scale_tmp$log10_trans <- FALSE
+
     interp_data <- predict(obj = x,
                            newdata = interp_data,
-                           use_scale_conc = use_scale_conc,
+                           use_scale_conc = conc_scale_tmp,
                            model = model,
                            method = method,
                            exclude = FALSE,
@@ -337,12 +386,9 @@ plot.pk <- function(x,
       interp_data <- dplyr::left_join(get_winning_model(obj = x),
                                       interp_data)
     }
-    # browser()
 
-    # rowwise can be taxing for function calls
-    # This process is inefficient, need to rewrite using a simple
-    # JOIN -> MUTATE -> SELECT
-
+    #if plotting transformed time, then transform interpolated time points
+    if(time_trans){
     conversion_table <- time_conversions %>%
       dplyr::filter(TimeFrom %in% interp_data$Time.Units,
                     TimeTo %in% interp_data$Time_trans.Units) %>%
@@ -354,6 +400,7 @@ plot.pk <- function(x,
                                                 Time_trans.Units)) %>%
       dplyr::mutate(Time_trans = Time * conversion) %>%
       dplyr::select(!conversion)
+    }
 
     interp_data <- interp_data %>%
       dplyr::group_by(!!!x$data_group) %>%
