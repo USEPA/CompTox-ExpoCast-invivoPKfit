@@ -40,6 +40,7 @@ that includes the fitted models used in much of the publication.
 ``` {r file_load, eval=FALSE}
 # saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds")
 my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
+today <- format(Sys.Date(), "%d%B%Y")
 
 ```
 
@@ -135,7 +136,10 @@ my_pk_000p <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    # "bobyqa",
+    "L-BFGS-B"
+  )) +
   scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
   # scale_time(new_units = "auto") +
   # stat_model() + 
@@ -145,7 +149,10 @@ my_pk_100p <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    # "bobyqa",
+    "L-BFGS-B"
+  )) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   # scale_time(new_units = "auto") +
   # stat_model() + 
@@ -155,7 +162,10 @@ my_pk_110p <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    "L-BFGS-B",
+    "bobyqa"
+  )) +
   scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
   # scale_time(new_units = "auto") +
   # stat_model() + 
@@ -165,7 +175,10 @@ my_pk_111p <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    # "bobyqa",
+    "L-BFGS-B"
+  )) +
   scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
   scale_time(new_units = "auto") +
   # stat_model() + 
@@ -175,7 +188,10 @@ my_pk_010p <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    "L-BFGS-B",
+    "bobyqa"
+  )) +
   scale_conc(dose_norm = FALSE, log10_trans = TRUE) +
   # scale_time(new_units = "auto") +
   # stat_model() + 
@@ -185,7 +201,10 @@ my_pk_011p <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    "L-BFGS-B",
+    "bobyqa"
+  )) +
   scale_conc(dose_norm = FALSE, log10_trans = TRUE) +
   scale_time(new_units = "auto") +
   # stat_model() + 
@@ -195,7 +214,10 @@ my_pk_001p <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    "L-BFGS-B",
+    "bobyqa"
+    )) +
   scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
   scale_time(new_units = "auto") +
   # stat_model() + 
@@ -205,7 +227,10 @@ my_pk_101p <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    "L-BFGS-B",
+    "bobyqa"
+    )) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   scale_time(new_units = "auto") +
   # stat_model() + 
@@ -220,7 +245,10 @@ my_pk_000j <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    # "bobyqa",
+    "L-BFGS-B"
+  )) +
   scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
   # scale_time(new_units = "auto") +
   # stat_model() + 
@@ -230,7 +258,10 @@ my_pk_100j <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B")) +
+  settings_optimx(method = c(
+    # "bobyqa",
+    "L-BFGS-B"
+  )) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   # scale_time(new_units = "auto") +
   # stat_model() + 
@@ -240,7 +271,10 @@ my_pk_110j <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    "L-BFGS-B",
+    "bobyqa"
+  )) +
   scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
   # scale_time(new_units = "auto") +
   # stat_model() + 
@@ -250,7 +284,10 @@ my_pk_111j <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    # "bobyqa",
+    "L-BFGS-B"
+  )) +
   scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
   scale_time(new_units = "auto") +
   # stat_model() + 
@@ -260,7 +297,10 @@ my_pk_010j <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    "L-BFGS-B",
+    "bobyqa"
+  )) +
   scale_conc(dose_norm = FALSE, log10_trans = TRUE) +
   # scale_time(new_units = "auto") +
   # stat_model() + 
@@ -270,7 +310,10 @@ my_pk_011j <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    "L-BFGS-B",
+    "bobyqa"
+  )) +
   scale_conc(dose_norm = FALSE, log10_trans = TRUE) +
   scale_time(new_units = "auto") +
   # stat_model() + 
@@ -280,7 +323,10 @@ my_pk_001j <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    "L-BFGS-B",
+    "bobyqa"
+    )) +
   scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
   scale_time(new_units = "auto") +
   # stat_model() + 
@@ -290,11 +336,14 @@ my_pk_101j <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
                       suppress.messages = TRUE) +
-  settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
+  settings_optimx(method = c(
+    "L-BFGS-B",
+    "bobyqa"
+    )) +
   scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
   scale_time(new_units = "auto") +
   # stat_model() + 
-  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+  stat_error_model(error_group = vars(Chemical, Species, Reference))  
 ```
 
 
@@ -375,7 +424,15 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
   cli::cli_progress_step("More detailed metrics...")
   # Other metrics (detailed)
   suppressMessages({
-    r2_df <- rsq(obj, use_scale_conc = FALSE) %>%
+    r2_df <- rsq(obj, use_scale_conc = FALSE,
+                 use_group = ggplot2::vars(
+                   Chemical,
+                   Species,
+                   Reference,
+                   Route,
+                   Media,
+                   Dose
+                 )) %>%
     inner_join(winning_model)
   myAIC <- AIC(obj) %>%
     inner_join(winning_model)
@@ -387,7 +444,9 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
                        signif(digits = 4),
                      median_FoldErr = median(Fold_Error, na.rm = TRUE) %>%
                        signif(digits = 4),
-                     within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2)/length(Fold_Error) %>%
+                     within_2fold = sum(
+                       Fold_Error >= 0.5 & Fold_Error <= 2
+                       )/length(Fold_Error) %>%
                        signif(digits = 4))
   
   myRMSE_all <- rmse(obj,
@@ -405,6 +464,7 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
     inner_join(myRMSE_all) %>%
     mutate(Options = pk_name, .before = Chemical)
   
+  # Are there models that have lower RMSE than the winning model
   winmodel_conflict <- rmse(obj, use_scale_conc = FALSE) %>%
     group_by(Chemical, Species, Route, Media, Dose, Time) %>%
     filter(RMSE == min(RMSE)) %>%
@@ -426,59 +486,158 @@ gc()
 ```{r Evaluating choices, eval=FALSE}
 
 ### Evaluations-----
-my_pk_000p <- do_fit(my_pk_000p, n_cores = 10)  %>% evaluate_choices() # Done
-my_pk_100p <- do_fit(my_pk_100p, n_cores = 12) %>% evaluate_choices() # Done
-my_pk_110p <- do_fit(my_pk_110p, n_cores = 12) %>% evaluate_choices() # Done
-my_pk_111p <- do_fit(my_pk_111p, n_cores = 12) %>% evaluate_choices() # Done
-rm(my_pk_000p, my_pk_100p,my_pk_110p,my_pk_111p)
-gc()
-my_pk_010p <- do_fit(my_pk_010p, n_cores = 12) %>% evaluate_choices() # Done
-my_pk_011p <- do_fit(my_pk_011p, n_cores = 12) %>% evaluate_choices() # Done 
-my_pk_001p <- do_fit(my_pk_001p, n_cores = 12) %>% evaluate_choices() # Done
-my_pk_101p <- do_fit(my_pk_101p, n_cores = 12) %>% evaluate_choices() # Done
-rm(my_pk_010p, my_pk_011p,my_pk_001p,my_pk_101p)
-gc()
-
-my_pk_000j <- do_fit(my_pk_000j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_100j <- do_fit(my_pk_100j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_110j <- do_fit(my_pk_110j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_111j <- do_fit(my_pk_111j, n_cores = 10) %>% evaluate_choices(PJ = "Joint") # Done
-rm(my_pk_000j, my_pk_100j, my_pk_110j, my_pk_111j)
-gc()
-my_pk_010j <- do_fit(my_pk_010j, n_cores = 12) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_011j <- do_fit(my_pk_011j, n_cores = 12) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_001j <- do_fit(my_pk_001j, n_cores = 12) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_101j <- do_fit(my_pk_101j, n_cores = 12) %>% evaluate_choices(PJ = "Joint") # Done
-
-# Run after each evaluation
-# initialization (only run once)
 {
+my_pk_000p <- do_fit(my_pk_000p, n_cores = 14)  %>% evaluate_choices() # Done
+my_pk_100p <- do_fit(my_pk_100p, n_cores = 14) %>% evaluate_choices() # Done
+my_pk_110p <- do_fit(my_pk_110p, n_cores = 14) %>% evaluate_choices() # Done
+my_pk_111p <- do_fit(my_pk_111p, n_cores = 14) %>% evaluate_choices() # Done
 
-winning_model_final <- NULL
-rmse_summary <- NULL
-detail_stats <- NULL
-
-current_pk <- my_pk_101j # Current evaluated pk object here
-
-# Run all at once
-
-winning_model_final <- bind_rows(winning_model_final, current_pk[[1]])
-rmse_summary <- bind_rows(rmse_summary, current_pk[[2]])
-detail_stats <- bind_rows(detail_stats, current_pk[[3]])
-rm(current_pk)
-gc()
+my_pk_010p <- do_fit(my_pk_010p, n_cores = 14) %>% evaluate_choices() # Done
+my_pk_011p <- do_fit(my_pk_011p, n_cores = 14) %>% evaluate_choices() # Done 
+my_pk_001p <- do_fit(my_pk_001p, n_cores = 14) %>% evaluate_choices() # Done
+my_pk_101p <- do_fit(my_pk_101p, n_cores = 14) %>% evaluate_choices() # Done
 }
 
-# For copy + pasting into Excel workbook
-winning_model_final %>% clipr::write_clip(col.names = FALSE)
-clipr::clear_clip()
-rmse_summary %>% clipr::write_clip(col.names = FALSE)
-clipr::clear_clip()
-detail_stats %>% clipr::write_clip(col.names = FALSE)
-clipr::clear_clip()
+{
+winning_model_final <- do.call("bind_rows", args = list(
+  my_pk_000p[1],
+  my_pk_100p[1],
+  my_pk_110p[1],
+  my_pk_111p[1],
+  my_pk_010p[1],
+  my_pk_011p[1],
+  my_pk_001p[1],
+  my_pk_101p[1]
+))
+
+rmse_summary <- do.call("bind_rows", args = list(
+  my_pk_000p[2],
+  my_pk_100p[2],
+  my_pk_110p[2],
+  my_pk_111p[2],
+  my_pk_010p[2],
+  my_pk_011p[2],
+  my_pk_001p[2],
+  my_pk_101p[2]
+))
+
+detail_stats <- do.call("bind_rows", args = list(
+  my_pk_000p[3],
+  my_pk_100p[3],
+  my_pk_110p[3],
+  my_pk_111p[3],
+  my_pk_010p[3],
+  my_pk_011p[3],
+  my_pk_001p[3],
+  my_pk_101p[3]
+))
+
+lower_RMSE <- do.call("bind_rows", args = list(
+  my_pk_000p[4],
+  my_pk_100p[4],
+  my_pk_110p[4],
+  my_pk_111p[4],
+  my_pk_010p[4],
+  my_pk_011p[4],
+  my_pk_001p[4],
+  my_pk_101p[4]
+))
+
+}
+
+
+rm(my_pk_010p, my_pk_011p,my_pk_001p,my_pk_101p,
+   my_pk_000p, my_pk_100p,my_pk_110p,my_pk_111p)
 gc()
 
-rm(winning_model_final, rmse_summary, detail_stats)
+{
+my_pk_000j <- do_fit(my_pk_000j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_100j <- do_fit(my_pk_100j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_110j <- do_fit(my_pk_110j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_111j <- do_fit(my_pk_111j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
+
+my_pk_010j <- do_fit(my_pk_010j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_011j <- do_fit(my_pk_011j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_001j <- do_fit(my_pk_001j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_101j <- do_fit(my_pk_101j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
+}
+
+{
+winning_model_final <- do.call("bind_rows", args = list(
+  winning_model_final,
+  my_pk_000j[1],
+  my_pk_100j[1],
+  my_pk_110j[1],
+  my_pk_111j[1],
+  my_pk_010j[1],
+  my_pk_011j[1],
+  my_pk_001j[1],
+  my_pk_101j[1]
+))
+
+rmse_summary <- do.call("bind_rows", args = list(
+  rmse_summary,
+  my_pk_000j[2],
+  my_pk_100j[2],
+  my_pk_110j[2],
+  my_pk_111j[2],
+  my_pk_010j[2],
+  my_pk_011j[2],
+  my_pk_001j[2],
+  my_pk_101j[2]
+))
+
+detail_stats <- do.call("bind_rows", args = list(
+  detail_stats,
+  my_pk_000j[3],
+  my_pk_100j[3],
+  my_pk_110j[3],
+  my_pk_111j[3],
+  my_pk_010j[3],
+  my_pk_011j[3],
+  my_pk_001j[3],
+  my_pk_101j[3]
+))
+
+lower_RMSE <- do.call("bind_rows", args = list(
+  lower_RMSE,
+  my_pk_000j[4],
+  my_pk_100j[4],
+  my_pk_110j[4],
+  my_pk_111j[4],
+  my_pk_010j[4],
+  my_pk_011j[4],
+  my_pk_001j[4],
+  my_pk_101j[4]
+))
+}
+
+rm(my_pk_010j, my_pk_011j,my_pk_001j,my_pk_101j,
+   my_pk_000j, my_pk_100j, my_pk_110j, my_pk_111j)
+
+gc()
+
+writexl::write_xlsx(x = list(
+  Fit_Counts = winning_model_final,
+  AUC_and_Cmax_RMSE_summary = rmse_summary,
+  Prediction_Evaluations = detail_stats),
+  path = paste0(Sys.getenv("FIG_DIR"),
+                "Manu_Files/",
+                format(Sys.Date(), "%d%B%Y"),
+                "_Supp_Table1",
+                ".xlsx"))
+
+
+lower_RMSE %>% count(Chemical, Species) %>% arrange(desc(n))
+
+detail_stats %>%
+  filter(Options %in% c("110 Pooled", "111 Joint")) %>%
+  ggplot(aes(x = log10(median_MSE), color = Options)) +
+  geom_freqpoly() +
+  facet_grid(rows = vars(method)) +
+  theme_bw()
+
+
 ```
 
 
@@ -503,150 +662,81 @@ multiRef_ChemSpec %>% nrow() # Surprisingly only 15 Chem + Species have multiple
 ```
 
 
-### Evaluating error in finalist options
-These finalists will be compared based on their more detailed statistics.
+### Evaluating error for the NCA estimations
+Some chemicals have one observation for a timepoint but not for others, which
+then each timepoint gets a random error value so that `PK::nca()` can run.
+Here I evaluate 100 random seeds and the differences in values of NCA estimated parameters.
 
-```{r Plotting_Summary, eval=FALSE}
-finalist_options <- c("000 Pooled", "000 Joint",
-                      "100 Pooled", "100 Joint",
-                      "111 Pooled", "111 Joint")
+```{r NCA_error_eval, eval=FALSE}
 
-# What are the sheets names
-summary_dir <- paste("C:/Users/GPADILLA",
-                           "OneDrive - Environmental Protection Agency (EPA)/Profile/Documents",
-                           "Manuscript",
-                           "DataSummary_2024_05_10.xlsx",
-                           sep = "/")
-readxl::excel_sheets(summary_dir) # Predictions Evaluation
-
-preval <- readxl::read_xlsx(summary_dir,
-                            sheet = "Predictions Evaluation") %>%
-  # left_join(multiRef_ChemSpec,
-  #           by = join_by(Chemical == analyte_dtxsid,
-  #                        Species == species)) %>%
-  # filter(method %in% "L-BFGS-B", 
-  #        Options %in% finalist_options) %>%
-  distinct()
-
-
-preval %>%
-  separate(Options, sep = " ",
-           into = c("Options", "Error_Model")) %>%
-  ggplot(aes(x = avg_FoldErr,
-             color = Options)) +
-  geom_freqpoly(bins = 10) +
-  facet_grid(cols = vars(Error_Model))
-
-preval %>% 
-  separate(Options, sep = " ",
-           into = c("Options", "Error_Model")) %>%
-  group_by(Options, Error_Model) %>%
-  summarize(totalFoldError = sum(avg_FoldErr))
+# Which Chemical Species Route Media Dose groups have the randomness?
+my_pk$data %>%
+  group_by(Chemical, Species, Reference, Route, Media, Dose, Time) %>%
+  summarize(Count = n()) %>%
+  group_by(Chemical, Species, Reference, Route, Media, Dose) %>%
+  filter(any(Count == 1) && any(Count > 1)) %>%
+  distinct(Chemical, Species, Reference, Route, Media, Dose) -> problem_set
 
 
 
-library(broom)
+# Evaluate 100 times
+n_evals <- 100
+evalNCA_df <- NULL
+my_pk_new <- my_pk +
+  settings_preprocess(suppress.message = TRUE)
 
-filtered_preval <- preval %>%
-  filter(if_all(where(is.numeric), is.finite))
+for (i in 1:100) {
+  seed_num <- 100 + i
+  set.seed(seed_num)
+  message(paste("Current seed:", seed_num))
+  my_pk_new <- do_preprocess(my_pk_new)
+  my_pk_new <- do_data_info(my_pk_new)
+  
+  this_nca <- my_pk_new$data_info$nca %>%
+    select(-param_sd_z) %>%
+    mutate(seed = as.factor(seed_num))
+  evalNCA_df <- bind_rows(evalNCA_df, this_nca)
+}
 
-filtered_preval %>%
-  dplyr::select(Chemical, Species, model, method, Options, Rsq) %>%
-  mutate(time_scaled = ifelse(str_detect(Options,
-                                         pattern = "^\\d\\d1"),
-                              "Time_Scaled",
-                              "notTime_Scaled"),
-         Options = str_remove(Options, pattern = "\\d(?=[:blank:])")) %>%
-  # dplyr::select(-Options) %>%
-  pivot_wider(names_from = time_scaled, values_from = Rsq) %>% 
-  mutate(differ = Time_Scaled - notTime_Scaled) %>%
+names(evalNCA_df)
+
+evalNCA_df %>%
+  group_by(Chemical, Species, Route, Media, Dose, param_name) %>%
+  summarize(Average = mean(param_value[which(!is.infinite(param_value))], na.rm = TRUE),
+            Median = median(param_value[which(!is.infinite(param_value))], na.rm = TRUE),
+            StDev = sd(param_value[which(!is.infinite(param_value))], na.rm = TRUE),
+            Min = min(param_value[which(!is.infinite(param_value))], na.rm = TRUE),
+            Max = max(param_value[which(!is.infinite(param_value))], na.rm = TRUE),
+            Unique_Values = length(unique(signif(param_value, 4))),
+            Inf_Count = sum(is.infinite(param_value))) %>%
+  filter(
+    # Route %in% "iv",
+    param_name %in% "Cmax"
+    ) %>%
   View()
-
-
-fit <- lm(within_2fold ~ avg_FoldErr, data = filtered_preval)
-summary(fit)
-tidy(fit)
-head(augment(fit))
-glance(fit)
-
-filtered_preval %>% group_by(Options) %>%
-  nest() %>%
-  mutate(fit = map(data, \(x) {
-    lm(within_2fold ~ avg_FoldErr, data = x)
-    }),
-    tidy_fit = map(fit, tidy)) %>%
-  unnest(tidy_fit) %>%
-  dplyr::select(Options, term, estimate, std.error, statistic) %>%
-  View()
-
-
-Cmax_AUC <- readxl::read_xlsx(summary_dir,
-                            sheet = "Cmax and AUC_inf Evaluation") %>%
-  dplyr::select(3:6) %>%
-  distinct()
-
-# DFO = difference from origin
-# OLS = ordinary least squares
-Cmax_AUC %>%
-  mutate(DFO = rank(sqrt(RMSE_Cmax^2 + signif(RMSE_AUC, 5)^2)),
-         OLS = rank(sqrt(2)*abs(RMSE_Cmax - signif(RMSE_AUC, 5))/2)) %>%
-  #filter(DFO < 11 | OLS < 11) %>%
-  arrange(DFO, OLS) %>%
-  dplyr::select(-RMSE_Cmax, -RMSE_AUC) %>% View()
-  clipr::write_clip()
-
-
-Cmax_AUC %>% na.omit() %>%
-  mutate(DFO = rank(sqrt(RMSE_Cmax^2 + RMSE_AUC^2)),
-         OLS = rank(sqrt(2)*abs(RMSE_Cmax - RMSE_AUC)/2)) %>%
-  separate(Options, into = c("Norms", "ErrModel")) %>% View()
-  ggplot(aes(
-    x = DFO,
-    y = OLS,
-    fill = Norms
-  )) + geom_point(shape = 21) +
-  facet_grid(rows = vars(ErrModel),
-             cols = vars(method))
-
   
-preval %>% group_by(Chemical, Species, model, method, Options) %>%
-    filter(AIC == min(AIC)) %>%
-  ggplot(aes(x = log10(median_MSE), fill = model)) +
-  geom_histogram(position = position_dodge()) +
-  facet_grid(rows = vars(Options),
-             cols = vars(method)) +
-  scale_fill_manual(values = c("orange3", "green4", "black")) +
+  
+evalNCA_df %>%
+  filter(param_name %in% c("tmax"),
+         Route %in% "iv",
+         is.finite(param_value),
+         Species %in% c("rat", "human", "hamster"))  %>%
+  ggplot(aes(x = param_value, y = Chemical)) +
+  geom_point() +
+  facet_grid(rows = vars(Route)) +
   theme_bw() +
-  theme(strip.text.y = element_text(angle = 0))
-  
+  theme(axis.text.y = element_text(size = 5),
+        axis.ticks.y = element_blank(),
+        panel.grid.major = element_line(color = "grey70",
+                                          linewidth = 0.4,
+                                          linetype = "solid"),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor = element_blank())
 
-ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "SquaredError_SummaryEvaluations_20240515.png"),
-       height = 8,
-       width = 5)
 
 
-# Supplemental Figure 3
 
-preval %>% filter(Options %in% c("000 Joint", "000 Pooled", "111 Joint"),
-                  method %in% "bobyqa") %>%
-  mutate(median_MSE = ifelse(Options == "111 Joint",
-                             median_MSE*2, median_MSE)) %>% View()
-  group_by(Chemical, Species, model, method, Options) %>%
-    filter(AIC == min(AIC)) %>%
-  ggplot(aes(x = log10(median_MSE))) +
-  geom_histogram(position = position_dodge(), fill = "grey5") +
-  facet_grid(rows = vars(Options),
-             cols = vars(method)) +
-  theme_bw() +
-  theme(strip.text.y = element_text(angle = 0),
-        strip.clip = "off",
-        axis.line.x.bottom = element_line(color = "black", linewidth = 1))
-  
-
-ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "SquaredError_SummaryEvaluations_Selective_20240515.png"),
-       height = 4,
-       width = 4)
+set.seed(2023)
 ```
 
 ## Running dose-normalized, log-transformed, joint fits  
@@ -670,9 +760,7 @@ my_pk <- minimal_pk +
 
 my_pk <- do_preprocess(my_pk)
 cvt_DTXSIDs <- unique(my_pk$data$Chemical)
-
-
-my_pk <- do_data_info(my_pk)
+length(cvt_DTXSIDs)
 
 my_pk <- do_prefit(my_pk)
 
@@ -703,9 +791,23 @@ winmodel <- get_winning_model(my_pk)
 my_preds <- inner_join(predict(my_pk, use_scale_conc = FALSE), winmodel)
 my_residuals <- residuals(my_pk, use_scale_conc = FALSE) %>%
   inner_join(winmodel)
-my_tkstats <- eval_tkstats(my_pk)
+my_tkstats <- eval_tkstats(my_pk) %>% inner_join(winmodel) 
 my_nca <- get_nca(my_pk)
 all_my_data <- get_data(my_pk)
+
+
+twofold_stats <- twofold_test(my_pk)
+
+# Writing file to xlsx
+writexl::write_xlsx(x = list(predictions = my_preds,
+                             tkstats = my_tkstats),
+                    path = paste0(Sys.getenv("FIG_DIR"),
+                                  "Manu_Files/",
+                                  format(Sys.Date(), "%d%B%Y"),
+                                  "_Supp_Table2",
+                                  ".xlsx"))
+
+
 
 fe_df <- fold_errors(my_pk) %>% inner_join(winmodel)
 # May need to change the use_scale_conc defaults
@@ -792,7 +894,6 @@ Additionally, this also contributes to supplemental figure 2.
 
 
 ```{r fig4A_supp2A, eval=FALSE}
-
 all_my_data %>%
   filter(Detect %in% TRUE,
          exclude %in% FALSE,
@@ -806,12 +907,18 @@ all_my_data %>%
   filter(n() > 1,
          sum(is.na(Conc)) != n(),
          Conc > LOQ) %>% 
-  mutate(meanConc = mean(Conc, na.rm = TRUE)) %>%
+  summarize(normal = shapiro.test(log10(Conc))$p.value) %>% ungroup() %>%
+  count(normal > 0.05)
+  ggplot(aes(x = Conc, color = paste(Chemical, Species, Reference,
+                                     Route, Media, Dose))) +
+  geom_freqpoly() +
+  theme(legend.position = "none")
+  mutate(meanConc = mean(Conc, na.rm = TRUE)) %>% 
   ungroup() %>%
   rowwise() %>%
-  mutate(foldConc = Conc / meanConc) %>%
+  mutate(foldConc = Conc / meanConc) %>% View("in_data")
   # filter(Route == "oral") %>%
-  count(foldConc >= 0.5 & foldConc <= 2) %>%
+  count(foldConc >= 0.5 & foldConc <= 2) #%>%
   {.[[2,2]]/(.[[1,2]] + .[[2,2]])}
 # Stats for ALL | ORAL | IV
 # 89.01% inside twofold | 87.13%  | 92.27%
@@ -1070,6 +1177,121 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
        units = "in",
        dpi = 300)
 
+
+# Extra Plot: Model error over ADME-normalized time!
+my_preds %>% 
+  inner_join(my_tkstats %>%
+              dplyr::select(Chemical, Species,
+                            Route, Media,
+                            tmax = tmax.nca) %>%
+              filter(!is.na(tmax))) %>%
+  group_by(Chemical,
+           Species,
+           Route,
+           Media,
+           Dose) %>%
+  mutate(normTime = ifelse(
+           Route == "iv",
+           1 + Time/max(Time),
+           ifelse(
+             Time > tmax,
+             ((Time - tmax)/max(Time)) + 1,
+             0.5 + Time/(2*tmax)
+           )
+         )) %>%
+  group_by(model, method,
+           Chemical, Species, Route, Media,
+           Dose, normTime) %>%
+  summarize(RMSLE = sqrt(sum((log10(Conc) - log10(Conc_est))^2)/n())) %>%
+  # inner_join(tricky_chems) %>% View("modelErr_overTime")
+  ###
+  # group_by(model, method,
+  #          Chemical, Species, Route, Media,
+  #          Dose) %>%
+  # summarize(RMSLE_diff = range(RMSLE)[2] - range(RMSLE)[1]) %>%
+  # filter(RMSLE_diff > 10) %>% distinct(Chemical, Species) -> tricky_chems
+  ggplot(aes(
+    x = normTime,
+    y = RMSLE
+  )) +
+  geom_point(alpha = 0.1, size = 0.7) +
+  geom_point(data = . %>% inner_join(tricky_chems),
+             alpha = 0.1, size = 0.7, color = "red3") +
+  geom_vline(xintercept = 1, color = "blue",
+             linewidth = 0.8, linetype = "dashed") +
+  geom_vline(xintercept = 2, color = "green4",
+             linewidth = 0.8, linetype = "dashed") +
+  facet_grid(cols = vars(Route),
+             scales = "free_x") +
+  labs(x = "ADME-Normalized Time",
+       y = "RMSLE",
+       title = "RMSLE over the course of an experiment") +
+  theme(text = element_text(size = 10),
+        panel.border = element_rect(color = "black", fill = NA, size = 1),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title = element_text(face = "bold"),
+        panel.spacing = unit(0.125, units = "in"),
+        plot.background = element_rect(color = "white"),
+        legend.position = "none")
+
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "RMLE_overADME_time",
+              ".png"),
+       height = 3,
+       width = 7,
+       units = "in",
+       dpi = 300)
+
+
+
+
+my_preds %>% 
+  inner_join(my_tkstats %>%
+              dplyr::select(Chemical, Species,
+                            Route, Media,
+                            tmax = tmax.nca) %>%
+              filter(!is.na(tmax))) %>%
+  group_by(Chemical,
+           Species,
+           Route,
+           Media,
+           Dose) %>%
+  mutate(normTime = ifelse(
+           Route == "iv",
+           1 + Time/max(Time),
+           ifelse(
+             Time > tmax,
+             ((Time - tmax)/max(Time)) + 1,
+             0.5 + Time/(2*tmax)
+           )
+         )) %>%
+  group_by(model, method,
+           Chemical, Species, Route, Media,
+           Dose, normTime) %>%
+  summarize(RMSLE = sqrt(sum((log10(Conc) - log10(Conc_est))^2)/n())) %>%
+  mutate(TimeCat = ifelse(normTime > 1, "elimination", "absorption")) %>%
+  ggplot(aes(x = RMSLE)) +
+  geom_histogram() +
+  facet_grid(rows = vars(Route),
+             cols = vars(TimeCat)) +
+  theme_bw()
+
+
+
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "RMLE_overADME_time_histograms",
+              ".png"),
+       height = 6,
+       width = 6,
+       units = "in",
+       dpi = 300)
+
 ```
 
 
@@ -1202,19 +1424,6 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 my_preds %>%
   rowwise() %>%
-<<<<<<< HEAD
-  mutate(Pred_Obs = Conc_est / Conc_trans) %>%
-  filter(is.finite(Pred_Obs),
-         model %in% c("model_1comp", "model_2comp")) %>%
-  ungroup() %>%
-  mutate(pass = ifelse(Pred_Obs > 2, TRUE, FALSE)) %>%
-  pull(pass) %>% table() %>% {100*.[[2]]/(.[[1]] + .[[2]])}
-  ggplot(aes(x = Pred_Obs)) +
-  geom_histogram(binwidth = 0.25,
-                 fill = "grey5") +
-  scale_x_log10(labels = scales::label_math(format = log10),
-                limits = c(0.01, 100)) +
-=======
   mutate(Pred_Obs = Conc_est/Conc) %>%
   filter(is.finite(Pred_Obs),
          model %in% c("model_1comp", "model_2comp")) %>%
@@ -1226,7 +1435,7 @@ my_preds %>%
                  fill = "grey5") +
   scale_x_log10(limits = c(1E-5, 1E5),
                 labels = scales::label_math(format = log10)) +
->>>>>>> feature/Rclearance_comparison
+
   expand_limits(y = 0) +
   geom_vline(xintercept = c(0.5, 2), color = "red3", linetype = "dashed") +
   facet_grid(cols = vars(model),
@@ -1238,15 +1447,7 @@ my_preds %>%
         panel.border = element_rect(color = "black", fill = NA),
         panel.grid.major = element_line(color = "grey90", linewidth = 0.4))
 
-<<<<<<< HEAD
-# 91.1% of Pred_Obs are finite
-# 16.5% Are above two-fold
-# 40%  Are below two-fold
-# 43.4% Are within twofold
 
-ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "PredictedObserved_compartmentModels_2024-02-28.png"),
-=======
 # 99.18% of Pred_Obs are finite
 # 18.89% Are above two-fold
 # 21.52%  Are below two-fold
@@ -1270,8 +1471,6 @@ Please note that in supplemental Figure 3, the data with summarized observations
 data variability with model performance, we look at data with replicated timepoint observations, which are largely data with individual animal data.
 
 ```{r fig5-modelPerform-v-dataVar, eval=FALSE}
-
-
 # pl_5A <-
   my_preds %>% 
   right_join(winmodel) %>%
@@ -1292,9 +1491,10 @@ data variability with model performance, we look at data with replicated timepoi
          foldPred = Conc_est / Conc) %>% 
   # For percentages
   ungroup() %>%
-  # filter(model %in% c("model_flat")) %>%
-  # count((foldPred >= 0.5 & foldPred <= 2) & (foldConc >= 0.5 & foldConc <= 2)) %>%
-  # {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
+  filter(model %in% c("model_flat")) %>%
+  count((foldPred >= 0.5 & foldPred <= 2) &
+          (foldConc >= 0.5 & foldConc <= 2)) %>%
+  {100*.[[2,2]]/(.[[1,2]] + .[[2,2]])}
   # For Plotting
   ggplot(aes(
     y = foldPred,
@@ -2245,6 +2445,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
+### NCA variation analysis
 Here I decide to investigate data where fits were aborted and how many 
 time-points occurred before non-compartmental t~max~, which essentially
 asks whether there are enough detectable (above LOQ) data points to model absorption.
@@ -2573,6 +2774,258 @@ ggsave(paste0(Sys.getenv("FIG_DIR"), "Point_Reference_3x5.png"),
        width = 5,
        device = "png",
        dpi = 300)
+```
+
+
+
+```{r Evaluating-Predictions}
+my_data <- get_data(my_pk_000j)
+
+
+my_preds <- bind_rows(list(
+  inner_join(predict(my_pk_000p, newdata = my_data, by_timepoint = TRUE) %>%
+                         mutate(Option = "000p"), 
+                       get_winning_model(my_pk_000p)),
+  inner_join(predict(my_pk_000j, newdata = my_data, by_timepoint = TRUE) %>%
+                         mutate(Option = "000j"), 
+                       get_winning_model(my_pk_000j)),
+  inner_join(predict(my_pk_100p, newdata = my_data, by_timepoint = TRUE) %>%
+                         mutate(Option = "100p"), 
+                       get_winning_model(my_pk_100p)),
+  inner_join(predict(my_pk_100j, newdata = my_data, by_timepoint = TRUE) %>%
+                         mutate(Option = "100j"), 
+                       get_winning_model(my_pk_100j)),
+  inner_join(predict(my_pk_111p, newdata = my_data, by_timepoint = TRUE) %>%
+                         mutate(Option = "111p"), 
+                       get_winning_model(my_pk_111p)),
+  inner_join(predict(my_pk_111j, newdata = my_data, by_timepoint = TRUE) %>%
+                         mutate(Option = "111j"), 
+                       get_winning_model(my_pk_111j))
+))
+
+
+data_pl <- my_data %>%
+  filter(Detect, !exclude) %>%
+  distinct(Chemical, Chemical_Name, Species,
+           Reference, Route, Media, Dose, Conc, Time) %>%
+  group_by(Chemical, Chemical_Name, Species) %>%
+  nest(.key = "observations") %>%
+  mutate(
+    data_plot = purrr::map(
+      observations,
+      \(x) {
+        p <- ggplot(data = x,
+                    mapping = aes(
+                      x = Time,
+                      y = Conc,
+                      shape = Reference
+                    ))
+        p + geom_point(size = 0.7) +
+          labs(title = Chemical_Name,
+               subtitle = paste(Chemical, Species,
+                                sep = ", ")) +
+          facet_wrap(~Route + Media + Dose,
+                     scales = "free_y") +
+          theme_bw() +
+          theme(panel.border = element_rect(color = "black", fill = NA,
+                                            linewidth = 1),
+                plot.title = element_text(hjust = 0.5, face = "bold"),
+                plot.subtitle = element_text(hjust = 0.5),
+                strip.background = element_rect(fill = "white",
+                                                color = "black",
+                                                size = 1))
+      }))
+
+
+pred_pl <- my_preds %>%
+  group_by(Chemical, Species) %>%
+  nest(.key = "predictions") %>%
+  mutate(pred_plot = purrr::map(predictions,
+                                \(x) {
+                                  p <- geom_point(data = x,
+                                                 mapping = aes(
+                                                x = Time,
+                                                y = Conc_est,
+                                                color = factor(Option)),
+                                              shape = 6)
+                                }))
+
+
+
+combined_pl <- left_join(data_pl, pred_pl) %>%
+  mutate(final_plot = purrr::map2(data_plot, pred_plot,
+                                  \(x, y) { 
+                                    x + y +
+                                      scale_color_manual(values = c(
+                                      "red2", "red4",
+                                      "skyblue2", "blue2",
+                                      "grey20", "grey5"
+                                    )) +
+                                      scale_y_log10()
+                                  }))
+
+
+
+pdf(paste0(Sys.getenv("FIG_DIR"),
+           "VariousPredictions_BestFits.pdf"),
+    width = 10, height = 10, bg = "white",
+    onefile = TRUE)
+for (i in 1:nrow(combined_pl)) {
+  print(combined_pl$final_plot[[i]])
+}
+dev.off()
+
+
+comp_preds <- bind_rows(list(
+  inner_join(predict(my_pk_000p, newdata = my_data, by_timepoint = FALSE) %>%
+                         mutate(Option = "000p"), 
+                       get_winning_model(my_pk_000p)),
+  inner_join(predict(my_pk_000j, newdata = my_data, by_timepoint = FALSE) %>%
+                         mutate(Option = "000j"), 
+                       get_winning_model(my_pk_000j)),
+  inner_join(predict(my_pk_100p, newdata = my_data, by_timepoint = FALSE) %>%
+                         mutate(Option = "100p"), 
+                       get_winning_model(my_pk_100p)),
+  inner_join(predict(my_pk_100j, newdata = my_data, by_timepoint = FALSE) %>%
+                         mutate(Option = "100j"), 
+                       get_winning_model(my_pk_100j)),
+  inner_join(predict(my_pk_111p, newdata = my_data, by_timepoint = FALSE) %>%
+                         mutate(Option = "111p"), 
+                       get_winning_model(my_pk_111p)),
+  inner_join(predict(my_pk_111j, newdata = my_data, by_timepoint = FALSE) %>%
+                         mutate(Option = "111j"), 
+                       get_winning_model(my_pk_111j))
+))
+
+
+comp_pl <- comp_preds %>%
+  left_join(my_data %>% distinct(Chemical, Chemical_Name) %>%
+              mutate(Chemical_Name = case_when(
+                Chemical_Name %in% "2,4-d" ~ "2,4-dichlorophenoxyacetic acid",
+                Chemical_Name %in% "methylene chloride" ~ "dichloromethane"
+                                            Chemical_Name)),
+            relationship = "many-to-many") %>%
+  group_by(Chemical, Chemical_Name, Species) %>%
+  nest(.key = "data_pred") %>%
+  mutate(Rsq_plot = purrr::map(
+    data_pred,
+    \(x) {
+      ggplot(data = x,
+             mapping = aes(x = Conc,
+                           y = Conc_est,
+                           color = factor(Option))) +
+        geom_point(shape = 1, alpha = 0.5) +
+        geom_abline(linetype = "dashed") +
+        scale_y_log10(labels = scales::label_math(format = log10)) +
+        scale_x_log10(labels = scales::label_math(format = log10)) +
+        scale_color_manual(values = c(
+          "red2", "red4",
+          "skyblue2", "blue2",
+          "grey40", "grey5"
+        )) +
+        labs(title = Chemical_Name,
+             subtitle = paste(Chemical, Species,
+                              sep = ", "),
+             x = "Observations, log10",
+             y = "Predictions, log10",
+             color = "Options") +
+        facet_wrap(~Route + Media + Dose,
+                   scales = "free") +
+        theme_bw() +
+        theme(panel.border = element_rect(color = "black", fill = NA,
+                                          linewidth = 1),
+              plot.title = element_text(hjust = 0.5, face = "bold"),
+              plot.subtitle = element_text(hjust = 0.5),
+              strip.background = element_rect(fill = "white",
+                                              color = "black",
+                                              size = 1))
+      
+    }))
+
+pdf(paste0(Sys.getenv("FIG_DIR"),
+           "logScaled_Rsq_BestFits.pdf"),
+    width = 10, height = 10, bg = "white",
+    onefile = TRUE)
+for (i in 1:nrow(combined_pl)) {
+  print(comp_pl$Rsq_plot[[i]])
+}
+dev.off()
+
+
+my_rsq <- bind_rows(list(
+  inner_join(rsq(my_pk_000p, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species,
+                                           Route, Media, Dose)) %>%
+                         mutate(Option = "000p"), 
+                       get_winning_model(my_pk_000p)),
+  inner_join(rsq(my_pk_000j, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species,
+                                           Route, Media, Dose)) %>%
+                         mutate(Option = "000j"), 
+                       get_winning_model(my_pk_000j)),
+  inner_join(rsq(my_pk_100p, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species,
+                                           Route, Media, Dose)) %>%
+                         mutate(Option = "100p"), 
+                       get_winning_model(my_pk_100p)),
+  inner_join(rsq(my_pk_100j, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species,
+                                           Route, Media, Dose)) %>%
+                         mutate(Option = "100j"), 
+                       get_winning_model(my_pk_100j)),
+  inner_join(rsq(my_pk_111p, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species,
+                                           Route, Media, Dose)) %>%
+                         mutate(Option = "111p"), 
+                       get_winning_model(my_pk_111p)),
+  inner_join(rsq(my_pk_111j, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species,
+                                           Route, Media, Dose)) %>%
+                         mutate(Option = "111j"), 
+                       get_winning_model(my_pk_111j))
+))
+
+
+
+
+ggplot() +
+  geom_violin(my_rsq %>%
+                filter(!is.na(Rsq)),
+              mapping = aes(
+                x = Option,
+                y = Rsq
+              ),
+              color = "grey20",
+              alpha = 0.5,
+              draw_quantiles = c(0.5),
+              scale = "area") + 
+  ggbeeswarm::geom_beeswarm(
+    data = my_rsq %>% 
+      filter(Species %in% c("human", "hamster", "dog"),
+             !is.na(Rsq)),
+    mapping = aes(
+      x = Option,
+      y = Rsq
+    ),
+    method = "hex",
+    size = 0.8) +
+  facet_grid(rows = vars(Species)) +
+  labs(title = "Distribution of Rsq per select options",
+       subtitle = "(calculated using Chemical + Species + Route + Media + Dose grouping)") +
+  theme_bw() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    strip.background = element_rect(fill = "white", color = "grey5")
+  )
+
+ggsave(paste0(Sys.getenv("FIG_DIR"), "Rsq_betterGroups.png"),
+       units = "in",
+       height = 8,
+       width = 8,
+       device = "png",
+       dpi = 200)
+
 ```
 
 

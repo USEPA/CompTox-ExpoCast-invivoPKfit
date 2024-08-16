@@ -121,6 +121,10 @@
 #'   R-squared is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
+#' @param rsq_group Default: Chemical, Species. Determines what the data
+#' grouping that is used to calculate R-squared value. Should be set to lowest number
+#' of variables that still would return unique experimental conditions.
+#' Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.
 #' @param ... Additional arguments. Not currently in use.
 #' @return  A dataframe with one row for each `data_group`, `model` and `method`.
 #'   The final column contains the R-squared of the model fitted by the corresponding
@@ -135,6 +139,7 @@ rsq.pk <- function(obj,
                    method = NULL,
                    exclude = TRUE,
                    use_scale_conc = TRUE,
+                   rsq_group = ggplot2::vars(Chemical, Species),
                    ...){
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -172,6 +177,12 @@ rsq.pk <- function(obj,
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
 
+  if (is.null(rsq_group)) {
+    rsq_group <- obj$data_group
+  }
+  rsq_group_char <- sapply(rsq_group, rlang::as_label)
+
+
   #Get predictions
   preds <- predict(obj,
                    newdata = newdata,
@@ -190,7 +201,7 @@ rsq.pk <- function(obj,
     }
   }
 
-  req_vars <- c(names(preds),
+  req_vars <- c(union(names(preds),rsq_group_char),
                 "Conc",
                 "Conc_SD",
                 "N_Subjects",
@@ -216,7 +227,7 @@ rsq.pk <- function(obj,
                            Conc_SD / Dose,
                            Conc_SD)) %>%
     dplyr::ungroup() %>%
-    dplyr::group_by(!!!obj$data_group,
+    dplyr::group_by(!!!rsq_group,
                     model, method) %>%
     dplyr::summarize(
       Rsq = calc_rsq(obs = Conc_set,
@@ -229,7 +240,7 @@ rsq.pk <- function(obj,
     dplyr::ungroup()
 
   message("Groups: \n",
-          paste(sapply(unlist(obj$data_group), rlang::as_label),
+          paste(sapply(unlist(rsq_group), rlang::as_label),
                 collapse = ", "),
           ", ", " method, model")
 

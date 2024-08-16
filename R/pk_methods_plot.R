@@ -379,7 +379,7 @@ plot.pk <- function(x,
                                   }))
       }
     }
-    # browser()
+
     newdata <- newdata %>%
       dplyr::mutate(predicted_plot = purrr::map(predicted,
                                   \(x) {

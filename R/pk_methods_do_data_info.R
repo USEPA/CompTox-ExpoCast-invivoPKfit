@@ -65,10 +65,11 @@ do_data_info.pk <- function(obj, ...){
     message("do_data_info.pk(): Doing dose-normalized non-compartmental analysis\n")
   }
   nca_dose_norm_long <- nca(obj = obj,
-                       newdata = NULL,
-                       nca_group = summary_group,
-                       exclude = TRUE,
-                       dose_norm = TRUE)
+                            newdata = NULL,
+                            nca_group = summary_group,
+                            exclude = TRUE,
+                            dose_norm = TRUE,
+                            n_cores = n_cores)
   #pivot wider
   #first get names of grouping vars
   grp_vars <- sapply(summary_group,

@@ -134,6 +134,7 @@ eval_tkstats.pk <- function(obj,
                             model = model,
                             method = method,
                             tk_group = tk_group,
+                            dose_norm = dose_norm,
                             exclude = exclude) %>%
     ungroup()
 
@@ -170,8 +171,6 @@ eval_tkstats.pk <- function(obj,
   }
 
 
-
-
   # prepare for merge
   nca_df_red <- nca_df %>%
     dplyr::rename_with(~ paste0(.x, ".nca", recycle0 = TRUE),
@@ -188,10 +187,8 @@ eval_tkstats.pk <- function(obj,
   }
 
   # Merge the tkstats and the nca data.frames
-  suppressMessages(
-    tk_eval <- dplyr::left_join(tkstats_df_red,
-                                               nca_df_red)
-    )
+    tk_eval <- suppressMessages(dplyr::left_join(tkstats_df_red,
+                                nca_df_red))
 
   # Filter out infinite values for AUC_infinity
   if (finite_only) {

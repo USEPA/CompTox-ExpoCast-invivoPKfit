@@ -58,6 +58,7 @@ predict.pk <- function(obj,
                        use_scale_conc = FALSE,
                        suppress_messages = TRUE,
                        include_NAs = FALSE,
+                       by_timepoint = TRUE,
                        ...) {
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -82,22 +83,26 @@ predict.pk <- function(obj,
     include_NAs = include_NAs
   )
 
-  other_vars <- NULL
+  if (by_timepoint) {
+    other_vars <- NULL
+  } else {
+    other_vars <- ggplot2::vars(
+      Conc,
+      Conc.Units
+    )
+  }
 
   if (is.null(newdata)) {
     newdata <- obj$data
-
     other_vars <- ggplot2::vars(
-      Value,
-      Value.Units,
       Conc,
       Conc.Units,
       Conc_trans,
       Conc_trans.Units,
       Detect,
-      exclude
-    )
+      exclude)
   }
+
 
   newdata_ok <- check_newdata(
     newdata = newdata,

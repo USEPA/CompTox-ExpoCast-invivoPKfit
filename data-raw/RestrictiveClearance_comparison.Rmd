@@ -49,7 +49,6 @@ cvt %>%
   dplyr::distinct(analyte_dtxsid, analyte_name_original)
 
 # Test which analyte_dtxsid don't have a clearance or vdist
-
 data.frame(Chemical = unique(cvt$analyte_dtxsid)) %>%
   rowwise() %>%
   mutate(needs_RestCL = ifelse(
@@ -139,6 +138,7 @@ combined_clearance_df %>%
                                "restrictive clearance (httk)"),
                     values = c("orange2", "grey5", "skyblue3",  "green4")) +
   facet_grid(rows = vars(Species), scales = "free", space = "free") +
+  labs(x = "Total Clearance") +
   theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
         panel.background = element_blank(),
         panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
@@ -263,25 +263,26 @@ new_pk <- minimal_pk +
   settings_preprocess(keep_data_original = TRUE,
                       suppress.messages = FALSE) +
   settings_optimx(method = c("L-BFGS-B")) +
-  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  scale_time(new_units = "auto") +
   stat_error_model(error_group = vars(Chemical, Species, Reference)) +
   stat_model(model = c("model_1comp", "model_1comp_cl_rest", "model_1comp_cl_nonrest"))
 new_pk <- do_data_info(new_pk)
 
-
+new_pk <- new_pk + settings_optimx(method = c("bobyqa"))
 new_pk <- do_prefit(new_pk)
 
-new_pk$prefit$par_DF %>% arrange(Chemical, Species) %>% filter(param_name == "Clint") %>%
+
+unique(new_pk$prefit$par_DF$param_name)
+new_pk$prefit$par_DF %>% arrange(Chemical, Species) %>% filter(param_name == "Fup") %>%
   View()
 
-new_pk <- do_fit(new_pk) # For troubleshooting only
 
 
 
 new_pk <- do_fit(new_pk, n_cores = 12)
 
 
-# Multidplyr error because of forgotten browser() call within log_likelihood
 new_pk$fit %>% unnest(fit) %>% select(!starts_with("sigma_")) %>% View()
 
 saveRDS(new_pk, "data-raw/someCVT_wHTTK_reform_JOINT.rds")
