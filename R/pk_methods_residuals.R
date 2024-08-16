@@ -122,19 +122,21 @@ residuals.pk <- function(obj,
   #apply dose-normalization if specified
   # conditional mutate ifelse
   resids <- new_preds %>%
-    # needs to be rowwise first then by
-    dplyr::rowwise() %>%
     dplyr::mutate(
-      Conc_set = ifelse(conc_scale$dose_norm,
-                        ifelse(conc_scale$log10_trans,
+      Conc_set = ifelse(rep(conc_scale$dose_norm,
+                            NROW(Dose)),
+                        ifelse(rep(conc_scale$log10_trans,
+                                   NROW(Dose)),
                                log10(Conc/Dose),
                                Conc / Dose),
-                        ifelse(conc_scale$log10_trans,
+                        ifelse(rep(conc_scale$log10_trans,
+                                   NROW(Dose)),
                                log10(Conc),
                                Conc)
                         ),
       Residuals = ifelse(Detect %in% FALSE & Conc_est <= Conc_set,
-                         0, Conc_est - Conc_set)) %>%
+                         0,
+                         Conc_est - Conc_set)) %>%
     dplyr::ungroup() %>%
     dplyr::distinct()
 

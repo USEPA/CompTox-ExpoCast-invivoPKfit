@@ -193,18 +193,19 @@ if (!(check %in% TRUE)) {
   #apply dose-normalization if specified
   # conditional mutate ifelse
   rmse_df <- new_preds %>%
-    # needs to be rowwise first then by
-    dplyr::rowwise() %>%
     dplyr::mutate(
-      Conc_set = ifelse(conc_scale$dose_norm,
+      Conc_set = ifelse(rep(conc_scale$dose_norm,
+                            NROW(Dose)),
                         Conc / Dose,
                         Conc),
-      Conc_set_SD = ifelse(conc_scale$dose_norm,
+      Conc_set_SD = ifelse(rep(conc_scale$dose_norm,
+                               NROW(Dose)),
                            Conc_SD / Dose,
                            Conc_SD),
-      Conc_est = ifelse(conc_scale$dose_norm,
+      Conc_est = ifelse(rep(conc_scale$dose_norm,
+                            NROW(Dose)),
                         Conc_est / Dose,
-                        Conc)
+                        Conc_est)
                         ) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(!!!rmse_group,
@@ -216,7 +217,7 @@ if (!(check %in% TRUE)) {
                        n_subj = N_Subjects,
                        detect = Detect,
                        log10_trans = conc_scale$log10_trans)) %>%
-    dplyr::distinct() %>%
+    # dplyr::distinct() %>%
     dplyr::ungroup()
 
   message("rmse.pk(): RMSE calculated by groups: \n",
