@@ -84,28 +84,41 @@ predict.pk <- function(obj,
   if (is.null(newdata)) {
     newdata <- obj$data
 
-    other_vars <- ggplot2::vars(
-      Value,
-      Value.Units,
-      Conc,
-      Conc.Units,
-      Conc_trans,
-      Conc_trans.Units,
-      Detect,
-      exclude
-    )
+    # other_vars <- ggplot2::vars(
+    #   Value,
+    #   Value.Units,
+    #   Conc,
+    #   Conc.Units,
+    #   Conc_trans,
+    #   Conc_trans.Units,
+    #   Time_trans,
+    #   Time_trans.Units,
+    #   Detect,
+    #   exclude
+    # )
   }
+
+  req_vars <- union(obj$data_group,
+                    ggplot2::vars(Time,
+                            Time.Units,
+                            Dose,
+                            Route,
+                            Media))
+
+  #other_vars is all the non-required vars
+  #and non-data-group vars
+  all_vars <- do.call(ggplot2::vars,
+                      lapply(names(newdata),
+                             as.name)
+  )
+  other_vars <- setdiff(all_vars,
+                        req_vars)
 
   newdata_ok <- check_newdata(
     newdata = newdata,
     olddata = obj$data,
-    req_vars = c("Chemical",
-                 "Species",
-                 "Time",
-                 "Time.Units",
-                 "Dose",
-                 "Route",
-                 "Media"),
+    req_vars = sapply(req_vars,
+                      rlang::as_label),
     exclude = exclude
   )
 
@@ -114,18 +127,13 @@ predict.pk <- function(obj,
                                use_scale_conc = use_scale_conc)
 
   # Get variables required for model functions
-  req_vars <- ggplot2::vars(Time,
-                            Time.Units,
-                            Dose,
-                            Route,
-                            Media)
+
 
   # Make observations into nested list-column
   newdata <- newdata %>%
-    dplyr::select(!!!union(obj$data_group, req_vars),
-                  !!!other_vars) %>%
-    dplyr::group_by(!!!union(obj$data_group,
-                             ggplot2::vars(Route, Media))) %>%
+    # dplyr::select(!!!req_vars,
+    #               !!!other_vars) %>%
+    dplyr::group_by(!!!obj$data_group) %>% #again need not group by Route, Media
     tidyr::nest(.key = "observations") %>%
     dplyr::ungroup()
 
@@ -145,8 +153,8 @@ predict.pk <- function(obj,
   # After join it is joined by model, method, Chemical, Species
   # Set a new column for the model function
   newdata <- newdata %>%
-    dplyr::group_by(model, method,
-                    !!!obj$data_group) %>% #need not group by Route and Media for this
+    dplyr::group_by(!!!obj$data_group,
+                    model, method) %>% #need not group by Route and Media for this
     dplyr::mutate(
       model_fun = dplyr::case_when(
         type == "conc" ~ obj$stat_model[[model]]$conc_fun,
@@ -157,47 +165,43 @@ predict.pk <- function(obj,
 
   # Get predictions
   # Note that the model functions only need Time, Dose, Route, and Medium
-  # AND this will NOT give log10-transformed values... that is a data independent transformation of scale
+
   newdata <- newdata %>%
-    dplyr::reframe(predictions =
-                     purrr::map(observations,
-                                .f = \(x) {
-                                  x %>%
-                                    dplyr::rowwise() %>%
-                                    dplyr::mutate(
-                                      Estimate = tryCatch(
-                                        sapply(
-                                          coefs_vector,
-                                          FUN = model_fun,
-                                          time = Time,
-                                          dose = ifelse(rep(conc_scale$dose_norm,
-                                                            NROW(Dose)),
-                                                        rep(1.0, NROW(Dose)),
-                                                        Dose),
-                                          route = Route,
-                                          medium = Media,
-                                          simplify = TRUE,
-                                          USE.NAMES = TRUE
-                                        ),
-                                        error = function(err) {
-                                          if (!suppress_messages) {
-                                            message(paste("predict.pk(): Unable to run",
-                                                          model_fun, "for",
-                                                          Chemical, Species,
-                                                          "data grouping.",
-                                                          "Likely an aborted fit,",
-                                                          "it is missing estimated parameters."))
-                                          }
-                                          # Return Value
-                                          NA_real_
-                                        })
-                                    )
-                                })) %>%
+    dplyr::rowwise() %>% #this is a LOT faster than purrr::pmap()!!!
+    dplyr::summarise(predictions = list(
+                                     observations %>%
+                                       dplyr::mutate(
+                                         Dose_tmp = dplyr::if_else(rep(conc_scale$dose_norm,
+                                                                       NROW(Dose)),
+                                                                   1.0,
+                                                                   Dose),
+                                         Estimate = tryCatch(
+                                           do.call(model_fun,
+                                                   list(coefs_vector,
+                                                        time = Time,
+                                                        dose = Dose_tmp,
+                                                        route = Route,
+                                                        medium = Media))
+                                           ,
+                                           error = function(err) {
+                                             if (!suppress_messages) {
+                                               message(paste("predict.pk(): Unable to run",
+                                                             model_fun, "for",
+                                                             Chemical, Species,
+                                                             "data grouping.",
+                                                             "Likely an aborted fit,",
+                                                             "it is missing estimated parameters."))
+                                             }
+                                             # Return Value
+                                             NA_real_
+                                           }) #end tryCatch
+                                       )  %>%  #end dplyr::mutate
+                                       dplyr::select(!Dose_tmp)
+    )
+                       ) %>%
     tidyr::unnest(predictions)
 
   #If log10 transformation was specified, then apply it now
-
-
   if (type %in% "conc"){
     newdata <- dplyr::rename(newdata, Conc_est = "Estimate")
   #apply log10-trans to predicted conc, if so specified
