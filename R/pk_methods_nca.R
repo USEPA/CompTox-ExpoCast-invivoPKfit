@@ -93,6 +93,7 @@ nca.pk <- function(obj,
     }
   }
 
+  if(dose_norm %in% TRUE){
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
                               req_vars = union(
@@ -143,7 +144,7 @@ nca.pk <- function(obj,
                                  ")")
   }else{
     newdata$Conc_nca <- newdata$Conc
-    newdata$Dose_nca <- Dose
+    newdata$Dose_nca <- newdata$Dose
     newdata$Conc_nca.Units <- newdata$Conc.Units
   }
 

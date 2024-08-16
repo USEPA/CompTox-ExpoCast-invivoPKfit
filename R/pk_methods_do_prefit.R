@@ -146,7 +146,7 @@ sigma_DF <- do.call(dplyr::group_by,
   dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
                                                upper_bound <= lower_bound,
                                              1000,
-                                             upper_bound))
+                                             upper_bound),
                 start = 0.1 * upper_bound) %>%
   as.data.frame()
 
