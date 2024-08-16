@@ -29,7 +29,7 @@ datadir <- "C:/Users/cring/OneDrive - Environmental Protection Agency (EPA)/invi
 ```
 
 
-```{r}
+```{r, eval = FALSE}
 ### Minimal PK Object ###----
 # Minimum pk object, add options later
 # Note that these mappings are now a default mappings, just being verbose here.
@@ -61,19 +61,43 @@ minimal_pk <- pk(data = cvt,
                  ))
 ```
 
-```{r}
-my_pk_000p <- minimal_pk +
+```{r, eval = FALSE}
+my_pk_000p <- pk(data = cvt,
+                 mapping = ggplot2::aes(
+                   Chemical = analyte_dtxsid,
+                   Chemical_Name = analyte_name_original,
+                   DTXSID = analyte_dtxsid,
+                   CASRN = analyte_casrn,
+                   Species = species,
+                   Reference = document_id,
+                   Media = conc_medium_normalized,
+                   Route = administration_route_normalized,
+                   Dose = dose_level_normalized,
+                   Dose.Units = "mg/kg",
+                   Subject_ID = subject_id,
+                   Series_ID = series_id,
+                   Study_ID = study_id,
+                   ConcTime_ID = conc_time_id,
+                   N_Subjects = n_subjects_in_series,
+                   Weight = weight_kg,
+                   Weight.Units = "kg",
+                   Time = time_hr,
+                   Time.Units = "hours",
+                   Value = conc,
+                   Value.Units = "mg/L",
+                   Value_SD = conc_sd_normalized,
+                   LOQ = loq
+                 )) +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = FALSE,
-                      suppress.messages = TRUE) +
+                      suppress.messages = FALSE) +
   settings_optimx(method = c("L-BFGS-B", "bobyqa")) +
   scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
   stat_error_model(error_group = vars(Chemical, Species)) 
 ```
 
-```{r}
+```{r, eval = FALSE}
 system.time(my_pk_000p <- do_fit(my_pk_000p, n_cores = 12))
-#takes about 1000 seconds on my machine
 ```
 
 We want to do the following by data group (Chemical, Species):
@@ -82,42 +106,42 @@ We want to do the following by data group (Chemical, Species):
 2. Get tkstats
 3. Get goodness of fit metrics: RMSE, R-squared, AIC
 
-```{r}
+```{r, eval = FALSE}
 this_win_model <- get_winning_model(my_pk_000p)
 ```
 
 
 
-```{r}
+```{r, eval = FALSE}
 this_rsq <- rsq(my_pk_000p,
                 use_scale_conc = FALSE) #get rsq in original concentration units
 ```
 
 Filter Rsq for the winning models only
 
-```{r}
+```{r, eval = FALSE}
 this_rsq_win <- dplyr::inner_join(this_rsq,
                                   this_win_model)
 ```
 
-```{r}
+```{r, eval = FALSE}
 ggplot(this_rsq_win) + geom_violin(aes(x = method, y = Rsq))
 ```
 
 
-```{r}
+```{r, eval = FALSE}
 this_tkstats_dose_norm <- get_tkstats(my_pk_000p,
                             dose_norm = TRUE,
                             tk_group = vars(Chemical, Species, Reference, Route, Media, Dose))
 ```
 
-```{r}
+```{r, eval = FALSE}
 this_tkstats_dose_norm_win <- dplyr::inner_join(this_tkstats_dose_norm,
                                                 this_win_model)
 ```
 Pivot the tkstats longer
 
-```{r}
+```{r, eval = FALSE}
 this_tkstats_long <- tidyr::pivot_longer(data = this_tkstats_dose_norm_win,
                     cols = -any_of(c(names(my_pk_000p$data),
                                      "model",
@@ -127,13 +151,13 @@ this_tkstats_long <- tidyr::pivot_longer(data = this_tkstats_dose_norm_win,
 
 
 
-```{r}
+```{r, eval = FALSE}
 this_nca_dose_norm <- nca(my_pk_000p,
                           nca_group = vars(Chemical, Species, Reference, Route, Media, Dose),
                           dose_norm = TRUE)
 ```
 
-```{r}
+```{r, eval = FALSE}
 this_tkstats_long <- this_tkstats_long %>% 
   dplyr::rename(param_name = name,
                 tkstats_value = value) %>%
@@ -158,7 +182,7 @@ this_nca_dose_norm <- this_nca_dose_norm %>%
 
 Merge the TK stats and the NCA, keeping only the ones with matches in both
 
-```{r}
+```{r, eval = FALSE}
 tkstats_nca <- inner_join(this_tkstats_long,
                           this_nca_dose_norm,
                           by = join_by(Chemical,
@@ -171,7 +195,7 @@ tkstats_nca <- inner_join(this_tkstats_long,
 ```
 Calculate differences 
 
-```{r}
+```{r, eval = FALSE}
 tkstats_nca_summary <- tkstats_nca %>%
   dplyr::group_by(method, param_name) %>%
   dplyr::summarise(rmse = sqrt(mean((tkstats_value - nca_value)^2,
@@ -195,7 +219,7 @@ There are 16 combinations of fitting options. At about 1000 seconds per combinat
 
 Function to loop over fitting options
 
-```{r}
+```{r, eval = FALSE}
 fit_data <- function(this_error_model,
                      this_dose_norm,
                      this_log10_trans,
@@ -265,7 +289,7 @@ fit_data <- function(this_error_model,
 ```
 
 
-```{r}
+```{r, eval = FALSE}
 system.time(tmp <- mapply(fit_data,
               this_error_model = fitopts$error_model,
                      this_dose_norm = fitopts$dose_norm,
@@ -323,12 +347,12 @@ get_gof_win <- function(this_error_model,
 
 ```{r}
 system.time(gof_tbl <- fitopts %>%
-              dplyr::group_by(error_model,
-                              dose_norm,
-                              log10_trans,
-                              time_scale) %>%
-              dplyr::reframe(gof_win = purrr::pmap(get_gof_win)) %>%
-              tidyr::unnest())
+              dplyr::rowwise() %>%
+              dplyr::mutate(gof_win = list(get_gof_win(this_error_model = error_model,
+                                                  this_dose_norm = dose_norm,
+                                                  this_log10_trans = log10_trans,
+                                                  this_time_scale = time_scale))) %>%
+              tidyr::unnest(gof_win))
 ```
 
 Plot
@@ -343,7 +367,6 @@ ggplot(gof_tbl[winning_model %in% TRUE]) +
                               time_scale),
               y = Rsq)
 ```
-
 
 
 
