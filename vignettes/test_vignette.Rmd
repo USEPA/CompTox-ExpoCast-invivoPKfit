@@ -19,7 +19,7 @@ library(cowplot)
 library(RColorBrewer)
 # saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds")
 # my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
-
+library(ggplot2)
 ```
 
 Set data directory
@@ -360,12 +360,22 @@ Plot
 Distributions of R-squared values (for winning models) across data groups (Chemical + Species), by combinations of fitting options. I chose R-squared here because it's on the same scale across data groups, unlike RMSE or even AIC.
 
 ```{r}
-ggplot(gof_tbl[winning_model %in% TRUE]) +
-  geom_violin(x = interaction(error_model,
-                              dose_norm,
-                              log10_trans,
-                              time_scale),
-              y = Rsq)
+gof_tbl_win <- gof_tbl %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(Options = paste0(as.numeric(dose_norm),
+                                 as.numeric(log10_trans),
+                                 as.numeric(time_scale),
+                                 collapse = "")) %>%
+  dplyr::filter(winning_model %in% TRUE)
+
+
+ggplot(gof_tbl_win) +
+  geom_violin(aes(x = "1",
+              y = Rsq,
+              color = interaction(error_model, method)),
+              draw_quantiles = c(0.25,0.5,0.75)) +
+  facet_grid(cols = vars(Options)) +
+  scale_color_brewer(palette = "Paired")
 ```
 
 
