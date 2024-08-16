@@ -136,7 +136,7 @@ rsq.pk <- function(obj,
                    model = NULL,
                    method = NULL,
                    exclude = TRUE,
-                   use_scale_conc = TRUE,
+                   use_scale_conc = FALSE,
                    rsq_group = NULL,
                    ...){
   #ensure that the model has been fitted
