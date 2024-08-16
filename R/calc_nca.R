@@ -132,6 +132,20 @@ series_id <- series_id[ord]
 
   obs_per_time <- table(time)
   obs_per_seriesID <- table(series_id)
+  times_per_seriesID <- colSums(table(time, series_id))
+
+  #if there is only one observation per time
+  #then pretend all observations are from the same id
+  if(all(obs_per_time %in% 1)){
+    series_id <- rep(1L, length(time))
+  }
+
+  obs_per_time <- table(time)
+  obs_per_seriesID <- table(series_id)
+  times_per_seriesID <- colSums(table(time, series_id))
+
+  ntab <- table(time, series_id)
+  m <- matrix(ntab, ncol = ncol(ntab))
 
   if(all(m==1)){
     #every subject measured at every time point
@@ -160,7 +174,17 @@ series_id <- series_id[ord]
   }else if(all(obs_per_time > 1) &
            length(unique(obs_per_seriesID))>1){
     #multiple observations for every time point, but not all subjects at every time point
+    #note this will break if there is 1 time point for some subjects and multiple for others
+    if(any(times_per_seriesID < 2)){
+      #pretend every obs is a different series id
+      series_id <- seq_along(conc)
+      design <- "ssd"
+    }else{
+      #if there is more than one time point measured for each subject,
+      #and more than one obs per time point,
+      #but not all time points measured for all subjects
       design <- "batch"
+    }
     }else if(length(unique(obs_per_seriesID))==1){
       #one obs per subject per time point
       design <- "ssd"

@@ -167,6 +167,7 @@ if(length(setdiff(nca_group, summary_group))>0 |
     dplyr::group_by(!!!summary_group) %>%
     dplyr::ungroup(Dose) %>%
     dplyr::reframe(
+      n_dose_groups = dplyr::n_distinct(Dose),
       Cmax_fold_range = {
         tmprange <- suppressWarnings(range(`Cmax`, na.rm = TRUE))
         if (all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)

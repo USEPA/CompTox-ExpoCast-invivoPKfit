@@ -167,21 +167,6 @@ nca.pk <- function(obj,
                      Dose.Units = unique(Dose.Units),
                      dose_norm = dose_norm,
                      {
-                       # if(suppress.messages %in% FALSE){
-                       #   cur_data_summary <- dplyr::inner_join(
-                       #     get_data_summary(obj,
-                       #                      summary_group = nca_group),
-                       #     dplyr::cur_group(),
-                       #     by = grp_vars) %>%
-                       #     as.data.frame
-                       #   message(paste("nca.pk(): Doing",
-                       #                 ifelse(dose_norm %in% TRUE,
-                       #                        "dose-normalized",
-                       #                        "non-dose-normalized"),
-                       #                 "NCA for the following data:\n"),
-                       #           paste0(capture.output(cur_data_summary),
-                       #                  collapse = "\n"))
-                       # }
                        calc_nca(time = Time[exclude %in% FALSE], #calculate NCA
                                 dose = Dose_nca[exclude %in% FALSE],
                                 conc = Conc_nca[exclude %in% FALSE],
