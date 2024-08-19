@@ -177,9 +177,7 @@ rsq.pk <- function(obj,
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
 
-  if (is.null(rsq_group)) {
-    rsq_group <- obj$data_group
-  }
+
   rsq_group_char <- sapply(rsq_group, rlang::as_label)
 
 

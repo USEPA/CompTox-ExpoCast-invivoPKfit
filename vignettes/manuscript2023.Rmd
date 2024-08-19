@@ -365,7 +365,6 @@ analyses.
 
 ```{r Evaluation-helpers, eval=FALSE}
 # Evaluation
-# Current: 
 
 get_choices <- function(obj, PJ = "Pooled") {
   dose_norm <- obj$scales$conc$dose_norm
@@ -427,11 +426,7 @@ evaluate_choices <- function(obj, PJ = "Pooled") {
     r2_df <- rsq(obj, use_scale_conc = FALSE,
                  use_group = ggplot2::vars(
                    Chemical,
-                   Species,
-                   Reference,
-                   Route,
-                   Media,
-                   Dose
+                   Species
                  )) %>%
     inner_join(winning_model)
   myAIC <- AIC(obj) %>%
@@ -487,10 +482,10 @@ gc()
 
 ### Evaluations-----
 {
-my_pk_000p <- do_fit(my_pk_000p, n_cores = 14)  %>% evaluate_choices() # Done
-my_pk_100p <- do_fit(my_pk_100p, n_cores = 14) %>% evaluate_choices() # Done
-my_pk_110p <- do_fit(my_pk_110p, n_cores = 14) %>% evaluate_choices() # Done
-my_pk_111p <- do_fit(my_pk_111p, n_cores = 14) %>% evaluate_choices() # Done
+my_pk_000p <- do_fit(my_pk_000p, n_cores = 14) #%>% evaluate_choices() # Done
+my_pk_100p <- do_fit(my_pk_100p, n_cores = 14) #%>% evaluate_choices() # Done
+my_pk_111p <- do_fit(my_pk_111p, n_cores = 14) #%>% evaluate_choices() # Done
+my_pk_110p <- do_fit(my_pk_110p, n_cores = 14) #%>% evaluate_choices() # Done
 
 my_pk_010p <- do_fit(my_pk_010p, n_cores = 14) %>% evaluate_choices() # Done
 my_pk_011p <- do_fit(my_pk_011p, n_cores = 14) %>% evaluate_choices() # Done 
@@ -551,10 +546,10 @@ rm(my_pk_010p, my_pk_011p,my_pk_001p,my_pk_101p,
 gc()
 
 {
-my_pk_000j <- do_fit(my_pk_000j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_100j <- do_fit(my_pk_100j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_110j <- do_fit(my_pk_110j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
-my_pk_111j <- do_fit(my_pk_111j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_000j <- do_fit(my_pk_000j, n_cores = 14)# %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_100j <- do_fit(my_pk_100j, n_cores = 14)# %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_111j <- do_fit(my_pk_111j, n_cores = 14)# %>% evaluate_choices(PJ = "Joint") # Done
+my_pk_110j <- do_fit(my_pk_110j, n_cores = 14)# %>% evaluate_choices(PJ = "Joint") # Done
 
 my_pk_010j <- do_fit(my_pk_010j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
 my_pk_011j <- do_fit(my_pk_011j, n_cores = 14) %>% evaluate_choices(PJ = "Joint") # Done
@@ -2781,6 +2776,13 @@ ggsave(paste0(Sys.getenv("FIG_DIR"), "Point_Reference_3x5.png"),
 ```{r Evaluating-Predictions}
 my_data <- get_data(my_pk_000j)
 
+# A quick evaluation of where the data is in terms of highest vs lowest concentration
+my_data %>%
+  group_by(Chemical, Species) %>%
+  mutate(normConc = (Conc - min(Conc))/(max(Conc) - min(Conc))) %>%
+  ggplot(aes(x = normConc)) +
+  geom_histogram()
+
 
 my_preds <- bind_rows(list(
   inner_join(predict(my_pk_000p, newdata = my_data, by_timepoint = TRUE) %>%
@@ -2803,6 +2805,13 @@ my_preds <- bind_rows(list(
                        get_winning_model(my_pk_111j))
 ))
 
+my_preds %>%
+  group_by(Chemical, Species) %>%
+  mutate(normPred = (Conc_est - min(Conc_est))/(max(Conc_est) - min(Conc_est))) %>%
+  ggplot(aes(x = normPred, color = Option)) +
+  geom_freqpoly()
+
+
 
 data_pl <- my_data %>%
   filter(Detect, !exclude) %>%
@@ -2824,8 +2833,7 @@ data_pl <- my_data %>%
           labs(title = Chemical_Name,
                subtitle = paste(Chemical, Species,
                                 sep = ", ")) +
-          facet_wrap(~Route + Media + Dose,
-                     scales = "free_y") +
+          # facet_wrap(~Route + Media + Dose,scales = "free_y") +
           theme_bw() +
           theme(panel.border = element_rect(color = "black", fill = NA,
                                             linewidth = 1),
@@ -2860,8 +2868,7 @@ combined_pl <- left_join(data_pl, pred_pl) %>%
                                       "red2", "red4",
                                       "skyblue2", "blue2",
                                       "grey20", "grey5"
-                                    )) +
-                                      scale_y_log10()
+                                    ))
                                   }))
 
 
@@ -2877,33 +2884,52 @@ dev.off()
 
 
 comp_preds <- bind_rows(list(
-  inner_join(predict(my_pk_000p, newdata = my_data, by_timepoint = FALSE) %>%
+  inner_join(predict(my_pk_000p, newdata = my_data,
+                     use_scale_conc = FALSE, by_timepoint = FALSE) %>%
                          mutate(Option = "000p"), 
                        get_winning_model(my_pk_000p)),
-  inner_join(predict(my_pk_000j, newdata = my_data, by_timepoint = FALSE) %>%
+  inner_join(predict(my_pk_000j, newdata = my_data,
+                     use_scale_conc = FALSE, by_timepoint = FALSE) %>%
                          mutate(Option = "000j"), 
                        get_winning_model(my_pk_000j)),
-  inner_join(predict(my_pk_100p, newdata = my_data, by_timepoint = FALSE) %>%
+  inner_join(predict(my_pk_100p, newdata = my_data,
+                     use_scale_conc = FALSE, by_timepoint = FALSE) %>%
                          mutate(Option = "100p"), 
                        get_winning_model(my_pk_100p)),
-  inner_join(predict(my_pk_100j, newdata = my_data, by_timepoint = FALSE) %>%
+  inner_join(predict(my_pk_100j, newdata = my_data,
+                     use_scale_conc = FALSE, by_timepoint = FALSE) %>%
                          mutate(Option = "100j"), 
                        get_winning_model(my_pk_100j)),
-  inner_join(predict(my_pk_111p, newdata = my_data, by_timepoint = FALSE) %>%
+  inner_join(predict(my_pk_111p, newdata = my_data,
+                     use_scale_conc = FALSE, by_timepoint = FALSE) %>%
                          mutate(Option = "111p"), 
                        get_winning_model(my_pk_111p)),
-  inner_join(predict(my_pk_111j, newdata = my_data, by_timepoint = FALSE) %>%
+  inner_join(predict(my_pk_111j, newdata = my_data,
+                     use_scale_conc = FALSE, by_timepoint = FALSE) %>%
                          mutate(Option = "111j"), 
                        get_winning_model(my_pk_111j))
 ))
+
+comp_preds %>%
+  group_by(Chemical, Species) %>%
+  mutate(normPred = (Conc_est - min(Conc_est))/(max(Conc_est) - min(Conc_est)),
+         normConc = (Conc - min(Conc))/(max(Conc) - min(Conc))) %>%
+  ggplot(aes(y = normPred, x = normConc,
+             color = Option)) +
+  geom_point(alpha = 0.3, shape = 1) +
+  geom_smooth(method = "lm", linewidth = 0.5) +
+  geom_abline() +
+  facet_grid(rows = vars(Option),
+             cols = vars(Route)) +
+  theme_bw()
 
 
 comp_pl <- comp_preds %>%
   left_join(my_data %>% distinct(Chemical, Chemical_Name) %>%
               mutate(Chemical_Name = case_when(
                 Chemical_Name %in% "2,4-d" ~ "2,4-dichlorophenoxyacetic acid",
-                Chemical_Name %in% "methylene chloride" ~ "dichloromethane"
-                                            Chemical_Name)),
+                Chemical_Name %in% "methylene chloride" ~ "dichloromethane",
+                .default = Chemical_Name)),
             relationship = "many-to-many") %>%
   group_by(Chemical, Chemical_Name, Species) %>%
   nest(.key = "data_pred") %>%
@@ -2916,8 +2942,9 @@ comp_pl <- comp_preds %>%
                            color = factor(Option))) +
         geom_point(shape = 1, alpha = 0.5) +
         geom_abline(linetype = "dashed") +
-        scale_y_log10(labels = scales::label_math(format = log10)) +
-        scale_x_log10(labels = scales::label_math(format = log10)) +
+        facet_grid(rows = vars(Option)) +
+        # scale_y_log10(labels = scales::label_math(format = log10)) +
+        # scale_x_log10(labels = scales::label_math(format = log10)) +
         scale_color_manual(values = c(
           "red2", "red4",
           "skyblue2", "blue2",
@@ -2929,8 +2956,7 @@ comp_pl <- comp_preds %>%
              x = "Observations, log10",
              y = "Predictions, log10",
              color = "Options") +
-        facet_wrap(~Route + Media + Dose,
-                   scales = "free") +
+        # facet_wrap(~Route + Media + Dose, scales = "free") +
         theme_bw() +
         theme(panel.border = element_rect(color = "black", fill = NA,
                                           linewidth = 1),
@@ -2943,7 +2969,7 @@ comp_pl <- comp_preds %>%
     }))
 
 pdf(paste0(Sys.getenv("FIG_DIR"),
-           "logScaled_Rsq_BestFits.pdf"),
+           "logScaled_Rsq_BestFits_ChemSpec.pdf"),
     width = 10, height = 10, bg = "white",
     onefile = TRUE)
 for (i in 1:nrow(combined_pl)) {
@@ -2985,11 +3011,36 @@ my_rsq <- bind_rows(list(
                        get_winning_model(my_pk_111j))
 ))
 
-
+my_rsq2 <- bind_rows(list(
+  inner_join(rsq(my_pk_000p, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species)) %>%
+                         mutate(Option = "000p"), 
+                       get_winning_model(my_pk_000p)),
+  inner_join(rsq(my_pk_000j, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species)) %>%
+                         mutate(Option = "000j"), 
+                       get_winning_model(my_pk_000j)),
+  inner_join(rsq(my_pk_100p, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species)) %>%
+                         mutate(Option = "100p"), 
+                       get_winning_model(my_pk_100p)),
+  inner_join(rsq(my_pk_100j, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species)) %>%
+                         mutate(Option = "100j"), 
+                       get_winning_model(my_pk_100j)),
+  inner_join(rsq(my_pk_111p, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species)) %>%
+                         mutate(Option = "111p"), 
+                       get_winning_model(my_pk_111p)),
+  inner_join(rsq(my_pk_111j, use_scale_conc = FALSE,
+                 rsq_group = ggplot2::vars(Chemical, Species)) %>%
+                         mutate(Option = "111j"), 
+                       get_winning_model(my_pk_111j))
+))
 
 
 ggplot() +
-  geom_violin(my_rsq %>%
+  geom_violin(my_rsq2 %>%
                 filter(!is.na(Rsq)),
               mapping = aes(
                 x = Option,
@@ -3025,6 +3076,10 @@ ggsave(paste0(Sys.getenv("FIG_DIR"), "Rsq_betterGroups.png"),
        width = 8,
        device = "png",
        dpi = 200)
+
+
+
+
 
 ```
 
