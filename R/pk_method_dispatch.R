@@ -743,3 +743,26 @@ get_data_group.default <- function(obj, ...){
              paste(class(obj), collapse = ", ")))
 }
 
+#' twofold_test()
+#'
+#' This is the S3 method generic for get_data_group()
+#'
+#' `get_data_group()` is an alias for `data_summary()`
+#'
+#' @param obj An object.
+#' @param ... Additional arguments currently not in use.
+#' @seealso [twofold_test.pk()] for the method for class [pk()]
+#' @export
+twofold_test <- function(obj, ...){
+  UseMethod("twofold_test", obj)
+}
+
+#' Default method for twofold_test()
+#'
+#'@param obj An object
+#'@param ... Additional arguments currently not in use.
+#' @export
+twofold_test.default <- function(obj, ...){
+  stop(paste("No 'twofold_test' method exists for object of class",
+             paste(class(obj), collapse = ", ")))
+}

@@ -131,7 +131,6 @@ nca.pk <- function(obj,
     newdata$exclude <- FALSE
   }
 
-
   if(dose_norm %in% TRUE){
     newdata$Conc_nca <- newdata$Conc/newdata$Dose
     newdata$Dose_nca <- 1.0
@@ -209,8 +208,6 @@ nca.pk <- function(obj,
       dplyr::select(-c(Conc.Units,
                        Time.Units,
                        Dose.Units))
-
-
 
   return(nca_out)
 }

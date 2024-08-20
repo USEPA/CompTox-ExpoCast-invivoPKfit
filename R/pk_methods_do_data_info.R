@@ -94,6 +94,7 @@ do_data_info.pk <- function(obj, ...){
                        nca_group = nca_group,
                        exclude = TRUE,
                        dose_norm = TRUE)
+
   #pivot wider
   grp_vars_nca <- sapply(nca_group,
                          rlang::as_label)

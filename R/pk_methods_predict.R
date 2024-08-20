@@ -79,23 +79,8 @@ predict.pk <- function(obj,
     include_NAs = include_NAs
   )
 
-  other_vars <- NULL
-
   if (is.null(newdata)) {
     newdata <- obj$data
-
-    # other_vars <- ggplot2::vars(
-    #   Value,
-    #   Value.Units,
-    #   Conc,
-    #   Conc.Units,
-    #   Conc_trans,
-    #   Conc_trans.Units,
-    #   Time_trans,
-    #   Time_trans.Units,
-    #   Detect,
-    #   exclude
-    # )
   }
 
   req_vars <- union(obj$data_group,

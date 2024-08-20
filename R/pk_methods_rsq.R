@@ -122,6 +122,10 @@
 #'   R-squared is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
+#' @param rsq_group Default: Chemical, Species. Determines what the data
+#' grouping that is used to calculate R-squared value. Should be set to lowest number
+#' of variables that still would return unique experimental conditions.
+#' Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.
 #' @param ... Additional arguments. Not currently in use.
 #' @return  A dataframe with one row for each `data_group`, `model` and `method`.
 #'   The final column contains the R-squared of the model fitted by the corresponding
@@ -138,7 +142,7 @@ rsq.pk <- function(obj,
                    exclude = TRUE,
                    use_scale_conc = FALSE,
                    rsq_group = NULL,
-                   ...){
+                   ...) {
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -176,6 +180,10 @@ rsq.pk <- function(obj,
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
 
+
+  rsq_group_char <- sapply(rsq_group, rlang::as_label)
+
+
   #Get predictions
   #Do NOT apply any conc transformations at this stage
   #(conc transformations will be handled later)
@@ -196,7 +204,7 @@ rsq.pk <- function(obj,
     }
   }
 
-  req_vars <- c(names(preds),
+  req_vars <- c(union(names(preds),rsq_group_char),
                 "Conc",
                 "Conc_SD",
                 "N_Subjects",
