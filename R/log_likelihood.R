@@ -208,7 +208,7 @@ log_likelihood <- function(par,
     sigma_params <- as.list(params[grepl(x = names(params),
                                          pattern = "sigma")])
     #match the study ID and assign each sigma to its corresponding study
-    #except if data_sigma_group is NA -- then assume data are equally likely to come from any of the existing distributions
+    #if study ID doesn't match anything in the sigmas, then assign NA
     sigma_obs <- sigma_params[paste("sigma",
                                     data_sigma_group,
                                     sep = "_")]
@@ -218,7 +218,9 @@ log_likelihood <- function(par,
     data$sigma_obs <- sigma_obs
 
 
-
+    #if data_sigma_group is NA -- then assume data are equally likely to come from any of the existing distributions
+    #data_sigma_group may be NA if we are calculating log-likelihood for new data,
+    #i.e., data on which the model was not originally fitted.
     if (any(!is.na(sigma_obs))) {
       #compute log likelihoods for observations with sigmas
       data_sigma <- data[!is.na(sigma_obs),]

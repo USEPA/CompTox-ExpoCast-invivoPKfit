@@ -6,12 +6,12 @@
 #' @param group_mean Numeric vector: Observed sample means for summary data, or
 #'   observed values for non-summary data. Censored observations should *not* be
 #'   NA; they should be substituted with some value at or below the
-#'   corresponding LOQ (e.g. LOQ or LOQ/2). Even if `log %in% TRUE`, these
-#'   should *not* be log-transformed.
+#'   corresponding LOQ (e.g. LOQ or LOQ/2). Even if `log10 %in% TRUE`, these
+#'   should *not* be log10-transformed.
 #' @param group_sd Numeric vector: Observed sample SDs for summary data. For
 #'   non-summary data (individual-subject observations), the corresponding
-#'   element of `group_sd` should be set to 0. Even if `log %in% TRUE`, these
-#'   should *not* be log-transformed.
+#'   element of `group_sd` should be set to 0. Even if `log10 %in% TRUE`, these
+#'   should *not* be log10-transformed.
 #' @param group_n Numeric vector: Observed sample number of subjects for summary
 #'   data. For non-summary data (individual-subject observations), `group_n`
 #'   should be set to 1.
@@ -25,7 +25,7 @@
 #' @param na.rm Logical. If TRUE (default), then any groups where mean, SD, *or*
 #'   N were NA will be dropped. If FALSE, they will be retained (and the result
 #'   will be NA).
-#' @param log Logical. If TRUE the standard deviations are from log-transformed values.
+#' @param log10 Logical. If TRUE, the standard deviations are from log10-transformed values.
 #' @return Numeric: the standard deviation of the combined population (i.e. if
 #'   all the groups were concatenated into one large group).
 #' @author Caroline Ring
@@ -34,7 +34,7 @@ combined_sd <- function(group_mean,
                         group_n,
                         unbiased = TRUE,
                         na.rm = TRUE,
-                        log = FALSE){
+                        log10 = FALSE){
 
   x_len <- c("group_mean" = length(group_mean),
              "group_sd" = length(group_sd),
@@ -102,7 +102,7 @@ combined_sd <- function(group_mean,
     if(unbiased %in% TRUE){
       #convert unbiased group SDs to biased group SDs
       group_sd <- group_sd *
-        sqrt((group_n[which_na]-1)/group_n)
+        sqrt((group_n-1)/group_n)
     }
 
     grand_var <- (sum(group_n*group_sd^2) +
@@ -119,9 +119,9 @@ combined_sd <- function(group_mean,
     }
   }
 
-  if(log %in% TRUE){
-    #convert to log-scale combined SD
-    grand_sd <- sqrt(log(1 + grand_sd^2 / grand_mean^2))
+  if(log10 %in% TRUE){
+    #convert to log10-scale combined SD
+    grand_sd <- sqrt(log10(1 + grand_sd^2 / grand_mean^2))
   }
 
   return(grand_sd)

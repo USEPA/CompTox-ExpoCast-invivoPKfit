@@ -72,23 +72,23 @@
 #' the reported LOQ, the the observed value is (temporarily) set equal to the
 #' reported LOQ, for an effective error of (LOQ - predicted).
 #'
-#' # Log transformation
+#' # Log-10 transformation
 #'
-#' If `log %in% TRUE`, then both the observed and predicted values will be
-#' (natural) log-transformed before calculating the RMSE. In the case where
+#' If `log10 %in% TRUE`, then both the observed and predicted values will be
+#'  log10-transformed before calculating the RMSE. In the case where
 #' observed values are reported in summary format, each sample mean and sample
 #' SD (reported on the natural scale, i.e. the mean and SD of natural-scale
-#' individual observations) are used to produce an estimate of the log-scale
-#' sample mean and sample SD (i.e., the mean and SD of log-transformed
+#' individual observations) are used to produce an estimate of the log10-scale
+#' sample mean and sample SD (i.e., the mean and SD of log10-transformed
 #' individual observations), using [convert_summary_to_log10()].
 #'
 #' The formulas are as follows. Again, \eqn{\bar{y}_i} is the sample mean for
 #' group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.
 #'
-#' \deqn{\textrm{log-scale sample mean}_i = \log
+#' \deqn{\textrm{log10-scale sample mean}_i = \log_{10}
 #' \left(\frac{\bar{y}_i^2}{\sqrt{\bar{y}_i^2 + s_i^2}} \right)}
 #'
-#' \deqn{\textrm{log-scale sample SD}_i = \sqrt{\log \left(1 +
+#' \deqn{\textrm{log10-scale sample SD}_i = \sqrt{\log_{10} \left(1 +
 #' \frac{s_i^2}{\bar{y}_i^2} \right)}}
 #'
 #' @param pred Numeric vector: Model-predicted value corresponding to each
@@ -98,14 +98,14 @@
 #' @param obs Numeric vector: Observed sample means for summary data, or
 #'   observed values for non-summary data. Censored observations should *not* be
 #'   NA; they should be substituted with the LOQ. Even if `log10_trans %in%
-#'   TRUE`, these should *not* be log-transformed. (If `log10_trans %in% TRUE`,
-#'   they will be transformed to log-scale means internally to this function
+#'   TRUE`, these should *not* be log10-transformed. (If `log10_trans %in% TRUE`,
+#'   they will be transformed to log10-scale means internally to this function
 #'   before calculation.)
 #' @param obs_sd Numeric vector: Observed sample SDs for summary data. For
 #'   non-summary data (individual-subject observations), the corresponding
 #'   element of `obs_sd` should be set to 0. Even if `log10_trans %in% TRUE`,
-#'   these should *not* be log-transformed. (If `log10_trans %in% TRUE`, they
-#'   will be transformed to log-scale standard deviations internally to this
+#'   these should *not* be log10-transformed. (If `log10_trans %in% TRUE`, they
+#'   will be transformed to log10-scale standard deviations internally to this
 #'   function before calculation.)
 #' @param n_subj Numeric vector: Observed sample number of subjects for summary
 #'   data. For non-summary data (individual-subject observations), `group_n`
@@ -113,7 +113,7 @@
 #' @param detect Logical: Whether each
 #' @param log10_trans Logical. FALSE (default) means that R-squared is computed for
 #'   observations vs. predictions. TRUE means that R-squared is computed for
-#'   log(observations) vs. log(predictions) (see Details).
+#'   log10(observations) vs. log10(predictions) (see Details).
 #' @return A numeric scalar: the R-squared value for observations vs.
 #'   predictions.
 #' @author Caroline Ring

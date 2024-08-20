@@ -54,7 +54,7 @@ nca.pk <- function(obj,
   }
 
   if(is.null(nca_group)){
-    nca_group <- obj$settings_data_info$nca_group
+    nca_group <- obj$settings_data_info$summary_group
   }
 
   if(is.null(newdata)) newdata <- obj$data
@@ -62,6 +62,38 @@ nca.pk <- function(obj,
   grp_vars <- sapply(nca_group,
                      rlang::as_label)
 
+  #Create a new dose variable to handle dose-normalization or not
+  #If dose-normalized, grouping need not include original Dose column
+
+  if(dose_norm %in% TRUE){
+    #check_nca_group to ensure it includes  Route, and Media
+    #since we can only do NCA for a single Route, and a single Media at a time
+    #(when dose_norm is TRUE, Dose = 1, so we already have a single Dose)
+    if(!(all(c("Route",
+               "Media") %in%
+             grp_vars))){
+      stop(paste0("When dose_norm == TRUE, nca_group must include all of Route, Media.\n",
+                  "nca_group is: ",
+                  paste(grp_vars,
+                        collapse = ", ")
+      ))
+    }
+  }else{
+    #check_nca_group to ensure it includes Dose, Route, and Media
+    #since we can only do NCA for a single Dose, a single Route, and a single Media at a time
+    if(!(all(c("Dose",
+               "Route",
+               "Media") %in%
+             grp_vars))){
+      stop(paste0("When dose_norm == FALSE, nca_group must include all of Dose, Route, Media.\n",
+                 "nca_group is: ",
+                 paste(grp_vars,
+                       collapse = ", ")
+      ))
+    }
+  }
+
+  if(dose_norm %in% TRUE){
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
                               req_vars = union(
@@ -76,78 +108,106 @@ nca.pk <- function(obj,
                                   "Route"),
                                 grp_vars),
                               exclude = exclude)
+  }else{ #if dose_norm == TRUE
+    #ignore Dose column in check because it is technically not required
+    newdata_ok <- check_newdata(newdata = newdata,
+                                olddata = obj$data,
+                                req_vars = union(
+                                  c("Chemical",
+                                    "Species",
+                                    "Time",
+                                    "Time.Units",
+                                    "Conc",
+                                    "Dose.Units",
+                                    "Conc.Units",
+                                    "Route"),
+                                  grp_vars),
+                                exclude = exclude)
+  }
+
 
   #if exclude = FALSE, then treat all observations as included
   if(exclude %in% FALSE){
     newdata$exclude <- FALSE
   }
 
-
-  if (dose_norm %in% TRUE) {
-    newdata$Conc <- newdata$Conc/newdata$Dose # Dose normalizes the concentration values
-    # newdata$Dose <- newdata$Dose/newdata$Dose
-    newdata$Conc.units <- paste0(newdata$Conc.Units,
+  if(dose_norm %in% TRUE){
+    newdata$Conc_nca <- newdata$Conc/newdata$Dose
+    newdata$Dose_nca <- 1.0
+    newdata$Conc_nca.Units <- paste0("(",
+                                     newdata$Conc.Units,
+                                     ")",
                                  "/",
-                                 newdata$Dose.Units)
+                                 "(",
+                                 newdata$Dose.Units,
+                                 ")")
+  }else{
+    newdata$Conc_nca <- newdata$Conc
+    newdata$Dose_nca <- newdata$Dose
+    newdata$Conc_nca.Units <- newdata$Conc.Units
+  }
+
+  if(suppress.messages %in% FALSE){
+    message(paste("nca.pk(): Doing",
+                                  ifelse(dose_norm %in% TRUE,
+                                         "dose-normalized",
+                                         "non-dose-normalized"),
+                                  "NCA by the following grouping:",
+                  paste(grp_vars, collapse = ", ")
+                  )
+            )
   }
 
   #do NCA
-  nca_out <- newdata %>%
-    dplyr::group_by(!!!nca_group) %>%
-    dplyr::reframe(Conc.Units = unique(Conc.Units),
-                   Time.Units = unique(Time.Units),
-                   Dose.Units = unique(Dose.Units),
-                   {
-                     if (suppress.messages %in% FALSE) {
-                       cur_data_summary <- dplyr::inner_join(
-                         get_data_summary(obj,
-                                          summary_group = nca_group),
-                         dplyr::cur_group(),
-                         by = grp_vars) %>%
-                         as.data.frame
-                       message(paste("nca.pk(): Doing",
-                                     ifelse(dose_norm %in% TRUE,
-                                            "dose-normalized",
-                                            "non-dose-normalized"),
-                                     "NCA for the following data:"))
-                       print(cur_data_summary)
+    nca_out <- newdata %>%
+      dplyr::group_by(!!!nca_group) %>%
+      dplyr::reframe(Conc.Units = unique(Conc_nca.Units),
+                     Time.Units = unique(Time.Units),
+                     Dose.Units = unique(Dose.Units),
+                     dose_norm = dose_norm,
+                     {
+                       calc_nca(time = Time[exclude %in% FALSE], #calculate NCA
+                                dose = Dose_nca[exclude %in% FALSE],
+                                conc = Conc_nca[exclude %in% FALSE],
+                                detect = Detect[exclude %in% FALSE],
+                                route = unique(Route[exclude %in% FALSE]),
+                                series_id = Series_ID[exclude %in% FALSE])
                      }
-                     calc_nca(time = Time[exclude %in% FALSE], #calculate NCA
-                              dose = ifelse(dose_norm == TRUE, 1, Dose[exclude %in% FALSE]),
-                              conc = Conc[exclude %in% FALSE],
-                              detect = Detect[exclude %in% FALSE],
-                              route = unique(Route[exclude %in% FALSE]),
-                              series_id = Series_ID[exclude %in% FALSE])
-                   }
-    )
-
-  nca_out <- nca_out %>%
-    dplyr::mutate(
-      param_units = dplyr::case_when( #derive NCA param units from data units
-        param_name %in% c("AUC_tlast",
-                          "AUC_infinity") ~ paste(Conc.Units,
+      ) %>%
+      dplyr::mutate(
+        param_units = dplyr::case_when( #derive NCA param units from data units
+          param_name %in% c("AUC_tlast",
+                            "AUC_infinity") ~ paste0("(",
+                                                    Conc.Units,
+                                                    ")",
+                                                    "*",
+                                                    Time.Units),
+          param_name %in% "AUMC_infinity" ~ paste0("(",
+                                                  Conc.Units,
+                                                  ")",
+                                                  "*",
+                                                  Time.Units,
                                                   "*",
                                                   Time.Units),
-        param_name %in% "AUMC_infinity" ~ paste(Conc.Units,
-                                                "*",
-                                                Time.Units,
-                                                "*",
-                                                Time.Units),
-        param_name %in% c("MRT",
-                          "MTT",
-                          "halflife",
-                          "tmax") ~ Time.Units,
-        param_name %in% c("CLtot",
-                          "CLtot/Fgutabs") ~ paste0("L/",
-                                                    Time.Units),
-        param_name %in% "Vss" ~ paste0(Conc.Units,
-                                       "/",
-                                       Dose.Units),
-        param_name %in% "Cmax" ~ Conc.Units
-      )) %>%
-    dplyr::select(-c(Conc.Units,
-                     Time.Units,
-                     Dose.Units))
+          param_name %in% c("MRT",
+                            "MTT",
+                            "halflife",
+                            "tmax") ~ Time.Units,
+          param_name %in% c("CLtot",
+                            "CLtot/Fgutabs") ~ paste0("L/",
+                                                      Time.Units),
+          param_name %in% "Vss" ~ paste0("(",
+                                         Conc.Units,
+                                         ")",
+                                         "/",
+                                         "(",
+                                         Dose.Units,
+                                         ")"),
+          param_name %in% "Cmax" ~ Conc.Units
+        )) %>%
+      dplyr::select(-c(Conc.Units,
+                       Time.Units,
+                       Dose.Units))
 
   return(nca_out)
 }

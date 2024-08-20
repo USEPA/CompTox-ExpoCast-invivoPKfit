@@ -14,10 +14,7 @@
 #'   predictions and compute residuals. If NULL (the default), then residuals
 #'   will be computed for the data in `obj$data`. `newdata` is required to
 #'   contain at least the following variables: `Time`, `Time.Units`, `Dose`,
-#'   `Route`, `Media`, `Conc`, `Detect`. If variable `Time_trans` is not
-#'   present, then `Time` will be transformed according to the transformation in
-#'   `obj$scales$time` before making predictions; otherwise, `Time_trans` will
-#'   be used to make predictions.
+#'   `Route`, `Media`, `Conc`, `Detect`.
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   make predictions and calculate residuals. If NULL (the default), residuals
 #'   will be returned for all of the models in `obj$stat_model`.
@@ -34,10 +31,12 @@
 #'   elements `dose_norm` and `log10_trans` which themselves should be either
 #'   `TRUE` or `FALSE`. If `use_scale_conc = TRUE`, then the concentration
 #'   scaling/transformations in `obj` will be applied to both predicted and
-#'   observed concentrations before the log-likelihood is computed. If
-#'   `use_scale_conc = FALSE` (the default for this function), then no
-#'   concentration scaling or transformation will be applied before the
-#'   log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
+#'   observed concentrations before the residuals are computed (i.e., the
+#'   residuals will be computed on the same scale as the model was originally
+#'   fitted). If `use_scale_conc = FALSE` (the default for this function), then
+#'   no concentration scaling or transformation will be applied before the
+#'   residuals are computed (i.e., the residuals will be computed on natural
+#'   scale concentration data). If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
 #' @param ... Additional arguments not currently used.
@@ -115,21 +114,29 @@ residuals.pk <- function(obj,
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  message("Transformations used in fitting: \n",
+
+  message("residuals.pk(): Residuals calculated using the following transformations: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
-          "log-transformation (Not used in residual calculation)", conc_scale$log10_trans)
+          "log-transformation ", conc_scale$log10_trans)
 
   #apply dose-normalization if specified
   # conditional mutate ifelse
   resids <- new_preds %>%
-    # needs to be rowwise first then by
-    dplyr::rowwise() %>%
     dplyr::mutate(
-      Conc_set = ifelse(conc_scale$dose_norm,
-                        Conc / Dose,
-                        Conc),
+      Conc_set = ifelse(rep(conc_scale$dose_norm,
+                            NROW(Dose)),
+                        ifelse(rep(conc_scale$log10_trans,
+                                   NROW(Dose)),
+                               log10(Conc/Dose),
+                               Conc / Dose),
+                        ifelse(rep(conc_scale$log10_trans,
+                                   NROW(Dose)),
+                               log10(Conc),
+                               Conc)
+                        ),
       Residuals = ifelse(Detect %in% FALSE & Conc_est <= Conc_set,
-                         0, Conc_est - Conc_set)) %>%
+                         0,
+                         Conc_est - Conc_set)) %>%
     dplyr::ungroup() %>%
     dplyr::distinct()
 

@@ -54,10 +54,10 @@
 #'  each observed time point. Default 10.
 #'@param fit_limits Default `NULL`. c(Upper Bound, Lower Bound).
 #'  Supply a numeric vector. These values filter the predicted
-#'  values for fits to not exceed 1.5 of the maximum observed concentration values
+#'  values for fits to not exceed 2.25x of the maximum observed concentration values
 #'  for each `data_group` in the `pk` object. When there is a log10 transformation
 #'  of concentration values, it limits predicted values to 1/20th of the minimum
-#'  observed concentration values.
+#'  observed concentration values and 5 times the maximum value.
 #'@param print_out For plotting: whether the output of the function should be
 #'  the list of plots. Default `FALSE`.
 #'@param best_fit Default FALSE. Determines whether fit plot outputs only the
@@ -73,6 +73,7 @@ plot.pk <- function(x,
                     method = NULL,
                     use_scale_conc = FALSE,
                     # Plotting arguments
+                    time_trans = FALSE,
                     log10_C = NULL,
                     plot_data_aes = NULL,
                     plot_point_aes = NULL,
@@ -85,36 +86,34 @@ plot.pk <- function(x,
                     fit_limits = NULL,
                     print_out = FALSE,
                     best_fit = FALSE,
-                    ...){
-
+                    ...) {
   #ensure that the model has at least been preprocessed
-  check <- check_required_status(obj = x,
-                                 required_status = status_preprocess)
+  check <- check_required_status(obj = x, required_status = status_preprocess)
   if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
-  if (is.null(model)) model <- names(x$stat_model)
-  if (is.null(method)) method <- x$settings_optimx$method
-  if (is.null(newdata)) newdata <- x$data
+  if (is.null(model))
+    model <- names(x$stat_model)
+  if (is.null(method))
+    method <- x$settings_optimx$method
+  if (is.null(newdata))
+    newdata <- x$data
 
 
-  newdata_ok <- check_newdata(newdata = newdata,
-                              olddata = x$data,
-                              req_vars = c("Time",
-                                           "Time.Units",
-                                           "Dose",
-                                           "Route",
-                                           "Media"),
-                              exclude = FALSE)
+  newdata_ok <- check_newdata(
+    newdata = newdata,
+    olddata = x$data,
+    req_vars = c("Time", "Time.Units", "Dose", "Route", "Media"),
+    exclude = FALSE
+  )
 
   #check method and model
   method_ok <- check_method(obj = x, method = method)
   model_ok <- check_model(obj = x, model = model)
 
   #apply transformations if so specified
-  conc_scale <- conc_scale_use(obj = x,
-                               use_scale_conc = use_scale_conc)
+  conc_scale <- conc_scale_use(obj = x, use_scale_conc = use_scale_conc)
 
   if (drop_nonDetect %in% TRUE) {
     newdata <- subset(newdata, Detect %in% TRUE)
@@ -122,18 +121,22 @@ plot.pk <- function(x,
 
   newdata <- subset(newdata, exclude %in% FALSE)
 
-  if (is.null(log10_C)) log10_C <- conc_scale$log10_trans
+  if (is.null(log10_C))
+    log10_C <- conc_scale$log10_trans
 
 
   if (is.null(fit_limits)) {
-    fit_limits <- c(2.25, 0.01)
+    fit_limits <- c(2.25, 0.05)
+    if (log10_C) {
+      fit_limits[1] <- 5
+    }
   }
 
   if (is.numeric(fit_limits) & length(fit_limits) <= 2) {
     limit_predicted <- TRUE
     if (log10_C) {
       if (length(fit_limits) == 1) {
-        fit_limits[2] <- 0.01
+        fit_limits[2] <- 0.05
         warning("Lower Bound not defined, setting it to the default.")
       } else {
         message("Lower and Upper Bounds supplied will be used.")
@@ -146,39 +149,65 @@ plot.pk <- function(x,
     if (is.character(fit_limits) & (fit_limits == "none")) {
       limit_predicted <- FALSE
     } else {
-      stop("fit_limits must be numeric vector of length 1 or 2. Set fit_limits = 'none' to prevent possible predicted data filtering.")
+      stop(
+        "fit_limits must be numeric vector of length 1 or 2. Set fit_limits = 'none' to prevent possible predicted data filtering."
+      )
     }
   }
 
-  common_vars <- ggplot2::vars(Time, Time.Units, Time_trans, Time_trans.Units,
-                               Dose, Route, Media)
-  obs_vars <- ggplot2::vars(Conc, Conc_SD, Value, Value.Units,
-                            Detect, exclude,
-                            Conc_trans, Conc_trans.Units,
-                            Reference)
+
+  time_var <- ifelse(time_trans, as.name("Time_trans"), as.name("Time"))
+
+  time_units_var <- ifelse(time_trans,
+                           as.name("Time_trans.Units"),
+                           as.name("Time.Units"))
+
+  common_vars <- ggplot2::vars(Time, Time.Units, Dose, Route, Media)
+
+  if (time_trans) {
+    common_vars <- union(common_vars, ggplot2::vars(Time_trans, Time_trans.Units))
+  }
+
+  obs_vars <- ggplot2::vars(
+    Conc,
+    Conc_SD,
+    Value,
+    Value.Units,
+    Detect,
+    exclude,
+    Conc_trans,
+    Conc_trans.Units,
+    Reference
+  )
 
 
   # Default arguments and functions
-  plot_data_aes_default <- ggplot2::aes(x = Time_trans,
-                                        y = Conc_set,
-                                        ymin = Conc_set - Conc_set_SD,
-                                        ymax = Conc_set + Conc_set_SD,
-                                        color = factor(Dose),
-                                        shape = Reference)
+  plot_data_aes_default <- ggplot2::aes(
+    x = !!time_var,
+    y = Conc_set,
+    ymin = Conc_set - Conc_set_SD,
+    ymax = Conc_set + Conc_set_SD,
+    color = factor(Dose)
+  )
 
   plot_point_aes_default <- ggplot2::aes(fill = factor(Dose),
+                                         shape = Reference,
                                          alpha = Detect)
 
-  plot_fit_aes_default <- ggplot2::aes(x = Time_trans,
-                                       y = Conc_est,
-                                       linetype = interaction(model, method))
+  plot_fit_aes_default <- ggplot2::aes(
+    x = !!time_var,
+    y = Conc_est,
+    linetype = interaction(model, method)
+  )
 
   if (conc_scale$dose_norm) {
     facet_fun_default <- "facet_grid"
-    facet_fun_args_default <- list(rows = ggplot2::vars(Route),
-                                   cols = ggplot2::vars(Media),
-                                   scales = "free_y",
-                                   labeller = "label_both")
+    facet_fun_args_default <- list(
+      rows = ggplot2::vars(Route),
+      cols = ggplot2::vars(Media),
+      scales = "free_y",
+      labeller = "label_both"
+    )
   } else {
     facet_fun_default <- "facet_wrap"
     facet_fun_args_default <- list(ggplot2::vars(Route, Media, Dose),
@@ -186,31 +215,33 @@ plot.pk <- function(x,
                                    labeller = "label_both")
   }
 
-  if (is.null(plot_data_aes)) plot_data_aes <- plot_data_aes_default
-  if (is.null(plot_point_aes)) plot_point_aes <- plot_point_aes_default
-  if (is.null(plot_fit_aes)) plot_fit_aes <- plot_fit_aes_default
-  if (is.null(facet_fun)) facet_fun <- facet_fun_default
-  if (is.null(facet_fun_args)) facet_fun_args <- facet_fun_args_default
+  if (is.null(plot_data_aes))
+    plot_data_aes <- plot_data_aes_default
+  if (is.null(plot_point_aes))
+    plot_point_aes <- plot_point_aes_default
+  if (is.null(plot_fit_aes))
+    plot_fit_aes <- plot_fit_aes_default
+  if (is.null(facet_fun))
+    facet_fun <- facet_fun_default
+  if (is.null(facet_fun_args))
+    facet_fun_args <- facet_fun_args_default
 
-  if (facet_fun %in% "none") facet_fun <- NULL
+  if (facet_fun %in% "none")
+    facet_fun <- NULL
 
   # I think ideally there should be required variables and
   # a way to ensure all the aes() variables get added
   newdata <- newdata %>%
-    dplyr::select(!!!union(union(x$data_group,
-                                 common_vars),
-                           obs_vars)) %>%
+    dplyr::select(!!!union(union(x$data_group, common_vars), obs_vars)) %>%
     dplyr::rowwise() %>%
-    dplyr::mutate(Conc_set = ifelse(conc_scale$dose_norm,
-                                    Conc / Dose,
-                                    Conc),
-                  Conc_set_SD = ifelse(conc_scale$dose_norm,
-                                       Conc_SD / Dose,
-                                       Conc_SD),
-                  Detect = ifelse(Detect,
-                                  "Detect",
-                                  "Non-Detect"),
-                  Dose = Dose) %>%
+    #apply dose-norm if specified, but do not apply log10-trans even if specified
+    #(if log10-trans specified, the y axis will be log10-scaled)
+    dplyr::mutate(
+      Conc_set = ifelse(conc_scale$dose_norm, Conc / Dose, Conc),
+      Conc_set_SD = ifelse(conc_scale$dose_norm, Conc_SD / Dose, Conc_SD),
+      Detect = ifelse(Detect, "Detect", "Non-Detect"),
+      Dose = Dose
+    ) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(!!!x$data_group) %>%
     tidyr::nest(.key = "observations")
@@ -219,141 +250,182 @@ plot.pk <- function(x,
 
   newdata <- newdata %>%
     dplyr::mutate(observation_plot =
-             purrr::map(observations,
-                 \(x) {
-                   # Need to write this into a mutate + map pattern function
-                   #initialize plot
-                   p <- ggplot(data = x,
-                               mapping = plot_data_aes) +
-                     geom_point(mapping = plot_point_aes,
-                                stroke = 1) + # plots points
-                     geom_errorbar(mapping = plot_data_aes)
+                    purrr::map(observations, \(x) {
+                      # Need to write this into a mutate + map pattern function
+                      #initialize plot
+                      p <- ggplot(data = x, mapping = plot_data_aes) +
+                        geom_point(mapping = plot_point_aes, stroke = 1) + # plots points
+                        geom_errorbar(mapping = plot_data_aes)
 
-                   t_units <- unique(x$Time_trans.Units)
+                      t_units <- x %>%
+                        dplyr::pull(!!time_units_var) %>%
+                        unique()
 
-                   # if alpha = Detect then we have to do some trickery to implement that
-                   # that is the objective of plot_point_aes
-                   if (rlang::as_label(plot_point_aes$alpha) %in% "Detect") {
-                     # plot the data
-                     p <- p +
-                       geom_point()
-                     # plots here are un-filled points (only inherits color variable by default)
+                      # if alpha = Detect then we have to do some trickery to implement that
+                      # that is the objective of plot_point_aes
+                      if (rlang::as_label(plot_point_aes$alpha) %in% "Detect") {
+                        # plot the data
+                        p <- p +
+                          geom_point()
+                        # plots here are un-filled points (only inherits color variable by default)
 
-                     if ("shape" %in% c(names(plot_data_aes),
-                                        names(plot_point_aes))) {
-                       # Ensure shapes can take both fill and color if alpha is set
-                       p <- p +
-                         scale_shape_manual(values = 21:25)
-                     }
+                        if ("shape" %in% c(names(plot_data_aes), names(plot_point_aes))) {
+                          # Ensure shapes can take both fill and color if alpha is set
+                          p <- p +
+                            scale_shape_manual(values = 21:25)
+                        }
 
-                     #set an alpha scale
-                     p <- p + scale_alpha_manual(values = c("Detect" = 1, "Non-Detect" = 0),
-                                                 breaks = c("Detect", "Non-Detect"),
-                                                 drop = FALSE,
-                                                 name = NULL)
+                        #set an alpha scale
+                        p <- p + scale_alpha_manual(
+                          values = c("Detect" = 1, "Non-Detect" = 0),
+                          breaks = c("Detect", "Non-Detect"),
+                          drop = FALSE,
+                          name = NULL
+                        )
 
-                     # Need to check whether there are two values in Detect
-                     # some might be all Non-Detect or all Detect
-                     if (length(unique(x$Detect)) > 1){
-                       alpha_fill <- c("black", NA)
-                     } else {
-                       alpha_fill <- ifelse(unique(x$Detect) == "Detect",
-                                            "black", NA)
-                     }
-                     p <- p +
-                       guides(alpha = guide_legend(override.aes = list(shape = 21,
-                                                                       color = "black",
-                                                                       stroke = 1,
-                                                                       fill = alpha_fill,
-                                                                       alpha = 1),
-                                                   order = 2))
+                        # Need to check whether there are two values in Detect
+                        # some might be all Non-Detect or all Detect
+                        if (length(unique(x$Detect)) > 1) {
+                          alpha_fill <- c("black", NA)
+                        } else {
+                          alpha_fill <- ifelse(unique(x$Detect) == "Detect", "black", NA)
+                        }
+                        p <- p +
+                          guides(alpha = guide_legend(
+                            override.aes = list(
+                              shape = 21,
+                              color = "black",
+                              stroke = 1,
+                              fill = alpha_fill,
+                              alpha = 1
+                            ),
+                            order = 2
+                          ))
 
-                   }
+                      }
 
-                   p <- p +
-                     do.call(facet_fun,
-                             args = facet_fun_args)
+                      p <- p +
+                        do.call(facet_fun, args = facet_fun_args)
 
-                   if (log10_C) {
-                     p <- p + scale_y_continuous(trans = "log10",
-                                                 labels = scales::label_log())
-                   }
+                      if (log10_C) {
+                        p <- p + scale_y_continuous(trans = "log10", labels = scales::label_log())
+                      }
 
-                   p +
-                     labs(title = paste(Chemical, Species),
+                      p +
+                        labs(
+                          title = paste(Chemical, Species),
                           x = paste0("Time (", t_units , ")"),
-                          y = ifelse(conc_scale$dose_norm,
-                                     "Concentration/Dose",
-                                     "Concentration")) +
-                     theme_bw() +
-                     theme(panel.border = element_rect(color = "black", fill = NA,
-                                                       linewidth = 1),
-                           plot.title = element_text(hjust = 0.5, face = "bold"),
-                           strip.background = element_rect(fill = "white",
-                                                           color = "black",
-                                                           size = 1))
+                          y = ifelse(
+                            conc_scale$dose_norm,
+                            "Concentration/Dose",
+                            "Concentration"
+                          )
+                        ) +
+                        theme_bw() +
+                        theme(
+                          panel.border = element_rect(
+                            color = "black",
+                            fill = NA,
+                            linewidth = 1
+                          ),
+                          plot.title = element_text(hjust = 0.5, face = "bold"),
+                          strip.background = element_rect(
+                            fill = "white",
+                            color = "black",
+                            size = 1
+                          )
+                        )
 
 
 
-                 }))
+                    }))
 
-  # For predictions, I will interpolate the time
+  # For predictions, interpolate time
 
   if (get_status(obj = x) == 5) {
     interp_data <- newdata
     interp_data <- interp_data %>%
-      dplyr::mutate(interpolated = purrr::map(observations,
-                                \(x) {
-                                  t_units <- unique(x[["Time_trans.Units"]])
-                                  x %>%
-                                    dplyr::select(!!!common_vars) %>%
-                                    dplyr::group_by(Dose, Route, Media) %>%
-                                    dplyr::reframe(Time = max(Time), # Change to Time
-                                                   Time.Units,
-                                                   Time_trans.Units) %>%
-                                    dplyr::mutate(maxTime = max(Time),
-                                                  Time.Units = unique(Time.Units),
-                                                  Time_trans.Units = unique(Time_trans.Units)) %>%
-                                    tidyr::uncount(n_interp) %>%
-                                    dplyr::group_by(Dose, Route, Media) %>%
-                                    dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
-                                                    (dplyr::row_number() - 1))
-                                }))
+      dplyr::mutate(interpolated = purrr::map(observations, \(x) {
+        #if needed and not present, add Time_trans.Units column
+        if (time_trans %in% TRUE) {
+          if (!("Time_trans.Units" %in% names(x))) {
+            x <- x %>%
+              dplyr::mutate(Time_trans.Units = Time.Units)
+          }
+
+          x %>%
+            dplyr::select(!!!common_vars) %>%
+            dplyr::group_by(Dose, Route, Media) %>%
+            dplyr::reframe(Time = max(Time), # Change to Time
+                           Time.Units, Time_trans.Units) %>%
+            dplyr::mutate(
+              maxTime = max(Time),
+              Time.Units = unique(Time.Units),
+              Time_trans.Units = unique(Time_trans.Units)
+            ) %>%
+            tidyr::uncount(n_interp) %>%
+            dplyr::group_by(Dose, Route, Media) %>%
+            dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
+                            (dplyr::row_number() - 1))
+        } else if (time_trans %in% FALSE) {
+          x %>%
+            dplyr::select(!!!common_vars) %>%
+            dplyr::group_by(Dose, Route, Media) %>%
+            dplyr::reframe(Time = max(Time), # Change to Time
+                           Time.Units) %>%
+            dplyr::mutate(maxTime = max(Time),
+                          Time.Units = unique(Time.Units)) %>%
+            tidyr::uncount(n_interp) %>%
+            dplyr::group_by(Dose, Route, Media) %>%
+            dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
+                            (dplyr::row_number() - 1))
+        }
+      }))
 
     interp_data <- interp_data %>%
       dplyr::select(!!!x$data_group, interpolated) %>%
       tidyr::unnest(cols = c(interpolated)) %>%
       dplyr::ungroup()
 
-    interp_data <- predict(obj = x,
-                           newdata = interp_data,
-                           use_scale_conc = use_scale_conc,
-                           model = model,
-                           method = method,
-                           exclude = FALSE,
-                           include_NAs = TRUE)
+
+    #Make predictions --
+    #apply dose-normalization if it has been specified --
+    #but do not use log10-transformation for now, even if it has been specified
+    conc_scale_tmp <- conc_scale
+    conc_scale_tmp$log10_trans <- FALSE
+
+    interp_data <- predict(
+      obj = x,
+      newdata = interp_data,
+      use_scale_conc = conc_scale_tmp,
+      model = model,
+      method = method,
+      exclude = FALSE,
+      include_NAs = TRUE
+    )
 
     if (best_fit) {
-      interp_data <- dplyr::left_join(get_winning_model(obj = x),
-                                      interp_data)
+      interp_data <- dplyr::left_join(get_winning_model(obj = x), interp_data)
     }
-    # browser()
 
-    # rowwise can be taxing for function calls
-    # This process is inefficient, need to rewrite using a simple
-    # JOIN -> MUTATE -> SELECT
+    #if plotting transformed time, then transform interpolated time points
+    if (time_trans) {
+      conversion_table <- time_conversions %>%
+        dplyr::filter(
+          TimeFrom %in% interp_data$Time.Units,
+          TimeTo %in% interp_data$Time_trans.Units
+        ) %>%
+        dplyr::rename(Time.Units = "TimeFrom", Time_trans.Units = "TimeTo")
 
-    conversion_table <- time_conversions %>%
-      dplyr::filter(TimeFrom %in% interp_data$Time.Units,
-                    TimeTo %in% interp_data$Time_trans.Units) %>%
-      dplyr::rename(Time.Units = "TimeFrom",
-                    Time_trans.Units = "TimeTo")
+      interp_data <- interp_data %>%
+        dplyr::left_join(conversion_table,
+                         by = dplyr::join_by(Time.Units, Time_trans.Units)) %>%
+        dplyr::mutate(Time_trans = Time * conversion) %>%
+        dplyr::select(!conversion)
+    }
 
-    interp_data <- interp_data %>%
-      dplyr::left_join(conversion_table, by = dplyr::join_by(Time.Units,
-                                                Time_trans.Units)) %>%
-      dplyr::mutate(Time_trans = Time * conversion) %>%
-      dplyr::select(!conversion)
+
+
 
     interp_data <- interp_data %>%
       dplyr::group_by(!!!x$data_group) %>%
@@ -361,39 +433,59 @@ plot.pk <- function(x,
 
     newdata <- dplyr::left_join(newdata, interp_data)
 
+    # Need to check if predicted is NULL before filtering below
+    # NULL predicted values will occur when there was no adequate fit for the model
 
     if (limit_predicted) {
       if (log10_C) {
         newdata <- newdata %>%
-          dplyr::mutate(predicted = purrr::map2(observations, predicted,
-                                  \(x, y) {
-                                    dplyr::filter(y,
-                                           Conc_est <= (fit_limits[1]*max(x$Conc_set)),
-                                           Conc_est >= (fit_limits[2]*min(x$Conc_set)))
-                                  }))
+          dplyr::mutate(predicted = purrr::map2(observations, predicted, \(x, y) {
+            if (!is.null(y)) {
+              dplyr::filter(y,
+                            Conc_est <= (fit_limits[1] * max(x$Conc_set)),
+                            Conc_est >= (fit_limits[2] * min(x$Conc_set)))
+            } else {
+              message(paste(
+                Chemical, Species, "did not have adequate fit"
+              ))
+            }
+
+          }))
       } else {
         newdata <- newdata %>%
-          dplyr::mutate(predicted = purrr::map2(observations, predicted,
-                                  \(x, y) {
-                                    dplyr::filter(y, Conc_est <= (fit_limits[1]*max(x$Conc_set)))
-                                  }))
+          dplyr::mutate(predicted = purrr::map2(observations, predicted, \(x, y) {
+            if (!is.null(y)) {
+              dplyr::filter(y, Conc_est <= (fit_limits[1] * max(x$Conc_set)))
+            } else {
+              message(paste(
+                Chemical, Species, "did not have adequate fit"
+              ))
+            }
+          }))
       }
     }
 
     newdata <- newdata %>%
-      dplyr::mutate(predicted_plot = purrr::map(predicted,
-                                  \(x) {
-                                    ggplot2::geom_line(data = x,
-                                                       mapping = plot_fit_aes,
-                                                       inherit.aes = FALSE)
-                                  })) %>%
-      dplyr::mutate(final_plot = purrr::map2(observation_plot, predicted_plot,
-                               \(x, y) x + y +
-                                 guides(color = guide_legend(title = "Dose", order = 1),
-                                        fill = "none",
-                                        linetype = guide_legend(title = "Model & Method", order = 3),
-                                        shape = guide_legend(order = 4))
-                               ))
+      dplyr::mutate(predicted_plot = purrr::map(predicted, \(x) {
+        if (!is.null(x)) {
+        ggplot2::geom_line(data = x,
+                           mapping = plot_fit_aes,
+                           inherit.aes = FALSE)
+        } else {
+          NULL
+        }
+      })) %>%
+      dplyr::mutate(final_plot = purrr::map2(
+        observation_plot,
+        predicted_plot,
+        \(x, y) x + y +
+          guides(
+            color = guide_legend(title = "Dose", order = 1),
+            fill = "none",
+            linetype = guide_legend(title = "Model & Method", order = 3),
+            shape = guide_legend(order = 4)
+          )
+      ))
 
   } else {
     newdata <- newdata %>%
@@ -402,7 +494,8 @@ plot.pk <- function(x,
     message("Note that the final plots do not contain any fits")
   }
 
-  if (print_out) return(newdata$final_plot)
+  if (print_out)
+    return(newdata$final_plot)
 
   return(newdata)
 }

@@ -14,10 +14,12 @@
 #'
 #' Upper bounds for each "sigma" hyperparameter are calculated as the standard
 #' deviation of observations in the corresponding error SD group (see
-#' [combined_sd()]). If the combined SD is non-finite or less than the sigma
-#' lower bound, then the combined SD of all non-excluded data is substituted. If
-#' that is still non-finite or less then the sigma lower bound, then a constant
-#' value of 100 is substituted.
+#' [combined_sd()]), with any specified transformations applied
+#' (dose-normalization and/or log10-transformation). If the combined SD is
+#' non-finite or less than the sigma lower bound, then the maximum concentration
+#' is used as an upper bound; if this still returns a non-finite value or a
+#' value less than the lower bound, then a constant value of 1000 is
+#' substituted.
 #'
 #' The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
 #'
@@ -96,27 +98,56 @@ sigma_lower <- sqrt(.Machine$double.eps)
 # Add the data_sigma_group and filter out all excluded values
 sigma_DF <- data %>%
   dplyr::mutate(data_sigma_group = data_sigma_group) %>%
-  dplyr::filter(exclude %in% FALSE)
+  dplyr::filter(exclude %in% FALSE) %>%
+  #temporarily undo log10-trans, if it has been used
+  #this is because combined_sd() requires NON log transformed concs
+  #but we want to keep dose-normalization if it has been applied
+  #so we un-log Conc_trans
+  dplyr::mutate(Conc_tmp = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
+                                              NROW(Conc_trans)),
+                                  10^Conc_trans,
+                                  Conc_trans),
+                Conc_SD_tmp = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
+                                                 NROW(Conc_trans)),
+                                     10^Conc_SD_trans,
+                                     Conc_SD_trans),
+                Conc_tmp.Units = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
+                                                    NROW(Conc_trans)),
+                                                gsub(pattern = "\\)$",
+                                                     replacement = "",
+                                                     x = gsub(pattern = "^log10\\(",
+                                                     replacement = "",
+                                                     x = Conc_trans.Units)),
+                                                Conc_trans.Units))
 
 # Set values for sigma upper/lower-bounds and start
-sigma_DF <- do.call(dplyr::group_by,
-                    args = c(list(sigma_DF),
-                             obj$stat_error_model$error_group)) %>%
-  dplyr::summarise(param_name = paste("sigma",
+sigma_DF <- sigma_DF %>%
+  dplyr::group_by(!!!obj$stat_error_model$error_group) %>%
+  dplyr::summarise(max_conc =  max(Conc_tmp,
+                                   na.rm = TRUE),
+                   param_name = paste("sigma",
                                       unique(data_sigma_group),
                                       sep = "_"),
-                   param_units = unique(Conc_trans.Units),
+                   param_units = unique(Conc_tmp.Units),
                    optimize_param = TRUE,
                    use_param = TRUE,
                    lower_bound = sigma_lower,
                    upper_bound = combined_sd(
-                     group_mean = Conc_trans,
-                     group_sd = Conc_SD_trans,
+                     group_mean = Conc_tmp,
+                     group_sd = Conc_SD_tmp,
                      group_n = N_Subjects,
                      unbiased = TRUE,
                      na.rm = TRUE,
-                     log = FALSE),
-                   start = 0.1 * upper_bound) %>%
+                     log10 = obj$scales$conc$log10_trans)) %>%
+  dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
+                                               upper_bound <= lower_bound,
+                                             max_conc,
+                                             upper_bound)) %>%
+  dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
+                                               upper_bound <= lower_bound,
+                                             1000,
+                                             upper_bound),
+                start = 0.1 * upper_bound) %>%
   as.data.frame()
 
   #assign rownames to sigma_DF

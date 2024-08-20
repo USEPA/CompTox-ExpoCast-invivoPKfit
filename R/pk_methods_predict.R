@@ -6,10 +6,7 @@
 #' @param newdata Optional: A `data.frame` with new data for which to make
 #'   predictions. If NULL (the default), then predictions will be made for the
 #'   data in `obj$data`. `newdata` is required to contain at least the following
-#'   variables: `Time`, `Time.Units`, `Dose`, `Route`, and `Media`. If variable
-#'   `Time_trans` is not present, then `Time` will be transformed according to
-#'   the transformation in `obj$scales$time` before making predictions;
-#'   otherwise, `Time_trans` will be used to make predictions.
+#'   variables: `Time`, `Time.Units`, `Dose`, `Route`, and `Media`.
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   make predictions. If NULL (the default), predictions will be returned for
 #'   all of the models in `obj$stat_model`.
@@ -58,7 +55,6 @@ predict.pk <- function(obj,
                        use_scale_conc = FALSE,
                        suppress_messages = TRUE,
                        include_NAs = FALSE,
-                       by_timepoint = TRUE,
                        ...) {
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -83,81 +79,46 @@ predict.pk <- function(obj,
     include_NAs = include_NAs
   )
 
-  if (by_timepoint) {
-    other_vars <- NULL
-  } else {
-    other_vars <- ggplot2::vars(
-      Conc,
-      Conc.Units
-    )
-  }
-
   if (is.null(newdata)) {
     newdata <- obj$data
-    other_vars <- ggplot2::vars(
-      Conc,
-      Conc.Units,
-      Conc_trans,
-      Conc_trans.Units,
-      Detect,
-      exclude)
   }
 
+  req_vars <- union(obj$data_group,
+                    ggplot2::vars(Time,
+                            Time.Units,
+                            Dose,
+                            Route,
+                            Media))
+
+  #other_vars is all the non-required vars
+  #and non-data-group vars
+  all_vars <- do.call(ggplot2::vars,
+                      lapply(names(newdata),
+                             as.name)
+  )
+  other_vars <- setdiff(all_vars,
+                        req_vars)
 
   newdata_ok <- check_newdata(
     newdata = newdata,
     olddata = obj$data,
-    req_vars = c("Chemical",
-                 "Species",
-                 "Time",
-                 "Time.Units",
-                 "Dose",
-                 "Route",
-                 "Media"),
+    req_vars = sapply(req_vars,
+                      rlang::as_label),
     exclude = exclude
   )
-
-
-  #scale time if needed
-
-  # If true, this also means that newdata was not NULL and was user input
-  if (!("Time_trans" %in% names(newdata))) {
-    newdata$Time_trans <- convert_time(
-      x = newdata$Time,
-      from = newdata$Time.Units,
-      to = obj$scales$time$new_units
-    )
-
-    trans_unit_data <- obj$data %>%
-      dplyr::select(
-        !!!union(obj$data_group,
-                 ggplot2::vars(Time_trans.Units))) %>%
-      dplyr::distinct()
-
-    newdata <- newdata %>%
-      dplyr::left_join(trans_unit_data) %>%
-      dplyr::distinct()
-  }
 
   #apply transformations if so specified
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
 
   # Get variables required for model functions
-  req_vars <- ggplot2::vars(Time,
-                            Time.Units,
-                            Time_trans,
-                            Time_trans.Units,
-                            Dose,
-                            Route,
-                            Media)
+
 
   # Make observations into nested list-column
   newdata <- newdata %>%
-    dplyr::select(!!!union(obj$data_group, req_vars),
-                  !!!other_vars) %>%
-    dplyr::group_by(!!!union(obj$data_group,
-                             ggplot2::vars(Route, Media))) %>%
+    # dplyr::select(!!!req_vars,
+    #               !!!other_vars) %>%
+    dplyr::group_by(!!!obj$data_group) %>% #again need not group by Route, Media
     tidyr::nest(.key = "observations") %>%
     dplyr::ungroup()
 
@@ -177,9 +138,8 @@ predict.pk <- function(obj,
   # After join it is joined by model, method, Chemical, Species
   # Set a new column for the model function
   newdata <- newdata %>%
-    dplyr::group_by(model, method,
-                    !!!obj$data_group,
-                    Route, Media) %>%
+    dplyr::group_by(!!!obj$data_group,
+                    model, method) %>% #need not group by Route and Media for this
     dplyr::mutate(
       model_fun = dplyr::case_when(
         type == "conc" ~ obj$stat_model[[model]]$conc_fun,
@@ -190,52 +150,66 @@ predict.pk <- function(obj,
 
   # Get predictions
   # Note that the model functions only need Time, Dose, Route, and Medium
-  # AND this will NOT give log10-transformed values... that is a data independent transformation of scale
+
   newdata <- newdata %>%
-    dplyr::reframe(predictions =
-                     purrr::map(observations,
-                                .f = \(x) {
-                                  x %>%
-                                    dplyr::rowwise() %>%
-                                    dplyr::mutate(
-                                      Estimate = tryCatch(
-                                        sapply(
-                                          coefs_vector,
-                                          FUN = model_fun,
-                                          time = Time,
-                                          dose = ifelse(conc_scale$dose_norm,
-                                                        1, Dose),
-                                          route = Route,
-                                          medium = Media,
-                                          simplify = TRUE,
-                                          USE.NAMES = TRUE
-                                        ),
-                                        error = function(err) {
-                                          if (!suppress_messages) {
-                                            message(paste("Unable to run",
-                                                          model_fun, "for",
-                                                          Chemical, Species,
-                                                          "data grouping.",
-                                                          "Likely an aborted fit,",
-                                                          "it is missing estimated parameters."))
-                                          }
-                                          # Return Value
-                                          NA
-                                        })
-                                    )
-                                })) %>%
+    dplyr::rowwise() %>% #this is a LOT faster than purrr::pmap()!!!
+    dplyr::summarise(predictions = list(
+                                     observations %>%
+                                       dplyr::mutate(
+                                         Dose_tmp = dplyr::if_else(rep(conc_scale$dose_norm,
+                                                                       NROW(Dose)),
+                                                                   1.0,
+                                                                   Dose),
+                                         Estimate = tryCatch(
+                                           do.call(model_fun,
+                                                   list(coefs_vector,
+                                                        time = Time,
+                                                        dose = Dose_tmp,
+                                                        route = Route,
+                                                        medium = Media))
+                                           ,
+                                           error = function(err) {
+                                             if (!suppress_messages) {
+                                               message(paste("predict.pk(): Unable to run",
+                                                             model_fun, "for",
+                                                             Chemical, Species,
+                                                             "data grouping.",
+                                                             "Likely an aborted fit,",
+                                                             "it is missing estimated parameters."))
+                                             }
+                                             # Return Value
+                                             NA_real_
+                                           }) #end tryCatch
+                                       )  %>%  #end dplyr::mutate
+                                       dplyr::select(!Dose_tmp)
+    )
+                       ) %>%
     tidyr::unnest(predictions)
 
-  if (type == "conc")
+  #If log10 transformation was specified, then apply it now
+  if (type %in% "conc"){
     newdata <- dplyr::rename(newdata, Conc_est = "Estimate")
-  if (type == "auc")
-    newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
-
-  if (!suppress_messages && conc_scale$dose_norm) {
-    message("Note that the estimated values are Dose-normalized")
-  } else {
-    message("Note these values scale with Dose! (Not Dose-normalized)")
+  #apply log10-trans to predicted conc, if so specified
+  if(conc_scale$log10_trans %in% TRUE){
+    newdata <- newdata %>%
+      dplyr::mutate(Conc_est = log10(Conc_est))
   }
-  message("These predictions have been made using 1/hour rate constants from coefs()")
+  } else if (type %in% "auc"){
+    newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
+  #note that it doesn't make sense to log10-trans AUC
+    if (suppress_messages %in% FALSE){
+      message("predict.pk(): Log10 transformation was specified, but was not used because `type == 'AUC'`.")
+    }
+  }
+
+  if (suppress_messages %in% FALSE){
+    if(conc_scale$dose_norm) {
+    message("predict.pk(): Note that the predicted values are for dose 1.0 (dose-normalized)")
+  } else {
+    message("predict.pk(): Note that the predicted values are not dose-normalized")
+  }
+  }
+
+  message("predict.pk(): These predictions have been made using un-scaled Time and 1/hour rate constants from coefs()")
   return(newdata)
 }

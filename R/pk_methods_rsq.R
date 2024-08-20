@@ -74,31 +74,32 @@
 #'
 #' # Log10 transformation
 #'
-#' If `log10_trans %in% TRUE`, then both the observed and predicted values will
-#' be (natural) log-transformed before calculating the RMSE. In the case where
-#' observed values are reported in summary format, each sample mean and sample
-#' SD (reported on the natural scale, i.e. the mean and SD of natural-scale
-#' individual observations) are used to produce an estimate of the log-scale
-#' sample mean and sample SD (i.e., the mean and SD of log-transformed
-#' individual observations), using [convert_summary_to_log10()].
+#' If `log10_trans %in% TRUE`, then R-squared is computed for
+#'   log10(observations) vs. log10(predictions).
+#'
+#' In the case where observed values are reported in summary format, each sample
+#' mean and sample SD (reported on the natural scale, i.e. the mean and SD of
+#' natural-scale individual observations) are used to produce an estimate of the
+#' log10-scale sample mean and sample SD (i.e., the mean and SD of
+#' log10-transformed individual observations), using
+#' [convert_summary_to_log10()].
 #'
 #' The formulas are as follows. Again, \eqn{\bar{y}_i} is the sample mean for
 #' group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.
 #'
-#' \deqn{\textrm{log-scale sample mean}_i = \log
+#' \deqn{\textrm{log10-scale sample mean}_i = \log_{10}
 #' \left(\frac{\bar{y}_i^2}{\sqrt{\bar{y}_i^2 + s_i^2}} \right)}
 #'
-#' \deqn{\textrm{log-scale sample SD}_i = \sqrt{\log \left(1 +
+#' \deqn{\textrm{log10-scale sample SD}_i = \sqrt{\log_{10} \left(1 +
 #' \frac{s_i^2}{\bar{y}_i^2} \right)}}
+#'
+#'
 #' @param obj A `pk` object
 #' @param newdata Optional: A `data.frame` with new data for which to make
 #'   predictions and compute RMSsE. If NULL (the default), then R-squared will be
 #'   computed for the data in `obj$data`. `newdata` is required to contain at
 #'   least the following variables: `Time`, `Time.Units`, `Dose`, `Route`,
-#'   `Media`, `Conc`, `Conc_SD`, `N_Subjects`, `Detect`. If variable
-#'   `Time_trans` is not present, then `Time` will be transformed according to
-#'   the transformation in `obj$scales$time` before making predictions;
-#'   otherwise, `Time_trans` will be used to make predictions.
+#'   `Media`, `Conc`, `Conc_SD`, `N_Subjects`, `Detect`.
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   make predictions and calculate R-squared. If NULL (the default), R-squared will be
 #'   returned for all of the models in `obj$stat_model`.
@@ -111,13 +112,13 @@
 #'   data, an observation is marked for exclusion when `exclude %in% TRUE`).
 #'   `FALSE` to include all observations, regardless of exclusion status.
 #'   Default `TRUE`.
-#' @param use_scale_conc Possible values: `TRUE`, `FALSE`, or a named list with
+#' @param use_scale_conc Possible values: `TRUE` (default), `FALSE`, or a named list with
 #'   elements `dose_norm` and `log10_trans` which themselves should be either
 #'   `TRUE` or `FALSE`. If `use_scale_conc = TRUE` (the default for this
 #'   function), then the concentration scaling/transformations in `obj` will be
-#'   applied to both predicted and observed concentrations before the
-#'   R-squared is computed. If `use_scale_conc = FALSE`, then no
-#'   concentration scaling or transformation will be applied before the
+#'   applied to both predicted and observed concentrations when the
+#'   R-squared is computed (see [calc_rsq()] for details). If `use_scale_conc = FALSE`, then no
+#'   concentration scaling or transformation will be applied when the
 #'   R-squared is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
@@ -133,14 +134,15 @@
 #' @author Caroline Ring
 #' @family fit evaluation metrics
 #' @family methods for fitted pk objects
+#' @seealso [calc_rsq()]
 rsq.pk <- function(obj,
                    newdata = NULL,
                    model = NULL,
                    method = NULL,
                    exclude = TRUE,
-                   use_scale_conc = TRUE,
-                   rsq_group = ggplot2::vars(Chemical, Species),
-                   ...){
+                   use_scale_conc = FALSE,
+                   rsq_group = NULL,
+                   ...) {
   #ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -151,6 +153,7 @@ rsq.pk <- function(obj,
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
   if (is.null(newdata)) newdata <- obj$data
+  if(is.null(rsq_group)) rsq_group <- obj$data_group
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -173,7 +176,7 @@ rsq.pk <- function(obj,
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  message("Transformations used: \n",
+  message("rsq.pk(): Calculating R-squared on transformed concentration scale. Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
 
@@ -182,13 +185,15 @@ rsq.pk <- function(obj,
 
 
   #Get predictions
+  #Do NOT apply any conc transformations at this stage
+  #(conc transformations will be handled later)
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,
                    method = method,
                    type = "conc",
                    exclude = exclude,
-                   use_scale_conc = use_scale_conc)
+                   use_scale_conc = FALSE)
 
 
   #remove any excluded observations & corresponding predictions, if so specified
@@ -211,19 +216,22 @@ rsq.pk <- function(obj,
     dplyr::select(dplyr::all_of(req_vars)) %>%
     dplyr::ungroup())
 
-
   #apply dose-normalization if specified
   # conditional mutate ifelse
   rsq_df <- new_preds %>%
-    # needs to be rowwise first then by
-    dplyr::rowwise() %>%
     dplyr::mutate(
-      Conc_set = ifelse(conc_scale$dose_norm,
+      Conc_set = ifelse(rep(conc_scale$dose_norm,
+                            NROW(Conc)),
                         Conc / Dose,
                         Conc),
-      Conc_set_SD = ifelse(conc_scale$dose_norm,
+      Conc_set_SD = ifelse(rep(conc_scale$dose_norm,
+                               NROW(Conc)),
                            Conc_SD / Dose,
-                           Conc_SD)) %>%
+                           Conc_SD),
+      Conc_est = ifelse(rep(conc_scale$dose_norm,
+                            NROW(Conc)),
+                        Conc_est / Dose,
+                        Conc_est)) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(!!!rsq_group,
                     model, method) %>%
@@ -234,10 +242,10 @@ rsq.pk <- function(obj,
                        n_subj = N_Subjects,
                        detect = Detect,
                        log10_trans = conc_scale$log10_trans)) %>%
-    dplyr::distinct() %>%
+    # dplyr::distinct() %>%
     dplyr::ungroup()
 
-  message("Groups: \n",
+  message("rsq.pk)(): Groups: \n",
           paste(sapply(unlist(rsq_group), rlang::as_label),
                 collapse = ", "),
           ", ", " method, model")
