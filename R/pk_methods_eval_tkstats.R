@@ -13,7 +13,7 @@
 #'   The data (either `newdata` or `obj$data`) will be grouped according to the
 #'   unique combinations of these variables. For each unique combination of
 #'   these variables in the data, a set of TK statistics will be computed. The
-#'   default is `obj$settings_data_info$nca_group`, to derive TK statistics for
+#'   default is `obj$settings_data_info$summary_group`, to derive TK statistics for
 #'   the same groups of data as non-compartmental analysis statistics. With the
 #'   default, you can directly compare e.g. a model-predicted AUC_inf to the
 #'   corresponding NCA-estimated AUC_inf. However, you may specify a different
@@ -78,7 +78,7 @@ eval_tkstats.pk <- function(obj,
   if(is.null(model)) model <- names(obj$stat_model)
   if(is.null(method)) method <- obj$settings_optimx$method
   if(is.null(newdata)) newdata <- obj$data
-  if(is.null(tk_group)) tk_group <- obj$settings_data_info$nca_group
+  if(is.null(tk_group)) tk_group <- obj$settings_data_info$summary_group
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)

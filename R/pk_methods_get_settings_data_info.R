@@ -10,7 +10,7 @@ get_settings_data_info.pk <- function(obj, ...){
   #convert lists of quosures into "vars(...)"
   out$nca_group <- rlang::parse_expr(
     paste0("vars(",
-           paste(sapply(out$nca_group,
+           paste(sapply(out$summary_group,
                         function(x) rlang::as_label(x)),
                  collapse = ", "),
            ")")

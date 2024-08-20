@@ -220,15 +220,15 @@ rsq.pk <- function(obj,
   # conditional mutate ifelse
   rsq_df <- new_preds %>%
     dplyr::mutate(
-      Conc_set = ifelse(rep(conc_scale$dose_norm,
+      Conc_set = dplyr::if_else(rep(conc_scale$dose_norm,
                             NROW(Conc)),
                         Conc / Dose,
                         Conc),
-      Conc_set_SD = ifelse(rep(conc_scale$dose_norm,
+      Conc_set_SD = dplyr::if_else(rep(conc_scale$dose_norm,
                                NROW(Conc)),
                            Conc_SD / Dose,
                            Conc_SD),
-      Conc_est = ifelse(rep(conc_scale$dose_norm,
+      Conc_est = dplyr::if_else(rep(conc_scale$dose_norm,
                             NROW(Conc)),
                         Conc_est / Dose,
                         Conc_est)) %>%
