@@ -26,45 +26,34 @@ fit_group <- function(data,
   #Rowbind par_DF and sigma_DF
   par_DF <- dplyr::bind_rows(par_DF,
                              sigma_DF)
-
   #get params to be optimized with their starting points
-  opt_params <- par_DF %>%
-    dplyr::filter(optimize_param %in% TRUE) %>%
-    dplyr::pull(start)
-  names(opt_params) <- par_DF %>%
-    dplyr::filter(optimize_param %in% TRUE) %>%
-    dplyr::pull(param_name)
+  # since this series of assignments only return ordered vectors, possible to optimize a little
+  # also optimized parameter names was repeated, simply put into variable
+  opt_param_names <- par_DF[which(par_DF$optimize_param), "param_name",
+                            drop = TRUE]
+
+  opt_params <- par_DF[which(par_DF$optimize_param), "start",
+                       drop = TRUE]
+  names(opt_params) <- opt_param_names
 
   if (fit_decision %in% "continue") {
 
-    #param lower bounds (only on params to be optimized)
-    lower_params <- par_DF %>%
-      dplyr::filter(optimize_param %in% TRUE) %>%
-      dplyr::pull(lower_bound)
-    names(lower_params) <- par_DF %>%
-      dplyr::filter(optimize_param %in% TRUE) %>%
-      dplyr::pull(param_name)
 
-    #param upper bounds (only on params to be optimized)
-    upper_params <- par_DF %>%
-      dplyr::filter(optimize_param %in% TRUE) %>%
-      dplyr::pull(upper_bound)
-    names(upper_params) <- par_DF %>%
-      dplyr::filter(optimize_param %in% TRUE) %>%
-      dplyr::pull(param_name)
+    lower_params <- par_DF[which(par_DF$optimize_param), "lower_bound",
+                           drop = TRUE]
+    names(lower_params) <- opt_param_names
+
+    upper_params <- par_DF[which(par_DF$optimize_param), "upper_bound",
+                           drop = TRUE]
+    names(upper_params) <- opt_param_names
 
     #get params to be held constant, if any
     if(any(par_DF$optimize_param %in% FALSE &
            par_DF$use_param %in% TRUE)){
-      const_params <- par_DF %>%
-        dplyr::filter(optimize_param %in% FALSE &
-                        use_param %in% TRUE) %>%
-        dplyr::pull(start)
-
-      names(const_params) <- par_DF %>%
-        dplyr::filter(optimize_param %in% FALSE &
-                        use_param %in% TRUE) %>%
-        dplyr::pull(param_name)
+      const_params <- par_DF[which(!par_DF$optimize_param & par_DF$use_param),
+                             "start", drop = TRUE]
+      names(const_params) <- par_DF[which(!par_DF$optimize_param & par_DF$use_param),
+                                    "param_name", drop = TRUE]
     }else{
       const_params <- NULL
     }

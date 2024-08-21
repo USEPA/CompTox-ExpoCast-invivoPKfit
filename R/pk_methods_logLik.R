@@ -199,11 +199,13 @@ logLik.pk <- function(object,
   # time_scale_check
   if (any(!(newdata$Time_trans.Units %in% "hours"))) {
     message("logLik.pk(): Scaling these transformed time units back into hours for log-likelihood calculation, to match time units of coefficients")
+    if(!suppress.messages) {
+      print(newdata %>%
+              dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
+              dplyr::filter(Time.Units != Time_trans.Units) %>%
+              dplyr::distinct())
+    }
 
-    print(newdata %>%
-            dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
-            dplyr::filter(Time.Units != Time_trans.Units) %>%
-            dplyr::distinct())
   }
 
     newdata <- newdata %>%
