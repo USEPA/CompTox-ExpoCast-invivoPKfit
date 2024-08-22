@@ -5,12 +5,12 @@
 \title{Data info settings}
 \usage{
 settings_data_info(
-  nca_group = dplyr::vars(Chemical, Species, Reference, Route, Media, Dose),
+  summary_group = dplyr::vars(Chemical, Species, Reference, Route, Media, Dose),
   ...
 )
 }
 \arguments{
-\item{nca_group}{A set of variables. Data will be split into groups according
+\item{summary_group}{A set of variables. Data will be split into groups according
 to unique combinations of these variables, and non-compartmental analysis
 will be performed separately on each group. Default `dplyr::vars(Chemical,
 Species, Reference, Route, Media, Dose)`.}

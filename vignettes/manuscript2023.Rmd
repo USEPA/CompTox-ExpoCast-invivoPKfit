@@ -50,7 +50,8 @@ my_pk <- readRDS(paste0(Sys.getenv("OD_DIR"),
                  "mypk_fit_111h.rds"))
 
 clr_pk <- readRDS(paste0(Sys.getenv("OD_DIR"),
-                 "pkfit_111h.rds"))
+                         "pkfits_feature_clrtest/",
+                         "pkfit_111h.rds"))
 ```
 
 

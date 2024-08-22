@@ -10,6 +10,7 @@
   model = NULL,
   method = NULL,
   use_scale_conc = FALSE,
+  time_trans = FALSE,
   log10_C = NULL,
   plot_data_aes = NULL,
   plot_point_aes = NULL,
@@ -87,10 +88,10 @@ each observed time point. Default 10.}
 
 \item{fit_limits}{Default `NULL`. c(Upper Bound, Lower Bound).
 Supply a numeric vector. These values filter the predicted
-values for fits to not exceed 1.5 of the maximum observed concentration values
+values for fits to not exceed 2.25x of the maximum observed concentration values
 for each `data_group` in the `pk` object. When there is a log10 transformation
 of concentration values, it limits predicted values to 1/20th of the minimum
-observed concentration values.}
+observed concentration values and 5 times the maximum value.}
 
 \item{print_out}{For plotting: whether the output of the function should be
 the list of plots. Default `FALSE`.}

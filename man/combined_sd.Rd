@@ -10,20 +10,20 @@ combined_sd(
   group_n,
   unbiased = TRUE,
   na.rm = TRUE,
-  log = FALSE
+  log10 = FALSE
 )
 }
 \arguments{
 \item{group_mean}{Numeric vector: Observed sample means for summary data, or
 observed values for non-summary data. Censored observations should *not* be
 NA; they should be substituted with some value at or below the
-corresponding LOQ (e.g. LOQ or LOQ/2). Even if `log %in% TRUE`, these
-should *not* be log-transformed.}
+corresponding LOQ (e.g. LOQ or LOQ/2). Even if `log10 %in% TRUE`, these
+should *not* be log10-transformed.}
 
 \item{group_sd}{Numeric vector: Observed sample SDs for summary data. For
 non-summary data (individual-subject observations), the corresponding
-element of `group_sd` should be set to 0. Even if `log %in% TRUE`, these
-should *not* be log-transformed.}
+element of `group_sd` should be set to 0. Even if `log10 %in% TRUE`, these
+should *not* be log10-transformed.}
 
 \item{group_n}{Numeric vector: Observed sample number of subjects for summary
 data. For non-summary data (individual-subject observations), `group_n`
@@ -41,7 +41,7 @@ also the biased estimator of the combined population SD.}
 N were NA will be dropped. If FALSE, they will be retained (and the result
 will be NA).}
 
-\item{log}{Logical. If TRUE the standard deviations are from log-transformed values.}
+\item{log10}{Logical. If TRUE, the standard deviations are from log10-transformed values.}
 }
 \value{
 Numeric: the standard deviation of the combined population (i.e. if

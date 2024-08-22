@@ -12,7 +12,7 @@
 \item{...}{Additional arguments. Currently not in use.}
 }
 \value{
-A `data.frame`: the `data` element of `obj`
+A `list` of `tibble`s: the `data_info` element of `obj`
 }
 \description{
 Extract summary data information results from a [pk()] object

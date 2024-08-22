@@ -47,7 +47,7 @@ A numeric scalar: the root mean squared error (RMSE) for this set of
 Calculate RMSE when observed data may be left-censored (non-detect) or may be
 reported in summary form (as sample mean, sample standard deviation, and
 sample number of subjects). Additionally, handle the situation when observed
-data and predictions need to be log-transformed before RMSE is calculated.
+data and predictions need to be log10-transformed before RMSE is calculated.
 }
 \details{
 RMSE is calculated using the following formula, to properly handle summary
@@ -87,23 +87,23 @@ predicted value, for an effective error of zero.
 If the observed value is censored, and the predicted value is greater than
 the reported LOQ, the the observed value is set equal to the reported LOQ.
 
-# Log transformation
+# Log10 transformation
 
 If `log10_trans %in% TRUE`, then both the observed and predicted values will be
-(natural) log-transformed before calculating the RMSE. In the case where
+log10-transformed before calculating the RMSE. In the case where
 observed values are reported in summary format, each sample mean and sample
 SD (reported on the natural scale, i.e. the mean and SD of natural-scale
-individual observations) are used to produce an estimate of the log-scale
-sample mean and sample SD (i.e., the mean and SD of log-transformed
+individual observations) are used to produce an estimate of the log10-scale
+sample mean and sample SD (i.e., the mean and SD of log10-transformed
 individual observations), using [convert_summary_to_log10()].
 
 The formulas are as follows. Again, \eqn{\bar{y}_i} is the sample mean for
 group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.
 
-\deqn{\textrm{log-scale sample mean}_i = \log
+\deqn{\textrm{log10-scale sample mean}_i = \log_{10}
 \left(\frac{\bar{y}_i^2}{\sqrt{\bar{y}_i^2 + s_i^2}} \right)}
 
-\deqn{\textrm{log-scale sample SD}_i = \sqrt{\log \left(1 +
+\deqn{\textrm{log10-scale sample SD}_i = \sqrt{\log_{10} \left(1 +
 \frac{s_i^2}{\bar{y}_i^2} \right)}}
 }
 \author{

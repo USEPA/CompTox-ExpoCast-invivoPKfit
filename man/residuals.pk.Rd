@@ -21,10 +21,7 @@
 predictions and compute residuals. If NULL (the default), then residuals
 will be computed for the data in `obj$data`. `newdata` is required to
 contain at least the following variables: `Time`, `Time.Units`, `Dose`,
-`Route`, `Media`, `Conc`, `Detect`. If variable `Time_trans` is not
-present, then `Time` will be transformed according to the transformation in
-`obj$scales$time` before making predictions; otherwise, `Time_trans` will
-be used to make predictions.}
+`Route`, `Media`, `Conc`, `Detect`.}
 
 \item{model}{Optional: Specify one or more of the fitted models for which to
 make predictions and calculate residuals. If NULL (the default), residuals
@@ -45,10 +42,12 @@ exclusion. Default `TRUE`.}
 elements `dose_norm` and `log10_trans` which themselves should be either
 `TRUE` or `FALSE`. If `use_scale_conc = TRUE`, then the concentration
 scaling/transformations in `obj` will be applied to both predicted and
-observed concentrations before the log-likelihood is computed. If
-`use_scale_conc = FALSE` (the default for this function), then no
-concentration scaling or transformation will be applied before the
-log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
+observed concentrations before the residuals are computed (i.e., the
+residuals will be computed on the same scale as the model was originally
+fitted). If `use_scale_conc = FALSE` (the default for this function), then
+no concentration scaling or transformation will be applied before the
+residuals are computed (i.e., the residuals will be computed on natural
+scale concentration data). If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
 

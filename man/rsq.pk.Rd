@@ -10,7 +10,8 @@
   model = NULL,
   method = NULL,
   exclude = TRUE,
-  use_scale_conc = TRUE,
+  use_scale_conc = FALSE,
+  rsq_group = NULL,
   ...
 )
 }
@@ -21,10 +22,7 @@
 predictions and compute RMSsE. If NULL (the default), then R-squared will be
 computed for the data in `obj$data`. `newdata` is required to contain at
 least the following variables: `Time`, `Time.Units`, `Dose`, `Route`,
-`Media`, `Conc`, `Conc_SD`, `N_Subjects`, `Detect`. If variable
-`Time_trans` is not present, then `Time` will be transformed according to
-the transformation in `obj$scales$time` before making predictions;
-otherwise, `Time_trans` will be used to make predictions.}
+`Media`, `Conc`, `Conc_SD`, `N_Subjects`, `Detect`.}
 
 \item{model}{Optional: Specify one or more of the fitted models for which to
 make predictions and calculate R-squared. If NULL (the default), R-squared will be
@@ -41,16 +39,21 @@ data, an observation is marked for exclusion when `exclude %in% TRUE`).
 `FALSE` to include all observations, regardless of exclusion status.
 Default `TRUE`.}
 
-\item{use_scale_conc}{Possible values: `TRUE`, `FALSE`, or a named list with
+\item{use_scale_conc}{Possible values: `TRUE` (default), `FALSE`, or a named list with
 elements `dose_norm` and `log10_trans` which themselves should be either
 `TRUE` or `FALSE`. If `use_scale_conc = TRUE` (the default for this
 function), then the concentration scaling/transformations in `obj` will be
-applied to both predicted and observed concentrations before the
-R-squared is computed. If `use_scale_conc = FALSE`, then no
-concentration scaling or transformation will be applied before the
+applied to both predicted and observed concentrations when the
+R-squared is computed (see [calc_rsq()] for details). If `use_scale_conc = FALSE`, then no
+concentration scaling or transformation will be applied when the
 R-squared is computed. If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
+
+\item{rsq_group}{Default: Chemical, Species. Determines what the data
+grouping that is used to calculate R-squared value. Should be set to lowest number
+of variables that still would return unique experimental conditions.
+Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.}
 
 \item{...}{Additional arguments. Not currently in use.}
 }
@@ -134,24 +137,28 @@ reported LOQ, for an effective error of (LOQ - predicted).
 
 # Log10 transformation
 
-If `log10_trans %in% TRUE`, then both the observed and predicted values will
-be (natural) log-transformed before calculating the RMSE. In the case where
-observed values are reported in summary format, each sample mean and sample
-SD (reported on the natural scale, i.e. the mean and SD of natural-scale
-individual observations) are used to produce an estimate of the log-scale
-sample mean and sample SD (i.e., the mean and SD of log-transformed
-individual observations), using [convert_summary_to_log10()].
+If `log10_trans %in% TRUE`, then R-squared is computed for
+  log10(observations) vs. log10(predictions).
+
+In the case where observed values are reported in summary format, each sample
+mean and sample SD (reported on the natural scale, i.e. the mean and SD of
+natural-scale individual observations) are used to produce an estimate of the
+log10-scale sample mean and sample SD (i.e., the mean and SD of
+log10-transformed individual observations), using
+[convert_summary_to_log10()].
 
 The formulas are as follows. Again, \eqn{\bar{y}_i} is the sample mean for
 group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.
 
-\deqn{\textrm{log-scale sample mean}_i = \log
+\deqn{\textrm{log10-scale sample mean}_i = \log_{10}
 \left(\frac{\bar{y}_i^2}{\sqrt{\bar{y}_i^2 + s_i^2}} \right)}
 
-\deqn{\textrm{log-scale sample SD}_i = \sqrt{\log \left(1 +
+\deqn{\textrm{log10-scale sample SD}_i = \sqrt{\log_{10} \left(1 +
 \frac{s_i^2}{\bar{y}_i^2} \right)}}
 }
 \seealso{
+[calc_rsq()]
+
 Other fit evaluation metrics: 
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},

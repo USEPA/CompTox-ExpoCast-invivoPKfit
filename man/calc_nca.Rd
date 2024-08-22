@@ -11,7 +11,7 @@ calc_nca(time, conc, detect, series_id = NULL, dose, route, method = "z", ...)
 
 \item{conc}{A numeric vector of concentrations. If detected (above limit of
 detection/quantification), contains the measured value; if not detected
-(below lLOD/LOQ), contains the LOD/LOQ.}
+(below LOD/LOQ), contains the LOD/LOQ.}
 
 \item{detect}{A logical vector: Whether each concentration was detected
 (above LOD/LOQ) or not.}

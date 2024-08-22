@@ -23,10 +23,7 @@
 \item{newdata}{Optional: A `data.frame` with new data for which to make
 predictions. If NULL (the default), then predictions will be made for the
 data in `obj$data`. `newdata` is required to contain at least the following
-variables: `Time`, `Time.Units`, `Dose`, `Route`, and `Media`. If variable
-`Time_trans` is not present, then `Time` will be transformed according to
-the transformation in `obj$scales$time` before making predictions;
-otherwise, `Time_trans` will be used to make predictions.}
+variables: `Time`, `Time.Units`, `Dose`, `Route`, and `Media`.}
 
 \item{model}{Optional: Specify one or more of the fitted models for which to
 make predictions. If NULL (the default), predictions will be returned for

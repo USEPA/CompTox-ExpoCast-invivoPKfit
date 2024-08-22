@@ -36,7 +36,7 @@ Default `NULL` to return TK stats for all methods.}
 The data (either `newdata` or `obj$data`) will be grouped according to the
 unique combinations of these variables. For each unique combination of
 these variables in the data, a set of TK statistics will be computed. The
-default is `obj$settings_data_info$nca_group`, to derive TK statistics for
+default is `obj$settings_data_info$summary_group`, to derive TK statistics for
 the same groups of data as non-compartmental analysis statistics. With the
 default, you can directly compare e.g. a model-predicted AUC_inf to the
 corresponding NCA-estimated AUC_inf. However, you may specify a different

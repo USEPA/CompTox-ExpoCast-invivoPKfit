@@ -204,12 +204,13 @@ rsq.pk <- function(obj,
     }
   }
 
-  req_vars <- c(union(names(preds),rsq_group_char),
-                "Conc",
-                "Conc_SD",
-                "N_Subjects",
-                "Detect",
-                "exclude")
+req_vars <- unique(c(names(preds),
+                     rsq_group_char,
+                     "Conc",
+                     "Conc_SD",
+                     "N_Subjects",
+                     "Detect",
+                     "exclude"))
 
 
   new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
@@ -246,7 +247,7 @@ rsq.pk <- function(obj,
     dplyr::ungroup()
 
   message("rsq.pk)(): Groups: \n",
-          paste(sapply(unlist(rsq_group), rlang::as_label),
+          paste(rsq_group_char,
                 collapse = ", "),
           ", ", " method, model")
 

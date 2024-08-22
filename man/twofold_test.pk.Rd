@@ -4,21 +4,28 @@
 \alias{twofold_test.pk}
 \title{Evaluate whether data and predictions are within two-fold of mean or concentration, respectively}
 \usage{
-\method{twofold_test}{pk}(obj, newdata = NULL, suppress_messages = FALSE)
+\method{twofold_test}{pk}(obj, suppress_messages = FALSE)
 }
 \arguments{
 \item{obj}{A pk object.}
 
-\item{newdata}{A data.frame with new data. Uses the same column names as obj$data}
-
 \item{suppress_messages}{Logical, default: FALSE.
-Should there be no printed message output?}
+Should there be no printed output?}
 }
 \value{
 A list of data frames.
 }
 \description{
-Evaluate whether data and predictions are within two-fold of mean or concentration, respectively
+First this creates mean-normalized concentrations for individual data.
+Then it summarizes data (individual & summarized) by `mean` and `sd`.
+It tests whether predictions are within two-fold of mean,
+in the latter case whether the 95% of observations are within 2-fold.
+}
+\details{
+Furthermore if `pk` object `status == 5` then it calculates the model error by
+evaluating _prediction/concentration_ at each timepoint for all data. Each test
+is done for data from individual subject observations and for all data by summarizing the
+observations.
 }
 \author{
 Gilberto Padilla Mercado

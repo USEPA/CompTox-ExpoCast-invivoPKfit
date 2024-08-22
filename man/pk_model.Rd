@@ -19,35 +19,35 @@ pk_model(
 )
 }
 \arguments{
-\item{name}{Character: The name of the model}
+\item{name}{Character: The name of the model.}
 
-\item{params}{Character vector: Parameter names of the model}
+\item{params}{Character vector: Parameter names of the model.}
 
-\item{conc_fun}{Name of a function to predict tissue concentrations. See
+\item{conc_fun}{Character: Name of the function to predict tissue concentrations using this model. See
 Details for requirements.}
 
-\item{auc_fun}{Name of the function to predict AUC (area under the
-concentration-time curve). See Details for requirements.}
+\item{auc_fun}{Character: Name of the function to predict AUC (area under the
+concentration-time curve) using this model. See Details for requirements.}
 
-\item{params_fun}{Name of the function that produces the `data.frame` of
-parameter info (see Details)}
+\item{params_fun}{Character: Name of the function that produces the `data.frame` of
+parameter info for this model (see Details)}
 
-\item{tkstats_fun}{Name of the function that produces a`data.frame` of derived
-TK statistics (see Details)}
+\item{tkstats_fun}{Character: Name of the function that produces a`data.frame` of derived
+TK statistics for this model (see Details)}
 
-\item{conc_fun_args}{Any additional arguments to `conc_fun` other than those
-listed in Details. Default NULL.}
+\item{conc_fun_args}{A named list: any additional arguments to `conc_fun` other than those
+listed in Details. Default `NULL`.}
 
-\item{auc_fun_args}{Any additional arguments to `auc_fun` other those those
-listed in Details. Default NULL.}
+\item{auc_fun_args}{A named list: any additional arguments to `auc_fun` other those those
+listed in Details. Default `NULL`.}
 
-\item{params_fun_args}{Any additional arguments to `params_fun` other than
-`data` (see Details). Default NULL.}
+\item{params_fun_args}{A named list: any additional arguments to `params_fun` other than
+`data` (see Details). Default `NULL`.}
 
-\item{tkstats_fun_args}{Any additional arguments to `tkstats_fun` other than
+\item{tkstats_fun_args}{A named list: any additional arguments to `tkstats_fun` other than
 `data`, `medium`, `route` (see Details). Default NULL.}
 
-\item{...}{Additional arguments not currently implement.}
+\item{...}{Additional arguments (not currently implemented).}
 }
 \value{
 An object of class `pk_model`. Effectively, a named list containing

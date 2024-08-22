@@ -32,10 +32,12 @@ Lower bounds for each "sigma" hyperparameter are set to `sqrt(.Machine$double_ep
 
 Upper bounds for each "sigma" hyperparameter are calculated as the standard
 deviation of observations in the corresponding error SD group (see
-[combined_sd()]). If the combined SD is non-finite or less than the sigma
-lower bound, then the combined SD of all non-excluded data is substituted. If
-that is still non-finite or less then the sigma lower bound, then a constant
-value of 100 is substituted.
+[combined_sd()]), with any specified transformations applied
+(dose-normalization and/or log10-transformation). If the combined SD is
+non-finite or less than the sigma lower bound, then the maximum concentration
+is used as an upper bound; if this still returns a non-finite value or a
+value less than the lower bound, then a constant value of 1000 is
+substituted.
 
 The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
 }
