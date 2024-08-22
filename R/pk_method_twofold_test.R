@@ -1,5 +1,15 @@
 #' Evaluate whether data and predictions are within two-fold of mean or concentration, respectively
 #'
+#' At each timepoint across CvT experimental data, there are three ways that data may
+#' be presented. These can be found as either:
+#' - multiple individual observations
+#' - single individual observation
+#' - summarized group of observations (mean concentration and standard deviation)
+#'
+#' For the purposes of this calculations we largely divide the data into two groups,
+#' those with individual observations, where N_Subjects == 1, and the summarized
+#' group of observations.
+#'
 #' First this creates mean-normalized concentrations for individual data.
 #' Then it summarizes data (individual & summarized) by `mean` and `sd`.
 #' It tests whether predictions are within two-fold of mean,
@@ -68,29 +78,40 @@ twofold_test.pk <- function(obj,
 
   # Find how many observations per Chemical + Species + Route + Media + Dose
   data_counts <- aggregate(
-    Conc ~ Chemical + Species + Reference + Route + Media + Dose + Time,
+    Conc ~ Chemical + Species + Reference + Route + Media + Dose + Time + N_Subjects,
     data = data_cvt,
     FUN = NROW)
   names(data_counts)[names(data_counts) == 'Conc'] <- 'Count'
 
-  # There must be at least 2 values per timepoint for individual data
-  data_counts <- subset(data_counts, subset = Count > 1)
+  # There must be at least 2 values per timepoint for individual data or else
+  # Conc = mean(Conc)
+  indiv_counts <- subset(data_counts, subset = (Count > 1 & N_Subjects == 1))
+  # I will also save the individual single obsevations
+  single_counts <- subset(data_counts, subset = (Count == 1 & N_Subjects == 1))
 
+  # Each summarized group of observations should have multiple subjects
+  sgo_counts <- subset(data_counts, subset = (N_Subjects > 1))
 
   # For individual data, can only summarize if there are multiple observations per timepoint
   # Note we only use data_counts filtering left join with individual data
-  indiv_data <- merge(data_counts[names(data_counts) != 'Count'],
-                      subset(data_cvt, subset = ((N_Subjects == 1 | is.na(N_Subjects)) &
-                                                  Conc_SD == 0)),
+  indiv_data <- merge(indiv_counts[names(indiv_counts) != 'Count'],
+                      data_cvt,
                       all.x = TRUE)
 
   # Group data have multiple subjects per experimental timepoint
   # Must have some data variability described
-  group_data <- subset(data_cvt, subset = (N_Subjects >= 2 & Conc_SD > 0))
-  group_data['conc_mean'] <- group_data['Conc']
-  group_data['conc_sd'] <- group_data['Conc_SD']
+  sgo_data <- merge(sgo_counts[names(sgo_counts) != 'Count'],
+                      subset(data_cvt, subset = (Conc_SD > 0)),
+                      by = c("Chemical", "Species", "Reference",
+                             "Route", "Media", "Dose", "Time",
+                             "N_Subjects"))
 
-  # Calculate mean and standard deviation for individual data
+  sgo_data['conc_mean'] <- sgo_data['Conc']
+  sgo_data['conc_sd'] <- sgo_data['Conc_SD']
+
+
+  # Next I will deal with individual data and
+  # calculate mean and standard deviation for individual data
   indiv_data_summary <- do.call(data.frame,
                         aggregate(
                           Conc ~ Chemical + Species + Reference + Route + Media + Dose + Time,
@@ -108,12 +129,12 @@ twofold_test.pk <- function(obj,
 
   # Need to ensure both data.frames have the same colnames before rbind
   indiv_data_summary <- indiv_data_summary[c(intersect(names(indiv_data_summary),
-                                                       names(group_data)))]
-  group_data <- group_data[c(intersect(names(indiv_data_summary),
-                                       names(group_data)))]
+                                                       names(sgo_data)))]
+  sgo_data <- sgo_data[c(intersect(names(indiv_data_summary),
+                                       names(sgo_data)))]
 
-  # Combined data
-  total_data_summary <- rbind(indiv_data_summary, group_data)
+  # Combined summarized data
+  total_data_summary <- rbind(indiv_data_summary, sgo_data)
 
   total_data_summary['twofold_95'] <- with(total_data_summary,
                                    ifelse((conc_mean + (2*conc_sd))/conc_mean <= 2,
@@ -129,7 +150,7 @@ twofold_test.pk <- function(obj,
 
 
   # Add grouped mean of individual data to
-  id_mean <- merge(indiv_data_summary, indiv_data,
+  id_mean <- merge(indiv_data, indiv_data_summary,
                      all.x = TRUE)
 
   # Calculate the fold concentration from the mean
@@ -170,29 +191,27 @@ twofold_test.pk <- function(obj,
 
 
   # First three outputs
-  out_list[["Summarized Data Normal Test"]] <- tds_list
+  out_list[["Summarized Data Test"]] <- tds_list
   out_list[['Individual Data by Route']] <- id_twofold_route
   out_list[['Individual Data All']] <- id_total_twofold
 
-
+  browser()
 
 # If predictions are possible
   if (status == 5) {
-    winmodel <- suppressMessages(get_winning_model(obj = obj))
+    winmodel <- get_winning_model(obj = obj)
 
     # id_mean already has foldConc to test
-    # but needs exclude and Time.Units from initial data
+    # but needs exclude and Time.Units columns from initial data
     id_mean <- merge(id_mean,
                      data_cvt[vital_col])
 
-    pred_twofold <- merge(winmodel,
-                          predict(obj = obj,
-                                  newdata = id_mean,
-                                  use_scale_conc = FALSE,
-                                  by_timepoint = FALSE,
-                                  type = "conc"))
+    pred_win <- merge(winmodel,
+                      predict(obj = obj,
+                              type = "conc"))
 
 
+    # Note
     pred_twofold['foldPred'] <- with(pred_twofold,
                                      Conc_est / Conc)
 
@@ -256,7 +275,7 @@ twofold_test.pk <- function(obj,
     out_list[['Model Error by Method and Model']] <- both_routes
     out_list[['Model Error by Method']] <- all_models
 
-    browser()
+
 
     ##
     # This merge should have both foldPred AND foldConc
