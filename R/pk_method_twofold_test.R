@@ -88,9 +88,12 @@ twofold_test.pk <- function(obj,
   indiv_counts <- subset(data_counts, subset = (Count > 1 & N_Subjects == 1))
   # I will also save the individual single obsevations
   single_counts <- subset(data_counts, subset = (Count == 1 & N_Subjects == 1))
+  single_data <- merge(single_counts[names(single_counts) != 'Count'],
+                      data_cvt,
+                      all.x = TRUE)
 
-  # Each summarized group of observations should have multiple subjects
-  sgo_counts <- subset(data_counts, subset = (N_Subjects > 1))
+  # Each Summarized Group of Observations should have multiple subjects
+  sgroup_counts <- subset(data_counts, subset = (N_Subjects > 1))
 
   # For individual data, can only summarize if there are multiple observations per timepoint
   # Note we only use data_counts filtering left join with individual data
@@ -100,14 +103,24 @@ twofold_test.pk <- function(obj,
 
   # Group data have multiple subjects per experimental timepoint
   # Must have some data variability described
-  sgo_data <- merge(sgo_counts[names(sgo_counts) != 'Count'],
+  sgroup_data <- merge(sgroup_counts[names(sgroup_counts) != 'Count'],
                       subset(data_cvt, subset = (Conc_SD > 0)),
                       by = c("Chemical", "Species", "Reference",
                              "Route", "Media", "Dose", "Time",
                              "N_Subjects"))
 
-  sgo_data['conc_mean'] <- sgo_data['Conc']
-  sgo_data['conc_sd'] <- sgo_data['Conc_SD']
+  sgroup_data['conc_mean'] <- sgroup_data['Conc']
+  sgroup_data['conc_sd'] <- sgroup_data['Conc_SD']
+
+  # Merely for output, this is the multi-subject data without SD
+  sgroup_nsd_data <- merge(sgroup_counts[names(sgroup_counts) != 'Count'],
+                       subset(data_cvt, subset = (Conc_SD == 0)),
+                       by = c("Chemical", "Species", "Reference",
+                              "Route", "Media", "Dose", "Time",
+                              "N_Subjects"))
+
+  sgroup_nsd_data['conc_mean'] <- sgroup_nsd_data['Conc']
+  sgroup_nsd_data['conc_sd'] <- sgroup_nsd_data['Conc_SD']
 
 
   # Next I will deal with individual data and
@@ -129,27 +142,43 @@ twofold_test.pk <- function(obj,
 
   # Need to ensure both data.frames have the same colnames before rbind
   indiv_data_summary <- indiv_data_summary[c(intersect(names(indiv_data_summary),
-                                                       names(sgo_data)))]
-  sgo_data <- sgo_data[c(intersect(names(indiv_data_summary),
-                                       names(sgo_data)))]
+                                                       names(sgroup_data)))]
+  sgroup_data <- sgroup_data[c(intersect(names(indiv_data_summary),
+                                       names(sgroup_data)))]
 
-  # Combined summarized data
-  total_data_summary <- rbind(indiv_data_summary, sgo_data)
+  # Combined summarized data (indiv + sgroup)
+  total_data_summary <- rbind(indiv_data_summary, sgroup_data)
 
   total_data_summary['twofold_95'] <- with(total_data_summary,
                                    ifelse((conc_mean + (2*conc_sd))/conc_mean <= 2,
                                           TRUE, FALSE))
 
-  tds_list <- data.frame(
-    Data = "Individual and Summarized Data",
-    within_twofold_95 = 100*sum(total_data_summary['twofold_95'])/nrow(total_data_summary),
-    outside_twofold_95 = 100*sum(!total_data_summary['twofold_95'])/nrow(total_data_summary))
+  twofold_95 <- do.call(data.frame,
+                        aggregate(twofold_95 ~ Route,
+                                  data = total_data_summary,
+                                  FUN = \(x) {
+                                    c(within = sum(x),
+                                      outside = sum(!x))
+                                  }))
+  names(twofold_95) <- gsub(pattern = "\\.",
+                                  replacement = "_",
+                                  x = names(twofold_95))
+
+  twofold_95 <- rbind(twofold_95,
+                      data.frame(Route = "All",
+                                 twofold_95_within = with(twofold_95,
+                                                          sum(twofold_95_within)),
+                                 twofold_95_outside = with(twofold_95,
+                                                           sum(twofold_95_outside))
+                      )
+  )
+  ### General Test Summary of Data that are NOT single observation per timepoint
+  twofold_95 <- rowwise_calc_percentages(twofold_95, group_cols = "Route")
+  ###
 
   # Use indiv_data (id_) for individual data evaluations
   # Use total_data_summary (tds_) for summarized data evaluations
-
-
-  # Add grouped mean of individual data to
+  # Add grouped mean of individual data to indiv_data
   id_mean <- merge(indiv_data, indiv_data_summary,
                      all.x = TRUE)
 
@@ -173,12 +202,10 @@ twofold_test.pk <- function(obj,
                                     replacement = "",
                                     x = names(id_twofold_route))
 
-  id_twofold_route <- twofold_calc_percentages(id_twofold_route)
-
 
   # Also need a row for total
   id_total_twofold <- data.frame(
-    Route = "Both",
+    Route = "All",
     above_twofold = with(id_twofold_route,
                          sum(above_twofold)),
     within_twofold = with(id_twofold_route,
@@ -187,58 +214,56 @@ twofold_test.pk <- function(obj,
                          sum(below_twofold))
   )
 
-  id_total_twofold <- twofold_calc_percentages(id_total_twofold)
+  ### Combine into single data.frame
+  id_total_twofold <- rbind(id_twofold_route, id_total_twofold)
+
+  id_total_twofold <- rowwise_calc_percentages(id_total_twofold,
+                                               group_cols = "Route")
 
 
-  # First three outputs
-  out_list[["Summarized Data Test"]] <- tds_list
-  out_list[['Individual Data by Route']] <- id_twofold_route
-  out_list[['Individual Data All']] <- id_total_twofold
+  # First two outputs
+  out_list[["Summarized Data Test"]] <- twofold_95
+  out_list[['Individual Data Test']] <- id_total_twofold
+  out_list[['Individual Data Multiple Observations']] <- id_mean
+  out_list[['Individual Data Single Observation']] <- single_data
+  out_list[['Summarized Data with SD']] <- sgroup_data
+  out_list[['Summarized Data without SD']] <- sgroup_nsd_data
 
-  browser()
 
 # If predictions are possible
   if (status == 5) {
     winmodel <- get_winning_model(obj = obj)
 
-    # id_mean already has foldConc to test
-    # but needs exclude and Time.Units columns from initial data
-    id_mean <- merge(id_mean,
-                     data_cvt[vital_col])
-
     pred_win <- merge(winmodel,
-                      predict(obj = obj,
-                              type = "conc"))
-
-
-    # Note
-    pred_twofold['foldPred'] <- with(pred_twofold,
-                                     Conc_est / Conc)
-
-
+                      suppressMessages(fold_errors(obj = obj,
+                                                   type = "conc"))
+    )
 
     # Make a table of values with percent within or outside factors of two
     # Summarizing number of fold concentrations from the mean
-    pred_twofold_summary <- do.call(data.frame,
-                                    aggregate(foldPred ~ Route + model + method,
-                                              data = pred_twofold,
-                                              FUN = \(x) {
-                                                c(
-                                                  above_twofold = sum(x > 2),
-                                                  within_twofold = sum(x >= 0.5 & x <= 2),
-                                                  below_twofold = sum(x < 0.5)
-                                                )
-                                              }
-                                    ))
+    # Here I really only care about 1- and 2-compartment models
+    pred_twofold_summary <- do.call(
+      data.frame,
+      aggregate(Fold_Error ~ Route + model + method,
+                data = subset(pred_win,
+                              subset = (model %in% c("model_1comp", "model_2comp"))),
+                FUN = \(x) {
+                  c(
+                    above_twofold = sum(x > 2),
+                    within_twofold = sum(x >= 0.5 & x <= 2),
+                    below_twofold = sum(x < 0.5)
+                  )
+                }
+      ))
 
-    names(pred_twofold_summary) <- gsub(pattern = "foldPred.",
+    names(pred_twofold_summary) <- gsub(pattern = "Fold_Error.",
                                         replacement = "",
                                         x = names(pred_twofold_summary))
-    pred_twofold_summary <- twofold_calc_percentages(pred_twofold_summary)
 
     ###
     # Get totals for models + method
-    both_routes <- cbind(
+    all_routes <- cbind(
+      Route = "All",
       merge(
         merge(
           aggregate(above_twofold ~ model + method,
@@ -247,15 +272,15 @@ twofold_test.pk <- function(obj,
                     pred_twofold_summary, sum)
         ),
         aggregate(below_twofold ~ model + method,
-                  pred_twofold_summary, sum),
+                  pred_twofold_summary, sum)
       ))
-    both_routes <- twofold_calc_percentages(both_routes)
 
 
     ###
     # Get totals for method
     all_models <- cbind(
-      model = "All",
+      Route = "All",
+      model = "1- & 2-comp",
       merge(
         merge(
           aggregate(above_twofold ~ method,
@@ -264,41 +289,43 @@ twofold_test.pk <- function(obj,
                     pred_twofold_summary, sum)
         ),
         aggregate(below_twofold ~ method,
-                  pred_twofold_summary, sum),
+                  pred_twofold_summary, sum)
       ))
 
-    all_models <- twofold_calc_percentages(all_models)
+    full_pred_twofold <- rbind(pred_twofold_summary,
+                               all_routes,
+                               all_models)
+
+    full_pred_twofold <- rowwise_calc_percentages(full_pred_twofold,
+                                                  group_cols = c("Route",
+                                                                 "model",
+                                                                 "method"))
 
     ##
     # Output these data.frames
-    out_list[['Model Error by Route']] <- pred_twofold_summary
-    out_list[['Model Error by Method and Model']] <- both_routes
-    out_list[['Model Error by Method']] <- all_models
-
-
+    out_list[['Model Error Twofold Summary']] <- full_pred_twofold
+    out_list[["Model Error Full"]] <- pred_win
 
     ##
-    # This merge should have both foldPred AND foldConc
-    # However, it also has multiple
-    data_preds <- merge(pred_twofold,
-                        data_mean)
+    # This merge should have both Fold_Error AND foldConc
+    data_preds <- merge(id_mean, pred_win, all.x = TRUE)
 
-    data_preds['both_within'] <- ((data_preds$foldPred >= 0.5 &
-                                     data_preds$foldPred <= 2) &
+    data_preds['both_within'] <- ((data_preds$Fold_Error >= 0.5 &
+                                     data_preds$Fold_Error <= 2) &
                                     (data_preds$foldConc >= 0.5 &
                                        data_preds$foldConc <= 2))
 
-    data_preds['both_outside'] <- ((data_preds$foldPred < 0.5 |
-                                      data_preds$foldPred > 2) &
+    data_preds['both_outside'] <- ((data_preds$Fold_Error < 0.5 |
+                                      data_preds$Fold_Error > 2) &
                                      (data_preds$foldConc < 0.5 |
                                         data_preds$foldConc > 2))
 
-    data_preds['model_outside'] <- ((data_preds$foldPred < 0.5 |
-                                       data_preds$foldPred > 2) &
+    data_preds['model_outside'] <- ((data_preds$Fold_Error < 0.5 |
+                                       data_preds$Fold_Error > 2) &
                                       (data_preds$foldConc >= 0.5 |
                                          data_preds$foldConc <= 2))
-    data_preds['data_outside'] <- ((data_preds$foldPred >= 0.5 |
-                                      data_preds$foldPred <= 2) &
+    data_preds['data_outside'] <- ((data_preds$Fold_Error >= 0.5 |
+                                      data_preds$Fold_Error <= 2) &
                                      (data_preds$foldConc < 0.5 |
                                         data_preds$foldConc > 2))
 
@@ -313,8 +340,78 @@ twofold_test.pk <- function(obj,
                                    data = data_preds,
                                    FUN = \(x) {sum(x + 0)}))
 
-    data_pred_summary <- twofold_calc_percentages(data_pred_summary)
+    data_pred_summary <- rbind(
+      data_pred_summary,
+      cbind(
+        model = "1- & 2-comp",
+        merge(
+          merge(
+            merge(
+              aggregate(both_within ~ method,
+                        subset(data_pred_summary,
+                               subset = (model %in% c("model_1comp",
+                                                      "model_2comp"))), sum),
+              aggregate(both_outside ~ method,
+                        subset(data_pred_summary,
+                               subset = (model %in% c("model_1comp",
+                                                      "model_2comp"))), sum)
+            ),
+            aggregate(model_outside ~ method,
+                      subset(data_pred_summary,
+                             subset = (model %in% c("model_1comp",
+                                                    "model_2comp"))), sum)
+          ),
+          aggregate(data_outside ~ method,
+                    subset(data_pred_summary,
+                           subset = (model %in% c("model_1comp",
+                                                  "model_2comp"))), sum)
+        )
+      )
+    )
 
+
+    data_pred_summary <- rowwise_calc_percentages(data_pred_summary,
+                                                  group_cols = c("model",
+                                                                 "method"))
+
+    out_list[['Individual Data and Fold_Errors']] <- data_preds
+    out_list[['ID Test and Fold Errors']] <- data_pred_summary
+
+    ###
+    # Here is when we take the 95% within two-fold summary data into account
+    data95_preds <- merge(total_data_summary, pred_win, all.x = TRUE)
+
+    data95_preds['both_within'] <- ((data95_preds$Fold_Error >= 0.5 &
+                                       data95_preds$Fold_Error <= 2) &
+                                      (data95_preds$twofold_95))
+
+    data95_preds['both_outside'] <- ((data95_preds$Fold_Error < 0.5 |
+                                        data95_preds$Fold_Error > 2) &
+                                       !(data95_preds$twofold_95))
+
+    data95_preds['model_outside'] <- ((data95_preds$Fold_Error < 0.5 |
+                                         data95_preds$Fold_Error > 2) &
+                                        (data95_preds$twofold_95))
+    data95_preds['data_outside'] <- ((data95_preds$Fold_Error >= 0.5 |
+                                        data95_preds$Fold_Error <= 2) &
+                                       !(data95_preds$twofold_95))
+
+    # Make a table of values with percent within or outside factors of two
+    # Summarizing number of fold concentrations from the mean
+    data95_pred_summary <- do.call(data.frame,
+                                 aggregate(
+                                   cbind(both_within,
+                                         both_outside,
+                                         model_outside,
+                                         data_outside) ~ model + method,
+                                   data = data95_preds,
+                                   FUN = \(x) {sum(x + 0)}))
+
+    data95_pred_summary <- rowwise_calc_percentages(data95_pred_summary,
+                                                  group_cols = c("model",
+                                                                 "method"))
+
+    out_list[['Summarized Data Test with Fold Errors']] <- data95_pred_summary
 
     ###
   } else { # This is the case where the model has not been fit
@@ -322,81 +419,66 @@ twofold_test.pk <- function(obj,
     warning("pk object not fit, unable to run metrics for predictions")
   }
 
-  out_list[['Data with foldConc and foldPreds']] <- data_preds
-  out_list[['foldPreds only']] <- pred_twofold
-
   if (!suppress_messages) {
     cat("\n\n")
-    message("Data Summary of 95% of mean-normalized Concentrations within 2-fold")
-    print(out_list[['data_95_twofold']])
+    message("Data Summary of 95% of mean-normalized Concentrations within 2-fold Test")
+    print(out_list[['Summarized Data Test']])
 
     # Print the summaries
     cat("\n\n")
-    message("Data Summary of Fold Concentration from Mean")
-    print(out_list[['data_fold_summary']])
+    message("Result: Individual Data Fold Concentration from Mean 2-fold Test")
+    print(out_list[['Individual Data Test']])
 
     if (status == 5) {
       cat("\n\n")
-      message("Prediction / Concentration Summary")
-      print(out_list[['pred_fold_summary']])
+      message("Result: Model Fold Error Summary")
+      print(out_list[['Model Error Twofold Summary']])
+
+      cat("\n\n")
+      message("Result: Individual Data and Model Error Test")
+      print(out_list[['ID Test and Fold Errors']])
+
+      cat("\n\n")
+      message("Result: Summary Data and Model Error Test")
+      print(out_list[['Summarized Data Test with Fold Errors']])
     }
   }
 
-  return(out_list)
+  invisible(out_list)
 }
 
 
 
-# This function takes totals and calculates rowise percentages across columns
-twofold_calc_percentages <- function(data) {
-  if (all(
-    c("above_twofold",
-      "within_twofold",
-      "below_twofold") %in% names(data))) {
 
-    data['total_twofold'] <-  with(data,
-                                   above_twofold + within_twofold + below_twofold)
-    # Calculate percentages
-    data['percent_above'] <- with(data,
-                                  signif(
-                                    100 * above_twofold / total_twofold,
-                                    4))
-    data['percent_below'] <- with(data,
-                                  signif(
-                                    100 * below_twofold / total_twofold,
-                                    4))
-    data['percent_within'] <- with(data,
-                                   signif(
-                                     100 * within_twofold / total_twofold,
-                                     4))
-
-    return(data)
-  } else if (all(
-    c("both_within", "both_outside",
-      "model_outside", "data_outside") %in% names(data)
-  )) {
-    data['total_twofold'] <-  with(data,
-                                   both_within + both_outside + model_outside + data_outside)
-    # Calculate percentages
-    data['percent_both_win'] <- with(data,
-                                     signif(
-                                       100 * both_within / total_twofold,
-                                       4))
-    data['percent_both_out'] <- with(data,
-                                     signif(
-                                       100 * both_outside / total_twofold,
-                                       4))
-    data['percent_model_out'] <- with(data,
-                                      signif(
-                                        100 * model_outside / total_twofold,
-                                        4))
-    data['percent_data_out'] <- with(data,
-                                     signif(
-                                       100 * data_outside / total_twofold,
-                                       4))
-    return(data)
+#' Helper function for calculating percentages of count data, by row
+#'
+#' This function takes totals and calculates rowise percentages across columns
+#' Expects columns for each percentage, can specify a vector of "grouping" column names
+#'
+#' @param data A data.frame that contains columns of count data and
+#' possibly columns of group names.
+#' @param group_cols String or numeric indices for the columns which contain
+#' grouping variables.
+#'
+#' @return data.frame with rowwise totals and percentages
+rowwise_calc_percentages <- function(data,
+                                     group_cols = NULL) {
+  if (!is.null(group_cols)) {
+    if (is.list(group_cols)) group_cols <- unlist(group_cols)
+    group_cols <- unique(group_cols)
+    op_cols <- setdiff(names(data), names(data[group_cols]))
   } else {
-    stop("The are some missing columns!")
+    op_cols <- names(data)
   }
-}
 
+  # Calculate total
+
+  data$total <-  apply(data[op_cols], 1, sum)
+
+  # Calculate percentages
+  data[paste0("percent_", op_cols)] <- apply(data[op_cols], 2,
+                                             \(x) signif(100 * x / data$total,
+                                                         4))
+
+  return(data)
+}
