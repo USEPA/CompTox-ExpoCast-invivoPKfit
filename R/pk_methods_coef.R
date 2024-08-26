@@ -143,9 +143,9 @@ coef.pk <- function(obj,
 
   # include NA values from aborted fits
   if (!include_NAs) {
-    no_fits <- obj$prefit$fit_check %>%
+    no_fits <- suppressMessages(obj$prefit$fit_check %>%
       dplyr::filter(fit_decision %in% "abort") %>%
-      dplyr::select(model, Chemical, Species)
+      dplyr::select(model, Chemical, Species))
     coefs_tidy <- suppressMessages(dplyr::anti_join(coefs_tidy, no_fits))
   }
 

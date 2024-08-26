@@ -164,11 +164,10 @@ logLik.pk <- function(object,
     model = model,
     method = method,
     drop_sigma = FALSE)
-  coefs <- coefs %>%
+  coefs <- suppressMessages(coefs %>%
     dplyr::select(coefs_vector,
                   sigma_value,
-                  error_group)
-  coefs <- suppressMessages(coefs %>%
+                  error_group) %>%
     dplyr::mutate(coefs_vector = purrr::map(coefs_vector,
                                             \(x) {
                                               sigma_transfer <- sigma_value
@@ -176,7 +175,6 @@ logLik.pk <- function(object,
                                               c(x, sigma_transfer)
                                             })) %>%
     dplyr::select(-sigma_value, -error_group))
-
 
   req_vars <- ggplot2::vars(Time,
                             Time.Units,
@@ -192,9 +190,9 @@ logLik.pk <- function(object,
 
 
 
-  newdata <- newdata %>%
+  newdata <- suppressMessages(newdata %>%
     dplyr::select(!!!union(object$data_group, req_vars),
-                  !!!other_vars)
+                  !!!other_vars))
 
   # time_scale_check
   if (any(!(newdata$Time_trans.Units %in% "hours"))) {
