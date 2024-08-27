@@ -148,11 +148,9 @@ if (!(check %in% TRUE)) {
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  if(use_scale_conc %in% TRUE){
   message("rmse.pk(): Computing RMSE on transformed concentration scale. Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log10-transformation ", conc_scale$log10_trans)
-  }
 
   #Get predictions
   #do NOT apply transformations at this stage
