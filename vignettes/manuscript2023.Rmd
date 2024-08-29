@@ -31,7 +31,7 @@ library(tidyverse, quietly = TRUE)
 library(cowplot)
 library(RColorBrewer)
 devtools::load_all() 
-
+today <- format(Sys.Date(), "%d%B%Y")
 ```
 
 To speed up analysis in sections 4 and beyond, we can load an `.rds` file 
@@ -40,18 +40,17 @@ that includes the fitted models used in much of the publication.
 ``` {r file_load, eval=FALSE}
 # saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds")
 my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
-today <- format(Sys.Date(), "%d%B%Y")
+
 
 ```
 
 
 ```{r}
-my_pk <- readRDS(paste0(Sys.getenv("OD_DIR"),
+my_pk_111h <- readRDS(paste0(Sys.getenv("OD_DIR"),
                  "mypk_fit_111h.rds"))
 
-clr_pk <- readRDS(paste0(Sys.getenv("OD_DIR"),
-                         "pkfits_feature_clrtest/",
-                         "pkfit_111h.rds"))
+my_pk_000h <- readRDS(paste0(Sys.getenv("OD_DIR"),
+                 "mypk_fit_000h.rds"))
 ```
 
 
@@ -134,6 +133,19 @@ Here we setup the PK object with the various options for fitting and data
 transformations. As shown in this vignette, it is possible to setup multiple
 distinct options for fitting and data transformation at once prior to processing
 and fitting the data.
+
+
+```{r outlining_all_options, eval=FALSE}
+
+# List of options
+fitopts <- expand.grid(error_model = c("pooled",
+                                       "hierarchical"),
+                       dose_norm = c(TRUE, FALSE),
+                       log10_trans = c(TRUE, FALSE),
+                       time_scale = c(TRUE, FALSE),
+                       stringsAsFactors = FALSE)
+```
+
 
 ```{r pooled_fitting_choices, eval=FALSE}
 # Types of Choices:
@@ -220,15 +232,6 @@ fit_data <- function(this_error_model,
 
 ```{r running_all_options, eval=FALSE}
 
-# List of options
-fitopts <- expand.grid(error_model = c("pooled",
-                                       "hierarchical"),
-                       dose_norm = c(TRUE, FALSE),
-                       log10_trans = c(TRUE, FALSE),
-                       time_scale = c(TRUE, FALSE),
-                       stringsAsFactors = FALSE)
-
-
 system.time(tmp_out <- mapply(fit_data,
                               this_error_model = fitopts$error_model,
                               this_dose_norm = fitopts$dose_norm,
@@ -238,7 +241,7 @@ system.time(tmp_out <- mapply(fit_data,
 ```
 
 
-### Evaluating fitting options
+# Evaluating fitting options
 
 Here I evaluate the various fitting options by counting the number of fits 
 for each model that "won" based on AIC. This is given by the `get_winning_model`
@@ -345,6 +348,8 @@ rmses_Cmax_AUC <- function(this_error_model,
       )
   })
   
+  print(RMSE_eval)
+  
   return(RMSE_eval)
 }
 
@@ -376,10 +381,12 @@ get_gof <- function(this_error_model,
     this_AIC <- AIC(current_rds) %>%
       inner_join(winning_model)
     
-    this_rmse <- rmse(current_rds,
-                      rmse_group = vars(Chemical, Species),
-                      use_scale_conc = FALSE) %>%
-      inner_join(winning_model)
+    this_rmsle <- fold_errors(current_rds,
+                      rmse_group = vars(Chemical, Species)) %>%
+      inner_join(winning_model) %>%
+      group_by(Chemical, Species, method, model) %>%
+      summarize(RMSLE = mean(log10(Fold_Error[which(Fold_Error > 0)])^2, 
+                             na.rm = TRUE))
   })
   
   # Since they are all joined by winmodel
@@ -390,16 +397,80 @@ get_gof <- function(this_error_model,
   
   message(paste0("rsq: ", NROW(this_rsq)))
   message(paste0("aic: ", NROW(this_AIC)))
-  message(paste0("rmse: ", NROW(this_rmse)))
+  message(paste0("rmsle: ", NROW(this_rmsle)))
   
   gof_df <- this_rsq %>%
     inner_join(this_AIC, by = join_by(Chemical, Species, method, model)) %>%
-    inner_join(this_rmse, by = join_by(Chemical, Species, method, model)) %>%
+    inner_join(this_rmsle, by = join_by(Chemical, Species, method, model)) %>%
     mutate(Options = pk_name, .before = Chemical)
   
   
+  
   return(gof_df)
-  }
+}
+
+
+
+get_all_preds <- function(this_error_model,
+                             this_dose_norm,
+                             this_log10_trans,
+                             this_time_scale) {
+  dose_indic <- as.numeric(this_dose_norm)
+  log10_indic <- as.numeric(this_log10_trans)
+  time_indic <- as.numeric(this_time_scale)
+  errmodel_indic <- substr(this_error_model, 1, 1)
+  
+  file_str <- paste0(Sys.getenv("OD_DIR"),
+                     "mypk_fit_",
+                     dose_indic,
+                     log10_indic,
+                     time_indic,
+                     errmodel_indic,
+                     ".Rds")
+  pk_name <- paste0(dose_indic, log10_indic, time_indic, errmodel_indic)
+  
+  
+  current_rds <- readRDS(file = file_str)
+  
+  # Wide winning model
+  suppressMessages({
+    winning_model <- get_winning_model(obj = current_rds)
+    this_preds <- predict(current_rds,
+                          use_scale_conc = FALSE) %>%
+      inner_join(winning_model) %>%
+      mutate(Options = pk_name, .before = Chemical)
+  })
+  return(this_preds)
+}
+
+
+tf_tests <- function(this_error_model,
+                             this_dose_norm,
+                             this_log10_trans,
+                             this_time_scale) {
+  dose_indic <- as.numeric(this_dose_norm)
+  log10_indic <- as.numeric(this_log10_trans)
+  time_indic <- as.numeric(this_time_scale)
+  errmodel_indic <- substr(this_error_model, 1, 1)
+  
+  file_str <- paste0(Sys.getenv("OD_DIR"),
+                     "mypk_fit_",
+                     dose_indic,
+                     log10_indic,
+                     time_indic,
+                     errmodel_indic,
+                     ".Rds")
+  pk_name <- paste0(dose_indic, log10_indic, time_indic, errmodel_indic)
+  current_rds <- readRDS(file = file_str)
+  print(paste0("Now analyzing: ", pk_name))
+  
+  out <- twofold_test(current_rds, suppress_messages = TRUE)
+  
+  out <- out$model_error_twofold_summary %>%
+    mutate(Options = pk_name)
+  
+}
+
 ```
 
 
@@ -412,6 +483,15 @@ system.time(gof_tbl <- fitopts %>%
                                  this_log10_trans = log10_trans,
                                  this_time_scale = time_scale))) %>%
               tidyr::unnest(gof_win))
+
+system.time(all_preds <- fitopts %>%
+              dplyr::rowwise() %>%
+              dplyr::mutate(these_preds = list(
+                get_all_preds(this_error_model = error_model,
+                                 this_dose_norm = dose_norm,
+                                 this_log10_trans = log10_trans,
+                                 this_time_scale = time_scale))) %>%
+              tidyr::unnest(these_preds))
 
 system.time(cmax_auc_rmse_tbl <- fitopts %>%
               dplyr::rowwise() %>%
@@ -431,7 +511,15 @@ system.time(wm_comp <- fitopts %>%
                                  this_time_scale = time_scale))) %>%
               tidyr::unnest(winmodel_comp))
 
-
+system.time(all_tf_tests <- fitopts %>%
+              dplyr::rowwise() %>%
+              dplyr::mutate(TF = list(
+                tf_tests(error_model,
+                         this_dose_norm = dose_norm,
+                         this_log10_trans = log10_trans,
+                         this_time_scale = time_scale))) %>%
+              tidyr::unnest(TF))
+            
 gc()
 ```
   
@@ -452,13 +540,111 @@ writexl::write_xlsx(x = list(
 # Plot Rsq
 
 gof_tbl %>%
+  filter(!(model %in% "model_flat")) %>%
+  ggplot() +
+  geom_violin(aes(x = "1",
+                  y = RMSLE,
+                  color = interaction(error_model, method)),
+              draw_quantiles = c(0.25,0.5,0.75)) +
+  facet_grid(cols = vars(Options)) +
+  scale_color_brewer(palette = "Paired") +
+  labs(title = "RMSLE",
+       color = "Error Model.Optimizer") +
+  coord_cartesian(ylim = c(0, 200)) +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5))
+
+gof_tbl %>%
+  filter(!(model %in% "model_flat")) %>%
   ggplot() +
   geom_violin(aes(x = "1",
                   y = Rsq,
                   color = interaction(error_model, method)),
               draw_quantiles = c(0.25,0.5,0.75)) +
   facet_grid(cols = vars(Options)) +
-  scale_color_brewer(palette = "Paired")
+  scale_color_brewer(palette = "Paired") +
+  labs(title = "R-squared",
+       color = "Error Model.Optimizer") +
+  coord_cartesian(ylim = c(0, 1)) +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5))
+
+gof_tbl %>%
+  ggplot() +
+  geom_point(aes(x = Rsq, y = RMSLE,
+                 color = interaction(error_model, method)),
+             shape = 1) +
+  facet_wrap(~Options) +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  coord_cartesian(ylim = c(0, 500),
+                  xlim = c(0, 1)) +
+  theme(legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5))
+
+gof_tbl %>%
+  select(Options, Chemical, Species, method, RMSLE) %>%
+  pivot_wider(names_from = Options, values_from = RMSLE) %>%
+  # filter(is.finite(`111h`) & !is.finite(`000h`)) %>%
+  select(Chemical, Species, method, `000h`, `111h`) %>%
+  View("RMSLE_wide")
+
+gof_tbl %>%
+  select(Options, Chemical, Species, method, Rsq) %>%
+  pivot_wider(names_from = Options, values_from = Rsq) %>%
+  filter(`111h` < 0.25 & `000h` > 0.8) %>%
+  select(Chemical, Species, method, `000h`, `111h`) %>%
+  View("Rsq_wide")
+
+
+pl_111h <- plot(my_pk_111h, best_fit = TRUE)
+pl_000h <- plot(my_pk_000h, best_fit = TRUE)
+
+{
+  interest_chem <- "DTXSID9044297"
+  cowplot::plot_grid(
+    pl_111h %>% filter(Chemical %in% interest_chem) %>% pull(final_plot) %>% .[[1]],
+    pl_000h %>% filter(Chemical %in% interest_chem) %>% pull(final_plot) %>% .[[1]],
+    labels = c("111h", "000h"), ncol = 1)
+  
+}
+
+pl_111h %>% filter(Chemical %in% "DTXSID9020667") %>% pull(observation_plot)
+
+
+
+all_preds_prep <- all_preds %>% mutate(ID = as.factor(paste(Chemical, Species,
+                                                            error_model, method)),
+                                                 .keep = "unused") %>%
+  select(ID, Options, Route, Media, Dose, Conc, Conc_est, Time)
+
+split_preds <- split(all_preds_prep, all_preds_prep$ID)
+
+sp_plots <- lapply(names(split_preds), function(i) {
+  ggplot(data = split_preds[[i]],
+         mapping = aes(x = Conc, y = Conc_est,
+                       color = Options)) +
+    geom_point(shape = 1) +
+    geom_abline(slope = 1) +
+    facet_wrap(~Route+Media+Dose) +
+    scale_y_log10() + scale_x_log10() +
+    theme_bw() +
+    labs(title = i) +
+    theme(legend.position = "bottom",
+          plot.title = element_text(hjust = 0.5, face = "bold"))
+}
+)
+
+# Very BIG FILE
+pdf(file = paste0(Sys.getenv("FIG_DIR"),
+                  "log10_GOFplots.pdf"),
+    onefile = TRUE, height = 8, width = 8)
+for (x in seq_along(sp_plots)) {
+  print(split_pred_plots[[x]])
+}
+dev.off()
 
 ```
 
