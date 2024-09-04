@@ -377,7 +377,7 @@ cvt_df <- cvt_df %>%
     invivPK_dose_level = if_else(
       fk_study_id %in% c("1714", "1713"),
       5/1000 * dose_level_normalized,
-      invivPK_dose_level
+      dose_level_normalized
     )
   )
 
