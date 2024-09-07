@@ -25,7 +25,7 @@
 #'   `from` to the units in `to`.
 #'
 #' @export
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 
 convert_time <- function(x,
                          from = "hours",
@@ -50,13 +50,10 @@ convert_time <- function(x,
     }
 
     if (to %in% period_units) {
-      # Legacy Code
-      # y_new <- as.numeric(lubridate::duration(num = y, units = from), to)
-      # New Code (needs to be vectorized)
-      # test with convert_time(c(1, 2, 10), from = "minutes", to = "hours")
-      conversion_table <- time_conversions %>%
-        dplyr::filter(to == TimeTo & unique(from) == TimeFrom)
-      y_new <- y * conversion_table$conversion
+      # test with convert_time(c(60, 15, 30, 120), from = "minutes", to = "hours")
+      conversion_table <- time_conversions[to == time_conversions$TimeTo &
+                                             unique(from) == time_conversions$TimeFrom, "conversion"]
+      y_new <- y * conversion_table
 
     } else{
       y_new <- NA_real_
