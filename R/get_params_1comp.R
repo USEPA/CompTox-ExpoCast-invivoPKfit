@@ -119,39 +119,40 @@
 #' @family get_params functions
 #' @family built-in model functions
 
-get_params_1comp <- function(data,
-                             lower_bound = ggplot2::aes(kelim = log(2)/(2*max(Time_trans)),
-                                                        Vdist = 0.01,
-                                                        Fgutabs = 0.0,
-                                                        kgutabs = log(2)/(2*max(Time_trans)),
-                                                        Fgutabs_Vdist = 0.01,
-                                                        Rblood2plasma = 1e-2),
-                             upper_bound = ggplot2::aes(kelim = log(2)/(0.5*min(Time_trans[Time_trans>0])),
-                                                        Vdist = 100,
-                                                        Fgutabs = 1,
-                                                        kgutabs = log(2)/(0.5*min(Time_trans[Time_trans>0])),
-                                                        Fgutabs_Vdist = 1e2,
-                                                        Rblood2plasma = 100,),
-                             param_units = ggplot2::aes(kelim = paste0("1/", #kelim
-                                                                       unique(Time_trans.Units)),
-                                                        Vdist = paste0("(", #Vdist
-                                                                       unique(Dose.Units),
-                                                                       ")",
-                                                                       "/",
-                                                                       "(",
-                                                                       unique(Conc.Units),
-                                                                       ")"),
-                                                        Fgutabs = "unitless fraction", #Fgutabs
-                                                        kgutabs = paste0("1/", #kgutabs
-                                                                         unique(Time_trans.Units)),
-                                                        Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
-                                                                               unique(Conc.Units),
-                                                                               ")",
-                                                                               "/",
-                                                                               "(",
-                                                                               unique(Dose.Units),
-                                                                               ")"),
-                                                        Rblood2plasma = "unitless ratio")){
+get_params_1comp <- function(
+    data,
+    lower_bound = ggplot2::aes(kelim = log(2)/(2*max(Time_trans)),
+                               Vdist = 0.01,
+                               Fgutabs = 0.0,
+                               kgutabs = log(2)/(2*max(Time_trans)),
+                               Fgutabs_Vdist = 0.01,
+                               Rblood2plasma = 1e-2),
+    upper_bound = ggplot2::aes(kelim = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+                               Vdist = 100,
+                               Fgutabs = 1,
+                               kgutabs = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+                               Fgutabs_Vdist = 1e2,
+                               Rblood2plasma = 100,),
+    param_units = ggplot2::aes(kelim = paste0("1/", #kelim
+                                              unique(Time_trans.Units)),
+                               Vdist = paste0("(", #Vdist
+                                              unique(Dose.Units),
+                                              ")",
+                                              "/",
+                                              "(",
+                                              unique(Conc.Units),
+                                              ")"),
+                               Fgutabs = "unitless fraction", #Fgutabs
+                               kgutabs = paste0("1/", #kgutabs
+                                                unique(Time_trans.Units)),
+                               Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
+                                                      unique(Conc.Units),
+                                                      ")",
+                                                      "/",
+                                                      "(",
+                                                      unique(Dose.Units),
+                                                      ")"),
+                               Rblood2plasma = "unitless ratio")){
   #param names
   param_name <- c("kelim",
                    "Vdist",

@@ -109,80 +109,66 @@ get_starts_flat <- function(data,
   Rblood2plasma_iv_log10 <- NA_real_
   Rblood2plasma_po_log10 <- NA_real_
 
-  if(has_iv %in% TRUE){
-    if(has_iv_plasma %in% TRUE){
+  if (has_iv %in% TRUE) {
+    if (has_iv_plasma %in% TRUE) {
       #get Vdist for plasma
-      Cmean_plasma_log10 <- with(subset(ivdat,
-                                 Media %in% "plasma"),
-                          mean(log10(Conc/Dose)),
-                          na.rm = TRUE)
+      Cmean_plasma_log10 <- with(subset(ivdat, Media %in% "plasma"),
+                                 mean(log10(Conc/Dose), na.rm = TRUE))
       Vdist_plasma_log10 <- -Cmean_plasma_log10
     }
-      if(has_iv_blood %in% TRUE){ #if both blood and plasma IV data, estimate Rblood2plasma
-        #get Vdist for blood
+    if (has_iv_blood %in% TRUE) { #if both blood and plasma IV data, estimate Rblood2plasma
+      #get Vdist for blood
 
-        Cmean_blood_log10 <- with(subset(ivdat,
-                                          Media %in% "blood"),
-                                   mean(log10(Conc/Dose)),
-                                   na.rm = TRUE)
-        Vdist_blood_log10 <- -Cmean_blood_log10
-      }
-    if(has_iv_plasma %in% TRUE &
-       has_iv_blood %in% TRUE){
+      Cmean_blood_log10 <- with(subset(ivdat,
+                                       Media %in% "blood"),
+                                mean(log10(Conc/Dose), na.rm = TRUE))
+      Vdist_blood_log10 <- -Cmean_blood_log10
+    }
+    if (has_iv_plasma %in% TRUE & has_iv_blood %in% TRUE) {
       Rblood2plasma_iv_log10 <- Vdist_plasma_log10 - Vdist_blood_log10
     }
   }
 
-  if(has_po %in% TRUE){
-    if(has_po_plasma %in% TRUE){
+  if (has_po %in% TRUE) {
+    if (has_po_plasma %in% TRUE) {
       #get Fgutabs_Vdist for plasma
-      Fgutabs_Vdist_plasma_log10 <- with(subset(podat,
-                                        Media %in% "plasma"),
-                                 mean(log10(Conc/Dose)),
-                                 na.rm = TRUE)
+      Fgutabs_Vdist_plasma_log10 <- with(subset(podat,Media %in% "plasma"),
+                                         mean(log10(Conc/Dose),na.rm = TRUE))
     }
-    if(has_po_blood %in% TRUE){
+    if (has_po_blood %in% TRUE) {
       #get Fgutabs_Vdist for blood
-      Fgutabs_Vdist_blood_log10 <- with(subset(podat,
-                                       Media %in% "blood"),
-                                mean(log10(Conc/Dose)),
-                                na.rm = TRUE)
+      Fgutabs_Vdist_blood_log10 <- with(subset(podat, Media %in% "blood"),
+                                        mean(log10(Conc/Dose), na.rm = TRUE))
     }
-    if(has_po_plasma %in% TRUE &
-       has_po_blood %in% TRUE){
+    if (has_po_plasma %in% TRUE & has_po_blood %in% TRUE) {
       Rblood2plasma_po_log10 <- Fgutabs_Vdist_blood_log10 + Fgutabs_Vdist_blood_log10
     }
   }
 
-if(has_iv %in% TRUE){
-      Vdist <- 10^(mean(c(Vdist_plasma_log10,
-                        Vdist_blood_log10),
-                        na.rm = TRUE))
-}
-
-if(has_po %in% TRUE){
-  Fgutabs_Vdist <- 10^(mean(c(Fgutabs_Vdist_plasma_log10,
-                      Fgutabs_Vdist_blood_log10),
+  if (has_iv %in% TRUE) {
+    Vdist <- 10^(mean(c(Vdist_plasma_log10, Vdist_blood_log10),
                       na.rm = TRUE))
-}
+  }
 
-  if(has_iv %in% TRUE &
-     has_po %in% TRUE){
+  if (has_po %in% TRUE) {
+    Fgutabs_Vdist <- 10^(mean(c(Fgutabs_Vdist_plasma_log10, Fgutabs_Vdist_blood_log10),
+                              na.rm = TRUE))
+  }
+
+  if (has_iv %in% TRUE & has_po %in% TRUE) {
     Fgutabs <- Fgutabs_Vdist * Vdist
   }
 
-  if(has_plasma %in% TRUE &
-     has_blood %in% TRUE){
-  Rblood2plasma <- 10^(mean(c(Rblood2plasma_iv_log10,
-                              Rblood2plasma_po_log10),
-                            na.rm = TRUE))
+  if (has_plasma %in% TRUE & has_blood %in% TRUE) {
+    Rblood2plasma <- 10^(mean(c(Rblood2plasma_iv_log10, Rblood2plasma_po_log10),
+                              na.rm = TRUE))
   }
 
   #update starting Concs
-par_DF["Vdist", "start"] <- Vdist
-par_DF["Fgutabs_Vdist", "start"] <- Fgutabs_Vdist
-par_DF["Fgutabs", "start"] <- Fgutabs
-par_DF["Rblood2plasma", "start"] <- Rblood2plasma
+  par_DF["Vdist", "start"] <- Vdist
+  par_DF["Fgutabs_Vdist", "start"] <- Fgutabs_Vdist
+  par_DF["Fgutabs", "start"] <- Fgutabs
+  par_DF["Rblood2plasma", "start"] <- Rblood2plasma
 
-return(par_DF)
+  return(par_DF)
 }
