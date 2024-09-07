@@ -1,11 +1,10 @@
-stat_nca <- function(nca_group = dplyr::vars(Chemical,
+stat_nca <- function(summary_group = dplyr::vars(Chemical,
                                              Species,
                                              Reference,
                                              Route,
                                              Media,
                                              Dose),
                      ...){
-  Chemical <- NULL
   #get arguments and values
   argg <- c(as.list(environment()), list(...))
   this_stat_nca <- argg

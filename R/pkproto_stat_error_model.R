@@ -56,10 +56,11 @@
 #'@export
 stat_error_model <- function(error_group = vars(Chemical, Species, Reference, Media),
                              ...){
-  Chemical <- NULL
   #get arguments and values as a list
   argg <- c(as.list(environment()), list(...))
   this_error_model <- argg
-  class(this_error_model) <- c(class(this_error_model), "pkproto", "pk_stat_error_model")
+  class(this_error_model) <- c(class(this_error_model),
+                               "pkproto",
+                               "pk_stat_error_model")
   return(this_error_model)
 }

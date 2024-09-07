@@ -21,11 +21,12 @@
 #' for this `pk` object, and the integer status will be returned.
 #'
 #' @param obj A `pk` object
+#' @param suppress.messages Logical. Whether to display messages.
 #' @param ... Additional arguments.
 #' @return The status of the `pk` object as an integer.
 #' @export
 #' @author Caroline Ring
-get_status.pk <- function(obj, ...){
+get_status.pk <- function(obj, suppress.messages = NULL, ...){
   objname <- deparse(substitute(obj))
   obj_status <- obj$status
   steps <- c("1/5. Object has been initialized",
@@ -39,22 +40,28 @@ get_status.pk <- function(obj, ...){
                                                "--",
                                                "COMPLETE")
 
-  if(obj_status < n_steps){
-    steps[seq(obj_status+1,
-              n_steps)] <- paste(steps[seq(obj_status+1,
+  if (obj_status < n_steps) {
+    steps[seq(obj_status + 1,
+              n_steps)] <- paste(steps[seq(obj_status + 1,
                                            n_steps)],
                                  "--",
                                  "NOT COMPLETE")
   }
 
-  msg <- paste(
-    paste0("Status of pk object ", objname, ":"),
-    paste(steps,
-          collapse = "\n"),
-    sep  = "\n"
-  )
-  message(msg)
-  out <- obj_status
-  attr(out, "msg") <- msg
+  if (is.null(suppress.messages)) {
+    suppress.messages <- obj$settings_preprocess$suppress.messages
+  }
+  if (suppress.messages == FALSE) {
+    out <- obj_status
+    msg <- paste(
+      paste0("Status of pk object ", objname, ":"),
+      paste(steps,
+            collapse = "\n"),
+      sep  = "\n"
+    )
+    message(msg)
+    attr(out, "msg") <- msg
+  }
+
   return(obj_status)
 }
