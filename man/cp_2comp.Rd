@@ -4,7 +4,7 @@
 \alias{cp_2comp}
 \title{Analytical 2-compartment model}
 \usage{
-cp_2comp(params, time, dose, route, medium = "plasma")
+cp_2comp(params, time, dose, route, medium = "plasma", loq)
 }
 \arguments{
 \item{params}{A named numeric vector of parameter values. See Details for requirements.}
@@ -24,6 +24,9 @@ and \code{dose}, or length 1.}
 \item{medium}{A character vector reflecting the medium in which each resulting
 concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 Must be same length as other arguments, or length 1.}
+
+\item{loq}{A numeric vector of LOQ values. For any predicted value greater
+than zero but less than half the LOQ, that value is set to half the LOQ.}
 }
 \value{
 A vector of blood or plasma concentration values (mass chemical/volume media) corresponding to each
