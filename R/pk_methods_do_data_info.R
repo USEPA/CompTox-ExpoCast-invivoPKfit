@@ -58,7 +58,6 @@ do_data_info.pk <- function(obj, ...){
     }
   }
 
-
   #do NCA dose-normalized
   #for purposes of some data flags
 
@@ -112,8 +111,8 @@ do_data_info.pk <- function(obj, ...){
   }
 
   #get summary for nca_group if it is different from summary_group
-if(length(setdiff(nca_group, summary_group))>0 |
-   length(setdiff(summary_group, nca_group))>0){
+if (length(setdiff(nca_group, summary_group)) > 0 |
+   length(setdiff(summary_group, nca_group)) > 0){
   data_summary_nca <- data_summary(obj = obj,
                                    newdata = NULL,
                                    summary_group = nca_group
@@ -159,8 +158,7 @@ if(length(setdiff(nca_group, summary_group))>0 |
                                     "AUC_infinity is negative",
                                     sep = " | "),
                              data_flag)
-        ) %>%
-    as.data.frame()
+        )
 
   #Other data flags:
   #Check for obeying dose normalization by summary_group - Dose

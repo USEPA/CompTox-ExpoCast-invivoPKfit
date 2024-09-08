@@ -63,13 +63,11 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
 
   if (!rlang::is_installed("multidplyr")) { n_cores <- NULL }
 
-
-
   #pull the non-excluded observations for fitting
   data <- subset(obj$data, exclude %in% FALSE)
   data_sigma_group <- data$data_sigma_group
 
-  data_group <- get_data_group(obj)
+  data_group <- obj$data_group
   data_group_vars <- sapply(data_group,
                                rlang::as_label)
 
@@ -170,7 +168,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
     tidy_fit <- info_nest %>%
       dplyr::rowwise(!!!data_group, model) %>%
       dplyr::mutate(modelfun = obj$stat_model[[model]]$conc_fun) %>%
-      dplyr::mutate(
+      dplyr::summarize(
         fit = list(fit_group(data = data,
                              par_DF = par_DF,
                              sigma_DF = sigma_DF,
@@ -180,75 +178,113 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
                              modelfun = modelfun,
                              dose_norm = dose_norm,
                              log10_trans = log10_trans,
-                             suppress.messages = TRUE)
-        )
+                             suppress.messages = TRUE))
       )
   }
 
-
-  # Need to convert rates to perHour
-  # Take rate_names
-  # Parameter names don't matter, all rates should have consistent param_unit
-  message(paste0("do_fit.pk(): Now converting all rate constants to units of 1/hour, ",
-                 "in case time has been scaled to units other than hours before fitting"))
-  rate_names <- par_DF %>% dplyr::select(!!!obj$data_group,
-                                        param_name,
-                                        param_units) %>%
-    dplyr::filter(stringr::str_detect(param_units, "^1/")) %>%
-    dplyr::mutate(Time_trans.Units = stringr::str_remove(param_units, "^1/")) %>%
-    dplyr::distinct()
-  # Get a simple data_group and conversion rate data frame
-  rate_conversion <- rate_names %>%
-    dplyr::select(-param_name) %>% # Keep Time_trans.Units for a join
-    dplyr::group_by(Time_trans.Units) %>%
-    dplyr::mutate(to_perhour = convert_time(1,
-                                            from = Time_trans.Units,
-                                            to = "hours",
-                                            inverse = TRUE)) %>%
-    dplyr::ungroup() %>%
-    dplyr::distinct()
   # Extract names
-  rate_names <- rate_names %>% dplyr::pull(param_name)
+  tidy_fit <- tidy_fit %>%
+    tidyr::unnest(fit) %>%
+    dplyr::mutate(ngatend = as.numeric(ngatend),
+                  nhatend = as.numeric(nhatend),
+                  hev = as.numeric(hev),
+                  message = as.character(message))
+  orig_names <- names(tidy_fit) # Saving the original names
+  # Making optimized sigma values their own column... not tidy otherwise
+  tidy_sigmas <- tidy_fit %>%
+    dplyr::select(!!!data_group, model, method,
+                  tidyselect::starts_with("sigma_")) %>%
+    tidyr::pivot_longer(cols = tidyselect::starts_with("sigma"),
+                        names_to = "param_name",
+                        values_to = "estimate") %>%
+    dplyr::filter(stringr::str_detect(
+      param_name,
+      paste(Chemical, Species, sep = "."))) %>%
+    dplyr::inner_join(sigma_DF %>%
+                        dplyr::select(!!!data_group,
+                                      param_name, param_units,
+                                      optimize_param, use_param,
+                                      lower_bound, upper_bound,
+                                      ),
+                      by = c(data_group_vars, "param_name"))
 
   tidy_fit <- tidy_fit %>%
-    tidyr::unnest(fit)
-  orig_names <- names(tidy_fit) # Saving the original names
+    dplyr::select(-tidyselect::starts_with("sigma_"))
 
-  # Convert the rates
+  tidy_params <- tidy_fit %>%
+    dplyr::select(-c(value, fevals, gevals, niter, convcode,
+                     kkt1, kkt2, xtime, ngatend, nhatend, hev,
+                     message)) %>%
+    tidyr::pivot_longer(cols = -c(!!!data_group, model, method),
+                        names_to = "param_name",
+                        values_to = "estimate") %>%
+    dplyr::inner_join(par_DF,
+                      by = c(data_group_vars, "model", "param_name"))
 
-  tidy_fit <- suppressMessages(
-    tidy_fit %>%
-      dplyr::left_join(rate_conversion,
-                       by = c(data_group_vars)) %>%
-      dplyr::mutate(across(contains(rate_names),
-                           \(x) x * to_perhour)))
+  tidy_res <- tidy_fit %>%
+    dplyr::distinct(!!!data_group, model, method,
+                      value, fevals, gevals, niter, convcode,
+                      kkt1, kkt2, xtime, ngatend, nhatend, hev,
+                      message)
 
 
-  # Add optimx bad fits
-  obj$conv_not_zero <- tidy_fit %>%
-    dplyr::select(-tidyselect::starts_with("sigma")) %>%
-    dplyr::filter(convcode != 0)
+
+  all_params <- dplyr::bind_rows(tidy_sigmas, tidy_params) %>%
+    dplyr::arrange(!!!data_group, model, method)
+
+
+  tidy_fit <- all_params %>%
+    dplyr::left_join(tidy_res,
+                     relationship = "many-to-one",
+                     by = c(data_group_vars, "model", "method"))
+
+  # Need to convert rates to perHour IFF get_scale_time(my_pk) is NOT "identity"
+  # The assumption here is that the provided units of time in CvT data are hours.
+  time_scaled <- get_scale_time(obj)[["new_units"]]
+  if (time_scaled != "identity") {
+    # Take rate_names
+    # Parameter names don't matter, all rates should have consistent param_unit
+    message(paste0("do_fit.pk(): Now converting all rate constants to units of 1/hour, ",
+                   "in case time has been scaled to units other than hours before fitting"))
+    rate_names <- par_DF %>% dplyr::select(!!!obj$data_group,
+                                           param_name,
+                                           param_units) %>%
+      dplyr::filter(stringr::str_detect(param_units, "^1/")) %>%
+      dplyr::mutate(Time_trans.Units = stringr::str_remove(param_units, "^1/")) %>%
+      dplyr::distinct()
+    # Get a simple data_group and conversion rate data frame
+    rate_conversion <- rate_names %>%
+      dplyr::select(-param_name) %>% # Keep Time_trans.Units for a join
+      dplyr::group_by(Time_trans.Units) %>%
+      dplyr::mutate(to_perhour = convert_time(1,
+                                              from = Time_trans.Units,
+                                              to = "hours",
+                                              inverse = TRUE)) %>%
+      dplyr::ungroup() %>%
+      dplyr::distinct()
+
+    rate_names <- rate_names %>% dplyr::pull(param_name)
+
+    # Convert the rates
+    tidy_fit <- suppressMessages(
+      tidy_fit %>%
+        dplyr::left_join(rate_conversion,
+                         by = c(data_group_vars, param_units)) %>%
+        dplyr::mutate(across(contains(rate_names),
+                             \(x) x * to_perhour)) %>%
+        dplyr::select(-to_perhour))
+  }
+
+# Changing the final fit form so that everything is similar parDF
 
   # Add parameter fit flags
-  obj$params_atBounds <- tidy_fit %>%
-    dplyr::select(-(value:xtime), -tidyselect::starts_with("sigma")) %>%
-    tidyr::pivot_longer(cols = tidyselect::where(is.numeric),
-                        names_to = "param_name",
-                        values_to = "param_value") %>%
-    dplyr::inner_join(obj$prefit$par_DF) %>% filter(optimize_param) %>%
-    mutate(at_bound = ifelse(
-      param_value != lower_bound & param_value != upper_bound,
-      "Not at bound", ifelse(
-        param_value == lower_bound, "LOWER BOUND",
-        "UPPER BOUND")
-    ))
-
-  obj$fit <- suppressMessages(tidy_fit %>%
-                                 dplyr::select(contains(orig_names)) %>%
-                                 dplyr::filter(convcode != -9999) %>%
-                                 dplyr::group_by(!!!obj$data_group, model) %>%
-                                 tidyr::nest(.key = "fit") %>% ungroup())
-
+  obj$fit <- tidy_fit %>%
+    mutate(at_bound = dplyr::case_when(
+      identical(estimate, lower_bound) ~ "AT LOWER BOUND",
+      identical(estimate, upper_bound) ~ "AT UPPER BOUND",
+      .default = "Not at bound")
+    ) %>%
+    dplyr::distinct()
 
   obj$status <- status_fit #fitting complete
   message("do_fit.pk: Fitting complete")

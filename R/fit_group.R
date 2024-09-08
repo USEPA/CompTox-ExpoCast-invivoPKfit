@@ -24,8 +24,8 @@ fit_group <- function(data,
                       log10_trans,
                       suppress.messages){
   #Rowbind par_DF and sigma_DF
-  par_DF <- dplyr::bind_rows(par_DF,
-                             sigma_DF)
+  par_DF <- dplyr::bind_rows(par_DF, sigma_DF)
+
   #get params to be optimized with their starting points
   # since this series of assignments only return ordered vectors, possible to optimize a little
   # also optimized parameter names was repeated, simply put into variable
@@ -38,7 +38,6 @@ fit_group <- function(data,
 
   if (fit_decision %in% "continue") {
 
-
     lower_params <- par_DF[which(par_DF$optimize_param), "lower_bound",
                            drop = TRUE]
     names(lower_params) <- opt_param_names
@@ -48,95 +47,89 @@ fit_group <- function(data,
     names(upper_params) <- opt_param_names
 
     #get params to be held constant, if any
-    if(any(par_DF$optimize_param %in% FALSE &
-           par_DF$use_param %in% TRUE)){
+    if (any(par_DF$optimize_param %in% FALSE & par_DF$use_param %in% TRUE)) {
       const_params <- par_DF[which(!par_DF$optimize_param & par_DF$use_param),
                              "start", drop = TRUE]
       names(const_params) <- par_DF[which(!par_DF$optimize_param & par_DF$use_param),
                                     "param_name", drop = TRUE]
-    }else{
+    } else {
       const_params <- NULL
     }
 
     #Now call optimx::optimx() and do the fit
-    suppressWarnings(
-      optimx_out <- tryCatch({
-        tmp <- do.call(
-          optimx::optimx,
-          args = c(
-            list(par = opt_params,
-                 fn = log_likelihood,
-                 # save.failures = TRUE,
-                 lower = lower_params,
-                 upper = upper_params),
-            #method and control
-            settings_optimx,
-            #... additional args to log_likelihood
-            list(
-              const_params = const_params,
-              data = data,
-              data_sigma_group = data$data_sigma_group,
-              modelfun = modelfun,
-              dose_norm = dose_norm,
-              log10_trans = log10_trans,
-              negative = TRUE,
-              force_finite = TRUE,
-              suppress.messages = suppress.messages
-            ) #end list()
-          ) #end args = c()
-        ) #end do.call
-        tmp$method <- rownames(tmp)
-        tmp
-      },
-      error = function(err){
-        method <- rlang::eval_tidy(settings_optimx$method)
-        tmp <- c(rep(NA_real_, length(opt_params)),
-                 rep(NA_real_, 4),
-                 -9999,
-                 rep(NA, 2),
-                 NA_real_)
+    optimx_out <- suppressWarnings(
+      tryCatch(
+        expr = {
+          tmp <- do.call(
+            optimx::optimx,
+            args = c(
+              list(par = opt_params,
+                   fn = log_likelihood,
+                   # save.failures = TRUE,
+                   lower = lower_params,
+                   upper = upper_params),
+              #method and control
+              settings_optimx,
+              #... additional args to log_likelihood
+              list(
+                const_params = const_params,
+                data = data,
+                data_sigma_group = data$data_sigma_group,
+                modelfun = modelfun,
+                dose_norm = dose_norm,
+                log10_trans = log10_trans,
+                negative = TRUE,
+                force_finite = TRUE,
+                suppress.messages = suppress.messages
+              ) #end list()
+            ) #end args = c()
+          ) #end do.call
+          tmp$method <- rownames(tmp)
+          tmp <- merge(tmp, as.data.frame(attr(tmp, "details")))
+          tmp
+        },
+        error = function(err){
+          method <- rlang::eval_tidy(settings_optimx$method)
+          tmp <- c(rep(NA_real_, length(opt_params)),
+                   rep(NA_real_, 4),
+                   -9999,
+                   rep(NA, 2),
+                   NA_real_)
 
-        names(tmp) <- c(names(opt_params),
-                        "value", "fevals", "gevals", "niter",
-                        "convcode",
-                        "kkt1", "kkt2",
-                        "xtime")
+          names(tmp) <- c(names(opt_params),
+                          "value", "fevals", "gevals", "niter",
+                          "convcode",
+                          "kkt1", "kkt2",
+                          "xtime")
 
-        tmp <- data.frame(as.list(tmp)) %>%
-          dplyr::slice(rep(1:dplyr::n(),
-                           each = length(method)))
+          tmp <- data.frame(as.list(tmp)) %>%
+            dplyr::slice(rep(1:dplyr::n(),
+                             each = length(method)))
 
-        rownames(tmp) <- method
-        tmp$method <- rownames(tmp)
+          rownames(tmp) <- method
+          tmp$method <- rownames(tmp)
 
-        attr(tmp, "maximize") <- FALSE
-        attr(tmp, "npar") <- length(opt_params)
-        attr(tmp, "follow.on") <- FALSE
+          details <- as.data.frame(
+            cbind(method = as.list(method),
+                  ngatend = as.list(rep(NA_real_, length(method))),
+                  nhatend = as.list(rep(NA_real_, length(method))),
+                  hev = as.list(rep(NA_real_, length(method))),
+                  message = as.list(rep(err$message,
+                                        length(method)))
+            )
+          )
+          rownames(details) <- method
+          tmp <- merge(tmp, details)
 
-        details <- cbind(method = as.list(method),
-                                           ngatend = as.list(rep(NA_real_, length(method))),
-                                           nhatend = as.list(rep(NA_real_, length(method))),
-                                           hev = as.list(rep(NA_real_, length(method))),
-                                           message = as.list(rep(err$message,
-                                                                 length(method)
-                                                                 )
-                                                             )
-                                           )
-        rownames(details) <- method
-        attr(tmp, "details") <- details
-
-        class(tmp) <- c("optimx",
-                        class(tmp))
-
-        return(tmp)
-      }) #end tryCatch()
+          return(tmp)
+        }) #end tryCatch()
     ) #end suppressWarnings()
     out <- optimx_out
-  }else{ #if status for this model was "abort", then abort fit and return NULL
+  } else { #if status for this model was "abort", then abort fit and return NULL
     method <- rlang::eval_tidy(settings_optimx$method)
     tmp <- c(rep(NA_real_, length(opt_params)),
              rep(NA_real_, 4),
-             -9999,
+             9999,
              rep(NA, 2),
              NA_real_)
     names(tmp) <- c(names(opt_params),
@@ -154,20 +147,17 @@ fit_group <- function(data,
     attr(tmp, "npar") <- length(opt_params)
     attr(tmp, "follow.on") <- FALSE
     # method <- settings_optimx$method
-    details <- cbind(method = as.list(method),
-                     ngatend = as.list(rep(NA_real_, length(method))),
-                     nhatend = as.list(rep(NA_real_, length(method))),
-                     hev = as.list(rep(NA_real_, length(method))),
-                     message = as.list(rep("Fit status was 'abort'",
-                                           length(method)
-                     )
-                     )
+    details <- as.data.frame(
+      cbind(method = as.list(method),
+            ngatend = as.list(rep(NA_real_, length(method))),
+            nhatend = as.list(rep(NA_real_, length(method))),
+            hev = as.list(rep(NA_real_, length(method))),
+            message = as.list(rep("Fit status was 'abort'",
+                                  length(method)))
+      )
     )
     rownames(details) <- method
-    attr(tmp, "details") <- details
-
-    class(tmp) <- c("optimx",
-                    class(tmp))
+    tmp <- merge(tmp, details)
 
     out <- tmp
   }

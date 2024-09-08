@@ -25,6 +25,7 @@
 #' @import dplyr
 #' @import tidyr
 #' @import purrr
+#' @importFrom vctrs vec_slice
 #' @importFrom magrittr `%>%`
 #' @export
 do_preprocess.pk <- function(obj, ...) {
@@ -107,8 +108,8 @@ do_preprocess.pk <- function(obj, ...) {
     weight_units <- unique(data$Weight.Units)
     dose_units <- unique(data$Dose.Units)
 
-    if (any(sapply(list(time_units, value_units, weight_units, dose_units), function(x)
-      length(x) > 1))) {
+    if (any(vapply(list(time_units, value_units, weight_units, dose_units), function(x)
+      length(x) > 1, logical(1)))) {
       stop(
         paste(
           "do_preprocess.pk(): data contains multiple units for one or more variables.",
