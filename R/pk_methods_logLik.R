@@ -102,13 +102,13 @@ logLik.pk <- function(object,
   }
   other_vars <- NULL
   if (is.null(model)) model <- names(object$stat_model)
-  if (is.null(method)) method <- object$optimx_settings$method
+  if (is.null(method)) method <- object$settings_optimx$method
   if (is.null(newdata)) {
     newdata <- object$data
 
     other_vars <- ggplot2::vars(
-      Value,
-      Value.Units,
+      Conc,
+      Conc.Units,
       Time_trans.Units,
       Conc_trans,
       Conc_trans.Units,
@@ -123,6 +123,8 @@ logLik.pk <- function(object,
   #check variables in newdata
 #including error grouping variables
   err_grp_vars <- sapply(eval(get_error_group(object)),
+                         rlang::as_label)
+  data_grp_vars <- sapply(eval(get_data_group(object)),
                          rlang::as_label)
 
   newdata_ok <- check_newdata(newdata = newdata,
@@ -158,23 +160,12 @@ logLik.pk <- function(object,
   }
 
   # get coefs data.frame for each model and method
-  #
+  # must include sigma value
   coefs <- coef(
     obj = object,
     model = model,
     method = method,
     drop_sigma = FALSE)
-  coefs <- suppressMessages(coefs %>%
-    dplyr::select(coefs_vector,
-                  sigma_value,
-                  error_group) %>%
-    dplyr::mutate(coefs_vector = purrr::map(coefs_vector,
-                                            \(x) {
-                                              sigma_transfer <- sigma_value
-                                              names(sigma_transfer) <- error_group
-                                              c(x, sigma_transfer)
-                                            })) %>%
-    dplyr::select(-sigma_value, -error_group))
 
   req_vars <- ggplot2::vars(Time,
                             Time.Units,
@@ -186,6 +177,7 @@ logLik.pk <- function(object,
                             Conc,
                             Conc_SD,
                             N_Subjects,
+                            LOQ,
                             Detect)
 
 
@@ -203,15 +195,16 @@ logLik.pk <- function(object,
               dplyr::filter(Time.Units != Time_trans.Units) %>%
               dplyr::distinct())
     }
-
-  }
-
     newdata <- newdata %>%
       dplyr::mutate(data_sigma_group = factor(data_sigma_group),
                     Time_trans = convert_time(x = Time_trans,
                                               from = Time_trans.Units,
                                               to = "hours"),
-                    Time_trans.Units = "hours") %>%
+                    Time_trans.Units = "hours")
+  }
+
+
+    newdata <- newdata %>%
       dplyr::group_by(!!!object$data_group) %>%
       tidyr::nest(.key = "observations") %>%
       dplyr::ungroup()
@@ -219,17 +212,23 @@ logLik.pk <- function(object,
 
   newdata <- tidyr::expand_grid(tidyr::expand_grid(model, method),
                                 newdata)
+  # This setup allows for a more stable call to the model functions later on
+  fun_models <- data.frame(
+    model_name = unname(sapply(my_pk$stat_model, \(x) {x$name})),
+    model_fun = unname(sapply(my_pk$stat_model, \(x) {x$conc_fun}))
+  )
 
-  newdata <- suppressMessages(dplyr::left_join(coefs, newdata))
+  newdata <- dplyr::left_join(coefs, newdata,
+                              by = c("model", "method",
+                                      data_grp_vars))
 
 
   newdata <- newdata %>%
     dplyr::rowwise() %>%
     dplyr::filter(!is.null(observations)) %>%
-    dplyr::mutate(model_fun = object$stat_model[[model]]$conc_fun) %>%
+    dplyr::left_join(fun_models, join_by(model == model_name)) %>%
     dplyr::ungroup() %>%
     dplyr::distinct()
-
 
   newdata <- newdata %>%
     dplyr::rowwise() %>%
