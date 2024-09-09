@@ -61,7 +61,8 @@ fold_errors.pk <- function(obj,
                    method = method,
                    use_scale_conc = FALSE,
                    type = "conc") %>%
-    mutate(Fold_Error = Conc_est/Conc)
+    mutate(Fold_Error = Conc_est/Conc,
+           .after = Conc_est)
 
   return(preds)
 
