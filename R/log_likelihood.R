@@ -147,7 +147,7 @@ log_likelihood <- function(par,
   sigma_index <- grepl(x = names(params),
                        pattern = "sigma")
 
-  # Used variables
+  # Used variables such that there is no need to reference 'data'
   Time_trans <- data$Time_trans
   Dose <- data$Dose
   Route <- data$Route
@@ -246,14 +246,13 @@ log_likelihood <- function(par,
     if (any(!sigma_na_index)) {
       # Expectations: N_Subjects must be >= 1
       #compute log likelihoods for observations with sigmas
-      # Messy code but twice as fast not trying to operate on data.frames
       ll_data_sigma <-  ifelse(
         N_Subjects[!sigma_na_index] == 1 & !is.na(N_Subjects[!sigma_na_index]),
         ifelse(
           Detect[!sigma_na_index] %in% TRUE,
           dnorm(
             x = Conc_trans[!sigma_na_index],
-            mean = pred_trans,
+            mean = pred_trans[!sigma_index],
             sd = sigma_obs[!sigma_na_index],
             log = TRUE
           ),
