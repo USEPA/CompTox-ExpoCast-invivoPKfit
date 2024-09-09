@@ -77,6 +77,17 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   fit_check_DF <- obj$prefit$fit_check
 
 
+  # Subset data so I only have the columns needed for fitting
+  req_data_vars <- ggplot2::vars(
+    Route, Media, Dose,
+    Conc, Conc_trans, Conc_SD,
+    LOQ, exclude, Detect,
+    N_Subjects, data_sigma_group, Time_trans
+  )
+  data <- data %>%
+    dplyr::select(!!!obj$stat_error_model$error_group,
+                  !!!req_data_vars)
+
   # nest the necessary data frames...
   data_nest <- data %>%
     tidyr::nest(data = !tidyselect::all_of(data_group_vars))
@@ -279,12 +290,19 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
 
   # Add parameter fit flags
   obj$fit <- tidy_fit %>%
-    mutate(at_bound = dplyr::case_when(
+    dplyr::mutate(estimate = dplyr::if_else(
+      optimize_param == FALSE & use_param == TRUE,
+      start,
+      estimate)
+    ) %>%
+    dplyr::mutate(at_bound = dplyr::case_when(
       identical(estimate, lower_bound) ~ "AT LOWER BOUND",
       identical(estimate, upper_bound) ~ "AT UPPER BOUND",
+      identical(estimate, start) ~ "AT START",
       .default = "Not at bound")
     ) %>%
-    dplyr::distinct()
+    dplyr::distinct() %>%
+    dplyr::select(-c(lower_bound, upper_bound))
 
   obj$status <- status_fit #fitting complete
   message("do_fit.pk: Fitting complete")
