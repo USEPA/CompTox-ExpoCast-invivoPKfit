@@ -205,12 +205,13 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   tidy_sigmas <- tidy_fit %>%
     dplyr::select(!!!data_group, model, method,
                   tidyselect::starts_with("sigma_")) %>%
+    dplyr::mutate(expected_sigma_group = paste(!!!obj$data_group, sep = ".")) %>%
     tidyr::pivot_longer(cols = tidyselect::starts_with("sigma"),
                         names_to = "param_name",
                         values_to = "estimate") %>%
-    dplyr::filter(stringr::str_detect(
-      param_name,
-      paste(Chemical, Species, sep = "."))) %>%
+    dplyr::filter(stringr::str_detect(error_group,
+                                      expected_sigma_group)) %>%
+    dplyr::select(-expected_sigma_group) %>%
     dplyr::inner_join(sigma_DF %>%
                         dplyr::select(!!!data_group,
                                       param_name, param_units,
