@@ -149,7 +149,8 @@ Vss_Fgutabs <- (1/Fgutabs_V1) * (k21 + k12) / k21
   time = tmax,
   dose = dose,
   route= route,
-  medium = medium)
+  medium = medium,
+  ...)
 
   AUC_inf <- auc_2comp(params = pars,
   time = Inf,
