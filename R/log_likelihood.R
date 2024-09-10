@@ -142,10 +142,10 @@ log_likelihood <- function(par,
 
   #Extract parameters whose names do not match 'sigma'
   #(that is, all the actual model parameters)
-  model.params <- params[!grepl(x = names(params),
-                                pattern = "sigma")]
-  sigma_index <- grepl(x = names(params),
-                       pattern = "sigma")
+  sigma_index <- stringr::str_detect(names(params),
+                                     pattern = "sigma")
+  model.params <- params[!sigma_index]
+
 
   # Used variables such that there is no need to reference 'data'
   Time_trans <- data$Time_trans
@@ -158,8 +158,6 @@ log_likelihood <- function(par,
   Conc_trans <- data$Conc_trans
   N_Subjects <- data$N_Subjects
   Detect <- data$Detect
-
-  rm(data)
 
   #get un-transformed predicted plasma concentration vs. time for the current parameter
   #values, by dose and route
@@ -281,7 +279,6 @@ log_likelihood <- function(par,
 
     #compute log likelihoods for observations without sigmas
     if (any(sigma_na_index)) {
-      # data_no_sigma <- vctrs::vec_slice(data, sigma_na_index)
       if (suppress.messages %in% FALSE) {
         message(
           paste(

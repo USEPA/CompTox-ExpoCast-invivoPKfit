@@ -209,7 +209,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
     tidyr::pivot_longer(cols = tidyselect::starts_with("sigma"),
                         names_to = "param_name",
                         values_to = "estimate") %>%
-    dplyr::filter(stringr::str_detect(error_group,
+    dplyr::filter(stringr::str_detect(param_name,
                                       expected_sigma_group)) %>%
     dplyr::select(-expected_sigma_group) %>%
     dplyr::inner_join(sigma_DF %>%
