@@ -2,7 +2,7 @@
 % Please edit documentation in R/pk_methods_get_data_group.R
 \name{get_data_group.pk}
 \alias{get_data_group.pk}
-\title{Get data groupingh}
+\title{Get data grouping}
 \usage{
 \method{get_data_group}{pk}(obj, ...)
 }
@@ -15,5 +15,5 @@
 An object of class `call` giving the data grouping as a `dplyr::vars()` specification
 }
 \description{
-Get data groupingh
+Get data grouping
 }

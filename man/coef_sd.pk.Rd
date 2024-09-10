@@ -4,14 +4,7 @@
 \alias{coef_sd.pk}
 \title{Get coefficient standard deviations}
 \usage{
-\method{coef_sd}{pk}(
-  obj,
-  model = NULL,
-  method = NULL,
-  table_format = FALSE,
-  suppress.messages = TRUE,
-  ...
-)
+\method{coef_sd}{pk}(obj, model = NULL, method = NULL, suppress.messages = TRUE, ...)
 }
 \arguments{
 \item{obj}{A [pk] object}
@@ -23,9 +16,6 @@ returned for all of the models in `obj$stat_model`.}
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 whose coefficients to return. If NULL (the default), coefficients will be
 returned for all of the models in `obj$settings_optimx$method`.}
-
-\item{table_format}{Logical. `FALSE` by default, this determines whether the
-the output is in an unnested format.}
 
 \item{suppress.messages}{Logical. `TRUE` (the default) to suppress
 informative messages. `FALSE` to see them.}
