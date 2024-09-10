@@ -1,0 +1,270 @@
+---
+title: "testing_summary"
+author: "Gilberto Padilla Mercado"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+today <- format(Sys.Date(), "%d%B%Y")
+set.seed(as.numeric(Sys.Date()))
+options(digits = 10, warnPartialMatchDollar = TRUE)
+```
+
+## Purpose
+
+The pupose of this document is to test all functions in invivoPKfit and
+assist with debugging. No function will remain unturned. Perhaps some of these
+examples will be formalized into unit tests included in the package.
+
+The first step is loading some basic packages: _magrittr_ and _devtools_
+
+```{r libraries}
+library(devtools)
+load_all()
+library(magrittr)
+```
+
+Now the first thing we could do is get a list of all the functions.
+Since we are in a project-based development environment, we are already in the
+necessary working directory. We can inquire all the _.R_ files in the Terminal as so:
+
+```
+ls R/*.R
+ls -l R/*.R | wc -l
+```
+
+We have 111 functions and methods in this package! This will be a lot of work to get
+through, hence the inspiration for this document. First things first, make a 
+"small" version of `cvt` that we can quickly fit. For the purposes of this
+document, I will take 5% of CVT_Legacy data.
+I will also add a few chemicals + species' data that I know will fail or
+be skipped, so that these features may be tested.
+
+```{r tiny-cvt}
+tiny_cvt <- cvt %>%
+  dplyr::filter(curation_set_tag == "CVT_Legacy") %>%
+  dplyr::distinct(analyte_dtxsid, species) %>%
+  dplyr::slice_sample(prop = 0.05) %>%
+  dplyr::bind_rows(
+    data.frame(
+      analyte_dtxsid = c("DTXSID00861411", "DTXSID6023577", 
+                         "DTXSID1043881", "DTXSID3061635",
+                         "DTXSID1021116", "DTXSID2020139"),
+      species = rep("rat", 6)
+    )) %>%
+  dplyr::distinct() %>%
+  dplyr::left_join(cvt, by = dplyr::join_by(analyte_dtxsid, species))
+
+length(unique(tiny_cvt$analyte_dtxsid))
+length(unique(tiny_cvt$administration_route_normalized)) # Should be two
+length(unique(tiny_cvt$conc_medium_normalized)) # Should be two
+tiny_cvt %>% 
+  dplyr::distinct(analyte_dtxsid, species, n_subjects_normalized, curation_set_tag)
+```
+
+
+The next step is to create a minimal PK object like in the main vignette.
+
+
+```{r minimal-pk}
+minimal_pk <- pk(data = tiny_cvt %>%
+                   mutate(n_subjects_normalized = if_else(
+                     n_subjects_normalized > 1 & is.na(invivPK_conc_sd),
+                     min(n_subjects_normalized, 6), n_subjects_normalized)),
+                 mapping = ggplot2::aes(
+                   Chemical = analyte_dtxsid,
+                   Chemical_Name = analyte_name_original,
+                   DTXSID = analyte_dtxsid,
+                   CASRN = analyte_casrn,
+                   Species = species,
+                   Reference = fk_extraction_document_id,
+                   Media = conc_medium_normalized,
+                   Route = administration_route_normalized,
+                   Dose = invivPK_dose_level,
+                   Dose.Units = "mg/kg",
+                   Subject_ID = fk_subject_id,
+                   Series_ID = fk_series_id,
+                   Study_ID = fk_study_id,
+                   ConcTime_ID = conc_time_id,
+                   N_Subjects = n_subjects_normalized,
+                   Weight = weight_kg,
+                   Weight.Units = "kg",
+                   Time = time_hr,
+                   Time.Units = "hours",
+                   Value = invivPK_conc,
+                   Value.Units = "mg/L",
+                   Value_SD = invivPK_conc_sd,
+                   LOQ = invivPK_loq
+                 ))
+
+testthat::expect_identical(length(minimal_pk), 10L)
+```
+
+From here I need to set up the pk object settings. I will be using the dose-normalization only,
+then re-run using all settings at the end.
+
+```{r pk-settings}
+my_pk <- minimal_pk +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE,
+                      suppress.messages = FALSE) +
+  settings_optimx(method = c("bobyqa", "L-BFGS-B")) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
+  # scale_time(new_units = "auto") +
+  stat_error_model(error_group = vars(Chemical, Species, Reference))
+```
+
+## Setting Getters Test
+
+Below are just a few checks for the settings I changed above.
+
+```{r setting-getters}
+get_data_group(my_pk) # Modified to follow output from get_error_group
+get_error_group(my_pk)
+
+get_mapping(my_pk)
+get_settings_data_info(my_pk) # Removed nca_group
+get_settings_preprocess(my_pk)
+get_scale_time(my_pk)
+get_scale_conc(my_pk)
+get_stat_error_model(my_pk) # Removed Chemical <- NULL
+get_stat_model(my_pk)
+
+get_status(my_pk)
+get_status(my_pk, suppress.messages = TRUE)
+
+testthat::expect_identical(get_status(my_pk), 1L)
+```
+
+Now we can do the pre-processing steps. Important to note that there is actually
+an impute_sd setting that is on by default but has been commented out.
+
+I need to figure out what the effect of the 30% is on calculating sigma.
+
+```{r pre-process}
+my_pk <- do_preprocess(my_pk)
+my_data <- get_data(my_pk)
+# Showing that Chemical + Species + Route + Media + Dose defines
+# A CvT experiment, not necessarily Study_ID
+my_data %>% dplyr::distinct(Study_ID,
+                            Chemical, Species, Route, Media, Dose)
+
+```
+
+
+Next I will go through the data info function. Implicitly, this tests
+the `nca` and `calc_nca`
+
+```{r data-info}
+my_pk <- do_data_info(my_pk)
+get_status(my_pk)
+```
+
+
+Next is pre-fitting. Here, the upper/lower bounds & starts for the parameters.
+Here is also where sigma values are initialized.
+
+```{r prefit}
+my_pk <- do_prefit(my_pk)
+get_prefit(my_pk) # This has some odd outputs :/
+get_status(my_pk)
+get_data_summary(my_pk)
+get_settings_optimx(my_pk)
+```
+
+
+Finally do the fitting, here is where most of the functions come to play,
+including the model functions. Walk through the main function and set `browser()`
+markers in the concentration prediction functions.
+
+```{r fit}
+thispk_profvis <- profvis::profvis(do_fit(my_pk))
+system.time(my_pk <- do_fit(my_pk)) # 72 seconds, 11 data_groups
+
+```
+
+After some optimization of the fitting functions... now it's time
+to optimize some of the downstream analysis functions and make sure they work
+as intended! Firstly, I changed the way fit object _look_ so I need to change how
+it interfaces with the coef method.  
+
+I have also found a _safer_ way to select the model functions in `predict.pk()`
+that is based on joins and creating a data.frame of model names and functions
+ahead of time.
+
+```{r coef-preds}
+my_coefs <- coef(my_pk)
+my_preds <- predict(my_pk)
+my_logLik <- logLik(my_pk)
+```
+
+There are a bunch of methods that call these three...  
+For coef.pk() :  
+
++ coef_sd.pk()  
++ get_tkstats.pk()  
++ _logLik.pk()_  
++ _predict.pk()_  
++ summary.pk()  
+
+
+For predict.pk() :  
+
++ fold_errors.pk()  
++ residuals.pk()  
++ rsq.pk()  
++ rmse.pk()
+
+
+For logLik.pk() :  
+
++ AIC.pk()  
++ BIC.pk()  
++ get_winning_model.pk()  
+
+
+
+I will start with adjusting the `predict.pk()`-dependent methods.
+Since most of these simply use the results from `predict.pk()`, it should
+be simple.
+
+```{r}
+my_residuals <- residuals(my_pk)
+my_fes <- fold_errors(my_pk)
+my_rmse <- rmse(my_pk)
+my_rmsle <- rmse(my_pk, use_scale_conc = list(dose_norm = FALSE,
+                                              log10_trans = TRUE))
+
+my_rsq <- rsq(my_pk)
+```
+
+
+Next lets address `logLik.pk()`-dependent methods. Generally, what I did here
+is let `logLik.pk()` take the responsibility of checking that the methods
+and models were alright. This was done more for efficiency in reading the code.
+One important consideration for `get_winning_model.pk()` is what happens
+when there are ties? This is probably unlikely to be the case, but we
+need to account for it nonetheless. 
+
+
+```{r}
+my_AIC <- AIC(my_pk)
+my_BIC <- BIC(my_pk)
+my_wm <- get_winning_model(my_pk)
+```
+
+Lastly, let's take a look at the remaining `coef.pk()`-dependent methods.
+To make more efficient use of the results, I modified the output of
+`coef_sd.pk` to look like `coef`, removing the table_format option.
+`get_tkstats(my_pk)` has some nested operations that I think can be optimized
+further.
+
+```{r}
+my_coefsd <- coef_sd(my_pk)
+my_tkstats <- get_tkstats(my_pk)
+best_tkstats <- eval_tkstats(my_pk)
+```
+
+
