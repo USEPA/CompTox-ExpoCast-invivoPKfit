@@ -56,23 +56,20 @@ predict.pk <- function(obj,
                        suppress_messages = TRUE,
                        include_NAs = FALSE,
                        ...) {
-  #ensure that the model has been fitted
-  check <- check_required_status(obj = obj,
-                                 required_status = status_fit)
-  if (!(check %in% TRUE)) {
-    stop(attr(check, "msg"))
-  }
+  if (is.null(model)) model <- names(obj$stat_model)
+  if (is.null(method)) method <- obj$settings_optimx$method
 
-  data_group_vars <- sapply(obj$data_group,
-                            rlang::as_label)
-
-  if (is.null(model))
-    model <- names(obj$stat_model)
-  if (is.null(method))
-    method <- obj$settings_optimx$method
-
-  method_ok <- check_method(obj = obj, method = method)
-  model_ok <- check_model(obj = obj, model = model)
+  # From here it needs to output a named numeric vector coefs_vector
+  # for the model functions
+  # Responsibility for some checks done in coefs
+  coefs <- coef(
+    obj = obj,
+    model = model,
+    method = method,
+    drop_sigma = TRUE,
+    include_NAs = include_NAs
+  ) %>%
+    dplyr::select(-c(Time.Units, Time_trans.Units))
 
   # This setup allows for a more stable call to the model functions later on
   fun_models <- data.frame(
@@ -84,16 +81,8 @@ predict.pk <- function(obj,
     }
   )
 
-  # From here it needs to output a named numeric vector coefs_vector
-  # for the model functions
-  coefs <- coef(
-    obj = obj,
-    model = model,
-    method = method,
-    drop_sigma = TRUE,
-    include_NAs = include_NAs
-  ) %>%
-    dplyr::select(-c(Time.Units, Time_trans.Units))
+  data_group_vars <- sapply(obj$data_group,
+                            rlang::as_label)
 
   if (is.null(newdata)) {
     newdata <- obj$data
@@ -112,7 +101,7 @@ predict.pk <- function(obj,
                       Media,
                       LOQ,
                       data_sigma_group)
-                    )
+  )
 
   #other_vars is all the non-required vars
   #and non-data-group vars
