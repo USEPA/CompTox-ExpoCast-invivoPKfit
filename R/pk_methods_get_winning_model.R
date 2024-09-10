@@ -4,7 +4,8 @@
 #'
 #'Get the winning model (i.e. the model with the lowest value of the criterion
 #'specified in `criterion`) for a fitted `pk` object, for a specified method,
-#'and optionally for a specified new dataset.
+#'and optionally for a specified new dataset. When there are ties it will
+#'return the first encounter, where the priority is: model_1comp > model_2comp > model_flat.
 #'
 #'@param obj A [pk()] object
 #'@param newdata Optional: A `data.frame` containing new data to plot. Must
@@ -75,24 +76,26 @@ get_winning_model.pk <- function(obj,
     left_join(pred_check,
               c(data_grp_vars, "model", "method"))
 
-
-
   #return the winning model for each method
   # Winmodel should have RMSE of at least 95% of flat model
   # This will mean the fold-MSE should be at least around 90%
  winmodels <- model_compare %>%
    dplyr::group_by(!!!obj$data_group, method) %>%
    dplyr::mutate(
-     near_flat = ifelse(
+    near_flat = ifelse(
        RMSE/dplyr::cur_data()$RMSE[which(dplyr::cur_data()$model == "model_flat")] <= 0.95,
        FALSE, TRUE)
      ) %>%
    dplyr::group_by(!!!obj$data_group, method) %>%
-   dplyr::filter(if_any(contains(criterion), ~ . == min(.)),
-          method == method) %>%
-    dplyr::ungroup() %>%
-    dplyr::select(!!!obj$data_group,
-                  method, model, near_flat, preds_below_loq)
+   dplyr::arrange(model) %>%
+   dplyr::filter(method == method) %>%
+   dplyr::slice_min(
+     order_by = pick({{ criterion }}),
+     n = 1,
+     with_ties = FALSE) %>%
+   dplyr::ungroup() %>%
+   dplyr::select(!!!obj$data_group,
+                 method, model, near_flat, preds_below_loq)
 
   return(winmodels)
 
