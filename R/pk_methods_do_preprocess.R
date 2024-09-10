@@ -25,7 +25,6 @@
 #' @import dplyr
 #' @import tidyr
 #' @import purrr
-#' @importFrom vctrs vec_slice
 #' @importFrom magrittr `%>%`
 #' @export
 do_preprocess.pk <- function(obj, ...) {

@@ -115,8 +115,9 @@ eval_tkstats.pk <- function(obj,
   } # Need this transformation for get_tkstats
 
   #Get the winning model for filtering
-  winmodel_df <- get_winning_model(obj = obj,
-                                   method = method)
+  winmodel_df <- get_winning_model.pk(obj = obj,
+                                   method = method) %>%
+    dplyr::select(-c(near_flat, preds_below_loq))
 
   #calc NCA for newdata
   nca_df <- nca(obj = obj,
@@ -135,7 +136,7 @@ eval_tkstats.pk <- function(obj,
 
 
   #get tkstats
-  tkstats_df <- get_tkstats(obj = obj,
+  tkstats_df <- get_tkstats.pk(obj = obj,
                             newdata = newdata,
                             model = model,
                             method = method,
