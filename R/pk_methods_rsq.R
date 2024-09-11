@@ -169,6 +169,7 @@ rsq.pk <- function(obj,
                                            "Conc",
                                            "Conc_SD",
                                            "N_Subjects",
+                                           "LOQ",
                                            "Detect"),
                               exclude = exclude)
 

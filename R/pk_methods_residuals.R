@@ -82,6 +82,7 @@ residuals.pk <- function(obj,
                                            "Route",
                                            "Media",
                                            "Conc",
+                                           "LOQ",
                                            "Detect"),
                               exclude = exclude)
 

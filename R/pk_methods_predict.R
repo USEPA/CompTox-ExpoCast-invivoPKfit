@@ -84,31 +84,20 @@ predict.pk <- function(obj,
   data_group_vars <- sapply(obj$data_group,
                             rlang::as_label)
 
-  if (is.null(newdata)) {
-    newdata <- obj$data
-  }
-
-  req_vars <- union(obj$stat_error_model$error_group,
+  req_vars <- union(obj$data_group,
                     ggplot2::vars(
-                      Conc,
-                      Conc_trans,
-                      Conc_SD,
                       Conc.Units,
                       Time,
                       Time.Units,
                       Dose,
                       Route,
-                      Media,
-                      LOQ,
-                      data_sigma_group)
-  )
+                      Media))
 
-  #other_vars is all the non-required vars
-  #and non-data-group vars
-  all_vars <- do.call(ggplot2::vars,
-                      lapply(names(newdata),
-                             as.name)
-  )
+  if (is.null(newdata)) {
+    newdata <- obj$data
+  }
+
+  # Check if there are other variables
 
   newdata_ok <- check_newdata(
     newdata = newdata,
@@ -118,13 +107,15 @@ predict.pk <- function(obj,
     exclude = exclude
   )
 
+  loq_check <- any("LOQ" %in% names(newdata))
+
+
   #apply transformations if so specified
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
 
   # Make observations into nested list-column
   newdata <- newdata %>%
-    dplyr::select(!!!req_vars) %>%
     dplyr::group_by(!!!obj$data_group) %>%
     tidyr::nest(.key = "observations") %>%
     dplyr::ungroup()
@@ -169,8 +160,8 @@ predict.pk <- function(obj,
                          dose = Dose_tmp,
                          route = Route,
                          medium = Media,
-                         loq = LOQ))
-            ,
+                         loq = ifelse(loq_check, LOQ, 0)
+                         )),
             error = function(err) {
               if (!suppress_messages) {
                 message(paste("predict.pk(): Unable to run",
