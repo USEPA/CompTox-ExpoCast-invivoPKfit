@@ -257,6 +257,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   # Need to convert rates to perHour IFF get_scale_time(my_pk) is NOT "identity"
   # The assumption here is that the provided units of time in CvT data are hours.
   time_scaled <- get_scale_time(obj)[["new_units"]]
+
   if (time_scaled != "identity") {
     # Take rate_names
     # Parameter names don't matter, all rates should have consistent param_unit
@@ -285,7 +286,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
     tidy_fit <- suppressMessages(
       tidy_fit %>%
         dplyr::left_join(rate_conversion,
-                         by = c(data_group_vars, param_units)) %>%
+                         by = c(data_group_vars, "param_units")) %>%
         dplyr::mutate(across(contains(rate_names),
                              \(x) x * to_perhour)) %>%
         dplyr::select(-to_perhour))
