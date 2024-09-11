@@ -66,6 +66,7 @@ coef.pk <- function(obj,
                   param_name,
                   estimate,
                   convcode)
+
   # drop the sigma parameters (not used in some functions)
   if (drop_sigma == TRUE) {
     coefs <- coefs %>%
@@ -76,7 +77,7 @@ coef.pk <- function(obj,
   # include NA values from aborted fits
   if (!include_NAs) {
     coefs <- coefs %>%
-      dplyr::filter(convcode != 9999)
+      dplyr::filter(abs(convcode) != 9999)
   }
 
   # Get the columns describing time units and their (possibly) transformed units
