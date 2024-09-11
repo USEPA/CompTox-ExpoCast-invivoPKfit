@@ -72,8 +72,12 @@
 #' @family flat model functions
 #' @family model concentration functions
 
-cp_flat <- function(params, time, dose, route, medium, loq) {
-
+cp_flat <- function(params,
+                    time,
+                    dose,
+                    route,
+                    medium = "plasma",
+                    loq = sqrt(.Machine$double.eps)) {
   params <- fill_params_flat(params)
 
   check_msg <- check_params_flat(params = params,
