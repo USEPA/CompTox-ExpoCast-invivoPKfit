@@ -27,7 +27,7 @@
 #'  The return value has attribute `criterion` giving the name of the criterion function used to compare
 #'  models.
 #'@export
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 get_winning_model.pk <- function(obj,
                                  newdata = NULL,
                                  method = NULL,
@@ -82,9 +82,10 @@ get_winning_model.pk <- function(obj,
  winmodels <- model_compare %>%
    dplyr::group_by(!!!obj$data_group, method) %>%
    dplyr::mutate(
-    near_flat = ifelse(
-       RMSE/dplyr::cur_data()$RMSE[which(dplyr::cur_data()$model == "model_flat")] <= 0.95,
-       FALSE, TRUE)
+    near_flat = dplyr::if_else(
+      !is.null(dplyr::cur_data()$RMSE[which(dplyr::cur_data()$model == "model_flat")]),
+       all(RMSE/dplyr::cur_data()$RMSE[which(dplyr::cur_data()$model == "model_flat")] >= 0.95),
+       FALSE, missing = NA)
      ) %>%
    dplyr::group_by(!!!obj$data_group, method) %>%
    dplyr::arrange(model) %>%
