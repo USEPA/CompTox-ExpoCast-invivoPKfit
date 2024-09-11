@@ -146,18 +146,17 @@ log_likelihood <- function(par,
                                      pattern = "sigma")
   model.params <- params[!sigma_index]
 
-
   # Used variables such that there is no need to reference 'data'
   Time_trans <- data$Time_trans
   Dose <- data$Dose
   Route <- data$Route
   Media <- data$Media
-  LOQ <- data$LOQ
   Conc <- data$Conc
   Conc_SD <- data$Conc_SD
   Conc_trans <- data$Conc_trans
   N_Subjects <- data$N_Subjects
   Detect <- data$Detect
+
 
   #get un-transformed predicted plasma concentration vs. time for the current parameter
   #values, by dose and route
@@ -168,16 +167,18 @@ log_likelihood <- function(par,
       time = Time_trans,
       dose = Dose,
       route = Route,
-      medium = Media,
-      loq = LOQ
+      medium = Media
     )
   )
+
+  max_pred <- max(pred, na.rm = TRUE)
+  max_conc <- max(Conc, na.rm = TRUE)
 
   # Early Return
   # if model predicted any NA or Inf concentrations OR
   # any negative concentrations,
   #then parameters are infinitely unlikely
-  if (any(!is.finite(pred)) || any(pred < 0)) {
+  if (any(!is.finite(pred)) || any(pred < 0) || max_pred > 10*max_conc) {
     ll <- -Inf
     if (negative) ll <- -1 * ll
     return(ll)
@@ -232,8 +233,8 @@ log_likelihood <- function(par,
                                     data_sigma_group,
                                     sep = "_")]
 
-    sigma_na_index <- vapply(sigma_obs, is.null, logical(1))
-    sigma_obs[sigma_na_index] <- NA_real_
+    sigma_is_na <- vapply(sigma_obs, is.null, logical(1))
+    sigma_obs[sigma_is_na] <- NA_real_
     sigma_obs <- unlist(sigma_obs)
 
     sigma_obs <- sigma_obs
@@ -241,34 +242,34 @@ log_likelihood <- function(par,
     #if data_sigma_group is NA -- then assume data are equally likely to come from any of the existing distributions
     #data_sigma_group may be NA if we are calculating log-likelihood for new data,
     #i.e., data on which the model was not originally fitted.
-    if (any(!sigma_na_index)) {
+    if (any(!sigma_is_na)) {
       # Expectations: N_Subjects must be >= 1
       #compute log likelihoods for observations with sigmas
       ll_data_sigma <-  ifelse(
-        N_Subjects[!sigma_na_index] == 1 & !is.na(N_Subjects[!sigma_na_index]),
+        N_Subjects[!sigma_is_na] == 1 & !is.na(N_Subjects[!sigma_is_na]),
         ifelse(
-          Detect[!sigma_na_index] %in% TRUE,
+          Detect[!sigma_is_na] %in% TRUE,
           dnorm(
-            x = Conc_trans[!sigma_na_index],
-            mean = pred_trans[!sigma_index],
-            sd = sigma_obs[!sigma_na_index],
+            x    = Conc_trans[!sigma_is_na],
+            mean = pred_trans[!sigma_is_na],
+            sd   = sigma_obs[!sigma_is_na],
             log = TRUE
           ),
           pnorm(
-            q = Conc_trans[!sigma_na_index],
-            mean = pred_trans[!sigma_na_index],
-            sd = sigma_obs[!sigma_na_index],
+            q    = Conc_trans[!sigma_is_na],
+            mean = pred_trans[!sigma_is_na],
+            sd   = sigma_obs[!sigma_is_na],
             log.p = TRUE
           )
         ),
           do.call(
             ll_summary,
             list(
-              mu = pred_trans[!sigma_na_index],
-              sigma = sigma_obs[!sigma_na_index],
-              x_mean = conc_natural[!sigma_na_index],
-              x_sd = conc_sd_natural[!sigma_na_index],
-              x_N = N_Subjects[!sigma_na_index],
+              mu     = pred_trans[!sigma_is_na],
+              sigma  = sigma_obs[!sigma_is_na],
+              x_mean = conc_natural[!sigma_is_na],
+              x_sd   = conc_sd_natural[!sigma_is_na],
+              x_N    = N_Subjects[!sigma_is_na],
               log = TRUE
             )
         )
@@ -278,7 +279,7 @@ log_likelihood <- function(par,
     }
 
     #compute log likelihoods for observations without sigmas
-    if (any(sigma_na_index)) {
+    if (any(sigma_is_na)) {
       if (suppress.messages %in% FALSE) {
         message(
           paste(
@@ -296,18 +297,18 @@ log_likelihood <- function(par,
         function(this_sigma) {
           #place these observations in each group in turn
           ifelse(
-            N_Subjects[sigma_na_index] == 1 & !is.na(N_Subjects[sigma_na_index]),
+            N_Subjects[sigma_is_na] == 1 & !is.na(N_Subjects[sigma_is_na]),
             ifelse(
-              Detect[sigma_na_index] %in% TRUE,
+              Detect[sigma_is_na] %in% TRUE,
               dnorm(
-                x = Conc_trans[sigma_na_index],
-                mean = pred_trans[sigma_na_index],
+                x = Conc_trans[sigma_is_na],
+                mean = pred_trans[sigma_is_na],
                 sd = this_sigma,
                 log = TRUE
               ),
               pnorm(
-                q = Conc_trans[sigma_na_index],
-                mean = pred_trans[sigma_na_index],
+                q = Conc_trans[sigma_is_na],
+                mean = pred_trans[sigma_is_na],
                 sd = this_sigma,
                 log.p = TRUE
               )
@@ -315,11 +316,11 @@ log_likelihood <- function(par,
             do.call(
               ll_summary,
               list(
-                mu = pred_trans[sigma_na_index],
+                mu = pred_trans[sigma_is_na],
                 sigma = this_sigma,
-                x_mean = conc_natural[sigma_na_index],
-                x_sd = conc_sd_natural[sigma_na_index],
-                x_N = N_Subjects[sigma_na_index],
+                x_mean = conc_natural[sigma_is_na],
+                x_sd = conc_sd_natural[sigma_is_na],
+                x_N = N_Subjects[sigma_is_na],
                 log = TRUE
               )
             )
