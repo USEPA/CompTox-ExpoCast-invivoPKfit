@@ -100,11 +100,11 @@ plot.pk <- function(x,
   if (is.null(newdata))
     newdata <- x$data
 
-
   newdata_ok <- check_newdata(
     newdata = newdata,
     olddata = x$data,
-    req_vars = c("Time", "Time.Units", "Dose", "Route", "Media"),
+    req_vars = c("Time", "Time.Units", "Conc.Units",
+                 "Dose", "Route", "Media"),
     exclude = FALSE
   )
 
@@ -162,15 +162,21 @@ plot.pk <- function(x,
                            as.name("Time_trans.Units"),
                            as.name("Time.Units"))
 
-  common_vars <- ggplot2::vars(Time, Time.Units, Dose, Route, Media)
+  common_vars <- ggplot2::vars(Time,
+                               Time.Units,
+                               Dose,
+                               Route,
+                               Media)
 
   if (time_trans) {
-    common_vars <- union(common_vars, ggplot2::vars(Time_trans, Time_trans.Units))
+    common_vars <- union(common_vars,
+                         ggplot2::vars(Time_trans, Time_trans.Units))
   }
 
   obs_vars <- ggplot2::vars(
     Conc,
     Conc_SD,
+    Conc.Units,
     Value,
     Value.Units,
     Detect,
@@ -341,9 +347,9 @@ plot.pk <- function(x,
                     }))
 
   # For predictions, interpolate time
-
   if (get_status(obj = x) == 5) {
     interp_data <- newdata
+
     interp_data <- interp_data %>%
       dplyr::mutate(interpolated = purrr::map(observations, \(x) {
         #if needed and not present, add Time_trans.Units column
@@ -354,10 +360,11 @@ plot.pk <- function(x,
           }
 
           x %>%
-            dplyr::select(!!!common_vars) %>%
+            dplyr::select(!!!union(common_vars, obs_vars)) %>%
             dplyr::group_by(Dose, Route, Media) %>%
             dplyr::reframe(Time = max(Time), # Change to Time
-                           Time.Units, Time_trans.Units) %>%
+                           Time.Units, Time_trans.Units,
+                           Conc.Units) %>%
             dplyr::mutate(
               maxTime = max(Time),
               Time.Units = unique(Time.Units),
@@ -369,10 +376,10 @@ plot.pk <- function(x,
                             (dplyr::row_number() - 1))
         } else if (time_trans %in% FALSE) {
           x %>%
-            dplyr::select(!!!common_vars) %>%
+            dplyr::select(!!!union(common_vars, obs_vars)) %>%
             dplyr::group_by(Dose, Route, Media) %>%
             dplyr::reframe(Time = max(Time), # Change to Time
-                           Time.Units) %>%
+                           Time.Units, Conc.Units) %>%
             dplyr::mutate(maxTime = max(Time),
                           Time.Units = unique(Time.Units)) %>%
             tidyr::uncount(n_interp) %>%
@@ -394,7 +401,7 @@ plot.pk <- function(x,
     conc_scale_tmp <- conc_scale
     conc_scale_tmp$log10_trans <- FALSE
 
-    interp_data <- predict(
+    interp_data <- predict.pk(
       obj = x,
       newdata = interp_data,
       use_scale_conc = conc_scale_tmp,
