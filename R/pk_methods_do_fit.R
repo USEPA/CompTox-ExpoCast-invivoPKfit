@@ -101,8 +101,13 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   fit_check <- fit_check_DF %>%
     dplyr::select(!c(n_par, n_sigma, n_detect, n_par_opt, fit_reason))
 
-  # merge it all together
+  # make a join-able data.frame with all the possible models
+  fun_models <- data.frame(
+    model_name = unname(vapply(my_pk$stat_model, \(x) {x$name}, character(1))),
+    modelfun = unname(vapply(my_pk$stat_model, \(x) {x$conc_fun}, character(1)))
+  )
 
+  # merge it all together
   info_nest <- suppressMessages(dplyr::inner_join(
     dplyr::inner_join(
       dplyr::inner_join(data_nest,
@@ -112,16 +117,19 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
       by = c(data_group_vars)),
     fit_check,
     by = c("model", data_group_vars)) %>%
-    dplyr::relocate(model, .after = data_group_vars[-1]) )
+    dplyr::relocate(model, .after = data_group_vars[-1]) %>%
+    dplyr::left_join(fun_models, join_by(model == model_name)))
 
-  # Set the options for Parallel Computing
-  # First condition if it is FALSE don't use parallel computing (takes much longer though)
-  #
 
   this_settings_optimx <- get_settings_optimx(obj)
   dose_norm <- obj$scales$conc$dose_norm
   log10_trans <- obj$scales$conc$log10_trans
 
+  message("do_fit.pk(): Begin fitting for model(s):",
+          paste(fun_models$model_name, collapse = " "))
+
+  # Set the options for Parallel Computing
+  # First condition if it is FALSE don't use parallel computing (takes much longer though)
   if (is.numeric(n_cores)) {
     message(paste0("do_fit.pk(): Trying to divide processes into ", n_cores, " processing cores"))
     total_cores <- parallel::detectCores()
@@ -151,9 +159,6 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
     #we can likely save some memory by only passing what we need from obj
     #like this
 
-    info_nest <- info_nest %>% dplyr::rowwise() %>%
-      dplyr::mutate(modelfun = obj$stat_model[[model]]$conc_fun)
-
 
     tidy_fit <- info_nest %>%
       dplyr::rowwise(!!!data_group, model) %>%
@@ -178,7 +183,6 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
 
     tidy_fit <- info_nest %>%
       dplyr::rowwise(!!!data_group, model) %>%
-      dplyr::mutate(modelfun = obj$stat_model[[model]]$conc_fun) %>%
       dplyr::summarize(
         fit = list(fit_group(data = data,
                              par_DF = par_DF,
