@@ -254,43 +254,37 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
                      relationship = "many-to-one",
                      by = c(data_group_vars, "model", "method"))
 
-  # Need to convert rates to perHour IFF get_scale_time(obj) is NOT "identity"
-  # The assumption here is that the provided units of time in CvT data are hours.
-  time_scaled <- get_scale_time(obj)[["new_units"]]
+  # Take rate_names
+  # Parameter names don't matter, all rates should have consistent param_unit
+  message(paste0("do_fit.pk(): Now converting all rate constants to units of 1/hour, ",
+                 "in case time has been scaled to units other than hours before fitting"))
+  rate_names <- par_DF %>% dplyr::select(!!!obj$data_group,
+                                         param_name,
+                                         param_units) %>%
+    dplyr::filter(stringr::str_detect(param_units, "^1/")) %>%
+    dplyr::mutate(Time_trans.Units = stringr::str_remove(param_units, "^1/")) %>%
+    dplyr::distinct()
+  # Get a simple data_group and conversion rate data frame
+  rate_conversion <- rate_names %>%
+    dplyr::select(-param_name) %>% # Keep Time_trans.Units for a join
+    dplyr::group_by(Time_trans.Units) %>%
+    dplyr::mutate(to_perhour = convert_time(1,
+                                            from = Time_trans.Units,
+                                            to = "hours",
+                                            inverse = TRUE)) %>%
+    dplyr::ungroup() %>%
+    dplyr::distinct()
 
-  if (time_scaled != "identity") {
-    # Take rate_names
-    # Parameter names don't matter, all rates should have consistent param_unit
-    message(paste0("do_fit.pk(): Now converting all rate constants to units of 1/hour, ",
-                   "in case time has been scaled to units other than hours before fitting"))
-    rate_names <- par_DF %>% dplyr::select(!!!obj$data_group,
-                                           param_name,
-                                           param_units) %>%
-      dplyr::filter(stringr::str_detect(param_units, "^1/")) %>%
-      dplyr::mutate(Time_trans.Units = stringr::str_remove(param_units, "^1/")) %>%
-      dplyr::distinct()
-    # Get a simple data_group and conversion rate data frame
-    rate_conversion <- rate_names %>%
-      dplyr::select(-param_name) %>% # Keep Time_trans.Units for a join
-      dplyr::group_by(Time_trans.Units) %>%
-      dplyr::mutate(to_perhour = convert_time(1,
-                                              from = Time_trans.Units,
-                                              to = "hours",
-                                              inverse = TRUE)) %>%
-      dplyr::ungroup() %>%
-      dplyr::distinct()
+  rate_names <- rate_names %>% dplyr::pull(param_name)
 
-    rate_names <- rate_names %>% dplyr::pull(param_name)
-
-    # Convert the rates
-    tidy_fit <- suppressMessages(
-      tidy_fit %>%
-        dplyr::left_join(rate_conversion,
-                         by = c(data_group_vars, "param_units")) %>%
-        dplyr::mutate(across(contains(rate_names),
-                             \(x) x * to_perhour)) %>%
-        dplyr::select(-to_perhour))
-  }
+  # Convert the rates
+  tidy_fit <- suppressMessages(
+    tidy_fit %>%
+      dplyr::left_join(rate_conversion,
+                       by = c(data_group_vars, "param_units")) %>%
+      dplyr::mutate(across(contains(rate_names),
+                           \(x) x * to_perhour)) %>%
+      dplyr::select(-to_perhour))
 
 # Changing the final fit form so that everything is similar parDF
 
