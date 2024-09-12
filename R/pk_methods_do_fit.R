@@ -103,8 +103,8 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
 
   # make a join-able data.frame with all the possible models
   fun_models <- data.frame(
-    model_name = unname(vapply(my_pk$stat_model, \(x) {x$name}, character(1))),
-    modelfun = unname(vapply(my_pk$stat_model, \(x) {x$conc_fun}, character(1)))
+    model_name = unname(vapply(obj$stat_model, \(x) {x$name}, character(1))),
+    modelfun = unname(vapply(obj$stat_model, \(x) {x$conc_fun}, character(1)))
   )
 
   # merge it all together
@@ -254,7 +254,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
                      relationship = "many-to-one",
                      by = c(data_group_vars, "model", "method"))
 
-  # Need to convert rates to perHour IFF get_scale_time(my_pk) is NOT "identity"
+  # Need to convert rates to perHour IFF get_scale_time(obj) is NOT "identity"
   # The assumption here is that the provided units of time in CvT data are hours.
   time_scaled <- get_scale_time(obj)[["new_units"]]
 

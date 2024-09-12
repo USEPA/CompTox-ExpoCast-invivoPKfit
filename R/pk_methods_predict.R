@@ -73,11 +73,11 @@ predict.pk <- function(obj,
 
   # This setup allows for a more stable call to the model functions later on
   fun_models <- data.frame(
-    model_name = unname(vapply(my_pk$stat_model, \(x) {x$name}, character(1))),
+    model_name = unname(vapply(obj$stat_model, \(x) {x$name}, character(1))),
     model_fun = if (type == "auc") {
-      unname(sapply(my_pk$stat_model, \(x) {x$auc_fun}))
+      unname(sapply(obj$stat_model, \(x) {x$auc_fun}))
     } else {
-      unname(sapply(my_pk$stat_model, \(x) {x$conc_fun}))
+      unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
     }
   )
 

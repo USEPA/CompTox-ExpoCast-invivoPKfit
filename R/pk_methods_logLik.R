@@ -213,8 +213,8 @@ logLik.pk <- function(object,
                                 newdata)
   # This setup allows for a more stable call to the model functions later on
   fun_models <- data.frame(
-    model_name = unname(sapply(my_pk$stat_model, \(x) {x$name})),
-    model_fun = unname(sapply(my_pk$stat_model, \(x) {x$conc_fun}))
+    model_name = unname(sapply(object$stat_model, \(x) {x$name})),
+    model_fun = unname(sapply(object$stat_model, \(x) {x$conc_fun}))
   )
 
   newdata <- dplyr::left_join(coefs, newdata,
