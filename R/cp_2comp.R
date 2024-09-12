@@ -60,7 +60,7 @@ cp_2comp <- function(params,
                      dose,
                      route,
                      medium = "plasma",
-                     loq = sqrt(.Machine$double.eps)) {
+                     loq = 0) {
   #fill any missing parameters with NAs, and impute Fgutabs_v1 from Fgutabs and
   #V1 if necessary
   params <- fill_params_2comp(params)

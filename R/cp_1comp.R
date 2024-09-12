@@ -68,7 +68,7 @@ cp_1comp <- function(params,
                      dose,
                      route,
                      medium = 'plasma',
-                     loq = sqrt(.Machine$double.eps)) {
+                     loq = 0) {
   params <- fill_params_1comp(params)
 
   check_msg <- check_params_1comp(params = params,

@@ -77,7 +77,7 @@ cp_flat <- function(params,
                     dose,
                     route,
                     medium = "plasma",
-                    loq = sqrt(.Machine$double.eps)) {
+                    loq = 0) {
   params <- fill_params_flat(params)
 
   check_msg <- check_params_flat(params = params,
