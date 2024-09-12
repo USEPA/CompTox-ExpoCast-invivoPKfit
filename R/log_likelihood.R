@@ -181,6 +181,7 @@ log_likelihood <- function(par,
   if (any(!is.finite(pred)) || any(pred < 0) || max_pred > 10*max_conc) {
     ll <- -Inf
     if (negative) ll <- -1 * ll
+    if (force_finite) ll <- -1 * sqrt(.Machine$double.xmax)
     return(ll)
   }
 
