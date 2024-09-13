@@ -121,6 +121,9 @@
 #'  as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If
 #'  TRUE, then if the log-likelihood works out to be non-finite, then it will be
 #'  replaced with `.Machine$double.xmax`.
+#'@param max_multiplier Numeric, but NULL by default. Determines which multiple
+#'  of the maximum concentration to use to limit possible predictions.
+#'  Note: only use this as part of the fitting function.
 #'@param suppress.messages Logical.
 #'@return A log-likelihood value for the data given the parameter values in
 #'  params
@@ -135,6 +138,7 @@ log_likelihood <- function(par,
                            log10_trans = FALSE,
                            negative = TRUE,
                            force_finite = FALSE,
+                           max_multiplier = NULL,
                            suppress.messages = TRUE) {
 
   #combine parameters to be optimized and held constant
@@ -158,6 +162,8 @@ log_likelihood <- function(par,
   Detect <- data$Detect
 
 
+
+
   #get un-transformed predicted plasma concentration vs. time for the current parameter
   #values, by dose and route
   pred <- do.call(
@@ -171,17 +177,35 @@ log_likelihood <- function(par,
     )
   )
 
-  max_pred <- max(pred, na.rm = TRUE)
-  max_conc <- max(Conc, na.rm = TRUE)
+  # Handles the max_conc check, needs to be separate because it should only
+  # be used for fitting. Not logLik etc...
+  if (!is.null(max_multiplier)) {
+    if (!is.numeric(max_multiplier)) {
+      stop("Argument max_multiplier expects a numeric value or NULL")
+    }
+    if (!("groupCmax" %in% names(data))) {
+      stop(cat("Using max_multiplier requires a column in data named groupCmax ",
+               "which stores the maximum concentration per ",
+               "Reference, Dose, Route, and Media group."))
+    }
+
+    max_conc <- data$groupCmax * max_multiplier
+    if (any(pred >= max_conc)) {
+      ll <- -Inf
+      if (force_finite) ll <- -1 * sqrt(.Machine$double.eps)
+      if (negative) ll <- -1 * ll
+      return(ll)
+    }
+  }
 
   # Early Return
   # if model predicted any NA or Inf concentrations OR
   # any negative concentrations,
   #then parameters are infinitely unlikely
-  if (any(!is.finite(pred)) || any(pred < 0) || max_pred > 10*max_conc) {
+  if (any(!is.finite(pred)) || any(pred < 0)) {
     ll <- -Inf
-    if (negative) ll <- -1 * ll
     if (force_finite) ll <- -1 * sqrt(.Machine$double.xmax)
+    if (negative) ll <- -1 * ll
     return(ll)
   }
 

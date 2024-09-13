@@ -56,6 +56,13 @@ fit_group <- function(data,
       const_params <- NULL
     }
 
+    # Add the maximum concentration per Reference, Dose, Route, and Media
+    data <- data %>%
+      dplyr::group_by(Reference, Dose, Route, Media) %>%
+      dplyr::mutate(groupCmax = max(Conc, na.rm = TRUE)) %>%
+      dplyr::ungroup()
+
+
     #Now call optimx::optimx() and do the fit
     optimx_out <- suppressWarnings(
       tryCatch(
@@ -79,6 +86,7 @@ fit_group <- function(data,
                 log10_trans = log10_trans,
                 negative = TRUE,
                 force_finite = TRUE,
+                max_multiplier = 10,
                 suppress.messages = suppress.messages
               ) #end list()
             ) #end args = c()
