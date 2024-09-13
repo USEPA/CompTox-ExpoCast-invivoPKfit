@@ -63,10 +63,7 @@
 #'  TRUE, then if the log-likelihood works out to be non-finite, then it will be
 #'  replaced with `.Machine$double.xmax`.
 #'@param negative Logical: Whether to return the *negative* log-likelihood
-#'  (i.e., the log-likelihood multiplied by negative 1). Default TRUE, to
-#'  multiply the log-likelihood by negative 1 before returning it. This option
-#'  is useful when treating the log-likelihood as an objective function to be
-#'  *minimized* by an optimization algorithm.
+#'  (i.e., the log-likelihood multiplied by negative 1). Default `FALSE`.
 #' @param exclude Logical: `TRUE` to compute the log-likelihood excluding any
 #'   observations in the data marked for exclusion (if there is a variable
 #'   `exclude` in the data, an observation is marked for exclusion when `exclude
@@ -140,13 +137,24 @@ logLik.pk <- function(object,
                                 err_grp_vars),
                               exclude = exclude)
 
-  #scale time if needed
-  if (!("Time_trans" %in% names(newdata))) {
-    newdata$Time_trans <- convert_time(x = newdata$Time,
-                                       from = newdata$Time.Units,
-                                       to = "hours")
-    newdata$Time_trans.Units <- rep("hours", nrow(newdata))
+  # time_scale_check
+  if (any(!(newdata$Time_trans.Units %in% "hours"))) {
+    message("logLik.pk(): Scaling these transformed time units back into hours for log-likelihood calculation, to match time units of coefficients")
+    #scale time if needed
+    if (!("Time_trans" %in% names(newdata))) {
+      newdata$Time_trans <- convert_time(x = newdata$Time,
+                                         from = newdata$Time.Units,
+                                         to = "hours")
+      newdata$Time_trans.Units <- rep("hours", nrow(newdata))
+    }
+    if(!suppress.messages & (object$status < 5)) {
+      print(newdata %>%
+              dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
+              dplyr::filter(Time.Units != Time_trans.Units) %>%
+              dplyr::distinct())
+    }
   }
+
 
   #get transformations to apply
   conc_scale <- conc_scale_use(obj = object,
@@ -185,22 +193,7 @@ logLik.pk <- function(object,
     dplyr::select(!!!union(object$data_group, req_vars),
                   !!!other_vars))
 
-  # time_scale_check
-  if (any(!(newdata$Time_trans.Units %in% "hours"))) {
-    message("logLik.pk(): Scaling these transformed time units back into hours for log-likelihood calculation, to match time units of coefficients")
-    if(!suppress.messages & (object$status < 5)) {
-      print(newdata %>%
-              dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
-              dplyr::filter(Time.Units != Time_trans.Units) %>%
-              dplyr::distinct())
-    }
-    newdata <- newdata %>%
-      dplyr::mutate(data_sigma_group = factor(data_sigma_group),
-                    Time_trans = convert_time(x = Time_trans,
-                                              from = Time_trans.Units,
-                                              to = "hours"),
-                    Time_trans.Units = "hours")
-  }
+
 
 
     newdata <- newdata %>%
