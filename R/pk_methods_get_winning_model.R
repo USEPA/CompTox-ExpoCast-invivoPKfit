@@ -68,10 +68,11 @@ get_winning_model.pk <- function(obj,
                            args = list(obj = obj,
                                        newdata = newdata,
                                        method = method)) %>%
-    left_join(rmse.pk(obj = obj,
-                      newdata = newdata,
-                      method = method),
-              by = c(data_grp_vars, "model", "method")
+    left_join(suppressMessages(
+      rmse.pk(obj = obj,
+              newdata = newdata,
+              method = method)
+      ), by = c(data_grp_vars, "model", "method")
       ) %>%
     left_join(pred_check,
               c(data_grp_vars, "model", "method"))
@@ -87,9 +88,10 @@ get_winning_model.pk <- function(obj,
        all(RMSE/dplyr::cur_data()$RMSE[which(dplyr::cur_data()$model == "model_flat")] >= 0.95),
        FALSE, missing = NA)
      ) %>%
-   dplyr::group_by(!!!obj$data_group, method) %>%
-   dplyr::arrange(model) %>%
+   dplyr::group_by(!!!obj$data_group) %>%
+   dplyr::arrange(method, model) %>%
    dplyr::filter(method == method) %>%
+   dplyr::group_by(!!!obj$data_group, method) %>%
    dplyr::slice_min(
      order_by = pick({{ criterion }}),
      n = 1,
