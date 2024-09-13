@@ -128,17 +128,15 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   message("do_fit.pk(): Begin fitting for model(s):",
           paste(fun_models$model_name, collapse = " "))
 
+  total_cores <- parallel::detectCores()
   # Set the options for Parallel Computing
   # First condition if it is FALSE don't use parallel computing (takes much longer though)
-  if (is.numeric(n_cores)) {
+  if (is.numeric(n_cores) && n_cores == 1 || total_cores == 1) {
     message(paste0("do_fit.pk(): Trying to divide processes into ", n_cores, " processing cores"))
-    total_cores <- parallel::detectCores()
     if (total_cores <= n_cores & total_cores > 1) {
       n_cores  <- total_cores - 1
       message(paste0("do_fit.pk():To ensure other programs & processes are still able to run, ",
                      "n_cores has been set to ", n_cores))
-    } else if (total_cores == 1) {
-      n_cores = total_cores
     } else {
       n_cores <- n_cores
     }
