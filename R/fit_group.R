@@ -58,7 +58,7 @@ fit_group <- function(data,
 
     # Add the maximum concentration per Reference, Dose, Route, and Media
     data <- data %>%
-      dplyr::group_by(Reference, Dose, Route, Media) %>%
+      dplyr::group_by(Dose, Route, Media) %>%
       dplyr::mutate(groupCmax = max(Conc, na.rm = TRUE)) %>%
       dplyr::ungroup()
 
