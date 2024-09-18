@@ -32,7 +32,11 @@
 #' @export
 #' @import multidplyr purrr
 #' @author Caroline Ring, Gilberto Padilla Mercado
-do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
+do_fit.pk <- function(obj,
+                      n_cores = NULL,
+                      rate_names = NULL,
+                      max_multiplier = NULL,
+                      ...){
   #check status
   objname <- deparse(substitute(obj))
   status <- obj$status
@@ -81,7 +85,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   req_data_vars <- ggplot2::vars(
     Route, Media, Dose,
     Conc, Conc_trans, Conc_SD,
-    LOQ, exclude, Detect,
+    LOQ, exclude, Detect, pLOQ,
     N_Subjects, data_sigma_group, Time_trans
   )
   data <- data %>%
@@ -131,7 +135,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
   total_cores <- parallel::detectCores()
   # Set the options for Parallel Computing
   # First condition if it is FALSE don't use parallel computing (takes much longer though)
-  if (is.numeric(n_cores) && n_cores != 1 || total_cores != 1) {
+  if (!is.null(n_cores) && is.numeric(n_cores) && (n_cores != 1 || total_cores != 1)) {
     message(paste0("do_fit.pk(): Trying to divide processes into ", n_cores, " processing cores"))
     if (total_cores <= n_cores & total_cores > 1) {
       n_cores  <- total_cores - 1
@@ -156,8 +160,6 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
     #multidplyr::cluster_copy(cluster, "obj")
     #we can likely save some memory by only passing what we need from obj
     #like this
-
-
     tidy_fit <- info_nest %>%
       dplyr::rowwise(!!!data_group, model) %>%
       multidplyr::partition(cluster) %>%
@@ -171,6 +173,7 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
                              modelfun = modelfun,
                              dose_norm = dose_norm,
                              log10_trans = log10_trans,
+                             max_mult = max_multiplier,
                              suppress.messages = TRUE)
                    )
         ) %>%
@@ -191,9 +194,11 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
                              modelfun = modelfun,
                              dose_norm = dose_norm,
                              log10_trans = log10_trans,
+                             max_mult = max_multiplier,
                              suppress.messages = TRUE))
       )
   }
+
 
   # Extract names
   tidy_fit <- tidy_fit %>%
@@ -203,54 +208,45 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
                   hev = as.numeric(hev),
                   message = as.character(message))
   orig_names <- names(tidy_fit) # Saving the original names
+  # Nesting the fit_output, which should always be in consecutive columns
+  tidy_fit <- tidy_fit %>%
+    tidyr::nest(
+      fit_data = c(value:message)
+    )
+
+  tidy_fit <- tidy_fit %>%
+    tidyr::pivot_longer(cols = !c(!!!data_group, model, method, fit_data),
+                        names_to = "param_name",
+                        values_to = "estimate")
+
+  # Only keep sigma values describing the data_group, and non-sigma values
+  tidy_fit <- tidy_fit %>%
+    dplyr::filter(
+      !stringr::str_detect(param_name, "sigma_") |
+      stringr::str_detect(param_name, paste(!!!obj$data_group, sep = "."))
+      )
+
   # Making optimized sigma values their own column... not tidy otherwise
   tidy_sigmas <- tidy_fit %>%
-    dplyr::select(!!!data_group, model, method,
-                  tidyselect::starts_with("sigma_")) %>%
-    dplyr::mutate(expected_sigma_group = paste(!!!obj$data_group, sep = ".")) %>%
-    tidyr::pivot_longer(cols = tidyselect::starts_with("sigma"),
-                        names_to = "param_name",
-                        values_to = "estimate") %>%
-    dplyr::filter(stringr::str_detect(param_name,
-                                      expected_sigma_group)) %>%
-    dplyr::select(-expected_sigma_group) %>%
+    dplyr::filter(stringr::str_detect(param_name, "sigma_")) %>%
     dplyr::inner_join(sigma_DF %>%
                         dplyr::select(!!!data_group,
                                       param_name, param_units,
                                       optimize_param, use_param,
                                       lower_bound, upper_bound,
-                                      ),
+                                      ) %>%
+                        dplyr::distinct(),
                       by = c(data_group_vars, "param_name"))
 
-  tidy_fit <- tidy_fit %>%
-    dplyr::select(-tidyselect::starts_with("sigma_"))
+  # Prepare non-sigma parameters
+  tidy_params <- par_DF %>% dplyr::filter(use_param) %>%
+    dplyr::left_join(tidy_fit %>%
+                       dplyr::filter(stringr::str_detect(param_name, "sigma_",
+                                                         negate = TRUE)),
+                     by = c(data_group_vars, "model", "param_name"))
 
-  tidy_params <- tidy_fit %>%
-    dplyr::select(-c(value, fevals, gevals, niter, convcode,
-                     kkt1, kkt2, xtime, ngatend, nhatend, hev,
-                     message)) %>%
-    tidyr::pivot_longer(cols = -c(!!!data_group, model, method),
-                        names_to = "param_name",
-                        values_to = "estimate") %>%
-    dplyr::inner_join(par_DF,
-                      by = c(data_group_vars, "model", "param_name"))
-
-  tidy_res <- tidy_fit %>%
-    dplyr::distinct(!!!data_group, model, method,
-                      value, fevals, gevals, niter, convcode,
-                      kkt1, kkt2, xtime, ngatend, nhatend, hev,
-                      message)
-
-
-
-  all_params <- dplyr::bind_rows(tidy_sigmas, tidy_params) %>%
+  tidy_fit <- dplyr::bind_rows(tidy_sigmas, tidy_params) %>%
     dplyr::arrange(!!!data_group, model, method)
-
-
-  tidy_fit <- all_params %>%
-    dplyr::left_join(tidy_res,
-                     relationship = "many-to-one",
-                     by = c(data_group_vars, "model", "method"))
 
   # Take rate_names
   # Parameter names don't matter, all rates should have consistent param_unit
@@ -300,7 +296,8 @@ do_fit.pk <- function(obj, n_cores = NULL, rate_names = NULL, ...){
       .default = "Not at bound")
     ) %>%
     dplyr::distinct() %>%
-    dplyr::select(-c(lower_bound, upper_bound))
+    dplyr::select(-c(lower_bound, upper_bound)) %>%
+    tidyr::unnest(cols = fit_data)
 
   obj$status <- status_fit #fitting complete
   message("do_fit.pk: Fitting complete")
