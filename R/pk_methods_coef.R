@@ -60,7 +60,7 @@ coef.pk <- function(obj,
   # along with the unique identifying columns model and data_group
   coefs <- subset(
     obj$fit,
-    subset = !(use_param == FALSE)) %>%
+    subset = (use_param == TRUE)) %>%
     dplyr::select(model, method,
                   !!!obj$data_group,
                   param_name,
@@ -74,10 +74,12 @@ coef.pk <- function(obj,
         stringr::str_detect(param_name, pattern = "^sigma_",
                             negate = TRUE))
   }
+
   # include NA values from aborted fits
   if (!include_NAs) {
     coefs <- coefs %>%
-      dplyr::filter(abs(convcode) != 9999)
+      dplyr::filter(!(convcode %in% 9999),
+                    !(convcode %in% -9999))
   }
 
   # Get the columns describing time units and their (possibly) transformed units

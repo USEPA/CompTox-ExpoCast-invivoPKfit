@@ -22,6 +22,7 @@ fit_group <- function(data,
                       modelfun,
                       dose_norm,
                       log10_trans,
+                      max_mult,
                       suppress.messages){
   #Rowbind par_DF and sigma_DF
   par_DF <- dplyr::bind_rows(par_DF, sigma_DF)
@@ -45,6 +46,7 @@ fit_group <- function(data,
     upper_params <- par_DF[which(par_DF$optimize_param), "upper_bound",
                            drop = TRUE]
     names(upper_params) <- opt_param_names
+
 
     #get params to be held constant, if any
     if (any(par_DF$optimize_param %in% FALSE & par_DF$use_param %in% TRUE)) {
@@ -86,7 +88,7 @@ fit_group <- function(data,
                 log10_trans = log10_trans,
                 negative = TRUE,
                 force_finite = TRUE,
-                max_multiplier = 10,
+                max_multiplier = max_mult,
                 suppress.messages = suppress.messages
               ) #end list()
             ) #end args = c()
