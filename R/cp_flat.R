@@ -60,8 +60,6 @@
 #'@param medium A character vector reflecting the medium in which each resulting
 #'  concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 #'  Must be same length as other arguments, or length 1.
-#'@param loq A numeric vector of LOQ values. For any predicted value greater
-#'  than zero but less than half the LOQ, that value is set to half the LOQ.
 #'@return A vector of plasma concentration values (mass chemical/volume) corresponding to
 #'  \code{time}.
 #'
@@ -76,8 +74,7 @@ cp_flat <- function(params,
                     time,
                     dose,
                     route,
-                    medium = "plasma",
-                    loq = 0) {
+                    medium = "plasma") {
   params <- fill_params_flat(params)
 
   check_msg <- check_params_flat(params = params,
@@ -98,10 +95,6 @@ cp_flat <- function(params,
 
   cp <- ifelse(medium %in% "blood",
                cp * Rblood2plasma,
-               cp)
-  # Any value greater than zero but less than LOQ will be set to LOQ/2
-  cp <- ifelse(cp > 0 & cp < loq/2,
-               loq/2,
                cp)
 
   return(cp)

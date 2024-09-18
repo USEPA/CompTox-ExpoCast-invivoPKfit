@@ -923,6 +923,10 @@ do_preprocess.pk <- function(obj, ...) {
     # Make sure that Reference is a list of characters
     data$Reference <- as.character(data$Reference)
 
+    # Create prediction LOQ column
+    data$pLOQ <- data$LOQ
+
+
     # add data & data info to object
     obj$data <- data
 
