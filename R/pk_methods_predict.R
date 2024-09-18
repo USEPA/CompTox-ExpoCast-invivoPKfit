@@ -55,7 +55,6 @@ predict.pk <- function(obj,
                        use_scale_conc = FALSE,
                        suppress_messages = TRUE,
                        include_NAs = FALSE,
-                       use_ploq = FALSE,
                        ...) {
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$settings_optimx$method
@@ -108,8 +107,6 @@ predict.pk <- function(obj,
     exclude = exclude
   )
 
-  loq_check <- ("LOQ" %in% names(newdata) & use_ploq)
-
 
   #apply transformations if so specified
   conc_scale <- conc_scale_use(obj = obj,
@@ -160,8 +157,7 @@ predict.pk <- function(obj,
                          time = Time,
                          dose = Dose_tmp,
                          route = Route,
-                         medium = Media,
-                         loq = ifelse(loq_check, LOQ, 0)
+                         medium = Media
                          )),
             error = function(err) {
               if (!suppress_messages) {

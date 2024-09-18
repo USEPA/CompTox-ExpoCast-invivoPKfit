@@ -169,8 +169,7 @@ get_tkstats.pk <- function(obj,
                        dose = ifelse(dose_norm == TRUE, 1, Dose),
                        time_unit = "hours", # coef() is standardized now
                        conc_unit = Conc.Units,
-                       vol_unit = "L",
-                       loq = 0
+                       vol_unit = "L"
                      )),
       error = function(e) {
         message(paste0("Failed to run:", tk_fun, "error reads: "))
