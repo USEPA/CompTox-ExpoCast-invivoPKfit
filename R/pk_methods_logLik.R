@@ -185,7 +185,8 @@ logLik.pk <- function(object,
                             Conc,
                             Conc_SD,
                             N_Subjects,
-                            Detect)
+                            Detect,
+                            pLOQ)
 
 
 

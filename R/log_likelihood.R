@@ -160,8 +160,7 @@ log_likelihood <- function(par,
   Conc_trans <- data$Conc_trans
   N_Subjects <- data$N_Subjects
   Detect <- data$Detect
-
-
+  pLOQ <- data$pLOQ
 
 
   #get un-transformed predicted plasma concentration vs. time for the current parameter
@@ -176,6 +175,8 @@ log_likelihood <- function(par,
       medium = Media
     )
   )
+
+  pred[which(pred < pLOQ)] <- pLOQ[which(pred < pLOQ)]
 
   # Handles the max_conc check, needs to be separate because it should only
   # be used for fitting. Not logLik etc...
