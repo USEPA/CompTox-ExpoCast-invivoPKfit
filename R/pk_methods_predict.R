@@ -138,7 +138,8 @@ predict.pk <- function(obj,
   # Set a new column for the model function
   newdata <- newdata %>%
     dplyr::left_join(fun_models,
-                     join_by(model == model_name))
+                     join_by(model == model_name)) %>%
+    dplyr::distinct()
 
   # Get predictions
   # Note that the model functions only need Time, Dose, Route, and Medium
