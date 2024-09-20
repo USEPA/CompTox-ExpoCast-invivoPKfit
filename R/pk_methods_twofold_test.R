@@ -208,11 +208,12 @@ twofold_test.pk <- function(obj,
     ###
     # Get totals for method
     all_models <- pred_win %>%
-      dplyr::group_by(model) %>%
+      dplyr::filter(!(model %in% "model_flat")) %>%
+      dplyr::group_by(method) %>%
       dplyr::summarise(above_twofold = sum(Fold_Error > 2),
                        within_twofold = sum(dplyr::between(Fold_Error, 0.5, 2)),
                        below_twofold = sum(Fold_Error < 0.5)) %>%
-      dplyr::mutate(method = "All", .after = model)
+      dplyr::mutate(model = "All non-flat", .before = 1)
 
     full_pred_twofold <- dplyr::bind_rows(pred_twofold_summary,
                                all_models)
@@ -246,6 +247,11 @@ twofold_test.pk <- function(obj,
     data_pred_summary <- data_preds %>%
       dplyr::group_by(model, method) %>%
       dplyr::summarise(across(c(both_within:data_outside), sum))
+    data_pred_summary_combo <- data_preds %>%
+      dplyr::group_by(method) %>%
+      dplyr::summarise(across(c(both_within:data_outside), sum)) %>%
+      dplyr::mutate(model = "All", .before = 1)
+    data_pred_summary <- dplyr::bind_rows(data_pred_summary, data_pred_summary_combo)
 
     data_pred_summary <- rowwise_calc_percentages(data_pred_summary,
                                                   group_cols = c("model",

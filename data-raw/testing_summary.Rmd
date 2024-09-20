@@ -24,6 +24,7 @@ The first step is loading some basic packages: _magrittr_ and _devtools_
 library(devtools)
 load_all()
 library(magrittr)
+library(ggplot2)
 ```
 
 Now the first thing we could do is get a list of all the functions.
@@ -38,7 +39,7 @@ ls -l R/*.R | wc -l
 We have 111 functions and methods in this package! This will be a lot of work to get
 through, hence the inspiration for this document. First things first, make a 
 "small" version of `cvt` that we can quickly fit. For the purposes of this
-document, I will take 5% of CVT_Legacy data.
+document, I will take 20% of CVT_Legacy data.
 I will also add a few chemicals + species' data that I know will fail or
 be skipped, so that these features may be tested.
 
@@ -46,13 +47,14 @@ be skipped, so that these features may be tested.
 tiny_cvt <- cvt %>%
   dplyr::filter(curation_set_tag == "CVT_Legacy") %>%
   dplyr::distinct(analyte_dtxsid, species) %>%
-  dplyr::slice_sample(prop = 0.05) %>%
+  dplyr::slice_sample(prop = 0.20) %>%
   dplyr::bind_rows(
     data.frame(
       analyte_dtxsid = c("DTXSID00861411", "DTXSID6023577", 
                          "DTXSID1043881", "DTXSID3061635",
-                         "DTXSID1021116", "DTXSID2020139"),
-      species = rep("rat", 6)
+                         "DTXSID1021116", "DTXSID2020139",
+                         "DTXSID3031862"),
+      species = rep("rat", 7)
     )) %>%
   dplyr::distinct() %>%
   dplyr::left_join(cvt, by = dplyr::join_by(analyte_dtxsid, species))
@@ -69,7 +71,16 @@ The next step is to create a minimal PK object like in the main vignette.
 
 
 ```{r minimal-pk}
-minimal_pk <- pk(data = tiny_cvt %>%
+flat_chems <- paste0("DTXSID",
+                     c(2020139,
+                       5037523,
+                       8020541,
+                       8025337,
+                       5034773,
+                       4021268))
+
+minimal_pk <- pk(data = cvt %>%
+                   # filter(analyte_dtxsid %in% flat_chems) %>%
                    mutate(n_subjects_normalized = if_else(
                      n_subjects_normalized > 1 & is.na(invivPK_conc_sd),
                      min(n_subjects_normalized, 6), n_subjects_normalized)),
@@ -102,17 +113,19 @@ minimal_pk <- pk(data = tiny_cvt %>%
 testthat::expect_identical(length(minimal_pk), 10L)
 ```
 
-From here I need to set up the pk object settings. I will be using the dose-normalization only,
-then re-run using all settings at the end.
+From here I need to set up the pk object settings.
+I will be using all settings as TRUE.
 
 ```{r pk-settings}
 my_pk <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE,
                       suppress.messages = FALSE) +
-  settings_optimx(method = c("bobyqa", "L-BFGS-B")) +
-  scale_conc(dose_norm = TRUE, log10_trans = FALSE) +
-  # scale_time(new_units = "auto") +
+  settings_optimx(method = c(
+    "bobyqa",
+    "L-BFGS-B")) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  scale_time(new_units = "auto") +
   stat_error_model(error_group = vars(Chemical, Species, Reference))
 ```
 
@@ -146,11 +159,7 @@ I need to figure out what the effect of the 30% is on calculating sigma.
 ```{r pre-process}
 my_pk <- do_preprocess(my_pk)
 my_data <- get_data(my_pk)
-# Showing that Chemical + Species + Route + Media + Dose defines
-# A CvT experiment, not necessarily Study_ID
-my_data %>% dplyr::distinct(Study_ID,
-                            Chemical, Species, Route, Media, Dose)
-
+my_data %>% dplyr::distinct(Chemical, Species) %>% NROW()
 ```
 
 
@@ -181,8 +190,14 @@ markers in the concentration prediction functions.
 
 ```{r fit}
 thispk_profvis <- profvis::profvis(do_fit(my_pk))
-system.time(my_pk <- do_fit(my_pk)) # 72 seconds, 11 data_groups
+system.time(my_pk <- do_fit(my_pk))
+system.time(my_pk <- do_fit(my_pk, n_cores = 10))
+my_pk <- do_fit(my_pk)
+# 100 seconds, 11 data_groups
+# 270 seconds, 25 data_groups
+# 12 cores, full dataset:  489 seconds
 
+get_winning_model(my_pk) %>% View()
 ```
 
 After some optimization of the fitting functions... now it's time
@@ -238,6 +253,8 @@ my_rmsle <- rmse(my_pk, use_scale_conc = list(dose_norm = FALSE,
                                               log10_trans = TRUE))
 
 my_rsq <- rsq(my_pk)
+
+plot(my_rsq$Rsq, my_rmsle$RMSLE)
 ```
 
 
@@ -253,6 +270,8 @@ need to account for it nonetheless.
 my_AIC <- AIC(my_pk)
 my_BIC <- BIC(my_pk)
 my_wm <- get_winning_model(my_pk)
+table(my_wm$model)
+
 ```
 
 Lastly, let's take a look at the remaining `coef.pk()`-dependent methods.
@@ -267,4 +286,11 @@ my_tkstats <- get_tkstats(my_pk)
 best_tkstats <- eval_tkstats(my_pk)
 ```
 
+Plotting is of the important outputs of _invivoPKfit_, as it allows
+people to visualize the predictions and form a second opinion on the
+fits.
+
+```{r}
+mypl <- plot(my_pk, best_fit = TRUE)
+```
 
