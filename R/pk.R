@@ -272,7 +272,7 @@ pk <- function(data = NULL,
   )
 
   #nd assign it class pk
-  class(obj) <- append(class(obj), "pk")
+  class(obj) <- append("pk", class(obj))
 
   # Add default data preprocessing settings
   obj <- obj + do.call(settings_preprocess, settings_preprocess_args)
