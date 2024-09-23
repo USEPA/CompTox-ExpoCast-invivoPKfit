@@ -14,6 +14,7 @@ fit_group(
   modelfun,
   dose_norm,
   log10_trans,
+  max_mult,
   suppress.messages
 )
 }

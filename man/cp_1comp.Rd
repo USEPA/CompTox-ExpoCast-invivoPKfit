@@ -4,7 +4,7 @@
 \alias{cp_1comp}
 \title{Analytical 1-compartment model}
 \usage{
-cp_1comp(params, time, dose, route, medium = "plasma", loq)
+cp_1comp(params, time, dose, route, medium = "plasma")
 }
 \arguments{
 \item{params}{A named numeric vector of model parameter values. See Details for
@@ -25,9 +25,6 @@ and `dose`, or length 1.}
 \item{medium}{A character vector reflecting the medium in which each resulting
 concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 Must be same length as `time` and `dose`, or length 1.}
-
-\item{loq}{A numeric vector of LOQ values. For any predicted value greater
-than zero but less than half the LOQ, that value is set to half the LOQ.}
 }
 \value{
 A vector of blood or plasma concentration values  corresponding

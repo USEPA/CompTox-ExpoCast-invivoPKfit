@@ -43,5 +43,5 @@ and optionally for a specified new dataset. When there are ties it will
 return the first encounter, where the priority is: model_1comp > model_2comp > model_flat.
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }
