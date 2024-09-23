@@ -79,7 +79,7 @@ flat_chems <- paste0("DTXSID",
                        5034773,
                        4021268))
 
-minimal_pk <- pk(data = cvt %>%
+minimal_pk <- pk(data = tiny_cvt %>%
                    # filter(analyte_dtxsid %in% flat_chems) %>%
                    mutate(n_subjects_normalized = if_else(
                      n_subjects_normalized > 1 & is.na(invivPK_conc_sd),
@@ -125,7 +125,7 @@ my_pk <- minimal_pk +
     "bobyqa",
     "L-BFGS-B")) +
   scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
-  scale_time(new_units = "auto") +
+  # scale_time(new_units = "auto") +
   stat_error_model(error_group = vars(Chemical, Species, Reference))
 ```
 
@@ -291,6 +291,7 @@ people to visualize the predictions and form a second opinion on the
 fits.
 
 ```{r}
-mypl <- plot(my_pk, best_fit = TRUE)
+mypl <- plot(my_pk, log10_C = TRUE)
+mypl %>% pull(final_plot) %>% .[[13]]
 ```
 
