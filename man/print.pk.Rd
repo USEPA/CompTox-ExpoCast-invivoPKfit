@@ -7,9 +7,9 @@
 \method{print}{pk}(x, ...)
 }
 \arguments{
-\item{...}{Additional arguments. Currently not in use.}
+\item{x}{A pk object.}
 
-\item{obj}{A pk object.}
+\item{...}{Additional arguments. Currently not in use.}
 }
 \value{
 Summary output

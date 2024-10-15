@@ -4,13 +4,15 @@
 \alias{twofold_test.pk}
 \title{Evaluate whether data and predictions are within two-fold of mean or concentration, respectively}
 \usage{
-\method{twofold_test}{pk}(obj, suppress_messages = FALSE)
+\method{twofold_test}{pk}(obj, suppress_messages = FALSE, ...)
 }
 \arguments{
 \item{obj}{A pk object.}
 
 \item{suppress_messages}{Logical, default: FALSE.
 Should there be no printed output?}
+
+\item{...}{Additional arguments. Currently unused.}
 }
 \value{
 A list of data frames.

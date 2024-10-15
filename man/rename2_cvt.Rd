@@ -7,12 +7,14 @@
 rename2_cvt(
   data,
   cvt_LUT = c(analyte_dtxsid = "Chemical", analyte_dtxsid = "DTXSID",
-    analyte_name_original = "Chemica_Name", species = "Species", document_id =
-    "Reference", conc_medium_normalized = "Media", administration_route_normalized =
-    "Route", dose_level_corrected = "Dose", subject_id = "Subject_ID", series_id =
-    "Series_ID", study_id = "Study_ID", conc_time_id = "ConcTime_ID",
-    n_subjects_in_series = "N_Subjects", weight_kg = "Weight", time_hr = "Time", conc =
-    "Value", conc_sd_normalized = "Value_SD", loq = "LOQ")
+    analyte_name_original = "Chemica_Name", species = "Species",
+    fk_extraction_document_id = "Reference", conc_medium_normalized = "Media",
+    administration_route_normalized = "Route", invivPK_dose_level = "Dose", fk_subject_id
+    = "Subject_ID", fk_series_id = "Series_ID", fk_study_id = "Study_ID", conc_time_id =
+    "ConcTime_ID", invivPK_subjects_corrected = "N_Subjects", weight_kg = "Weight",
+    time_hr = "Time", invivPK_conc = "Value", invivPK_conc_sd = "Value_SD", 
+    
+    invivPK_loq = "LOQ")
 )
 }
 \arguments{

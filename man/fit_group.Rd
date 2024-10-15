@@ -39,6 +39,9 @@ before evaluating log-likelihood}
 \item{log10_trans}{TRUE or FALSE -- whether to 1og10-transform concentrations
 before evaluating log-likelihood}
 
+\item{max_mult}{Multiplier for maximum acceptable value. Default set to NULL and
+currently unused.}
+
 \item{suppress.messages}{TRUE or FALSE -- whether to suppress messages or emit them}
 }
 \value{

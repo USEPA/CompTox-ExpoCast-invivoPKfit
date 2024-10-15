@@ -13,6 +13,9 @@
 
 \item{rate_names}{The names of the rate units. Leave NULL to utilize default 1/hour.}
 
+\item{max_multiplier}{Numeric value for upper prediction limit (this number multiplied
+by maximum concentrations in each experiment). Default set to NULL does not apply this limit.}
+
 \item{...}{Additional arguments. Not currently in use.}
 }
 \value{

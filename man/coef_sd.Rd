@@ -4,7 +4,7 @@
 \alias{coef_sd}
 \title{Coefficient standard deviations}
 \usage{
-coef_sd(obj, model, method, table_format, suppress.messages, ...)
+coef_sd(obj, model, method, suppress.messages, ...)
 }
 \arguments{
 \item{obj}{An object}
@@ -12,8 +12,6 @@ coef_sd(obj, model, method, table_format, suppress.messages, ...)
 \item{model}{The TK model used.}
 
 \item{method}{Optimizer method used.}
-
-\item{table_format}{Defines output format.}
 
 \item{suppress.messages}{Boolean. Whether messages will be printed.}
 
