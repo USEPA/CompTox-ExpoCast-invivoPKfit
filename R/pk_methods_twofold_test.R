@@ -23,13 +23,15 @@
 #' @param obj A pk object.
 #' @param suppress_messages Logical, default: FALSE.
 #' Should there be no printed output?
+#' @param ... Additional arguments. Currently unused.
 #'
 #' @return A list of data frames.
 #' @export
 #' @author Gilberto Padilla Mercado
 #'
 twofold_test.pk <- function(obj,
-                            suppress_messages = FALSE) {
+                            suppress_messages = FALSE,
+                            ...) {
   # Check the status of the pk object
   status <- suppressMessages(get_status(obj))
   if (status < 2) {

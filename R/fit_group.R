@@ -11,6 +11,8 @@
 #'   before evaluating log-likelihood
 #' @param log10_trans TRUE or FALSE -- whether to 1og10-transform concentrations
 #'   before evaluating log-likelihood
+#' @param max_mult Multiplier for maximum acceptable value. Default set to NULL and
+#' currently unused.
 #' @param suppress.messages TRUE or FALSE -- whether to suppress messages or emit them
 #' @return An object of class `optimx` (i.e. a data.frame with fit results)
 fit_group <- function(data,

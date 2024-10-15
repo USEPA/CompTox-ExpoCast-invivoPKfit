@@ -2,7 +2,7 @@
 #'
 #' Prints a clear summary of `pk` object and returns it invisibly.
 #'
-#' @param obj A pk object.
+#' @param x A pk object.
 #' @param ... Additional arguments. Currently not in use.
 #'
 #' @return Summary output

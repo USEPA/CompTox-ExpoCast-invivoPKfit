@@ -25,6 +25,7 @@
 #'  log10_trans = ...)`, then the specified dose normalization and/or
 #'  log10-transformation will be applied to the y-axis (concentration axis) of
 #'  the plots.
+#'@param time_trans Default `FLASE`. Determines whether time values will be transformed.
 #'@param log10_C Default `NULL`. Determines whether y-axis (concentration) should
 #'  be log10 transformed. Takes `TRUE` or `FALSE` values. Otherwise it defaults
 #'  to the value determined from `use_scale_conc`.

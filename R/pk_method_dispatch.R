@@ -99,7 +99,6 @@ rmse.default <- function(obj, ...){
 #' @param obj An object
 #' @param model The TK model used.
 #' @param method Optimizer method used.
-#' @param table_format Defines output format.
 #' @param suppress.messages Boolean. Whether messages will be printed.
 #' @param ... Additional arguments currently not in use.
 #' @export
@@ -107,7 +106,6 @@ rmse.default <- function(obj, ...){
 coef_sd <- function(obj,
                     model,
                     method,
-                    table_format,
                     suppress.messages, ...){
   UseMethod("coef_sd", obj)
 }
