@@ -63,10 +63,7 @@
 #'  TRUE, then if the log-likelihood works out to be non-finite, then it will be
 #'  replaced with `.Machine$double.xmax`.
 #'@param negative Logical: Whether to return the *negative* log-likelihood
-#'  (i.e., the log-likelihood multiplied by negative 1). Default TRUE, to
-#'  multiply the log-likelihood by negative 1 before returning it. This option
-#'  is useful when treating the log-likelihood as an objective function to be
-#'  *minimized* by an optimization algorithm.
+#'  (i.e., the log-likelihood multiplied by negative 1). Default `FALSE`.
 #' @param exclude Logical: `TRUE` to compute the log-likelihood excluding any
 #'   observations in the data marked for exclusion (if there is a variable
 #'   `exclude` in the data, an observation is marked for exclusion when `exclude
@@ -102,13 +99,13 @@ logLik.pk <- function(object,
   }
   other_vars <- NULL
   if (is.null(model)) model <- names(object$stat_model)
-  if (is.null(method)) method <- object$optimx_settings$method
+  if (is.null(method)) method <- object$settings_optimx$method
   if (is.null(newdata)) {
     newdata <- object$data
 
     other_vars <- ggplot2::vars(
-      Value,
-      Value.Units,
+      Conc,
+      Conc.Units,
       Time_trans.Units,
       Conc_trans,
       Conc_trans.Units,
@@ -124,6 +121,8 @@ logLik.pk <- function(object,
 #including error grouping variables
   err_grp_vars <- sapply(eval(get_error_group(object)),
                          rlang::as_label)
+  data_grp_vars <- sapply(eval(get_data_group(object)),
+                         rlang::as_label)
 
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = object$data,
@@ -138,13 +137,24 @@ logLik.pk <- function(object,
                                 err_grp_vars),
                               exclude = exclude)
 
-  #scale time if needed
-  if (!("Time_trans" %in% names(newdata))) {
-    newdata$Time_trans <- convert_time(x = newdata$Time,
-                                       from = newdata$Time.Units,
-                                       to = "hours")
-    newdata$Time_trans.Units <- rep("hours", nrow(newdata))
+  # time_scale_check
+  if (any(!(newdata$Time_trans.Units %in% "hours"))) {
+    message("logLik.pk(): Scaling these transformed time units back into hours for log-likelihood calculation, to match time units of coefficients")
+    #scale time if needed
+    if (!("Time_trans" %in% names(newdata))) {
+      newdata$Time_trans <- convert_time(x = newdata$Time,
+                                         from = newdata$Time.Units,
+                                         to = "hours")
+      newdata$Time_trans.Units <- rep("hours", nrow(newdata))
+    }
+    if(!suppress.messages & (object$status < 5)) {
+      print(newdata %>%
+              dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
+              dplyr::filter(Time.Units != Time_trans.Units) %>%
+              dplyr::distinct())
+    }
   }
+
 
   #get transformations to apply
   conc_scale <- conc_scale_use(obj = object,
@@ -158,25 +168,12 @@ logLik.pk <- function(object,
   }
 
   # get coefs data.frame for each model and method
-  #
+  # must include sigma value
   coefs <- coef(
     obj = object,
     model = model,
     method = method,
     drop_sigma = FALSE)
-  coefs <- coefs %>%
-    dplyr::select(coefs_vector,
-                  sigma_value,
-                  error_group)
-  coefs <- suppressMessages(coefs %>%
-    dplyr::mutate(coefs_vector = purrr::map(coefs_vector,
-                                            \(x) {
-                                              sigma_transfer <- sigma_value
-                                              names(sigma_transfer) <- error_group
-                                              c(x, sigma_transfer)
-                                            })) %>%
-    dplyr::select(-sigma_value, -error_group))
-
 
   req_vars <- ggplot2::vars(Time,
                             Time.Units,
@@ -188,32 +185,19 @@ logLik.pk <- function(object,
                             Conc,
                             Conc_SD,
                             N_Subjects,
-                            Detect)
+                            Detect,
+                            pLOQ)
 
 
 
-  newdata <- newdata %>%
+  newdata <- suppressMessages(newdata %>%
     dplyr::select(!!!union(object$data_group, req_vars),
-                  !!!other_vars)
+                  !!!other_vars))
 
-  # time_scale_check
-  if (any(!(newdata$Time_trans.Units %in% "hours"))) {
-    message("logLik.pk(): Scaling these transformed time units back into hours for log-likelihood calculation, to match time units of coefficients")
-    if(!suppress.messages) {
-      print(newdata %>%
-              dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
-              dplyr::filter(Time.Units != Time_trans.Units) %>%
-              dplyr::distinct())
-    }
 
-  }
+
 
     newdata <- newdata %>%
-      dplyr::mutate(data_sigma_group = factor(data_sigma_group),
-                    Time_trans = convert_time(x = Time_trans,
-                                              from = Time_trans.Units,
-                                              to = "hours"),
-                    Time_trans.Units = "hours") %>%
       dplyr::group_by(!!!object$data_group) %>%
       tidyr::nest(.key = "observations") %>%
       dplyr::ungroup()
@@ -221,17 +205,23 @@ logLik.pk <- function(object,
 
   newdata <- tidyr::expand_grid(tidyr::expand_grid(model, method),
                                 newdata)
+  # This setup allows for a more stable call to the model functions later on
+  fun_models <- data.frame(
+    model_name = unname(sapply(object$stat_model, \(x) {x$name})),
+    model_fun = unname(sapply(object$stat_model, \(x) {x$conc_fun}))
+  )
 
-  newdata <- suppressMessages(dplyr::left_join(coefs, newdata))
+  newdata <- dplyr::left_join(coefs, newdata,
+                              by = c("model", "method",
+                                      data_grp_vars))
 
 
   newdata <- newdata %>%
     dplyr::rowwise() %>%
     dplyr::filter(!is.null(observations)) %>%
-    dplyr::mutate(model_fun = object$stat_model[[model]]$conc_fun) %>%
+    dplyr::left_join(fun_models, join_by(model == model_name)) %>%
     dplyr::ungroup() %>%
     dplyr::distinct()
-
 
   newdata <- newdata %>%
     dplyr::rowwise() %>%

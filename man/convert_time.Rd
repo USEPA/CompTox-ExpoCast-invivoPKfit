@@ -37,5 +37,5 @@ A numeric vector the same length as `x`, converted from the units in
 Convert a vector of times between units
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }

@@ -41,10 +41,11 @@ tkstats_flat <- function(pars,
 
 
   Css <- cp_flat(params = pars,
-                          time = Inf,
-                          dose = dose,
-                          route = route,
-                          medium = medium)
+                 time = Inf,
+                 dose = dose,
+                 route = route,
+                 medium = medium,
+                 ...)
 
  AUC_inf <- auc_flat(params = pars,
                           time = Inf,
@@ -52,32 +53,30 @@ tkstats_flat <- function(pars,
                           route = route,
                           medium = medium)
 
-  return(data.frame("param_name" = c(
-    "CLtot",
-    "CLtot/Fgutabs",
-    "Css",
-    "halflife",
-    "Cmax",
-    "AUC_infinity",
-    "Vss",
-    "Vss/Fgutabs"),
-                    "param_value" = c(
-                      0,
-                      0,
-                      Css,
-                      Inf,
-                      Css,
-                      AUC_inf,
-                      Vdist,
-                      1/(Fgutabs_Vdist)),
-                      param_units = c(paste0(vol_unit, "/", time_unit),
-                                      paste0(vol_unit, "/", time_unit),
-                                      conc_unit,
-                                      time_unit,
-                                      time_unit,
-                                      paste0(conc_unit, " * ", time_unit),
-                                      vol_unit,
-                                      vol_unit)
+ return(data.frame("param_name" = c("CLtot",
+                                    "CLtot/Fgutabs",
+                                    "Css",
+                                    "halflife",
+                                    "Cmax",
+                                    "AUC_infinity",
+                                    "Vss",
+                                    "Vss/Fgutabs"),
+                   "param_value" = c(0,
+                                     0,
+                                     Css,
+                                     Inf,
+                                     Css,
+                                     AUC_inf,
+                                     Vdist,
+                                     1/(Fgutabs_Vdist)),
+                   param_units = c(paste0(vol_unit, "/", time_unit),
+                                   paste0(vol_unit, "/", time_unit),
+                                   conc_unit,
+                                   time_unit,
+                                   conc_unit,
+                                   paste0(conc_unit, " * ", time_unit),
+                                   vol_unit,
+                                   vol_unit)
     )
     )
 }

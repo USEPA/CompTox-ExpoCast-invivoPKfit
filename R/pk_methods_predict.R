@@ -56,48 +56,48 @@ predict.pk <- function(obj,
                        suppress_messages = TRUE,
                        include_NAs = FALSE,
                        ...) {
-  #ensure that the model has been fitted
-  check <- check_required_status(obj = obj,
-                                 required_status = status_fit)
-  if (!(check %in% TRUE)) {
-    stop(attr(check, "msg"))
-  }
+  if (is.null(model)) model <- names(obj$stat_model)
+  if (is.null(method)) method <- obj$settings_optimx$method
 
-  if (is.null(model))
-    model <- names(obj$stat_model)
-  if (is.null(method))
-    method <- obj$settings_optimx$method
-
-  method_ok <- check_method(obj = obj, method = method)
-  model_ok <- check_model(obj = obj, model = model)
-
+  # From here it needs to output a named numeric vector coefs_vector
+  # for the model functions
+  # Responsibility for some checks done in coefs
   coefs <- coef(
     obj = obj,
     model = model,
     method = method,
     drop_sigma = TRUE,
     include_NAs = include_NAs
+  ) %>%
+    dplyr::select(-c(Time.Units, Time_trans.Units))
+
+  # This setup allows for a more stable call to the model functions later on
+  fun_models <- data.frame(
+    model_name = unname(vapply(obj$stat_model, \(x) {x$name}, character(1))),
+    model_fun = if (type == "auc") {
+      unname(sapply(obj$stat_model, \(x) {x$auc_fun}))
+    } else {
+      unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
+    }
   )
+
+  data_group_vars <- sapply(obj$data_group,
+                            rlang::as_label)
+
+  req_vars <- union(obj$data_group,
+                    ggplot2::vars(
+                      Conc.Units,
+                      Time,
+                      Time.Units,
+                      Dose,
+                      Route,
+                      Media))
 
   if (is.null(newdata)) {
     newdata <- obj$data
   }
 
-  req_vars <- union(obj$data_group,
-                    ggplot2::vars(Time,
-                            Time.Units,
-                            Dose,
-                            Route,
-                            Media))
-
-  #other_vars is all the non-required vars
-  #and non-data-group vars
-  all_vars <- do.call(ggplot2::vars,
-                      lapply(names(newdata),
-                             as.name)
-  )
-  other_vars <- setdiff(all_vars,
-                        req_vars)
+  # Check if there are other variables
 
   newdata_ok <- check_newdata(
     newdata = newdata,
@@ -107,18 +107,14 @@ predict.pk <- function(obj,
     exclude = exclude
   )
 
+
   #apply transformations if so specified
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
 
-  # Get variables required for model functions
-
-
   # Make observations into nested list-column
   newdata <- newdata %>%
-    # dplyr::select(!!!req_vars,
-    #               !!!other_vars) %>%
-    dplyr::group_by(!!!obj$data_group) %>% #again need not group by Route, Media
+    dplyr::group_by(!!!obj$data_group) %>%
     tidyr::nest(.key = "observations") %>%
     dplyr::ungroup()
 
@@ -127,7 +123,9 @@ predict.pk <- function(obj,
                                 newdata)
 
   # Add the coefs
-  newdata <- suppressMessages(dplyr::left_join(coefs, newdata))
+  newdata <- dplyr::left_join(coefs, newdata,
+                              by = c(data_group_vars,
+                                     "model", "method"))
 
   # Remove any NULL observations
   newdata <- newdata %>%
@@ -135,74 +133,69 @@ predict.pk <- function(obj,
     dplyr::filter(!is.null(observations)) %>%
     dplyr::ungroup()
 
+
   # After join it is joined by model, method, Chemical, Species
   # Set a new column for the model function
   newdata <- newdata %>%
-    dplyr::group_by(!!!obj$data_group,
-                    model, method) %>% #need not group by Route and Media for this
-    dplyr::mutate(
-      model_fun = dplyr::case_when(
-        type == "conc" ~ obj$stat_model[[model]]$conc_fun,
-        type == "auc"  ~ obj$stat_model[[model]]$auc_fun,
-        .default = obj$stat_model[[model]]$conc_fun
-      )
-    )
+    dplyr::left_join(fun_models,
+                     join_by(model == model_name)) %>%
+    dplyr::distinct()
 
   # Get predictions
   # Note that the model functions only need Time, Dose, Route, and Medium
-
-  newdata <- newdata %>%
-    dplyr::rowwise() %>% #this is a LOT faster than purrr::pmap()!!!
+  newdata <- newdata %>% # Rowwise drops
+    dplyr::rowwise(model, method, !!!obj$data_group) %>% # Needs to include columns outside the nest
     dplyr::summarise(predictions = list(
-                                     observations %>%
-                                       dplyr::mutate(
-                                         Dose_tmp = dplyr::if_else(rep(conc_scale$dose_norm,
-                                                                       NROW(Dose)),
-                                                                   1.0,
-                                                                   Dose),
-                                         Estimate = tryCatch(
-                                           do.call(model_fun,
-                                                   list(coefs_vector,
-                                                        time = Time,
-                                                        dose = Dose_tmp,
-                                                        route = Route,
-                                                        medium = Media))
-                                           ,
-                                           error = function(err) {
-                                             if (!suppress_messages) {
-                                               message(paste("predict.pk(): Unable to run",
-                                                             model_fun, "for",
-                                                             Chemical, Species,
-                                                             "data grouping.",
-                                                             "Likely an aborted fit,",
-                                                             "it is missing estimated parameters."))
-                                             }
-                                             # Return Value
-                                             NA_real_
-                                           }) #end tryCatch
-                                       )  %>%  #end dplyr::mutate
-                                       dplyr::select(!Dose_tmp)
-    )
-                       ) %>%
+      observations %>%
+        dplyr::mutate(
+          Dose_tmp = dplyr::if_else(rep(conc_scale$dose_norm,
+                                        NROW(Dose)),
+                                    1.0,
+                                    Dose),
+          Estimate = tryCatch(
+            do.call(model_fun,
+                    list(coefs_vector,
+                         time = Time,
+                         dose = Dose_tmp,
+                         route = Route,
+                         medium = Media
+                         )),
+            error = function(err) {
+              if (!suppress_messages) {
+                message(paste("predict.pk(): Unable to run",
+                              model_fun, "for",
+                              Chemical, Species,
+                              "data grouping.",
+                              "Likely an aborted fit,",
+                              "it is missing estimated parameters."))
+              }
+              # Return Value
+              NA_real_
+            }), #end tryCatch
+          .after = Conc.Units)  %>%  #end dplyr::mutate
+        dplyr::select(-Dose_tmp)
+    )) %>%
     tidyr::unnest(predictions)
 
+
+
   #If log10 transformation was specified, then apply it now
-  if (type %in% "conc"){
+  if (type %in% "conc") {
     newdata <- dplyr::rename(newdata, Conc_est = "Estimate")
   #apply log10-trans to predicted conc, if so specified
-  if(conc_scale$log10_trans %in% TRUE){
+  if (conc_scale$log10_trans %in% TRUE) {
     newdata <- newdata %>%
       dplyr::mutate(Conc_est = log10(Conc_est))
   }
-  } else if (type %in% "auc"){
+  } else if (type %in% "auc") {
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
   #note that it doesn't make sense to log10-trans AUC
-    if (suppress_messages %in% FALSE){
+    if (suppress_messages %in% FALSE) {
       message("predict.pk(): Log10 transformation was specified, but was not used because `type == 'AUC'`.")
     }
   }
 
-  if (suppress_messages %in% FALSE){
+  if (suppress_messages %in% FALSE) {
     if(conc_scale$dose_norm) {
     message("predict.pk(): Note that the predicted values are for dose 1.0 (dose-normalized)")
   } else {

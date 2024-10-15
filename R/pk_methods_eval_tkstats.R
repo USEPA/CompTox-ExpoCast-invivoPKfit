@@ -64,7 +64,7 @@ eval_tkstats.pk <- function(obj,
                             method = NULL,
                             tk_group = NULL,
                             exclude = TRUE,
-                            dose_norm = TRUE,
+                            dose_norm = FALSE,
                             finite_only = TRUE,
                             ...){
 
@@ -115,11 +115,18 @@ eval_tkstats.pk <- function(obj,
   } # Need this transformation for get_tkstats
 
   #Get the winning model for filtering
-  winmodel_df <- get_winning_model(obj = obj,
-                                   method = method)
+  winmodel_df <- get_winning_model.pk(obj = obj,
+                                   method = method) %>%
+    dplyr::select(-c(near_flat, preds_below_loq))
 
   #calc NCA for newdata
-  nca_df <- get_nca(obj = obj)
+  nca_df <- nca(obj = obj,
+                newdata = newdata,
+                nca_group = tk_group,
+                dose_norm = dose_norm,
+                exclude = exclude,
+                suppress.messages = TRUE)
+
   nca_df <- nca_df %>% dplyr::select(-param_sd_z, -param_units) %>%
     tidyr::pivot_wider(names_from = param_name,
                        values_from = param_value) %>%
@@ -129,7 +136,7 @@ eval_tkstats.pk <- function(obj,
 
 
   #get tkstats
-  tkstats_df <- get_tkstats(obj = obj,
+  tkstats_df <- get_tkstats.pk(obj = obj,
                             newdata = newdata,
                             model = model,
                             method = method,
@@ -143,29 +150,16 @@ eval_tkstats.pk <- function(obj,
                                  by = c(data_grp_vars, "method", "model"))
 
   # Assess group variables
-  # Are all error_group variables in data_group, error group might be subset
-  if(!all(error_grp_vars %in% data_grp_vars)) {
+  # Are all error_group variables in tk_group? Unlikely but error group might be subset
+  # Note that despite dose-normalization, each summary_group will have
+  # different NCA values.
+  if (!all(error_grp_vars %in% grp_vars)) {
     remaining_vars <- error_grp_vars[!(error_grp_vars %in% data_grp_vars)]
 
-    if (dose_norm) {
-      tkstats_df_refs <- tkstats_df %>%
-        dplyr::group_by(!!!obj$data_group, Route, Media) %>%
-        dplyr::summarize(dplyr::across(all_of(remaining_vars),
-                                       \(x) {paste0(x, collapse = ",")}))
-      nca_df <- nca_df %>%
-        dplyr::ungroup() %>%
-        dplyr::select(!c(Dose, design))
-    } else {
-      tkstats_df_refs <- tkstats_df %>%
-        dplyr::group_by(!!!obj$data_group, Route, Media, Dose) %>%
-        dplyr::summarize(dplyr::across(all_of(remaining_vars),
-                                       \(x) {paste0(x, collapse = ",")}))
-    }
-
-
-    tkstats_df <- dplyr::left_join(tkstats_df_refs,
-                                   tkstats_df %>%
-                                     dplyr::select(!all_of(remaining_vars))) %>%
+    tkstats_df <- tkstats_df %>%
+      dplyr::group_by(!!!tk_group) %>%
+      dplyr::summarize(dplyr::across(all_of(remaining_vars),
+                                     \(x) {paste0(x, collapse = ",")})) %>%
       dplyr::ungroup() %>%
       dplyr::distinct()
   }
@@ -183,12 +177,16 @@ eval_tkstats.pk <- function(obj,
                                  "Rblood2plasma", "model", "method")))
 
   if (dose_norm) {
-    message("TK statistics calculated based on dose-normalized value of 1mg/kg")
+    message(paste0("eval_tkstats.pk(): ",
+                   "TK statistics AND NCA have been ",
+                   "calculated based on dose-normalized value of 1mg/kg"))
   }
 
   # Merge the tkstats and the nca data.frames
-    tk_eval <- suppressMessages(dplyr::left_join(tkstats_df_red,
-                                nca_df_red))
+    tk_eval <- suppressMessages(dplyr::left_join(
+      tkstats_df_red,
+      nca_df_red
+      ))
 
   # Filter out infinite values for AUC_infinity
   if (finite_only) {

@@ -82,6 +82,7 @@ residuals.pk <- function(obj,
                                            "Route",
                                            "Media",
                                            "Conc",
+                                           "LOQ",
                                            "Detect"),
                               exclude = exclude)
 
@@ -123,20 +124,18 @@ residuals.pk <- function(obj,
   # conditional mutate ifelse
   resids <- new_preds %>%
     dplyr::mutate(
-      Conc_set = ifelse(rep(conc_scale$dose_norm,
-                            NROW(Dose)),
-                        ifelse(rep(conc_scale$log10_trans,
-                                   NROW(Dose)),
+      Conc_set = ifelse(rep(conc_scale$dose_norm, NROW(Dose)),
+                        ifelse(rep(conc_scale$log10_trans, NROW(Dose)),
                                log10(Conc/Dose),
                                Conc / Dose),
-                        ifelse(rep(conc_scale$log10_trans,
-                                   NROW(Dose)),
+                        ifelse(rep(conc_scale$log10_trans, NROW(Dose)),
                                log10(Conc),
                                Conc)
                         ),
       Residuals = ifelse(Detect %in% FALSE & Conc_est <= Conc_set,
                          0,
-                         Conc_est - Conc_set)) %>%
+                         Conc_est - Conc_set),
+      .after = Conc_est) %>%
     dplyr::ungroup() %>%
     dplyr::distinct()
 

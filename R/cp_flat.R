@@ -60,7 +60,6 @@
 #'@param medium A character vector reflecting the medium in which each resulting
 #'  concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 #'  Must be same length as other arguments, or length 1.
-#'
 #'@return A vector of plasma concentration values (mass chemical/volume) corresponding to
 #'  \code{time}.
 #'
@@ -71,8 +70,11 @@
 #' @family flat model functions
 #' @family model concentration functions
 
-cp_flat <- function(params, time, dose, route, medium) {
-
+cp_flat <- function(params,
+                    time,
+                    dose,
+                    route,
+                    medium = "plasma") {
   params <- fill_params_flat(params)
 
   check_msg <- check_params_flat(params = params,

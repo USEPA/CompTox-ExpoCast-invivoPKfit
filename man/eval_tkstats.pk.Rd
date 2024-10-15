@@ -11,7 +11,7 @@
   method = NULL,
   tk_group = NULL,
   exclude = TRUE,
-  dose_norm = TRUE,
+  dose_norm = FALSE,
   finite_only = TRUE,
   ...
 )

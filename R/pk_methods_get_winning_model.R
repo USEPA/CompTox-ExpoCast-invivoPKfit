@@ -4,7 +4,8 @@
 #'
 #'Get the winning model (i.e. the model with the lowest value of the criterion
 #'specified in `criterion`) for a fitted `pk` object, for a specified method,
-#'and optionally for a specified new dataset.
+#'and optionally for a specified new dataset. When there are ties it will
+#'return the first encounter, where the priority is: model_1comp > model_2comp > model_flat.
 #'
 #'@param obj A [pk()] object
 #'@param newdata Optional: A `data.frame` containing new data to plot. Must
@@ -26,7 +27,7 @@
 #'  The return value has attribute `criterion` giving the name of the criterion function used to compare
 #'  models.
 #'@export
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 get_winning_model.pk <- function(obj,
                                  newdata = NULL,
                                  method = NULL,
@@ -51,21 +52,53 @@ get_winning_model.pk <- function(obj,
                sep = "\n"))
   }
 
-  # N.B. this updated method makes compare_models() superfluous
+  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
+
+  pred_check <- predict.pk(obj = obj,
+                           newdata = newdata,
+                           method = method)
+
+  pred_check <- pred_check %>%
+    dplyr::group_by(!!!obj$data_group, model, method) %>%
+    dplyr::summarize(preds_below_loq = 100*round(sum(Conc_est < LOQ)/n(), 3)) %>%
+    dplyr::ungroup()
+
 
   model_compare <- do.call(criterion,
                            args = list(obj = obj,
                                        newdata = newdata,
-                                       method = method))
+                                       method = method)) %>%
+    left_join(suppressMessages(
+      rmse.pk(obj = obj,
+              newdata = newdata,
+              method = method)
+      ), by = c(data_grp_vars, "model", "method")
+      ) %>%
+    left_join(pred_check,
+              c(data_grp_vars, "model", "method"))
 
- #return the winning model for each method
+  #return the winning model for each method
+  # Winmodel should have RMSE of at least 95% of flat model
+  # This will mean the fold-MSE should be at least around 90%
  winmodels <- model_compare %>%
    dplyr::group_by(!!!obj$data_group, method) %>%
-   dplyr::filter(if_any(contains(criterion), ~ . == min(.)),
-          method == method) %>%
-    dplyr::ungroup() %>%
-    dplyr::select(!!!obj$data_group,
-                  method, model)
+   dplyr::mutate(
+    near_flat = dplyr::if_else(
+      !is.null(dplyr::cur_data()$RMSE[which(dplyr::cur_data()$model == "model_flat")]),
+       all(RMSE/dplyr::cur_data()$RMSE[which(dplyr::cur_data()$model == "model_flat")] >= 0.95),
+       FALSE, missing = NA)
+     ) %>%
+   dplyr::group_by(!!!obj$data_group) %>%
+   dplyr::arrange(method, model) %>%
+   dplyr::filter(method == method) %>%
+   dplyr::group_by(!!!obj$data_group, method) %>%
+   dplyr::slice_min(
+     order_by = pick({{ criterion }}),
+     n = 1,
+     with_ties = FALSE) %>%
+   dplyr::ungroup() %>%
+   dplyr::select(!!!obj$data_group,
+                 method, model, near_flat, preds_below_loq)
 
   return(winmodels)
 

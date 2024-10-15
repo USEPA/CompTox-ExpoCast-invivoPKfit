@@ -39,8 +39,9 @@ Get winning model for a fitted `pk` object
 \details{
 Get the winning model (i.e. the model with the lowest value of the criterion
 specified in `criterion`) for a fitted `pk` object, for a specified method,
-and optionally for a specified new dataset.
+and optionally for a specified new dataset. When there are ties it will
+return the first encounter, where the priority is: model_1comp > model_2comp > model_flat.
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }

@@ -14,6 +14,7 @@ log_likelihood(
   log10_trans = FALSE,
   negative = TRUE,
   force_finite = FALSE,
+  max_multiplier = NULL,
   suppress.messages = TRUE
 )
 }
@@ -50,6 +51,10 @@ is useful when treating the log-likelihood as an objective function to be
 as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If
 TRUE, then if the log-likelihood works out to be non-finite, then it will be
 replaced with `.Machine$double.xmax`.}
+
+\item{max_multiplier}{Numeric, but NULL by default. Determines which multiple
+of the maximum concentration to use to limit possible predictions.
+Note: only use this as part of the fitting function.}
 
 \item{suppress.messages}{Logical.}
 }

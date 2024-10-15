@@ -4,7 +4,7 @@
 \alias{cp_flat}
 \title{Flat model}
 \usage{
-cp_flat(params, time, dose, route, medium)
+cp_flat(params, time, dose, route, medium = "plasma")
 }
 \arguments{
 \item{params}{A named list of parameter values. See Details for requirements.}

@@ -114,12 +114,12 @@ rmse.pk <- function(obj,
                     use_scale_conc = FALSE,
                     rmse_group = NULL,
                     ...){
-#ensure that the model has been fitted
-check <- check_required_status(obj = obj,
-                               required_status = status_fit)
-if (!(check %in% TRUE)) {
-  stop(attr(check, "msg"))
-}
+  #ensure that the model has been fitted
+  check <- check_required_status(obj = obj,
+                                 required_status = status_fit)
+  if (!(check %in% TRUE)) {
+    stop(attr(check, "msg"))
+  }
 
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
@@ -133,26 +133,23 @@ if (!(check %in% TRUE)) {
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
                               req_vars = c("Time",
-                                                 "Time.Units",
-                                                 "Dose",
-                                                 "Route",
-                                                 "Media",
-                                                 "Conc",
-                                                 "Conc_SD",
-                                                 "N_Subjects",
-                                                 "Detect"),
+                                           "Time.Units",
+                                           "Dose",
+                                           "Route",
+                                           "Media",
+                                           "Conc",
+                                           "Conc_SD",
+                                           "N_Subjects",
+                                           "LOQ",
+                                           "Detect"),
                               exclude = exclude)
-
-
 
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  if(use_scale_conc %in% TRUE){
   message("rmse.pk(): Computing RMSE on transformed concentration scale. Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log10-transformation ", conc_scale$log10_trans)
-  }
 
   #Get predictions
   #do NOT apply transformations at this stage
@@ -217,14 +214,20 @@ if (!(check %in% TRUE)) {
                        n_subj = N_Subjects,
                        detect = Detect,
                        log10_trans = conc_scale$log10_trans)) %>%
-    # dplyr::distinct() %>%
     dplyr::ungroup()
 
-  message("rmse.pk(): RMSE calculated by groups: \n",
-          paste(sapply(unlist(rmse_group), rlang::as_label),
-                collapse = ", "),
-          ", method, model")
-
+  if (conc_scale$log10_trans == FALSE) {
+    message("rmse.pk(): RMSE calculated by groups: \n",
+            paste(sapply(unlist(rmse_group), rlang::as_label),
+                  collapse = ", "),
+            ", method, model")
+  } else {
+    message("rmse.pk(): RMSLE calculated by groups: \n",
+            paste(sapply(unlist(rmse_group), rlang::as_label),
+                  collapse = ", "),
+            ", method, model")
+    rmse_df <- rmse_df %>% rename(RMSLE = RMSE)
+  }
 
   return(rmse_df)
 }

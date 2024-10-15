@@ -121,47 +121,48 @@
 #' @family get_params functions
 #' @family built-in model functions
 
-get_params_2comp <- function(data,
-                             lower_bound = ggplot2::aes(kelim = log(2)/(2*max(Time_trans)),
-                                                        k12 = log(2)/(2*max(Time_trans)),
-                                                        k21 = log(2)/(2*max(Time_trans)),
-                                                        V1 = 0.01,
-                                                        Fgutabs = 0.0,
-                                                        kgutabs = log(2)/(2*max(Time_trans)),
-                                                        Fgutabs_V1 = 0.01,
-                                                        Rblood2plasma = 1e-2),
-                             upper_bound = ggplot2::aes(kelim = log(2)/(0.5*min(Time_trans[Time_trans>0])),
-                                                        k12 = log(2)/(0.5*min(Time_trans[Time_trans>0])),
-                                                        k21 = log(2)/(0.5*min(Time_trans[Time_trans>0])),
-                                                        V1 = 100,
-                                                        Fgutabs = 1,
-                                                        kgutabs = log(2)/(0.5*min(Time_trans[Time_trans>0])),
-                                                        Fgutabs_V1 = 1e2,
-                                                        Rblood2plasma = 100),
-                             param_units = ggplot2::aes(kelim = paste0("1/", #kelim
-                                                         unique(Time_trans.Units)),
-                                          V1 = paste0("(", #V1
-                                                         unique(Dose.Units),
-                                                         ")",
-                                                         "/",
-                                                         "(",
-                                                         unique(Conc.Units),
-                                                         ")"),
-                                          k21 = paste0("1/", #k21
-                                                         unique(Time_trans.Units)),
-                                          k12 = paste0("1/", #k12
-                                                         unique(Time_trans.Units)),
-                                          Fgutabs = "unitless fraction", #Fgutabs
-                                          kgutabs = paste0("1/", #kgutabs
-                                                           unique(Time_trans.Units)),
-                                          Fgutabs_V1 = paste0("(", #Fgutabs_V1
-                                                                 unique(Conc.Units),
-                                                                 ")",
-                                                                 "/",
-                                                                 "(",
-                                                                 unique(Dose.Units),
-                                                                 ")"),
-                                          Rblood2plasma = "unitless ratio")){
+get_params_2comp <- function(
+    data,
+    lower_bound = ggplot2::aes(kelim = log(2)/(2*max(Time_trans)),
+                               k12 = log(2)/(2*max(Time_trans)),
+                               k21 = log(2)/(2*max(Time_trans)),
+                               V1 = 0.01,
+                               Fgutabs = 0.0,
+                               kgutabs = log(2)/(2*max(Time_trans)),
+                               Fgutabs_V1 = 0.01,
+                               Rblood2plasma = 1e-2),
+    upper_bound = ggplot2::aes(kelim = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+                               k12 = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+                               k21 = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+                               V1 = 100,
+                               Fgutabs = 1,
+                               kgutabs = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+                               Fgutabs_V1 = 1e2,
+                               Rblood2plasma = 100),
+    param_units = ggplot2::aes(kelim = paste0("1/", #kelim
+                                              unique(Time_trans.Units)),
+                               V1 = paste0("(", #V1
+                                           unique(Dose.Units),
+                                           ")",
+                                           "/",
+                                           "(",
+                                           unique(Conc.Units),
+                                           ")"),
+                               k21 = paste0("1/", #k21
+                                            unique(Time_trans.Units)),
+                               k12 = paste0("1/", #k12
+                                            unique(Time_trans.Units)),
+                               Fgutabs = "unitless fraction", #Fgutabs
+                               kgutabs = paste0("1/", #kgutabs
+                                                unique(Time_trans.Units)),
+                               Fgutabs_V1 = paste0("(", #Fgutabs_V1
+                                                   unique(Conc.Units),
+                                                   ")",
+                                                   "/",
+                                                   "(",
+                                                   unique(Dose.Units),
+                                                   ")"),
+                               Rblood2plasma = "unitless ratio")){
   #param names
   param_name <-c("kelim",
                   "V1",
@@ -177,7 +178,7 @@ get_params_2comp <- function(data,
   #parameters. Any parameters not specified in the `lower_bound` argument will
   #take their default lower bounds defined here. This should be the same as the
   #default value for the `lower_bound` argument.
-  lower_bound_default = ggplot2::aes(kelim =log(2)/(2*max(Time_trans)),
+  lower_bound_default <- ggplot2::aes(kelim =log(2)/(2*max(Time_trans)),
                                      k12 = log(2)/(2*max(Time_trans)),
                                      k21 = log(2)/(2*max(Time_trans)),
                                      V1 = 0.01,
@@ -198,7 +199,7 @@ get_params_2comp <- function(data,
   #parameters. Any parameters not specified in the `upper_bound` argument will
   #take their default upper bounds defined here. This should be the same as the
   #default value for the `upper_bound` argument.
-  upper_bound_default =ggplot2::aes(kelim = log(2)/(0.5*min(Time_trans[Time_trans>0])),
+  upper_bound_default <- ggplot2::aes(kelim = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                     k12 = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                     k21 = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                     V1 = 100,

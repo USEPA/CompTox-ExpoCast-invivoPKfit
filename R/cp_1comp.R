@@ -52,7 +52,6 @@
 #'@param medium A character vector reflecting the medium in which each resulting
 #'  concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 #'  Must be same length as `time` and `dose`, or length 1.
-#'
 #'@return A vector of blood or plasma concentration values  corresponding
 #'  to `time`.
 #'
@@ -62,7 +61,11 @@
 #' @family built-in model functions
 #' @family 1-compartment model functions
 #' @family model concentration functions
-cp_1comp <- function(params, time, dose, route, medium = 'plasma') {
+cp_1comp <- function(params,
+                     time,
+                     dose,
+                     route,
+                     medium = 'plasma') {
   params <- fill_params_1comp(params)
 
   check_msg <- check_params_1comp(params = params,
@@ -76,19 +79,6 @@ cp_1comp <- function(params, time, dose, route, medium = 'plasma') {
 
 
   list2env(as.list(params), envir = as.environment(-1))
-
-  #repeat route, time, dose, and medium to be all the same length
-  tmp <- data.frame(time = time,
-                    route = route,
-                    dose = dose,
-                    medium = medium)
-
-  time <- tmp$time
-  dose <- tmp$dose
-  route <- tmp$route
-  medium <- tmp$medium
-
-  rm(tmp)
 
   #compute plasma concentration
   cp <- dose * ifelse(
@@ -114,6 +104,7 @@ cp_1comp <- function(params, time, dose, route, medium = 'plasma') {
   cp <- ifelse(medium %in% "blood",
                Rblood2plasma * cp,
                cp)
+
 
   return(cp)
 }

@@ -27,8 +27,6 @@
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   whose coefficients to return. If NULL (the default), coefficients will be
 #'   returned for all of the models in `obj$settings_optimx$method`.
-#' @param table_format Logical. `FALSE` by default, this determines whether the
-#'   the output is in an unnested format.
 #' @param suppress.messages Logical. `TRUE` (the default) to suppress
 #'   informative messages. `FALSE` to see them.
 #' @param ... Additional arguments. Not in use right now.
@@ -49,7 +47,6 @@
 coef_sd.pk <- function(obj,
                        model = NULL,
                        method = NULL,
-                       table_format = FALSE,
                        suppress.messages = TRUE, ...){
 
   #ensure that the model has been fitted
@@ -59,17 +56,14 @@ coef_sd.pk <- function(obj,
     stop(attr(check, "msg"))
   }
 
-  if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$settings_optimx$method
-
-  method_ok <- check_method(obj = obj, method = method)
-  model_ok <- check_model(obj = obj, model = model)
-
-  noptim_params <- obj$prefit$par_DF %>%
-    dplyr::filter(optimize_param == FALSE,
-                  use_param == TRUE) %>%
-    dplyr::pull(param_name) %>%
-    unique()
+  # get coefs data.frame for each model and method
+  # but exclude non-optimized parameters and sigma values for error_group
+  # coef does method & model checks
+  coefs <- coef(
+    obj = obj,
+    model = model,
+    method = method,
+    drop_sigma = FALSE)
 
   other_vars <- ggplot2::vars(
     Value,
@@ -81,25 +75,7 @@ coef_sd.pk <- function(obj,
     exclude
   )
 
-  # get coefs data.frame for each model and method
-  # but exclude non-optimized parameters and sigma values for error_group
-  coefs <- suppressMessages(
-    coef(
-      obj = obj,
-      model = model,
-      method = method,
-      drop_sigma = FALSE
-    ) %>%
-      dplyr::select(coefs_vector, sigma_value, error_group) %>%
-      dplyr::mutate(coefs_vector = purrr::map(coefs_vector,
-                                              \(x) {
-                                                sigma_transfer <- sigma_value
-                                                names(sigma_transfer) <- error_group
-                                                c(x[!(names(x) %in% noptim_params)], sigma_transfer)
-                                              })) %>%
-      dplyr::select(-sigma_value, -error_group)
-  )
-
+  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
 
   # Get required variables for log_likelihood()
   req_vars <- ggplot2::vars(Time,
@@ -111,7 +87,8 @@ coef_sd.pk <- function(obj,
                             Conc,
                             Conc_SD,
                             N_Subjects,
-                            Detect)
+                            Detect,
+                            LOQ)
 
   # Convert Time_trans to hours
   newdata <- obj$data %>%
@@ -128,30 +105,27 @@ coef_sd.pk <- function(obj,
     tidyr::nest(.key = "observations") %>%
     dplyr::ungroup()
 
-  newdata <- tidyr::expand_grid(expand_grid(model, method),
-                                newdata)
+  # This setup allows for a more stable call to the model functions later on
+  fun_models <- data.frame(
+    model_name = unname(sapply(obj$stat_model, \(x) {x$name})),
+    model_fun = unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
+  )
 
-  newdata <- suppressMessages(dplyr::left_join(coefs, newdata))
+  newdata <- dplyr::left_join(coefs, newdata,
+                              by = data_grp_vars) %>%
+    dplyr::left_join(fun_models, join_by(model == model_name))
 
-
-  newdata <- suppressMessages(
-    newdata %>%
-      dplyr::rowwise() %>%
-      dplyr::filter(!is.null(observations)) %>%
-      dplyr::mutate(model_fun = obj$stat_model[[model]]$conc_fun) %>%
-      dplyr::left_join(obj$prefit$par_DF %>%
-                  dplyr::filter(param_name %in% noptim_params) %>%
-                  dplyr::select(!!!obj$data_group, param_name, start)) %>%
-      dplyr::distinct() %>%
-      dplyr::mutate(const_pars = setNames(start, param_name)) %>%
-      dplyr::ungroup() %>%
-      dplyr::distinct())
 
   newdata <- newdata %>%
     dplyr::rowwise() %>%
+    dplyr::filter(!is.null(observations)) %>%
+    dplyr::ungroup() %>%
+    dplyr::distinct()
+
+  newdata <- suppressWarnings(newdata %>%
+    dplyr::rowwise() %>%
     dplyr::mutate(hessian_mat = list(numDeriv::hessian(func = function(x){
       log_likelihood(par = x,
-                     const_params = const_pars,
                      data = observations,
                      data_sigma_group = observations$data_sigma_group,
                      modelfun = model_fun,
@@ -203,33 +177,36 @@ coef_sd.pk <- function(obj,
                "using pseudovariance matrix ",
                "to estimate parameter uncertainty.")
       })
-    }))
+    })))
 
   # Limit data.frame columns to those that unique identify needed values
   newdata <- newdata %>%
     dplyr::select(model, method, !!!obj$data_group, coefs_vector, sds, alerts)
 
-  # Pivot data.frame so that each parameter has a row
-  if (table_format) {
-    newdata <- newdata %>%
+  newdata <- newdata %>%
     dplyr::mutate(sds_tibble = purrr::map(sds,
-                                          \(x) as.list(x) %>% as.data.frame)) %>%
-      tidyr::unnest(sds_tibble) %>%
-      tidyr::pivot_longer(cols = tidyselect::starts_with("sigma_"),
-                          names_to = "error_group",
-                          values_to = "sigma.value_sd") %>%
-      dplyr::filter(!is.na(sigma.value_sd)) %>%
-      dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) as.list(x) %>% as.data.frame)) %>%
-      tidyr::unnest(coefs_tibble) %>%
-      tidyr::pivot_longer(cols = tidyselect::starts_with("sigma_"),
-                          names_to = "error_group_value",
-                          values_to = "sigma.value") %>%
-      dplyr::filter(!is.na(sigma.value)) %>%
-      dplyr::filter(error_group_value == gsub(x = error_group,
-                                              pattern = "_sd", "")) %>%
-      dplyr::select(-coefs_vector, -sds, -error_group_value) %>%
-      dplyr::relocate(error_group, sigma.value, sigma.value_sd, .after = method)
-  }
+                                          \(x) as.list(x) %>%
+                                            as.data.frame() %>%
+                                            tidyr::pivot_longer(
+                                              cols = tidyselect::everything(),
+                                              names_to = "param_name_sd",
+                                              values_to = "param_sd"))) %>%
+    tidyr::unnest(sds_tibble) %>%
+    dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) as.list(x) %>%
+                                              as.data.frame() %>%
+                                              tidyr::pivot_longer(
+                                                cols = tidyselect::everything(),
+                                                names_to = "param_name",
+                                                values_to = "param_value"
+                                              ))) %>%
+    tidyr::unnest(coefs_tibble) %>%
+    dplyr::filter(stringr::str_detect(param_name_sd, param_name)) %>%
+    dplyr::select(-c(coefs_vector, sds, param_name_sd)) %>%
+    dplyr::ungroup() %>%
+    dplyr::distinct() %>%
+    dplyr::mutate(param_value = dplyr::na_if(param_value, NaN),
+                  param_sd = dplyr::na_if(param_sd, NaN)) %>%
+    dplyr::relocate(param_name, param_value, param_sd, .after = alerts)
 
   return(newdata)
 

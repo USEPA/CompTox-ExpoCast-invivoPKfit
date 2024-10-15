@@ -12,10 +12,7 @@ twofold_test(obj, ...)
 \item{...}{Additional arguments currently not in use.}
 }
 \description{
-This is the S3 method generic for get_data_group()
-}
-\details{
-`get_data_group()` is an alias for `data_summary()`
+This is the S3 method generic for twofold_test()
 }
 \seealso{
 [twofold_test.pk()] for the method for class [pk()]

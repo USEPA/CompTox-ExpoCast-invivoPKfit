@@ -88,32 +88,32 @@
 #' @family get_params functions
 #' @family built-in model functions
 
-get_params_flat <- function(data,
-                            lower_bound = ggplot2::aes(Vdist = 0.01,
-                                                       Fgutabs = 0.0,
-                                                       Fgutabs_Vdist = 0.01,
-                                                       Rblood2plasma = 1e-2),
-                            upper_bound = ggplot2::aes(Vdist = 100,
-                                                       Fgutabs = 1,
-                                                       Fgutabs_Vdist = 1e2,
-                                                       Rblood2plasma = 100),
-                            param_units = ggplot2::aes(Vdist = paste0("(", #Vdist
-                                                                      unique(Dose.Units),
-                                                                      ")",
-                                                                      "/",
-                                                                      "(",
-                                                                      unique(Conc.Units),
-                                                                      ")"),
-                                                       Fgutabs = "unitless fraction", #Fgutabs
-                                                       Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
-                                                                              unique(Conc.Units),
-                                                                              ")",
-                                                                              "/",
-                                                                              "(",
-                                                                              unique(Dose.Units),
-                                                                              ")"),
-                                                       Rblood2plasma = "unitless ratio")
-                            ){
+get_params_flat <- function(
+    data,
+    lower_bound = ggplot2::aes(Vdist = 0.01,
+                               Fgutabs = 0.0,
+                               Fgutabs_Vdist = 0.01,
+                               Rblood2plasma = 1e-2),
+    upper_bound = ggplot2::aes(Vdist = 100,
+                               Fgutabs = 1,
+                               Fgutabs_Vdist = 1e2,
+                               Rblood2plasma = 100),
+    param_units = ggplot2::aes(Vdist = paste0("(", #Vdist
+                                              unique(Dose.Units),
+                                              ")",
+                                              "/",
+                                              "(",
+                                              unique(Conc.Units),
+                                              ")"),
+                               Fgutabs = "unitless fraction", #Fgutabs
+                               Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
+                                                      unique(Conc.Units),
+                                                      ")",
+                                                      "/",
+                                                      "(",
+                                                      unique(Dose.Units),
+                                                      ")"),
+                               Rblood2plasma = "unitless ratio")){
   #param names
   param_name <-c("Vdist",
                   "Fgutabs",

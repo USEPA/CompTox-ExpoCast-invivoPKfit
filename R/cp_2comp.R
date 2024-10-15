@@ -53,8 +53,11 @@
 #' @family built-in model functions
 #' @family 2-compartment model functions
 #' @family model concentration functions
-cp_2comp <- function(params, time, dose, route, medium = "plasma")
-{
+cp_2comp <- function(params,
+                     time,
+                     dose,
+                     route,
+                     medium = "plasma") {
   #fill any missing parameters with NAs, and impute Fgutabs_v1 from Fgutabs and
   #V1 if necessary
   params <- fill_params_2comp(params)
@@ -71,10 +74,6 @@ cp_2comp <- function(params, time, dose, route, medium = "plasma")
   #get transformed parameters for 2-comp model
   trans_params <- transformed_params_2comp(params)
 
-  #for readability, assign params to variables inside this function
-  # for(x in names(params)){
-  #   assign(x, unname(params[x]))
-  # }
   list2env(as.list(params), envir = as.environment(-1))
 
   #for readability, assign transformed params to variables inside this function

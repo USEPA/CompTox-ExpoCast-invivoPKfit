@@ -57,29 +57,9 @@ AIC.pk <- function(object,
   if(!(check %in% TRUE)){
     stop(attr(check, "msg"))
   }
+
   if(is.null(model)) model <- names(object$stat_model)
   if(is.null(method)) method <- object$settings_optimx$method
-
-  # Get the number of parameters
-  # Need to filter for parameters that were used in model
-  # Then only need some columns for param table
-  param_table <- object$prefit$par_DF %>%
-    dplyr::filter(use_param %in% TRUE) %>%
-    dplyr::select(model, !!!object$data_group, param_name, param_units)
-
-  # Sigma values for error groups
-  # Make sure to have each combination of error group-data group
-  # which is possible with tidyr::expand_grid
-  sigma_table <- object$prefit$stat_error_model$sigma_DF %>%
-    tibble::rownames_to_column("error_group") %>%
-    dplyr::select(!!!object$data_group, param_name, param_units) %>%
-    tidyr::expand_grid(model = unique(param_table$model))
-
-  # Create a "long" data.frame with both parameters and sigma values
-  params_df <- dplyr::bind_rows(param_table, sigma_table) %>%
-    dplyr::group_by(!!!object$data_group, model) %>%
-    dplyr::count(name = "npar")
-
 
   #get log-likelihoods
   ll <- logLik(object = object,
@@ -91,19 +71,27 @@ AIC.pk <- function(object,
                exclude = exclude,
                drop_obs = drop_obs)
 
+
+  # obj$fit is a "long" data.frame with both parameters and sigma values
+  params_df <- object$fit %>%
+    group_by(!!!object$data_group, model, method) %>%
+    dplyr::summarize(npar = dplyr::n())
+  data_grp_vars <- sapply(object$data_group, rlang::as_label)
+
+
   # Combining log-likelihood table with parameters table
-  ll <- suppressMessages(ll %>%
+  ll <- ll %>%
     dplyr::select(!!!object$data_group,
                   model, method,
                   log_likelihood) %>%
-    dplyr::left_join(params_df))
+    dplyr::left_join(params_df,
+                     by = c(data_grp_vars, "model", "method"))
 
 
   #get number of parameters (excluding any constant, non-optimized parameters)
 
-  AIC <- ll %>% dplyr::group_by(!!!object$data_group, model) %>%
+  AIC <- ll %>% dplyr::group_by(!!!object$data_group, model, method) %>%
     dplyr::mutate(AIC = (k * npar) - (2 * log_likelihood))
-
 
   return(AIC)
 }

@@ -4,10 +4,12 @@
 \alias{get_status.pk}
 \title{Check status of a `pk` object}
 \usage{
-\method{get_status}{pk}(obj, ...)
+\method{get_status}{pk}(obj, suppress.messages = NULL, ...)
 }
 \arguments{
 \item{obj}{A `pk` object}
+
+\item{suppress.messages}{Logical. Whether to display messages.}
 
 \item{...}{Additional arguments.}
 }

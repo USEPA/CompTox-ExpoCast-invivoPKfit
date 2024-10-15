@@ -37,10 +37,7 @@ log-likelihoods will be returned for all of the models in
 `obj$optimx_settings$method`.}
 
 \item{negative}{Logical: Whether to return the *negative* log-likelihood
-(i.e., the log-likelihood multiplied by negative 1). Default TRUE, to
-multiply the log-likelihood by negative 1 before returning it. This option
-is useful when treating the log-likelihood as an objective function to be
-*minimized* by an optimization algorithm.}
+(i.e., the log-likelihood multiplied by negative 1). Default `FALSE`.}
 
 \item{force_finite}{Logical: Whether to force return of a finite value (e.g.
 as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If

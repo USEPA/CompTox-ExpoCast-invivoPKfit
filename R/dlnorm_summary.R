@@ -41,7 +41,7 @@ dlnorm_summary <- function(mu,
              "mu" = length(mu),
              "sigma" = length(sigma))
 
-  if(any(x_len %in% 0)){
+  if (any(x_len %in% 0)) {
     stop(paste0("invivopkfit::dnorm_summary(): ",
                 "the following arguments have zero length: ",
                 paste(names(x_len)[x_len %in% 0],
@@ -55,7 +55,7 @@ dlnorm_summary <- function(mu,
   bad_len <- (x_len < max_len) & (x_len != 1)
 
 
-  if(any(bad_len)){
+  if (any(bad_len)) {
     warning(paste("invivopkfit::dnorm_summary():",
                   "the following inputs do not have matching lengths: ",
                   paste(paste0(names(x_len)[bad_len],
@@ -69,16 +69,17 @@ dlnorm_summary <- function(mu,
                   max_len,
                   "."
             ))
+    #repeat to match longest
+    for (i in seq_along(x_len)) {
+      assign(names(x_len)[i],
+             rep( #repeat the current value of each item to match the length
+               get(names(x_len)[i]), #get the current value of each item
+               length.out = max_len)
+      )
+    }
   }
 
-  #repeat to match longest
-  for (i in seq_along(x_len)){
-    assign(names(x_len)[i],
-           rep( #repeat the current value of each item to match the length
-             get(names(x_len)[i]), #get the current value of each item
-               length.out = max_len)
-           )
-  }
+
 
   #Evaluate
   y_log <- x_N * log(1/(sigma*sqrt(2*pi))) +
@@ -96,9 +97,9 @@ dlnorm_summary <- function(mu,
     ) +
     -mu^2 * x_N / (2 * sigma^2)
 
- if(log == TRUE){
+ if (log == TRUE) {
    return(y_log)
- }else{
+ } else {
    return(exp(y_log))
  }
 
