@@ -38,7 +38,7 @@ To speed up analysis in sections 4 and beyond, we can load an `.rds` file
 that includes the fitted models used in much of the publication.
 
 ``` {r file_load, eval=FALSE}
-my_pk <- readRDS("data-raw/all_cvt_pk_JOINT.rds")
+my_pk <- readRDS("data-raw/all_cvt_pk.rds")
 ```
 
 
@@ -994,7 +994,7 @@ evalNCA_df %>%
 set.seed(2023)
 ```
 
-## Running log-transformed, joint fits  
+## Running log-transformed, pooled fits  
 
 log10 transformation and a hierarchical model were the options that produced the least
 amount of error in predictions and derived TK stats.
@@ -1043,6 +1043,13 @@ my_tkstats <- eval_tkstats(my_pk) %>% semi_join(winmodel)
 my_nca <- get_nca(my_pk)
 all_my_data <- get_data(my_pk)
 
+formatted_coefs <- my_pk$fit %>% 
+  filter(str_detect(param_name, "sigma_", negate = TRUE)) %>%
+  select(Chemical, Species, model, model, param_name, estimate,
+         param_name, estimate, convcode) %>% 
+  mutate(param_name = paste(param_name, "tkstats", sep = ".")) |> 
+  pivot_wider(names_from = param_name,
+                                     values_from = estimate)
 
 my_tf <- twofold_test(my_pk)
 
@@ -1056,8 +1063,6 @@ writexl::write_xlsx(x = list(predictions = my_preds,
                                   today,
                                   "_Supp_Table2",
                                   ".xlsx"))
-
-
 
 fe_df <- fold_errors(my_pk) %>% semi_join(winmodel)
 # May need to change the use_scale_conc defaults
@@ -1081,7 +1086,6 @@ chem_name_translate <- all_my_data %>%
   dplyr::distinct()
 
 ```
-
 
 
 ### Figure 4A: Replicated timepoint variation in CvTdb
@@ -1176,7 +1180,6 @@ Which essentially tests whether, at least 95% of data is within a factor of 2.
 The result is a bar chart that shows how many timepoints with replicate values
 passed this test. It minimizes the double (or more) counting of timepoints with
 multiple replicates from individual animal data.
-
 
 ```{r fig4A-2-alt, eval=FALSE}
 # With the mapped column names
@@ -1365,9 +1368,6 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
        units = "in",
        dpi = 300)
 
-
-
-
 my_preds %>% 
   filter(Detect, !exclude, Conc_est >= pLOQ,
          !(model %in% "model_flat")) %>%
@@ -1401,7 +1401,6 @@ my_preds %>%
   facet_grid(rows = vars(Route),
              cols = vars(TimeCat)) +
   theme_bw()
-
 
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
@@ -1759,6 +1758,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 
 
 ### Supp. Fig. 6 Examples fits for chemicals with R-squared and within 2-fold
+
 ```{r goodness-of-fit_exampleFits, eval = FALSE}
 pl <- plot(my_pk, best_fit = TRUE,
            use_scale_conc = TRUE,
@@ -1990,8 +1990,6 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        height = 7,
        width = 6.5,
        device = "png", dpi = 300)
-  
-
 
 ```
 
@@ -2448,11 +2446,7 @@ for (i in fm) {
 }
 dev.off()
 
-
-
 ```
-
-
 
 ## Other Plots
 
@@ -2496,7 +2490,6 @@ pl %>%
 
 
 ### Figure 2: Example Fits to Explain Joint vs Pooled Models
-
 
 ```{r Explain-Heirarchical-Model, eval=FALSE}
 # Note that the data will run one "Series" of time point at a time
@@ -2639,133 +2632,121 @@ ggsave(paste0(Sys.getenv("FIG_DIR"), "Point_Reference_3x5.png"),
        dpi = 300)
 ```
 
+Here we prepare our results for the CvTdb.
 
 ```{r cvtdb-prep, eval=FALSE}
-
 my_cvt <- cvt
-my_tkstats <- eval_tkstats(my_pk)
-  
-my_cvt_unique <- my_cvt %>% dplyr::mutate(
-  preprocess_data_flags = 
-    case_when(
-      (other_study_identifier %in% "S0916") ~ paste("Adjusted dose_level_original_units",
-                                                              "adjusted dose_level_normalized.",
-                                                              sep = " and "),
-      (other_study_identifier %in% "S0624") ~ paste("Adjusted dose_level_normalized."),
-      (document_id %in% c("65", "61", "46", "31")) ~ paste("Adjusted analyte_dtxsid",
-                                                           "adjusted analyte_name_original.",
-                                                           sep = " and "),
-      (other_study_identifier %in% c("S0976",
-                                     "S0361",
-                                     "S0328")) ~ paste("Adjusted loq and loq_units."),
-      (document_id %in% "38") ~ paste("Adjusted conc."),
-      (analyte_name_original %in% c("n-desmethyltamoxifen",
-                                    "methemoglobin")) ~ paste("Adjusted analyte_dtxsid."),
-      .default = NA_character_
-    )) %>%
+my_wm <- get_winning_model(my_pk)
+
+my_tkstats <- get_tkstats(my_pk) %>%  
+  rename2_cvt() %>%
+  select(-c(invivpk_dose_level, dose_units, conc_units, time_units,
+            data_sigma_group, fk_extraction_document_id)) %>% 
+  distinct() %>% 
+  pivot_longer(cols = cltot:vss_fgutabs,
+               names_to = "param_name",
+               values_to = "estimate") %>% 
+  filter(!is.na(estimate)) %>% 
+  mutate(param_units = case_when(
+    param_name %in% c("cltot", "cltot_fgutabs") ~ "L/hours",
+    param_name %in% c("css", "cmax") ~ "mg/L",
+    param_name %in% c("halflife", "tmax") ~ "hours",
+    param_name %in% c("vss", "vss_fgutabs") ~ "L",
+    param_name %in% "auc_infinity" ~ "mg/L * hours",
+    .default = NA_character_
+  )) %>% 
+  distinct()%>% 
+  mutate(dose_normalization = conc_scale_use(TRUE, my_pk)$dose_norm,
+         log10_transformation = conc_scale_use(TRUE,my_pk)$log10_trans,
+         time_scaling = "identity",
+         invivoPKfit_version = "2.0.0",
+         update_date = today) %>% 
+  filter(model %in% c("model_1comp", "model_2comp"))
+
+my_params <- my_pk$fit %>% 
+  rename2_cvt() %>% distinct(
+    analyte_dtxsid, species, model, method, param_name, estimate, param_units
+  ) %>% 
+  mutate(dose_normalization = conc_scale_use(TRUE, my_pk)$dose_norm,
+         log10_transformation = conc_scale_use(TRUE,my_pk)$log10_trans,
+         time_scaling = "identity",
+         invivoPKfit_version = "2.0.0",
+         update_date = today) %>% 
+  filter(model %in% c("model_1comp", "model_2comp"))
+
+my_cvt_unique <- my_cvt %>%
+  dplyr::mutate(
+    conc_processing_flags = 
+      case_when(
+        invivPK_conc == conc ~ glue::glue("Used 'conc' value."),
+        invivPK_conc == conc_original ~ glue::glue("Used 'conc_original' value."),
+        invivPK_conc == conc_original * conc_unit_norm_factor ~ glue::glue(
+          "Mulitplied 'conc_original' by {conc_unit_norm_factor}."
+        ),
+        invivPK_conc != conc_original * conc_unit_norm_factor ~ glue::glue(
+          "Multiplied 'conc_original' by {signif(invivPK_conc/conc_original, 2)}."
+        ),
+        is.na(conc) ~ glue::glue(
+          "Multiplied 'conc_original' by {signif(invivPK_conc/conc_original, 2)}"
+          ),
+        .default = ""
+      )
+  ) %>% 
+  dplyr::mutate(
+    loq_processing_flags = 
+      if_else(
+        invivPK_loq == loq,
+        glue::glue("Used 'loq' value."),
+        glue::glue("Multiplied 'loq' value by {signif(invivPK_loq/loq,2)}."),
+        missing = glue::glue("'loq' was imputed as 90% of lowest concentration.")
+      )
+  ) %>% 
+  dplyr::mutate(
+    dose_processing_flags =
+      if_else(
+        invivPK_dose_level == dose_level_normalized,
+        glue::glue("Used 'dose_level_normalized'."),
+        glue::glue("Multiplied 'dose_level_normalized' by",
+                   " {signif(invivPK_dose_level/dose_level_normalized, 3)}.")
+      )
+  ) %>% 
+  dplyr::select(fk_series_id,
+                analyte_dtxsid,
+                species,
+                administration_route_normalized,
+                conc_medium_normalized,
+                conc_processing_flags,
+                dose_processing_flags,
+                loq_processing_flags,
+                ) %>%
   group_by(analyte_dtxsid, species,
-    administration_route_normalized, conc_medium_normalized, preprocess_data_flags) %>%
-  summarize(document_ids = paste0(unique(document_id), collapse = ","))
+           administration_route_normalized,
+           conc_medium_normalized) %>% 
+  summarize(all_series_ids = paste(unique(fk_series_id), collapse = ", "),
+            conc_processing_flags = paste(unique(conc_processing_flags), collapse = " "),
+            dose_processing_flags = paste(unique(dose_processing_flags), collapse = " "),
+            loq_processing_flags = paste(unique(loq_processing_flags), collapse = " ")) %>% 
+  dplyr::distinct()
 
-# Non-compartmental analysis
-my_nca <- get_nca(my_pk) %>% dplyr::select(-param_units) %>%
-  mutate(param_name = paste0(param_name, ".nca")) %>%
-  group_by(Chemical, Species,
-           Route, Media, design) %>%
-  pivot_wider(names_from = param_name,
-              values_from = c(param_value, param_sd_z)) %>%
-  distinct() %>%
-  arrange(Chemical) %>%
-  rename_with(.fn = ~gsub("param_", "", .x)) %>%
-  rename_with(.fn = ~gsub("value_", "", .x)) %>%
-  rename(analyte_dtxsid = Chemical,
-         species = Species,
-         administration_route_normalized = Route,
-         conc_medium_normalized = Media)
-
-
-my_cvt %>%
-  dplyr::select(analyte_dtxsid, species, radiolabeled) %>%
-  distinct() %>%
-  filter(analyte_dtxsid %in% (cvt %>% filter(radiolabeled) %>% pull(analyte_dtxsid)))
+tkstats_cvtdb <- inner_join(my_cvt_unique, my_tkstats,
+                     by = join_by(analyte_dtxsid, species,
+                                  administration_route_normalized,
+                                  conc_medium_normalized)) %>%
+  distinct()
+params_cvtdb <- inner_join(my_cvt_unique, my_params,
+                     by = join_by(analyte_dtxsid, species),
+                     relationship = "many-to-many") %>%
+  distinct()
 
 # Writing to file
-left_join(my_nca, my_cvt_unique) %>%
-  ungroup() %>%
-  filter(!is.infinite(AUC_infinity.nca), !is.infinite(AUMC_infinity.nca)) %>%
-  distinct() %>%
-  mutate(nca_id = row_number(),
-         .before = analyte_dtxsid) %>%
-  # View("NCA-CvTdb")
-  write_tsv("data-raw/NCA_CvTdb.tsv")
-# Note that this will have more numbers because it still includes AUC_infinity == NA
-
-
-
-# TK stats
-my_tkstats <- my_tkstats %>%
-  dplyr::select(analyte_dtxsid = Chemical, species = Species,
-                administration_route_normalized = Route, 
-                conc_medium_normalized = Media, 
-                Reference,
-                model, method,
-                ends_with("tkstats")) %>%
-  group_by(across(everything())) %>%
-  ungroup(Reference) %>%
-  summarize(document_ids = paste0(unique(Reference), collapse = ",")) %>%
-  ungroup() %>%
-  distinct() %>%
-  arrange(analyte_dtxsid) 
-
-prefit_df <- my_pk$prefit$fit_check %>% inner_join(get_winning_model(my_pk)) %>%
-  dplyr::select(analyte_dtxsid = Chemical, species = Species, model, method, 
-                fit_decision, fit_reason)
-
-left_join(my_tkstats, my_cvt_unique) %>%
-  left_join(prefit_df) %>%
-  ungroup() %>%
-  distinct() %>%
-  mutate(tkstats_id = row_number(), .before = analyte_dtxsid) %>%
-  # View("TKstats-CvTdb")
-  write_tsv("data-raw/tkstats_CvTdb.tsv")
-
+bind_rows(params_cvtdb,
+          tkstats_cvtdb) %>% 
+  distinct() -> tkparams_cvtdb
+tkparams_cvtdb_winmodels <- tkparams_cvtdb %>% semi_join(my_wm)
+save(tkparams_cvtdb, tkstats_cvtdb, params_cvtdb, tkparams_cvtdb_winmodels,
+     file = "data-raw/tkparams_CvTdb.Rdata")
 ```
-
-```{r data_flagging, eval=FALSE}
-get_status(my_pk)
-my_data <- get_data(my_pk)
-# Do dose normalized NCA
-my_pk_doseNorm <- my_pk + 
-  scale_conc(dose_norm = TRUE, log10_trans = FALSE)
-my_pk_doseNorm <- do_preprocess(my_pk_doseNorm)
-my_pk_doseNorm <- do_data_info(my_pk_doseNorm)
-my_nca <- nca(my_pk_doseNorm, dose_norm = TRUE)
-my_nca <- my_nca %>% select(Chemical:param_value) %>%
-  pivot_wider(names_from = param_name,
-              values_from = param_value)
-my_data_summary <- my_data %>%
-  group_by(!!!my_pk_doseNorm$settings_data_info$summary_group) %>%
-  summarize(t_first = min(Time), t_last = max(Time))
-
-full_summary <- my_nca %>% inner_join(my_data_summary)
-
-full_summary %>%
-  rowwise() %>% 
-  mutate(sufficient_abs_phase = ifelse(Route %in% "iv", NA,
-                                       ifelse(t_first == tmax, 
-                                              FALSE, TRUE)),
-         sufficient_elim_phase = ifelse(t_last == tmax, FALSE, TRUE)) %>%
-  View()
-
-full_summary %>%
-  group_by(!!!my_pk$settings_data_info$summary_group) %>%
-  reframe(AUC_inf_range = range(AUC_infinity))
-
-```
-
 
 ```{r information}
 sessionInfo()
 ```
-
-
