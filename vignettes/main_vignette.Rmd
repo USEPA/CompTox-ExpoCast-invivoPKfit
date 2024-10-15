@@ -244,6 +244,7 @@ predict(my_pk, newdata = data.frame(
   Species = "rat",
   Time = seq(0, 5, by = 0.5),
   Time.Units = "hours",
+  Conc.Units = "mg/kg",
   Dose = 1,
   Route = "iv",
   Media = "plasma",
