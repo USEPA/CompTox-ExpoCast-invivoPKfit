@@ -173,7 +173,7 @@ do_prefit.pk <- function(obj,
                          par_DF <- dplyr::group_by(par_DF,
                                                    !!!obj$data_group) %>%
                            dplyr::reframe(do.call(obj$stat_model[[this_model]]$params_fun,
-                                                  args = c(list(dplyr::cur_data_all()),
+                                                  args = c(list(dplyr::pick(tidyselect::everything())),
                                                            obj$stat_model[[this_model]]$params_fun_args)
                            )
                            ) %>% as.data.frame()

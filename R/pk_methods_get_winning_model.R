@@ -84,8 +84,12 @@ get_winning_model.pk <- function(obj,
    dplyr::group_by(!!!obj$data_group, method) %>%
    dplyr::mutate(
     near_flat = dplyr::if_else(
-      !is.null(dplyr::cur_data()$RMSE[which(dplyr::cur_data()$model == "model_flat")]),
-       all(RMSE/dplyr::cur_data()$RMSE[which(dplyr::cur_data()$model == "model_flat")] >= 0.95),
+      !is.null(dplyr::pick(
+        tidyselect::everything())$RMSE[which(
+          dplyr::pick(tidyselect::everything())$model == "model_flat")]),
+       all(RMSE/dplyr::pick(
+         tidyselect::everything())$RMSE[which(
+         dplyr::pick(tidyselect::everything())$model == "model_flat")] >= 0.95),
        FALSE, missing = NA)
      ) %>%
    dplyr::group_by(!!!obj$data_group) %>%
