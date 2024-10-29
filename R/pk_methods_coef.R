@@ -58,6 +58,12 @@ coef.pk <- function(obj,
   # Get the parameters that were held constant from par_DF
   # And only keep the name and starting value for the parameter
   # along with the unique identifying columns model and data_group
+  parDF <- subset(
+    obj$prefit$par_DF,
+    use_param == TRUE & optimize_param == FALSE &
+      param_name %in% possible_model_params) %>%
+    dplyr::select(model, !!!obj$data_group, param_name, start)
+
   coefs <- subset(
     obj$fit,
     subset = (use_param == TRUE)) %>%
@@ -66,6 +72,13 @@ coef.pk <- function(obj,
                   param_name,
                   estimate,
                   convcode)
+
+  parDF <- coefs %>%
+    dplyr::distinct(model, method, !!!obj$data_group, convcode) %>%
+    dplyr::inner_join(parDF, by = c(data_group_vars, "model")) %>%
+    dplyr::rename(estimate = "start")
+
+  coefs <- dplyr::bind_rows(coefs, parDF)
 
   # drop the sigma parameters (not used in some functions)
   if (drop_sigma == TRUE) {
