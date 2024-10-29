@@ -162,26 +162,33 @@ do_prefit.pk <- function(obj,
   }
 
   #for each model to be fitted:
-  par_DF_out <- sapply(names(obj$stat_model),
-                       function(this_model){
-                         #get parameters to be optimized, bounds, and starting points
-                         #by evaluating params_fun for this stat_model
-                         #pass it only the non-excluded observations
-                         par_DF <- data %>%
-                           dplyr::filter(exclude %in% FALSE)
+  par_DF_out <- sapply(
+    names(obj$stat_model),
+    function(this_model){
+      #get parameters to be optimized, bounds, and starting points
+      #by evaluating params_fun for this stat_model
+      #pass it only the non-excluded observations
+      par_DF <- data %>%
+        dplyr::filter(exclude %in% FALSE)
 
-                         par_DF <- dplyr::group_by(par_DF,
-                                                   !!!obj$data_group) %>%
-                           dplyr::reframe(do.call(obj$stat_model[[this_model]]$params_fun,
-                                                  args = c(list(dplyr::pick(tidyselect::everything())),
-                                                           obj$stat_model[[this_model]]$params_fun_args)
-                           )
-                           ) %>% as.data.frame()
+      par_DF <- dplyr::group_by(par_DF,
+                                !!!obj$data_group) %>%
+        dplyr::reframe(
+          do.call(
+            obj$stat_model[[this_model]]$params_fun,
+            args = c(list(cbind(dplyr::cur_group(),
+                                dplyr::pick(tidyselect::everything())
+                                )
+                          ),
+                     obj$stat_model[[this_model]]$params_fun_args
+                     )
+          )
+        ) %>% as.data.frame()
 
-                         par_DF
-                       },
-                       simplify = FALSE,
-                       USE.NAMES = TRUE
+      par_DF
+    },
+    simplify = FALSE,
+    USE.NAMES = TRUE
   )
 
   par_DF_out <- dplyr::bind_rows(par_DF_out, .id = "model")
