@@ -33,6 +33,7 @@ coef.pk <- function(obj,
                     method = NULL,
                     drop_sigma = FALSE,
                     include_NAs = FALSE,
+                    suppress_messages = FALSE,
                     ...) {
   # Check fit status
   check <- check_required_status(obj = obj,
@@ -116,13 +117,17 @@ coef.pk <- function(obj,
   # By optimization method
   if (is.character(method)) {
     method_vector <- method
+    if (!suppress_messages) {
     message("coef.pk(): Filtering by method(s): ", paste(method, collapse = " "))
+    }
     coefs_tidy <- coefs_tidy %>% dplyr::filter(method %in% method_vector)
   }
   # By models used
   if (is.character(model)) {
     model_vector <- model
-    message("coef.pk(): Filtering by model(s): ", paste(model, collapse = " "))
+    if (!suppress_messages) {
+      message("coef.pk(): Filtering by model(s): ", paste(model, collapse = " "))
+    }
     coefs_tidy <- coefs_tidy %>% dplyr::filter(model %in% model_vector)
   }
 

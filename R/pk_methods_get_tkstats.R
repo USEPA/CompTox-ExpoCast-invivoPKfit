@@ -80,7 +80,8 @@ get_tkstats.pk <- function(obj,
   all_coefs <- coef(obj,
                     model = model,
                     method = method,
-                    drop_sigma = TRUE) %>%
+                    drop_sigma = TRUE,
+                    suppress_messages = TRUE) %>%
     dplyr::select(-c(Time.Units, Time_trans.Units))
 
   grp_vars <- sapply(tk_group,

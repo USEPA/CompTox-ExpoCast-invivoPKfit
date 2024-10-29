@@ -133,8 +133,6 @@ eval_tkstats.pk <- function(obj,
     dplyr::right_join(winmodel_df) %>%
     dplyr::relocate(model, method, .after = Media)
 
-
-
   #get tkstats
   tkstats_df <- get_tkstats.pk(obj = obj,
                             newdata = newdata,

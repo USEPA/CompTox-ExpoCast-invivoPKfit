@@ -173,7 +173,8 @@ logLik.pk <- function(object,
     obj = object,
     model = model,
     method = method,
-    drop_sigma = FALSE)
+    drop_sigma = FALSE,
+    suppress_message = TRUE)
 
   req_vars <- ggplot2::vars(Time,
                             Time.Units,
