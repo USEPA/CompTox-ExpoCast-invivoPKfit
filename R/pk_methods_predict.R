@@ -67,7 +67,8 @@ predict.pk <- function(obj,
     model = model,
     method = method,
     drop_sigma = TRUE,
-    include_NAs = include_NAs
+    include_NAs = include_NAs,
+    suppress_messages = suppress_messages
   ) %>%
     dplyr::select(-c(Time.Units, Time_trans.Units))
 
