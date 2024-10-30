@@ -114,8 +114,6 @@
 #'@param param_units A mapping specified using a call to [ggplot2::aes()],
 #'  giving the units for each variable, as expressions which may include
 #'  variables in `data`.
-#'@param restrictive A boolean value (Default: FALSE) that determines whether
-#'  to assume restrictive clearance when setting starting values for parameters.
 #'@return A `data.frame`with the following variables:
 #' - `param_name`: Character: Names of the model parameters
 #' - `param_units`: Character: Units of the model parameters
@@ -129,7 +127,7 @@
 #' @family get_params functions
 #' @family built-in model functions
 
-get_params_1comp_cl <- function(
+get_params_1comp_fup <- function(
     data,
     lower_bound = ggplot2::aes(Q_totli = NA,
                                Q_gfr = NA,
@@ -170,8 +168,9 @@ get_params_1comp_cl <- function(
                                                       "(",
                                                       unique(Dose.Units),
                                                       ")"),
-                               Rblood2plasma = "unitless ratio"),
-    restrictive = FALSE) {
+                               Rblood2plasma = "unitless ratio")
+    ){
+
   #param names
   param_name <- c("Q_totli",
                   "Q_gfr",
@@ -231,7 +230,7 @@ get_params_1comp_cl <- function(
   #initialize optimization: start with optimize = TRUE for all params
   optimize_param <- rep(TRUE, length(param_name))
   #but then will hold constant some of these
-  optimize_param[param_name %in% c("Fup", "Q_gfr", "Q_totli", "Rblood2plasma")] <- FALSE
+  optimize_param[param_name %in% c("Clint", "Q_gfr", "Q_totli", "Rblood2plasma")] <- FALSE
 
   #initialize whether each param is used: start with use = TRUE for all params
   use_param <- rep(TRUE, length(param_name))
@@ -296,9 +295,8 @@ get_params_1comp_cl <- function(
                        "upper_bound" = upper_bound_vect)
 
   # now get starting values
-  par_DF <-  get_starts_1comp_cl(data = data,
-                              par_DF = par_DF,
-                              restrictive = restrictive)
+  par_DF <-  get_starts_1comp_fup(data = data,
+                              par_DF = par_DF)
 
 
   #check to ensure starting values are within bounds

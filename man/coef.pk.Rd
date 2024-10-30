@@ -10,6 +10,7 @@
   method = NULL,
   drop_sigma = FALSE,
   include_NAs = FALSE,
+  suppress_messages = FALSE,
   ...
 )
 }
