@@ -108,8 +108,6 @@
 #' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
 #' -`lower_bounds`: Numeric: The lower bounds for each parameter
 #' - `upper_bounds`: Numeric: The upper bounds for each parameter
-#' @param restrictive A boolean value determinining whether to assume restrictive
-#'   or non-restrictive clearance when getting starting values.
 #'
 #'@return The same `data.frame` as `par_DF`, with an additional variable
 #'  `starts` containing the derived starting value for each parameter. If a
@@ -120,16 +118,16 @@
 #' @family 1-compartment model functions
 #' @family get_starts functions
 #' @family built-in model functions
-#'
-get_starts_1comp_cl <- function(data,
-                             par_DF,
-                             restrictive){
+
+get_starts_1comp_fup <- function(data,
+                                 par_DF){
   #initialize starting values for each parameter.
   #if no IV data exist, then Vdist starting value will remain NA.
   # if no oral data exist, then Fgutabs_Vdist and Fgutabs starting values will remain NA.
   #if only one of IV or oral data exist, then Fgutabs starting value will remain NA.
   # May just make a static version of this?
   # Or combine it with another table
+
   kelim <- NA_real_
   kgutabs <- NA_real_
   Vdist <- NA_real_
@@ -170,11 +168,9 @@ get_starts_1comp_cl <- function(data,
       httk::parameterize_gas_pbtk(
         dtxsid = unique(data[["Chemical"]]),
         species = this_species,
-        restrictive.clearance = restrictive)))
+        restrictive.clearance = TRUE)))
 
-  if (restrictive) {
-    Fup <- parm_gas[["Funbound.plasma"]]
-  }
+  Fup <- parm_gas[["Funbound.plasma"]]
 
   Rblood2plasma <- parm_gas[["Rblood2plasma"]]
 

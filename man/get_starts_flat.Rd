@@ -84,6 +84,7 @@ Other flat model functions:
 Other get_starts functions: 
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
+\code{\link{get_starts_1comp_fup}()},
 \code{\link{get_starts_2comp}()}
 
 Other built-in model functions: 
@@ -98,10 +99,12 @@ Other built-in model functions:
 \code{\link{cp_flat}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
+\code{\link{get_params_1comp_fup}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
+\code{\link{get_starts_1comp_fup}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}

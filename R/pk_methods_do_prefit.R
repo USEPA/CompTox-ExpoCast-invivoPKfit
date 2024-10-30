@@ -155,7 +155,6 @@ do_prefit.pk <- function(obj,
   #assign sigma_DF to the `pk` object
   obj$prefit$stat_error_model$sigma_DF <- sigma_DF
 
-
   if(suppress.messages %in% FALSE){
     message(paste("do_prefit.pk():",
                   "Getting bounds and starting guesses for all model parameters to be fitted"))
@@ -171,6 +170,7 @@ do_prefit.pk <- function(obj,
       par_DF <- data %>%
         dplyr::filter(exclude %in% FALSE)
 
+  # browser()
       par_DF <- dplyr::group_by(par_DF,
                                 !!!obj$data_group) %>%
         dplyr::reframe(
@@ -178,10 +178,9 @@ do_prefit.pk <- function(obj,
             obj$stat_model[[this_model]]$params_fun,
             args = c(list(cbind(dplyr::cur_group(),
                                 dplyr::pick(tidyselect::everything())
-                                )
-                          ),
-                     obj$stat_model[[this_model]]$params_fun_args
-                     )
+            )),
+            obj$stat_model[[this_model]]$params_fun_args
+            )
           )
         ) %>% as.data.frame()
 
