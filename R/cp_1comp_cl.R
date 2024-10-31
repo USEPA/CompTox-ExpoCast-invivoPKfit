@@ -85,7 +85,7 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
 
   # compute total clearance
   Clhep <- (Q_totli * Fup * Clint)/(Q_totli + (Fup * Clint/Rblood2plasma))
-  Cltot <- Q_gfr + Clhep
+  Cltot <- (Fup * Q_gfr) + Clhep
   Cltot_Vdist <- Cltot/Vdist
 
   #compute plasma concentration
