@@ -473,7 +473,8 @@ quick_message(c(
 cvt_df <- cvt_df %>%
   mutate(invivPK_loq = if_else(
     invivPK_loq_units %in% c("ug/L", "ng/mL", "ng/g"),
-    invivPK_loq * 1E-3, invivPK_loq)) # mg/L and ug/mL are same scale
+    invivPK_loq * 1E-3, invivPK_loq)) %>% 
+  mutate(ivivPK_loq_units = "ug/mL") # mg/L and ug/mL are same scale
 # Normalize conc_sd and conc units manually
 
 # Some concentrations are already normalized
