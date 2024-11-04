@@ -17,6 +17,8 @@
 #'  sigma in the output.
 #' @param include_NAs Logical: `FALSE` by default. Determines whether to include
 #'  aborted fits which have NAs as coefficients.
+#' @param suppress_messages Logical: `FALSE` by default. Determines whether to
+#'  display messages.
 #' @param ... Additional arguments currently not in use.
 #' @return A data.frame with a row for each `data_group` x `method` x `model` combination
 #'  in a fitted [pk()] object. When `drop_sigma = TRUE` there is also a row for each

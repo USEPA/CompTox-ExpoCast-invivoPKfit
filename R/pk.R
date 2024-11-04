@@ -188,6 +188,7 @@
 #'  argument `data`. `data_settings` is a named list containing all the other
 #'  input arguments: these provide settings that will be used when the data is
 #'  pre-processed before fitting.
+#'@import tibble
 #'@author Caroline Ring
 #'@export
 
