@@ -32,6 +32,9 @@ sigma in the output.}
 \item{include_NAs}{Logical: `FALSE` by default. Determines whether to include
 aborted fits which have NAs as coefficients.}
 
+\item{suppress_messages}{Logical: `FALSE` by default. Determines whether to
+display messages.}
+
 \item{...}{Additional arguments currently not in use.}
 }
 \value{
