@@ -153,7 +153,6 @@ get_starts_1comp_cl <- function(data,
 
   names_Q_gfr <- names(Q_gfr)
   this_species <- unique(data$Species)
-  # message("Converting mL/min/kg to L/h/kg for Q_gfr & Q_totli")
 
   if (this_species %in% names_Q_gfr) {
     Q_gfr <- Q_gfr[[this_species]] * (60/1000) # Assumes L/h/kg are standard units

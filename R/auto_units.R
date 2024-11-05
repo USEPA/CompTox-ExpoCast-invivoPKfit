@@ -57,7 +57,7 @@ auto_units <- function(y,
     y_mid_up <- midpt_log10(
       convert_time(y,
                    from = from,
-                   to = period_units[i+1])
+                   to = period_units[i + 1])
     )
 
     target_dist_new <- abs(y_mid_up - target_log10)
@@ -67,7 +67,7 @@ auto_units <- function(y,
     y_mid_down <- midpt_log10(
       convert_time(y,
                    from = from,
-                   to = period_units[i-1])
+                   to = period_units[i - 1])
     )
 
     target_dist_new <- abs(y_mid_down - target_log10)
@@ -76,14 +76,14 @@ auto_units <- function(y,
     y_mid_up <- midpt_log10(
       convert_time(y,
                    from = from,
-                   to = period_units[i+1])
+                   to = period_units[i + 1])
     )
     target_dist_up <- abs(y_mid_up - target_log10)
 
     y_mid_down <- midpt_log10(
       convert_time(y,
                    from = from,
-                   to = period_units[i-1])
+                   to = period_units[i - 1])
     )
 
     target_dist_down <- abs(y_mid_down - target_log10)
@@ -99,7 +99,8 @@ auto_units <- function(y,
     }
   }
 
-  #now search in that direction until either we hit the end, or until it starts getting *farther* away from target
+  # now search in that direction until either we hit the end,
+  # or until it starts getting *farther* away from target
   i <- i + dir
   #are we getting closer (negative delta) or farther away (positive delta)?
   delta_target_dist <- target_dist_new - target_dist

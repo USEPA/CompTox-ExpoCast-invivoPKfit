@@ -71,18 +71,14 @@ auc_1comp <- function(params,
   params <- fill_params_1comp(params)
 
   check_msg <- check_params_1comp(params = params,
-                            route = route,
-                            medium = medium)
+                                  route = route,
+                                  medium = medium)
 
-  if(!(check_msg %in% "Parameters OK")){
-    stop(paste("cp_1comp():",
-               check_msg))
+  if(check_msg != "Parameters OK") {
+    stop("cp_1comp(): ", check_msg)
   }
 
   #for readability, assign params to variables inside this function
-  # for(x in names(params)){
-  #   assign(x, unname(params[x]))
-  # }
   list2env(as.list(params), envir = as.environment(-1))
 
 

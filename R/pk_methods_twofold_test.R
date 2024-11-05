@@ -35,8 +35,9 @@ twofold_test.pk <- function(obj,
   # Check the status of the pk object
   status <- suppressMessages(get_status(obj))
   if (status < 2) {
-    stop(paste0("Please do data preprocessing step on this pk object",
-                " by running do_preprocess(...)"))
+    stop("Please do data preprocessing step on this pk object",
+         " by running do_preprocess(...)"
+         )
   }
 
   # Get the data to evaluate
@@ -70,9 +71,9 @@ twofold_test.pk <- function(obj,
   )
 
   if (!all(vital_col %in% names(data_cvt))) {
-    stop(paste("Missing the following columns:",
-               paste(setdiff(vital_col, names(data_cvt)),
-                     collapse = ", ")))
+    stop("Missing the following columns:",
+         toString(setdiff(vital_col, names(data_cvt)))
+         )
   }
 
   data_cvt <- data_cvt[vital_col]
@@ -85,7 +86,7 @@ twofold_test.pk <- function(obj,
                  name = "Count")
 
   # There must be at least 2 values per timepoint for individual data or else
-  # Conc = mean(Conc)
+  # Conc is equal to mean(Conc)
   # Each Summarized Group of Observations should have multiple subjects
   # For individual data, can only summarize if there are multiple observations per timepoint
   # Note we only use data_counts filtering left join with individual data
@@ -105,7 +106,7 @@ twofold_test.pk <- function(obj,
   out_list[['data_descriptors']] <- data_counts
 
   # There must be at least 2 values per timepoint for individual data or else
-  # Conc = mean(Conc)
+  # Conc is equal to mean(Conc)
   indiv_data <- subset(data_counts, subset = (data_descr %in% "Individual Data, Multiple Observations"))
   # I will also save the individual single observations
   single_data <- subset(data_counts, subset = (data_descr %in% "Individual Data, Single Observation"))
@@ -135,8 +136,7 @@ twofold_test.pk <- function(obj,
   # Combined summarized data (indiv + sgroup)
   total_data_summary <- dplyr::bind_rows(indiv_data_summary, sgroup_data) %>%
     dplyr::ungroup() %>%
-    dplyr::mutate(twofold_95 = ifelse(((conc_mean + 2+conc_sd)/conc_mean) <= 2,
-                                      TRUE, FALSE))
+    dplyr::mutate(twofold_95 = ((conc_mean + 2 * conc_sd)/conc_mean) <= 2)
 
   twofold_95 <- total_data_summary %>%
     dplyr::group_by(Route) %>%
@@ -346,7 +346,7 @@ rowwise_calc_percentages <- function(data,
 
   # Calculate total
 
-  data$total <-  apply(data[op_cols], 1, sum)
+  data$total <-  rowSums(data[op_cols], 1, sum)
 
   # Calculate percentages
   data[paste0("percent_", op_cols)] <- apply(data[op_cols], 2,

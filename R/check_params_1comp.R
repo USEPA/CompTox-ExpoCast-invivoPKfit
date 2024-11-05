@@ -24,8 +24,6 @@ check_params_1comp <- function(params,
 
   msg <- "Parameters OK"
 
-  # params <- fill_params_1comp(params)
-
   #check for any missing parameters
   #required params for oral dose
   if(any(route %in% "oral")){
@@ -35,8 +33,9 @@ check_params_1comp <- function(params,
                               names(params)[is.finite(params)])
     if(length(missing_params)>0){
       msg <- (paste("Error: For 1-compartment oral model,",
-                 "missing parameters:",
-                 paste(missing_params, collapse = ", ")))
+                    "missing parameters:",
+                    toString(missing_params))
+      )
     }
   }
 
@@ -47,8 +46,9 @@ check_params_1comp <- function(params,
                               names(params)[is.finite(params)])
     if(length(missing_params)>0){
       msg <- (paste("Error: For 1-compartment IV model,",
-                 "missing parameters:",
-                 paste(missing_params, collapse = ", ")))
+                    "missing parameters:",
+                    toString(missing_params))
+      )
     }
   }
 

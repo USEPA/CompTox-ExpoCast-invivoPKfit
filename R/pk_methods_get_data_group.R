@@ -7,11 +7,12 @@
 get_data_group.pk <- function(obj, ...){
   out <- rlang::parse_expr(
     paste0("vars(",
-           paste(sapply(obj$data_group,
-                        function(x) rlang::as_label(x)),
-                 collapse = ", "),
-           ")")
+           paste(
+             toString(obj$data_group,
+                      rlang::as_label),
+             ")"
+           )
+    )
   )
-
   return(out)
 }

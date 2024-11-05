@@ -62,9 +62,9 @@ cp_2comp_dt <- function(params, time, dose, route, medium)
   check_msg <- check_params_2comp(params,
                                   route,
                                   medium)
-  if(!(check_msg %in% "Parameters OK")){
-    stop(paste("cp_2comp_dt():",
-               check_msg))
+
+  if (check_msg != "Parameters OK") {
+    stop("cp_2comp_dt(): ", check_msg)
   }
 
   #get transformed parameters for 2-comp model

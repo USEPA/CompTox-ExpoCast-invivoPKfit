@@ -138,8 +138,9 @@ logLik.pk <- function(object,
                               exclude = exclude)
 
   # time_scale_check
-  if (any(!(newdata$Time_trans.Units %in% "hours"))) {
-    message("logLik.pk(): Scaling these transformed time units back into hours for log-likelihood calculation, to match time units of coefficients")
+  if (!all(newdata$Time_trans.Units %in% "hours")) {
+    message("logLik.pk(): Scaling these transformed time units back into hours ",
+            "for log-likelihood calculation, to match time units of coefficients")
     #scale time if needed
     if (!("Time_trans" %in% names(newdata))) {
       newdata$Time_trans <- convert_time(x = newdata$Time,
@@ -161,10 +162,8 @@ logLik.pk <- function(object,
                                use_scale_conc = TRUE)
 
   #remove any excluded observations & corresponding predictions, if so specified
-  if (exclude %in% TRUE) {
-    if ("exclude" %in% names(newdata)) {
+  if (exclude %in% TRUE && "exclude" %in% names(newdata)) {
       newdata <- subset(newdata, exclude %in% FALSE)
-    }
   }
 
   # get coefs data.frame for each model and method

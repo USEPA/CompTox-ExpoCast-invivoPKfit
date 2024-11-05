@@ -156,7 +156,7 @@ eval_tkstats.pk <- function(obj,
 
     tkstats_df <- tkstats_df %>%
       dplyr::group_by(!!!tk_group) %>%
-      dplyr::summarize(dplyr::across(all_of(remaining_vars),
+      dplyr::summarize(dplyr::across(tidyselect::all_of(remaining_vars),
                                      \(x) {paste0(x, collapse = ",")})) %>%
       dplyr::ungroup() %>%
       dplyr::distinct()
@@ -166,18 +166,22 @@ eval_tkstats.pk <- function(obj,
   # prepare for merge
   nca_df_red <- nca_df %>%
     dplyr::rename_with(~ paste0(.x, ".nca", recycle0 = TRUE),
-                       !any_of(c(grp_vars, "model", "method")))
+                       !tidyselect::any_of(c(grp_vars, "model", "method")))
 
   tkstats_df_red <- tkstats_df %>%
     dplyr::rename_with(~ paste0(.x, ".tkstats", recycle0 = TRUE),
-                       !any_of(c(grp_vars, "Dose.Units", "Conc.Units",
-                                 "Time.Units", "Time_trans.Units",
-                                 "Rblood2plasma", "model", "method")))
+                       !tidyselect::any_of(c(grp_vars,
+                                             "Dose.Units", "Conc.Units",
+                                             "Time.Units", "Time_trans.Units",
+                                             "Rblood2plasma", "model", "method")
+                       )
+    )
 
   if (dose_norm) {
-    message(paste0("eval_tkstats.pk(): ",
-                   "TK statistics AND NCA have been ",
-                   "calculated based on dose-normalized value of 1mg/kg"))
+    message("eval_tkstats.pk(): ",
+            "TK statistics AND NCA have been ",
+            "calculated based on dose-normalized value of 1mg/kg"
+    )
   }
 
   # Merge the tkstats and the nca data.frames
@@ -193,8 +197,5 @@ eval_tkstats.pk <- function(obj,
              is.finite(AUC_infinity.nca))
   }
 
-
   return(tk_eval)
-
-
 }

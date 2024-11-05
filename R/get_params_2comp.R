@@ -222,22 +222,23 @@ get_params_2comp <- function(
   use_param <- rep(TRUE, length(param_name))
 
   #now follow the logic described in the documentation for this function:
-  if(!("oral" %in% data$Route)){
-    #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_V1,
-    #and they won't be used.
-    optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
-    use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
-  }else{ #if yes oral data:
+  if("oral" %in% data$Route){
+    #if yes oral data:
     if("iv" %in% data$Route){
       #if both oral and IV data, Fgutabs and V1 can be fit separately, so turn off Fgutabs_V1
-      optimize_param[param_name %in% c("Fgutabs_V1")] <- FALSE
-      use_param[param_name %in% c("Fgutabs_V1")] <- FALSE
+      optimize_param[param_name %in% "Fgutabs_V1"] <- FALSE
+      use_param[param_name %in% "Fgutabs_V1"] <- FALSE
     }else{
       #if oral ONLY:
       #cannot fit Fgutabs and V1 separately, so turn them off.
       optimize_param[param_name %in% c("Fgutabs", "V1")] <- FALSE
       use_param[param_name %in% c("Fgutabs", "V1")] <- FALSE
     }
+  }else{
+    #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_V1,
+    #and they won't be used.
+    optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
+    use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_V1")] <- FALSE
   }
 
 
@@ -246,12 +247,6 @@ get_params_2comp <- function(
   if(!(all(c("blood", "plasma") %in% data$Media))){
     optimize_param[param_name %in% "Rblood2plasma"] <- FALSE
   }
-
-  # #if no medium is "blood" then Rblood2plasma will not be used at all
-  # if(!("blood" %in% data$Media)){
-  #   use_param[param_name %in% "Rblood2plasma"] <- FALSE
-  #   #otherwise, if blood-only data, Rblood2plasma will be used, but held constant at 1
-  # }
 
   #get param units based on data
   param_units_vect <- sapply(param_units,
@@ -292,9 +287,12 @@ get_params_2comp <- function(
   start_nonfin <- !is.finite(par_DF$start)
 
   par_DF[start_low | start_high | start_nonfin,
-         "start"] <- rowMeans(cbind(par_DF[start_low | start_high | start_nonfin,
-                                           c("lower_bound",
-                                                                   "upper_bound")]))
+         "start"] <- rowMeans(
+           cbind(par_DF[start_low | start_high | start_nonfin,
+                        c("lower_bound",
+                          "upper_bound")]
+                 )
+           )
 
   return(par_DF)
 

@@ -32,7 +32,7 @@ get_peak <- function(x, y, ties = "median", na.rm = TRUE, ...){
   y_finite <- y[is.finite(x) & is.finite(y)]
 
   if(length(unique(x_finite))>1){
-  suppressWarnings(tmp <- approx(x=x,
+  tmp <- suppressWarnings(approx(x=x,
                                  y=y,
                                  xout = unique(x),
                                  method = "linear",
@@ -45,7 +45,7 @@ get_peak <- function(x, y, ties = "median", na.rm = TRUE, ...){
                 "y" = tmp$y[peak_ind])
 
   }else if(length(unique(x_finite))==1){
-    suppressWarnings(tmp <- approx(x=x,
+    tmp <- suppressWarnings(approx(x=x,
                                    y=y,
                                    xout = unique(x),
                                    method = "constant",

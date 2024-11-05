@@ -163,12 +163,13 @@ predict.pk <- function(obj,
                          )),
             error = function(err) {
               if (!suppress_messages) {
-                message(paste("predict.pk(): Unable to run",
-                              model_fun, "for",
-                              Chemical, Species,
-                              "data grouping.",
-                              "Likely an aborted fit,",
-                              "it is missing estimated parameters."))
+                message("predict.pk(): Unable to run ",
+                        model_fun, " for ",
+                        toString(data_group_vars),
+                        " data grouping.\n",
+                        "Likely an aborted fit, ",
+                        "it is missing estimated parameters."
+                )
               }
               # Return Value
               NA_real_
@@ -192,7 +193,8 @@ predict.pk <- function(obj,
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
   #note that it doesn't make sense to log10-trans AUC
     if (suppress_messages %in% FALSE) {
-      message("predict.pk(): Log10 transformation was specified, but was not used because `type == 'AUC'`.")
+      message("predict.pk(): Log10 transformation was specified, ",
+              "but was not used because `type == 'AUC'`.")
     }
   }
 
@@ -204,6 +206,7 @@ predict.pk <- function(obj,
   }
   }
 
-  message("predict.pk(): These predictions have been made using un-scaled Time and 1/hour rate constants from coefs()")
+  message("predict.pk(): These predictions have been made using un-scaled Time ",
+          "and 1/hour rate constants from coefs()")
   return(newdata)
 }

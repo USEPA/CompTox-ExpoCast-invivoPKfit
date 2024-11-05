@@ -14,12 +14,12 @@ do_data_info.pk <- function(obj, ...){
   objname <- deparse(substitute(obj))
   status <- obj$status
   if (status >= status_data_info) {
-    warning(paste0(objname,
-                   " current status is ",
-                   status,
-                   ". do_data_info.pk() will reset its status to ",
-                   status_data_info,
-                   ". Any results from later workflow stages will be lost.\n"))
+    warning(objname,
+            " current status is ",
+            status,
+            ". do_data_info.pk() will reset its status to ",
+            status_data_info,
+            ". Any results from later workflow stages will be lost.\n")
     # Here is where I need to implement logic for skipping if same data group
     prev_summary <- obj$data_info$data_summary %>%
       dplyr::select(Chemical:tlast_detect)
@@ -53,7 +53,8 @@ do_data_info.pk <- function(obj, ...){
   if (status >= status_data_info) {
     id_summary <- identical(data_summary_out, prev_summary)
     if (id_summary) {
-      message("Any changes made do not affect the outcome of the non-compartmental analysis!\n")
+      message("Any changes made do not affect the outcome ",
+              "of the non-compartmental analysis!\n")
       return(obj)
     }
   }
@@ -69,21 +70,19 @@ do_data_info.pk <- function(obj, ...){
   grp_vars_summary <- sapply(summary_group,
                              rlang::as_label)
 
-  if(!(all(c("Dose",
-             "Route",
-             "Media") %in%
-           grp_vars_summary))){
+  if(all(c("Dose", "Route", "Media") %in% grp_vars_summary)){
+    nca_group <- summary_group
+
+  }else{
     if (obj$settings_preprocess$suppress.messages %in% FALSE) {
       message(paste0("Grouping for NCA must include Dose, Route, and Media, but ",
                      "summary_group is: ",
-                     paste(grp_vars_summary, collapse = ", "),
+                     toString(grp_vars_summary),
                      "\n",
                      "Dose, Route, and/or Media are being added to the grouping for purposes of NCA."))
     }
     nca_group <- union(summary_group,
                        vars(Dose, Route, Media))
-  }else{
-    nca_group <- summary_group
   }
 
 
@@ -182,8 +181,8 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
       },
       data_flag_AUC = ifelse(AUC_fold_range > 2,
                              "AUC_infinity may not scale with dose. AUC/Dose range > 2-fold across dose groups for this group",
-                             NA_character_),
-    ) %>% as.data.frame()
+                             NA_character_)) %>%
+    as.data.frame()
 
   obj$data_info <- list("data_summary" = data_summary_out,
                         "data_flags" = df,

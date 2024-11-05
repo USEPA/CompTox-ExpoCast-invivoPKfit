@@ -141,9 +141,10 @@ coef_sd.pk <- function(obj,
       tryCatch(diag(solve(x))^(1/2) %>% as.numeric(),
                error = function(err){
                  if (!suppress.messages) {
-                   message(paste0("Hessian can't be inverted, ",
-                                  "using pseudovariance matrix ",
-                                  "to estimate parameter uncertainty."))
+                   message("Hessian can't be inverted, ",
+                           "using pseudovariance matrix ",
+                           "to estimate parameter uncertainty."
+                   )
                  }
                  # pseudovariance matrix
                  # see http://gking.harvard.edu/files/help.pdf
@@ -152,8 +153,9 @@ coef_sd.pk <- function(obj,
                              pivot = TRUE))^(1/2)),
                    error = function(err){
                      if (!suppress.messages) {
-                       message(paste0("Pseudovariance matrix failed,",
-                                      " returning NAs"))
+                       message("Pseudovariance matrix failed, ",
+                               "returning NAs"
+                               )
                      }
                      rep(NA_real_, nrow(x))
                    })
@@ -170,14 +172,17 @@ coef_sd.pk <- function(obj,
           suppressWarnings(diag(chol(MASS::ginv(x),
                                      pivot = TRUE))^(1/2)),
           error = function(err){
-            paste0("Pseudovariance matrix failed,",
-                   " returning NAs")
+            message("Pseudovariance matrix failed, ",
+                    "returning NAs")
           })
-        paste0("Hessian can't be inverted, ",
-               "using pseudovariance matrix ",
-               "to estimate parameter uncertainty.")
-      })
-    })))
+        message("Hessian can't be inverted, ",
+                "using pseudovariance matrix ",
+                "to estimate parameter uncertainty.")
+      }
+      )
+    }
+    ))
+  )
 
   # Limit data.frame columns to those that unique identify needed values
   newdata <- newdata %>%

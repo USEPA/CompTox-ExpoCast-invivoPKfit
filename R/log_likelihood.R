@@ -203,7 +203,7 @@ log_likelihood <- function(par,
   # if model predicted any NA or Inf concentrations OR
   # any negative concentrations,
   #then parameters are infinitely unlikely
-  if (any(!is.finite(pred)) || any(pred < 0)) {
+  if (!all(is.finite(pred)) || any(pred < 0)) {
     ll <- -Inf
     if (force_finite) ll <- -1 * sqrt(.Machine$double.xmax)
     if (negative) ll <- -1 * ll
@@ -244,11 +244,9 @@ log_likelihood <- function(par,
   # Reversed conditional order for clarity
   if (!any(sigma_index)) {
     stop(
-      paste(
         "Could not find any parameters with 'sigma' in the name.",
         "Param names are:",
-        paste(names(params), collapse = "; ")
-      )
+        toString(names(params))
     )
   } else { # There ARE sigma values
     #get sigma params
@@ -265,10 +263,11 @@ log_likelihood <- function(par,
 
     sigma_obs <- sigma_obs
 
-    #if data_sigma_group is NA -- then assume data are equally likely to come from any of the existing distributions
+    #if data_sigma_group is NA -- then assume data are equally likely to come from
+    # any of the existing distributions
     #data_sigma_group may be NA if we are calculating log-likelihood for new data,
     #i.e., data on which the model was not originally fitted.
-    if (any(!sigma_is_na)) {
+    if (!all(sigma_is_na)) {
       # Expectations: N_Subjects must be >= 1
       #compute log likelihoods for observations with sigmas
       ll_data_sigma <-  ifelse(
@@ -308,13 +307,11 @@ log_likelihood <- function(par,
     if (any(sigma_is_na)) {
       if (suppress.messages %in% FALSE) {
         message(
-          paste(
             "log_likelihood():",
             sum(is.na(sigma_obs)),
             "observations are not in any existing error-SD (sigma) group.",
             "They will be treated as equally likely to be in",
             "any of the existing error-SD groups."
-          )
         )
       }
       # Expectations: N_Subjects must be >= 1
@@ -383,12 +380,10 @@ log_likelihood <- function(par,
   #e.g. as required by optimx with method 'L-BFGS-B',
   #then when log-likelihood is infinitely unlikely,
   #return a large negative number instead
-  if (force_finite) {
-    if (!is.finite(ll)) {
+  if (force_finite && !is.finite(ll)) {
       #now return sqrt of .Machine$double.xmax, not just .Machine$double.xmax
       #not taking sqrt seems to break L-BFGS-B sometimes
       ll <- -1 * sqrt(.Machine$double.xmax)
-    }
   }
 
   #to get negative log-likelihood (e.g. for minimization)

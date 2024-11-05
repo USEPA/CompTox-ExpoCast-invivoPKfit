@@ -132,8 +132,8 @@ get_starts_flat <- function(data,
   if (has_po %in% TRUE) {
     if (has_po_plasma %in% TRUE) {
       #get Fgutabs_Vdist for plasma
-      Fgutabs_Vdist_plasma_log10 <- with(subset(podat,Media %in% "plasma"),
-                                         mean(log10(Conc/Dose),na.rm = TRUE))
+      Fgutabs_Vdist_plasma_log10 <- with(subset(podat, Media %in% "plasma"),
+                                         mean(log10(Conc/Dose), na.rm = TRUE))
     }
     if (has_po_blood %in% TRUE) {
       #get Fgutabs_Vdist for blood

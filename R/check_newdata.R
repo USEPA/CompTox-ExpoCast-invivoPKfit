@@ -30,13 +30,12 @@ check_newdata <- function(newdata,
 
   #check that newdata has the required variables
   if(!(all(req_vars %in% names(newdata)))){
-    stop(paste("newdata is missing one or more required variables.",
-               paste("Required variables:",
-                     paste(req_vars, collapse = ", ")),
-               paste("Missing required variables:",
-                     paste(setdiff(req_vars, names(newdata)),
-                           collapse = ", ")),
-                     sep = "\n"))
+    stop("newdata is missing one or more required variables.\n",
+         "Required variables: ",
+         toString(req_vars), "\n",
+         "Missing required variables: ",
+         toString(setdiff(req_vars, names(newdata)))
+    )
   }
 
  #check that required variables are the same type as old data

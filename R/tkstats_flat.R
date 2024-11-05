@@ -32,8 +32,7 @@ tkstats_flat <- function(pars,
                                  medium = medium)
 
   if(!(check_msg %in% "Parameters OK")){
-    stop(paste("cp_flat():",
-               check_msg))
+    stop("cp_flat():", check_msg)
   }
 
   #for readability, assign params to variables inside this function

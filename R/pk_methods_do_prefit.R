@@ -36,12 +36,13 @@ do_prefit.pk <- function(obj,
   objname <- deparse(substitute(obj))
   status <- obj$status
   if(status >= status_prefit){
-    warning(paste0(objname,
-                   " current status is ",
-                   status,
-                   ". do_prefit.pk() will reset its status to ",
-                   status_prefit,
-                   ". Any results from later workflow stages will be lost."))
+    warning(objname,
+            " current status is ",
+            status,
+            ". do_prefit.pk() will reset its status to ",
+            status_prefit,
+            ". Any results from later workflow stages will be lost."
+    )
   }
 
   #if preprocessing not already done, do it
@@ -58,7 +59,7 @@ do_prefit.pk <- function(obj,
   data <- obj$data
 
   if(suppress.messages %in% FALSE){
-    message(paste("do_prefit.pk(): Assigning error SD groups to all observations"))
+    message("do_prefit.pk(): Assigning error SD groups to all observations")
   }
 
   #get the error model obj$stat_error_model, which defines the number of sigmas that will need to be optimized
@@ -87,8 +88,9 @@ do_prefit.pk <- function(obj,
   #get bounds and starting points for each error sigma to be fitted
 
   if(suppress.messages %in% FALSE){
-    message(paste("do_prefit.pk():",
-                  "Getting bounds and starting guesses for each error SD to be fitted"))
+    message("do_prefit.pk():",
+            "Getting bounds and starting guesses for each error SD to be fitted"
+    )
   }
 
   # Set a value to square root of lowest possible value 'x' where 1+x != 1
@@ -102,22 +104,24 @@ do_prefit.pk <- function(obj,
     #this is because combined_sd() requires NON log transformed concs
     #but we want to keep dose-normalization if it has been applied
     #so we un-log Conc_trans
-    dplyr::mutate(Conc_tmp = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
-                                                NROW(Conc_trans)),
-                                            10^Conc_trans,
-                                            Conc_trans),
-                  Conc_SD_tmp = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
-                                                   NROW(Conc_trans)),
-                                               10^Conc_SD_trans,
-                                               Conc_SD_trans),
-                  Conc_tmp.Units = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
-                                                      NROW(Conc_trans)),
-                                                  gsub(pattern = "\\)$",
-                                                       replacement = "",
-                                                       x = gsub(pattern = "^log10\\(",
-                                                                replacement = "",
-                                                                x = Conc_trans.Units)),
-                                                  Conc_trans.Units))
+    dplyr::mutate(
+      Conc_tmp = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
+                                    NROW(Conc_trans)),
+                                10^Conc_trans,
+                                Conc_trans),
+      Conc_SD_tmp = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
+                                       NROW(Conc_trans)),
+                                   10^Conc_SD_trans,
+                                   Conc_SD_trans),
+      Conc_tmp.Units = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
+                                          NROW(Conc_trans)),
+                                      gsub(pattern = "\\)$",
+                                           replacement = "",
+                                           x = gsub(pattern = "^log10\\(",
+                                                    replacement = "",
+                                                    x = Conc_trans.Units)),
+                                      Conc_trans.Units)
+      )
 
   # Set values for sigma upper/lower-bounds and start
   sigma_DF <- sigma_DF %>%
@@ -156,8 +160,10 @@ do_prefit.pk <- function(obj,
   obj$prefit$stat_error_model$sigma_DF <- sigma_DF
 
   if(suppress.messages %in% FALSE){
-    message(paste("do_prefit.pk():",
-                  "Getting bounds and starting guesses for all model parameters to be fitted"))
+    message("do_prefit.pk(): ",
+            "Getting bounds and starting guesses ",
+            "for all model parameters to be fitted"
+    )
   }
 
   #for each model to be fitted:
@@ -170,7 +176,6 @@ do_prefit.pk <- function(obj,
       par_DF <- data %>%
         dplyr::filter(exclude %in% FALSE)
 
-  # browser()
       par_DF <- dplyr::group_by(par_DF,
                                 !!!obj$data_group) %>%
         dplyr::reframe(
@@ -192,56 +197,62 @@ do_prefit.pk <- function(obj,
 
   par_DF_out <- dplyr::bind_rows(par_DF_out, .id = "model")
 
-  fit_check_out <-  sapply(names(obj$stat_model),
-                           function(this_model){
-                             #check whether there are enough observations to optimize the requested parameters plus sigmas
-                             #number of parameters to optimize
-                             if(suppress.messages %in% FALSE){
-                               message(paste("do_prefit.pk():",
-                                             "Checking whether sufficient observations to fit models"))
-                             }
+  fit_check_out <-  sapply(
+    names(obj$stat_model),
+    function(this_model){
+      #check whether there are enough observations to optimize the requested parameters plus sigmas
+      #number of parameters to optimize
+      if(suppress.messages %in% FALSE){
+        message("do_prefit.pk():",
+                "Checking whether sufficient observations to fit models"
+        )
+      }
 
-                             n_par_DF <- par_DF_out %>%
-                               dplyr::filter(model %in% this_model) %>%
-                               dplyr::group_by(!!!obj$data_group) %>%
-                               dplyr::summarise(n_par = sum(optimize_param))
+      n_par_DF <- par_DF_out %>%
+        dplyr::filter(model %in% this_model) %>%
+        dplyr::group_by(!!!obj$data_group) %>%
+        dplyr::summarise(n_par = sum(optimize_param))
 
-                             n_sigma_DF <- sigma_DF %>%
-                               dplyr::group_by(!!!obj$data_group) %>%
-                               dplyr::summarise(n_sigma = sum(optimize_param))
-
-
-                             n_detect_DF <- get_data_summary(obj) %>%
-                               dplyr::group_by(!!!obj$data_group) %>%
-                               dplyr::summarise(n_detect = sum(n_detect))
+      n_sigma_DF <- sigma_DF %>%
+        dplyr::group_by(!!!obj$data_group) %>%
+        dplyr::summarise(n_sigma = sum(optimize_param))
 
 
-                             #merge all of these together
-                             fit_check_DF <- dplyr::inner_join(
-                               dplyr::inner_join(n_par_DF,
-                                                 n_sigma_DF,
-                                                 by = sapply(obj$data_group,
-                                                             rlang::as_label)),
-                               n_detect_DF,
-                               by = sapply(obj$data_group,
-                                           rlang::as_label)
-                             )
+      n_detect_DF <- get_data_summary(obj) %>%
+        dplyr::group_by(!!!obj$data_group) %>%
+        dplyr::summarise(n_detect = sum(n_detect))
 
-                             #get fit decision & reasoning
-                             fit_check_DF <- fit_check_DF %>%
-                               dplyr::mutate(n_par_opt = n_par + n_sigma,
-                                             fit_decision = ifelse(n_par_opt < n_detect,
-                                                                   "continue",
-                                                                   "abort"),
-                                             fit_reason = ifelse(n_par_opt < n_detect,
-                                                                 "Number of parameters to estimate is less than number of non-excluded detected observations",
-                                                                 "Number of parameters to estimate is greater than or equal to number of non-excluded detected observations")) %>%
-                               as.data.frame()
 
-                             fit_check_DF
-                           },
-                           simplify = FALSE,
-                           USE.NAMES = TRUE)
+      #merge all of these together
+      fit_check_DF <- dplyr::inner_join(
+        dplyr::inner_join(n_par_DF,
+                          n_sigma_DF,
+                          by = sapply(obj$data_group,
+                                      rlang::as_label)),
+        n_detect_DF,
+        by = sapply(obj$data_group,
+                    rlang::as_label)
+      )
+
+      #get fit decision & reasoning
+      fit_check_DF <- fit_check_DF %>%
+        dplyr::mutate(
+          n_par_opt = n_par + n_sigma,
+          fit_decision = ifelse(n_par_opt < n_detect,
+                                "continue",
+                                "abort"),
+          fit_reason = ifelse(n_par_opt < n_detect,
+                              paste("Number of parameters to estimate is ",
+                                    "less than number of non-excluded detected observations"),
+                              paste("Number of parameters to estimate is ",
+                                    "greater than or equal to number of non-excluded detected observations")
+                              )
+          ) %>% as.data.frame()
+
+      fit_check_DF
+    },
+    simplify = FALSE,
+    USE.NAMES = TRUE)
 
   fit_check_out <- dplyr::bind_rows(fit_check_out, .id = "model")
 

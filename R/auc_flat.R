@@ -60,9 +60,8 @@ auc_flat <- function(time, params, dose, route, medium) {
                            route = route,
                            medium = medium)
 
-  if(!(check_msg %in% "Parameters OK")){
-    stop(paste("cp_flat():",
-               check_msg))
+  if (check_msg != "Parameters OK") {
+    stop("cp_flat(): ", check_msg)
   }
 
   #for readability, assign params to variables inside this function

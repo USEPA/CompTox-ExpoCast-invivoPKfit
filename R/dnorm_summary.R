@@ -37,11 +37,10 @@ dnorm_summary <- function(mu,
              "sigma" = length(sigma))
 
   if (any(x_len %in% 0)) {
-    stop(paste0("invivopkfit::dnorm_summary(): ",
-                "the following arguments have zero length: ",
-                paste(names(x_len)[x_len %in% 0],
-                      collapse = ", ")
-                ))
+    stop("invivopkfit::dnorm_summary(): ",
+         "the following arguments have zero length: ",
+         toString(names(x_len)[x_len %in% 0])
+    )
   }
 
   max_len <- max(x_len)
@@ -51,19 +50,20 @@ dnorm_summary <- function(mu,
 
 
   if (any(bad_len)) {
-    warning(paste("invivopkfit::dnorm_summary():",
-                  "the following inputs do not have matching lengths: ",
-                  paste(paste0(names(x_len)[bad_len],
-                        " length = ",
-                        x_len[bad_len]),
-                        collapse = "\n"
-                  ),
-                  "\n They will be repeated to match the length of the longest input,",
-                  names(x_len)[which_max_len],
-                  " length = ",
-                  max_len,
-                  "."
-            ))
+    warning("invivopkfit::dnorm_summary(): ",
+            "the following inputs do not have matching lengths: ",
+            paste(paste0(names(x_len)[bad_len],
+                         " length = ",
+                         x_len[bad_len]),
+                  collapse = "\n"
+            ),
+            "\n They will be repeated to match the length of the longest input,",
+            names(x_len)[which_max_len],
+            " length = ",
+            max_len,
+            "."
+    )
+
     #repeat to match longest IFF there is mismatch
     for (i in seq_along(x_len)) {
       assign(names(x_len)[i],

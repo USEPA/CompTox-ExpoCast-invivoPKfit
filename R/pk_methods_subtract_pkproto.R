@@ -53,27 +53,31 @@ subtract_pk <- function(pk_obj, object, objectname) {
 #' @export
 pk_subtract.pk_stat_model <- function(pkproto_obj, pk_obj, objectname){
 
-  for(this_model in names(pkproto_obj)){
-    if(!is.null(pk_obj$stat_model[[this_model]])){
+  for (this_model in names(pkproto_obj)) {
+    if (!is.null(pk_obj$stat_model[[this_model]])) {
       #if this_model is present, remove it, and say so
-      message(paste0(objectname,
-                     ": stat_model for",
-                     this_model,
-                     "will be removed")
+      message(objectname,
+              ": stat_model for",
+              this_model,
+              "will be removed"
       )
       pk_obj$stat_model[[this_model]] <- NULL
-    }else{
+
+    } else {
       #if this_model not present, say so
-      message(paste0(objectname,
-                     ": stat_model for",
-                     this_model,
-                     "was not present to begin with, so it can't be removed")
+      message(objectname,
+              ": stat_model for",
+              this_model,
+              "was not present to begin with, so it can't be removed"
       )
     }
   }
-  if(pk_obj$status > 2L){
-    message(paste0(objectname,
-                   ": Modifying stat_model resets status to level 2 (data preprocessing complete);\nmodel pre-fit (level 3)  (prefit()) and model fit (level 4) (fit()) will need to be re-done")
+  if (pk_obj$status > 2L) {
+    message(objectname,
+            ": Modifying stat_model resets status to level 2 ",
+            "(data preprocessing complete);\n",
+            "model pre-fit (level 3)  (prefit()) ",
+            "and model fit (level 4) (fit()) will need to be re-done"
     )
     pk_obj$status <- 2L #data pre-processing won't change with addition of new model, but model pre-fit and fit will change
   }
