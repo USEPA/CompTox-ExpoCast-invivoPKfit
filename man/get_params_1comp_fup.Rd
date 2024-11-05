@@ -11,7 +11,7 @@ get_params_1comp_fup(
     Rblood2plasma = 0.01),
   upper_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Fup = 1, Clint = 1e+05, Vdist =
     100, Fgutabs = 1, kgutabs = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
-    Fgutabs_Vdist = 100, Rblood2plasma = 100, ),
+    Fgutabs_Vdist = 100, Rblood2plasma = 100),
   param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4", Q_gfr = "L/h/kg ^3/4", Fup =
     "unitless fraction", Clint = "L/h/kg", Vdist = paste0("(", unique(Dose.Units), ")",
     "/", "(", unique(Conc.Units), ")"), Fgutabs = "unitless fraction", kgutabs =

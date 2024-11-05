@@ -87,7 +87,7 @@ coef.pk <- function(obj,
   if (drop_sigma == TRUE) {
     coefs <- coefs %>%
       dplyr::filter(
-        !startsWith(param_name, pattern = "sigma_")
+        !startsWith(param_name, "sigma_")
       )
   }
 

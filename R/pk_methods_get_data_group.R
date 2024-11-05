@@ -8,9 +8,11 @@ get_data_group.pk <- function(obj, ...){
   out <- rlang::parse_expr(
     paste0("vars(",
            paste(
-             toString(obj$data_group,
-                      rlang::as_label),
-             ")"
+             toString(
+               sapply(obj$data_group,
+                      rlang::as_label)
+             ),
+           ")"
            )
     )
   )

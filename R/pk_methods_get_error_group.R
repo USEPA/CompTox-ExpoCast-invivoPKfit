@@ -9,7 +9,8 @@ get_error_group.pk <- function(obj, ...){
   out <- rlang::parse_expr(
     paste0("vars(",
            toString(sapply(obj$stat_error_model$error_group,
-                        function(x) rlang::as_label(x))),
+                           rlang::as_label)
+                    ),
            ")")
   )
 
