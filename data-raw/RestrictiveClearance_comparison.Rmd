@@ -17,6 +17,7 @@ library(httk)
 library(tidyverse)
 my_pk <- readRDS("data-raw/all_cvt_pk.rds")
 httk::load_dawson2021()
+source("data-raw/RC_comparison_bkgd.R")
 ```
 
 Steps in the analysis:
@@ -43,127 +44,8 @@ chemicals (include Lipinski's Rule of 5 too).
 The first thing I need to do is get the chemicals included in both the CvTdb subset
 and the httk empirical data for pbpk.
 
-```{r dawson}
-# try dawson
-# can also be run as background job (see data-raw/RC_comparison_bkgd.R)
-
-human_chems_gas <- get_cheminfo(info = "DTXSID",
-                                species = "Human",
-                                model = "gas_pbtk",
-                                median.only = TRUE,
-                                physchem.exclude = TRUE,
-                                suppress.messages = TRUE)
-
-common_chems_dawson <- cvt %>%
-  filter(species %in% c("human", "rat", "mouse"),
-         analyte_dtxsid %in% human_chems_gas) %>%
-  pull(analyte_dtxsid) %>%
-  unique()
-
-rat_chems_gas <- get_cheminfo(info = "DTXSID",
-                                species = "Rat",
-                                model = "gas_pbtk",
-                                median.only = TRUE,
-                                physchem.exclude = TRUE,
-                                suppress.messages = TRUE)
-
-common_chems_rat <- cvt %>%
-  filter(species %in% "rat",
-         analyte_dtxsid %in% rat_chems_gas) %>%
-  pull(analyte_dtxsid) %>%
-  unique()
-
-remove(list = c("human_chems_gas", "rat_chems_gas"))
-
-# How many are in the previous invivoPKfit analysis?
-length(common_chems_dawson %in% unique(my_pk$fit %>%
-                                         filter(convcode == 0) %>%
-                                         pull(Chemical)))
-
-test_parameterization <- function(dtxsid, species = "Human") {
-  is(
-    tryCatch(
-      {
-        parameterize_gas_pbtk(dtxsid = dtxsid,
-                              species = species,
-                              supress.messages = TRUE)  
-      }, error = function(e) {
-        NULL
-      }
-    ),
-    "list"
-  )
-}
-
-parameterize_all_gas <- function(dtxsid, species = "Human") {
-  # Note that Clint is given in uL/min, which must be converted to L/h
-  params <- httk::parameterize_gas_pbtk(dtxsid = dtxsid,
-                                        species = species,
-                                        default.to.human = FALSE)
-  paramdf <- data.frame(Chemical = dtxsid, Species = tolower(species),
-                        Qliverf = params$Qliverf,
-                        Funbound.plasma = params$Funbound.plasma,
-                        Clint = params$Clint*60/1e+6)
-  paramdf$fupClint <- paramdf$Funbound.plasma * paramdf$Clint
-  paramdf$ExtEff <- paramdf$fupClint/(paramdf$Qliverf + paramdf$fupClint)
-  paramdf$Q_Clint <- paramdf$Qliverf/paramdf$Clint
-  return(paramdf)
-}
-
-if (all(vapply(common_chems_rat, test_parameterization,
-               FUN.VALUE = logical(1), species = "Rat"))) {
-  rat_params <- do.call(rbind, lapply(common_chems_rat,
-                                      parameterize_all_gas,
-                                      species = "Rat"))
-}
-
-if (all(vapply(common_chems_dawson, test_parameterization,
-               FUN.VALUE = logical(1), species = "Human"))) {
-  human_params <- do.call(rbind, lapply(common_chems_dawson,
-                                        parameterize_all_gas,
-                                        species = "Human"))
-}
-```
-
 Next I need to get the clearances using the `calc_total_clearance(dtxsid, restrictive.clearance)`
 function from httk. Also need the clearances from invivoPKfit's winning models.
-
-
-```{r get_clearances}
-params_dtxsid <- function(dtxsid, species) {
-  httk::parameterize_gas_pbtk(dtxsid = dtxsid,
-                              species = species,
-                              default.to.human = FALSE,
-                              suppress.messages = TRUE)
-}
-
-make_clearance_df <- function(dtxsid, species) {
-  tmp_df <- data.frame(Chemical = dtxsid)
-  tmp_params <- lapply(dtxsid, params_dtxsid, species = species)
-  tmp_df$restrict_cl <- vapply(tmp_params,
-                               \(x) {
-                                 calc_total_clearance(
-                                   parameters = x,species = species,
-                                   suppress.messages = TRUE,
-                                   restrictive.clearance = TRUE
-                                 )
-                               },
-                               FUN.VALUE = double(1L)
-  )
-  tmp_df$nonrestrict_cl <- vapply(tmp_params,
-                                  \(x) {
-                                    calc_total_clearance(
-                                      parameters = x,species = species,
-                                      suppress.messages = TRUE,
-                                      restrictive.clearance = FALSE
-                                    )
-                                  },
-                                  FUN.VALUE = double(1L)
-  )
-  return(tmp_df)
-}
-clearance_df <- make_clearance_df(dtxsid = common_chems_rat, species = "rat")
-```
 
 ```{r combine_tkstats}
 # Start Here if you ran the background job
