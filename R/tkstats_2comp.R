@@ -90,16 +90,7 @@ tkstats_2comp <- function(pars,
   # these are parameters such alpha, beta
   trans_params <- transformed_params_2comp(params = params)
 
-  #for readability, assign params to variables inside this function
-  # for(x in names(params)){
-  #   assign(x, unname(params[x]))
-  # }
   list2env(as.list(params), envir = as.environment(-1))
-
-  #for readability, assign transformed params to variables inside this function
-  # for(x in names(trans_params)){
-  #   assign(x, unname(trans_params[x]))
-  # }
   list2env(as.list(trans_params), envir = as.environment(-1))
 
   CLtot <- kelim * V1

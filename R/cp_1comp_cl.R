@@ -75,9 +75,8 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
                                      route = route,
                                      medium = medium)
 
-  if (!(check_msg %in% "Parameters OK")) {
-    stop(paste("cp_1comp():",
-               check_msg))
+  if (check_msg != "Parameters OK") {
+    stop("cp_1comp(): ", check_msg)
   }
 
 

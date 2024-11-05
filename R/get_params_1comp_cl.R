@@ -148,7 +148,7 @@ get_params_1comp_cl <- function(
                                Fgutabs = 1,
                                kgutabs = log(2)/(0.5*min(Time_trans[Time_trans>0])),
                                Fgutabs_Vdist = 1e2,
-                               Rblood2plasma = 100,),
+                               Rblood2plasma = 100),
     param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4",
                                Q_gfr = "L/h/kg ^3/4",
                                Fup = "unitless fraction",
@@ -237,22 +237,23 @@ get_params_1comp_cl <- function(
   use_param <- rep(TRUE, length(param_name))
 
   #now follow the logic described in the documentation for this function:
-  if(!("oral" %in% data$Route)){
-    #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_Vdist,
-    #and they won't be used.
-    optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
-    use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
-  }else{ #if yes oral data:
-    if("iv" %in% data$Route){
+  if ("oral" %in% data$Route) {
+    #if yes oral data:
+    if ("iv" %in% data$Route) {
       #if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
-      optimize_param[param_name %in% c("Fgutabs_Vdist")] <- FALSE
-      use_param[param_name %in% c("Fgutabs_Vdist")] <- FALSE
-    }else{
+      optimize_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
+      use_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
+    } else {
       #if oral ONLY:
       #cannot fit Fgutabs and Vdist separately, so turn them off.
       optimize_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
       use_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
     }
+  } else {
+    #if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_Vdist,
+    #and they won't be used.
+    optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
+    use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
   }
 
   #if both "blood" and "plasma" are not in data,
@@ -260,12 +261,6 @@ get_params_1comp_cl <- function(
   if(!(all(c("blood", "plasma") %in% data$Media))){
     optimize_param[param_name %in% "Rblood2plasma"] <- FALSE
   }
-
-  # #if no medium is "blood" then Rblood2plasma will not be used at all
-  # if(!("blood" %in% data$Media)){
-  #   use_param[param_name %in% "Rblood2plasma"] <- FALSE
-  #   #otherwise, if blood-only data, Rblood2plasma will be used, but held constant at 1
-  # }
 
   param_units_vect <- sapply(param_units,
                              function(x) rlang::eval_tidy(x,
@@ -310,9 +305,12 @@ get_params_1comp_cl <- function(
   start_nonfin <- !is.finite(par_DF$start)
 
   par_DF[start_low | start_high | start_nonfin,
-         "start"] <- rowMeans(cbind(par_DF[start_low | start_high | start_nonfin,
-                                           c("lower_bound",
-                                             "upper_bound")]))
+         "start"] <- rowMeans(
+           cbind(par_DF[start_low | start_high | start_nonfin,
+                        c("lower_bound",
+                          "upper_bound")]
+           )
+         )
 
 
   return(par_DF)

@@ -87,8 +87,8 @@ coef.pk <- function(obj,
   if (drop_sigma == TRUE) {
     coefs <- coefs %>%
       dplyr::filter(
-        stringr::str_detect(param_name, pattern = "^sigma_",
-                            negate = TRUE))
+        !startsWith(param_name, pattern = "sigma_")
+      )
   }
 
   # include NA values from aborted fits
@@ -108,7 +108,7 @@ coef.pk <- function(obj,
     dplyr::group_by(model, method, !!!obj$data_group) %>%
     dplyr::reframe(coefs_vector = purrr::map2(
       estimate, param_name,
-      .f = \(x,y){
+      .f = \(x, y){
         setNames(estimate, param_name)
       }
     )) %>%

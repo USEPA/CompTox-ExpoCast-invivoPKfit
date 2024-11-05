@@ -198,24 +198,25 @@ series_id <- series_id[ord]
 
   pk_out <- tryCatch(
     {
-      suppressMessages(
+      tmp <- suppressMessages(
         suppressWarnings(
-          tmp <- do.call(PK::nca,
-                         args = c(list(data = data,
-                                       dose = dose,
-                                       design = design,
-                                       method = method),
-                                  list(...)))
+          do.call(PK::nca,
+                  args = c(list(data = data,
+                                dose = dose,
+                                design = design,
+                                method = method),
+                           list(...)))
         )
       )
-    tmp_est <- tmp$est[,1]
+    tmp_est <- tmp$est[, 1]
     tmp_se <- tmp$CIs[, c("stderr", "method")]
     #if more than one method, reshape the output to have one stderr column per method
-    tmp_se_list <- sapply(method,
-                       function(this_method){
-                         this_tmp <- tmp_se[tmp_se[, "method"] %in% this_method, 1]
-                         this_tmp
-                       })
+    tmp_se_list <- sapply(
+      method,
+      function(this_method){
+        this_tmp <- tmp_se[tmp_se[, "method"] %in% this_method, 1]
+        this_tmp
+      })
     tmp_out <- cbind(tmp_est, tmp_se_list)
     tmp_out
     },

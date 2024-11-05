@@ -52,7 +52,7 @@ summary.pk <- function(object, ...){
     models <- names(object$stat_model)
 
     cat(paste0("\nModels to be fitted:\n",
-               paste(models, collapse = ", "),
+               toString(models),
                "\n"))
 
     #stat_error_model

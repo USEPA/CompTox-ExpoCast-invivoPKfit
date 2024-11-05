@@ -51,21 +51,21 @@ convert_time <- function(x,
 
     if (to %in% period_units) {
       # test with convert_time(c(60, 15, 30, 120), from = "minutes", to = "hours")
-      conversion_table <- time_conversions[to == time_conversions$TimeTo &
-                                             unique(from) == time_conversions$TimeFrom, "conversion"]
+      conversion_table <- time_conversions[
+        to == time_conversions$TimeTo &
+          unique(from) == time_conversions$TimeFrom, "conversion"
+      ]
+
       y_new <- y * conversion_table
 
     } else{
       y_new <- NA_real_
       message(
-        paste(
           "invivopkfit::convert_time(): Allowable values for 'to' are",
-          paste(c(period_units),
-                collapse = ", "),
+          toString(period_units),
           ", but 'to' =",
           to,
           ". Returning NA_real_ for converted times."
-        )
       )
     }
 

@@ -144,7 +144,6 @@ fitopts <- expand.grid(error_model = c("pooled",
                        stringsAsFactors = FALSE)
 ```
 
-
 ```{r fitting_choices, eval=FALSE}
 # Make function similar to that in test_vignette authored by Caroline Ring
 fit_data <- function(this_error_model,
@@ -222,7 +221,6 @@ fit_data <- function(this_error_model,
   return(retval)
 }
 ```
-
 
 ```{r running_all_options, eval=FALSE}
 
@@ -510,7 +508,6 @@ tf_tests <- function(this_error_model,
 
 ```
 
-
 ```{r do_evalutations, eval=FALSE}
 system.time(wm_comp <- fitopts %>%
               dplyr::rowwise() %>%
@@ -572,7 +569,6 @@ gc()
   + All log10_trans options have at least 10 more data_groups with RMSLE < 10 than the non-log10 transformed. 
 + There are some cases where fits are bad due to a combination of factors,
 most interestingly error model, dose_norm, and optimizer.  
-+ 
 
 ```{r Evaluating choices, eval=FALSE}
 # Writing to file
@@ -664,7 +660,6 @@ gof_tbl %>%
   pivot_wider(names_from = Options, values_from = Rsq) %>% 
   ggplot(aes(x = `110p`, y = `010h`)) + geom_point()
 #110h is most even between models
-
 
 
 cmax_auc_rmsle_tbl %>% 
@@ -931,8 +926,6 @@ my_pk$data %>%
   group_by(Chemical, Species, Reference, Route, Media, Dose) %>%
   filter(any(Count == 1) && any(Count > 1)) %>%
   distinct(Chemical, Species, Reference, Route, Media, Dose) -> problem_set
-
-
 
 # Evaluate 100 times
 n_evals <- 100
@@ -1510,7 +1503,6 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
-
 ### Supp Figure 3: invivoPKfit model performance
 
 
@@ -1543,7 +1535,6 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
   
 
 ```
-
 
 
 ### Figures 5 and Supplemental Figures 4 & 5: Model performance vs Data Variability
@@ -1807,7 +1798,6 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
-
 ### Supp. Fig. 7: Distribution of Sigmas in CvTdb data
 
 ```{r sFig4-sigmaDistribution, eval=FALSE}
@@ -1853,7 +1843,6 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
        height = 3, width = 5)
 
 ```
-
 
 
 ### Figure 7: Comparing derived TK stats with human TK stats from Lombardo et al.
@@ -2105,9 +2094,6 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        device = "png", dpi = 300)
 
 ```
-
-
-
 
 ### Supp. Fig. 9: Parallelization decreases runtime of invivoPKfit
 
@@ -2478,7 +2464,7 @@ dev.off()
 
 ```
 
-It is also possible to plot only one plot
+It is also possible to plot only one plot.
 
 ```{r Single-Plot, eval=FALSE}
 pl <- plot(my_pk, n_interp = 10, use_scale_conc = FALSE)

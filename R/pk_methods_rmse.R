@@ -163,11 +163,8 @@ rmse.pk <- function(obj,
 
 
   #remove any excluded observations & corresponding predictions, if so specified
-  if (exclude %in% TRUE) {
-    if ("exclude" %in% names(newdata)) {
-      newdata <- newdata %>%
-        dplyr::filter(exclude %in% FALSE)
-    }
+  if (exclude %in% TRUE && "exclude" %in% names(newdata)) {
+      newdata <- subset(newdata, exclude %in% FALSE)
   }
 
   #Requested variables
@@ -218,13 +215,11 @@ rmse.pk <- function(obj,
 
   if (conc_scale$log10_trans == FALSE) {
     message("rmse.pk(): RMSE calculated by groups: \n",
-            paste(sapply(unlist(rmse_group), rlang::as_label),
-                  collapse = ", "),
+            toString(sapply(unlist(rmse_group), rlang::as_label)),
             ", method, model")
   } else {
     message("rmse.pk(): RMSLE calculated by groups: \n",
-            paste(sapply(unlist(rmse_group), rlang::as_label),
-                  collapse = ", "),
+            toString(sapply(unlist(rmse_group), rlang::as_label)),
             ", method, model")
     rmse_df <- rmse_df %>% rename(RMSLE = RMSE)
   }

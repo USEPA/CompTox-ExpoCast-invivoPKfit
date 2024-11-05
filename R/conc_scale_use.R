@@ -27,15 +27,21 @@ conc_scale_use <- function(use_scale_conc,
       log10_trans <- FALSE
     }}else{
       if(!is.list(use_scale_conc)){
-        stop("use_scale_conc must be either TRUE, FALSE, or a list like `list(dose_norm = TRUE/FALSE, log10_trans = TRUE/FALSE)`")
+        stop("use_scale_conc must be either TRUE, FALSE, ",
+             "or a list like `list(dose_norm = TRUE/FALSE, ",
+             "log10_trans = TRUE/FALSE)`")
       }
 
       if(!all(c("dose_norm", "log10_trans") %in% names(use_scale_conc))){
-        stop("use_scale_conc must be either TRUE, FALSE, or a list like `list(dose_norm = TRUE/FALSE, log10_trans = TRUE/FALSE)`")
+        stop("use_scale_conc must be either TRUE, FALSE, ",
+             "or a list like `list(dose_norm = TRUE/FALSE, ",
+             "log10_trans = TRUE/FALSE)`")
       }
 
       if(!all(sapply(use_scale_conc[c("dose_norm", "log10_trans")], is.logical))){
-        stop("use_scale_conc must be either TRUE, FALSE, or a list like `list(dose_norm = TRUE/FALSE, log10_trans = TRUE/FALSE)`")
+        stop("use_scale_conc must be either TRUE, FALSE, ",
+             "or a list like `list(dose_norm = TRUE/FALSE, ",
+             "log10_trans = TRUE/FALSE)`")
       }
 
       dose_norm <- use_scale_conc$dose_norm

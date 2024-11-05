@@ -30,8 +30,8 @@ print.pk <- function(x, ...) {
     } else {
       cat("The error model is hierarchical.\n")
     }
-    cat("Data Group:\t", paste(data_group_vars, collapse = ", "), "\n")
-    cat("Error Group:\t", paste(error_group_vars, collapse = ", "), "\n")
+    cat("Data Group:\t", toString(data_group_vars), "\n")
+    cat("Error Group:\t", toString(error_group_vars), "\n")
     cat("Scaling:\n\t",
         "Dose-normalization? ", scale_conc$dose_norm, "\n\t",
         "Log10-transformation? ", scale_conc$log10_trans, "\n\t")
@@ -57,11 +57,14 @@ print.pk <- function(x, ...) {
   }
 
   if (status == 5) {
-    fit_results <- x$fit[c(data_group_vars, "model", "method", "xtime", "convcode", "message")]
+    fit_results <- x$fit[c(data_group_vars,
+                           "model", "method", "xtime", "convcode", "message")]
     fit_results <- unique(fit_results)
     cat("Fitted object summary:\n")
-    cat("Average time per Data Group: ", signif(mean(fit_results$xtime, na.rm = TRUE),3), "\n")
-    cat("Number of non-zero convergence codes: ", sum(fit_results$convcode != 0), "\n\n")
+    cat("Average time per Data Group: ",
+        signif(mean(fit_results$xtime, na.rm = TRUE), 3), "\n")
+    cat("Number of non-zero convergence codes: ",
+        sum(fit_results$convcode != 0), "\n\n")
 
   }
 

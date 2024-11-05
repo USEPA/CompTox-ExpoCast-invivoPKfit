@@ -41,11 +41,10 @@ combined_sd <- function(group_mean,
              "group_n" = length(group_n))
 
   if(any(x_len %in% 0)){
-    stop(paste0("invivopkfit::combined_sd(): ",
-                "the following arguments have zero length: ",
-                paste(names(x_len)[x_len %in% 0],
-                      collapse = ", ")
-    ))
+    stop("invivopkfit::combined_sd(): ",
+         "the following arguments have zero length: ",
+         toString(names(x_len)[x_len %in% 0])
+    )
   }
 
   max_len <- max(x_len)
@@ -55,19 +54,20 @@ combined_sd <- function(group_mean,
 
 
   if(any(bad_len)){
-    warning(paste("invivopkfit::combined_sd():",
-                  "the following inputs do not have matching lengths: ",
-                  paste(paste0(names(x_len)[bad_len],
-                               " length = ",
-                               x_len[bad_len]),
-                        collapse = "\n"
-                  ),
-                  "\n They will be repeated to match the length of the longest input,",
-                  names(x_len)[which_max_len],
-                  " length = ",
-                  max_len,
-                  "."
-    ))
+    warning(
+      "invivopkfit::combined_sd():",
+      "the following inputs do not have matching lengths: ",
+      paste(paste0(names(x_len)[bad_len],
+                   " length = ",
+                   x_len[bad_len]),
+            collapse = "\n"
+      ),
+      "\n They will be repeated to match the length of the longest input,",
+      names(x_len)[which_max_len],
+      " length = ",
+      max_len,
+      "."
+    )
   }
 
   #repeat to match longest

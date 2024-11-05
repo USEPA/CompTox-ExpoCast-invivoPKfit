@@ -44,12 +44,13 @@ do_fit.pk <- function(obj,
   status <- obj$status
 
   if(status >= status_fit){
-    warning(paste0(objname,
-                   " current status is ",
-                   status,
-                   ". do_fit() will reset its status to ",
-                   status_fit,
-                   ". Any results from later workflow stages will be lost."))
+    warning(objname,
+            " current status is ",
+            status,
+            ". do_fit() will reset its status to ",
+            status_fit,
+            ". Any results from later workflow stages will be lost."
+    )
   }
 
   #if preprocessing not already done, do it
@@ -138,15 +139,25 @@ do_fit.pk <- function(obj,
   # Set the options for Parallel Computing
   # First condition if it is FALSE don't use parallel computing (takes much longer though)
   if (!is.null(n_cores) && is.numeric(n_cores) && (n_cores != 1 || total_cores != 1)) {
-    message(paste0("do_fit.pk(): Trying to divide processes into ", n_cores, " processing cores"))
+    message("do_fit.pk(): Trying to divide processes into ",
+            n_cores,
+            " processing cores"
+    )
+
     if (total_cores <= n_cores & total_cores > 1) {
       n_cores  <- total_cores - 1
-      message(paste0("do_fit.pk():To ensure other programs & processes are still able to run, ",
-                     "n_cores has been set to ", n_cores))
+      message("do_fit.pk():To ensure other programs ",
+              "& processes are still able to run, ",
+              "n_cores has been set to ", n_cores
+      )
     } else {
       n_cores <- n_cores
     }
-    message(paste0("do_fit.pk(): ", n_cores, " processing cores allocated."))
+
+    message("do_fit.pk(): ",
+            n_cores,
+            " processing cores allocated."
+    )
     cluster <- multidplyr::new_cluster(n_cores)
     if (any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
       multidplyr::cluster_send(cluster, library(invivoPKfit))
@@ -159,7 +170,6 @@ do_fit.pk <- function(obj,
     multidplyr::cluster_copy(cluster, "log10_trans")
 
 
-    #multidplyr::cluster_copy(cluster, "obj")
     #we can likely save some memory by only passing what we need from obj
     #like this
     tidy_fit <- info_nest %>%
@@ -235,7 +245,7 @@ do_fit.pk <- function(obj,
                         dplyr::select(!!!data_group,
                                       param_name, param_units,
                                       optimize_param, use_param,
-                                      lower_bound, upper_bound,
+                                      lower_bound, upper_bound
                                       ) %>%
                         dplyr::distinct(),
                       by = c(data_group_vars, "param_name"))
@@ -252,12 +262,14 @@ do_fit.pk <- function(obj,
 
   # Take rate_names
   # Parameter names don't matter, all rates should have consistent param_unit
-  message(paste0("do_fit.pk(): Now converting all rate constants to units of 1/hour, ",
-                 "in case time has been scaled to units other than hours before fitting"))
+  message("do_fit.pk(): Now converting all rate constants to units of 1/hour, ",
+          "in case time has been scaled to units other than hours before fitting"
+  )
+
   rate_names <- par_DF %>% dplyr::select(!!!obj$data_group,
                                          param_name,
                                          param_units) %>%
-    dplyr::filter(stringr::str_detect(param_units, "^1/")) %>%
+    dplyr::filter(startsWith(param_units, "1/")) %>%
     dplyr::mutate(Time_trans.Units = stringr::str_remove(param_units, "^1/")) %>%
     dplyr::distinct()
   # Get a simple data_group and conversion rate data frame
@@ -278,8 +290,8 @@ do_fit.pk <- function(obj,
     tidy_fit %>%
       dplyr::left_join(rate_conversion,
                        by = c(data_group_vars, "param_units")) %>%
-      dplyr::mutate(across(contains(rate_names),
-                           \(x) x * to_perhour)) %>%
+      dplyr::mutate(dplyr::across(tidyselect::contains(rate_names),
+                                  \(x) x * to_perhour)) %>%
       dplyr::select(-to_perhour))
 
 # Changing the final fit form so that everything is similar parDF

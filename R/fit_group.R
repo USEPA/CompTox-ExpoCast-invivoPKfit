@@ -54,8 +54,11 @@ fit_group <- function(data,
     if (any(par_DF$optimize_param %in% FALSE & par_DF$use_param %in% TRUE)) {
       const_params <- par_DF[which(!par_DF$optimize_param & par_DF$use_param),
                              "start", drop = TRUE]
-      names(const_params) <- par_DF[which(!par_DF$optimize_param & par_DF$use_param),
-                                    "param_name", drop = TRUE]
+      names(const_params) <- par_DF[
+        which(!par_DF$optimize_param & par_DF$use_param),
+        "param_name",
+        drop = TRUE
+      ]
     } else {
       const_params <- NULL
     }
@@ -114,7 +117,7 @@ fit_group <- function(data,
                           "xtime")
 
           tmp <- data.frame(as.list(tmp)) %>%
-            dplyr::slice(rep(1:dplyr::n(),
+            dplyr::slice(rep(seq_len(dplyr::n()),
                              each = length(method)))
 
           rownames(tmp) <- method
@@ -149,7 +152,7 @@ fit_group <- function(data,
                     "kkt1", "kkt2",
                     "xtime")
     tmp <- data.frame(as.list(tmp)) %>%
-      dplyr::slice(rep(1:dplyr::n(),
+      dplyr::slice(rep(seq_len(dplyr::n()),
                        each = length(method)))
     rownames(tmp) <- method
     tmp$method <- rownames(tmp)
@@ -157,7 +160,6 @@ fit_group <- function(data,
     attr(tmp, "maximize") <- FALSE
     attr(tmp, "npar") <- length(opt_params)
     attr(tmp, "follow.on") <- FALSE
-    # method <- settings_optimx$method
     details <- as.data.frame(
       cbind(method = as.list(method),
             ngatend = as.list(rep(NA_real_, length(method))),

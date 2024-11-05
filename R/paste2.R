@@ -1,4 +1,4 @@
-paste2 <- function(... ,
+paste2 <- function(...,
                    sep = " ",
                    collapse = NULL,
                    na.rm = TRUE,

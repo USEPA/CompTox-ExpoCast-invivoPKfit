@@ -74,8 +74,7 @@ nca.pk <- function(obj,
              grp_vars))){
       stop(paste0("When dose_norm == TRUE, nca_group must include all of Route, Media.\n",
                   "nca_group is: ",
-                  paste(grp_vars,
-                        collapse = ", ")
+                  toString(grp_vars)
       ))
     }
   }else{
@@ -87,8 +86,7 @@ nca.pk <- function(obj,
              grp_vars))){
       stop(paste0("When dose_norm == FALSE, nca_group must include all of Dose, Route, Media.\n",
                  "nca_group is: ",
-                 paste(grp_vars,
-                       collapse = ", ")
+                 toString(grp_vars)
       ))
     }
   }
@@ -153,7 +151,7 @@ nca.pk <- function(obj,
                                          "dose-normalized",
                                          "non-dose-normalized"),
                                   "NCA by the following grouping:",
-                  paste(grp_vars, collapse = ", ")
+                  toString(grp_vars)
                   )
             )
   }

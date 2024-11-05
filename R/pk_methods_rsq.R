@@ -198,11 +198,8 @@ rsq.pk <- function(obj,
 
 
   #remove any excluded observations & corresponding predictions, if so specified
-  if (exclude %in% TRUE) {
-    if ("exclude" %in% names(newdata)) {
-      newdata <- newdata %>%
-        dplyr::filter(exclude %in% FALSE)
-    }
+  if (exclude %in% TRUE && "exclude" %in% names(newdata)) {
+      newdata <- subset(newdata, exclude %in% FALSE)
   }
 
 req_vars <- unique(c(names(preds),

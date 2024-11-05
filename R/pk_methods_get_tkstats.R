@@ -173,10 +173,10 @@ get_tkstats.pk <- function(obj,
                        vol_unit = "L"
                      )),
       error = function(e) {
-        message(paste0("Failed to run:", tk_fun, "error reads: "))
+        message("Failed to run:", tk_fun, "error reads: ")
         print(e)
       }
-    )) # list(tryCatch(...))
+    )) # ending tryCatch statement
     ) %>%
     tidyr::unnest(cols = TKstats)
 

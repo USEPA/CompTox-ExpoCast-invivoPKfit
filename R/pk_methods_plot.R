@@ -321,7 +321,7 @@ plot.pk <- function(x,
                       p +
                         labs(
                           title = paste(Chemical, Species),
-                          x = paste0("Time (", t_units , ")"),
+                          x = paste0("Time (", t_units, ")"),
                           y = ifelse(
                             conc_scale$dose_norm,
                             "Concentration/Dose",
