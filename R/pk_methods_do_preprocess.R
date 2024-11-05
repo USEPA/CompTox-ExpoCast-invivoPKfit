@@ -399,7 +399,7 @@ do_preprocess.pk <- function(obj, ...) {
 
     #Exclude any remaining cases where both Value and LOQ are NA
     #because if we don't have a value or an LOQ, we can't do anything
-    if (anyNA(data$Value) & is.na(data$LOQ)) {
+    if (anyNA(data$Value) & anyNA(data$LOQ)) {
       if (!obj$settings_preprocess$suppress.messages) {
         message(
             "Excluding observations where both Value and LOQ were NA. ",

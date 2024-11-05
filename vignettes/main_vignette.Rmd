@@ -119,7 +119,7 @@ First, select data for a single chemical and species. This is the dataset that w
 ```{r}
 #select data for a single chemical and species
 my_data <- subset(cvt,
-                  analyte_dtxsid %in% "DTXSID1021116" & species %in% "rat")
+                  analyte_dtxsid %in% "DTXSID1021116")
 
 
 ```
@@ -352,6 +352,7 @@ The `data_original` element contains the data set you provided in argument `data
 
 ```{r}
 head(my_pk$data_original)
+print(my_pk)
 ```
 
 ## `my_pk$mapping`

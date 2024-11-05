@@ -10,8 +10,10 @@ get_stat_error_model.pk <- function(obj, ...){
   #convert lists of quosures into "vars(...)"
   out$error_group <- rlang::parse_expr(
     paste0("vars(",
-           paste(toString(out$error_group,
-                          rlang::as_label),
+           paste(toString(
+             sapply(out$error_group,
+                    rlang::as_label)
+           ),
            ")"
            )
     )

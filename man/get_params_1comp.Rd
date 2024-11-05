@@ -11,7 +11,7 @@ get_params_1comp(
     0.01),
   upper_bound = ggplot2::aes(kelim = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
     Vdist = 100, Fgutabs = 1, kgutabs = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
-    Fgutabs_Vdist = 100, Rblood2plasma = 100, ),
+    Fgutabs_Vdist = 100, Rblood2plasma = 100),
   param_units = ggplot2::aes(kelim = paste0("1/", unique(Time_trans.Units)), Vdist =
     paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units), ")"), Fgutabs =
     "unitless fraction", kgutabs = paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist
