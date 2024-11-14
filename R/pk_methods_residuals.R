@@ -58,18 +58,18 @@ residuals.pk <- function(obj,
                          method = NULL,
                          exclude = TRUE,
                          use_scale_conc = FALSE,
-                         ...){
+                         ...) {
 
-  #ensure that the model has been fitted
+  # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
-  if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$settings_optimx$method
-  if(is.null(newdata)) newdata <- obj$data
+  if (is.null(model)) model <- names(obj$stat_model)
+  if (is.null(method)) method <- obj$settings_optimx$method
+  if (is.null(newdata)) newdata <- obj$data
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -95,7 +95,7 @@ residuals.pk <- function(obj,
                    use_scale_conc = use_scale_conc)
 
 
-  #remove any excluded observations & corresponding predictions, if so specified
+  # remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE && "exclude" %in% names(newdata)) {
       newdata <- subset(newdata, exclude %in% FALSE)
   }
@@ -118,13 +118,13 @@ residuals.pk <- function(obj,
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
 
-  #apply dose-normalization if specified
+  # apply dose-normalization if specified
   # conditional mutate ifelse
   resids <- new_preds %>%
     dplyr::mutate(
       Conc_set = ifelse(rep(conc_scale$dose_norm, NROW(Dose)),
                         ifelse(rep(conc_scale$log10_trans, NROW(Dose)),
-                               log10(Conc/Dose),
+                               log10(Conc / Dose),
                                Conc / Dose),
                         ifelse(rep(conc_scale$log10_trans, NROW(Dose)),
                                log10(Conc),

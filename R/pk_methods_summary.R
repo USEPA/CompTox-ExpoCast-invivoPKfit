@@ -12,7 +12,7 @@
 #' @export
 #' @author Caroline Ring
 #'
-summary.pk <- function(object, ...){
+summary.pk <- function(object, ...) {
   objname <- deparse(substitute(object))
   status <- get_status(object)
 
@@ -22,13 +22,13 @@ summary.pk <- function(object, ...){
   coef <- model <- method <- RMSE <- Fold_Error <- NULL
   avg_FoldErr <- median_FoldErr <- within_2fold <- NULL
 
-  if(status < 5){
+  if (status < 5) {
     return(message("Please fit the object above before running, or try get_data_summary()"))
   }
-    #things that require status 1
-    #things that are just instructions:
-    #data
-    #preprocessing settings
+    # things that require status 1
+    # things that are just instructions:
+    # data
+    # preprocessing settings
     settings_preprocess <- get_settings_preprocess(object)
     cat(paste0(
       "\nData preprocessing settings:\n",
@@ -38,7 +38,7 @@ summary.pk <- function(object, ...){
             collapse = "\n"),
       "\n"))
 
-    #data info settings
+    # data info settings
     settings_data_info <- get_settings_data_info(object)
     cat(paste0(
       "\nData info settings:\n",
@@ -47,7 +47,7 @@ summary.pk <- function(object, ...){
             sep = " = ",
             collapse = "\n"),
       "\n"))
-    #stat_model
+    # stat_model
 
     models <- names(object$stat_model)
 
@@ -55,7 +55,7 @@ summary.pk <- function(object, ...){
                toString(models),
                "\n"))
 
-    #stat_error_model
+    # stat_error_model
 
     error_group <- get_error_group(object)
 
@@ -63,7 +63,7 @@ summary.pk <- function(object, ...){
                rlang::as_label(error_group),
                "\n"))
 
-    #optimx settings
+    # optimx settings
 
     settings_optimx <- get_settings_optimx(object)
     cat(paste0("\nSettings for optimx::optimx():\n",
@@ -73,7 +73,7 @@ summary.pk <- function(object, ...){
                      collapse = "\n"),
                "\n"))
 
-  #scale_conc
+  # scale_conc
 
   scale_conc <- get_scale_conc(object)
   cat(paste0(
@@ -84,7 +84,7 @@ summary.pk <- function(object, ...){
           collapse = "\n"),
     "\n"))
 
-  #scale_time
+  # scale_time
 
   scale_time <- get_scale_time(object)
   cat(paste0(
@@ -95,7 +95,7 @@ summary.pk <- function(object, ...){
           collapse = "\n"),
     "\n"))
 
-  #Produce a data.frame with all of the instructions in one place
+  # Produce a data.frame with all of the instructions in one place
   settings_preprocess_DF <- data.frame(instructions_category = "settings_preprocess",
                                        instruction_name = names(settings_preprocess),
                                        instruction_value = sapply(settings_preprocess,
@@ -135,35 +135,35 @@ summary.pk <- function(object, ...){
 
   rownames(instructions_DF) <- NULL
 
-  #things that require preprocessing & data_info (status 3):
-  #data_summary
+  # things that require preprocessing & data_info (status 3):
+  # data_summary
   cat("Data summary:\n")
   data_info <- get_data_info(object)
   print(data_info)
   cat("\n")
 
-  #nca
+  # nca
   cat("NCA results:\n")
   nca <- get_nca(object)
   print(nca)
   cat("\n")
 
-  #things that require pre-fitting (status 4):
-  #stat_error_model
+  # things that require pre-fitting (status 4):
+  # stat_error_model
   message("Error Model Variables Specified: ")
   print(as.character(get_error_group(object))[-1])
-  #stat_model par_DFs
+  # stat_model par_DFs
   prefit_DF <- object$prefit$par_DF
 
   print(get_prefit(object))
 
-  #things that require fitting (status 5):
-  #coefficients
-  #get model coefficients
+  # things that require fitting (status 5):
+  # coefficients
+  # get model coefficients
   outDF <- suppressMessages(left_join(coef(object, include_NAs = TRUE),
                      coef_sd(object, table_format = TRUE)))
 
-  #goodness of fit metrics
+  # goodness of fit metrics
   aic_all <- suppressMessages(AIC(object)) # Already includes logLik
   bic_all <- suppressMessages(BIC(object))
   rmse_all <- suppressMessages(rmse(object, use_scale_conc = FALSE) %>%
@@ -175,7 +175,7 @@ summary.pk <- function(object, ...){
     dplyr::group_by(!!!object$data_group, model, method, Route, Media, Dose) %>%
     dplyr::mutate(avg_FoldErr = mean(Fold_Error, na.rm = TRUE),
                   median_FoldErr = median(Fold_Error, na.rm = TRUE),
-                  within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2)/length(Fold_Error)) %>%
+                  within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2) / length(Fold_Error)) %>%
     dplyr::select(Time, Fold_Error,
                   avg_FoldErr, median_FoldErr, within_2fold) %>%
     tidyr::nest(full_fold_errors = c(Time, Fold_Error)))
@@ -185,15 +185,15 @@ summary.pk <- function(object, ...){
     dplyr::right_join(dplyr::inner_join(rmse_all, fold_errors_all)))
 
 
-  #model comparison
+  # model comparison
   winmodel_DF <- suppressMessages(get_winning_model(object))
 
-  #get TK stats
+  # get TK stats
   tkstats <- suppressMessages(get_tkstats(object))
-  #pivot wider and rowbind?
+  # pivot wider and rowbind?
 
 
-  #compare Cmax, AUC of winning model (for each method) to NCA Cmax, AUC, for each NCA group
+  # compare Cmax, AUC of winning model (for each method) to NCA Cmax, AUC, for each NCA group
   tk_nca <- suppressMessages(eval_tkstats(object))
 
 

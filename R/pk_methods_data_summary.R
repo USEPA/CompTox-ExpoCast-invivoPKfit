@@ -47,7 +47,7 @@
 data_summary.pk <- function(obj,
                             newdata = NULL,
                             summary_group = NULL,
-                            ...){
+                            ...) {
 
   if (is.null(summary_group)) {
     summary_group <- obj$settings_data_info$summary_group
@@ -76,7 +76,7 @@ data_summary.pk <- function(obj,
 
   data_summary <- dplyr::group_by(newdata, !!!summary_group) %>%
     dplyr::reframe(
-      n_obs = dplyr::n(), #summary stats on data
+      n_obs = dplyr::n(), # summary stats on data
       n_exclude = sum(exclude %in% TRUE),
       n_detect = sum(Detect %in% TRUE & exclude %in% FALSE),
       n_series_id = length(unique(Series_ID[exclude %in% FALSE])),

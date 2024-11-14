@@ -29,21 +29,19 @@
 #'   the elbow point. The elbow point is *not* necessarily one of the input data
 #'   points; it may be interpolated.
 #' @author Caroline Ring
-get_elbow <- function(x, y, ...){
-  #find elbow point:
-  #draw a line connecting first and last observation
-  #find the point that has the largest residual
+get_elbow <- function(x, y, ...) {
+  # find elbow point:
+  # draw a line connecting first and last observation
+  # find the point that has the largest residual
   xmin <- min(x)
   xmax <- max(x)
 
-  obs_first <- c(xmin, median(y[x==xmin]))
-  obs_last <- c(xmax, median(y[x==xmax]))
-  slope <- (obs_last[2] - obs_first[2])/(obs_last[1] - obs_first[1])
+  obs_first <- c(xmin, median(y[x == xmin]))
+  obs_last <- c(xmax, median(y[x == xmax]))
+  slope <- (obs_last[2] - obs_first[2]) / (obs_last[1] - obs_first[1])
   intercept <- obs_first[2] - slope * obs_first[1]
 
-  med_y <- sapply(x,
-                          function(this_x) median(y[x==this_x])
-  )
+  med_y <- sapply(x, function(this_x) median(y[x == this_x]))
 
   pred <- slope * x + intercept
   resid <- med_y - pred
@@ -51,4 +49,3 @@ get_elbow <- function(x, y, ...){
 
   return(elbow_x)
 }
-

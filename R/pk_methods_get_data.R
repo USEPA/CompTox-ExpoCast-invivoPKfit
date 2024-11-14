@@ -7,11 +7,11 @@
 #' @return A `data.frame`: the `data` element of `obj`
 #' @export
 #' @author Caroline Ring
-get_data.pk <- function(obj, ...){
- #check if data has been preprocessed
+get_data.pk <- function(obj, ...) {
+ # check if data has been preprocessed
   check <- check_required_status(obj = obj,
                                  required_status = status_preprocess)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 

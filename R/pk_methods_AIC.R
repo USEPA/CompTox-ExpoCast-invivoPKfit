@@ -50,18 +50,18 @@ AIC.pk <- function(object,
                    exclude = TRUE,
                    drop_obs = TRUE,
                    ...,
-                   k = 2){
-  #ensure that the model has been fitted
+                   k = 2) {
+  # ensure that the model has been fitted
   check <- check_required_status(obj = object,
                                  required_status = 5)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
-  if(is.null(model)) model <- names(object$stat_model)
-  if(is.null(method)) method <- object$settings_optimx$method
+  if (is.null(model)) model <- names(object$stat_model)
+  if (is.null(method)) method <- object$settings_optimx$method
 
-  #get log-likelihoods
+  # get log-likelihoods
   ll <- logLik(object = object,
                newdata = newdata,
                model = model,
@@ -84,11 +84,10 @@ AIC.pk <- function(object,
     dplyr::select(!!!object$data_group,
                   model, method,
                   log_likelihood) %>%
-    dplyr::left_join(params_df,
-                     by = c(data_grp_vars, "model", "method"))
+    dplyr::left_join(params_df, by = c(data_grp_vars, "model", "method"))
 
 
-  #get number of parameters (excluding any constant, non-optimized parameters)
+  # get number of parameters (excluding any constant, non-optimized parameters)
 
   AIC <- ll %>% dplyr::group_by(!!!object$data_group, model, method) %>%
     dplyr::mutate(AIC = (k * npar) - (2 * log_likelihood))

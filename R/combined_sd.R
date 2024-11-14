@@ -34,13 +34,13 @@ combined_sd <- function(group_mean,
                         group_n,
                         unbiased = TRUE,
                         na.rm = TRUE,
-                        log10 = FALSE){
+                        log10 = FALSE) {
 
   x_len <- c("group_mean" = length(group_mean),
              "group_sd" = length(group_sd),
              "group_n" = length(group_n))
 
-  if(any(x_len %in% 0)){
+  if (any(x_len %in% 0)) {
     stop("invivopkfit::combined_sd(): ",
          "the following arguments have zero length: ",
          toString(names(x_len)[x_len %in% 0])
@@ -53,13 +53,11 @@ combined_sd <- function(group_mean,
   bad_len <- (x_len < max_len) & (x_len != 1)
 
 
-  if(any(bad_len)){
+  if (any(bad_len)) {
     warning(
       "invivopkfit::combined_sd():",
       "the following inputs do not have matching lengths: ",
-      paste(paste0(names(x_len)[bad_len],
-                   " length = ",
-                   x_len[bad_len]),
+      paste(paste0(names(x_len)[bad_len], " length = ", x_len[bad_len]),
             collapse = "\n"
       ),
       "\n They will be repeated to match the length of the longest input,",
@@ -70,57 +68,55 @@ combined_sd <- function(group_mean,
     )
   }
 
-  #repeat to match longest
-  for (i in seq_along(x_len)){
+  # repeat to match longest
+  for (i in seq_along(x_len)) {
     assign(names(x_len)[i],
-           rep( #repeat the current value of each item to match the length
-             get(names(x_len)[i]), #get the current value of each item
+           rep( # repeat the current value of each item to match the length
+             get(names(x_len)[i]), # get the current value of each item
              length.out = max_len)
     )
   }
 
-  #remove NAs if so specified
-  if(na.rm %in% TRUE){
+  # remove NAs if so specified
+  if (isTRUE(na.rm)) {
     which_na <- is.na(group_mean) | is.na(group_sd) | is.na(group_n)
     group_mean <- group_mean[!which_na]
     group_sd <- group_sd[!which_na]
     group_n <- group_n[!which_na]
   }
 
-  grand_mean <- sum(group_n*group_mean)/sum(group_n)
+  grand_mean <- sum(group_n * group_mean) / sum(group_n)
 
-  #if all N = 1, then just take regular standard deviation
-  if(all(group_n %in% 1)){
+  # if all N = 1, then just take regular standard deviation
+  if (all(group_n %in% 1)) {
     grand_sd <- sd(group_mean)
 
     grand_n <- sum(group_n)
-    if(unbiased %in% FALSE){
-      #convert unbiased SD to biased SD
-      grand_sd <- grand_sd * sqrt((grand_n-1)/grand_n)
+    if (isFALSE(unbiased)) {
+      # convert unbiased SD to biased SD
+      grand_sd <- grand_sd * sqrt((grand_n - 1) / grand_n)
     }
-  }else{ #if not all N = 1
-    if(unbiased %in% TRUE){
-      #convert unbiased group SDs to biased group SDs
-      group_sd <- group_sd *
-        sqrt((group_n-1)/group_n)
+  } else { # if not all N = 1
+    if (isTRUE(unbiased)) {
+      # convert unbiased group SDs to biased group SDs
+      group_sd <- group_sd * sqrt((group_n - 1) / group_n)
     }
 
-    grand_var <- (sum(group_n*group_sd^2) +
-                    sum(group_n*(group_mean - grand_mean)^2))/
-      (sum(group_n))
+    grand_var <- (sum(group_n * group_sd^2)
+                  + sum(group_n * (group_mean - grand_mean)^2)) / (sum(group_n))
 
-    grand_sd <- sqrt(grand_var) #biased
+    grand_sd <- sqrt(grand_var) # biased
 
 
-    if(unbiased %in% TRUE){
+    if (unbiased %in% TRUE) {
       grand_n <- sum(group_n)
-      #convert biased grand SD to unbiased grand SD
-      grand_sd <- grand_sd * sqrt(grand_n/(grand_n - 1))
+      # convert biased grand SD to unbiased grand SD
+      grand_sd <- grand_sd * sqrt(grand_n / (grand_n - 1))
     }
   }
 
-  if(log10 %in% TRUE){
-    #convert to log10-scale combined SD
+  if (log10 %in% TRUE) {
+    # convert to log10-scale combined SD
     grand_sd <- sqrt(log10(1 + grand_sd^2 / grand_mean^2))
   }
 

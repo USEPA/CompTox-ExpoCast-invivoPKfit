@@ -3,15 +3,15 @@
   #' @param ... Additional arguments currently not in use.
   #' @export
   #' @seealso [do_preprocess.pk()] for the `do_preprocess` method for class [pk()]
-  do_preprocess <- function(obj, ...){
+  do_preprocess <- function(obj, ...) {
     UseMethod("do_preprocess", obj)
   }
 
   #' do_preprocess default method
   #' @param obj an object
-  #'@param ... Additional arguments currently not in use.
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  do_preprocess.default <- function(obj, ...){
+  do_preprocess.default <- function(obj, ...) {
     stop("No 'do_preprocess' method exists for object of class",
          toString(class(obj))
     )
@@ -19,10 +19,10 @@
 
   #' do_data_info generic
   #' @param obj the pk object
-  #'@param ... Additional arguments currently not in use.
+  #' @param ... Additional arguments currently not in use.
   #' @export
   #' @seealso [do_data_info.pk()] for the `do_data_info` method for class [pk()]
-  do_data_info <- function(obj, ...){
+  do_data_info <- function(obj, ...) {
     UseMethod("do_data_info", obj)
   }
 
@@ -30,7 +30,7 @@
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  do_data_info.default <- function(obj, ...){
+  do_data_info.default <- function(obj, ...) {
     stop("No 'do_data_info' method exists for object of class",
          toString(class(obj))
     )
@@ -40,7 +40,7 @@
   #' @param obj the pk object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  do_prefit <- function(obj, ...){
+  do_prefit <- function(obj, ...) {
     UseMethod("do_prefit", obj)
   }
 
@@ -49,7 +49,7 @@
   #' @param ... Additional arguments currently not in use.
   #'
   #' @export
-  do_prefit.default <- function(obj, ...){
+  do_prefit.default <- function(obj, ...) {
     stop("No 'do_prefit' method exists for object of class",
          toString(class(obj))
     )
@@ -62,7 +62,7 @@
   #' @param ... Additional arguments currently not in use.
   #' @export
   #' @seealso [do_fit.pk()] for the `do_fit` method for class [pk()]
-  do_fit <- function(obj, ...){
+  do_fit <- function(obj, ...) {
     UseMethod("do_fit", obj)
   }
 
@@ -70,7 +70,7 @@
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  do_fit.default <- function(obj, ...){
+  do_fit.default <- function(obj, ...) {
     stop("No 'do_fit' method exists for object of class",
          toString(class(obj))
     )
@@ -83,7 +83,7 @@
   #' @param ... Additional arguments currently not in use.
   #' @export
   #' @seealso [rmse.pk()] for the `rmse` method for class [pk()]
-  rmse <- function(obj, ...){
+  rmse <- function(obj, ...) {
     UseMethod("rmse", obj)
   }
 
@@ -91,7 +91,7 @@
   #' @param obj an object
   #' @param ... Additional arguments.
   #' @export
-  rmse.default <- function(obj, ...){
+  rmse.default <- function(obj, ...) {
     stop("No 'rmse' method exists for object of class",
          toString(class(obj))
     )
@@ -110,9 +110,9 @@
   #' @seealso [coef_sd.pk()] for the `coef_sd` method for class [pk()]
   coef_sd <- function(obj,
                       model,
-method,
-suppress.messages, ...){
-  UseMethod("coef_sd", obj)
+                      method,
+                      suppress.messages, ...) {
+    UseMethod("coef_sd", obj)
   }
 
   #' Coefficient standard deviation default
@@ -120,7 +120,7 @@ suppress.messages, ...){
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  coef_sd.default <- function(obj, ...){
+  coef_sd.default <- function(obj, ...) {
     stop("No 'coef_sd' method exists for object of class",
          toString(class(obj))
     )
@@ -134,7 +134,7 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_status.pk()] for the `get_status` method for class [pk()]
   #' @export
-  get_status <- function(obj, ...){
+  get_status <- function(obj, ...) {
     UseMethod("get_status", obj)
   }
 
@@ -142,7 +142,7 @@ suppress.messages, ...){
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  get_status.default <- function(obj, ...){
+  get_status.default <- function(obj, ...) {
     stop("No 'get_status' method exists for object of class",
          toString(class(obj))
     )
@@ -155,7 +155,7 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @export
   #' @seealso [fold_errors.pk()] for the `fold_errors` method for class [pk()]
-  fold_errors <- function(obj, ...){
+  fold_errors <- function(obj, ...) {
     UseMethod("fold_errors", obj)
   }
 
@@ -163,7 +163,7 @@ suppress.messages, ...){
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  fold_errors.default <- function(obj, ...){
+  fold_errors.default <- function(obj, ...) {
     stop("No 'fold_errors' method exists for object of class",
          toString(class(obj))
     )
@@ -177,7 +177,7 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [check_required_status.pk()] for the method for class [pk()]
   #' @export
-  check_required_status <- function(obj, ...){
+  check_required_status <- function(obj, ...) {
     UseMethod("check_required_status", obj)
   }
 
@@ -186,7 +186,7 @@ suppress.messages, ...){
   #' @param obj An object.
   #' @param ... Additional arguments currently not in use.
   #' @export
-  check_required_status.default <- function(obj, ...){
+  check_required_status.default <- function(obj, ...) {
     stop("No 'check_required_status' method exists for object of class",
          toString(class(obj))
     )
@@ -200,7 +200,7 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_tkstats.pk()] for the method for class [pk()]
   #' @export
-  get_tkstats <- function(obj, ...){
+  get_tkstats <- function(obj, ...) {
     UseMethod("get_tkstats", obj)
   }
 
@@ -208,7 +208,7 @@ suppress.messages, ...){
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  get_tkstats.default <- function(obj, ...){
+  get_tkstats.default <- function(obj, ...) {
     stop("No 'get_tkstats' method exists for object of class",
          toString(class(obj))
     )
@@ -222,7 +222,7 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [compare_models.pk()] for the method for class [pk()]
   #' @export
-  compare_models <- function(obj, ...){
+  compare_models <- function(obj, ...) {
     UseMethod("compare_models", obj)
   }
 
@@ -230,7 +230,7 @@ suppress.messages, ...){
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  compare_models.default <- function(obj, ...){
+  compare_models.default <- function(obj, ...) {
     stop("No 'compare_models' method exists for object of class",
          toString(class(obj))
     )
@@ -245,16 +245,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_data.pk()] for the method for class [pk()]
   #' @export
-  get_data <- function(obj, ...){
+  get_data <- function(obj, ...) {
     UseMethod("get_data", obj)
   }
 
   #' Default method for get_data()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_data.default <- function(obj, ...){
+  get_data.default <- function(obj, ...) {
     stop("No 'get_data' method exists for object of class",
          toString(class(obj))
     )
@@ -268,16 +268,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_nca.pk()] for the method for class [pk()]
   #' @export
-  get_nca <- function(obj, ...){
+  get_nca <- function(obj, ...) {
     UseMethod("get_nca", obj)
   }
 
   #' Default method for get_nca()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_nca.default <- function(obj, ...){
+  get_nca.default <- function(obj, ...) {
     stop("No 'get_nca' method exists for object of class",
          toString(class(obj))
     )
@@ -291,16 +291,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_data_info.pk()] for the method for class [pk()]
   #' @export
-  get_data_info <- function(obj, ...){
+  get_data_info <- function(obj, ...) {
     UseMethod("get_data_info", obj)
   }
 
   #' Default method for get_data_info()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_data_info.default <- function(obj, ...){
+  get_data_info.default <- function(obj, ...) {
     stop("No 'get_data_info' method exists for object of class",
          toString(class(obj))
     )
@@ -314,16 +314,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_prefit.pk()] for the method for class [pk()]
   #' @export
-  get_prefit <- function(obj, ...){
+  get_prefit <- function(obj, ...) {
     UseMethod("get_prefit", obj)
   }
 
   #' Default method for get_prefit()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_prefit.default <- function(obj, ...){
+  get_prefit.default <- function(obj, ...) {
     stop("No 'get_prefit' method exists for object of class",
          toString(class(obj))
     )
@@ -337,16 +337,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_settings_preprocess.pk()] for the method for class [pk()]
   #' @export
-  get_settings_preprocess <- function(obj, ...){
+  get_settings_preprocess <- function(obj, ...) {
     UseMethod("get_settings_preprocess", obj)
   }
 
   #' Default method for get_settings_preprocess()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_settings_preprocess.default <- function(obj, ...){
+  get_settings_preprocess.default <- function(obj, ...) {
     stop("No 'get_settings_preprocess' method exists for object of class",
          toString(class(obj))
     )
@@ -360,16 +360,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_settings_data_info.pk()] for the method for class [pk()]
   #' @export
-  get_settings_data_info <- function(obj, ...){
+  get_settings_data_info <- function(obj, ...) {
     UseMethod("get_settings_data_info", obj)
   }
 
   #' Default method for get_settings_data_info()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_settings_data_info.default <- function(obj, ...){
+  get_settings_data_info.default <- function(obj, ...) {
     stop("No 'get_settings_data_info' method exists for object of class",
          toString(class(obj))
     )
@@ -383,16 +383,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_stat_error_model.pk()] for the method for class [pk()]
   #' @export
-  get_stat_error_model <- function(obj, ...){
+  get_stat_error_model <- function(obj, ...) {
     UseMethod("get_stat_error_model", obj)
   }
 
   #' Default method for get_stat_error_model()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_stat_error_model.default <- function(obj, ...){
+  get_stat_error_model.default <- function(obj, ...) {
     stop("No 'get_stat_error_model' method exists for object of class",
          toString(class(obj))
     )
@@ -406,16 +406,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_data_sigma_group.pk()] for the method for class [pk()]
   #' @export
-  get_data_sigma_group <- function(obj, ...){
+  get_data_sigma_group <- function(obj, ...) {
     UseMethod("get_data_sigma_group", obj)
   }
 
   #' Default method for get_data_sigma_group()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_data_sigma_group.default <- function(obj, ...){
+  get_data_sigma_group.default <- function(obj, ...) {
     stop("No 'get_data_sigma_group' method exists for object of class",
          toString(class(obj))
     )
@@ -429,16 +429,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_settings_optimx.pk()] for the method for class [pk()]
   #' @export
-  get_settings_optimx <- function(obj, ...){
+  get_settings_optimx <- function(obj, ...) {
     UseMethod("get_settings_optimx", obj)
   }
 
   #' Default method for get_settings_optimx()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_settings_optimx.default <- function(obj, ...){
+  get_settings_optimx.default <- function(obj, ...) {
     stop("No 'get_settings_optimx' method exists for object of class",
          toString(class(obj))
     )
@@ -452,16 +452,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_scale_conc.pk()] for the method for class [pk()]
   #' @export
-  get_scale_conc <- function(obj, ...){
+  get_scale_conc <- function(obj, ...) {
     UseMethod("get_scale_conc", obj)
   }
 
   #' Default method for get_scale_conc()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_scale_conc.default <- function(obj, ...){
+  get_scale_conc.default <- function(obj, ...) {
     stop("No 'get_scale_conc' method exists for object of class",
          toString(class(obj))
     )
@@ -475,16 +475,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_scale_time.pk()] for the method for class [pk()]
   #' @export
-  get_scale_time <- function(obj, ...){
+  get_scale_time <- function(obj, ...) {
     UseMethod("get_scale_time", obj)
   }
 
   #' Default method for get_scale_time()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_scale_time.default <- function(obj, ...){
+  get_scale_time.default <- function(obj, ...) {
     stop("No 'get_scale_time' method exists for object of class",
          toString(class(obj))
     )
@@ -498,16 +498,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_error_group.pk()] for the method for class [pk()]
   #' @export
-  get_error_group <- function(obj, ...){
+  get_error_group <- function(obj, ...) {
     UseMethod("get_error_group", obj)
   }
 
   #' Default method for get_error_group()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_error_group.default <- function(obj, ...){
+  get_error_group.default <- function(obj, ...) {
     stop("No 'get_error_group' method exists for object of class",
          toString(class(obj))
     )
@@ -521,16 +521,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_stat_model.pk()] for the method for class [pk()]
   #' @export
-  get_stat_model <- function(obj, ...){
+  get_stat_model <- function(obj, ...) {
     UseMethod("get_stat_model", obj)
   }
 
   #' Default method for get_stat_model()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_stat_model.default <- function(obj, ...){
+  get_stat_model.default <- function(obj, ...) {
     stop("No 'get_stat_model' method exists for object of class",
          toString(class(obj))
     )
@@ -544,16 +544,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_data_original.pk()] for the method for class [pk()]
   #' @export
-  get_data_original <- function(obj, ...){
+  get_data_original <- function(obj, ...) {
     UseMethod("get_data_original", obj)
   }
 
   #' Default method for get_data_original()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_data_original.default <- function(obj, ...){
+  get_data_original.default <- function(obj, ...) {
     stop("No 'get_data_original' method exists for object of class",
          toString(class(obj))
     )
@@ -567,16 +567,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_mapping.pk()] for the method for class [pk()]
   #' @export
-  get_mapping <- function(obj, ...){
+  get_mapping <- function(obj, ...) {
     UseMethod("get_mapping", obj)
   }
 
   #' Default method for get_mapping()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_mapping.default <- function(obj, ...){
+  get_mapping.default <- function(obj, ...) {
     stop("No 'get_mapping' method exists for object of class",
          toString(class(obj))
     )
@@ -590,16 +590,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [rsq.pk()] for the method for class [pk()]
   #' @export
-  rsq <- function(obj, ...){
+  rsq <- function(obj, ...) {
     UseMethod("rsq", obj)
   }
 
   #' Default method for rsq()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  rsq.default <- function(obj, ...){
+  rsq.default <- function(obj, ...) {
     stop("No 'rsq' method exists for object of class",
          toString(class(obj))
     )
@@ -613,16 +613,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [get_winning_model.pk()] for the method for class [pk()]
   #' @export
-  get_winning_model <- function(obj, ...){
+  get_winning_model <- function(obj, ...) {
     UseMethod("get_winning_model", obj)
   }
 
   #' Default method for get_winning_model()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_winning_model.default <- function(obj, ...){
+  get_winning_model.default <- function(obj, ...) {
     stop("No 'get_winning_model' method exists for object of class",
          toString(class(obj))
     )
@@ -636,16 +636,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [nca.pk()] for the method for class [pk()]
   #' @export
-  nca <- function(obj, ...){
+  nca <- function(obj, ...) {
     UseMethod("nca", obj)
   }
 
   #' Default method for nca()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  nca.default <- function(obj, ...){
+  nca.default <- function(obj, ...) {
     stop("No 'nca' method exists for object of class",
          toString(class(obj))
     )
@@ -659,16 +659,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [data_summary.pk()] for the method for class [pk()]
   #' @export
-  data_summary <- function(obj, ...){
+  data_summary <- function(obj, ...) {
     UseMethod("data_summary", obj)
   }
 
   #' Default method for data_summary()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  data_summary.default <- function(obj, ...){
+  data_summary.default <- function(obj, ...) {
     stop("No 'data_summary' method exists for object of class",
          toString(class(obj))
     )
@@ -685,16 +685,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [data_summary.pk()] for the method for class [pk()]
   #' @export
-  get_data_summary <- function(obj, ...){
+  get_data_summary <- function(obj, ...) {
     UseMethod("data_summary", obj)
   }
 
   #' Default method for get_data_summary()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_data_summary.default <- function(obj, ...){
+  get_data_summary.default <- function(obj, ...) {
     stop("No 'get_data_summary' method exists for object of class",
          toString(class(obj))
     )
@@ -710,16 +710,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [data_summary.pk()] for the method for class [pk()]
   #' @export
-  eval_tkstats <- function(obj, ...){
+  eval_tkstats <- function(obj, ...) {
     UseMethod("eval_tkstats", obj)
   }
 
   #' Default method for eval_tkstats()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  eval_tkstats.default <- function(obj, ...){
+  eval_tkstats.default <- function(obj, ...) {
     stop("No 'eval_tkstats' method exists for object of class",
          toString(class(obj))
     )
@@ -735,16 +735,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [data_summary.pk()] for the method for class [pk()]
   #' @export
-  get_fit <- function(obj, ...){
+  get_fit <- function(obj, ...) {
     UseMethod("get_fit", obj)
   }
 
   #' Default method for get_fit()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_fit.default <- function(obj, ...){
+  get_fit.default <- function(obj, ...) {
     stop("No 'get_fit' method exists for object of class",
          toString(class(obj))
     )
@@ -760,16 +760,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [data_summary.pk()] for the method for class [pk()]
   #' @export
-  get_data_group <- function(obj, ...){
+  get_data_group <- function(obj, ...) {
     UseMethod("get_data_group", obj)
   }
 
   #' Default method for get_data_group()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  get_data_group.default <- function(obj, ...){
+  get_data_group.default <- function(obj, ...) {
     stop("No 'get_data_group' method exists for object of class",
          toString(class(obj))
     )
@@ -783,16 +783,16 @@ suppress.messages, ...){
   #' @param ... Additional arguments currently not in use.
   #' @seealso [twofold_test.pk()] for the method for class [pk()]
   #' @export
-  twofold_test <- function(obj, ...){
+  twofold_test <- function(obj, ...) {
     UseMethod("twofold_test", obj)
   }
 
   #' Default method for twofold_test()
   #'
-  #'@param obj An object
-  #'@param ... Additional arguments currently not in use.
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
   #' @export
-  twofold_test.default <- function(obj, ...){
+  twofold_test.default <- function(obj, ...) {
     stop("No 'twofold_test' method exists for object of class",
          toString(class(obj))
     )

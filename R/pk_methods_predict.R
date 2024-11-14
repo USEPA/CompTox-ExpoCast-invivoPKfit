@@ -109,7 +109,7 @@ predict.pk <- function(obj,
   )
 
 
-  #apply transformations if so specified
+  # apply transformations if so specified
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
 
@@ -173,25 +173,25 @@ predict.pk <- function(obj,
               }
               # Return Value
               NA_real_
-            }), #end tryCatch
-          .after = Conc.Units)  %>%  #end dplyr::mutate
+            }), # end tryCatch
+          .after = Conc.Units) %>% # end dplyr::mutate
         dplyr::select(-Dose_tmp)
     )) %>%
     tidyr::unnest(predictions)
 
 
 
-  #If log10 transformation was specified, then apply it now
+  # If log10 transformation was specified, then apply it now
   if (type %in% "conc") {
     newdata <- dplyr::rename(newdata, Conc_est = "Estimate")
-  #apply log10-trans to predicted conc, if so specified
+  # apply log10-trans to predicted conc, if so specified
   if (conc_scale$log10_trans %in% TRUE) {
     newdata <- newdata %>%
       dplyr::mutate(Conc_est = log10(Conc_est))
   }
   } else if (type %in% "auc") {
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
-  #note that it doesn't make sense to log10-trans AUC
+  # note that it doesn't make sense to log10-trans AUC
     if (suppress_messages %in% FALSE) {
       message("predict.pk(): Log10 transformation was specified, ",
               "but was not used because `type == 'AUC'`.")
@@ -199,7 +199,7 @@ predict.pk <- function(obj,
   }
 
   if (suppress_messages %in% FALSE) {
-    if(conc_scale$dose_norm) {
+    if (conc_scale$dose_norm) {
     message("predict.pk(): Note that the predicted values are for dose 1.0 (dose-normalized)")
   } else {
     message("predict.pk(): Note that the predicted values are not dose-normalized")

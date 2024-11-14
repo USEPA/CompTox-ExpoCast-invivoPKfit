@@ -4,7 +4,7 @@
 #' @return TRUE if the object inherits from class `pk`, FALSE if it does not
 #' @export
 #' @author Caroline Ring
-is.pk <- function(obj){
+is.pk <- function(obj) {
   return(inherits(obj, "pk"))
 }
 
@@ -14,6 +14,6 @@ is.pk <- function(obj){
 #' @return TRUE if the object inherits from class `pk`, FALSE if it does not
 #' @export
 #' @author Caroline Ring
-is.pk_faceted <- function(obj){
+is.pk_faceted <- function(obj) {
   return(inherits(obj, "pk_faceted"))
 }

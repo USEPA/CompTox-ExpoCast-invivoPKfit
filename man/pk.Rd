@@ -136,7 +136,7 @@ which will appear in the `pk` object in `pk$data` after the analysis is done.
 
 As with usual calls to [ggplot2::aes()], you should provide the variable names
 without quoting them. For example, use `ggplot2::aes(Chemical = my_chem)`. Do
-*not* use `ggplot2::aes("Chemical" = "my_chem")`.
+* not* use `ggplot2::aes("Chemical" = "my_chem")`.
 
 Also, as with usual calls to [ggplot2::aes()], you may also specify that any
 of the "`invivopkfit` aesthetic" variables should be mapped to a constant

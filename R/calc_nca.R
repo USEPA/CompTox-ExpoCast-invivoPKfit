@@ -89,231 +89,211 @@ calc_nca <- function(time,
                    dose,
                    route,
                    method = "z",
-                   ...){
+                   ...) {
 
-  if(length(time) > 0 &
-     length(conc) > 0 &
-     length(dose) > 0 &
-     !(all(is.na(time))) &
-     !(all(is.na(dose))) &
-     !(all(is.na(conc))) &
-     !(all(is.na(detect)))){
+  if (length(time) > 0 && length(conc) > 0 && length(dose) > 0 &&
+      anyNA(c(time, conc, dose)) && anyNA(detect)) {
 
     dose <- unique(dose)
 
-    if(is.null(series_id)){
+    if (is.null(series_id)) {
       series_id <- rep(NA_integer_, length(conc))
     }
 
-    #order everything by increasing time
-ord <- order(time)
-time <- time[ord]
-conc <- conc[ord]
-detect <- detect[ord]
-series_id <- series_id[ord]
+    # order everything by increasing time
+    ord <- order(time)
+    time <- time[ord]
+    conc <- conc[ord]
+    detect <- detect[ord]
+    series_id <- series_id[ord]
 
-  #Calculate area under the concentration-time curve for NCA.
-  #At present we do not know individual animal IDs or animal-group IDs for each point,
-  #so we will have to just assume that each time point is a different animal.
-  #substitute any nondetects with LOQ/2. This is not sophisticated but it is fast.
+    # Calculate area under the concentration-time curve for NCA.
+    # At present we do not know individual animal IDs or animal-group IDs for each point,
+    # so we will have to just assume that each time point is a different animal.
+    # substitute any nondetects with LOQ/2. This is not sophisticated but it is fast.
 
-  conc <- ifelse(detect %in% FALSE,
-                 conc*0.5,
-                 conc)
+    conc <- ifelse(detect %in% FALSE, conc * 0.5, conc)
 
-  if(all(is.na(series_id))){
-    #assume every obs is a different animal
-    series_id <- seq_along(conc)
-  }
-
-
-  ntab <- table(time, series_id)
-  m <- matrix(ntab, ncol = ncol(ntab))
-
-  obs_per_time <- table(time)
-  obs_per_seriesID <- table(series_id)
-  times_per_seriesID <- colSums(table(time, series_id))
-
-  #if there is only one observation per time
-  #then pretend all observations are from the same id
-  if(all(obs_per_time %in% 1)){
-    series_id <- rep(1L, length(time))
-  }
-
-  obs_per_time <- table(time)
-  obs_per_seriesID <- table(series_id)
-  times_per_seriesID <- colSums(table(time, series_id))
-
-  ntab <- table(time, series_id)
-  m <- matrix(ntab, ncol = ncol(ntab))
-
-  if(all(m==1)){
-    #every subject measured at every time point
-    design <- "complete"
-  }else if(any(obs_per_time==1) &
-       any(obs_per_time>1)){
-      #if 1 observation for some time point and multiple observations for others,
-      #it should be "batch" but it will fail due to a bug in PK::nca.batch()
-      #munge time very slightly to make 1 observation for each time point,
-      #and use an ssd design
-    time_split <- split(time, time)
-    min_time_nz <- min(time[time > 0])
-    time_split <- sapply(time_split,
-                         function(this_time){
-                           if(length(this_time)==1){
-                             this_time
-                           }else{
-                             #add a small fuzz factor: 1% of smallest time
-                             this_time + runif(length(this_time),
-                                               min = 0,
-                                               max = 0.01*min_time_nz)
-                           }
-                         })
-    time <- unsplit(time_split, time)
-    design <- "complete"
-  }else if(all(obs_per_time > 1) &
-           length(unique(obs_per_seriesID))>1){
-    #multiple observations for every time point, but not all subjects at every time point
-    #note this will break if there is 1 time point for some subjects and multiple for others
-    if(any(times_per_seriesID < 2)){
-      #pretend every obs is a different series id
+    if (all(is.na(series_id))) {
+      # assume every obs is a different animal
       series_id <- seq_along(conc)
-      design <- "ssd"
-    }else{
-      #if there is more than one time point measured for each subject,
-      #and more than one obs per time point,
-      #but not all time points measured for all subjects
-      design <- "batch"
     }
-    }else if(length(unique(obs_per_seriesID))==1){
-      #one obs per subject per time point
+
+
+    ntab <- table(time, series_id)
+    m <- matrix(ntab, ncol = ncol(ntab))
+
+    obs_per_time <- table(time)
+    obs_per_seriesID <- table(series_id)
+    times_per_seriesID <- colSums(table(time, series_id))
+
+    # if there is only one observation per time
+    # then pretend all observations are from the same id
+    if (all(obs_per_time %in% 1)) {
+      series_id <- rep(1L, length(time))
+    }
+
+    obs_per_time <- table(time)
+    obs_per_seriesID <- table(series_id)
+    times_per_seriesID <- colSums(table(time, series_id))
+
+    ntab <- table(time, series_id)
+    m <- matrix(ntab, ncol = ncol(ntab))
+
+    if (all(m == 1)) {
+      # every subject measured at every time point
+      design <- "complete"
+    } else if (any(obs_per_time == 1) && any(obs_per_time > 1)) {
+      # if 1 observation for some time point and multiple observations for others,
+      # it should be "batch" but it will fail due to a bug in PK::nca.batch()
+      # munge time very slightly to make 1 observation for each time point,
+      # and use an ssd design
+      time_split <- split(time, time)
+      min_time_nz <- min(time[time > 0])
+      time_split <- sapply(time_split,
+                           function(this_time) {
+                             if (length(this_time) == 1) {
+                               this_time
+                             } else {
+                               # add a small fuzz factor: 1% of smallest time
+                               this_time + runif(length(this_time),
+                                                 min = 0,
+                                                 max = 0.01 * min_time_nz)
+                             }
+                           })
+      time <- unsplit(time_split, time)
+      design <- "complete"
+    } else if (all(obs_per_time > 1) && length(unique(obs_per_seriesID)) > 1) {
+      # multiple observations for every time point, but not all subjects at every time point
+      # note this will break if there is 1 time point for some subjects and multiple for others
+      if (any(times_per_seriesID < 2)) {
+        # pretend every obs is a different series id
+        series_id <- seq_along(conc)
+        design <- "ssd"
+      } else {
+        # if there is more than one time point measured for each subject,
+        # and more than one obs per time point,
+        # but not all time points measured for all subjects
+        design <- "batch"
+      }
+    } else if (length(unique(obs_per_seriesID)) == 1) {
+      # one obs per subject per time point
       design <- "ssd"
-    }else{
+    } else {
       design <- "batch"
     }
 
-  data <- data.frame(id = series_id,
-                     conc = conc,
-                     time = time)
+    data <- data.frame(id = series_id, conc = conc, time = time)
 
-  pk_out <- tryCatch(
-    {
-      tmp <- suppressMessages(
-        suppressWarnings(
-          do.call(PK::nca,
-                  args = c(list(data = data,
-                                dose = dose,
-                                design = design,
-                                method = method),
-                           list(...)))
+    pk_out <- tryCatch(
+      {
+        tmp <- suppressMessages(
+          suppressWarnings(
+            do.call(PK::nca,
+                    args = c(list(data = data,
+                                  dose = dose,
+                                  design = design,
+                                  method = method),
+                             list(...)))
+          )
         )
-      )
-    tmp_est <- tmp$est[, 1]
-    tmp_se <- tmp$CIs[, c("stderr", "method")]
-    #if more than one method, reshape the output to have one stderr column per method
-    tmp_se_list <- sapply(
-      method,
-      function(this_method){
-        this_tmp <- tmp_se[tmp_se[, "method"] %in% this_method, 1]
-        this_tmp
-      })
-    tmp_out <- cbind(tmp_est, tmp_se_list)
-    tmp_out
-    },
-          error = function(err){
-            tmp <- matrix(nrow = 7,
-                             ncol = length(method) + 1)
-            rownames(tmp) <- c("AUC_tlast",
-                                  "AUC_infinity",
-                                  "AUMC_infinity",
-                                  "MRT",
-                                  "halflife",
-                                  "CLtot",
-                                  "Vss")
-            colnames(tmp) <- c("est",
-                                  paste("se",
-                                        method,
-                                        sep = "."))
-            tmp
+        tmp_est <- tmp$est[, 1]
+        tmp_se <- tmp$CIs[, c("stderr", "method")]
+        # if more than one method, reshape the output to have one stderr column per method
+        tmp_se_list <- sapply(
+          method,
+          function(this_method) {
+            this_tmp <- tmp_se[tmp_se[, "method"] %in% this_method, 1]
+            this_tmp
           })
-  }else{ #If data are zero
+        tmp_out <- cbind(tmp_est, tmp_se_list)
+        tmp_out
+      },
+      error = function(err) {
+        tmp <- matrix(nrow = 7,
+                      ncol = length(method) + 1)
+        rownames(tmp) <- c("AUC_tlast",
+                           "AUC_infinity",
+                           "AUMC_infinity",
+                           "MRT",
+                           "halflife",
+                           "CLtot",
+                           "Vss")
+        colnames(tmp) <- c("est",
+                           paste("se",
+                                 method,
+                                 sep = "."))
+        tmp
+      })
+  } else { # If data are zero
     design <- NA_character_
     pk_out <- matrix(nrow = 7,
                      ncol = length(method) + 1)
     rownames(pk_out) <- c("AUC_tlast",
-                       "AUC_infinity",
-                       "AUMC_infinity",
-                       "MRT",
-                       "halflife",
-                       "CLtot",
-                       "Vss")
+                          "AUC_infinity",
+                          "AUMC_infinity",
+                          "MRT",
+                          "halflife",
+                          "CLtot",
+                          "Vss")
     colnames(pk_out) <- c("est",
                           paste("se",
                                 method,
                                 sep = "."))
   }
 
-  if(all(route %in% "oral")){
+  if (all(route %in% "oral")) {
     rownames(pk_out) <- c("AUC_tlast",
-                       "AUC_infinity",
-                       "AUMC_infinity",
-                       "MTT",
-                       "halflife",
-                       "CLtot/Fgutabs",
-                       "Vss")
-    #halflife and Vss are not valid under oral administration, per ?PK::nca
+                          "AUC_infinity",
+                          "AUMC_infinity",
+                          "MTT",
+                          "halflife",
+                          "CLtot/Fgutabs",
+                          "Vss")
+    # halflife and Vss are not valid under oral administration, per ?PK::nca
     pk_out["halflife", ] <- NA_real_
     pk_out["Vss", ] <- NA_real_
-    #fill in CLtot and MRT as NA
+    # fill in CLtot and MRT as NA
     pk_out <- rbind(pk_out,
                     "CLtot" = rep(NA_real_, ncol(pk_out)),
                     "MRT" = rep(NA_real_, ncol(pk_out)))
-  }else{
+  } else {
     rownames(pk_out) <- c("AUC_tlast",
-                       "AUC_infinity",
-                       "AUMC_infinity",
-                       "MRT",
-                       "halflife",
-                       "CLtot",
-                       "Vss")
-    #fill in oral-only params as NA
+                          "AUC_infinity",
+                          "AUMC_infinity",
+                          "MRT",
+                          "halflife",
+                          "CLtot",
+                          "Vss")
+    # fill in oral-only params as NA
     pk_out <- rbind(pk_out,
                     "CLtot/Fgutabs" = rep(NA_real_, ncol(pk_out)),
                     "MTT" = rep(NA_real_, ncol(pk_out)))
   }
 
 
-  #also compute tmax, Cmax
-  peak <- unlist(get_peak(x = time,
-                          y = conc))
+  # also compute tmax, Cmax
+  peak <- unlist(get_peak(x = time, y = conc))
 
   pk_out <- rbind(pk_out,
-                  "tmax" = c(peak[1], rep(NA_real_, ncol(pk_out)-1)),
-                  "Cmax" =  c(peak[2], rep(NA_real_, ncol(pk_out)-1))
-                  )
+                  "tmax" = c(peak[1], rep(NA_real_, ncol(pk_out) - 1)),
+                  "Cmax" = c(peak[2], rep(NA_real_, ncol(pk_out) - 1))
+  )
 
-  #convert to data.frame
+  # convert to data.frame
   outval <- as.data.frame(pk_out)
-  names(outval) <- c("param_value",
-                     paste0("param_sd_",
-                           method))
+  names(outval) <- c("param_value", paste0("param_sd_", method))
   outval$param_name = rownames(pk_out)
   outval$design <- design
 
-  #put columnsin right order
-  outval <- outval[, c("design",
-                       "param_name",
-                       "param_value",
-                       paste0("param_sd_",
-                             method))]
+  # put columnsin right order
+  outval <- outval[, c("design", "param_name", "param_value", paste0("param_sd_", method))]
 
-  #ensure parameters are sorted alphabetically
+  # ensure parameters are sorted alphabetically
   outval <- outval[order(outval$param_name), ]
 
-  #remove rownames
+  # remove rownames
   rownames(outval) <- NULL
 
   outval
-
-
 }

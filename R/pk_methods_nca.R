@@ -47,43 +47,43 @@ nca.pk <- function(obj,
                    exclude = TRUE,
                    dose_norm = FALSE,
                    suppress.messages = NULL,
-                   ...){
+                   ...) {
 
   if (is.null(suppress.messages)) {
     suppress.messages <- obj$settings_preprocess$suppress.messages
   }
 
-  if(is.null(nca_group)){
+  if (is.null(nca_group)) {
     nca_group <- obj$settings_data_info$summary_group
   }
 
-  if(is.null(newdata)) newdata <- obj$data
+  if (is.null(newdata)) newdata <- obj$data
 
   grp_vars <- sapply(nca_group,
                      rlang::as_label)
 
-  #Create a new dose variable to handle dose-normalization or not
-  #If dose-normalized, grouping need not include original Dose column
+  # Create a new dose variable to handle dose-normalization or not
+  # If dose-normalized, grouping need not include original Dose column
 
-  if(dose_norm %in% TRUE){
-    #check_nca_group to ensure it includes  Route, and Media
-    #since we can only do NCA for a single Route, and a single Media at a time
-    #(when dose_norm is TRUE, Dose = 1, so we already have a single Dose)
-    if(!(all(c("Route",
+  if (dose_norm %in% TRUE) {
+    # check_nca_group to ensure it includes  Route, and Media
+    # since we can only do NCA for a single Route, and a single Media at a time
+    # (when dose_norm is TRUE, Dose = 1, so we already have a single Dose)
+    if (!(all(c("Route",
                "Media") %in%
-             grp_vars))){
+             grp_vars))) {
       stop(paste0("When dose_norm == TRUE, nca_group must include all of Route, Media.\n",
                   "nca_group is: ",
                   toString(grp_vars)
       ))
     }
-  }else{
-    #check_nca_group to ensure it includes Dose, Route, and Media
-    #since we can only do NCA for a single Dose, a single Route, and a single Media at a time
-    if(!(all(c("Dose",
+  } else {
+    # check_nca_group to ensure it includes Dose, Route, and Media
+    # since we can only do NCA for a single Dose, a single Route, and a single Media at a time
+    if (!(all(c("Dose",
                "Route",
                "Media") %in%
-             grp_vars))){
+             grp_vars))) {
       stop(paste0("When dose_norm == FALSE, nca_group must include all of Dose, Route, Media.\n",
                  "nca_group is: ",
                  toString(grp_vars)
@@ -91,7 +91,7 @@ nca.pk <- function(obj,
     }
   }
 
-  if(dose_norm %in% TRUE){
+  if (dose_norm %in% TRUE) {
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
                               req_vars = union(
@@ -106,8 +106,8 @@ nca.pk <- function(obj,
                                   "Route"),
                                 grp_vars),
                               exclude = exclude)
-  }else{ #if dose_norm == TRUE
-    #ignore Dose column in check because it is technically not required
+  } else { # if dose_norm == TRUE
+    # ignore Dose column in check because it is technically not required
     newdata_ok <- check_newdata(newdata = newdata,
                                 olddata = obj$data,
                                 req_vars = union(
@@ -124,13 +124,13 @@ nca.pk <- function(obj,
   }
 
 
-  #if exclude = FALSE, then treat all observations as included
-  if(exclude %in% FALSE){
+  # if exclude = FALSE, then treat all observations as included
+  if (exclude %in% FALSE) {
     newdata$exclude <- FALSE
   }
 
-  if(dose_norm %in% TRUE){
-    newdata$Conc_nca <- newdata$Conc/newdata$Dose
+  if (dose_norm %in% TRUE) {
+    newdata$Conc_nca <- newdata$Conc / newdata$Dose
     newdata$Dose_nca <- 1.0
     newdata$Conc_nca.Units <- paste0("(",
                                      newdata$Conc.Units,
@@ -139,13 +139,13 @@ nca.pk <- function(obj,
                                  "(",
                                  newdata$Dose.Units,
                                  ")")
-  }else{
+  } else {
     newdata$Conc_nca <- newdata$Conc
     newdata$Dose_nca <- newdata$Dose
     newdata$Conc_nca.Units <- newdata$Conc.Units
   }
 
-  if(suppress.messages %in% FALSE){
+  if (suppress.messages %in% FALSE) {
     message(paste("nca.pk(): Doing",
                                   ifelse(dose_norm %in% TRUE,
                                          "dose-normalized",
@@ -156,7 +156,7 @@ nca.pk <- function(obj,
             )
   }
 
-  #do NCA
+  # do NCA
     nca_out <- newdata %>%
       dplyr::group_by(!!!nca_group) %>%
       dplyr::reframe(Conc.Units = unique(Conc_nca.Units),
@@ -164,7 +164,7 @@ nca.pk <- function(obj,
                      Dose.Units = unique(Dose.Units),
                      dose_norm = dose_norm,
                      {
-                       calc_nca(time = Time[exclude %in% FALSE], #calculate NCA
+                       calc_nca(time = Time[exclude %in% FALSE], # calculate NCA
                                 dose = Dose_nca[exclude %in% FALSE],
                                 conc = Conc_nca[exclude %in% FALSE],
                                 detect = Detect[exclude %in% FALSE],
@@ -173,7 +173,7 @@ nca.pk <- function(obj,
                      }
       ) %>%
       dplyr::mutate(
-        param_units = dplyr::case_when( #derive NCA param units from data units
+        param_units = dplyr::case_when( # derive NCA param units from data units
           param_name %in% c("AUC_tlast",
                             "AUC_infinity") ~ paste0("(",
                                                     Conc.Units,

@@ -27,7 +27,7 @@
 #' @param dose A numeric vector of doses in mg/kg
 #' @param route A logical vector: TRUE for single IV bolus dose, FALSE for single oral dose
 #' @param medium A character string that determines the measured media. Default: "plasma".
-#'@return A vector of plasma AUC values, evaluated at each time point in `time`.
+#' @return A vector of plasma AUC values, evaluated at each time point in `time`.
 #' @export auc_2comp
 #' @author Caroline Ring, John Wambaugh
 #' @family built-in model functions
@@ -35,11 +35,11 @@
 #' @family model AUC functions
 auc_2comp <- function(params, time, dose, route, medium = "plasma")
 {
-  #fill any missing parameters with NAs, and impute Fgutabs_v1 from Fgutabs and
-  #V1 if necessary
+  # fill any missing parameters with NAs, and impute Fgutabs_v1 from Fgutabs and
+  # V1 if necessary
   params <- fill_params_2comp(params)
 
-  #check that required params are present
+  # check that required params are present
   check_msg <- check_params_2comp(params,
                                   route,
                                   medium)
@@ -48,37 +48,35 @@ auc_2comp <- function(params, time, dose, route, medium = "plasma")
     stop("auc_2comp():", check_msg)
   }
 
-  #get transformed parameters for 2-comp model
+  # get transformed parameters for 2-comp model
   trans_params <- transformed_params_2comp(params)
 
-  #for readability, assign params to variables inside this function
-  for(x in names(params)){
+  # for readability, assign params to variables inside this function
+  for (x in names(params)) {
     assign(x, unname(params[x]))
   }
 
-  #for readability, assign transformed params to variables inside this function
-  for(x in names(trans_params)){
+  # for readability, assign transformed params to variables inside this function
+  for (x in names(trans_params)) {
     assign(x, unname(trans_params[x]))
   }
 
   auc <- dose * ifelse(route %in% "iv",
-                A_iv_unit/alpha -
-                  A_iv_unit*exp(-time*alpha)/
-                  alpha +
-                  B_iv_unit/beta -
-                  B_iv_unit*exp(-time*beta)/
-                  beta,
-                A_oral_unit/alpha -
-                  A_oral_unit*exp(-time*alpha)/
-                  alpha +
-                  B_oral_unit/beta -
-                  B_oral_unit*exp(-time*beta)/
-                  beta +
-                  (-A_oral_unit -B_oral_unit)/
-                  kgutabs -
-                  (-A_oral_unit -B_oral_unit)*
-                  exp(-time*kgutabs)/kgutabs
-                )
+                       (
+                         A_iv_unit / alpha
+                         - A_iv_unit * exp(-time * alpha) / alpha
+                         + B_iv_unit / beta
+                         - B_iv_unit * exp(-time * beta) / beta
+                       ),
+                       (
+                         A_oral_unit / alpha
+                         - A_oral_unit * exp(-time * alpha) / alpha
+                         + B_oral_unit / beta
+                         - B_oral_unit * exp(-time * beta) / beta
+                         + (-A_oral_unit - B_oral_unit) / kgutabs
+                         - (-A_oral_unit - B_oral_unit) * exp(-time * kgutabs) / kgutabs
+                       )
+  )
 auc <- ifelse(medium %in% "blood",
               Rblood2plasma * auc,
               auc

@@ -58,11 +58,11 @@
 #'   for which to calculate log-likelihoods. If NULL (the default),
 #'   log-likelihoods will be returned for all of the models in
 #'   `obj$optimx_settings$method`.
-#'@param force_finite Logical: Whether to force return of a finite value (e.g.
+#' @param force_finite Logical: Whether to force return of a finite value (e.g.
 #'  as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If
 #'  TRUE, then if the log-likelihood works out to be non-finite, then it will be
 #'  replaced with `.Machine$double.xmax`.
-#'@param negative Logical: Whether to return the *negative* log-likelihood
+#' @param negative Logical: Whether to return the *negative* log-likelihood
 #'  (i.e., the log-likelihood multiplied by negative 1). Default `FALSE`.
 #' @param exclude Logical: `TRUE` to compute the log-likelihood excluding any
 #'   observations in the data marked for exclusion (if there is a variable
@@ -87,11 +87,11 @@ logLik.pk <- function(object,
                       negative = FALSE,
                       force_finite = FALSE,
                       exclude = TRUE,
-                      drop_obs = TRUE, ...){
+                      drop_obs = TRUE, ...) {
 
   suppress.messages <- object$settings_preprocess$suppress.messages
 
-  #ensure that the model has been fitted
+  # ensure that the model has been fitted
   check <- check_required_status(obj = object,
                                  required_status = status_fit)
   if (!(check %in% TRUE)) {
@@ -117,8 +117,8 @@ logLik.pk <- function(object,
   method_ok <- check_method(obj = object, method = method)
   model_ok <- check_model(obj = object, model = model)
 
-  #check variables in newdata
-#including error grouping variables
+  # check variables in newdata
+# including error grouping variables
   err_grp_vars <- sapply(eval(get_error_group(object)),
                          rlang::as_label)
   data_grp_vars <- sapply(eval(get_data_group(object)),
@@ -141,14 +141,14 @@ logLik.pk <- function(object,
   if (!all(newdata$Time_trans.Units %in% "hours")) {
     message("logLik.pk(): Scaling these transformed time units back into hours ",
             "for log-likelihood calculation, to match time units of coefficients")
-    #scale time if needed
+    # scale time if needed
     if (!("Time_trans" %in% names(newdata))) {
       newdata$Time_trans <- convert_time(x = newdata$Time,
                                          from = newdata$Time.Units,
                                          to = "hours")
       newdata$Time_trans.Units <- rep("hours", nrow(newdata))
     }
-    if(!suppress.messages & (object$status < 5)) {
+    if (!suppress.messages & (object$status < 5)) {
       print(newdata %>%
               dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
               dplyr::filter(Time.Units != Time_trans.Units) %>%
@@ -157,11 +157,11 @@ logLik.pk <- function(object,
   }
 
 
-  #get transformations to apply
+  # get transformations to apply
   conc_scale <- conc_scale_use(obj = object,
                                use_scale_conc = TRUE)
 
-  #remove any excluded observations & corresponding predictions, if so specified
+  # remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE && "exclude" %in% names(newdata)) {
       newdata <- subset(newdata, exclude %in% FALSE)
   }
@@ -242,5 +242,4 @@ logLik.pk <- function(object,
  }
 
   return(newdata)
-
 }

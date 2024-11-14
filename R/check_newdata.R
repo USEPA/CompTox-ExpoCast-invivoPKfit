@@ -21,15 +21,14 @@
 check_newdata <- function(newdata,
                           olddata,
                           req_vars,
-                          exclude = FALSE){
+                          exclude = FALSE) {
 
-  if(exclude %in% TRUE){
-    req_vars <- union(req_vars,
-                      "exclude")
+  if (exclude %in% TRUE) {
+    req_vars <- union(req_vars, "exclude")
   }
 
-  #check that newdata has the required variables
-  if(!(all(req_vars %in% names(newdata)))){
+  # check that newdata has the required variables
+  if (!(all(req_vars %in% names(newdata)))) {
     stop("newdata is missing one or more required variables.\n",
          "Required variables: ",
          toString(req_vars), "\n",
@@ -38,15 +37,15 @@ check_newdata <- function(newdata,
     )
   }
 
- #check that required variables are the same type as old data
+ # check that required variables are the same type as old data
 
   req_class <- sapply(req_vars,
-                     function(this_var) {
-                       class(olddata[[this_var]])
-                     },
-                     simplify = FALSE,
-                     USE.NAMES = TRUE
-                       )
+                      function(this_var) {
+                        class(olddata[[this_var]])
+                      },
+                      simplify = FALSE,
+                      USE.NAMES = TRUE
+  )
 
   new_class <- sapply(req_vars,
                      function(this_var) {
@@ -57,12 +56,12 @@ check_newdata <- function(newdata,
   )
 
   has_class <- sapply(seq_along(req_class),
-                      function(i){
+                      function(i) {
                         req_class[[i]] %in% new_class[[i]]
                       },
                       simplify = TRUE)
 
-  if(!all(has_class %in% TRUE)){
+  if (any(has_class %in% FALSE)) {
     bad_class <- req_vars[has_class %in% FALSE]
 
     stop(paste("The following variables in newdata have the wrong class:",
@@ -76,6 +75,6 @@ check_newdata <- function(newdata,
                sep = "\n"
                ))
   }
- #if everything is OK, return TRUE.
+ # if everything is OK, return TRUE.
   return(TRUE)
 }

@@ -36,8 +36,8 @@ fold_errors.pk <- function(obj,
                           newdata = NULL,
                           model = NULL,
                           method = NULL,
-                          ...){
-  #ensure that the model has been fitted
+                          ...) {
+  # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
   if (!(check %in% TRUE)) {
@@ -53,7 +53,7 @@ fold_errors.pk <- function(obj,
                   req_vars = "Conc_trans")
   }
 
-  #get predicted concentrations
+  # get predicted concentrations
   # Note that these are given in original concentration units, not transformed values
   preds <- predict(obj,
                    newdata = newdata,
@@ -61,7 +61,7 @@ fold_errors.pk <- function(obj,
                    method = method,
                    use_scale_conc = FALSE,
                    type = "conc") %>%
-    mutate(Fold_Error = Conc_est/Conc,
+    mutate(Fold_Error = Conc_est / Conc,
            .after = Conc_est)
 
   return(preds)

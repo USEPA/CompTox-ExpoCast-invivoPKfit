@@ -143,7 +143,7 @@ rsq.pk <- function(obj,
                    use_scale_conc = FALSE,
                    rsq_group = NULL,
                    ...) {
-  #ensure that the model has been fitted
+  # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
   if (!(check %in% TRUE)) {
@@ -153,7 +153,7 @@ rsq.pk <- function(obj,
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
   if (is.null(newdata)) newdata <- obj$data
-  if(is.null(rsq_group)) rsq_group <- obj$data_group
+  if (is.null(rsq_group)) rsq_group <- obj$data_group
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -177,7 +177,8 @@ rsq.pk <- function(obj,
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  message("rsq.pk(): Calculating R-squared on transformed concentration scale. Transformations used: \n",
+  message("rsq.pk(): Calculating R-squared on transformed concentration scale. ",
+          "Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
 
@@ -185,9 +186,9 @@ rsq.pk <- function(obj,
   rsq_group_char <- sapply(rsq_group, rlang::as_label)
 
 
-  #Get predictions
-  #Do NOT apply any conc transformations at this stage
-  #(conc transformations will be handled later)
+  # Get predictions
+  # Do NOT apply any conc transformations at this stage
+  # (conc transformations will be handled later)
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,
@@ -197,7 +198,7 @@ rsq.pk <- function(obj,
                    use_scale_conc = FALSE)
 
 
-  #remove any excluded observations & corresponding predictions, if so specified
+  # remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE && "exclude" %in% names(newdata)) {
       newdata <- subset(newdata, exclude %in% FALSE)
   }
@@ -215,22 +216,26 @@ req_vars <- unique(c(names(preds),
     dplyr::select(dplyr::all_of(req_vars)) %>%
     dplyr::ungroup())
 
-  #apply dose-normalization if specified
+  # apply dose-normalization if specified
   # conditional mutate ifelse
   rsq_df <- new_preds %>%
     dplyr::mutate(
-      Conc_set = dplyr::if_else(rep(conc_scale$dose_norm,
-                            NROW(Conc)),
-                        Conc / Dose,
-                        Conc),
-      Conc_set_SD = dplyr::if_else(rep(conc_scale$dose_norm,
-                               NROW(Conc)),
-                           Conc_SD / Dose,
-                           Conc_SD),
-      Conc_est = dplyr::if_else(rep(conc_scale$dose_norm,
-                            NROW(Conc)),
-                        Conc_est / Dose,
-                        Conc_est)) %>%
+      Conc_set = dplyr::if_else(
+        rep(conc_scale$dose_norm, NROW(Conc)),
+        Conc / Dose,
+        Conc
+      ),
+      Conc_set_SD = dplyr::if_else(
+        rep(conc_scale$dose_norm, NROW(Conc)),
+        Conc_SD / Dose,
+        Conc_SD
+      ),
+      Conc_est = dplyr::if_else(
+        rep(conc_scale$dose_norm, NROW(Conc)),
+        Conc_est / Dose,
+        Conc_est
+      )
+    ) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(!!!rsq_group,
                     model, method) %>%
@@ -245,9 +250,8 @@ req_vars <- unique(c(names(preds),
     dplyr::ungroup()
 
   message("rsq.pk)(): Groups: \n",
-          paste(rsq_group_char,
-                collapse = ", "),
-          ", ", " method, model")
+          toString(rsq_group_char),
+          ", method, model")
 
   return(rsq_df)
 }

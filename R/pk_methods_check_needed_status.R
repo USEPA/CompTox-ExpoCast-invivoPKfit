@@ -18,17 +18,17 @@
 #' @export
 #' @author Caroline Ring
 check_required_status.pk <- function(obj,
-                                   required_status, ...){
+                                   required_status, ...) {
   objname <- deparse(substitute(obj))
   status <- obj$status
-  if(status > status_fit) status <- status_fit + 1
+  if (status > status_fit) status <- status_fit + 1
   steps <- c("1/5. Object has been initialized",
              "2/5. Data pre-processing complete",
              "3/5. Data information summary and NCA complete",
              "4/5. Model pre-fitting complete",
              "5/5. Model fitting complete",
              "status > 5. not implemented")
-if(status < required_status){
+if (status < required_status) {
 msg <- paste(
     paste(objname, "current status is below required status."),
 paste0("Current status for ", objname, ":"),
@@ -39,7 +39,7 @@ sep = "\n")
 
 out <- FALSE
 attr(out, "msg") <- msg
-}else{
+} else {
   out <- TRUE
   attr(out, "msg") <- NULL
 }

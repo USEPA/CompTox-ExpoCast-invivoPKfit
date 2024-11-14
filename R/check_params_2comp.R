@@ -20,42 +20,35 @@
 check_params_2comp <- function(params,
                                route,
                                medium,
-                               ...){
+                               ...) {
 
   msg <- "Parameters OK"
 
-  #check for any missing parameters
-  #required params for oral dose
-  if(any(route %in% "oral")){
-    missing_params <- setdiff(c("kelim",
-                                "k21",
-                                "k12",
-                                "Fgutabs_V1",
-                                "kgutabs"),
+  # check for any missing parameters
+  # required params for oral dose
+  if (any(route %in% "oral")) {
+    missing_params <- setdiff(c("kelim", "k21", "k12", "Fgutabs_V1", "kgutabs"),
                               names(params)[is.finite(params)])
-    if(length(missing_params)>0){
+    if (length(missing_params) > 0) {
       msg <- (paste("Error: For 2-compartment oral model,",
                  "missing parameters:",
                  toString(missing_params)))
     }
   }
 
-  #required params for IV dose
-  if(any(route %in% "iv")){
-    missing_params <- setdiff(c("kelim",
-                                "V1",
-                                "k12",
-                                "k21"),
+  # required params for IV dose
+  if (any(route %in% "iv")) {
+    missing_params <- setdiff(c("kelim", "V1", "k12", "k21"),
                               names(params)[is.finite(params)])
-    if(length(missing_params)>0){
+    if (length(missing_params) > 0) {
       msg <- (paste("Error: For 2-compartment IV model,",
                  "missing parameters:",
                  toString(missing_params)))
     }
   }
 
-  if(any(medium %in% "blood")){
-    if(!("Rblood2plasma" %in% names(params)[is.finite(params)])){
+  if (any(medium %in% "blood")) {
+    if (!("Rblood2plasma" %in% names(params)[is.finite(params)])) {
       msg <- (paste0("Error: For 2-compartment model ",
                   "in blood: missing parameter Rblood2plasma"))
     }

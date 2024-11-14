@@ -47,12 +47,12 @@
 coef_sd.pk <- function(obj,
                        model = NULL,
                        method = NULL,
-                       suppress.messages = TRUE, ...){
+                       suppress.messages = TRUE, ...) {
 
-  #ensure that the model has been fitted
+  # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
@@ -92,8 +92,7 @@ coef_sd.pk <- function(obj,
 
   # Convert Time_trans to hours
   newdata <- obj$data %>%
-    dplyr::select(!!!union(obj$data_group, req_vars),
-                  !!!other_vars) %>%
+    dplyr::select(!!!union(obj$data_group, req_vars), !!!other_vars) %>%
     # log_likelihood() takes Time_trans so this must be converted to hours
     # so it is in concordance with coef()
     dplyr::mutate(data_sigma_group = factor(data_sigma_group),
@@ -111,8 +110,7 @@ coef_sd.pk <- function(obj,
     model_fun = unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
   )
 
-  newdata <- dplyr::left_join(coefs, newdata,
-                              by = data_grp_vars) %>%
+  newdata <- dplyr::left_join(coefs, newdata, by = data_grp_vars) %>%
     dplyr::left_join(fun_models, join_by(model == model_name))
 
 
@@ -124,7 +122,7 @@ coef_sd.pk <- function(obj,
 
   newdata <- suppressWarnings(newdata %>%
     dplyr::rowwise() %>%
-    dplyr::mutate(hessian_mat = list(numDeriv::hessian(func = function(x){
+    dplyr::mutate(hessian_mat = list(numDeriv::hessian(func = function(x) {
       log_likelihood(par = x,
                      data = observations,
                      data_sigma_group = observations$data_sigma_group,
@@ -138,9 +136,9 @@ coef_sd.pk <- function(obj,
     method = 'Richardson'))) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(sds = purrr::map2(hessian_mat, coefs_vector, \(x, y) {
-      tryCatch(diag(solve(x))^(1/2) %>% as.numeric(),
-               error = function(err){
-                 if (!suppress.messages) {
+      tryCatch(diag(solve(x))^(1 / 2) %>% as.numeric(),
+               error = function(err) {
+                 if (isFALSE(suppress.messages)) {
                    message("Hessian can't be inverted, ",
                            "using pseudovariance matrix ",
                            "to estimate parameter uncertainty."
@@ -150,12 +148,10 @@ coef_sd.pk <- function(obj,
                  # see http://gking.harvard.edu/files/help.pdf
                  tryCatch(
                    suppressWarnings(diag(chol(MASS::ginv(x),
-                             pivot = TRUE))^(1/2)),
-                   error = function(err){
+                             pivot = TRUE))^(1 / 2)),
+                   error = function(err) {
                      if (!suppress.messages) {
-                       message("Pseudovariance matrix failed, ",
-                               "returning NAs"
-                               )
+                       message("Pseudovariance matrix failed, returning NAs")
                      }
                      rep(NA_real_, nrow(x))
                    })
@@ -164,16 +160,15 @@ coef_sd.pk <- function(obj,
     }),
     alerts = purrr::map2(hessian_mat, coefs_vector, \(x, y) {
       tryCatch({
-        diag(solve(x))^(1/2) %>% as.numeric()
+        diag(solve(x))^(1 / 2) %>% as.numeric()
         return(paste0("Hessian successfully inverted"))
       },
-      error = function(err){
+      error = function(err) {
         tryCatch(
           suppressWarnings(diag(chol(MASS::ginv(x),
-                                     pivot = TRUE))^(1/2)),
-          error = function(err){
-            message("Pseudovariance matrix failed, ",
-                    "returning NAs")
+                                     pivot = TRUE))^(1 / 2)),
+          error = function(err) {
+            message("Pseudovariance matrix failed, returning NAs")
           })
         message("Hessian can't be inverted, ",
                 "using pseudovariance matrix ",

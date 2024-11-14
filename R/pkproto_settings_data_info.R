@@ -13,15 +13,14 @@ settings_data_info <- function(summary_group = dplyr::vars(Chemical,
                                                            Route,
                                                            Media,
                                                            Dose),
-                               ...){
-  #get arguments and values
+                               ...) {
+  # get arguments and values
   argg <- c(as.list(environment()), list(...))
   this_settings_data_info <- argg
-  #set class
+  # set class
   class(this_settings_data_info) <- c(class(this_settings_data_info),
                                       "pkproto",
                                       "pk_settings_data_info")
 
   return(this_settings_data_info)
 }
-

@@ -3,7 +3,7 @@ Type: Package
 Title: Fits HTTK Models to In Vivo PK Data Sets
 Version: 2.0.0
 Date: 2022-10-29
-Author: Caroline Ring, John Wambaugh, Chris Cook
+Author: Caroline Ring, John Wambaugh, Chris Cook, Gilberto Padilla Mercado
 Maintainer: John Wambaugh <wambaugh.john@epa.gov>
 Description: Takes in vivo toxicokinetic concentration-time data 
     and fits parameters of 1-compartment and 2-compartment models for each chemical.

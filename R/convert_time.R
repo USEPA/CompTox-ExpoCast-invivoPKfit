@@ -36,16 +36,15 @@ convert_time <- function(x,
   time_conversions <- time_conversions
 
   if (to %in% "auto") {
-    #select units automatically
-    to <- auto_units(y = x,
-                     from = from)
+    # select units automatically
+    to <- auto_units(y = x, from = from)
   }
 
 
   if (to != "identity") {
-    if (inverse %in% TRUE) {
+    if (isTRUE(inverse)) {
       y <- 1 / x
-    } else{
+    } else {
       y <- x
     }
 
@@ -58,7 +57,7 @@ convert_time <- function(x,
 
       y_new <- y * conversion_table
 
-    } else{
+    } else {
       y_new <- NA_real_
       message(
           "invivopkfit::convert_time(): Allowable values for 'to' are",
@@ -69,17 +68,15 @@ convert_time <- function(x,
       )
     }
 
-    if (inverse %in% TRUE) {
+    if (isTRUE(inverse)) {
       yout <- 1 / y_new
-    } else{
+    } else {
       yout <- y_new
     }
-  } else{
-    #if to == "identity", then just return the input as-is
+  } else {
+    # if to == "identity", then just return the input as-is
     yout <- x
   }
 
   return(yout)
 }
-
-

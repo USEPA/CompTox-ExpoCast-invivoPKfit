@@ -27,12 +27,12 @@
 #'
 #' If both blood and plasma data are available, then `Rblood2plasma` will be estimated from the data.
 #'
-#'# Only one of blood or plasma data
+#' # Only one of blood or plasma data
 #'
-#'If only one of blood or plasma data are available, then `Rblood2plasma` will be
-#'held constant at 1, not estimated from the data.
+#' If only one of blood or plasma data are available, then `Rblood2plasma` will be
+#' held constant at 1, not estimated from the data.
 #'
-#'# Default lower and upper bounds for each parameter
+#' # Default lower and upper bounds for each parameter
 #'
 #' ## Default lower and upper bounds for `Vdist`
 #'
@@ -65,17 +65,17 @@
 #' bounds for any parameter(s), then the starting value will be reset to a value
 #' halfway between the lower and upper bounds for that parameter.
 #'
-#'@param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#'@param lower_bound A mapping specified using a call to [ggplot2::aes()],
+#' @param data The data set to be fitted (e.g. the result of [preprocess_data()])
+#' @param lower_bound A mapping specified using a call to [ggplot2::aes()],
 #'  giving the lower bounds for each variable, as expressions which may include
 #'  variables in `data`.
 #' @param upper_bound A mapping specified using a call to [ggplot2::aes()],
 #'  giving the upper bounds for each variable, as expressions which may include
 #'  variables in `data`.
-#'@param param_units A mapping specified using a call to [ggplot2::aes()],
+#' @param param_units A mapping specified using a call to [ggplot2::aes()],
 #'  giving the units for each variable, as expressions which may include
 #'  variables in `data`.
-#'@return A `data.frame`with the following variables:
+#' @return A `data.frame`with the following variables:
 #' - `param_name`: Character: Names of the model parameters
 #' - `param_units`: Character: Units of the model parameters
 #' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
@@ -83,7 +83,7 @@
 #' -`lower_bounds`: Numeric: The lower bounds for each parameter
 #' - `upper_bounds`: Numeric: The upper bounds for each parameter
 #' - `start`: Numeric: The starting guesses for each parameter
-#'@author Caroline Ring
+#' @author Caroline Ring
 #' @family flat model functions
 #' @family get_params functions
 #' @family built-in model functions
@@ -98,24 +98,24 @@ get_params_flat <- function(
                                Fgutabs = 1,
                                Fgutabs_Vdist = 1e2,
                                Rblood2plasma = 100),
-    param_units = ggplot2::aes(Vdist = paste0("(", #Vdist
+    param_units = ggplot2::aes(Vdist = paste0("(", # Vdist
                                               unique(Dose.Units),
                                               ")",
                                               "/",
                                               "(",
                                               unique(Conc.Units),
                                               ")"),
-                               Fgutabs = "unitless fraction", #Fgutabs
-                               Fgutabs_Vdist = paste0("(", #Fgutabs_Vdist
+                               Fgutabs = "unitless fraction", # Fgutabs
+                               Fgutabs_Vdist = paste0("(", # Fgutabs_Vdist
                                                       unique(Conc.Units),
                                                       ")",
                                                       "/",
                                                       "(",
                                                       unique(Dose.Units),
                                                       ")"),
-                               Rblood2plasma = "unitless ratio")){
-  #param names
-  param_name <-c("Vdist",
+                               Rblood2plasma = "unitless ratio")) {
+  # param names
+  param_name <- c("Vdist",
                   "Fgutabs",
                   "Fgutabs_Vdist",
                   "Rblood2plasma")
@@ -129,7 +129,7 @@ get_params_flat <- function(
                                  names(lower_bound))
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
 
-  upper_bound_default =ggplot2::aes(Vdist = 100,
+  upper_bound_default = ggplot2::aes(Vdist = 100,
                                     Fgutabs = 1,
                                     Fgutabs_Vdist = 1e2,
                                     Rblood2plasma = 100)
@@ -144,32 +144,32 @@ get_params_flat <- function(
   use_param <- rep(TRUE, length(param_name))
 
 
-if("oral" %in% data$Route){
-  #if yes oral data:
-  if("iv" %in% data$Route){
-    #if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
+if ("oral" %in% data$Route) {
+  # if yes oral data:
+  if ("iv" %in% data$Route) {
+    # if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
     optimize_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
     use_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
-  }else{
-    #if oral ONLY:
-    #cannot fit Fgutabs and Vdist separately, so turn them off.
+  } else {
+    # if oral ONLY:
+    # cannot fit Fgutabs and Vdist separately, so turn them off.
     optimize_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
     use_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
   }
-}else{
-  #if no oral data, can't fit Fgutabs, or Fgutabs_Vdist,
-  #and they won't be used.
+} else {
+  # if no oral data, can't fit Fgutabs, or Fgutabs_Vdist,
+  # and they won't be used.
   optimize_param[param_name %in% c("Fgutabs", "Fgutabs_Vdist")] <- FALSE
   use_param[param_name %in% c("Fgutabs", "Fgutabs_Vdist")] <- FALSE
 }
 
-  #if both "blood" and "plasma" are not in data,
-  #then Rblood2plasma will not be optimized
-  if(!(all(c("blood", "plasma") %in% data$Media))){
+  # if both "blood" and "plasma" are not in data,
+  # then Rblood2plasma will not be optimized
+  if (!(all(c("blood", "plasma") %in% data$Media))) {
     optimize_param[param_name %in% "Rblood2plasma"] <- FALSE
   }
 
-  #get param units based on data
+  # get param units based on data
   param_units_vect <- sapply(param_units,
                              function(x) rlang::eval_tidy(x,
                                                           data = data),
@@ -204,8 +204,8 @@ if("oral" %in% data$Route){
   par_DF <- get_starts_flat(data = data,
                             par_DF = par_DF)
 
-  #check to ensure starting values are within bounds
-  #if not, then replace them by a value halfway between bounds
+  # check to ensure starting values are within bounds
+  # if not, then replace them by a value halfway between bounds
   start_low <- (par_DF$start < par_DF$lower_bound) %in% TRUE
   start_high <- (par_DF$start > par_DF$upper_bound) %in% TRUE
   start_nonfin <- !is.finite(par_DF$start)

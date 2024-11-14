@@ -122,16 +122,13 @@ calc_rsq <- function(pred,
                      obs_sd,
                      n_subj,
                      detect,
-                     log10_trans = FALSE){
-  #If both obs and pred are below LOQ, set pred = LOQ.
-  #This will effectively make error zero in these cases.
-  pred <- ifelse(detect %in% FALSE &
-                   pred <= obs,
-                 obs,
-                 pred)
+                     log10_trans = FALSE) {
+  # If both obs and pred are below LOQ, set pred = LOQ.
+  # This will effectively make error zero in these cases.
+  pred <- ifelse(detect %in% FALSE & pred <= obs, obs, pred)
 
-  #Convert to log10-scale if necessary
-  if(log10_trans %in% TRUE){
+  # Convert to log10-scale if necessary
+  if (log10_trans %in% TRUE) {
     tmplist <- convert_summary_to_log10(sample_mean = obs,
                                         sample_SD = obs_sd)
     obs <- tmplist$log10mean
@@ -139,38 +136,36 @@ calc_rsq <- function(pred,
     pred <- log10(pred)
   }
 
-  #grand mean of predictions
-  pred_bar <- sum(n_subj*pred)/sum(n_subj)
-  #grand mean of observations
-  x_bar <- sum(n_subj*obs)/sum(n_subj)
-  #Calculate numerator of Pearson correlation coefficient
-  r_num <- sum(pred * n_subj * obs) -
-    pred_bar * sum(n_subj * obs) -
-    x_bar * sum(n_subj * pred) +
-    x_bar * pred_bar * sum(n_subj)
-  #Calculate first denominator term of Pearson correlation coefficient
-  r_denom_1 <- sqrt(sum(
-    (n_subj - 1) * obs_sd^2 +
-      n_subj * obs^2
-  ) -
-    2 * x_bar * sum(n_subj * obs) +
-    sum(n_subj) * x_bar^2)
-  #Calculate second denominator term of Pearson correlation coefficient
-  r_denom_2 <- sqrt(pmax(0, sum(n_subj * pred^2) -
-                      2 * pred_bar * sum(n_subj * pred) +
-                      sum(n_subj) * pred_bar^2))
+  # grand mean of predictions
+  pred_bar <- sum(n_subj * pred) / sum(n_subj)
+  # grand mean of observations
+  x_bar <- sum(n_subj * obs) / sum(n_subj)
+  # Calculate numerator of Pearson correlation coefficient
+  r_num <- (sum(pred * n_subj * obs)
+            - pred_bar * sum(n_subj * obs)
+            - x_bar * sum(n_subj * pred)
+            + x_bar * pred_bar * sum(n_subj)
+  )
 
-  #Put the pieces together to get Pearson correlation coefficient
-  if((r_denom_1 > 0) %in% TRUE  &
-     ( r_denom_2 > 0) %in% TRUE){
-    r <- r_num /(r_denom_1 * r_denom_2)
-  }else{
+  # Calculate first denominator term of Pearson correlation coefficient
+  r_denom_1 <- sqrt(sum((n_subj - 1) * obs_sd^2 + n_subj * obs^2)
+                    - 2 * x_bar * sum(n_subj * obs)
+                    + sum(n_subj) * x_bar^2)
+
+  # Calculate second denominator term of Pearson correlation coefficient
+  r_denom_2 <- sqrt(pmax(0, sum(n_subj * pred^2)
+                         - 2 * pred_bar * sum(n_subj * pred)
+                         + sum(n_subj) * pred_bar^2))
+
+  # Put the pieces together to get Pearson correlation coefficient
+  if (isTRUE(r_denom_1 > 0) && isTRUE(r_denom_2 > 0)) {
+    r <- r_num / (r_denom_1 * r_denom_2)
+  } else {
     r <- NA_real_
   }
 
-  #Square it
+  # Square it
   rsq <- r^2
 
   return(rsq)
-
 }

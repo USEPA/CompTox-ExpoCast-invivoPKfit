@@ -48,7 +48,7 @@ print.pk <- function(x, ...) {
   if (status > 3) {
     fit_check_out <- x$prefit$fit_check
     cat("Average number of detected observations: ",
-        round(mean(fit_check_out$n_detect, na.rm = TRUE)/length(models_present),
+        round(mean(fit_check_out$n_detect, na.rm = TRUE) / length(models_present),
               digits = 0),
         "\n\n")
     cat("Fit decision summary:\n")

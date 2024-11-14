@@ -50,11 +50,11 @@ do_preprocess.pk <- function(obj, ...) {
     obj$data_info <- NULL
     obj$status <- status_preprocess
     return(obj)
-  } else{
-    #coerce to data.frame (in case it is a tibble or data.table or whatever)
+  } else {
+    # coerce to data.frame (in case it is a tibble or data.table or whatever)
     data_original <- as.data.frame(obj$data_original)
 
-    #rename variables using the mapping
+    # rename variables using the mapping
     data <- as.data.frame(
       sapply(obj$mapping, function(x)
         rlang::eval_tidy(x, data_original), simplify = FALSE, USE.NAMES = TRUE)
@@ -71,7 +71,7 @@ do_preprocess.pk <- function(obj, ...) {
     data$Route <- tolower(data$Route)
     data$Media <- tolower(data$Media)
 
-    #Check to make sure the data include only route_keep and media_keep
+    # Check to make sure the data include only route_keep and media_keep
     routes <- unique(data$Route)
     media <- unique(data$Media)
 
@@ -99,7 +99,7 @@ do_preprocess.pk <- function(obj, ...) {
 
 
 
-    #Check to make sure there is only one value for each set of units
+    # Check to make sure there is only one value for each set of units
     time_units <- unique(data$Time.Units)
     value_units <- unique(data$Value.Units)
     weight_units <- unique(data$Weight.Units)
@@ -116,7 +116,7 @@ do_preprocess.pk <- function(obj, ...) {
       )
     }
 
-    #Check to make sure that time units are in allowable list
+    # Check to make sure that time units are in allowable list
     if (!all(unique(data$Time.Units %in% time_units))) {
       stop(
           "do_preprocess.pk(): Data has Time.Units ",
@@ -285,7 +285,7 @@ do_preprocess.pk <- function(obj, ...) {
     data$LOQ_orig <- data$LOQ
     data$Value_SD_orig <- data$Value_SD
 
-    #Coerce any negative Value to NA
+    # Coerce any negative Value to NA
     if (!obj$settings_preprocess$suppress.messages) {
       if (any((data$Value < 0) %in% TRUE)) {
         message(
@@ -299,7 +299,7 @@ do_preprocess.pk <- function(obj, ...) {
     }
     data[(data$Value < 0) %in% TRUE, "Value"] <- NA_real_
 
-    #Coerce any negative LOQ to NA
+    # Coerce any negative LOQ to NA
     if (!obj$settings_preprocess$suppress.messages) {
       if (any((data$LOQ < 0) %in% TRUE)) {
         message(
@@ -311,7 +311,7 @@ do_preprocess.pk <- function(obj, ...) {
     }
     data[(data$LOQ < 0) %in% TRUE, "LOQ"] <- NA_real_
 
-    #Coerce any non-positive Value_SD to NA
+    # Coerce any non-positive Value_SD to NA
     if (!obj$settings_preprocess$suppress.messages) {
       if (any((data$Value_SD <= 0) %in% TRUE)) {
         message(
@@ -324,7 +324,7 @@ do_preprocess.pk <- function(obj, ...) {
     data[(data$Value_SD < 0) %in% TRUE, "Value_SD"] <- NA_real_
 
 
-    #Coerce any negative Time to NA
+    # Coerce any negative Time to NA
     if (!obj$settings_preprocess$suppress.messages) {
       if (any((data$Time < 0) %in% TRUE)) {
         message(
@@ -336,8 +336,8 @@ do_preprocess.pk <- function(obj, ...) {
     }
     data[(data$Time < 0) %in% TRUE, "Time"] <- NA_real_
 
-    #If any non-NA Value is currently less than its non-NA LOQ,
-    #then replace it with NA
+    # If any non-NA Value is currently less than its non-NA LOQ,
+    # then replace it with NA
     if (!obj$settings_preprocess$suppress.messages) {
       if (any((data$Value <= data$LOQ) %in% TRUE)) {
         message(
@@ -373,7 +373,7 @@ do_preprocess.pk <- function(obj, ...) {
                           if (any((Value > 0) %in% TRUE)) {
                             min(Value[(Value > 0) %in% TRUE], na.rm = TRUE) *
                               obj$settings_preprocess$calc_loq_factor
-                          } else{
+                          } else {
                             NA_real_
                           }
                         }, LOQ_orig)) %>%
@@ -381,13 +381,13 @@ do_preprocess.pk <- function(obj, ...) {
           as.data.frame()
       }
 
-    } #end if impute_loq %in% TRUE
+    } # end if impute_loq %in% TRUE
 
     if (!obj$settings_preprocess$suppress.messages) {
-      if (any((data$Value <  data$LOQ) %in% TRUE)) {
+      if (any((data$Value < data$LOQ) %in% TRUE)) {
         message(
             "Converting 'Value' values of less than LOQ to NA. ",
-            sum((data$Value <  data$LOQ) %in% TRUE),
+            sum((data$Value < data$LOQ) %in% TRUE),
             " values will be converted.\n"
         )
       }
@@ -397,8 +397,8 @@ do_preprocess.pk <- function(obj, ...) {
     data$exclude <- FALSE
     data$exclude_reason <- NA_character_
 
-    #Exclude any remaining cases where both Value and LOQ are NA
-    #because if we don't have a value or an LOQ, we can't do anything
+    # Exclude any remaining cases where both Value and LOQ are NA
+    # because if we don't have a value or an LOQ, we can't do anything
     if (anyNA(data$Value) & anyNA(data$LOQ)) {
       if (!obj$settings_preprocess$suppress.messages) {
         message(
@@ -430,7 +430,7 @@ do_preprocess.pk <- function(obj, ...) {
       data[is.na(data$N_Subjects), "N_Subjects"] <- 1
     }
 
-    #for anything with N_Subjects == 1, set Value_SD to 0
+    # for anything with N_Subjects == 1, set Value_SD to 0
     if (any(data$N_Subjects == 1)) {
       if (!obj$settings_preprocess$suppress.messages) {
         message(
@@ -447,7 +447,7 @@ do_preprocess.pk <- function(obj, ...) {
     if (obj$settings_preprocess$impute_sd %in% TRUE) {
       if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
         if (!obj$settings_preprocess$suppress.messages) {
-          #number of SDs to be estimated
+          # number of SDs to be estimated
           n_sd_est <- sum((data$N_Subjects > 1) %in% TRUE &
                             is.na(data$Value_SD))
           message(
@@ -485,9 +485,9 @@ do_preprocess.pk <- function(obj, ...) {
           as.data.frame()
       }
 
-    }#end if impute_sd %in% TRUE
+    } # end if impute_sd %in% TRUE
 
-    #Exclude any remaining multi-subject observations where SD is NA
+    # Exclude any remaining multi-subject observations where SD is NA
     if (any((data$N_Subjects > 1) %in% TRUE &
             is.na(data$Value_SD))) {
       if (!obj$settings_preprocess$suppress.messages) {
@@ -514,8 +514,6 @@ do_preprocess.pk <- function(obj, ...) {
       )
     }
 
-
-
     if (!obj$settings_preprocess$suppress.messages) {
       n_grps <- dplyr::group_by(data, !!!data_group) %>%
         dplyr::group_keys() %>%
@@ -531,7 +529,7 @@ do_preprocess.pk <- function(obj, ...) {
       )
     }
 
-    #Exclude any remaining multi-subject observations where Value is NA
+    # Exclude any remaining multi-subject observations where Value is NA
     if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value))) {
       if (!obj$settings_preprocess$suppress.messages) {
         message(
@@ -574,7 +572,7 @@ do_preprocess.pk <- function(obj, ...) {
       )
     }
 
-    #Exclude any NA time values
+    # Exclude any NA time values
     if (anyNA(data$Time)) {
       if (!obj$settings_preprocess$suppress.messages) {
         message(
@@ -608,7 +606,7 @@ do_preprocess.pk <- function(obj, ...) {
       )
     }
 
-    #Exclude any Dose = 0 observations
+    # Exclude any Dose = 0 observations
     if (any(data$Dose <= .Machine$double.eps)) {
       if (!obj$settings_preprocess$suppress.messages) {
         message(
@@ -642,11 +640,11 @@ do_preprocess.pk <- function(obj, ...) {
         )
     }
 
-    #apply time transformation
+    # apply time transformation
     data$Time_orig <- data$Time
     data$Time.Units_orig <- data$Time.Units
 
-    #first, default to identity transformation if none is specified
+    # first, default to identity transformation if none is specified
     if (is.null(obj$scales$time$new_units)) {
       obj$scales$time$new_units <- "identity"
     }
@@ -709,7 +707,7 @@ do_preprocess.pk <- function(obj, ...) {
     # End grouping
 
 
-    #Scale concentration by ratio_conc_dose
+    # Scale concentration by ratio_conc_dose
 
     if (is.null(obj$scales$conc$expr)) {
       obj$settings_preprocess$ratio_conc_dose <- 1
@@ -779,15 +777,15 @@ do_preprocess.pk <- function(obj, ...) {
       paste0(data$Value.Units, "/", ratio_conc_dose)
     )
 
-    #apply concentration transformation.
+    # apply concentration transformation.
     #
-    #.conc is a placeholder that refers to any concentration variable (Conc,
-    #value, Value_SD, Conc_SD, LOQ).
+    # .conc is a placeholder that refers to any concentration variable (Conc,
+    # value, Value_SD, Conc_SD, LOQ).
 
-    #apply conc transformation
-    #use tidy evaluation: Specify an expression to evaluate in the context of a data.frame
-    #Transform Conc (this is either the measured value or the LOQ, depending on Detect)
-    #If no conc transformation specified, assume identity
+    # apply conc transformation
+    # use tidy evaluation: Specify an expression to evaluate in the context of a data.frame
+    # Transform Conc (this is either the measured value or the LOQ, depending on Detect)
+    # If no conc transformation specified, assume identity
     if (is.null(obj$scales$conc$expr)) {
       obj$scales$conc$dose_norm <- FALSE
       obj$scales$conc$log10_trans <- FALSE
@@ -824,12 +822,12 @@ do_preprocess.pk <- function(obj, ...) {
       expr = obj$scales$conc$expr,
       data = cbind(data, data.frame(.conc = data$Conc)))
 
-    #Transform Conc_SD
+    # Transform Conc_SD
     data$Conc_SD_trans <- rlang::eval_tidy(
       obj$scales$conc$expr,
       data = cbind(data, data.frame(.conc = data$Conc_SD)))
 
-    #Record new conc units
+    # Record new conc units
     data$Conc_trans.Units <- gsub(
       x = gsub(
         x = rlang::as_label(obj$scales$conc$expr),
@@ -842,7 +840,7 @@ do_preprocess.pk <- function(obj, ...) {
       fixed = TRUE
     )
 
-    #If Series ID is not included, then assign it as NA
+    # If Series ID is not included, then assign it as NA
     if (!("Series_ID" %in% names(data))) {
       data$Series_ID <- NA_integer_
     }
@@ -865,7 +863,7 @@ do_preprocess.pk <- function(obj, ...) {
       obj$data_original <- NULL
     }
 
-    obj$status <- status_preprocess #preprocessing complete
+    obj$status <- status_preprocess # preprocessing complete
 
     return(obj)
   }

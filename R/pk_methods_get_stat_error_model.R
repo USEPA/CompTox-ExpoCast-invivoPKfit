@@ -5,9 +5,9 @@
 #' @return A named list of the stat_error_model settings
 #' @export
 #' @author Caroline Ring
-get_stat_error_model.pk <- function(obj, ...){
+get_stat_error_model.pk <- function(obj, ...) {
   out <- obj$stat_error_model
-  #convert lists of quosures into "vars(...)"
+  # convert lists of quosures into "vars(...)"
   out$error_group <- rlang::parse_expr(
     paste0("vars(",
            paste(toString(

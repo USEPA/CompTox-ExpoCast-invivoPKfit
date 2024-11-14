@@ -28,7 +28,7 @@ dnorm_summary <- function(mu,
                              x_mean,
                              x_sd,
                              x_N,
-                             log = FALSE){
+                             log = FALSE) {
 
   x_len <- c("x_mean" = length(x_mean),
              "x_sd" = length(x_sd),
@@ -64,24 +64,21 @@ dnorm_summary <- function(mu,
             "."
     )
 
-    #repeat to match longest IFF there is mismatch
+    # repeat to match longest IFF there is mismatch
     for (i in seq_along(x_len)) {
       assign(names(x_len)[i],
-             rep( #repeat the current value of each item to match the length
-               get(names(x_len)[i]), #get the current value of each item
+             rep( # repeat the current value of each item to match the length
+               get(names(x_len)[i]), # get the current value of each item
                length.out = max_len)
       )
     }
   }
 
-
-
-  #Evaluate
-  y_log <- x_N * log(1/(sigma*sqrt(2*pi))) +
-    (-1/(2*sigma^2)) * (
-      (x_N - 1) * x_sd^2 +
-                         x_N * (x_mean - mu)^2
-      )
+  # Evaluate
+  y_log <- (
+    x_N * log(1 / (sigma * sqrt(2 * pi)))
+    + (-1 / (2 * sigma^2)) * ((x_N - 1) * x_sd^2 + x_N * (x_mean - mu)^2)
+  )
 
  if (log == TRUE) {
    return(y_log)

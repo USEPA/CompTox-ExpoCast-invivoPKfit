@@ -11,15 +11,15 @@
 #' @export
 #' @author Caroline Ring
 get_data_sigma_group.pk <- function(obj,
-                                    newdata = NULL, ...){
-if(is.null(newdata)){
+                                    newdata = NULL, ...) {
+if (is.null(newdata)) {
   newdata <- obj$data
 }
 
   data_sigma_group <- interaction(
     lapply(
       obj$stat_error_model$error_group,
-      function(x){
+      function(x) {
         rlang::eval_tidy(x, data = newdata)
       }
     )

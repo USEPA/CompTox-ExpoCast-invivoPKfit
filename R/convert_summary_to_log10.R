@@ -16,16 +16,14 @@
 #'  }
 #'  }
 #'
-#'
 #' @param sample_mean Numeric: one or more sample means
 #' @param sample_SD Numeric: one or more sample SDs
 #' @return A list with two named elements: "log10mean" and "log10SD", the log10-scale
 #'   sample means and log10-scale sample SDs, respectively.
 #' @export
 #' @author Caroline Ring
-convert_summary_to_log10 <- function(sample_mean, sample_SD){
+convert_summary_to_log10 <- function(sample_mean, sample_SD) {
   log10mean <- log10(sample_mean^2 / sqrt(sample_SD^2 + sample_mean^2))
   log10SD <- sqrt(log10(1 + (sample_SD^2 / sample_mean^2)))
-  return(list("log10mean" = log10mean,
-              "log10SD" = log10SD))
+  return(list("log10mean" = log10mean, "log10SD" = log10SD))
 }

@@ -44,12 +44,12 @@ settings_preprocess <- function(routes_keep = c("oral", "iv"),
                                 impute_sd = TRUE,
                                 sd_group = dplyr::vars(Chemical, Species, Reference, Media),
                                 suppress.messages = FALSE,
-                                ...){
+                                ...) {
   Chemical <- NULL
-  #get arguments and values
+  # get arguments and values
   argg <- c(as.list(environment()), list(...))
   this_settings_preprocess <- argg
-  #set class
+  # set class
   class(this_settings_preprocess) <- c(class(this_settings_preprocess), "pkproto", "pk_settings_preprocess")
 
   return(this_settings_preprocess)

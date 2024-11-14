@@ -27,15 +27,15 @@
 #' @family methods for fitted pk objects
 get_fit.pk <- function(obj,
                        model = NULL,
-                       ...){
+                       ...) {
 
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
-  if(is.null(model)) model <- names(obj$stat_model)
+  if (is.null(model)) model <- names(obj$stat_model)
 
   model_ok <- check_model(obj = obj, model = model)
 
