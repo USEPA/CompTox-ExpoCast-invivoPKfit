@@ -92,11 +92,17 @@ quick_stats <- function(.data) {
   message(paste0("Total number of data points: ", nrow(.data)))
   message("Unique Species and data counts:")
   print(table(.data$species))
-  message(paste0("Number of unique studies: ", length(unique(.data$fk_study_id))))
-  message(paste0("Number of unique series: ", length(unique(.data$fk_series_id))))
-  message(paste0("Number of unique chemicals: ", length(unique(.data$analyte_dtxsid))))
-  message(paste0("Unique Dose units: ", paste(unique(.data$dose_level_units_original), collapse = ", ")))
-  message(paste0("Unique Concentration units: ", paste(unique(.data$conc_units_original), collapse = ", ")))
+  
+  message(paste0("Number of unique studies: ",
+                 length(unique(.data$fk_study_id))))
+  message(paste0("Number of unique series: ",
+                 length(unique(.data$fk_series_id))))
+  message(paste0("Number of unique chemicals: ",
+                 length(unique(.data$analyte_dtxsid))))
+  message(paste0("Unique Dose units: ",
+                 toString(unique(.data$dose_level_units_original))))
+  message(paste0("Unique Concentration units: ", 
+                 toString(unique(.data$conc_units_original))))
   message("Data by unique route of administration:")
   print(table(.data$administration_route_normalized))
   message("Data by medium collected:")
@@ -211,7 +217,8 @@ cvt_df <- sql_query %>%
                     "dose_level_original",
                     "dose_level_normalized",
                     "loq")), as.numeric),
-    # conc, conc_sd_original, and conc_original have NA/NE/ND values that are coerced to NAs
+    # conc, conc_sd_original, and conc_original
+    # have NA/NE/ND values that are coerced to NAs
     year = as.character(year),
     species = tolower(species),
     sex = tolower(sex),
@@ -520,6 +527,7 @@ cvt_df <- cvt_df %>%
 # DTXSID6020438 & DTXSID0020868 rat is from water (top) and oil (bottom curve) gavage
 
 glimpse(cvt_df, width = 80)
+quick_stats(cvt_df)
 ```
 
 Note the columns prefixed by _invivPK_. These are generated as a non-destructive form
@@ -527,8 +535,150 @@ of modifying the data that we will use for _invivoPKfit_. The only column from t
 SQL query result of CvTdb that is actually changed is the `analyte_dtxsid` as 
 described earlier.
 
-```{r}
-quick_stats(cvt_df)
+```{r diff_log_function}
+# Now I want to write a quick function that will log relevant changes
+# from previous 'cvt' objects
+devtools::load_all() # So this loads the previous cvt object
+diff_log_cvt <- function(new_cvt,
+                         key_id = "conc_time_id",
+                         grp_ids = c("analyte_dtxsid",
+                                     "species")) {
+  stopifnot(
+    key_id %in% colnames(cvt),
+    key_id %in% colnames(new_cvt),
+    all(grp_ids %in% colnames(cvt)),
+    all(grp_ids %in% colnames(new_cvt))
+  )
+  if (length(unique(new_cvt[[key_id]])) != NROW(new_cvt)) {
+    stop("key_id is not not a column that uniquely identifies this data.")
+  }
+  
+  # Prepare some vectors:
+  grp_strings_new <- unique(do.call("paste", new_cvt[grp_ids]))
+  grp_strings_old <- unique(do.call("paste", cvt[grp_ids]))
+  
+  msg_to_write <- paste0("\n\n======== ", round(Sys.time()))
+  
+  if (identical(new_cvt, cvt)) {
+    msg_to_write <- paste(msg_to_write, "No changes.", sep = "\t")
+    message("There are no changes from previous `cvt` data.frame, ",
+            "are you sure you want to save this?")
+  } else {
+    msg_to_write <- paste(msg_to_write, "Changes detected.", sep = "\t")
+    
+    ###---- Check key_id changes (usually conc_time_id)
+    diff_row_add <- setdiff(new_cvt[[key_id]], cvt[[key_id]])
+    diff_row_sub <- setdiff(cvt[[key_id]], new_cvt[[key_id]])
+    diff_row_common <- intersect(cvt[[key_id]], new_cvt[[key_id]])
+    # Nature of data changes:
+    added_grps <- unique(
+      do.call("paste",
+              new_cvt[which(new_cvt[[key_id]] %in% diff_row_add), grp_ids]
+              )
+      )
+    removed_grps <- unique(
+      do.call("paste",
+              cvt[which(cvt[[key_id]] %in% diff_row_sub), grp_ids]
+              )
+      )
+    
+    added_new_grps <- setdiff(added_grps, grp_strings_old)
+    added_existing_grps <- intersect(added_grps, grp_strings_old)
+    removed_new_grps <- setdiff(removed_grps, grp_strings_new)
+    removed_existing_grps <- intersect(removed_grps, grp_strings_new)
+    
+    
+    msg_to_write <- c(
+      msg_to_write,
+      paste("Rows added:", length(diff_row_add)),
+      paste("Rows removed:", length(diff_row_sub))
+    )
+    
+    limit_grp_output <- function(grp_vector) {
+      if (length(grp_vector) > 0) {
+        if (length(grp_vector) > 6) {
+          grp_vector <- c(grp_vector[c(1,2)],
+                              paste0("... [",
+                                     length(grp_vector) - 3,
+                                     "] more!"),
+                              grp_vector[c(length(grp_vector) - 1)]
+          )
+        }
+      return(grp_vector)
+    }
+      msg_to_write <- c(msg_to_write,
+                        "New Groups added (not in previous data):",
+                        paste0("\t", limit_grp_output(added_new_grps)),
+                        "Groups with new observations (group present in previous data)",
+                        paste0("\t", limit_grp_output(added_existing_grps)),
+                        "Groups removed that no longer have data present:",
+                        paste0("\t", limit_grp_output(removed_new_grps)),
+                        "Groups removed that still have some data present:",
+                        paste0("\t", limit_grp_output(removed_existing_grps)),
+                        "-----------------------------------"
+                        )
+    }
+    
+    ### -----Checking columns
+    diff_col_add <- setdiff(names(new_cvt), names(cvt)) # Columns added in new_cvt
+    diff_col_sub <- setdiff(names(cvt), names(new_cvt)) # Columns removed in new_cvt
+    diff_col_common <- intersect(names(cvt), names(new_cvt))
+    
+    # Left off here TODO
+    if (length(c(diff_col_add, diff_col_sub)) == 0) {
+      msg_to_write <- c(msg_to_write,
+                        "No changes in column names.")
+    } else if (length(diff_col_add) > 0 && length(diff_col_sub) > 0) {
+      # Check renaming
+      common_row_cvt <- cvt[diff_row_common, ]
+      common_row_new <- new_cvt[diff_row_common, ]
+      
+      diff_columns <- function(x, y) {
+        out_list <- character()
+        for (ix in names(x)) {
+          for (iy in names(y)) {
+            if (identical(x[[c(key_id,ix)]], y[[c(key_id, iy)]])) {
+              out_list <- c(out_list, paste0(ix, " -> ", iy))
+            }
+          }
+        }
+        return(out_list)
+      }
+      
+      renamed_cols <- diff_columns(common_row_cvt[diff_col_sub],
+                                   common_row_new[diff_col_add])
+      if (length(renamed_cols) > 0) {
+        msg_to_write <- c(msg_to_write,
+                          "Renamed columns (non-exhaustive):",
+                          renamed_cols)
+      } else {
+        msg_to_write <- c(msg_to_write,
+                          "No renamed columns found.")
+      }
+    }
+    if (length(diff_col_add) > 0) {
+      msg_to_write <- c(msg_to_write,
+                        "--------------",
+                        "Columns added:",
+                        diff_col_add)
+    }
+    if (length(diff_col_sub) > 0) {
+      msg_to_write <- c(msg_to_write,
+                        "______________",
+                        "Columns removed (from previous data):",
+                        diff_col_sub)
+    }
+    
+    if (!identical(common_row_cvt[diff_col_common],
+                   common_row_new[diff_col_common])) {
+      msg_to_write <- c(msg_to_write,
+                        "Data for same observation key_ids have changed.")
+    }
+    msg_to_write <- c(msg_to_write,
+                      "================================\n")
+  }
+  return(cat(msg_to_write, sep = "\n"))
+}
 ```
 
 Save the pulled CVT data with the edits/normalizations, and also save the current date.
