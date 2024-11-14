@@ -38,12 +38,12 @@ do_fit.pk <- function(obj,
                       n_cores = NULL,
                       rate_names = NULL,
                       max_multiplier = NULL,
-                      ...){
-  #check status
+                      ...) {
+  # check status
   objname <- deparse(substitute(obj))
   status <- obj$status
 
-  if(status >= status_fit){
+  if (status >= status_fit) {
     warning(objname,
             " current status is ",
             status,
@@ -53,24 +53,24 @@ do_fit.pk <- function(obj,
     )
   }
 
-  #if preprocessing not already done, do it
+  # if preprocessing not already done, do it
   if (obj$status < status_preprocess) {
     obj <- do_preprocess(obj)
   }
 
-  #if data summary not already done, do it
+  # if data summary not already done, do it
   if (obj$status < status_data_info) {
     obj <- do_data_info(obj)
   }
 
-  #if prefitting not already done, do it
+  # if prefitting not already done, do it
   if (obj$status < status_prefit) {
     obj <- do_prefit(obj)
   }
 
   if (!rlang::is_installed("multidplyr")) { n_cores <- NULL }
 
-  #pull the non-excluded observations for fitting
+  # pull the non-excluded observations for fitting
   data <- subset(obj$data, exclude %in% FALSE)
   data_sigma_group <- data$data_sigma_group
 
@@ -102,7 +102,7 @@ do_fit.pk <- function(obj,
   par_DF_nest <- par_DF %>%
     tidyr::nest(par_DF = !tidyselect::all_of(c("model", data_group_vars)))
 
-  sigma_DF_nest <-  sigma_DF %>%
+  sigma_DF_nest <- sigma_DF %>%
     tidyr::nest(sigma_DF = !tidyselect::all_of(data_group_vars))
 
   fit_check <- fit_check_DF %>%
@@ -145,7 +145,7 @@ do_fit.pk <- function(obj,
     )
 
     if (total_cores <= n_cores & total_cores > 1) {
-      n_cores  <- total_cores - 1
+      n_cores <- total_cores - 1
       message("do_fit.pk():To ensure other programs ",
               "& processes are still able to run, ",
               "n_cores has been set to ", n_cores
@@ -170,8 +170,8 @@ do_fit.pk <- function(obj,
     multidplyr::cluster_copy(cluster, "log10_trans")
 
 
-    #we can likely save some memory by only passing what we need from obj
-    #like this
+    # we can likely save some memory by only passing what we need from obj
+    # like this
     tidy_fit <- info_nest %>%
       dplyr::rowwise(!!!data_group, model) %>%
       multidplyr::partition(cluster) %>%
@@ -189,7 +189,7 @@ do_fit.pk <- function(obj,
                              suppress.messages = TRUE)
                    )
         ) %>%
-      dplyr::collect() #undo the multidplyr::partition()
+      dplyr::collect() # undo the multidplyr::partition()
 
     rm(cluster)
   } else {
@@ -313,7 +313,7 @@ do_fit.pk <- function(obj,
     dplyr::select(-c(lower_bound, upper_bound)) %>%
     tidyr::unnest(cols = fit_data)
 
-  obj$status <- status_fit #fitting complete
+  obj$status <- status_fit # fitting complete
   message("do_fit.pk: Fitting complete")
   return(obj)
 }

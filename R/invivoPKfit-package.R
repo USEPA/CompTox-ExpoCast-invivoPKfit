@@ -11,6 +11,3 @@
 #'
 #' @author Caroline Ring, Chris Cook, John Wambaugh, Mitchell Teague, Gilberto Padilla Mercado
 NULL
-
-
-

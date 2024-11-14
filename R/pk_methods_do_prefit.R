@@ -31,11 +31,11 @@
 #' @export
 #' @author Caroline Ring
 do_prefit.pk <- function(obj,
-                         ...){
+                         ...) {
 
   objname <- deparse(substitute(obj))
   status <- obj$status
-  if(status >= status_prefit){
+  if (status >= status_prefit) {
     warning(objname,
             " current status is ",
             status,
@@ -45,12 +45,12 @@ do_prefit.pk <- function(obj,
     )
   }
 
-  #if preprocessing not already done, do it
-  if(obj$status < status_preprocess){
+  # if preprocessing not already done, do it
+  if (obj$status < status_preprocess) {
     obj <- do_preprocess(obj)
   }
 
-  if(obj$status < status_data_info){
+  if (obj$status < status_data_info) {
     obj <- do_data_info(obj)
   }
 
@@ -58,36 +58,36 @@ do_prefit.pk <- function(obj,
 
   data <- obj$data
 
-  if(suppress.messages %in% FALSE){
+  if (suppress.messages %in% FALSE) {
     message("do_prefit.pk(): Assigning error SD groups to all observations")
   }
 
-  #get the error model obj$stat_error_model, which defines the number of sigmas that will need to be optimized
-  #count the number of unique combinations of vars in obj$stat_error_model$error_group
+  # get the error model obj$stat_error_model, which defines the number of sigmas that will need to be optimized
+  # count the number of unique combinations of vars in obj$stat_error_model$error_group
   unique_groups <- unique(rlang::eval_tidy(expr = obj$stat_error_model$error_group,
                                            data = data))
-  #Assign a factor variable denoting sigma group to each observation in obj$data
-  #This tells us which sigma applies to which observation
+  # Assign a factor variable denoting sigma group to each observation in obj$data
+  # This tells us which sigma applies to which observation
   data_sigma_group <- interaction(
     lapply(
       obj$stat_error_model$error_group,
-      function(x){
+      function(x) {
         rlang::eval_tidy(x, data = data)
       }
     )
   )
 
-  #but set to NA for any excluded observations, and drop any levels that occur only for excluded observations
+  # but set to NA for any excluded observations, and drop any levels that occur only for excluded observations
   data_sigma_group[data$exclude %in% TRUE] <- NA_character_
   data_sigma_group <- droplevels(data_sigma_group)
 
-  #add data_sigma_group to data
+  # add data_sigma_group to data
   obj$data$data_sigma_group <- data_sigma_group
   data <- get_data(obj)
 
-  #get bounds and starting points for each error sigma to be fitted
+  # get bounds and starting points for each error sigma to be fitted
 
-  if(suppress.messages %in% FALSE){
+  if (suppress.messages %in% FALSE) {
     message("do_prefit.pk():",
             "Getting bounds and starting guesses for each error SD to be fitted"
     )
@@ -100,10 +100,10 @@ do_prefit.pk <- function(obj,
   sigma_DF <- data %>%
     dplyr::mutate(data_sigma_group = data_sigma_group) %>%
     dplyr::filter(exclude %in% FALSE) %>%
-    #temporarily undo log10-trans, if it has been used
-    #this is because combined_sd() requires NON log transformed concs
-    #but we want to keep dose-normalization if it has been applied
-    #so we un-log Conc_trans
+    # temporarily undo log10-trans, if it has been used
+    # this is because combined_sd() requires NON log transformed concs
+    # but we want to keep dose-normalization if it has been applied
+    # so we un-log Conc_trans
     dplyr::mutate(
       Conc_tmp = dplyr::if_else(rep(obj$scales$conc$log10_trans %in% TRUE,
                                     NROW(Conc_trans)),
@@ -126,7 +126,7 @@ do_prefit.pk <- function(obj,
   # Set values for sigma upper/lower-bounds and start
   sigma_DF <- sigma_DF %>%
     dplyr::group_by(!!!obj$stat_error_model$error_group) %>%
-    dplyr::summarise(max_conc =  max(Conc_tmp,
+    dplyr::summarise(max_conc = max(Conc_tmp,
                                      na.rm = TRUE),
                      param_name = paste("sigma",
                                         unique(data_sigma_group),
@@ -153,26 +153,26 @@ do_prefit.pk <- function(obj,
                   start = 0.1 * upper_bound) %>%
     as.data.frame()
 
-  #assign rownames to sigma_DF
+  # assign rownames to sigma_DF
   rownames(sigma_DF) <- sigma_DF$param_name
 
-  #assign sigma_DF to the `pk` object
+  # assign sigma_DF to the `pk` object
   obj$prefit$stat_error_model$sigma_DF <- sigma_DF
 
-  if(suppress.messages %in% FALSE){
+  if (suppress.messages %in% FALSE) {
     message("do_prefit.pk(): ",
             "Getting bounds and starting guesses ",
             "for all model parameters to be fitted"
     )
   }
 
-  #for each model to be fitted:
+  # for each model to be fitted:
   par_DF_out <- sapply(
     names(obj$stat_model),
-    function(this_model){
-      #get parameters to be optimized, bounds, and starting points
-      #by evaluating params_fun for this stat_model
-      #pass it only the non-excluded observations
+    function(this_model) {
+      # get parameters to be optimized, bounds, and starting points
+      # by evaluating params_fun for this stat_model
+      # pass it only the non-excluded observations
       par_DF <- data %>%
         dplyr::filter(exclude %in% FALSE)
 
@@ -197,12 +197,12 @@ do_prefit.pk <- function(obj,
 
   par_DF_out <- dplyr::bind_rows(par_DF_out, .id = "model")
 
-  fit_check_out <-  sapply(
+  fit_check_out <- sapply(
     names(obj$stat_model),
-    function(this_model){
-      #check whether there are enough observations to optimize the requested parameters plus sigmas
-      #number of parameters to optimize
-      if(suppress.messages %in% FALSE){
+    function(this_model) {
+      # check whether there are enough observations to optimize the requested parameters plus sigmas
+      # number of parameters to optimize
+      if (suppress.messages %in% FALSE) {
         message("do_prefit.pk():",
                 "Checking whether sufficient observations to fit models"
         )
@@ -223,7 +223,7 @@ do_prefit.pk <- function(obj,
         dplyr::summarise(n_detect = sum(n_detect))
 
 
-      #merge all of these together
+      # merge all of these together
       fit_check_DF <- dplyr::inner_join(
         dplyr::inner_join(n_par_DF,
                           n_sigma_DF,
@@ -234,7 +234,7 @@ do_prefit.pk <- function(obj,
                     rlang::as_label)
       )
 
-      #get fit decision & reasoning
+      # get fit decision & reasoning
       fit_check_DF <- fit_check_DF %>%
         dplyr::mutate(
           n_par_opt = n_par + n_sigma,
@@ -259,7 +259,7 @@ do_prefit.pk <- function(obj,
   obj$prefit$par_DF <- par_DF_out
   obj$prefit$fit_check <- fit_check_out
 
-  obj$status <- status_prefit #prefit complete
+  obj$status <- status_prefit # prefit complete
 
   return(obj)
 

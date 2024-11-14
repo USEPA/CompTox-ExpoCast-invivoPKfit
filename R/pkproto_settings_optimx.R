@@ -12,11 +12,11 @@ settings_optimx <- function(method = c("bobyqa", "L-BFGS-B"),
                             itnmax = 1e6,
                             hessian = FALSE,
                             control = list(kkt = FALSE),
-                            ...){
-  #get arguments and values
+                            ...) {
+  # get arguments and values
   argg <- c(as.list(environment()), list(...))
   this_settings_optimx <- argg
-  #set class
+  # set class
   class(this_settings_optimx) <- c(class(this_settings_optimx), "pkproto", "pk_settings_optimx")
 
   return(this_settings_optimx)

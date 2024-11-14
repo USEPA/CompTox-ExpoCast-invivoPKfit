@@ -69,7 +69,7 @@ get_tkstats.pk <- function(obj,
                            exclude = TRUE,
                            vol_unit = "L",
                            dose_norm = TRUE,
-                           ...){
+                           ...) {
 
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$settings_optimx$method
@@ -103,7 +103,7 @@ get_tkstats.pk <- function(obj,
                                 grp_vars),
                               exclude = exclude)
 
-  #if exclude = TRUE, remove excluded observations
+  # if exclude = TRUE, remove excluded observations
   if (exclude %in% TRUE) {
     newdata <- subset(newdata, exclude %in% FALSE)
   }
@@ -119,8 +119,8 @@ get_tkstats.pk <- function(obj,
                       data_sigma_group)
   )
 
-  #check that tk_group is valid: it must produce groups with a unique
-  #combination of obj$data_group, Route, Media, and Dose
+  # check that tk_group is valid: it must produce groups with a unique
+  # combination of obj$data_group, Route, Media, and Dose
   newdata_grouped <- newdata %>%
     dplyr::group_by(!!!tk_group) %>%
     dplyr::distinct(!!!obj$data_group,
@@ -133,10 +133,10 @@ get_tkstats.pk <- function(obj,
 
   newdata_grouped_count <- newdata_grouped %>%
     dplyr::count(name = "N") %>%
-    dplyr::ungroup() #how many distinct rows per group?
+    dplyr::ungroup() # how many distinct rows per group?
 
 
-  #if more than one distinct row per group, stop
+  # if more than one distinct row per group, stop
   if (any(newdata_grouped_count$N > 1)) {
     stop("tk_group does not produce groups with unique combinations of Chemical, Species, Route, Media, and Dose.")
   }

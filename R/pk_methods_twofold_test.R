@@ -96,7 +96,7 @@ twofold_test.pk <- function(obj,
                               "Route", "Media", "Dose", "Time",
                               "N_Subjects")) %>%
     dplyr::mutate(data_descr = dplyr::case_when(
-      (Count > 1  & N_Subjects == 1) ~ "Individual Data, Multiple Observations",
+      (Count > 1 & N_Subjects == 1) ~ "Individual Data, Multiple Observations",
       (Count == 1 & N_Subjects == 1) ~ "Individual Data, Single Observation",
       (Count == 1 & N_Subjects > 1 & Conc_SD > 0) ~ "Grouped Data w SD",
       (N_Subjects > 1 & Conc_SD == 0) ~ "Grouped Data no SD",
@@ -136,7 +136,7 @@ twofold_test.pk <- function(obj,
   # Combined summarized data (indiv + sgroup)
   total_data_summary <- dplyr::bind_rows(indiv_data_summary, sgroup_data) %>%
     dplyr::ungroup() %>%
-    dplyr::mutate(twofold_95 = ((conc_mean + 2 * conc_sd)/conc_mean) <= 2)
+    dplyr::mutate(twofold_95 = ((conc_mean + 2 * conc_sd) / conc_mean) <= 2)
 
   twofold_95 <- total_data_summary %>%
     dplyr::group_by(Route) %>%
@@ -157,7 +157,7 @@ twofold_test.pk <- function(obj,
   # Use total_data_summary (tds_) for summarized data evaluations
   # Add grouped mean of individual data to indiv_data
   id_mean <- suppressMessages(dplyr::left_join(indiv_data, indiv_data_summary)) %>%
-    dplyr::mutate(foldConc = Conc/conc_mean)
+    dplyr::mutate(foldConc = Conc / conc_mean)
 
   # Make a table of values with percent within or outside factors of two
   # Summarizing number of fold concentrations from the mean
@@ -346,7 +346,7 @@ rowwise_calc_percentages <- function(data,
 
   # Calculate total
 
-  data$total <-  rowSums(data[op_cols], 1, sum)
+  data$total <- rowSums(data[op_cols], 1, sum)
 
   # Calculate percentages
   data[paste0("percent_", op_cols)] <- apply(data[op_cols], 2,
@@ -355,5 +355,3 @@ rowwise_calc_percentages <- function(data,
 
   return(data)
 }
-
-

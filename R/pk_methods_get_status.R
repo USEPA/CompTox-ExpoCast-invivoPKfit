@@ -26,7 +26,7 @@
 #' @return The status of the `pk` object as an integer.
 #' @export
 #' @author Caroline Ring
-get_status.pk <- function(obj, suppress.messages = NULL, ...){
+get_status.pk <- function(obj, suppress.messages = NULL, ...) {
   objname <- deparse(substitute(obj))
   obj_status <- obj$status
   steps <- c("1/5. Object has been initialized",
@@ -57,7 +57,7 @@ get_status.pk <- function(obj, suppress.messages = NULL, ...){
       paste0("Status of pk object ", objname, ":"),
       paste(steps,
             collapse = "\n"),
-      sep  = "\n"
+      sep = "\n"
     )
     message(msg)
     attr(out, "msg") <- msg

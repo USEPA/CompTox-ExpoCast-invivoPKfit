@@ -62,11 +62,11 @@
 #' @author Caroline Ring, Gilbert Padilla Mercado, Paul Kruse
 facet_data <- function(facets = vars(Chemical,
                                      Species),
-                     ...){
-  #get arguments and values
+                     ...) {
+  # get arguments and values
   argg <- c(as.list(environment()), list(...))
   this_facet_data <- argg
-  #set class
+  # set class
   class(this_facet_data) <- c(class(this_facet_data), "pkproto", "pk_facet_data")
 
   return(this_facet_data)

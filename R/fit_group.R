@@ -25,11 +25,11 @@ fit_group <- function(data,
                       dose_norm,
                       log10_trans,
                       max_mult,
-                      suppress.messages){
-  #Rowbind par_DF and sigma_DF
+                      suppress.messages) {
+  # Rowbind par_DF and sigma_DF
   par_DF <- dplyr::bind_rows(par_DF, sigma_DF)
 
-  #get params to be optimized with their starting points
+  # get params to be optimized with their starting points
   # since this series of assignments only return ordered vectors, possible to optimize a little
   # also optimized parameter names was repeated, simply put into variable
   opt_param_names <- par_DF[which(par_DF$optimize_param), "param_name",
@@ -37,6 +37,7 @@ fit_group <- function(data,
 
   opt_params <- par_DF[which(par_DF$optimize_param), "start",
                        drop = TRUE]
+
   names(opt_params) <- opt_param_names
 
   if (fit_decision %in% "continue") {
@@ -50,7 +51,7 @@ fit_group <- function(data,
     names(upper_params) <- opt_param_names
 
 
-    #get params to be held constant, if any
+    # get params to be held constant, if any
     if (any(par_DF$optimize_param %in% FALSE & par_DF$use_param %in% TRUE)) {
       const_params <- par_DF[which(!par_DF$optimize_param & par_DF$use_param),
                              "start", drop = TRUE]
@@ -70,7 +71,7 @@ fit_group <- function(data,
       dplyr::ungroup()
 
 
-    #Now call optimx::optimx() and do the fit
+    # Now call optimx::optimx() and do the fit
     optimx_out <- suppressWarnings(
       tryCatch(
         expr = {
@@ -81,9 +82,9 @@ fit_group <- function(data,
                    fn = log_likelihood,
                    lower = lower_params,
                    upper = upper_params),
-              #method and control
+              # method and control
               settings_optimx,
-              #... additional args to log_likelihood
+              # ... additional args to log_likelihood
               list(
                 const_params = const_params,
                 data = data,
@@ -95,14 +96,14 @@ fit_group <- function(data,
                 force_finite = TRUE,
                 max_multiplier = max_mult,
                 suppress.messages = suppress.messages
-              ) #end list()
-            ) #end args = c()
-          ) #end do.call
+              ) # end list()
+            ) # end args = c()
+          ) # end do.call
           tmp$method <- rownames(tmp)
           tmp <- merge(tmp, as.data.frame(attr(tmp, "details")))
           tmp
         },
-        error = function(err){
+        error = function(err) {
           method <- rlang::eval_tidy(settings_optimx$method)
           tmp <- c(rep(NA_real_, length(opt_params)),
                    rep(NA_real_, 4),
@@ -136,10 +137,10 @@ fit_group <- function(data,
           tmp <- merge(tmp, details)
 
           return(tmp)
-        }) #end tryCatch()
-    ) #end suppressWarnings()
+        }) # end tryCatch()
+    ) # end suppressWarnings()
     out <- optimx_out
-  } else { #if status for this model was "abort", then abort fit and return NULL
+  } else { # if status for this model was "abort", then abort fit and return NULL
     method <- rlang::eval_tidy(settings_optimx$method)
     tmp <- c(rep(NA_real_, length(opt_params)),
              rep(NA_real_, 4),

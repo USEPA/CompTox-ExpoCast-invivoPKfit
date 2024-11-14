@@ -33,7 +33,7 @@ dlnorm_summary <- function(mu,
                              x_mean,
                              x_sd,
                              x_N,
-                             log = FALSE){
+                             log = FALSE) {
 
   x_len <- c("x_mean" = length(x_mean),
              "x_sd" = length(x_sd),
@@ -55,11 +55,9 @@ dlnorm_summary <- function(mu,
 
 
   if (any(bad_len)) {
-    warning("invivopkfit::dnorm_summary():",
+    warning("invivopkfit::dnorm_summary(): ",
             "the following inputs do not have matching lengths: ",
-            paste(paste0(names(x_len)[bad_len],
-                         " length = ",
-                         x_len[bad_len]),
+            paste(paste0(names(x_len)[bad_len], " length = ", x_len[bad_len]),
                   collapse = "\n"
             ),
             "\n They will be repeated to match the length of the longest input,",
@@ -68,11 +66,11 @@ dlnorm_summary <- function(mu,
             max_len,
             "."
     )
-    #repeat to match longest
+    # repeat to match longest
     for (i in seq_along(x_len)) {
       assign(names(x_len)[i],
-             rep( #repeat the current value of each item to match the length
-               get(names(x_len)[i]), #get the current value of each item
+             rep( # repeat the current value of each item to match the length
+               get(names(x_len)[i]), # get the current value of each item
                length.out = max_len)
       )
     }
@@ -80,21 +78,15 @@ dlnorm_summary <- function(mu,
 
 
 
-  #Evaluate
-  y_log <- x_N * log(1/(sigma*sqrt(2*pi))) +
-    (-1/(2*sigma^2)) *
-    (
-      (x_N - 1) * log(1 + x_sd^2/x_mean^2) +
-        x_N * (
-          log(
-            x_mean^2/(sqrt(x_sd^2 + x_mean^2))
-          )
-        )^2
-    ) +
-    mu/sigma^2 * x_N * log(
-      x_mean^2/(sqrt(x_sd^2 + x_mean^2))
-    ) +
-    -mu^2 * x_N / (2 * sigma^2)
+  # Evaluate
+  y_log <- (
+    x_N * log(1 / (sigma * sqrt(2 * pi)))
+    + (-1 / (2 * sigma^2))
+    * ((x_N - 1) * log(1 + x_sd^2 / x_mean^2)
+       + x_N * (log(x_mean^2 / (sqrt(x_sd^2 + x_mean^2))))^2)
+    + mu / sigma^2 * x_N * log(x_mean^2 / (sqrt(x_sd^2 + x_mean^2)))
+    - mu^2 * x_N / (2 * sigma^2)
+  )
 
  if (log == TRUE) {
    return(y_log)

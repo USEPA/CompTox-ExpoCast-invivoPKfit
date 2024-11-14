@@ -8,9 +8,9 @@
 #' @export
 #' @importFrom magrittr `%>%`
 #' @author Caroline Ring
-do_data_info.pk <- function(obj, ...){
+do_data_info.pk <- function(obj, ...) {
 
-  #check status
+  # check status
   objname <- deparse(substitute(obj))
   status <- obj$status
   if (status >= status_data_info) {
@@ -25,7 +25,7 @@ do_data_info.pk <- function(obj, ...){
       dplyr::select(Chemical:tlast_detect)
   }
 
-  #if preprocessing not already done, do it
+  # if preprocessing not already done, do it
   if (obj$status < status_preprocess) {
     obj <- do_preprocess(obj)
   }
@@ -36,12 +36,12 @@ do_data_info.pk <- function(obj, ...){
 
   data <- obj$data
 
-  #get data summary
+  # get data summary
   if (obj$settings_preprocess$suppress.messages %in% FALSE) {
     message("do_data_info.pk(): Getting data summary statistics\n")
   }
 
-  #grouping for data summary:
+  # grouping for data summary:
 
   summary_group <- obj$settings_data_info$summary_group
 
@@ -59,21 +59,21 @@ do_data_info.pk <- function(obj, ...){
     }
   }
 
-  #do NCA dose-normalized
-  #for purposes of some data flags
+  # do NCA dose-normalized
+  # for purposes of some data flags
 
   if (obj$settings_preprocess$suppress.messages %in% FALSE) {
     message("do_data_info.pk(): Doing dose-normalized non-compartmental analysis\n")
   }
 
-  #if Dose, Route and Media not already in summary_group, add them for this
+  # if Dose, Route and Media not already in summary_group, add them for this
   grp_vars_summary <- sapply(summary_group,
                              rlang::as_label)
 
-  if(all(c("Dose", "Route", "Media") %in% grp_vars_summary)){
+  if (all(c("Dose", "Route", "Media") %in% grp_vars_summary)) {
     nca_group <- summary_group
 
-  }else{
+  } else {
     if (obj$settings_preprocess$suppress.messages %in% FALSE) {
       message(paste0("Grouping for NCA must include Dose, Route, and Media, but ",
                      "summary_group is: ",
@@ -93,30 +93,30 @@ do_data_info.pk <- function(obj, ...){
                        exclude = TRUE,
                        dose_norm = TRUE)
 
-  #pivot wider
+  # pivot wider
   grp_vars_nca <- sapply(nca_group,
                          rlang::as_label)
 
-  nca_dose_norm <-   nca_dose_norm_long %>%
+  nca_dose_norm <- nca_dose_norm_long %>%
     tidyr::pivot_wider(id_cols = tidyselect::all_of(c(grp_vars_nca,
                                                       "dose_norm")),
                        names_from = param_name,
                        values_from = param_value) %>%
     as.data.frame()
 
-  #get data flags:
+  # get data flags:
   if (obj$settings_preprocess$suppress.messages %in% FALSE) {
     message("do_data_info.pk(): Getting data flags based on NCA\n")
   }
 
-  #get summary for nca_group if it is different from summary_group
+  # get summary for nca_group if it is different from summary_group
 if (length(setdiff(nca_group, summary_group)) > 0 |
-   length(setdiff(summary_group, nca_group)) > 0){
+   length(setdiff(summary_group, nca_group)) > 0) {
   data_summary_nca <- data_summary(obj = obj,
                                    newdata = NULL,
                                    summary_group = nca_group
   )
-}else{
+} else {
   data_summary_nca <- data_summary_out
 }
 
@@ -159,8 +159,8 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
                              data_flag)
         )
 
-  #Other data flags:
-  #Check for obeying dose normalization by summary_group - Dose
+  # Other data flags:
+  # Check for obeying dose normalization by summary_group - Dose
   dose_norm_check <- df %>%
     dplyr::group_by(!!!summary_group) %>%
     dplyr::ungroup(Dose) %>%
@@ -169,7 +169,7 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
       Cmax_fold_range = {
         tmprange <- suppressWarnings(range(`Cmax`, na.rm = TRUE))
         if (all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
-        tmprange[2]/tmprange[1]
+        tmprange[2] / tmprange[1]
       },
       data_flag_Cmax = ifelse(Cmax_fold_range > 2,
                               "Cmax may not scale with dose. Cmax/Dose range > 2-fold across dose groups for this group",
@@ -177,7 +177,7 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
       AUC_fold_range = {
         tmprange <- suppressWarnings(range(`AUC_infinity`, na.rm = TRUE))
         if (all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
-        tmprange[2]/tmprange[1]
+        tmprange[2] / tmprange[1]
       },
       data_flag_AUC = ifelse(AUC_fold_range > 2,
                              "AUC_infinity may not scale with dose. AUC/Dose range > 2-fold across dose groups for this group",
@@ -189,7 +189,7 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
                         "dose_norm_check" = dose_norm_check,
                         "nca" = nca_dose_norm_long)
 
-  obj$status <- status_data_info #data summarization complete
+  obj$status <- status_data_info # data summarization complete
 
   return(obj)
 }

@@ -95,16 +95,13 @@ calc_rmse <- function(pred,
                       obs_sd,
                       n_subj,
                       detect,
-                      log10_trans = FALSE){
-  #If both obs and pred are below LOQ, set pred to obs
-  #This will effectively make error zero in these cases.
-  pred <- ifelse(detect %in% FALSE &
-                   (pred <= obs) %in% TRUE,
-                 obs,
-                 pred)
+                      log10_trans = FALSE) {
+  # If both obs and pred are below LOQ, set pred to obs
+  # This will effectively make error zero in these cases.
+  pred <- ifelse(detect %in% FALSE & (pred <= obs) %in% TRUE, obs, pred)
 
-  #Convert to log10-scale if necessary
-  if (log10_trans %in% TRUE){
+  # Convert to log10-scale if necessary
+  if (isTRUE(log10_trans)) {
     tmplist <- convert_summary_to_log10(sample_mean = obs,
                                       sample_SD = obs_sd)
     obs <- tmplist$log10mean
@@ -112,21 +109,16 @@ calc_rmse <- function(pred,
     pred <- log10(pred)
   }
 
-#Calculate MSE.
-  #If log = TRUE, this is mean(( log(observed) - log(pred) )^2)
-  #If log = FALSE, this is mean((observed - pred)^2)
-  mse <- (1/sum(n_subj)) *
-    sum(
-    (n_subj - 1) * obs_sd^2 +
-      n_subj * obs^2  +
-      -2 * pred * n_subj * obs  +
-      n_subj * pred^2
-  )
+# Calculate MSE.
+  # If log = TRUE, this is mean(( log(observed) - log(pred) )^2)
+  # If log = FALSE, this is mean((observed - pred)^2)
+  mse <- (1 / sum(n_subj)) * sum((n_subj - 1) * obs_sd^2
+                                 + n_subj * obs^2
+                                 - 2 * pred * n_subj * obs
+                                 + n_subj * pred^2)
 
-  #RMSE is just sqrt of MSE
+  # RMSE is just sqrt of MSE
   rmse <- sqrt(mse)
 
   return(rmse)
 }
-
-

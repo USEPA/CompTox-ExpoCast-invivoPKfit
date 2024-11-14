@@ -4,7 +4,7 @@
 #' @return TRUE if `obj` inherits from class `pkproto`; FALSE if not
 #' @export
 #' @author Caroline Ring
-is.pkproto <- function(obj){
+is.pkproto <- function(obj) {
   inherits(obj, "pkproto")
 }
 
@@ -14,6 +14,6 @@ is.pkproto <- function(obj){
 #' @return TRUE if `obj` inherits from class `pk_scales`; FALSE if not
 #' @export
 #' @author Caroline Ring
-is.pk_scales <- function(obj){
+is.pk_scales <- function(obj) {
   inherits(obj, "pk_scales")
 }

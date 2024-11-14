@@ -7,11 +7,11 @@
 #' @return A `list` of `tibble`s: the `data_info` element of `obj`
 #' @export
 #' @author Caroline Ring
-get_data_info.pk <- function(obj, ...){
-  #check if data has been data_info(0)
+get_data_info.pk <- function(obj, ...) {
+  # check if data has been data_info(0)
   check <- check_required_status(obj = obj,
                                  required_status = status_data_info)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 

@@ -31,8 +31,8 @@ mapping <- function(
       LOQ = loq
     ),
 ...
-){
-  class(mapping) <- c(class(mapping), #class "uneval" by default
+) {
+  class(mapping) <- c(class(mapping), # class "uneval" by default
                       "pkproto")
 return(mapping)
 }

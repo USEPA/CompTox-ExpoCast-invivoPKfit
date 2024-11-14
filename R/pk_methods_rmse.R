@@ -113,8 +113,8 @@ rmse.pk <- function(obj,
                     exclude = TRUE,
                     use_scale_conc = FALSE,
                     rmse_group = NULL,
-                    ...){
-  #ensure that the model has been fitted
+                    ...) {
+  # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
   if (!(check %in% TRUE)) {
@@ -124,7 +124,7 @@ rmse.pk <- function(obj,
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
   if (is.null(newdata)) newdata <- obj$data
-  if(is.null(rmse_group)) rmse_group <- obj$data_group
+  if (is.null(rmse_group)) rmse_group <- obj$data_group
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -151,8 +151,8 @@ rmse.pk <- function(obj,
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log10-transformation ", conc_scale$log10_trans)
 
-  #Get predictions
-  #do NOT apply transformations at this stage
+  # Get predictions
+  # do NOT apply transformations at this stage
   preds <- predict(obj,
                    newdata = newdata,
                    model = model,
@@ -162,15 +162,15 @@ rmse.pk <- function(obj,
                    use_scale_conc = FALSE)
 
 
-  #remove any excluded observations & corresponding predictions, if so specified
+  # remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE && "exclude" %in% names(newdata)) {
       newdata <- subset(newdata, exclude %in% FALSE)
   }
 
-  #Requested variables
-  #Note that we take the NON-transformed concentrations.
-  #Any dose-normalization will be done in the next step.
-  #Any log10 transformations will be handled within the calc_rmse() function.
+  # Requested variables
+  # Note that we take the NON-transformed concentrations.
+  # Any dose-normalization will be done in the next step.
+  # Any log10 transformations will be handled within the calc_rmse() function.
   req_vars <- c(names(preds),
                 "Conc",
                 "Conc_SD",
@@ -184,7 +184,7 @@ rmse.pk <- function(obj,
     dplyr::ungroup())
 
 
-  #apply dose-normalization if specified
+  # apply dose-normalization if specified
   # conditional mutate ifelse
   rmse_df <- new_preds %>%
     dplyr::mutate(

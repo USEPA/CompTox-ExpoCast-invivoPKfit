@@ -1,20 +1,20 @@
-#'TK stats for flat model
+#' TK stats for flat model
 #'
-#'@param pars A named numeric vector of model parameters (e.g. from [coef.pk()]).
-#'@param route Character: The route for which to compute TK stats. Currently
+#' @param pars A named numeric vector of model parameters (e.g. from [coef.pk()]).
+#' @param route Character: The route for which to compute TK stats. Currently
 #'  only "oral" and "iv" are supported.
-#'@param medium Character: the media (tissue) for which to compute TK stats.
+#' @param medium Character: the media (tissue) for which to compute TK stats.
 #'  Currently only "blood" and "plasma" are supported.
-#'@param dose Numeric: A dose for which to calculate TK stats.
-#'@param time_unit Character: the units of time.
-#'@param conc_unit Character: The units of concentration.
-#'@param vol_unit Character: The units of dose.
-#'@param ... Additional arguments not currently in use.
-#'@return A `data.frame` with two variables:
+#' @param dose Numeric: A dose for which to calculate TK stats.
+#' @param time_unit Character: the units of time.
+#' @param conc_unit Character: The units of concentration.
+#' @param vol_unit Character: The units of dose.
+#' @param ... Additional arguments not currently in use.
+#' @return A `data.frame` with two variables:
 #' - `param_name` = `c("CLtot", "CLtot/Fgutabs", "Css_1mgkgday", "halflife", "Cmax", "AUC_infinity")`
 #' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed).
-#'@export
-#'@author John Wambaugh, Caroline Ring
+#' @export
+#' @author John Wambaugh, Caroline Ring
 tkstats_flat <- function(pars,
                          route,
                          medium,
@@ -22,7 +22,7 @@ tkstats_flat <- function(pars,
                          time_unit,
                          conc_unit,
                          vol_unit,
-                         ...){
+                         ...) {
 
   Fgutabs_Vdist <- NULL
   params <- fill_params_flat(pars)
@@ -31,11 +31,11 @@ tkstats_flat <- function(pars,
                                  route = route,
                                  medium = medium)
 
-  if(!(check_msg %in% "Parameters OK")){
+  if (!(check_msg %in% "Parameters OK")) {
     stop("cp_flat():", check_msg)
   }
 
-  #for readability, assign params to variables inside this function
+  # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
 
@@ -67,7 +67,7 @@ tkstats_flat <- function(pars,
                                      Css,
                                      AUC_inf,
                                      Vdist,
-                                     1/(Fgutabs_Vdist)),
+                                     1 / (Fgutabs_Vdist)),
                    param_units = c(paste0(vol_unit, "/", time_unit),
                                    paste0(vol_unit, "/", time_unit),
                                    conc_unit,

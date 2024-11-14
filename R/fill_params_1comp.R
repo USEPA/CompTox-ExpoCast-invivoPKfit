@@ -7,22 +7,22 @@
 #'   be imputed to agree with the other two.
 #' @author Caroline Ring
 
-fill_params_1comp <- function(params){
+fill_params_1comp <- function(params) {
 
-  #fill in missing params with NAs
+  # fill in missing params with NAs
   missing_params <- setdiff(model_1comp$params,
                             names(params))
   params[missing_params] <- NA_real_
 
-  if(is.na(params["Fgutabs_Vdist"])){
-    params["Fgutabs_Vdist"] <- params["Fgutabs"]/params["Vdist"]
+  if (is.na(params["Fgutabs_Vdist"])) {
+    params["Fgutabs_Vdist"] <- params["Fgutabs"] / params["Vdist"]
   }
 
- if(is.na(params["Fgutabs"])){
+ if (is.na(params["Fgutabs"])) {
     params["Fgutabs"] <- params["Fgutabs_Vdist"] * params["Vdist"]
  }
 
-if(is.na(params["Vdist"])){
+if (is.na(params["Vdist"])) {
     params["Vdist"] <- params["Fgutabs"] / params["Fgutabs_Vdist"]
 }
 

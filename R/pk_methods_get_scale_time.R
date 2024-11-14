@@ -7,6 +7,6 @@
 #' @return A `list`: `obj$scales$time`
 #' @author Caroline Ring
 #' @export
-get_scale_time.pk <- function(obj, ...){
+get_scale_time.pk <- function(obj, ...) {
   return(obj$scales$time)
 }

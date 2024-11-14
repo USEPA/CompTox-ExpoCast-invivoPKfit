@@ -66,19 +66,19 @@ eval_tkstats.pk <- function(obj,
                             exclude = TRUE,
                             dose_norm = FALSE,
                             finite_only = TRUE,
-                            ...){
+                            ...) {
 
-  #ensure that the model has been fitted
+  # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
-  if(!(check %in% TRUE)){
+  if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
-  if(is.null(model)) model <- names(obj$stat_model)
-  if(is.null(method)) method <- obj$settings_optimx$method
-  if(is.null(newdata)) newdata <- obj$data
-  if(is.null(tk_group)) tk_group <- obj$settings_data_info$summary_group
+  if (is.null(model)) model <- names(obj$stat_model)
+  if (is.null(method)) method <- obj$settings_optimx$method
+  if (is.null(newdata)) newdata <- obj$data
+  if (is.null(tk_group)) tk_group <- obj$settings_data_info$summary_group
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -104,22 +104,22 @@ eval_tkstats.pk <- function(obj,
                                 grp_vars),
                               exclude = exclude)
 
-  #if exclude = TRUE, remove excluded observations
+  # if exclude = TRUE, remove excluded observations
   if (exclude %in% TRUE) {
     newdata <- subset(newdata, exclude %in% FALSE)
   }
 
   if (dose_norm %in% TRUE) {
-    newdata$Conc <- newdata$Conc/newdata$Dose
-    newdata$Dose <- newdata$Dose/newdata$Dose
+    newdata$Conc <- newdata$Conc / newdata$Dose
+    newdata$Dose <- newdata$Dose / newdata$Dose
   } # Need this transformation for get_tkstats
 
-  #Get the winning model for filtering
+  # Get the winning model for filtering
   winmodel_df <- get_winning_model.pk(obj = obj,
                                    method = method) %>%
     dplyr::select(-c(near_flat, preds_below_loq))
 
-  #calc NCA for newdata
+  # calc NCA for newdata
   nca_df <- nca(obj = obj,
                 newdata = newdata,
                 nca_group = tk_group,
@@ -133,7 +133,7 @@ eval_tkstats.pk <- function(obj,
     dplyr::right_join(winmodel_df) %>%
     dplyr::relocate(model, method, .after = Media)
 
-  #get tkstats
+  # get tkstats
   tkstats_df <- get_tkstats.pk(obj = obj,
                             newdata = newdata,
                             model = model,
