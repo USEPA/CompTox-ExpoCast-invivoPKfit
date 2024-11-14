@@ -312,7 +312,5 @@ get_params_1comp_cl <- function(
            )
          )
 
-
   return(par_DF)
-
 }

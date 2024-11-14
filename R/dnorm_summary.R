@@ -74,8 +74,6 @@ dnorm_summary <- function(mu,
     }
   }
 
-
-
   # Evaluate
   y_log <- (
     x_N * log(1 / (sigma * sqrt(2 * pi)))

@@ -122,7 +122,7 @@
 #' -`lower_bounds`: Numeric: The lower bounds for each parameter
 #' - `upper_bounds`: Numeric: The upper bounds for each parameter
 #' - `start`: Numeric: The starting guesses for each parameter
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family 1-compartment model functions
 #' @family get_params functions
 #' @family built-in model functions

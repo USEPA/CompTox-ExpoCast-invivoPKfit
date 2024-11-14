@@ -301,5 +301,4 @@ pk <- function(data = NULL,
 
   # return the initialized pk object
   return(obj)
-
 }

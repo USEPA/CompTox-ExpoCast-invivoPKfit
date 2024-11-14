@@ -110,9 +110,9 @@
   #' @seealso [coef_sd.pk()] for the `coef_sd` method for class [pk()]
   coef_sd <- function(obj,
                       model,
-method,
-suppress.messages, ...) {
-  UseMethod("coef_sd", obj)
+                      method,
+                      suppress.messages, ...) {
+    UseMethod("coef_sd", obj)
   }
 
   #' Coefficient standard deviation default

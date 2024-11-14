@@ -514,8 +514,6 @@ do_preprocess.pk <- function(obj, ...) {
       )
     }
 
-
-
     if (!obj$settings_preprocess$suppress.messages) {
       n_grps <- dplyr::group_by(data, !!!data_group) %>%
         dplyr::group_keys() %>%

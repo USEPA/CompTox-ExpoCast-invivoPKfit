@@ -169,7 +169,6 @@ do_fit.pk <- function(obj,
     multidplyr::cluster_copy(cluster, "dose_norm")
     multidplyr::cluster_copy(cluster, "log10_trans")
 
-
     # we can likely save some memory by only passing what we need from obj
     # like this
     tidy_fit <- info_nest %>%
@@ -210,7 +209,6 @@ do_fit.pk <- function(obj,
                              suppress.messages = TRUE))
       )
   }
-
 
   # Extract names
   tidy_fit <- tidy_fit %>%

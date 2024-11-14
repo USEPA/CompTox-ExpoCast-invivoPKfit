@@ -242,5 +242,4 @@ logLik.pk <- function(object,
  }
 
   return(newdata)
-
 }

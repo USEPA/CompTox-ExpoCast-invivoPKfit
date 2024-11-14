@@ -85,8 +85,6 @@ do_data_info.pk <- function(obj, ...) {
                        vars(Dose, Route, Media))
   }
 
-
-
   nca_dose_norm_long <- nca(obj = obj,
                        newdata = NULL,
                        nca_group = nca_group,

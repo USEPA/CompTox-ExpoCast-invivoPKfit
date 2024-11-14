@@ -178,11 +178,9 @@ rmse.pk <- function(obj,
                 "Detect",
                 "exclude")
 
-
   new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
     dplyr::select(dplyr::all_of(req_vars)) %>%
     dplyr::ungroup())
-
 
   # apply dose-normalization if specified
   # conditional mutate ifelse

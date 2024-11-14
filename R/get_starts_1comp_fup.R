@@ -195,7 +195,6 @@ get_starts_1comp_fup <- function(data,
   Cl_hep <- Q_totli * Fup * Clint / (Q_totli + (Fup * Clint / Rblood2plasma))
   Cl_tot <- Q_gfr + Cl_hep + (Rblood2plasma * Qalvc / Kblood2air)
 
-
   # Quick and dirty:
   # IV data estimates, if IV data exist
   if (nrow(ivdat) > 0) {

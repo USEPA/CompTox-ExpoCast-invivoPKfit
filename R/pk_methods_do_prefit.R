@@ -222,7 +222,6 @@ do_prefit.pk <- function(obj,
         dplyr::group_by(!!!obj$data_group) %>%
         dplyr::summarise(n_detect = sum(n_detect))
 
-
       # merge all of these together
       fit_check_DF <- dplyr::inner_join(
         dplyr::inner_join(n_par_DF,
@@ -262,5 +261,4 @@ do_prefit.pk <- function(obj,
   obj$status <- status_prefit # prefit complete
 
   return(obj)
-
 }

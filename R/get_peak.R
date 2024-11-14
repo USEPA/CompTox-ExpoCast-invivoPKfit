@@ -29,16 +29,16 @@
 get_peak <- function(x, y, ties = "median", na.rm = TRUE, ...) {
 
   x_finite <- x[is.finite(x) & is.finite(y)]
-  y_finite <- y[is.finite(x) & is.finite(y)]
+  y_finite <- y[is.finite(x) & is.finite(y)] # Not used?
 
   if (length(unique(x_finite)) > 1) {
-  tmp <- suppressWarnings(approx(x = x,
-                                 y = y,
-                                 xout = unique(x),
-                                 method = "linear",
-                                 ties = ties,
-                                 na.rm = na.rm,
-                                 ...))
+    tmp <- suppressWarnings(approx(x = x,
+                                   y = y,
+                                   xout = unique(x),
+                                   method = "linear",
+                                   ties = ties,
+                                   na.rm = na.rm,
+                                   ...))
     peak_ind <- which.max(tmp$y)
 
     peak <- list("x" = tmp$x[peak_ind], "y" = tmp$y[peak_ind])
@@ -58,8 +58,8 @@ get_peak <- function(x, y, ties = "median", na.rm = TRUE, ...) {
 
   } else {
     peak <- list("x" = NA_real_,
-                "y" = NA_real_)
+                 "y" = NA_real_)
   }
 
-return(peak)
+  return(peak)
 }
