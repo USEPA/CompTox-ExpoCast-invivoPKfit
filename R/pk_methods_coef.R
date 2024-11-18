@@ -5,7 +5,7 @@
 #' This function extracts fitted model parameter values from a fitted [pk()]
 #' object.
 #'
-#' @param obj A [pk()] object
+#' @param object A [pk()] object
 #' @param model Optional: Specify (as a `character` vector) one or more of the
 #'   fitted models whose coefficients to return. If `NULL` (the default),
 #'   coefficients will be returned for all of the models in `obj$stat_model`.
@@ -30,7 +30,7 @@
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
-coef.pk <- function(obj,
+coef.pk <- function(object,
                     model = NULL,
                     method = NULL,
                     drop_sigma = FALSE,
@@ -38,23 +38,23 @@ coef.pk <- function(obj,
                     suppress_messages = FALSE,
                     ...) {
   # Check fit status
-  check <- check_required_status(obj = obj,
+  check <- check_required_status(obj = object,
                                  required_status = status_fit)
 
   if (check %in% FALSE) stop(attr(check, "msg")) # Stop if not fitted
 
   if (is.null(model))
-    model <- names(obj$stat_model)
+    model <- names(object$stat_model)
   if (is.null(method))
-    method <- obj$settings_optimx$method
+    method <- object$settings_optimx$method
 
-  method_ok <- check_method(obj = obj, method = method)
-  model_ok <- check_model(obj = obj, model = model)
+  method_ok <- check_method(obj = object, method = method)
+  model_ok <- check_model(obj = object, model = model)
 
-  data_group_vars <- sapply(obj$data_group, rlang::as_label)
+  data_group_vars <- sapply(object$data_group, rlang::as_label)
 
   # Get a unique list of possible parameters for each model used
-  possible_model_params <- sapply(obj$stat_model, `[[`, "params") %>%
+  possible_model_params <- sapply(object$stat_model, `[[`, "params") %>%
     unlist() %>%
     unique()
 
@@ -62,22 +62,22 @@ coef.pk <- function(obj,
   # And only keep the name and starting value for the parameter
   # along with the unique identifying columns model and data_group
   parDF <- subset(
-    obj$prefit$par_DF,
+    object$prefit$par_DF,
     use_param == TRUE & optimize_param == FALSE &
       param_name %in% possible_model_params) %>%
-    dplyr::select(model, !!!obj$data_group, param_name, start)
+    dplyr::select(model, !!!object$data_group, param_name, start)
 
   coefs <- subset(
-    obj$fit,
+    object$fit,
     subset = (use_param == TRUE)) %>%
     dplyr::select(model, method,
-                  !!!obj$data_group,
+                  !!!object$data_group,
                   param_name,
                   estimate,
                   convcode)
 
   parDF <- coefs %>%
-    dplyr::distinct(model, method, !!!obj$data_group, convcode) %>%
+    dplyr::distinct(model, method, !!!object$data_group, convcode) %>%
     dplyr::inner_join(parDF, by = c(data_group_vars, "model")) %>%
     dplyr::rename(estimate = "start")
 
@@ -99,13 +99,13 @@ coef.pk <- function(obj,
   }
 
   # Get the columns describing time units and their (possibly) transformed units
-  time_group <- get_data(obj = obj) %>%
-    dplyr::select(!!!obj$data_group, Time.Units, Time_trans.Units) %>%
+  time_group <- get_data(obj = object) %>%
+    dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
     dplyr::distinct()
 
   # Create the coefs vector
   coefs_tidy <- coefs %>%
-    dplyr::group_by(model, method, !!!obj$data_group) %>%
+    dplyr::group_by(model, method, !!!object$data_group) %>%
     dplyr::reframe(coefs_vector = purrr::map2(
       estimate, param_name,
       .f = \(x, y){

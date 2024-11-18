@@ -9,19 +9,19 @@
 #' LOQ. Otherwise, the residual is the difference between the LOQ and `pred`.
 #'
 #'
-#' @param obj A `pk` object
+#' @param object A [pk] object
 #' @param newdata Optional: A `data.frame` with new data for which to make
 #'   predictions and compute residuals. If NULL (the default), then residuals
-#'   will be computed for the data in `obj$data`. `newdata` is required to
+#'   will be computed for the data in `object$data`. `newdata` is required to
 #'   contain at least the following variables: `Time`, `Time.Units`, `Dose`,
 #'   `Route`, `Media`, `Conc`, `Detect`.
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   make predictions and calculate residuals. If NULL (the default), residuals
-#'   will be returned for all of the models in `obj$stat_model`.
+#'   will be returned for all of the models in `object$stat_model`.
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   for which to make predictions and calculate residuals. If NULL (the
 #'   default), residuals will be returned for all of the models in
-#'   `obj$optimx_settings$method`.
+#'   `object$optimx_settings$method`.
 #' @param exclude Logical: `TRUE` to return `NA_real_` for any observations in
 #'   the data marked for exclusion (if there is a variable `exclude` in the
 #'   data, an observation is marked for exclusion when `exclude %in% TRUE`).
@@ -30,7 +30,7 @@
 #' @param use_scale_conc Possible values: `TRUE`, `FALSE`, or a named list with
 #'   elements `dose_norm` and `log10_trans` which themselves should be either
 #'   `TRUE` or `FALSE`. If `use_scale_conc = TRUE`, then the concentration
-#'   scaling/transformations in `obj` will be applied to both predicted and
+#'   scaling/transformations in `object` will be applied to both predicted and
 #'   observed concentrations before the residuals are computed (i.e., the
 #'   residuals will be computed on the same scale as the model was originally
 #'   fitted). If `use_scale_conc = FALSE` (the default for this function), then
@@ -45,14 +45,14 @@
 #'   [settings_optimx()]), and `data_group`.  The final column
 #'   contains the residuals (observed - predicted) of the model fitted by the
 #'   corresponding method.  If `use_scale_conc %in% FALSE`, these residuals are
-#'   in the same units as `obj$data$Conc.Units`. If `use_scale_conc %in% TRUE`,
-#'   the residuals are in the same units as `obj$data$Conc_trans.Units`. If
+#'   in the same units as `object$data$Conc.Units`. If `use_scale_conc %in% TRUE`,
+#'   the residuals are in the same units as `object$data$Conc_trans.Units`. If
 #'   `use_scale_conc` was a named list, then the residuals are in units of
-#'   `obj$data$Conc.Units` transformed as specified in `use_scale_conc`.
+#'   `object$data$Conc.Units` transformed as specified in `use_scale_conc`.
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
-residuals.pk <- function(obj,
+residuals.pk <- function(object,
                          newdata = NULL,
                          model = NULL,
                          method = NULL,
@@ -61,21 +61,21 @@ residuals.pk <- function(obj,
                          ...) {
 
   # ensure that the model has been fitted
-  check <- check_required_status(obj = obj,
+  check <- check_required_status(obj = object,
                                  required_status = status_fit)
   if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
-  if (is.null(model)) model <- names(obj$stat_model)
-  if (is.null(method)) method <- obj$settings_optimx$method
-  if (is.null(newdata)) newdata <- obj$data
+  if (is.null(model)) model <- names(object$stat_model)
+  if (is.null(method)) method <- object$settings_optimx$method
+  if (is.null(newdata)) newdata <- object$data
 
-  method_ok <- check_method(obj = obj, method = method)
-  model_ok <- check_model(obj = obj, model = model)
+  method_ok <- check_method(obj = object, method = method)
+  model_ok <- check_model(obj = object, model = model)
 
   newdata_ok <- check_newdata(newdata = newdata,
-                              olddata = obj$data,
+                              olddata = object$data,
                               req_vars = c("Time",
                                            "Time.Units",
                                            "Dose",
@@ -86,7 +86,7 @@ residuals.pk <- function(obj,
                                            "Detect"),
                               exclude = exclude)
 
-  preds <- predict(obj,
+  preds <- predict(object,
                    newdata = newdata,
                    model = model,
                    method = method,
@@ -111,7 +111,7 @@ residuals.pk <- function(obj,
 
 
   # Conc_trans columns will contain transformed values,
-  conc_scale <- conc_scale_use(obj = obj,
+  conc_scale <- conc_scale_use(obj = object,
                                use_scale_conc = use_scale_conc)
 
   message("residuals.pk(): Residuals calculated using the following transformations: \n",

@@ -5,7 +5,7 @@
 \title{Get residuals}
 \usage{
 \method{residuals}{pk}(
-  obj,
+  object,
   newdata = NULL,
   model = NULL,
   method = NULL,
@@ -15,22 +15,22 @@
 )
 }
 \arguments{
-\item{obj}{A `pk` object}
+\item{object}{A [pk] object}
 
 \item{newdata}{Optional: A `data.frame` with new data for which to make
 predictions and compute residuals. If NULL (the default), then residuals
-will be computed for the data in `obj$data`. `newdata` is required to
+will be computed for the data in `object$data`. `newdata` is required to
 contain at least the following variables: `Time`, `Time.Units`, `Dose`,
 `Route`, `Media`, `Conc`, `Detect`.}
 
 \item{model}{Optional: Specify one or more of the fitted models for which to
 make predictions and calculate residuals. If NULL (the default), residuals
-will be returned for all of the models in `obj$stat_model`.}
+will be returned for all of the models in `object$stat_model`.}
 
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 for which to make predictions and calculate residuals. If NULL (the
 default), residuals will be returned for all of the models in
-`obj$optimx_settings$method`.}
+`object$optimx_settings$method`.}
 
 \item{exclude}{Logical: `TRUE` to return `NA_real_` for any observations in
 the data marked for exclusion (if there is a variable `exclude` in the
@@ -41,7 +41,7 @@ exclusion. Default `TRUE`.}
 \item{use_scale_conc}{Possible values: `TRUE`, `FALSE`, or a named list with
 elements `dose_norm` and `log10_trans` which themselves should be either
 `TRUE` or `FALSE`. If `use_scale_conc = TRUE`, then the concentration
-scaling/transformations in `obj` will be applied to both predicted and
+scaling/transformations in `object` will be applied to both predicted and
 observed concentrations before the residuals are computed (i.e., the
 residuals will be computed on the same scale as the model was originally
 fitted). If `use_scale_conc = FALSE` (the default for this function), then
@@ -59,10 +59,10 @@ A data.frame with the final column being calculated residuals.
   [settings_optimx()]), and `data_group`.  The final column
   contains the residuals (observed - predicted) of the model fitted by the
   corresponding method.  If `use_scale_conc %in% FALSE`, these residuals are
-  in the same units as `obj$data$Conc.Units`. If `use_scale_conc %in% TRUE`,
-  the residuals are in the same units as `obj$data$Conc_trans.Units`. If
+  in the same units as `object$data$Conc.Units`. If `use_scale_conc %in% TRUE`,
+  the residuals are in the same units as `object$data$Conc_trans.Units`. If
   `use_scale_conc` was a named list, then the residuals are in units of
-  `obj$data$Conc.Units` transformed as specified in `use_scale_conc`.
+  `object$data$Conc.Units` transformed as specified in `use_scale_conc`.
 }
 \description{
 Extract residuals from a fitted `pk` object.

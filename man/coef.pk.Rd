@@ -5,7 +5,7 @@
 \title{Get coefficients}
 \usage{
 \method{coef}{pk}(
-  obj,
+  object,
   model = NULL,
   method = NULL,
   drop_sigma = FALSE,
@@ -15,7 +15,7 @@
 )
 }
 \arguments{
-\item{obj}{A [pk()] object}
+\item{object}{A [pk()] object}
 
 \item{model}{Optional: Specify (as a `character` vector) one or more of the
 fitted models whose coefficients to return. If `NULL` (the default),

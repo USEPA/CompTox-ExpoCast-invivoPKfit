@@ -2,17 +2,17 @@
 #'
 #' Extract predictions from a fitted `pk` object.
 #'
-#' @param obj A [pk] object.
+#' @param object A [pk] object.
 #' @param newdata Optional: A `data.frame` with new data for which to make
 #'   predictions. If NULL (the default), then predictions will be made for the
-#'   data in `obj$data`. `newdata` is required to contain at least the following
+#'   data in `object$data`. `newdata` is required to contain at least the following
 #'   variables: `Time`, `Time.Units`, `Dose`, `Route`, and `Media`.
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   make predictions. If NULL (the default), predictions will be returned for
-#'   all of the models in `obj$stat_model`.
+#'   all of the models in `object$stat_model`.
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   for which to make predictions. If NULL (the default), predictions will be
-#'   returned for all of the models in `obj$settings_optimx$method`.
+#'   returned for all of the models in `object$settings_optimx$method`.
 #' @param type Either `"conc"` (the default) or `"auc"`. `type = "conc"`
 #'   predicts concentrations; `type = "auc"` predicts area under the
 #'   concentration-time curve (AUC).
@@ -24,7 +24,7 @@
 #' @param use_scale_conc Possible values: `TRUE`, `FALSE`, or a named list with
 #'   elements `dose_norm` and `log10_trans` which themselves should be either
 #'   `TRUE` or `FALSE`. If `use_scale_conc = TRUE`, then the concentration
-#'   scaling/transformations in `obj` will be applied to both predicted and
+#'   scaling/transformations in `object` will be applied to both predicted and
 #'   observed concentrations before the log-likelihood is computed. If
 #'   `use_scale_conc = FALSE` (the default for this function), then no
 #'   concentration scaling or transformation will be applied before the
@@ -40,13 +40,13 @@
 #'   A column that contains the predicted concentration or AUC at that timepoint
 #'   given the TK parameters for that `model` and `method` specified in [coefs()].
 #'   If `use_scale_conc %in% FALSE`, these predictions are
-#'   un-transformed concentrations in the same units as `obj$data$Conc.Units`.
+#'   un-transformed concentrations in the same units as `object$data$Conc.Units`.
 #'   If `use_scale_conc %in% TRUE`, the predictions are transformed
-#'   concentrations in the same units as `obj$data$Conc_trans.Units`.
+#'   concentrations in the same units as `object$data$Conc_trans.Units`.
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
-predict.pk <- function(obj,
+predict.pk <- function(object,
                        newdata = NULL,
                        model = NULL,
                        method = NULL,
@@ -56,14 +56,14 @@ predict.pk <- function(obj,
                        suppress_messages = TRUE,
                        include_NAs = FALSE,
                        ...) {
-  if (is.null(model)) model <- names(obj$stat_model)
-  if (is.null(method)) method <- obj$settings_optimx$method
+  if (is.null(model)) model <- names(object$stat_model)
+  if (is.null(method)) method <- object$settings_optimx$method
 
   # From here it needs to output a named numeric vector coefs_vector
   # for the model functions
   # Responsibility for some checks done in coefs
   coefs <- coef(
-    obj = obj,
+    obj = object,
     model = model,
     method = method,
     drop_sigma = TRUE,
@@ -74,18 +74,18 @@ predict.pk <- function(obj,
 
   # This setup allows for a more stable call to the model functions later on
   fun_models <- data.frame(
-    model_name = unname(vapply(obj$stat_model, \(x) {x$name}, character(1))),
+    model_name = unname(vapply(object$stat_model, \(x) {x$name}, character(1))),
     model_fun = if (type == "auc") {
-      unname(sapply(obj$stat_model, \(x) {x$auc_fun}))
+      unname(sapply(object$stat_model, \(x) {x$auc_fun}))
     } else {
-      unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
+      unname(sapply(object$stat_model, \(x) {x$conc_fun}))
     }
   )
 
-  data_group_vars <- sapply(obj$data_group,
+  data_group_vars <- sapply(object$data_group,
                             rlang::as_label)
 
-  req_vars <- union(obj$data_group,
+  req_vars <- union(object$data_group,
                     ggplot2::vars(
                       Conc.Units,
                       Time,
@@ -95,14 +95,14 @@ predict.pk <- function(obj,
                       Media))
 
   if (is.null(newdata)) {
-    newdata <- obj$data
+    newdata <- object$data
   }
 
   # Check if there are other variables
 
   newdata_ok <- check_newdata(
     newdata = newdata,
-    olddata = obj$data,
+    olddata = object$data,
     req_vars = sapply(req_vars,
                       rlang::as_label),
     exclude = exclude
@@ -110,12 +110,12 @@ predict.pk <- function(obj,
 
 
   # apply transformations if so specified
-  conc_scale <- conc_scale_use(obj = obj,
+  conc_scale <- conc_scale_use(obj = object,
                                use_scale_conc = use_scale_conc)
 
   # Make observations into nested list-column
   newdata <- newdata %>%
-    dplyr::group_by(!!!obj$data_group) %>%
+    dplyr::group_by(!!!object$data_group) %>%
     tidyr::nest(.key = "observations") %>%
     dplyr::ungroup()
 
@@ -145,7 +145,7 @@ predict.pk <- function(obj,
   # Get predictions
   # Note that the model functions only need Time, Dose, Route, and Medium
   newdata <- newdata %>% # Rowwise drops
-    dplyr::rowwise(model, method, !!!obj$data_group) %>% # Needs to include columns outside the nest
+    dplyr::rowwise(model, method, !!!object$data_group) %>% # Needs to include columns outside the nest
     dplyr::summarise(predictions = list(
       observations %>%
         dplyr::mutate(

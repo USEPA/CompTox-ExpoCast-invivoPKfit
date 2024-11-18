@@ -54,7 +54,7 @@ get_winning_model.pk <- function(obj,
 
   data_grp_vars <- sapply(obj$data_group, rlang::as_label)
 
-  pred_check <- predict.pk(obj = obj,
+  pred_check <- predict.pk(object = obj,
                            newdata = newdata,
                            method = method)
 

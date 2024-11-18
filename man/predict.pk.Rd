@@ -5,7 +5,7 @@
 \title{Get predictions}
 \usage{
 \method{predict}{pk}(
-  obj,
+  object,
   newdata = NULL,
   model = NULL,
   method = NULL,
@@ -18,20 +18,20 @@
 )
 }
 \arguments{
-\item{obj}{A [pk] object.}
+\item{object}{A [pk] object.}
 
 \item{newdata}{Optional: A `data.frame` with new data for which to make
 predictions. If NULL (the default), then predictions will be made for the
-data in `obj$data`. `newdata` is required to contain at least the following
+data in `object$data`. `newdata` is required to contain at least the following
 variables: `Time`, `Time.Units`, `Dose`, `Route`, and `Media`.}
 
 \item{model}{Optional: Specify one or more of the fitted models for which to
 make predictions. If NULL (the default), predictions will be returned for
-all of the models in `obj$stat_model`.}
+all of the models in `object$stat_model`.}
 
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 for which to make predictions. If NULL (the default), predictions will be
-returned for all of the models in `obj$settings_optimx$method`.}
+returned for all of the models in `object$settings_optimx$method`.}
 
 \item{type}{Either `"conc"` (the default) or `"auc"`. `type = "conc"`
 predicts concentrations; `type = "auc"` predicts area under the
@@ -46,7 +46,7 @@ exclusion. Default `TRUE`.}
 \item{use_scale_conc}{Possible values: `TRUE`, `FALSE`, or a named list with
 elements `dose_norm` and `log10_trans` which themselves should be either
 `TRUE` or `FALSE`. If `use_scale_conc = TRUE`, then the concentration
-scaling/transformations in `obj` will be applied to both predicted and
+scaling/transformations in `object` will be applied to both predicted and
 observed concentrations before the log-likelihood is computed. If
 `use_scale_conc = FALSE` (the default for this function), then no
 concentration scaling or transformation will be applied before the
@@ -67,9 +67,9 @@ A data.frame with one row for each `data_group`, `model` and `method`.
   A column that contains the predicted concentration or AUC at that timepoint
   given the TK parameters for that `model` and `method` specified in [coefs()].
   If `use_scale_conc %in% FALSE`, these predictions are
-  un-transformed concentrations in the same units as `obj$data$Conc.Units`.
+  un-transformed concentrations in the same units as `object$data$Conc.Units`.
   If `use_scale_conc %in% TRUE`, the predictions are transformed
-  concentrations in the same units as `obj$data$Conc_trans.Units`.
+  concentrations in the same units as `object$data$Conc_trans.Units`.
 }
 \description{
 Extract predictions from a fitted `pk` object.

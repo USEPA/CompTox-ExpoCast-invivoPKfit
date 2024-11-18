@@ -7,7 +7,7 @@
 #'
 #' where \eqn{n_{par}} is the number of parameters in the fitted model.
 #'
-#' Note that the BIC is just the AIC with \eqn{k = \(n_{obs})}.
+#' Note that the BIC is just the AIC with \eqn{k = \log(n_{obs})}.
 #'
 #' @param object A `pk` object
 #' @param newdata Optional: A `data.frame` with new data for which to compute

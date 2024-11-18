@@ -403,7 +403,7 @@ plot.pk <- function(x,
     conc_scale_tmp$log10_trans <- FALSE
 
     interp_data <- predict.pk(
-      obj = x,
+      object = x,
       newdata = interp_data,
       use_scale_conc = conc_scale_tmp,
       model = model,

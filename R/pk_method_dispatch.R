@@ -97,6 +97,7 @@
     )
   }
 
+
   #' Coefficient standard deviations
   #'
   #' This is the S3 method generic for `coef_sd`.
