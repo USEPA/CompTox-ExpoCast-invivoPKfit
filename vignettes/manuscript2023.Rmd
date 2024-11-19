@@ -996,7 +996,7 @@ but _bobyqa_ produced predictions with more lower RMSLE.
 
 
 ```{r Final_Options, eval=FALSE}
-my_pk2 <- minimal_pk +
+my_pk <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE,
                       suppress.messages = FALSE) +
