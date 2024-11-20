@@ -13,11 +13,9 @@ This vignette describes comparisons between invivoPKfit predicted and those from
 
 ```{r library_loading}
 devtools::load_all()
-library(httk)
 library(tidyverse)
 my_pk <- readRDS("data-raw/all_cvt_pk.rds")
-httk::load_dawson2021()
-source("data-raw/RC_comparison_bkgd.R")
+source("data-raw/RC_comparison_bkgd.R") # httk loaded here
 ```
 
 Steps in the analysis:
@@ -56,7 +54,7 @@ my_tkstats <- eval_tkstats(my_pk) %>%
   distinct() %>%
   filter(
     Species %in% "rat",
-    Chemical %in% common_chems_rat,
+    Chemical %in% rat_pars_rat$clearance_df$Chemical,
     !is.na(CLtot.tkstats), !is.na(CLtot.nca)
   ) %>%
   group_by(Chemical, Species, CLtot.tkstats) %>%
@@ -66,7 +64,7 @@ my_tkstats <- eval_tkstats(my_pk) %>%
   )
 
 # Combine these two
-combined_clearance_df <- my_tkstats %>% inner_join(clearance_df)
+combined_clearance_df <- my_tkstats %>% inner_join(rat_pars_rat$clearance_df)
 ```
 
 
@@ -74,15 +72,15 @@ Finally, let's visualize where the tkstats predictions land.
 
 ```{r clearance_viz}
 combined_clearance_df %>%
-  mutate(AD_restrictive = abs(CLtot.tkstats - restrict_cl),
-         AD_nonrestrictive = abs(CLtot.tkstats - nonrestrict_cl),
+  mutate(AD_restrictive = abs(CLtot.tkstats - restrictive_clearance),
+         AD_nonrestrictive = abs(CLtot.tkstats - nonrestrictive_clearance),
          rough_determination = ifelse(
            min(AD_restrictive, AD_nonrestrictive) == AD_restrictive &
-             CLtot.tkstats < nonrestrict_cl,
+             CLtot.tkstats < nonrestrictive_clearance,
            "Restrictive", "Possibly non-Restrictive"
          )) %>% 
   dplyr::distinct(Chemical, rough_determination) %>%
-  View()
+  tally()
 
 # Preliminary viz, plot all clearances
 ccd <- combined_clearance_df %>%
@@ -98,7 +96,7 @@ ccd <- combined_clearance_df %>%
       Clearance_Source,
       levels = c(
         "CLtot.tkstats", "CLtot.nca_mean",
-        "nonrestrict_cl", "restrict_cl"
+        "nonrestrictive_clearance", "restrictive_clearance"
       )
     )
   ) %>%
@@ -117,9 +115,9 @@ ccd %>%
   scale_x_log10() +
   scale_fill_manual(
     breaks = c(
-      "nonrestrict_cl", "CLtot.tkstats",
+      "nonrestrictive_clearance", "CLtot.tkstats",
       "CLtot.nca_mean",
-      "restrict_cl"
+      "restrictive_clearance"
     ),
     labels = c(
       "non-restrictive clearance (httk)",

@@ -346,7 +346,7 @@ rowwise_calc_percentages <- function(data,
 
   # Calculate total
 
-  data$total <- rowSums(data[op_cols], 1, sum)
+  data$total <- rowSums(data[op_cols])
 
   # Calculate percentages
   data[paste0("percent_", op_cols)] <- apply(data[op_cols], 2,

@@ -207,5 +207,10 @@ nca.pk <- function(obj,
                        Time.Units,
                        Dose.Units))
 
+  if (NROW(nca_out) == 0L) {
+    warning("nca.pk: The data.frame returned is empty, ",
+            "please check your input.")
+  }
+
   return(nca_out)
 }
