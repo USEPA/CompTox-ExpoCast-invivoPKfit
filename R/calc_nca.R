@@ -91,8 +91,8 @@ calc_nca <- function(time,
                    method = "z",
                    ...) {
 
-  if (length(time) > 0 && length(conc) > 0 && length(dose) > 0 &&
-      anyNA(c(time, conc, dose)) && anyNA(detect)) {
+  if (length(time) > 0 & length(conc) > 0 & length(dose) > 0 &
+      !anyNA(c(time, conc, dose)) & !anyNA(detect)) {
 
     dose <- unique(dose)
 
