@@ -130,7 +130,8 @@ eval_tkstats.pk <- function(obj,
   nca_df <- nca_df %>% dplyr::select(-param_sd_z, -param_units) %>%
     tidyr::pivot_wider(names_from = param_name,
                        values_from = param_value) %>%
-    dplyr::right_join(winmodel_df) %>%
+    dplyr::right_join(winmodel_df,
+                      relationship = "many-to-many") %>%
     dplyr::relocate(model, method, .after = Media)
 
   # get tkstats
