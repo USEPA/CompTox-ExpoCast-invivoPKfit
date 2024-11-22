@@ -2,7 +2,7 @@
 % Please edit documentation in R/pk_method_dispatch.R
 \name{fold_errors}
 \alias{fold_errors}
-\title{Fold error}
+\title{This is the S3 method generic for `fold_errors`.}
 \usage{
 fold_errors(obj, ...)
 }
@@ -12,7 +12,7 @@ fold_errors(obj, ...)
 \item{...}{Additional arguments currently not in use.}
 }
 \description{
-This is the S3 method generic for `fold_error`.
+`fold_errors()` is an alias for `fold_error()`
 }
 \seealso{
 [fold_error.pk()] for the `fold_error` method for class [pk()]

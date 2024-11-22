@@ -38,7 +38,12 @@ fold_error.pk <- function(obj,
                           method = NULL,
                           exclude = TRUE,
                           sub_pLOQ = TRUE,
+                          suppress.messages = NULL,
                           ...) {
+
+  if (is.null(suppress.messages)) {
+    suppress.messages <- obj$settings_preprocess$suppress.messages
+  }
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -49,7 +54,6 @@ fold_error.pk <- function(obj,
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
   if (is.null(newdata)) newdata <- obj$data
-  if (is.null(rsq_group)) rsq_group <- obj$data_group
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -77,7 +81,8 @@ fold_error.pk <- function(obj,
                    model = model,
                    method = method,
                    use_scale_conc = FALSE,
-                   type = "conc")
+                   type = "conc",
+                   suppress.messages = suppress.messages)
 
 
   # remove any excluded observations & corresponding predictions, if so specified
@@ -87,7 +92,9 @@ fold_error.pk <- function(obj,
 
   #replace below-LOQ preds with pLOQ if specified
   if(sub_pLOQ %in% TRUE){
-    message("fold_errors.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    if(suppress.messages %in% FALSE){
+    message("fold_error.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    }
     preds <- preds %>%
       dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
                                               pLOQ,

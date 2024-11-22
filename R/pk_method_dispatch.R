@@ -157,11 +157,11 @@
   #' @param ... Additional arguments currently not in use.
   #' @export
   #' @seealso [fold_error.pk()] for the `fold_error` method for class [pk()]
-  fold_errors <- function(obj, ...) {
+  fold_error <- function(obj, ...) {
     UseMethod("fold_error", obj)
   }
 
-  #' Fold_error default method
+  #' fold_error default method
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
   #' @export
@@ -170,6 +170,19 @@
          toString(class(obj))
     )
   }
+
+  #' This is the S3 method generic for `fold_errors`.
+  #'
+  #'`fold_errors()` is an alias for `fold_error()`
+  #'
+  #' @param obj an object
+  #' @param ... Additional arguments currently not in use.
+  #' @export
+  #' @seealso [fold_error.pk()] for the `fold_error` method for class [pk()]
+  fold_errors <- function(obj, ...) {
+    UseMethod("fold_error", obj)
+  }
+
 
   #' Check required status
   #'
