@@ -11,6 +11,7 @@
   method = NULL,
   exclude = TRUE,
   use_scale_conc = FALSE,
+  suppress.messages = NULL,
   ...
 )
 }
@@ -50,6 +51,10 @@ residuals are computed (i.e., the residuals will be computed on natural
 scale concentration data). If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
+
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`obj$settings_preprocess$suppress.messages`}
 
 \item{...}{Additional arguments not currently used.}
 }

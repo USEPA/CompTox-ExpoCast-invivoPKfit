@@ -52,8 +52,9 @@
 #'   groupings, regardless of exclusion status. Default `TRUE`.
 #' @param vol_unit Character: Specifies the unit of volume. Defaults to "L" for liters.
 #' @param dose_norm Logical: `TRUE` (default) specifies whether the concentrations are dose-normalized.
-#' @param suppress.messages Logical: `TRUE` (default) suppresses the printing of
-#'   messages; `FALSE` will print them.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `obj$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments not currently in use.
 #' @return  A data.frame with one row for each `data_group`, `model` and `method`
 #'   with the variables in the `data.frame` returned by the `tkstats_fun` for
@@ -71,8 +72,11 @@ get_tkstats.pk <- function(obj,
                            exclude = TRUE,
                            vol_unit = "L",
                            dose_norm = TRUE,
-                           suppress.messages = TRUE,
+                           suppress.messages = NULL,
                            ...) {
+  if (is.null(suppress.messages)) {
+    suppress.messages <- obj$settings_preprocess$suppress.messages
+  }
 
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$settings_optimx$method

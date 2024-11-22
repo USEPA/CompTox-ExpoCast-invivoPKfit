@@ -31,8 +31,9 @@
 #'   log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
-#' @param suppress_messages Whether to suppress warnings and other
-#'  diagnostic messages during plotting
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `object$settings_preprocess$suppress.messages`
 #' @param include_NAs Logical: `FALSE` by default. Determines whether to include
 #'  aborted fits which have NAs as coefficients.
 #' @param ... Additional arguments.
@@ -53,9 +54,14 @@ predict.pk <- function(object,
                        type = "conc",
                        exclude = TRUE,
                        use_scale_conc = FALSE,
-                       suppress_messages = TRUE,
+                       suppress.messages = NULL,
                        include_NAs = FALSE,
                        ...) {
+
+  if (is.null(suppress.messages)) {
+    suppress.messages <- object$settings_preprocess$suppress.messages
+  }
+
   if (is.null(model)) model <- names(object$stat_model)
   if (is.null(method)) method <- object$settings_optimx$method
 
@@ -68,7 +74,7 @@ predict.pk <- function(object,
     method = method,
     drop_sigma = TRUE,
     include_NAs = include_NAs,
-    suppress_messages = suppress_messages
+    suppress.messages = suppress.messages
   ) %>%
     dplyr::select(-c(Time.Units, Time_trans.Units))
 
@@ -162,7 +168,7 @@ predict.pk <- function(object,
                          medium = Media
                          )),
             error = function(err) {
-              if (!suppress_messages) {
+              if (suppress.messages %in% FALSE) {
                 message("predict.pk(): Unable to run ",
                         model_fun, " for ",
                         toString(data_group_vars),
@@ -192,13 +198,13 @@ predict.pk <- function(object,
   } else if (type %in% "auc") {
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
   # note that it doesn't make sense to log10-trans AUC
-    if (suppress_messages %in% FALSE) {
+    if (suppress.messages %in% FALSE) {
       message("predict.pk(): Log10 transformation was specified, ",
               "but was not used because `type == 'AUC'`.")
     }
   }
 
-  if (suppress_messages %in% FALSE) {
+  if (suppress.messages %in% FALSE) {
     if (conc_scale$dose_norm) {
     message("predict.pk(): Note that the predicted values are for dose 1.0 (dose-normalized)")
   } else {

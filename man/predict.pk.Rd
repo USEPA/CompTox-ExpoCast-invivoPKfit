@@ -12,7 +12,7 @@
   type = "conc",
   exclude = TRUE,
   use_scale_conc = FALSE,
-  suppress_messages = TRUE,
+  suppress.messages = NULL,
   include_NAs = FALSE,
   ...
 )
@@ -54,8 +54,9 @@ log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
 
-\item{suppress_messages}{Whether to suppress warnings and other
-diagnostic messages during plotting}
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`object$settings_preprocess$suppress.messages`}
 
 \item{include_NAs}{Logical: `FALSE` by default. Determines whether to include
 aborted fits which have NAs as coefficients.}

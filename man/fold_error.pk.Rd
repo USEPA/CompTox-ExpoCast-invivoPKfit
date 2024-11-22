@@ -4,13 +4,14 @@
 \alias{fold_error.pk}
 \title{Fold errors}
 \usage{
-fold_error.pk(
+\method{fold_error}{pk}(
   obj,
   newdata = NULL,
   model = NULL,
   method = NULL,
   exclude = TRUE,
   sub_pLOQ = TRUE,
+  suppress.messages = NULL,
   ...
 )
 }

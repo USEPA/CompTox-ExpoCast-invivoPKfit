@@ -30,7 +30,9 @@
 #' @param dose_norm Logical: `TRUE` to perform NCA after dose-normalizing
 #'   concentrations. `FALSE` (default) to perform NCA on un-transformed
 #'   concentrations.
-#' @param suppress.messages Logical.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `obj$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments. Currently not in use.
 #' @return A `data.frame` with variables including all the grouping variables in
 #'   `nca_group`, `nca_group_id`; `design` (the auto-detected study design for

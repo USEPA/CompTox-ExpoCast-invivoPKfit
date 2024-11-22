@@ -13,6 +13,7 @@
   use_scale_conc = FALSE,
   rsq_group = NULL,
   sub_pLOQ = TRUE,
+  suppress.messages = NULL,
   ...
 )
 }
@@ -58,6 +59,10 @@ Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.}
 
 \item{sub_pLOQ}{TRUE (default): Substitute all predictions below the LOQ with
 the LOQ before computing R-squared. FALSE: do not.}
+
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`obj$settings_preprocess$suppress.messages`}
 
 \item{...}{Additional arguments. Not currently in use.}
 }
