@@ -150,15 +150,18 @@ calc_nca <- function(time,
       # and use an ssd design
       time_split <- split(time, time)
       min_time_nz <- min(time[time > 0])
+      min_time_step <- min(diff(time))
+
       time_split <- sapply(time_split,
                            function(this_time) {
                              if (length(this_time) == 1) {
                                this_time
                              } else {
-                               # add a small fuzz factor: 1% of smallest time
-                               this_time + runif(length(this_time),
-                                                 min = 0,
-                                                 max = 0.01 * min_time_nz)
+                               # add a small fuzz factor: spread times evenly along 1/100 of smallest time step
+                               this_time + seq(from = this_time[1] - 0.005*min_time_step,
+                                               to = this_time[1] + 0.005*min_time_step,
+                                               length.out = length(this_time)
+                                               )
                              }
                            })
       time <- unsplit(time_split, time)
