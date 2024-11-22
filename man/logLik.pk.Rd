@@ -105,6 +105,8 @@ the model.
 }
 \seealso{
 Other fit evaluation metrics: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{rmse.pk}()},
@@ -115,6 +117,8 @@ Other log likelihood functions:
 \code{\link{BIC.pk}()}
 
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},

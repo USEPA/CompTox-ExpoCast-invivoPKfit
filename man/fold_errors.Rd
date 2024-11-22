@@ -12,8 +12,8 @@ fold_errors(obj, ...)
 \item{...}{Additional arguments currently not in use.}
 }
 \description{
-This is the S3 method generic for `fold_errors`.
+This is the S3 method generic for `fold_error`.
 }
 \seealso{
-[fold_errors.pk()] for the `fold_errors` method for class [pk()]
+[fold_error.pk()] for the `fold_error` method for class [pk()]
 }

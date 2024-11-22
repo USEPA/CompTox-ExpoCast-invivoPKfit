@@ -14,9 +14,6 @@ get_fit(obj, ...)
 \description{
 This is the S3 method generic for get_fit()
 }
-\details{
-`get_fit()` is an alias for `data_summary()`
-}
 \seealso{
-[data_summary.pk()] for the method for class [pk()]
+[get_fit.pk()] for the method for class [pk()]
 }
