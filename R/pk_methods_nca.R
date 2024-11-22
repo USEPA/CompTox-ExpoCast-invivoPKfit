@@ -72,7 +72,7 @@ nca.pk <- function(obj,
     if (!(all(c("Route",
                "Media") %in%
              grp_vars))) {
-      stop(paste0("When dose_norm == TRUE, nca_group must include all of Route, Media.\n",
+      stop(paste0("nca.pk(): When dose_norm == TRUE, nca_group must include all of Route, Media.\n",
                   "nca_group is: ",
                   toString(grp_vars)
       ))
@@ -85,7 +85,7 @@ nca.pk <- function(obj,
                "Media") %in%
              grp_vars))) {
       stop(paste0("When dose_norm == FALSE, nca_group must include all of Dose, Route, Media.\n",
-                 "nca_group is: ",
+                 "nca.pk(): nca_group is: ",
                  toString(grp_vars)
       ))
     }
