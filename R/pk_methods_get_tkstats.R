@@ -115,8 +115,7 @@ get_tkstats.pk <- function(obj,
                       Dose,
                       Dose.Units,
                       Route,
-                      Media,
-                      data_sigma_group)
+                      Media)
   )
 
   # check that tk_group is valid: it must produce groups with a unique
@@ -138,7 +137,7 @@ get_tkstats.pk <- function(obj,
 
   # if more than one distinct row per group, stop
   if (any(newdata_grouped_count$N > 1)) {
-    stop("tk_group does not produce groups with unique combinations of Chemical, Species, Route, Media, and Dose.")
+    stop("get_tkstats.pk(): tk_group does not produce groups with unique combinations of Chemical, Species, Route, Media, and Dose.")
   }
 
 
@@ -173,7 +172,7 @@ get_tkstats.pk <- function(obj,
                        vol_unit = "L"
                      )),
       error = function(e) {
-        message("Failed to run:", tk_fun, "error reads: ")
+        message("get_tkstats.pk(): Failed to run:", tk_fun, "error reads: ")
         print(e)
       }
     )) # ending tryCatch statement
@@ -200,7 +199,7 @@ get_tkstats.pk <- function(obj,
     tkstats_all <- tkstats_all %>%
       dplyr::select(!Dose)
 
-    message("Dose column removed because these TK statistics are dose normalized")
+    message("get_tkstats.pk(): Dose column removed because these TK statistics are dose normalized")
   }
 
   # Final filtering of tkstats_all
