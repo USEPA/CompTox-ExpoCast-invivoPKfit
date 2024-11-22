@@ -119,6 +119,7 @@ eval_tkstats.pk <- function(obj,
                                    method = method) %>%
     dplyr::select(-c(near_flat, preds_below_loq))
 
+
   # calc NCA for newdata
   nca_df <- nca(obj = obj,
                 newdata = newdata,
@@ -148,22 +149,6 @@ eval_tkstats.pk <- function(obj,
                                  tkstats_df,
                                  by = c(data_grp_vars, "method", "model"))
 
-  # Assess group variables
-  # Are all error_group variables in tk_group? Unlikely but error group might be subset
-  # Note that despite dose-normalization, each summary_group will have
-  # different NCA values.
-  if (!all(error_grp_vars %in% grp_vars)) {
-    remaining_vars <- error_grp_vars[!(error_grp_vars %in% data_grp_vars)]
-
-    tkstats_df <- tkstats_df %>%
-      dplyr::group_by(!!!tk_group) %>%
-      dplyr::summarize(dplyr::across(tidyselect::all_of(remaining_vars),
-                                     \(x) {paste0(x, collapse = ",")})) %>%
-      dplyr::ungroup() %>%
-      dplyr::distinct()
-  }
-
-
   # prepare for merge
   nca_df_red <- nca_df %>%
     dplyr::rename_with(~ paste0(.x, ".nca", recycle0 = TRUE),
@@ -191,7 +176,7 @@ eval_tkstats.pk <- function(obj,
       nca_df_red
       ))
 
-  # Filter out infinite values for AUC_infinity
+  # Filter out infinite and NA values for AUC_infinity
   if (finite_only) {
     tk_eval <- tk_eval %>%
       filter(is.finite(AUC_infinity.tkstats),

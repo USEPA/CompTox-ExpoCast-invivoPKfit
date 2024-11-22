@@ -14,9 +14,6 @@ eval_tkstats(obj, ...)
 \description{
 This is the S3 method generic for eval_tkstats()
 }
-\details{
-`eval_tkstats()` is an alias for `data_summary()`
-}
 \seealso{
-[data_summary.pk()] for the method for class [pk()]
+[eval_tkstats.pk()] for the method for class [pk()]
 }
