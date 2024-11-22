@@ -24,10 +24,10 @@
 #'
 #' @param obj A pk object.
 #' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
-#'   the LOQ before computing fold errors. FALSE: do not.
-#' @param suppress_messages Logical, default: FALSE.
-#' Should there be no printed output?
-#'
+#'   the LOQ before computing fold errors. FALSE: do not. Only used if `obj` has been fitted and predictions are possible.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `obj$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments. Currently unused.
 #'
 #' @return A list of data frames.
@@ -35,12 +35,18 @@
 #' @author Gilberto Padilla Mercado
 #'
 twofold_test.pk <- function(obj,
-                            suppress_messages = FALSE,
+                            sub_pLOQ = TRUE,
+                            suppress.messages = NULL,
                             ...) {
+
+  if (is.null(suppress.messages)) {
+    suppress.messages <- obj$settings_preprocess$suppress.messages
+  }
+
   # Check the status of the pk object
   status <- suppressMessages(get_status(obj))
   if (status < 2) {
-    stop("Please do data preprocessing step on this pk object",
+    stop("twofold_test.pk(): Please do data preprocessing step on this pk object",
          " by running do_preprocess(...)"
          )
   }
@@ -53,13 +59,7 @@ twofold_test.pk <- function(obj,
   data_cvt <- subset(data_cvt,
                     subset = (Detect | !exclude | Conc > LOQ))
 
-  if(sub_pLOQ %in% TRUE){
-    #sub Conc_est < pLOQ with pLOQ
-    data_cvt <- data_cvt %>%
-      dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
-                                              pLOQ,
-                                              Conc_est))
-  }
+
 
 
   # Initialize output list
@@ -205,7 +205,9 @@ twofold_test.pk <- function(obj,
 
     # Only keep detects and non-excluded (observations to compare to)
     pred_win <- suppressMessages(
-      fold_errors(obj = obj) %>%
+      fold_error(obj = obj,
+                 sub_pLOQ = sub_pLOQ,
+                 suppress.messages = suppress.messages) %>%
         dplyr::ungroup() %>%
         dplyr::filter(Detect, !exclude) %>%
         dplyr::semi_join(winmodel)
@@ -327,12 +329,13 @@ twofold_test.pk <- function(obj,
     warning("pk object not fit, unable to run metrics for predictions")
   }
 
-  if (!suppress_messages) {
+  if (!suppress.messages) {
     cat("\n\n")
     message("Data Summary of 95% of mean-normalized Concentrations within 2-fold Test")
     print(out_list[['summarized_data_test']])
 
     # Print the summaries
+    if(suppress.messages %in% FALSE){
     cat("\n\n")
     message("Result: Individual Data Fold Concentration from Mean 2-fold Test")
     print(out_list[['indiv_data_test']])
@@ -346,9 +349,11 @@ twofold_test.pk <- function(obj,
       message("Result: Individual Data and Model Error Test")
       print(out_list[['indiv_data_test_fold_errors']])
     }
+    }
   }
 
   invisible(out_list)
+
 }
 
 

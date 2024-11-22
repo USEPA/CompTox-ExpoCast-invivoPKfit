@@ -4,18 +4,19 @@
 \alias{twofold_test.pk}
 \title{Evaluate whether data and predictions are within two-fold of mean or concentration, respectively}
 \usage{
-\method{twofold_test}{pk}(obj, suppress_messages = FALSE, ...)
+\method{twofold_test}{pk}(obj, sub_pLOQ = TRUE, suppress.messages = NULL, ...)
 }
 \arguments{
 \item{obj}{A pk object.}
 
-\item{suppress_messages}{Logical, default: FALSE.
-Should there be no printed output?}
+\item{sub_pLOQ}{TRUE (default): Substitute all predictions below the LOQ with
+the LOQ before computing fold errors. FALSE: do not. Only used if `obj` has been fitted and predictions are possible.}
+
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`obj$settings_preprocess$suppress.messages`}
 
 \item{...}{Additional arguments. Currently unused.}
-
-\item{sub_pLOQ}{TRUE (default): Substitute all predictions below the LOQ with
-the LOQ before computing fold errors. FALSE: do not.}
 }
 \value{
 A list of data frames.
