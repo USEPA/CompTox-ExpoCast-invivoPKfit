@@ -96,7 +96,7 @@
 #'
 #' @param obj A `pk` object
 #' @param newdata Optional: A `data.frame` with new data for which to make
-#'   predictions and compute RMSsE. If NULL (the default), then R-squared will be
+#'   predictions and compute R-squared. If NULL (the default), then R-squared will be
 #'   computed for the data in `obj$data`. `newdata` is required to contain at
 #'   least the following variables: `Time`, `Time.Units`, `Dose`, `Route`,
 #'   `Media`, `Conc`, `Conc_SD`, `N_Subjects`, `Detect`.
@@ -126,6 +126,8 @@
 #' grouping that is used to calculate R-squared value. Should be set to lowest number
 #' of variables that still would return unique experimental conditions.
 #' Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.
+#' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
+#'   the LOQ before computing R-squared. FALSE: do not.
 #' @param ... Additional arguments. Not currently in use.
 #' @return  A dataframe with one row for each `data_group`, `model` and `method`.
 #'   The final column contains the R-squared of the model fitted by the corresponding
@@ -142,6 +144,7 @@ rsq.pk <- function(obj,
                    exclude = TRUE,
                    use_scale_conc = FALSE,
                    rsq_group = NULL,
+                   sub_pLOQ = TRUE,
                    ...) {
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -170,7 +173,8 @@ rsq.pk <- function(obj,
                                            "Conc_SD",
                                            "N_Subjects",
                                            "LOQ",
-                                           "Detect"),
+                                           "Detect",
+                                           "pLOQ"),
                               exclude = exclude)
 
 
@@ -209,12 +213,22 @@ req_vars <- unique(c(names(preds),
                      "Conc_SD",
                      "N_Subjects",
                      "Detect",
-                     "exclude"))
+                     "exclude",
+                     "pLOQ"))
 
 
   new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
     dplyr::select(dplyr::all_of(req_vars)) %>%
     dplyr::ungroup())
+
+  #replace below-LOQ preds with pLOQ if specified
+  if(sub_pLOQ %in% TRUE){
+    message("rsq.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    new_preds <- new_preds %>%
+      dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
+                                              pLOQ,
+                                              Conc_est))
+  }
 
   # apply dose-normalization if specified
   # conditional mutate ifelse

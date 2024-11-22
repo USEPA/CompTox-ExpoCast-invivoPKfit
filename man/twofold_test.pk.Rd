@@ -13,6 +13,9 @@
 Should there be no printed output?}
 
 \item{...}{Additional arguments. Currently unused.}
+
+\item{sub_pLOQ}{TRUE (default): Substitute all predictions below the LOQ with
+the LOQ before computing fold errors. FALSE: do not.}
 }
 \value{
 A list of data frames.
@@ -38,6 +41,8 @@ Furthermore if `pk` object `status == 5` then it calculates the model error by
 evaluating _prediction/concentration_ at each timepoint for all data. Each test
 is done for data from individual subject observations and for all data by summarizing the
 observations.
+
+Only non-excluded detects are included in this analysis.
 }
 \author{
 Gilberto Padilla Mercado

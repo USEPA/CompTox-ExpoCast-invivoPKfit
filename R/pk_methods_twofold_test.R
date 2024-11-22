@@ -20,9 +20,14 @@
 #' is done for data from individual subject observations and for all data by summarizing the
 #' observations.
 #'
+#' Only non-excluded detects are included in this analysis.
+#'
 #' @param obj A pk object.
+#' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
+#'   the LOQ before computing fold errors. FALSE: do not.
 #' @param suppress_messages Logical, default: FALSE.
 #' Should there be no printed output?
+#'
 #' @param ... Additional arguments. Currently unused.
 #'
 #' @return A list of data frames.
@@ -47,6 +52,14 @@ twofold_test.pk <- function(obj,
   # because other observations won't have credible variability from mean
   data_cvt <- subset(data_cvt,
                     subset = (Detect | !exclude | Conc > LOQ))
+
+  if(sub_pLOQ %in% TRUE){
+    #sub Conc_est < pLOQ with pLOQ
+    data_cvt <- data_cvt %>%
+      dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
+                                              pLOQ,
+                                              Conc_est))
+  }
 
 
   # Initialize output list
@@ -231,19 +244,34 @@ twofold_test.pk <- function(obj,
 
     ##
     # This merge should have both Fold_Error AND foldConc
-    data_preds <- suppressMessages(dplyr::inner_join(pred_win, id_mean,
-                                                     relationship = "many-to-many"))
+    #inner join keeps only observations in both tables,
+    #keyed by all variables in common between pred_win and id_mean,
+    #so it's only keeping the time points with replicates
+    data_preds <- suppressMessages(
+      dplyr::inner_join(pred_win,
+                        id_mean,
+                        relationship = "many-to-many")
+    )
 
-    data_preds['both_within'] <- (dplyr::between(data_preds$Fold_Error, 0.5, 2) &
-                                    dplyr::between(data_preds$foldConc, 0.5, 2))
+    data_preds['both_within'] <- (
+      dplyr::between(data_preds$Fold_Error, 0.5, 2) &
+        dplyr::between(data_preds$foldConc, 0.5, 2)
+    )
 
-    data_preds['both_outside'] <- (!dplyr::between(data_preds$Fold_Error, 0.5, 2) &
-                                     !dplyr::between(data_preds$foldConc, 0.5, 2))
+    data_preds['both_outside'] <- (
+      !dplyr::between(data_preds$Fold_Error, 0.5, 2) &
+        !dplyr::between(data_preds$foldConc, 0.5, 2)
+    )
 
-    data_preds['model_outside'] <- (!dplyr::between(data_preds$Fold_Error, 0.5, 2) &
-                                      dplyr::between(data_preds$foldConc, 0.5, 2))
-    data_preds['data_outside'] <- (dplyr::between(data_preds$Fold_Error, 0.5, 2) &
-                                     !dplyr::between(data_preds$foldConc, 0.5, 2))
+    data_preds['model_outside'] <- (
+      !dplyr::between(data_preds$Fold_Error, 0.5, 2) &
+        dplyr::between(data_preds$foldConc, 0.5, 2)
+    )
+
+    data_preds['data_outside'] <- (
+      dplyr::between(data_preds$Fold_Error, 0.5, 2) &
+        !dplyr::between(data_preds$foldConc, 0.5, 2)
+    )
     # Make a table of values with percent within or outside factors of two
     # Summarizing number of fold concentrations from the mean
     data_pred_summary <- data_preds %>%
@@ -266,7 +294,8 @@ twofold_test.pk <- function(obj,
 
     ###
     # Here is when we take the 95% within two-fold summary data into account
-    data95_preds <- dplyr::left_join(pred_win, total_data_summary) %>%
+    data95_preds <- dplyr::left_join(pred_win,
+                                     total_data_summary) %>%
       dplyr::filter(!is.na(twofold_95))
 
     data95_preds['both_within'] <- (dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
@@ -345,8 +374,7 @@ rowwise_calc_percentages <- function(data,
   }
 
   # Calculate total
-
-  data$total <- rowSums(data[op_cols], 1, sum)
+  data$total <- apply(data[op_cols], 1, sum)
 
   # Calculate percentages
   data[paste0("percent_", op_cols)] <- apply(data[op_cols], 2,

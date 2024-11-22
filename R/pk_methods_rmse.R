@@ -96,6 +96,8 @@
 #'   in which case RMSE is calculated for each data group defined in the
 #'   object's `data_group` element (use [get_data_group.pk()] to access the
 #'   object's `data_group`).
+#' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
+#'   the LOQ before computing R-squared. FALSE: do not.
 #' @param ... Additional arguments. Not currently used.
 #' @return A `data.frame` with calculated RMSE as the final column. There is one row per
 #'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
@@ -113,6 +115,7 @@ rmse.pk <- function(obj,
                     exclude = TRUE,
                     use_scale_conc = FALSE,
                     rmse_group = NULL,
+                    sub_pLOQ = TRUE,
                     ...) {
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -167,6 +170,8 @@ rmse.pk <- function(obj,
       newdata <- subset(newdata, exclude %in% FALSE)
   }
 
+
+
   # Requested variables
   # Note that we take the NON-transformed concentrations.
   # Any dose-normalization will be done in the next step.
@@ -176,11 +181,22 @@ rmse.pk <- function(obj,
                 "Conc_SD",
                 "N_Subjects",
                 "Detect",
-                "exclude")
+                "exclude",
+                "pLOQ")
+
 
   new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
     dplyr::select(dplyr::all_of(req_vars)) %>%
     dplyr::ungroup())
+
+  #replace below-LOQ preds with pLOQ if specified
+  if(sub_pLOQ %in% TRUE){
+    message("rmse.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    new_preds <- new_preds %>%
+      dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
+                                   pLOQ,
+                                   Conc_est))
+  }
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
