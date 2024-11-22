@@ -32,10 +32,12 @@
 #'   concentration transformations (in `obj$scale$conc`) are *not* applied.
 #' @export
 #' @author Caroline Ring
-fold_errors.pk <- function(obj,
+fold_error.pk <- function(obj,
                           newdata = NULL,
                           model = NULL,
                           method = NULL,
+                          exclude = TRUE,
+                          sub_pLOQ = TRUE,
                           ...) {
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -45,13 +47,28 @@ fold_errors.pk <- function(obj,
   }
 
   if (is.null(model)) model <- names(obj$stat_model)
-  if (is.null(method)) method <- obj$settings_optimx$method
+  if (is.null(method)) method <- obj$optimx_settings$method
+  if (is.null(newdata)) newdata <- obj$data
+  if (is.null(rsq_group)) rsq_group <- obj$data_group
 
-  if (!is.null(newdata)) {
-    check_newdata(newdata = newdata,
-                  olddata = obj$data,
-                  req_vars = "Conc_trans")
-  }
+  method_ok <- check_method(obj = obj, method = method)
+  model_ok <- check_model(obj = obj, model = model)
+
+
+  newdata_ok <- check_newdata(newdata = newdata,
+                              olddata = obj$data,
+                              req_vars = c("Time",
+                                           "Time.Units",
+                                           "Dose",
+                                           "Route",
+                                           "Media",
+                                           "Conc",
+                                           "Conc_SD",
+                                           "N_Subjects",
+                                           "LOQ",
+                                           "Detect",
+                                           "pLOQ"),
+                              exclude = exclude)
 
   # get predicted concentrations
   # Note that these are given in original concentration units, not transformed values
@@ -60,7 +77,25 @@ fold_errors.pk <- function(obj,
                    model = model,
                    method = method,
                    use_scale_conc = FALSE,
-                   type = "conc") %>%
+                   type = "conc")
+
+
+  # remove any excluded observations & corresponding predictions, if so specified
+  if (exclude %in% TRUE && "exclude" %in% names(preds)) {
+    preds <- subset(preds, exclude %in% FALSE)
+  }
+
+  #replace below-LOQ preds with pLOQ if specified
+  if(sub_pLOQ %in% TRUE){
+    message("fold_errors.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    preds <- preds %>%
+      dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
+                                              pLOQ,
+                                              Conc_est))
+  }
+
+#calculate fold error
+  preds <- preds %>%
     mutate(Fold_Error = Conc_est / Conc,
            .after = Conc_est)
 
