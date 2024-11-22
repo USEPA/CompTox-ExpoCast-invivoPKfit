@@ -64,7 +64,7 @@ aborted fits which have NAs as coefficients.}
 }
 \value{
 A data.frame with one row for each `data_group`, `model` and `method`.
-  A column that contains the predicted concentration or AUC at that timepoint
+  Includes variable `Conc_est` that contains the predicted concentration or AUC at that timepoint
   given the TK parameters for that `model` and `method` specified in [coefs()].
   If `use_scale_conc %in% FALSE`, these predictions are
   un-transformed concentrations in the same units as `object$data$Conc.Units`.
@@ -76,6 +76,8 @@ Extract predictions from a fitted `pk` object.
 }
 \seealso{
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},
