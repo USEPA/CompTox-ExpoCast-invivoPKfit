@@ -13,6 +13,7 @@
   exclude = TRUE,
   vol_unit = "L",
   dose_norm = TRUE,
+  suppress.messages = TRUE,
   ...
 )
 }
@@ -55,6 +56,9 @@ groupings, regardless of exclusion status. Default `TRUE`.}
 
 \item{dose_norm}{Logical: `TRUE` (default) specifies whether the concentrations are dose-normalized.}
 
+\item{suppress.messages}{Logical: `TRUE` (default) suppresses the printing of
+messages; `FALSE` will print them.}
+
 \item{...}{Additional arguments not currently in use.}
 }
 \value{
@@ -89,6 +93,8 @@ model, and how they are calculated.
 }
 \seealso{
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},

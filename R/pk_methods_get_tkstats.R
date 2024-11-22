@@ -52,6 +52,8 @@
 #'   groupings, regardless of exclusion status. Default `TRUE`.
 #' @param vol_unit Character: Specifies the unit of volume. Defaults to "L" for liters.
 #' @param dose_norm Logical: `TRUE` (default) specifies whether the concentrations are dose-normalized.
+#' @param suppress.messages Logical: `TRUE` (default) suppresses the printing of
+#'   messages; `FALSE` will print them.
 #' @param ... Additional arguments not currently in use.
 #' @return  A data.frame with one row for each `data_group`, `model` and `method`
 #'   with the variables in the `data.frame` returned by the `tkstats_fun` for
@@ -69,6 +71,7 @@ get_tkstats.pk <- function(obj,
                            exclude = TRUE,
                            vol_unit = "L",
                            dose_norm = TRUE,
+                           suppress.messages = TRUE,
                            ...) {
 
   if (is.null(model)) model <- names(obj$stat_model)
@@ -180,14 +183,16 @@ get_tkstats.pk <- function(obj,
     tidyr::unnest(cols = TKstats)
 
 
+  if(suppress.messages %in% FALSE){
   # Print reference list of units for the parameters
   # The column is filtered out after pivoting
-  message("Here are the units for the estimated TK statistics: ")
+  message("get_tkstats.pk(): Here are the units for the estimated TK statistics: ")
   print(
     tkstats_all %>%
       dplyr::ungroup() %>%
       dplyr::distinct(param_name, param_units)
   )
+  }
 
   tkstats_all <- tkstats_all %>%
     dplyr::select(-param_units) %>%
@@ -198,8 +203,9 @@ get_tkstats.pk <- function(obj,
   if (dose_norm) {
     tkstats_all <- tkstats_all %>%
       dplyr::select(!Dose)
-
+if(suppress.messages %in% FALSE){
     message("get_tkstats.pk(): Dose column removed because these TK statistics are dose normalized")
+}
   }
 
   # Final filtering of tkstats_all
