@@ -208,5 +208,10 @@ predict.pk <- function(object,
 
   message("predict.pk(): These predictions have been made using un-scaled Time ",
           "and 1/hour rate constants from coefs()")
+
+  if (NROW(newdata) == 0L) {
+    warning("predict.pk: The output is empty, please check your input.")
+  }
+
   return(newdata)
 }

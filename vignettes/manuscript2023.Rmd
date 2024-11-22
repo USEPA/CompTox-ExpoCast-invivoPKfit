@@ -996,7 +996,7 @@ but _bobyqa_ produced predictions with more lower RMSLE.
 
 
 ```{r Final_Options, eval=FALSE}
-my_pk2 <- minimal_pk +
+my_pk <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(keep_data_original = TRUE,
                       suppress.messages = FALSE) +
@@ -1015,7 +1015,7 @@ my_pk <- do_prefit(my_pk)
 system.time(my_pk <- do_fit(my_pk, 
                             n_cores = 14))
 
-saveRDS(my_pk, "data-raw/all_cvt_pk_JOINT.rds")
+# saveRDS(my_pk, "data-raw/all_cvt_pk.rds")
 ```
 
 ## Analysis Plots
@@ -1081,9 +1081,9 @@ chem_name_translate <- all_my_data %>%
 ```
 
 
-### Figure 4A: Replicated timepoint variation in CvTdb
+### Figure 3A: Replicated timepoint variation in CvTdb
 
-The purpose of Figure 4 is to illustrate the variability among replicate
+The purpose of Figure 3 is to illustrate the variability among replicate
 time points per Chemical/Species/Reference/Route/Media/Dose group. 
 This characterization is important as it can serve as a pre-fitting data check
 and if the data are too variable it is likely `invivoPKfit` will struggle to
@@ -1096,11 +1096,11 @@ that contribute to data variability including but not limited to:
 Additionally, this also contributes to supplemental figure 2.
 
 
-```{r fig4A_supp2A, eval=FALSE}
+```{r fig3A, eval=FALSE}
 my_tf$indiv_data_test %>% select(Route, starts_with("percent_"))
 
 
-pl4A <- my_tf$individual_data %>%
+pl3A <- my_tf$individual_data %>%
   # Plotting
   ggplot(aes(x = foldConc)) +
   geom_histogram(binwidth = 0.2,
@@ -1126,12 +1126,12 @@ pl4A <- my_tf$individual_data %>%
         plot.background = element_blank(),
         axis.ticks.y = element_blank())
 
-pl4A
+pl3A
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
               today,
               "NormalizedConcentrations",".png"),
-       plot = pl4A,
+       plot = pl3A,
        bg = "white",
        height = 2.2,
        width = 2.5,
@@ -1139,7 +1139,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
        device = "png",
        dpi = 300)
 
-
+# Not included in manuscript
 my_tf$data_descriptors %>%
   select(Chemical, Species, Reference, Route, Media, Time, data_descr) %>%
   distinct() %>%
@@ -1153,9 +1153,9 @@ my_tf$data_descriptors %>%
 ```
 
 
-### Figure 4A-2: Alternate version of Figure 4A
+### Figure 3A-2: Alternate version of Figure 3A
 
-This alternate version of Figure 4A aims to simplify the assessment of replication
+This alternate version of Figure 3A aims to simplify the assessment of replication
 of datasets in invivoPKfit. In contrast to the original 4A, this will also result
 in the inclusion of datasets with recorded standard deviation values
 (i.e. non-indivudual animal data/summarized data).
@@ -1178,7 +1178,7 @@ multiple replicates from individual animal data.
 # With the mapped column names
 my_tf$summarized_data_test
 
-pl4A_alt <- my_tf$summarized_data_test %>%
+pl3A_alt <- my_tf$summarized_data_test %>%
   filter(Route == "All") %>%
   select(Route, within, outside) %>%
   pivot_longer(cols = c(within, outside),
@@ -1205,19 +1205,19 @@ pl4A_alt <- my_tf$summarized_data_test %>%
         axis.ticks.y = element_blank(),
         legend.position = "none")
 
-pl4A_alt # Don't think I will use this
+pl3A_alt # Not included in final manuscript
 
 ```
 
 
-### Figure 4B: Variation over time in CvTdb data.
+### Figure 3B: Variation over time in CvTdb data.
 
 Here the goal is to evaluate whether particular timepoints throughout CvT data
 are particularly susceptible to high variability. To do this, we create a 
 relative time scale anchored by $t_{max}$ and $t_{last}$.
 
 ```{r fig4B-cowplot, eval=FALSE}
-pl4B <- my_tf$individual_data %>%
+pl3B <- my_tf$individual_data %>%
   inner_join(my_tkstats %>%
               dplyr::select(Chemical, Species,
                             Route, Media,
@@ -1268,7 +1268,7 @@ pl4B <- my_tf$individual_data %>%
         plot.background = element_blank(),
         legend.position = "none")
 
-pl4B
+pl3B
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
               today,
@@ -1282,126 +1282,20 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 # Make the Combination Plot----
 
-plot_grid(pl4A, pl4B, labels = c("A", "B"),
+plot_grid(pl3A, pl3B, labels = c("A", "B"),
                      align = "h", axis = "bt", rel_widths = c(1, 1.7))
 
 
-figure4 <- plot_grid(pl4A, pl4B, labels = c("A", "B"),
+figure3 <- plot_grid(pl3A, pl3B, labels = c("A", "B"),
                      align = "h", axis = "bt", rel_widths = c(1, 1.7))
 
 ggsave(paste0(Sys.getenv("FIG_DIR"),
               today,
-              "Figure5alt_onlyDetects.png"),
-       plot = figure4,
+              "Figure3_onlyDetects.png"),
+       plot = figure3,
        bg = "white",
        height = 3,
        width = 6.5,
-       units = "in",
-       dpi = 300)
-
-
-# Extra Plot: Model error over ADME-normalized time! ----
-my_preds %>% 
-  filter(Detect, !exclude, Conc_est >= pLOQ,
-         !(model %in% "model_flat")) %>%
-  inner_join(my_tkstats %>%
-              dplyr::select(Chemical, Species,
-                            Route, Media,
-                            tmax = tmax.nca) %>%
-              filter(!is.na(tmax)) %>%
-               semi_join(winmodel)) %>%
-  group_by(Chemical,
-           Species,
-           Route,
-           Media,
-           Dose) %>%
-  mutate(normTime = ifelse(
-           Route == "iv",
-           1 + Time/max(Time),
-           ifelse(
-             Time > tmax,
-             ((Time - tmax)/max(Time)) + 1,
-             0.5 + Time/(2*tmax)
-           )
-         )) %>%
-  group_by(model, method,
-           Chemical, Species, Route, Media,
-           Dose, normTime) %>%
-  summarize(RMSLE = sqrt(sum((log10(Conc) - log10(Conc_est))^2)/n())) %>%
-  ggplot(aes(
-    x = normTime,
-    y = RMSLE
-  )) +
-  geom_point(alpha = 0.2, size = 0.7) +
-  facet_grid(cols = vars(Route),
-             scales = "free_x") +
-  labs(x = "ADME-Normalized Time",
-       y = "RMSLE",
-       title = "RMSLE over the course of an experiment") +
-  theme(text = element_text(size = 10),
-        panel.border = element_rect(color = "black", fill = NA, size = 1),
-        panel.background = element_blank(),
-        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
-        strip.background = element_rect(fill = "white"),
-        strip.text = element_text(face = "bold"),
-        axis.ticks = element_blank(),
-        axis.line = element_blank(),
-        axis.text.x = element_blank(),
-        axis.title = element_text(face = "bold"),
-        panel.spacing = unit(0.125, units = "in"),
-        plot.background = element_rect(color = "white"),
-        legend.position = "none")
-
-ggsave(paste0(Sys.getenv("FIG_DIR"),
-              today,
-              "RMLE_overADME_time",
-              ".png"),
-       height = 3,
-       width = 7,
-       units = "in",
-       dpi = 300)
-
-my_preds %>% 
-  filter(Detect, !exclude, Conc_est >= pLOQ,
-         !(model %in% "model_flat")) %>%
-  inner_join(my_tkstats %>%
-              dplyr::select(Chemical, Species,
-                            Route, Media,
-                            tmax = tmax.nca) %>%
-              filter(!is.na(tmax))) %>%
-  group_by(Chemical,
-           Species,
-           Route,
-           Media,
-           Dose) %>%
-  mutate(normTime = ifelse(
-           Route == "iv",
-           1 + Time/max(Time),
-           ifelse(
-             Time > tmax,
-             ((Time - tmax)/max(Time)) + 1,
-             0.5 + Time/(2*tmax)
-           )
-         )) %>%
-  group_by(model, method,
-           Chemical, Species, Route, Media,
-           Dose, normTime) %>%
-  summarize(RMSLE = sqrt(sum((log10(Conc) - log10(Conc_est))^2)/n())) %>%
-  mutate(TimeCat = ifelse(normTime > 1, "elimination", "absorption")) %>%
-  ggplot(aes(x = RMSLE)) +
-  geom_histogram(bins = 50) +
-  xlim(0,4) +
-  facet_grid(rows = vars(Route),
-             cols = vars(TimeCat)) +
-  theme_bw()
-
-
-ggsave(paste0(Sys.getenv("FIG_DIR"),
-              today,
-              "RMLE_overADME_time_histograms",
-              ".png"),
-       height = 6,
-       width = 6,
        units = "in",
        dpi = 300)
 
@@ -1411,7 +1305,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ### Supp. Figure 2: Concentration and final time-points have wide range
 
 
-```{r cvt_analysis, eval=FALSE}
+```{r sFig2-cvt_analysis, eval=FALSE}
 data_range <- all_my_data %>%
   filter(Detect, !exclude) %>%
   group_by(Chemical, Species, Reference, Media, Route, Dose, Dose.Units) %>%
@@ -1503,7 +1397,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
-### Supp Figure 3: invivoPKfit model performance
+### Supp Figure 4: invivoPKfit model performance
 
 
 ```{r sFig4-model_performance, eval=FALSE}
@@ -1537,19 +1431,19 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
-### Figures 5 and Supplemental Figures 4 & 5: Model performance vs Data Variability
+### Figures 4 and Supplemental Figures 4 & 5: Model performance vs Data Variability
 
 Here we examine the performance of "best fit" models with relation to data variability.
 Please note that in supplemental Figure 3, the data with summarized observations
 (mean and sd) were included. Here, because we are trying to specifically compare
 data variability with model performance, we look at data with replicated timepoint observations, which are largely data with individual animal data.
 
-```{r fig5-modelPerform-v-dataVar, eval=FALSE}
+```{r fig4-modelPerform-v-dataVar, eval=FALSE}
 my_tf$indiv_data_test_fold_errors %>%
   select(model, starts_with("percent_")) %>%
   glimpse()
 
-pl_5A <- my_tf$indiv_data_fold_errors %>%
+pl_4A <- my_tf$indiv_data_fold_errors %>%
   # For Plotting
   ggplot(aes(
     y = Fold_Error,
@@ -1578,7 +1472,7 @@ pl_5A <- my_tf$indiv_data_fold_errors %>%
         axis.ticks = element_blank(),
         axis.line = element_blank())
 
-pl_5A
+pl_4A
 ggsave(paste0(Sys.getenv("FIG_DIR"),
               today,
               "ModelPerformance_vDataVariability.png"),
@@ -1620,7 +1514,7 @@ table_plot <- gen_grob(flextable(my_table) %>%
                          autofit())
 
 
-dual_plot <- plot_grid(pl_5A, table_plot, ncol = 1, align = "v",
+dual_plot <- plot_grid(pl_4A, table_plot, ncol = 1, align = "v",
           rel_heights = c(1, 0.5))
 
 dual_plot
@@ -1646,12 +1540,12 @@ my_tf$summarized_data_model_error %>%
 ```
 
 
-### Figure 6: Multiple goodness-of-fit metrics validate model performance
+### Figure 5: Multiple goodness-of-fit metrics validate model performance
 Here we analyze and validate model performance per data group using R-squared,
 RMSE, and fraction of predictions that are within 2-fold for each Chemical,
 Species, Route, Media, and Dose groupings.
 
-```{r fig6-goodness-of-fit, eval=FALSE}
+```{r fig5-goodness-of-fit, eval=FALSE}
 combined_gof_df <- my_tf$model_error_all %>%
   group_by(Chemical, Species, model, method) %>%
   summarize(within_2fold = sum(between(Fold_Error, 0.5, 2))/n()) %>%
@@ -1800,7 +1694,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 
 ### Supp. Fig. 7: Distribution of Sigmas in CvTdb data
 
-```{r sFig4-sigmaDistribution, eval=FALSE}
+```{r sFig7-sigmaDistribution, eval=FALSE}
 
 my_pk$fit %>%
   select(Chemical, Species, model, method, param_name, estimate) %>%
@@ -1845,7 +1739,7 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
-### Figure 7: Comparing derived TK stats with human TK stats from Lombardo et al.
+### Figure 6: Comparing derived TK stats with human TK stats from Lombardo et al.
 
 This meta-analysis compares the TK stats from model fits with other published studies.
 
@@ -2001,7 +1895,7 @@ lombardo_hist <- data.frame(Chemical = c(lombardo$DTXSID,
                                       length.out = nrow(my_tkstats))))
 
 
-sfig4A <- lombardo_hist %>% 
+sfig7A <- lombardo_hist %>% 
   ggplot(aes(x = log2(Vss), color = Source,
              group = Source)) +
   geom_freqpoly(aes(y = after_stat(ndensity)),
@@ -2026,7 +1920,7 @@ sfig4A <- lombardo_hist %>%
         legend.title = element_text(face = "bold"),
         legend.text = element_text())
 
-sfig4A
+sfig7A
 other_meta <- read_csv(
   file = paste0(Sys.getenv("FIG_DIR"), "SupTableInVivoDatandPreds.csv")) %>%
   dplyr::select(DTXSID, fbioh, fbior) %>%
@@ -2039,7 +1933,7 @@ fgutabs <- my_pk$fit %>% filter(param_name %in% "Fgutabs", convcode == 0) %>%
   rename(Fgutabs.tkstats = "estimate")
 
 
-sfig4B <- other_meta %>% left_join(fgutabs, by = c("DTXSID" = "Chemical")) %>%
+sfig7B <- other_meta %>% left_join(fgutabs, by = c("DTXSID" = "Chemical")) %>%
   filter(Species %in% c("rat")) %>%
   filter(!is.na(Fgutabs.tkstats),
          !is.na(fbior)) %>%
@@ -2080,7 +1974,7 @@ sfig4B <- other_meta %>% left_join(fgutabs, by = c("DTXSID" = "Chemical")) %>%
         legend.text = element_text())
 
 
-plot_grid(sfig4A, sfig4B,
+plot_grid(sfig7A, sfig7B,
           align = "v",
           ncol = 1,
           axis = "lr",
@@ -2088,7 +1982,7 @@ plot_grid(sfig4A, sfig4B,
           labels = c("A", "B"))
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          today,
-                         "metaAnalysis_Comparisons_SuppFigure4_named.png"),
+                         "metaAnalysis_Comparisons_SuppFigure7_named.png"),
        height = 5.5,
        width = 4,
        device = "png", dpi = 300)
@@ -2196,9 +2090,9 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 ```
 
-### Supp. Fig. 10: Example plots for data fits
+### Supp. Fig. 5: Example plots for data fits
 
-```{r sfig6-examples-of-fits, eval=FALSE}
+```{r sfig5-examples-of-fits, eval=FALSE}
 pl <- plot(my_pk, use_scale_conc = TRUE, n_interp = 10)
 names(pl) # Chemical Species observations observation_plot predicted predicted_plot final_plot
 
@@ -2291,152 +2185,9 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
 
 ```
 
-
-### NCA variation analysis
-Here I decide to investigate data where fits were aborted and how many 
-time-points occurred before non-compartmental t~max~, which essentially
-asks whether there are enough detectable (above LOQ) data points to model absorption.
-As a threshold for whether absorption can be modeled, I count those that have at least
-more than one data point prior to the empirical t~max~. With at least three points
-(including t~max~) we can reasonably begin to assess the absorption of a compound.
-
-
-```{r more_analysis, eval=FALSE}
-
-
-my_pk$prefit$fit_check %>% filter(fit_decision == "abort") %>%
-  dplyr::select(model, Chemical) %>% distinct()
-
-all_my_data %>%
-  filter(Chemical == "DTXSID2021315")
-
-
-# On average, how many time-points before tmax (empirical)?
-my_nca %>% filter(param_name %in% "tmax") %>%
-  dplyr::select(Chemical, Species, Route, Media, tmax.nca = param_value) %>%
-  left_join(all_my_data) %>%
-  filter(Route %in% "oral", Time < tmax.nca) %>%
-  distinct(Chemical, Chemical_Name, Species, Route, Media, Detect, Time) %>%
-  group_by(Chemical, Chemical_Name, Species, Route, Media, Detect) %>%
-  count(name = "tp_before_tmax") %>%
-  ungroup() %>% 
-  filter(Detect == TRUE) %>%
-  dplyr::select(!Detect) %>%
-  arrange(tp_before_tmax) %>%
-  count(tp_before_tmax > 1)
-  
-```
-
-Here I introduce the notion whether the data is variable compared across time.
-
-```{r PredictionVariability_overtime, eval=FALSE}
-my_residuals %>%
-  filter(exclude == FALSE) %>%
-  inner_join(winmodel) %>%
-  inner_join(my_tkstats %>%
-              dplyr::select(Chemical, Species,
-                            Route, Media,
-                            tmax = tmax.tkstats) %>%
-              filter(!is.na(tmax))) %>%
-  group_by(Chemical,
-           Species,
-           Route,
-           Media,
-           Dose) %>%
-  mutate(
-         normTime = ifelse(
-           Route == "iv",
-           1 + Time/max(Time),
-           ifelse(
-             Time > tmax,
-             ((Time - tmax)/max(Time)) + 1,
-             0.5 + Time/(2*tmax)
-           )
-         )) %>%
-  distinct() %>%
-  filter(Detect %in% TRUE) -> my_residuals2
-my_residuals2 %>%
-  # filter(Route == "oral") %>% View()
-  ggplot(aes(
-    x = normTime,
-    y = Residuals
-  )) +
-  geom_point(alpha = 0.2, size = 0.5) +
-  geom_point(data = filter(my_residuals2,
-                           Chemical %in% "DTXSID4020533",
-                           Species %in% "rat"),
-             color = "orange2", size = 0.5) +
-  geom_point(data = filter(my_residuals2,
-                           Chemical %in% "DTXSID8031865",
-                           Species %in% "rat"),
-             color = "magenta4", size = 0.5) +
-  geom_point(data = filter(my_residuals2,
-                           Chemical %in% "DTXSID8025337",
-                           Species %in% "rat"),
-             color = "green2", size = 0.5) +
-  geom_vline(xintercept = 1, color = "blue", linetype = "dashed") +
-  geom_vline(xintercept = 2, color = "green4", linetype = "dashed") +
-  facet_grid(cols = vars(Route),
-             # rows = vars(model),
-             scales = "free_x") +
-  labs(x = "ADME-Normalized Time",
-       y = "Winning Model Residuals") +
-  theme(aspect.ratio = 1,
-        panel.border = element_rect(color = "black", fill = NA, size = 1.5),
-        panel.background = element_blank(),
-        panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
-        strip.background = element_rect(fill = "white"),
-        strip.text = element_text(face = "bold"),
-        axis.ticks = element_blank(),
-        axis.line = element_blank(),
-        axis.text.x = element_blank())
-
-ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "ADME_NormalizedTime-WinModelResiduals_onlyDetects_Highlighted_2023-07-19.png"),
-       height = 4,
-       width = 6,
-       units = "in")
-```
-
-
-I try to find the connections between functions in _invivoPKfit_ to best understand
-and represent the structure of the package.
-
-```{r function_connections, eval=FALSE}
-fw <- mvbutils::foodweb(where = asNamespace("invivoPKfit"),
-                        border = TRUE, cex = 0.6, lwd = 1.5)
-fun_mat <- fw$funmat
-
-mvbutils::foodweb(where = asNamespace("invivoPKfit"),
-                  prune = "calc_auc",
-                  # descendants = FALSE,
-                  # ancestors = FALSE,
-                  border = TRUE, cex = 1, lwd = 1.5)
-
-# Predict dependents: rmse, residuals, rsq, calc_auc, fold_errors, plot
-# Coef dependents: calc_auc, predict, get_tkstats, summary,log_Lik, coef_sd
-
-# list of all functions and methods
-fm <- ls(asNamespace("invivoPKfit"))
-fm <- fm[!grepl(".default", x = fm)]
-
-pdf(file = paste0(Sys.getenv("FIG_DIR"),
-              "NonDefaultFunction_Connections.pdf"),
-    height = 8, width = 8)
-for (i in fm) {
-  mvbutils::foodweb(where = asNamespace("invivoPKfit"),
-                  prune = i,
-                  # descendants = FALSE,
-                  # ancestors = FALSE,
-                  border = TRUE, cex = 1, lwd = 1.5)
-}
-dev.off()
-
-```
-
 ## Other Plots
 
-### Plotting ALL fits for Dose-normalized Joint fits (L-BFGS-B)
+### Plotting ALL fits
 
 Here is the code used to generate the CvT data and _invivoPKfit_ fits
 for each chemical, species data group.
@@ -2475,150 +2226,7 @@ pl %>%
 ```
 
 
-### Figure 2: Example Fits to Explain Joint vs Pooled Models
-
-```{r Explain-Heirarchical-Model, eval=FALSE}
-# Note that the data will run one "Series" of time point at a time
-my_1comp <- function(t, F_V, kelim, kabs, sd = 0) {
-  sd + (F_V * (kabs * (exp(-kelim * t) - exp(-kabs * t))) / (kabs - kelim))
-}
-
-my_cdata <- data.frame(
-  Reference = rep(rep(c("X", "O"), each = 3), 6),
-  Time = rep(c(0, 2, 4, 6, 8, 12), each = 6),
-  Concentration = c(
-    4, 5, 6.5,
-    4.5, 5, 6,
-    8, 9, 9.5,
-    7.5, 8, 8.5,
-    3, 4.5, 6,
-    3.5, 4, 5,
-    2, 2.5, 4,
-    1, 1.5, 2.25,
-    0.4, 1, 2,
-    0.4, 0.8, 1,
-    0.2, 0.5, 1,
-    0.25, 0.4, 0.5
-  ) 
-)
-
-
-pl_pool <- ggplot() +
-  geom_point(data = my_cdata,
-             mapping = aes(
-               x = Time,
-               y = Concentration,
-               color = Reference
-             ),
-             position = position_dodge(width = 0.4),
-             size = 2) +
-  stat_function(
-    fun = my_1comp,
-    args = list(F_V = 20, kelim = 0.6, kabs = 0.8),
-    linewidth = 1) +
-  stat_function(
-    fun = my_1comp,
-    args = list(F_V = 20, kelim = 0.6, kabs = 0.8, sd = 1),
-    linewidth = 0.5, linetype = "dashed") +
-  stat_function(
-    fun = my_1comp,
-    args = list(F_V = 20, kelim = 0.6, kabs = 0.8, sd = -1),
-    linewidth = 0.5, linetype = "dashed") +
-  scale_y_continuous(breaks = scales::pretty_breaks(10)) +
-  scale_x_continuous(breaks = scales::pretty_breaks(13)) +
-  scale_color_manual(values = c("black", "black")) +
-  theme_classic() +
-  theme(axis.text = element_blank(),
-        axis.ticks = element_blank(),
-        axis.title = element_text(size = 12, face = "bold"),
-        axis.line = element_line(linewidth = 1, lineend = "square"),
-        legend.position = "none")
-ggsave(paste0(Sys.getenv("FIG_DIR"), "PooledExampleFigure.png"),
-       units = "in",
-       height = 4,
-       width = 5,
-       device = "png",
-       dpi = 300)
-
-# Change shape(s) from circles
-pl_joint <- ggplot() +
-  geom_point(data = my_cdata,
-             mapping = aes(
-               x = Time,
-               y = Concentration,
-               color = Reference,
-               shape = Reference
-             ),
-             position = position_dodge(width = 0.4),
-             size = 2) +
-  stat_function(
-    fun = my_1comp,
-    args = list(F_V = 20, kelim = 0.6, kabs = 0.8),
-    linewidth = 1) +
-  stat_function(
-    fun = my_1comp,
-    args = list(F_V = 20, kelim = 0.6, kabs = 0.8, sd = 1.3),
-    linewidth = 0.6, linetype = "dashed", color = "green4") +
-  stat_function(
-    fun = my_1comp,
-    args = list(F_V = 20, kelim = 0.6, kabs = 0.8, sd = -1.3),
-    linewidth = 0.6, linetype = "dashed", color = "green4") +
-  stat_function(
-    fun = my_1comp,
-    args = list(F_V = 20, kelim = 0.6, kabs = 0.8, sd = 0.7),
-    linewidth = 0.6, linetype = "dashed", color = "magenta3") +
-  stat_function(
-    fun = my_1comp,
-    args = list(F_V = 20, kelim = 0.6, kabs = 0.8, sd = -0.7),
-    linewidth = 0.6, linetype = "dashed", color = "magenta3") +
-  scale_y_continuous(breaks = scales::pretty_breaks(10)) +
-  scale_x_continuous(breaks = scales::pretty_breaks(13)) +
-  scale_color_manual(values = c("magenta3", "green4")) +
-  scale_shape_manual(values = c(15, 17)) +
-  theme_classic() +
-  theme(axis.text = element_blank(),
-        axis.ticks = element_blank(),
-        axis.title = element_text(size = 12, face = "bold"),
-        axis.line = element_line(linewidth = 1, lineend = "square"),
-        axis.title.y = element_blank(),
-        legend.position = "none")
-
-pl_joint
-ggsave(paste0(Sys.getenv("FIG_DIR"), "JointExampleFigure.png"),
-       units = "in",
-       height = 4,
-       width = 5,
-       device = "png",
-       dpi = 300)
-
-
-plot_grid(pl_pool, pl_joint,
-          align = "h", axis = "bt")
-
-ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "Pooled_Joint_ExampleFigure.png"),
-       units = "in",
-       height = 3.4,
-       width = 6.5,
-       device = "png",
-       dpi = 300)
-
-ggplot(data.frame(point_size = seq(0.2, 3, by = 0.2)),
-       aes(x = as.factor(point_size), size = point_size)) +
-  geom_point(y = 0) +
-  scale_y_continuous(limits = c(-1, 1)) +
-  theme_bw() +
-  theme(legend.position = "none")
-
-ggsave(paste0(Sys.getenv("FIG_DIR"), "Point_Reference_3x5.png"),
-       units = "in",
-       height = 3,
-       width = 5,
-       device = "png",
-       dpi = 300)
-```
-
-Here we prepare our results for the CvTdb.
+## Preparing results for CvTdb
 
 ```{r cvtdb-prep, eval=FALSE}
 my_cvt <- cvt
