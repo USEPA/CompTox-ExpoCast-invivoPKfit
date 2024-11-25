@@ -17,8 +17,9 @@
 #'  sigma in the output.
 #' @param include_NAs Logical: `FALSE` by default. Determines whether to include
 #'  aborted fits which have NAs as coefficients.
-#' @param suppress_messages Logical: `FALSE` by default. Determines whether to
-#'  display messages.
+#' @param suppress.messages Logical: `NULL` by default to use the setting in
+#'   `object$settings_preprocess$suppress.messages`. Determines whether to
+#'   display messages.
 #' @param ... Additional arguments currently not in use.
 #' @return A data.frame with a row for each `data_group` x `method` x `model` combination
 #'  in a fitted [pk()] object. When `drop_sigma = TRUE` there is also a row for each
@@ -35,8 +36,12 @@ coef.pk <- function(object,
                     method = NULL,
                     drop_sigma = FALSE,
                     include_NAs = FALSE,
-                    suppress_messages = FALSE,
+                    suppress.messages = NULL,
                     ...) {
+
+  if (is.null(suppress.messages)) {
+    suppress.messages <- object$settings_preprocess$suppress.messages
+  }
   # Check fit status
   check <- check_required_status(obj = object,
                                  required_status = status_fit)
@@ -120,7 +125,7 @@ coef.pk <- function(object,
   # By optimization method
   if (is.character(method)) {
     method_vector <- method
-    if (!suppress_messages) {
+    if (suppress.messages %in% FALSE) {
     message("coef.pk(): Filtering by method(s): ", paste(method, collapse = " "))
     }
     coefs_tidy <- coefs_tidy %>% dplyr::filter(method %in% method_vector)
@@ -128,7 +133,7 @@ coef.pk <- function(object,
   # By models used
   if (is.character(model)) {
     model_vector <- model
-    if (!suppress_messages) {
+    if (suppress.messages %in% FALSE) {
       message("coef.pk(): Filtering by model(s): ", paste(model, collapse = " "))
     }
     coefs_tidy <- coefs_tidy %>% dplyr::filter(model %in% model_vector)
