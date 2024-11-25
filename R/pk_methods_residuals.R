@@ -41,7 +41,7 @@
 #'   log10-transformation will be applied.
 #' @param suppress.messages Logical: whether to suppress message printing. If
 #'   NULL (default), uses the setting in
-#'   `obj$settings_preprocess$suppress.messages`
+#'   `object$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments not currently used.
 #' @return A data.frame with the final column being calculated residuals.
 #'   There is one row per each [optimx::optimx()] methods (specified in
@@ -64,7 +64,7 @@ residuals.pk <- function(object,
                          suppress.messages = NULL,
                          ...) {
   if (is.null(suppress.messages)) {
-    suppress.messages <- obj$settings_preprocess$suppress.messages
+    suppress.messages <- object$settings_preprocess$suppress.messages
   }
 
   # ensure that the model has been fitted
