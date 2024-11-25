@@ -37,6 +37,8 @@
 twofold_test.pk <- function(obj,
                             sub_pLOQ = TRUE,
                             suppress.messages = NULL,
+                            model = NULL,
+                            method = NULL,
                             ...) {
 
   if (is.null(suppress.messages)) {
@@ -201,11 +203,14 @@ twofold_test.pk <- function(obj,
 
 # If predictions are possible
   if (status == 5) {
+
     winmodel <- get_winning_model(obj = obj)
 
     # Only keep detects and non-excluded (observations to compare to)
     pred_win <- suppressMessages(
       fold_error(obj = obj,
+                 model = model,
+                 method = method,
                  sub_pLOQ = sub_pLOQ,
                  suppress.messages = suppress.messages) %>%
         dplyr::ungroup() %>%
