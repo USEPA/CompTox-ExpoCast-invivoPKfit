@@ -153,12 +153,13 @@ fit_data <- function(this_error_model,
                      n_cores = 12,
                      file_dir = Sys.getenv("OD_DIR")){
   retval <- -9
-   dose_indic <- as.numeric(this_dose_norm)
+  dose_indic <- as.numeric(this_dose_norm)
   log10_indic <- as.numeric(this_log10_trans)
   time_indic <- as.numeric(this_time_scale)
   errmodel_indic <- substr(this_error_model, 1, 1)
   
-  file_str <- paste0("mypk_fit_",
+  file_str <- paste0(today,
+                     "mypk_fit_",
                      dose_indic,
                      log10_indic,
                      time_indic,
@@ -206,6 +207,7 @@ fit_data <- function(this_error_model,
       
       cli::cli_alert_success(text = "Fitting success!")
       print(this_time)
+      rm(this_fit)
       
       retval <- this_time[[3]]
     },
@@ -229,7 +231,7 @@ system.time(tmp_out <- mapply(fit_data,
                               this_dose_norm = fitopts$dose_norm,
                               this_log10_trans = fitopts$log10_trans,
                               this_time_scale = fitopts$time_scale,
-                              n_cores = 14))
+                              n_cores = 13))
 
 mean(tmp_out)/60 # Average runtime (in minutes) per fitting option
 median(tmp_out)/60
@@ -268,6 +270,7 @@ winmodel_comparison <- function(this_error_model,
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
+                     today,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -312,6 +315,7 @@ rmsles_Cmax_AUC <- function(
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
+                     today,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -399,6 +403,7 @@ get_gof <- function(this_error_model,
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
+                     today,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -456,6 +461,7 @@ get_all_preds <- function(this_error_model,
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
+                     today,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -490,6 +496,7 @@ tf_tests <- function(this_error_model,
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
+                     today,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -564,7 +571,7 @@ gc()
 ### General Observations
 
 + The time_scaling generally makes things worse.  
-+ L-BFGS-B had a difficult time fitting with new restriction, genrally worse estimates.
++ L-BFGS-B had a difficult time fitting with new restriction, generally worse estimates.
 + log10_trans generally improves RMSLE, at a small expense of R-squared.  
   + All log10_trans options have at least 10 more data_groups with RMSLE < 10 than the non-log10 transformed. 
 + There are some cases where fits are bad due to a combination of factors,
@@ -585,18 +592,18 @@ writexl::write_xlsx(x = list(
                 ".xlsx"))
 gof_tbl <- readxl::read_xlsx(path = paste0(Sys.getenv("FIG_DIR"),
                                                    "Manu_Files/",
-                                                   "19September2024",
+                                                   today,
                                                    "_Supp_Table1.xlsx"),
                                      sheet = "Prediction_Evaluations") %>% 
   mutate(RMSLE = as.numeric(RMSLE))
 wm_comp <- readxl::read_xlsx(path = paste0(Sys.getenv("FIG_DIR"),
                                                    "Manu_Files/",
-                                                   "19September2024",
+                                                   today,
                                                    "_Supp_Table1.xlsx"),
                                      sheet = "Fit_Counts")
 cmax_auc_rmsle_tbl <- readxl::read_xlsx(path = paste0(Sys.getenv("FIG_DIR"),
                                                    "Manu_Files/",
-                                                   "19September2024",
+                                                   today,
                                                    "_Supp_Table1.xlsx"),
                                      sheet = "AUC_and_Cmax_RMSE_summary")
 gof_tbl %>%
@@ -617,6 +624,8 @@ gof_tbl %>% filter(Options == "110p", model == "model_flat",
 gof_tbl %>% filter(Options == "110h", model == "model_flat",
                    method == "bobyqa") %>% distinct(Chemical, Species)
 gof_tbl %>% filter(Options == "010h", model == "model_flat",
+                   method == "bobyqa") %>% distinct(Chemical, Species)
+gof_tbl %>% filter(Options == "010p", model == "model_flat",
                    method == "bobyqa") %>% distinct(Chemical, Species)
 
 
@@ -650,7 +659,7 @@ gof_tbl %>%
   anti_join(data.frame(Chemical = "DTXSID1021116", Species = "rat")) %>%
   group_by(Options) %>%
   summarize(medianR2 = mean(Rsq, na.rm = TRUE))
-# Here we see that the highest mean Rsq is for 110p
+# Here we see that the highest median Rsq is for 110p
 # I use median because the distribution is skewed towards 1.
 gof_tbl %>%
   filter(method %in% "bobyqa",
@@ -669,20 +678,21 @@ cmax_auc_rmsle_tbl %>%
 
 all_tf_tests %>%
   filter(Options %in% c("110p", "110h", "010h"),
-         model %in% "All non-flat") %>%
+         model %in% "All non-flat",
+         method %in% "bobyqa") %>%
   select(Options, model, starts_with("percent_"))
 # Relatively similar here
 
 
 cmaxAUCpl <- cmax_auc_rmsle_tbl %>% 
-  filter(RMSLE_AUC < 0.5, RMSLE_Cmax < 0.5) %>%
+  filter(RMSLE_AUC < 0.8, RMSLE_Cmax < 0.5) %>%
   ggplot(aes(x = RMSLE_AUC, y = RMSLE_Cmax,
              shape = method, fill = Options)) +
   scale_shape_manual(values = c(21,22))+
   scale_color_brewer(palette = "Paired")+
   geom_point(color = "black", size = 2, stroke = 0.5)  +
   guides(fill = guide_legend(override.aes = list(shape = 21))) +
-  coord_equal(xlim = c(0.3, 0.45), ylim = c(0.3, 0.4), expand = TRUE) +
+  # coord_equal(xlim = c(0.3, 0.45), ylim = c(0.3, 0.4), expand = TRUE) +
   labs(x = "AUC RMSLE", y = "Cmax RMSLE") +
   theme_bw() +
   theme(panel.border = element_rect(fill = NA,
@@ -798,10 +808,7 @@ ggsave(
   )
 
 rmsle_hist <- gof_tbl %>% filter(model != "model_flat",
-                   Options %in% c("100p",
-                                  "010h",
-                                  "110p",
-                                  "110h"),
+                   Options %in% c("100p", "010h", "110p", "110h"),
                    method == "bobyqa") %>%
   ggplot(aes(x = RMSLE)) +
   geom_histogram(fill = "grey5",
