@@ -112,6 +112,7 @@ coef.pk <- function(object,
         setNames(estimate, param_name)
       }
     )) %>%
+    dplyr::distinct() %>%
     dplyr::left_join(time_group,
                      by = data_group_vars)
 
