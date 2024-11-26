@@ -6,7 +6,6 @@
 #'
 #' - Coerce data to class `data.frame` (if it is not already)
 #' - Rename variables to harmonized "`invivopkfit` aesthetic" variable names, using `obj$mapping`
-#' - Check that the data includes only one chemical and one species.
 #' - Check that the data includes only routes in `obj$settings_preprocess$routes_keep` and media in `obj$settings_preprocess$media_keep`
 #' - Check that the data includes only one unit for concentration, one unit for time, and one unit for dose.
 #' - Coerce `Value`, `Value_SD`, `LOQ`, `Dose`, and `Time` to numeric, if they are not already.
