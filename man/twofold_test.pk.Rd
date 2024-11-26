@@ -4,7 +4,14 @@
 \alias{twofold_test.pk}
 \title{Evaluate whether data and predictions are within two-fold of mean or concentration, respectively}
 \usage{
-\method{twofold_test}{pk}(obj, sub_pLOQ = TRUE, suppress.messages = NULL, ...)
+\method{twofold_test}{pk}(
+  obj,
+  sub_pLOQ = TRUE,
+  suppress.messages = NULL,
+  model = NULL,
+  method = NULL,
+  ...
+)
 }
 \arguments{
 \item{obj}{A pk object.}

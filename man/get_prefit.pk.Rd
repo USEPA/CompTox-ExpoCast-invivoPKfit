@@ -4,17 +4,15 @@
 \alias{get_prefit.pk}
 \title{Get prefit}
 \usage{
-\method{get_prefit}{pk}(obj, model = NULL, ...)
+\method{get_prefit}{pk}(obj, ...)
 }
 \arguments{
-\item{obj}{A [pk()] object that has had `data_info()` run on it}
-
-\item{model}{A vector with the names of model(s) that should be considered in output.}
+\item{obj}{A [pk()] object that has had `do_prefit()` run on it}
 
 \item{...}{Additional arguments. Currently not in use.}
 }
 \value{
-A list of `data.frame`s: one for each model in `obj$stat_model`
+A list of `data.frame`s in the object's `prefit` element.
 }
 \description{
 Extract pre-fitting results from a [pk()] object
