@@ -30,6 +30,7 @@ library(RColorBrewer)
 library(ctxR)
 library(flextable)
 library(officer)
+library(patchwork)
 
 devtools::load_all() #load invivopkfit
 
@@ -61,7 +62,7 @@ read_date_pk <- "25November2024"
 And a date for the results files to read from:
 
 ```{r}
-read_date_pk <- "27November2024"
+read_date_results <- "27November2024"
 ```
 
 
@@ -243,6 +244,105 @@ my_pk <- readRDS(paste0(Sys.getenv("OD_DIR"),
                         "mypk_fit_110p.Rds"))
 ```
 
+Number of observations:
+
+```{r}
+get_data(my_pk) %>%
+  count()
+```
+
+Number of unique chemicals:
+
+```{r}
+get_data(my_pk) %>%
+  distinct(Chemical) %>%
+  count()
+```
+
+Number of unique references:
+
+```{r}
+get_data(my_pk) %>%
+  distinct(Reference) %>%
+  count()
+```
+
+Number of unique species:
+
+```{r}
+get_data(my_pk) %>%
+  distinct(Species) %>%
+  count()
+```
+
+Number of unique combinations of Chemical and Species:
+
+```{r}
+get_data(my_pk) %>%
+  distinct(Chemical, Species) %>%
+  count()
+```
+
+Number of unique combinations of Chemical, Species, and Reference:
+
+```{r}
+get_data(my_pk) %>%
+  distinct(Chemical, Species, Reference) %>%
+  count()
+```
+
+Number of unique combinations of Chemical, Species, Reference, Route, Media:
+
+```{r}
+get_data(my_pk) %>%
+  distinct(Chemical, Species, Reference, Route, Media) %>%
+  count()
+```
+
+Number of unique combinations of Chemical, Species, Reference, Route, Media, Dose:
+
+```{r}
+get_data(my_pk) %>%
+  distinct(Chemical, Species, Reference, Route, Media, Dose) %>%
+  count()
+```
+## Number of data groups with both blood and plasma data available
+
+```{r}
+get_data(my_pk) %>%
+  group_by(Chemical, Species) %>%
+  summarise(blood_and_plasma = all(c("blood",
+                  "plasma") %in% Media)) %>%
+  ungroup() %>%
+  summarise(n_both = sum(blood_and_plasma))
+```
+
+## Number of data groups where time scaling could occur
+
+```{r}
+get_data(my_pk) %>%
+  group_by(Chemical, Species) %>%
+  summarise(t_mid = mean(range(Time)),
+    t_mid_log10 = midpt_log10(Time),
+            new_time_units = auto_units(y = Time,
+                       from = "hours",
+                       target = 10)) %>%
+  ungroup() %>%
+  count(new_time_units)
+```
+
+
+
+## How many experiments (Chemical, Species, Reference, Route, Media) were flagged for potential dose dependence?
+
+```{r}
+get_data_info(my_pk)$dose_norm_check %>%
+  dplyr::summarise(AUC_flag = sum(!is.na(data_flag_AUC)),
+            Cmax_flag = sum(!is.na(data_flag_Cmax)),
+            total_multi_dose = sum(n_dose_groups>1),
+            total_expts = n())
+```
+
 
 ## Evaluating time and concentration ranges
 
@@ -337,6 +437,43 @@ rm(sf_2A, sf_2B, sf_2AB)
 
 ### Figure 3
 
+```{r}
+data_cvt <- get_data(my_pk)
+data_counts <- data_cvt %>%
+dplyr::filter(Detect) %>%
+dplyr::count(Chemical, Species, Reference, Route, Media, Dose, Time, N_Subjects,
+name = "Count")
+data_counts <- dplyr::left_join(data_counts, data_cvt,
+by = c("Chemical", "Species", "Reference",
+"Route", "Media", "Dose", "Time",
+"N_Subjects")) %>%
+dplyr::mutate(data_descr = dplyr::case_when(
+(Count > 1 & N_Subjects == 1) ~ "Individual Data, Multiple Observations",
+(Count == 1 & N_Subjects == 1) ~ "Individual Data, Single Observation",
+(Count == 1 & N_Subjects > 1 & Conc_SD > 0) ~ "Grouped Data w SD",
+(N_Subjects > 1 & Conc_SD == 0) ~ "Grouped Data no SD",
+.default = NA_character_
+))
+
+indiv_data <- subset(data_counts,
+                     subset = (data_descr %in% "Individual Data, Multiple Observations"))
+
+indiv_data <- indiv_data %>%
+dplyr::group_by(Chemical, Species, Reference, Route, Media, Dose, Time) %>%
+dplyr::mutate(replicate_mean = mean(Conc, na.rm = TRUE)) %>%
+  ungroup()
+
+indiv_data_bygroup <- indiv_data %>%
+  dplyr::group_by(Chemical, Species) %>%
+  dplyr::summarise(AFE = 10^mean(log10(Conc/replicate_mean)),
+                                                                                               AAFE = 10^mean(abs(log10(Conc/replicate_mean)))) %>%
+  ungroup()
+
+indiv_data_bygroup %>% count(AFE < 0.5)
+indiv_data_bygroup %>% count(AFE > 2)
+```
+
+
 Do twofold-test; use only the information about the observations at this point (predictions will be handled later).
 
 ```{r}
@@ -353,16 +490,19 @@ pl3A <- my_tf$individual_data %>%
                  fill = "grey5",
                  color = "grey5",
                  linewidth = 0.4) +
-  coord_cartesian(xlim =  c(0, 4),
-                  ylim = c(0, 3200)) +
+  coord_cartesian(xlim =  c(0, 3.1),
+                  ylim = c(0, 1200)) +
   scale_y_continuous(expand = c(0, 0),
-                     breaks = c(0, 1000, 2000, 3000),
-                     labels = c("0", "1", "2", "3")) +
+                     breaks = c(0, 250, 500, 750, 1000),
+                     labels = c("0", "2.5", "5", "7.5", "10")) +
   expand_limits(y = 0) +
-  geom_vline(xintercept = c(0.5, 2), color = "red3", linetype = "dashed") +
+  geom_vline(xintercept = c(0.5, 2),
+             color = "red3",
+             linetype = "dashed",
+             linewidth = 1) +
   theme_bw() +
   labs(x = "Mean-normalized concentration",
-                y = "Observations thousands)") +
+                y = "Observations (hundreds))") +
   theme(text = element_text(size = 14),
         panel.border = element_rect(color = "black", linewidth = 1, fill = NA),
         panel.background = element_blank(),
@@ -412,8 +552,10 @@ pl3B <- my_tf$individual_data %>%
   scale_x_continuous(breaks = c(1,2),
                      labels = c("tmax", "end")) +
   geom_point(alpha = 0.1, size = 0.7) +
-  geom_hline(yintercept = c(0.5, 2), color = "red3",
-             linewidth = 0.8, linetype = "dashed") +
+  geom_hline(yintercept = c(0.5, 2),
+             color = "red3",
+             linewidth = 0.8,
+             linetype = "dashed") +
   facet_grid(cols = vars(Route),
              scales = "free_x") +
   labs(x = "ADME-Normalized Time",
@@ -564,8 +706,6 @@ Here we evaluate the various fitting options by:
 
 
 Define some helper functions to do the various model evaluations.
-
-
 
 
 ## Winning model tally
@@ -903,7 +1043,6 @@ rmsles_Cmax_AUC <- function(
 }
 ```
 
-
 ## Goodness of fit metrics
 
 Goodness-of-fit table with R-squared, RMSLE and AIC:
@@ -1145,6 +1284,7 @@ Produce and save tables for these evaluation metrics.
               values_from = n) )
 ```
 
+## Rank fitting options
 
 Rank fitting options by count of Chemical-Species data groups where RMSLE < 1
 
@@ -1199,6 +1339,8 @@ cmax_auc_rmsle_rank %>%
 This ranking strongly suggests 110p, with 100p as a second choice (both bobyqa).
 
 110p was ranked number 3 in the list of RMSLE and Rsq criteria 9and 100p was ranked number 5). So we select 110p bobyqa as the best when all of these metrics are considered.
+
+##  Supplemental Table 2: Save evaluation results
 
 Write the evaluation results to a spreadsheet, including the rankings.
 
@@ -1460,9 +1602,7 @@ dev.off()
 rm(sp_plots, split_preds, all_preds_prep, all_preds)
 ```
 
-Remove unneeded items.
-
-## Analysis Plots
+# Analysis Plots and Tables for Best Set of Fitting Options
 
 Begin by collating the data needed for plots. These data are generally accessible using functions/methods for evaluating fitted `pk` objects.
 
@@ -1482,24 +1622,19 @@ my_tkstats <- eval_tkstats(my_pk, method = "bobyqa") %>% semi_join(winmodel)
 my_nca <- get_nca(my_pk)
 all_my_data <- get_data(my_pk)
 
-formatted_coefs <- my_pk$fit %>% 
-  filter(method %in% "bobyqa") %>%
-  filter(str_detect(param_name, "sigma_", negate = TRUE)) %>%
-  select(Chemical, Species, model, model, param_name, estimate,
-         param_name, estimate, convcode) %>% 
-  mutate(param_name = paste(param_name, "tkstats", sep = ".")) |> 
-  pivot_wider(names_from = param_name,
-                                     values_from = estimate)
-
 #merge together long form coefs and long form coef SDs
 
 my_tf <- twofold_test(my_pk, method = "bobyqa")  
 
 NROW(all_my_data) > NROW(my_preds) # THis must be true... or else try distinct(my_preds)
 
+my_coef_sd <- coef_sd(my_pk, method = "bobyqa") %>% #this will take a few minutes to run
+  semi_join(winmodel) #keep only coefs & SDs for winning model
+
 # Writing file to xlsx
 writexl::write_xlsx(x = list(predictions = my_preds,
-                             tkstats = my_tkstats),
+                             tkstats = my_tkstats,
+                             coefs_sds = my_coef_sd),
                     path = paste0(Sys.getenv("FIG_DIR"),
                                   "Manu_Files/",
                                   today,
@@ -1510,21 +1645,31 @@ writexl::write_xlsx(x = list(predictions = my_preds,
 Compute fold errors, r-squared, AIC, RMSLE, RMSE.
 ```{r}
 
-fe_df <- fold_errors(my_pk, sub_pLOQ = TRUE, method = "bobyqa") %>% semi_join(winmodel)
+fe_df <- fold_errors(my_pk,
+                     sub_pLOQ = TRUE,
+                     method = "bobyqa") %>% semi_join(winmodel)
 
 # May need to change the use_scale_conc defaults
-r2_df <- rsq(my_pk, use_scale_conc = FALSE, sub_pLOQ = TRUE, method = "bobyqa") %>%
+r2_df <- rsq(my_pk, use_scale_conc = FALSE,
+             sub_pLOQ = TRUE,
+             method = "bobyqa") %>%
   semi_join(winmodel)  
 myAIC <- AIC(my_pk, method = "bobyqa") %>%
-  semi_join(winmodel) 
+  semi_join(winmodel)
+
 myRMSLE <- rmse(my_pk,
-               use_scale_conc = list(dose_norm = FALSE, log10_trans = TRUE),
+               use_scale_conc = list(dose_norm = FALSE,
+                                     log10_trans = TRUE),
                sub_pLOQ = TRUE,
                method = "bobyqa") %>% 
   semi_join(winmodel)  
 
 myRMSE <- rmse(my_pk,
-               rmse_group = ggplot2::vars(Chemical, Species, Route, Media, Dose),
+               rmse_group = ggplot2::vars(Chemical,
+                                          Species,
+                                          Route,
+                                          Media,
+                                          Dose),
                sub_pLOQ = TRUE,
                method = "bobyqa") %>%
   semi_join(winmodel) 
@@ -1538,35 +1683,6 @@ chem_name_translate <- all_my_data %>%
 #these chemical names are filtered out because they are alternate/secondary versions of names for the same DTXSID that is already identified by another name
 
 ```
-
-#### Supplemental Table 4: Best-fit coefficients and SDs
-```{r}
-my_coef_sd <- coef_sd(my_pk, method = "bobyqa") %>% #this will take a few minutes to run
-  semi_join(winmodel) #keep only coefs & SDs for winning model
-
-#save as Supplemental Table 3
-writexl::write_xlsx(x = my_coef_sd,
-                    path = paste0(Sys.getenv("FIG_DIR"),
-                                  "Manu_Files/",
-                                  today,
-                                  "_Supp_Table4",
-                                  ".xlsx"))
-
-rm(my_coef_sd)
-```
-
-#### Supplemental Table 5: TK summary stats
-
-```{r}
-#note that my_tkstats was already filtered to be winning model only
-writexl::write_xlsx(x = my_tkstats,
-                    path =  paste0(Sys.getenv("FIG_DIR"),
-                                  "Manu_Files/",
-                                  today,
-                                  "_Supp_Table5",
-                                  ".xlsx"))
-```
-
 
 ### Supp Figure 7: invivoPKfit model performance
 
@@ -1725,16 +1841,6 @@ ggsave(paste0(Sys.getenv("FIG_DIR"),
        dpi = 300,
        units = "in")  
 
-ggsave(paste0(Sys.getenv("FIG_DIR"),
-              "Manu_Files/",
-              today,
-              "_Fig4.png"),
-       plot = dual_plot,
-       height = 4.5,
-       width = 6,
-       device = "pdf",
-       bg = "white",
-       units = "in")  
 ```
 
 
@@ -1757,15 +1863,15 @@ mypl <- ggplot(data = combined_gof_df,
                aes(
                  x = within_2fold,
                  y = Rsq,
-                 color = model
+                 color = model,
                )) +
   geom_point() +
   geom_abline(slope = 1, color = "black", linetype = "longdash") +
   scale_color_manual(values = c("#0398FC", "#D68E09", "black")) +
-    coord_cartesian(xlim = c(0,1), ylim = c(0,1)) +
+    #coord_cartesian(xlim = c(0,1), ylim = c(0,1)) +
   labs(x = "Fraction of predictions within 2-fold",
        y = "R-squared value") +
-  theme(aspect.ratio = 1,
+  theme(#aspect.ratio = 1,
         panel.border = element_rect(color = "black", fill = NA, size = 1),
         panel.background = element_blank(),
         panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
@@ -1776,7 +1882,8 @@ mypl <- ggplot(data = combined_gof_df,
         legend.key = element_blank()
   )
   
-panelA_plot <- ggExtra::ggMarginal(mypl, groupFill = TRUE,
+panelA_plot <- ggExtra::ggMarginal(mypl,
+                                   groupFill = TRUE,
                     type = "histogram",
                     xparams = list(binwidth = 0.05),
                     yparams = list(binwidth = 0.05))
@@ -1794,8 +1901,9 @@ panelB_plot <- ggplot(data = myRMSE,
                  color = NA) +
   labs(y = "Count") +
   scale_fill_manual(values = c("#0398FC", "#D68E09", "grey10")) +
+   scale_color_manual(values = c("#0398FC", "#D68E09", "grey10"), guide = "none") +
   theme(text = element_text(size = 10),
-        aspect.ratio = 0.6,
+        #aspect.ratio = 1,
     panel.border = element_rect(color = "black", fill = NA, size = 1),
         panel.background = element_blank(),
         panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
@@ -1803,28 +1911,19 @@ panelB_plot <- ggplot(data = myRMSE,
         axis.line = element_blank(),
         strip.background = element_blank(),
     panel.spacing.y = unit(0.125, units = "in"),
-        legend.position = "left",
-        legend.title = element_blank())
+        legend.title = element_blank(),
+    legend.position = "bottom")
 panelB_plot
 
-legendB <- get_legend(panelB_plot)
+plAB <- patchwork::wrap_elements(panelA_plot) + panelB_plot +
+  plot_annotation(tag_levels = "A") + plot_layout(guides = 'collect', widths = c(1,0.9)) & theme(legend.position = "bottom") & guides(color = "none")
 
-#arrange plots without legend at first
-plAB <- plot_grid(panelA_plot,
-                   panelB_plot + theme(legend.position = "none"),
-                   ncol = 2,
-                   labels = c("A", "B"),
-                   axis = "tb", align = "hv", rel_widths = c(1,1))
-#now add legend as a third square on the grid
-comb_plot <- plot_grid(plAB,
-                       legendB,
-                       ncol = 2,
-                       rel_widths = c(1,0.1))
 #save PNG version
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "Manu_Files/",
                          today,
                          "_Fig5.png"),
+       plAB,
        height = 4,
        width = 6.5,
        bg = "white",
@@ -1835,6 +1934,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "Manu_Files/",
                          today,
                          "_Fig5.pdf"),
+       plAB,
        height = 4,
        width = 6.5,
        bg = "white")
@@ -2211,6 +2311,14 @@ fgutabs <- coef(my_pk, method = "bobyqa") %>%
   filter(!is.na(Fgutabs))
 ```
 
+How many chemicals overlapped at all
+
+```{r}
+length(intersect(musther2014_long$dtxsid,
+                 get_data(my_pk)$Chemical))
+```
+
+
 Join with the literature estimates, keeping only cases with data in both tables
 
 ```{r musther-join}
@@ -2254,12 +2362,14 @@ ggplot(fgutabs_pk_musther) +
         )
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "Manu_Files/",
                          today,
                          "_Supp_Fig10.pdf"),
        height = 5,
        width = 8)
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                          "Manu_Files/",
                          today,
                          "_Supp_Fig10.png"),
        height = 5,
@@ -2271,7 +2381,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 
 Benchmarking for parallelization vs. non-parallelization
 
-```{r do_fit-benchmarking, eval = FALSE}
+```{r do_fit-benchmarking}
 # Randomize the order of chemical species
 chem_spec <- cvt %>%
   dplyr::distinct(analyte_dtxsid, species) %>%
