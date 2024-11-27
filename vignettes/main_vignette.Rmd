@@ -71,9 +71,7 @@ For now, let's accept the default instructions. It will be easier to understand 
 
 The model fitting workflow has four steps.
 
-## Model fitting workflow
-
-### Step 1: Pre-processing data
+## Step 1: Pre-processing data
 
 The first is data pre-processing. Here, variable names are harmonized, and the data set is cleaned, filtered, and missing values are imputed when necessary. 
 
@@ -97,7 +95,7 @@ my_pk <- do_preprocess(my_pk)
 
 This step adds the pre-processed data to the `pk` object in a new element named `data`.
 
-### Step 2: Data information
+## Step 2: Data information
  
 Next, some summary information is gathered about each group of the data. These are things like the number of detects/non-detects, broken out by the different routes and media present in the data. This step also includes non-compartmental analysis of the data, to calculate things like the empirical Cmax (maximum concentration), empirical tmax (time of maximum concentration), and empirical AUC (area under the concentration-time curve). Instructions for this "data info" step are given in `my_pk$settings_data_info`.
 
@@ -108,7 +106,7 @@ my_pk <- do_data_info(my_pk)
 
 This step adds the data summary info to the `pk` object in a new element named `data_info`.
 
-### Step 3: Pre-fitting
+## Step 3: Pre-fitting
 
 Next, a "pre-fitting" step is performed. This step looks at each group of the data, along with the PK models to be fitted, and determines the following:
 
@@ -123,7 +121,7 @@ my_pk <- do_prefit(my_pk)
 
 This step adds the parameter lower/upper bounds and starting guesses to the `pk` object.
 
-### Step 4: Model fitting
+## Step 4: Model fitting
 
 Finally, the model fitting can be performed. Each group of the data is fitted separately. By default, three different PK models are fitted to each group: a "flat" model, a 1-compartment model, and a 2-compartment model.
 
@@ -147,8 +145,7 @@ system.time(my_pk <- do_fit(my_pk,
                 n_cores = parallel::detectCores()-1))
 ```
 
-
-### Fast-forward to model fitting
+## Fast-forward to model fitting
 
 Note that you coan just skip straight to the last step. If you call `do_fit()` on a newly-initialized `pk` object, all of the preceding steps will be done automatically. The following code will give you exactly the same results as going through each step individually as above.
 
@@ -158,12 +155,11 @@ my_pk <- pk(data = my_data)
 my_pk <- do_fit(my_pk)
 ```
 
-
-### Post-fitting: Getting information about the fitted models
+## Post-fitting: Getting information about the fitted models
 
 Once fitting has been completed, then you can use some familiar methods to extract information about the fitted model(s). 
 
-#### Coefficients, residuals, and predictions
+### Coefficients, residuals, and predictions
 
 For example, you can extract the fitted model parameter values using `coef()`. The result will be a tibble, whose columns include model parameters, and whose rows uniquely identify individual data groups, each model fitted, and each optimization algorithm used for fitting.
 
@@ -218,7 +214,7 @@ predict(my_pk, newdata = data.frame(
   exclude = FALSE)) %>% glimpse()
 ```
 
-#### Plots
+### Plots
 
 You can plot the fit using `plot()`, which returns a `ggplot2` plot object for each data group:
 
@@ -237,8 +233,7 @@ p2 <- plot(my_pk,
 print(p2$final_plot)
 ```
 
-
-#### Model evaluation metrics
+### Model evaluation metrics
 
 You can also get model-evaluation metrics such as log-likelihood:
 
@@ -282,8 +277,7 @@ Absolute average fold error:
 AAFE(my_pk)
 ```
 
-
-#### Data
+### Data
 
 You can get the pre-processed data frame itself:
 
@@ -301,8 +295,7 @@ names(my_data_info)
 my_data_info$data_flags %>% glimpse()
 ```
 
-
-#### Toxicokinetic statistics
+### Toxicokinetic statistics
 
 You can compute derived toxicokinetic statistics, such as total clearance rate, half-life, steady-state plasma concentration, etc., using `get_tkstats()`. (The result is a `data.frame` of TK stats, one for each model and optimization algorithm, that was fitted.)
 
@@ -311,7 +304,7 @@ my_tkstats <- get_tkstats(my_pk, suppress.messages = TRUE)
 my_tkstats %>% glimpse()
 ```
 
-#### Winning model
+### Winning model
 
 You can extract the best-fit "winning" model for each data group and each optimization method -- determined by which one had the lowest AIC.
 
@@ -422,8 +415,7 @@ names(cvt)
 
 At minimum, you will need to specify mappings for `Chemical`, `Species`, `Reference`, `Media`, `Route`, `Dose`, `Time`, `Value`, and `LOQ`. Most of these names are self-explanatory. `Media` refers to the biological media in which concentration is measured (e.g. blood, plasma, liver tissue). `Route` refers to the route of administration (e.g. intravenous or oral). `Time` refers to the time point at which concentration observation was made. `Value` refers to the measured concentration. `LOQ` refers to the limit of quantification of the measured concentration.
 
-
-### Expressions in `aes()`
+### Expressions in the `aes()` mapping specification
 
 Just as in `ggplot2`, you can specify expressions inside `aes`. This lets you specify mappings that are more complicated than just a simple one-to-one variable name change. 
 
@@ -559,11 +551,13 @@ Here are the default arguments to `settings_data_info()`:
 formals(settings_data_info)
 ```
 
-### Non-compartmental analysis settings
+### Summary data information settings
 
-Element `nca_group` instructs `invivopkfit` on how to perform non-compartmental analysis. Data will be split into groups according to unique combinations of the variables specified in `nca_group`. Then, non-compartmental analysis will be performed for each group using `PK::nca()`. 
+Element `summary_group` instructs `invivopkfit` on how to group data for calculation of summary statistics, including non-compartmental analysis (NCA).  (Later, `summary_group` is also used to instruct `invivopkfit` how to group dataa to calculate summary TK statistics predicted by the models). 
 
-For each NCA group, a few basic summary statistics will also be computed:
+Data will be split into groups according to unique combinations of the variables specified in `summary_group`. Then, non-compartmental analysis will be performed for each group using `PK::nca()`. 
+
+For each summary group, a few basic summary statistics will also be computed:
 
 - number of observations  
 - number of detects  
@@ -593,11 +587,11 @@ In general, you'll need to choose a value for `method` that names one of the opt
 
 ## Data transformations (scalings)
 
-`my_pk$scales` is itself a list with elements `conc` and `time`, providing instructions on how to scale and/or transform concentration and time variables before fitting any models.
+`my_pk$scales` is itself a list with elements `conc` and `time`, providing instructions on how to transform concentration and time variables before fitting any models.
 
 ### Concentration transformations (scalings)
 
-`my_pk$scales$conc` is a result of a call to `scales_conc()` with the default arguments. In other words, `pk()` alone is the same as
+`my_pk$scales$conc` is a result of a call to `scale_conc()` with the default arguments. In other words, `pk()` alone is the same as
 
 ```{r, eval = FALSE}
 my_pk <- pk(my_data) +
@@ -623,7 +617,7 @@ This instructs `invivopkfit` whether to apply a `log10()` transformation to obse
 
 ### `my_pk$scales$time`
 
-The `time` element is a result of a call to `scales_time()` with the default arguments (there is only one). Calling `pk()` by itself is the same as
+The `time` element is a result of a call to `scale_time()` with the default arguments (there is only one). Calling `pk()` by itself is the same as
 
 ```{r, eval = FALSE}
 my_pk <- pk(my_data) +
@@ -664,26 +658,7 @@ formals(stat_model)
 
 The `model` argument is a character vector (or scalar), listing the names of one or more models to fit to the data. The default value lists the three models that are already implemented and built in to `invivopkfit`. 
 
-Each model is an object of class `pk_model`, which is simply a named list giving:
 
-- `name`: The model name  
-- `params`: The model parameter names (listed as a character vector)  
-- `conc_fun`: The name of a function that computes concentrations, given model parameters, time, dose, route, and media  
-- `auc_fun`: The name of a function that computes AUC (area under the concentration time curve), given model parameters, time, dose, route, and media  
-- `params_fun`" The name of a function that returns bounds and starting points for each of the model parameters, given the data  
-- `tkstats_fun`: The name of a function that computes derived TK statistics (such as halflife, clearance rate, etc.) given model parameters  
-- `conc_fun_args`: Any additional arguments to the function in `conc_fun`  
-- `auc_fun_args`: Any additional arguments to the function in `auc_fun`  
-- `params_fun_args`: Any additional arguments to the function in `params_fun`  
-- `tkstats_fun_args` : Any additional arguments to the function in `tkstats_fun`  
-
-For example, here is the built-in model `model_1comp`:
-
-```{r}
-`model_1comp`
-```
-
-You can define a new model by first writing each of the required functions above for that model: a concentration function, an AUC function, a parameters function, and a TK-stats function. Source the R scripts containing those functions. Then use the command `pk_model()`, giving the names of the new functions you have written. Assign the result to an R variable, which will contain your new `pk_model` object. That new model object will persist for the duration of your R session (unless you remove it), and will need to be re-defined if you restart R.
 
 ## Error model to apply during fitting
 
@@ -1167,4 +1142,124 @@ plot(pk_pool, use_scale_conc = list(dose_norm = TRUE,
 Many more and detailed examples can be seen in the R Markdown document that gives the code to produce the figures and tables for the manuscript.
 
 
+# How to add a new PK model to invivopkfit
 
+Each model is an object of class `pk_model`, which is simply a named list giving:
+
+- `name`: The model name  
+- `params`: The model parameter names (listed as a character vector)  
+- `conc_fun`: The name of a function that computes concentrations, given model parameters, time, dose, route, and media  
+- `auc_fun`: The name of a function that computes AUC (area under the concentration time curve), given model parameters, time, dose, route, and media  
+- `params_fun`" The name of a function that returns bounds and starting points for each of the model parameters, given the data  
+- `tkstats_fun`: The name of a function that computes derived TK statistics (such as halflife, clearance rate, etc.) given model parameters  
+- `conc_fun_args`: Any additional arguments to the function in `conc_fun`  
+- `auc_fun_args`: Any additional arguments to the function in `auc_fun`  
+- `params_fun_args`: Any additional arguments to the function in `params_fun`  
+- `tkstats_fun_args` : Any additional arguments to the function in `tkstats_fun`  
+
+For example, here is the list for the built-in model `model_1comp`:
+
+```{r}
+`model_1comp`
+```
+
+And here is the list for the built-in model `model_2comp`:
+
+```{r}
+`model_2comp`
+```
+
+You can define a new model by first writing each of the required functions above for that model: 
+
+- a concentration function `conc_fun` that calculates concentration as a function of dose, time, and model parameters
+- an AUC function `auc_fun` that calculates area under the concentration-time curve as a function of dose, time, and model parameters
+- a parameters function `params_fun` that takes in the data and returns a `data.frame` whose rows give the names of the model parameters, whether to estimate them from the data, a starting guess for each parameter, and lower and upper bounds for each parameter
+- a TK-stats function `tkstats_fun` to calculate summary TK statistics from the fitted model coefficients. 
+
+Source the R scripts containing those functions, so that R knows those functions by name.
+
+Then use the command `pk_model()`, whose named arguments correspond to the items in the named list above. Supply `pk_model()` with values for each argument giving the names of the new functions you have written. Assign the result to an R variable, which will contain your new `pk_model` object. 
+
+That new model object will persist for the duration of your R session (unless you remove it), and will need to be re-defined if you restart R. You can save your new model object by, for example, calling `saveRDS()` to save it as a .Rds file in a location of your choice, and then load it by calling `loadRDS()`.
+
+## Model function requirements
+
+Here are the requirements for each of those functions (which can also be found in `help(pk_model)`):
+
+### `conc_fun` requirements
+
+`conc_fun` should be a function that takes the following named arguments, and returns a numeric vector of predicted tissue concentrations:
+
+- `params`: A named list of parameter values
+- `time`: A numeric vector of time values
+- `dose`: A numeric vector of dose values. Currently, only a single bolus dose at time 0 is supported.
+- `route`: A character vector of the route of administration. Currently, only `'oral'` and `'iv'` are supported.
+- `medium`: The tissue in which concentration is to be predicted. Currently, only `'blood'` and `'plasma'` are supported.
+
+See `cp_1comp()`, `cp_2comp()`, `cp_flat()` for examples.
+
+### `auc_fun` requirements
+
+`auc_fun` should be a function that takes the same arguments as `conc_fun`,
+and returns a numeric vector of predicted tissue AUCs (area under the
+concentration-time curve).
+
+See `auc_1comp()`, `auc_2comp()`, `auc_flat()` for examples.
+
+### `params_fun` requirements
+
+`params_fun` should be a function whose first argument is a `data.frame`,
+which will be the pre-processed data using `invivopkfit` harmonized variable names. It may take additional arguments, which can be provided in
+`params_fun_args`. The function should return a `data.frame` with the
+following variables:
+
+- `param_name`: Character vector, listing parameter names for the model
+- `param_units`: Character vector, listing units of each model parameter
+- `optimize_param`: Logical (TRUE/FALSE), whether each parameter is to be estimated given the available data
+- `use_param`: Logical (TRUE/FALSE), whether each parameter is to be used in the model even if it is not estimated (i.e., if a parameter value is to be held constant while the others are estimated, then `optimize_param` should be FALSE but `use_param` should be TRUE)
+-`lower_bound`: Numerical. Lower bounds for each parameter. May be `-Inf` if no lower bound.  If `optimize_param` or `use_param` is FALSE, thenthe corresponding `lower_bound` will be ignored (because the parameter is not being estimated from the data).
+- `upper_bound`: Numerical. Upper bounds for each parameter. May be `Inf` if no upper bound. If `optimize_param` or `use_param` is FALSE, then the corresponding `upper_bound` will be ignored (because the parameter is not being estimated from the data).
+- `start`: Numerical. Starting values for estimating each parameter. If `optimize_param` is FALSE and `use_param` is TRUE, then the parameter will be held constant at the corresponding value in `start`. If `use_param` is FALSE, then the corresponding `start` will be ignored.
+
+See `get_params_flat()`, `get_params_1comp()`, `get_params_2comp()` for
+examples.
+
+### `tkstats_fun` requirements
+
+`tkstats_fun` should be a function which accepts a vector of model parameter values and calculates derived summary toxicokinetic statistics (e.g. total clearance, halflife, AUC, volume of distribution at steadystate).
+
+The function must take the following named arguments:
+
+- `pars`: A named numeric vector of model parameter values.
+- `route`: A character scalar naming a route (e.g. "oral" or "iv")
+- `medium`: A character scalar naming a tissue medium of analysis (e.g. "blood" or "plasma")
+- `dose`: A numeric scalar giving a dose level for which to calculate TK statistics
+- `time_unit`: A character scalar giving the units of time
+- `conc_unit`: A character scalar giving the units of concentration
+- `vol_unit`: A character scalar giving the units of volume
+
+The function should return a `data.frame` of derived toxicokinetic statistics, which should include the following named variables:
+
+- `param_name`: A character vector giving the names of each derived TK statistic
+- `param_value`: A character vector giving the values of each derived TK statistic
+- `param_units`: A character vector giving the units of each derived TK statistic
+
+It is recommended (although not required) that the function return at least the following statistics, using these names in the `param_name` variable:
+
+- `CLtot`: Total clearance rate (units of volume/time)
+- `CLtot/Fgutabs`: Total clearance rate scaled by gut absorption fraction (if gut absorption fraction is available) (units of volume/time)
+- `Css`: The steady-state concentration after a long-term daily dose of `dose` (units of concentration)
+- `halflife`: The terminal half-life (units of time)
+- `tmax`: The time of peak concentration (units of time)
+- `Cmax`: The peak concentration (units of time)
+- `AUC_infinity`: The area under the concentration-time curve, calculated at infinite time (units of concentration * time)
+- `Vdist_ss`: The volume of distribution at steady-state (units of volume)
+- `Vdist_ss/Fgutabs`: The volume of distribution at steady-state scaled by gut absorption fraction (if gut absorption fraction is available) (units of volume)
+
+The recommendation to return these statistics, using these names, is intended to make it easier to compare TK statistics across models, and to compare TK statistics to the results of non-compartmental analysis. If these names are not used, then some outputs of `eval_tkstats()` will not be very useful. The automated comparison of TK stats from the winning model to the results of non-compartmental analysis relies on these names being present in the output of `tkstats_fun` to match the names of the statistics output from NCA; it shouldn't crash without them, but the results won't be very useful. And TK stats compiled across models will not be easy to compare if the models use different names for the statistics.
+
+For examples, see `tkstats_1comp()`, `tkstats_2comp()`.
+
+## Caveats
+
+Currently, some functions in `invivopkfit` may assume particular units for the data, and therefore particular units for the fitted model parameters. For example, time is generally assumed to be in units of hours. We plan to relax these assumptions in future releases of `invivoPKfit`.
