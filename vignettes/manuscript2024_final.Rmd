@@ -52,6 +52,19 @@ Additionally, at one point, this code uses package `ctxR` to query the CompTox C
 Sys.setenv(ccd_api_key = "your_api_key")
 ```
 
+Define a date for the pre-fit pk objects to read in:
+
+```{r}
+read_date_pk <- "25November2024"
+```
+
+And a date for the results files to read from:
+
+```{r}
+read_date_pk <- "27November2024"
+```
+
+
 # Pulling data from CvTdb
 
 See `pulling_iv_oral_cvtdb.Rmd`.
@@ -225,7 +238,9 @@ sum(tmp_out) # Looks like there's 10 extra seconds of overhead for non-fitting m
 Load in one of the saved fit objects; it doesn't matter which one, since we will be using only the pre-processed data, which is the same regardless of fitting options.
 
 ```{r}
-my_pk <- readRDS(paste0(Sys.getenv("OD_DIR"), "25November2024mypk_fit_110p.Rds"))
+my_pk <- readRDS(paste0(Sys.getenv("OD_DIR"),
+                        read_date_pk,
+                        "mypk_fit_110p.Rds"))
 ```
 
 
@@ -550,11 +565,7 @@ Here we evaluate the various fitting options by:
 
 Define some helper functions to do the various model evaluations.
 
-Define a date prefix to read.
 
-```{r}
-read_date <- "25November2024"
-```
 
 
 ## Winning model tally
@@ -572,7 +583,7 @@ winmodel_comparison <- function(this_error_model,
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
-                     read_date,
+                     read_date_pk,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -624,7 +635,7 @@ AUC_plot <- function(
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
-                     read_date,
+                     read_date_pk,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -780,7 +791,7 @@ rmsles_Cmax_AUC <- function(
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
-                     read_date,
+                     read_date_pk,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -909,7 +920,7 @@ get_gof <- function(this_error_model,
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
-                     read_date,
+                     read_date_pk,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -974,7 +985,7 @@ get_all_preds <- function(this_error_model,
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
-                     read_date,
+                     read_date_pk,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -1013,7 +1024,7 @@ tf_tests <- function(this_error_model,
   errmodel_indic <- substr(this_error_model, 1, 1)
   
   file_str <- paste0(Sys.getenv("OD_DIR"),
-                     read_date,
+                     read_date_pk,
                      "mypk_fit_",
                      dose_indic,
                      log10_indic,
@@ -1223,7 +1234,7 @@ Plot R-sq vs. RMSLE for the various fitting options, color-coding by winning mod
 ```{r plot_rsq_rmsle}
 gof_tbl <- readxl::read_excel(path = paste0(Sys.getenv("FIG_DIR"),
                 "Manu_Files/",
-                "27November2024",
+                read_date_results,
                 "_Supp_Table2_eval_results",
                 ".xlsx"),
                 sheet = "Prediction_Evaluations")
@@ -1335,7 +1346,7 @@ Plot Cmax RMSLE vs. AUC RMSLE.
 #read in table
 cmax_auc_rmsle_tbl <- readxl::read_xlsx(path = paste0(Sys.getenv("FIG_DIR"),
                                                    "Manu_Files/",
-                                                  "27November2024",
+                                                  read_date_results,
                                                   "_Supp_Table2_eval_results.xlsx"),
                                      sheet = "AUC_and_Cmax_RMSLE_summary")
 #make plot
@@ -1387,7 +1398,7 @@ Plot predicted vs. observed concentrations for everything, using the winning fit
 
 ```{r}
 all_preds <- readRDS(paste0(Sys.getenv("FIG_DIR"),
-                          "27November2024",
+                          read_date_results,
                           "_all_preds.Rds"))
 
 #select winning fit opts: 110p bobyqa
@@ -1457,7 +1468,7 @@ Begin by collating the data needed for plots. These data are generally accessibl
 
 ```{r data_aggregation}
 my_pk <- readRDS(paste0(Sys.getenv("OD_DIR"),
-                        read_date,
+                        read_date_pk,
                         "mypk_fit_110p.Rds"))
 
 # Need the following data for any of the subsequent plots
@@ -1530,12 +1541,9 @@ chem_name_translate <- all_my_data %>%
 
 #### Supplemental Table 4: Best-fit coefficients and SDs
 ```{r}
-my_coef_sd <- coef_sd(my_pk, method = "bobyqa") #this will take a few minutes to run
+my_coef_sd <- coef_sd(my_pk, method = "bobyqa") %>% #this will take a few minutes to run
+  semi_join(winmodel) #keep only coefs & SDs for winning model
 
-my_coef_sd <- my_coef_sd %>%
-  rowwise() %>%
-  mutate(alerts = paste(alerts[[1]],
-                        collapse = ";"))
 #save as Supplemental Table 3
 writexl::write_xlsx(x = my_coef_sd,
                     path = paste0(Sys.getenv("FIG_DIR"),
@@ -1550,6 +1558,7 @@ rm(my_coef_sd)
 #### Supplemental Table 5: TK summary stats
 
 ```{r}
+#note that my_tkstats was already filtered to be winning model only
 writexl::write_xlsx(x = my_tkstats,
                     path =  paste0(Sys.getenv("FIG_DIR"),
                                   "Manu_Files/",
