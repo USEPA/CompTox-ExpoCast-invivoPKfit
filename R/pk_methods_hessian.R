@@ -1,24 +1,11 @@
-#' Get coefficient standard deviations
+#' Get Hessian matrixes
 #'
-#' Extract coefficient/parameter standard deviations from a fitted `pk` object
+#' Extract Hessian matrixes from a fitted `pk` object
 #'
-#' The coefficient standard deviations are estimated by computing a numerical
+#' This function computes a numerical
 #' approximation to the model Hessian (the matrix of second derivatives of the
-#' model objective function with respect to each model parameter) and then
-#' attempting to invert it. This procedure yields a variance/covariance matrix
-#' for the model parameters. The square root of the diagonal elements of this
-#' matrix represent the parameter standard deviations.
+#' model objective function with respect to each model parameter).
 #'
-#' If the Hessian is not invertible, an attempt is made to calculate a
-#' pseudovariance matrix, following the procedure outlined in Gill & King
-#' (2004). First, the generalized inverse of the Hessian is calculated using
-#' [MASS::ginv()]. Then, a generalized Cholesky decomposition (to ensure
-#' positive-definiteness) is calculated using [base::chol()] with argument
-#' `pivot = TRUE`. The square root of the diagonal elements of this matrix
-#' represent the parameter standard deviations.
-#'
-#' If neither of these procedures is successful, then `NA_real_` is returned for
-#' all coefficient standard deviations.
 #'
 #' @param obj A [pk] object
 #' @param model Optional: Specify one or more of the fitted models whose
@@ -31,8 +18,7 @@
 #'   informative messages. `FALSE` to see them.
 #' @param ... Additional arguments. Not in use right now.
 #' @return A dataframe with one row for each `data_group`, `model` and `method`.
-#'   The remaining columns include the parameters & hyperparameters as returned by
-#'   [coef.pk()], as well as their calculated standard deviations.
+#'   The remaining column is a `list` column containing the Hessian for each row.
 #' @export
 #' @importFrom MASS ginv
 #' @import dplyr
@@ -44,7 +30,7 @@
 #' @references Gill J, King G. (2004) What to Do When Your Hessian is Not
 #'   Invertible: Alternatives to Model Respecification in Nonlinear Estimation.
 #'   Sociological Methods & Research 33(1):54-87. DOI: 10.1177/0049124103262681
-coef_sd.pk <- function(obj,
+hessian.pk <- function(obj,
                        model = NULL,
                        method = NULL,
                        suppress.messages = TRUE, ...) {
@@ -150,48 +136,23 @@ coef_sd.pk <- function(obj,
     dplyr::distinct()
 
 
-  sds_alerts <- newdata %>%
+  hess <- newdata %>%
     dplyr::rowwise() %>%
     dplyr::mutate(
-      sd_tbl = list(
-        calc_sds_alerts(pars_opt = coefs_opt_vector,
-                    pars_const = coefs_const_vector,
-                    observations = observations,
-                    modelfun = model_fun,
-                    dose_norm = obj$scales$conc$dose_norm,
-                    log10_trans = obj$scales$conc$log10_trans)
+      hessian = list(
+        calc_hessian(pars_opt = coefs_opt_vector,
+                        pars_const = coefs_const_vector,
+                        observations = observations,
+                        modelfun = model_fun,
+                        dose_norm = obj$scales$conc$dose_norm,
+                        log10_trans = obj$scales$conc$log10_trans)
       )
     )  %>%
-    tidyr::unnest(sd_tbl) %>%
     dplyr::ungroup() %>%
     dplyr::select(model, method, !!!obj$data_group,
-                  param_name, param_sd, sd_alert)
+                  hessian)
 
 
-  coefs_long <- newdata %>%
-    dplyr::select(model, method, !!!obj$data_group, coefs_vector) %>%
-    dplyr::group_by(model, method, !!!obj$data_group) %>%
-    dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) as.list(x) %>%
-                                              as.data.frame() %>%
-                                              tidyr::pivot_longer(
-                                                cols = tidyselect::everything(),
-                                                names_to = "param_name",
-                                                values_to = "param_value"
-                                              ))) %>%
-    tidyr::unnest(coefs_tibble) %>%
-    dplyr::ungroup() %>%
-    dplyr::select(-c(coefs_vector))
-
-  output <- coefs_long %>%
-    dplyr::left_join(sds_alerts) %>%
-  dplyr::ungroup() %>%
-    dplyr::distinct() %>%
-    dplyr::mutate(param_value = dplyr::na_if(param_value, NaN),
-                  param_sd = dplyr::na_if(param_sd, NaN)) %>%
-    dplyr::select(model, method, !!!obj$data_group,
-                  param_name, param_value, param_sd, sd_alert)
-
-
-  return(output)
+  return(hess)
 
 }
