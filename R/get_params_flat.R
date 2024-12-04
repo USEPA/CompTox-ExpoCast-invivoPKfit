@@ -8,7 +8,7 @@
 #' ## IV data, no oral data
 #'
 #' If IV dosing data are available, but no oral dosing data are available, then
-#' only the parameter `Vdist` and will be estimated from the data. The
+#' only the parameter `Vdist` will be estimated from the data. The
 #' parameter `Fgutabs` cannot be estimated from IV data alone and will not be used to evaluate the model.
 #'
 #' ## Oral data, no IV data

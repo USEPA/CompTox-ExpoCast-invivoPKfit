@@ -412,12 +412,12 @@ plot.pk <- function(x,
       include_NAs = TRUE
     )
 
-    if (best_fit) {
+    if (best_fit %in% TRUE) {
       interp_data <- dplyr::left_join(get_winning_model(obj = x), interp_data)
     }
 
     # if plotting transformed time, then transform interpolated time points
-    if (time_trans) {
+    if (time_trans %in% TRUE) {
       conversion_table <- time_conversions %>%
         dplyr::filter(
           TimeFrom %in% interp_data$Time.Units,
@@ -444,8 +444,8 @@ plot.pk <- function(x,
     # Need to check if predicted is NULL before filtering below
     # NULL predicted values will occur when there was no adequate fit for the model
 
-    if (limit_predicted) {
-      if (log10_C) {
+    if (limit_predicted %in% TRUE) {
+      if (log10_C %in% TRUE) {
         newdata <- newdata %>%
           dplyr::mutate(predicted = purrr::map2(observations, predicted, \(x, y) {
             if (!is.null(y)) {

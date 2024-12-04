@@ -10,7 +10,7 @@
   method = NULL,
   drop_sigma = FALSE,
   include_NAs = FALSE,
-  suppress_messages = FALSE,
+  suppress.messages = NULL,
   ...
 )
 }
@@ -32,7 +32,8 @@ sigma in the output.}
 \item{include_NAs}{Logical: `FALSE` by default. Determines whether to include
 aborted fits which have NAs as coefficients.}
 
-\item{suppress_messages}{Logical: `FALSE` by default. Determines whether to
+\item{suppress.messages}{Logical: `NULL` by default to use the setting in
+`object$settings_preprocess$suppress.messages`. Determines whether to
 display messages.}
 
 \item{...}{Additional arguments currently not in use.}
@@ -54,6 +55,8 @@ object.
 }
 \seealso{
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef_sd.pk}()},

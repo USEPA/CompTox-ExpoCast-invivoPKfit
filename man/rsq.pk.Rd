@@ -12,6 +12,8 @@
   exclude = TRUE,
   use_scale_conc = FALSE,
   rsq_group = NULL,
+  sub_pLOQ = TRUE,
+  suppress.messages = NULL,
   ...
 )
 }
@@ -19,7 +21,7 @@
 \item{obj}{A `pk` object}
 
 \item{newdata}{Optional: A `data.frame` with new data for which to make
-predictions and compute RMSsE. If NULL (the default), then R-squared will be
+predictions and compute R-squared. If NULL (the default), then R-squared will be
 computed for the data in `obj$data`. `newdata` is required to contain at
 least the following variables: `Time`, `Time.Units`, `Dose`, `Route`,
 `Media`, `Conc`, `Conc_SD`, `N_Subjects`, `Detect`.}
@@ -54,6 +56,13 @@ log10-transformation will be applied.}
 grouping that is used to calculate R-squared value. Should be set to lowest number
 of variables that still would return unique experimental conditions.
 Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.}
+
+\item{sub_pLOQ}{TRUE (default): Substitute all predictions below the LOQ with
+the LOQ before computing R-squared. FALSE: do not.}
+
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`obj$settings_preprocess$suppress.messages`}
 
 \item{...}{Additional arguments. Not currently in use.}
 }
@@ -160,12 +169,16 @@ group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.
 [calc_rsq()]
 
 Other fit evaluation metrics: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{rmse.pk}()}
 
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},

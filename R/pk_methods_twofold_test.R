@@ -20,9 +20,14 @@
 #' is done for data from individual subject observations and for all data by summarizing the
 #' observations.
 #'
+#' Only non-excluded detects are included in this analysis.
+#'
 #' @param obj A pk object.
-#' @param suppress_messages Logical, default: FALSE.
-#' Should there be no printed output?
+#' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
+#'   the LOQ before computing fold errors. FALSE: do not. Only used if `obj` has been fitted and predictions are possible.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `obj$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments. Currently unused.
 #'
 #' @return A list of data frames.
@@ -30,12 +35,20 @@
 #' @author Gilberto Padilla Mercado
 #'
 twofold_test.pk <- function(obj,
-                            suppress_messages = FALSE,
+                            sub_pLOQ = TRUE,
+                            suppress.messages = NULL,
+                            model = NULL,
+                            method = NULL,
                             ...) {
+
+  if (is.null(suppress.messages)) {
+    suppress.messages <- obj$settings_preprocess$suppress.messages
+  }
+
   # Check the status of the pk object
   status <- suppressMessages(get_status(obj))
   if (status < 2) {
-    stop("Please do data preprocessing step on this pk object",
+    stop("twofold_test.pk(): Please do data preprocessing step on this pk object",
          " by running do_preprocess(...)"
          )
   }
@@ -47,6 +60,8 @@ twofold_test.pk <- function(obj,
   # because other observations won't have credible variability from mean
   data_cvt <- subset(data_cvt,
                     subset = (Detect | !exclude | Conc > LOQ))
+
+
 
 
   # Initialize output list
@@ -188,11 +203,16 @@ twofold_test.pk <- function(obj,
 
 # If predictions are possible
   if (status == 5) {
+
     winmodel <- get_winning_model(obj = obj)
 
     # Only keep detects and non-excluded (observations to compare to)
     pred_win <- suppressMessages(
-      fold_errors(obj = obj) %>%
+      fold_error(obj = obj,
+                 model = model,
+                 method = method,
+                 sub_pLOQ = sub_pLOQ,
+                 suppress.messages = suppress.messages) %>%
         dplyr::ungroup() %>%
         dplyr::filter(Detect, !exclude) %>%
         dplyr::semi_join(winmodel)
@@ -231,19 +251,34 @@ twofold_test.pk <- function(obj,
 
     ##
     # This merge should have both Fold_Error AND foldConc
-    data_preds <- suppressMessages(dplyr::inner_join(pred_win, id_mean,
-                                                     relationship = "many-to-many"))
+    #inner join keeps only observations in both tables,
+    #keyed by all variables in common between pred_win and id_mean,
+    #so it's only keeping the time points with replicates
+    data_preds <- suppressMessages(
+      dplyr::inner_join(pred_win,
+                        id_mean,
+                        relationship = "many-to-many")
+    )
 
-    data_preds['both_within'] <- (dplyr::between(data_preds$Fold_Error, 0.5, 2) &
-                                    dplyr::between(data_preds$foldConc, 0.5, 2))
+    data_preds['both_within'] <- (
+      dplyr::between(data_preds$Fold_Error, 0.5, 2) &
+        dplyr::between(data_preds$foldConc, 0.5, 2)
+    )
 
-    data_preds['both_outside'] <- (!dplyr::between(data_preds$Fold_Error, 0.5, 2) &
-                                     !dplyr::between(data_preds$foldConc, 0.5, 2))
+    data_preds['both_outside'] <- (
+      !dplyr::between(data_preds$Fold_Error, 0.5, 2) &
+        !dplyr::between(data_preds$foldConc, 0.5, 2)
+    )
 
-    data_preds['model_outside'] <- (!dplyr::between(data_preds$Fold_Error, 0.5, 2) &
-                                      dplyr::between(data_preds$foldConc, 0.5, 2))
-    data_preds['data_outside'] <- (dplyr::between(data_preds$Fold_Error, 0.5, 2) &
-                                     !dplyr::between(data_preds$foldConc, 0.5, 2))
+    data_preds['model_outside'] <- (
+      !dplyr::between(data_preds$Fold_Error, 0.5, 2) &
+        dplyr::between(data_preds$foldConc, 0.5, 2)
+    )
+
+    data_preds['data_outside'] <- (
+      dplyr::between(data_preds$Fold_Error, 0.5, 2) &
+        !dplyr::between(data_preds$foldConc, 0.5, 2)
+    )
     # Make a table of values with percent within or outside factors of two
     # Summarizing number of fold concentrations from the mean
     data_pred_summary <- data_preds %>%
@@ -266,7 +301,8 @@ twofold_test.pk <- function(obj,
 
     ###
     # Here is when we take the 95% within two-fold summary data into account
-    data95_preds <- dplyr::left_join(pred_win, total_data_summary) %>%
+    data95_preds <- dplyr::left_join(pred_win,
+                                     total_data_summary) %>%
       dplyr::filter(!is.na(twofold_95))
 
     data95_preds['both_within'] <- (dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
@@ -298,12 +334,13 @@ twofold_test.pk <- function(obj,
     warning("pk object not fit, unable to run metrics for predictions")
   }
 
-  if (!suppress_messages) {
+  if (!suppress.messages) {
     cat("\n\n")
     message("Data Summary of 95% of mean-normalized Concentrations within 2-fold Test")
     print(out_list[['summarized_data_test']])
 
     # Print the summaries
+    if(suppress.messages %in% FALSE){
     cat("\n\n")
     message("Result: Individual Data Fold Concentration from Mean 2-fold Test")
     print(out_list[['indiv_data_test']])
@@ -317,9 +354,11 @@ twofold_test.pk <- function(obj,
       message("Result: Individual Data and Model Error Test")
       print(out_list[['indiv_data_test_fold_errors']])
     }
+    }
   }
 
   invisible(out_list)
+
 }
 
 
@@ -345,8 +384,7 @@ rowwise_calc_percentages <- function(data,
   }
 
   # Calculate total
-
-  data$total <- rowSums(data[op_cols])
+  data$total <- apply(data[op_cols], 1, sum)
 
   # Calculate percentages
   data[paste0("percent_", op_cols)] <- apply(data[op_cols], 2,

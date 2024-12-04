@@ -39,6 +39,9 @@
 #'   scale concentration data). If `use_scale_conc = list(dose_norm = ...,
 #'   log10_trans = ...)`, then the specified dose normalization and/or
 #'   log10-transformation will be applied.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `object$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments not currently used.
 #' @return A data.frame with the final column being calculated residuals.
 #'   There is one row per each [optimx::optimx()] methods (specified in
@@ -58,7 +61,11 @@ residuals.pk <- function(object,
                          method = NULL,
                          exclude = TRUE,
                          use_scale_conc = FALSE,
+                         suppress.messages = NULL,
                          ...) {
+  if (is.null(suppress.messages)) {
+    suppress.messages <- object$settings_preprocess$suppress.messages
+  }
 
   # ensure that the model has been fitted
   check <- check_required_status(obj = object,
@@ -92,7 +99,8 @@ residuals.pk <- function(object,
                    method = method,
                    type = "conc",
                    exclude = exclude,
-                   use_scale_conc = use_scale_conc)
+                   use_scale_conc = use_scale_conc,
+                   suppress.messages = suppress.messages)
 
 
   # remove any excluded observations & corresponding predictions, if so specified
@@ -113,10 +121,11 @@ residuals.pk <- function(object,
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = object,
                                use_scale_conc = use_scale_conc)
-
+if(suppress.messages %in% FALSE){
   message("residuals.pk(): Residuals calculated using the following transformations: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
+}
 
   # apply dose-normalization if specified
   # conditional mutate ifelse

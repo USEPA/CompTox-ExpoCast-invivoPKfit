@@ -12,6 +12,8 @@
   exclude = TRUE,
   use_scale_conc = FALSE,
   rmse_group = NULL,
+  sub_pLOQ = TRUE,
+  suppress.messages = NULL,
   ...
 )
 }
@@ -55,6 +57,13 @@ determines the data groupings for which RMSE is calculated. Default NULL,
 in which case RMSE is calculated for each data group defined in the
 object's `data_group` element (use [get_data_group.pk()] to access the
 object's `data_group`).}
+
+\item{sub_pLOQ}{TRUE (default): Substitute all predictions below the LOQ with
+the LOQ before computing R-squared. FALSE: do not.}
+
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`obj$settings_preprocess$suppress.messages`}
 
 \item{...}{Additional arguments. Not currently used.}
 }
@@ -133,12 +142,16 @@ group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.
 [calc_rmse()]
 
 Other fit evaluation metrics: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{rsq.pk}()}
 
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},

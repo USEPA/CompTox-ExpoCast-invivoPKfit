@@ -40,6 +40,7 @@
   #' @param obj the pk object
   #' @param ... Additional arguments currently not in use.
   #' @export
+  #' @seealso [do_prefit.pk()] for the `do_prefit` method for class [pk()]
   do_prefit <- function(obj, ...) {
     UseMethod("do_prefit", obj)
   }
@@ -151,24 +152,37 @@
 
   #' Fold error
   #'
-  #' This is the S3 method generic for `fold_errors`.
+  #' This is the S3 method generic for `fold_error`.
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  #' @seealso [fold_errors.pk()] for the `fold_errors` method for class [pk()]
-  fold_errors <- function(obj, ...) {
-    UseMethod("fold_errors", obj)
+  #' @seealso [fold_error.pk()] for the `fold_error` method for class [pk()]
+  fold_error <- function(obj, ...) {
+    UseMethod("fold_error", obj)
   }
 
-  #' Fold_error default method
+  #' fold_error default method
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  fold_errors.default <- function(obj, ...) {
-    stop("No 'fold_errors' method exists for object of class",
+  fold_error.default <- function(obj, ...) {
+    stop("No 'fold_error' method exists for object of class",
          toString(class(obj))
     )
   }
+
+  #' This is the S3 method generic for `fold_errors`.
+  #'
+  #'`fold_errors()` is an alias for `fold_error()`
+  #'
+  #' @param obj an object
+  #' @param ... Additional arguments currently not in use.
+  #' @export
+  #' @seealso [fold_error.pk()] for the `fold_error` method for class [pk()]
+  fold_errors <- function(obj, ...) {
+    UseMethod("fold_error", obj)
+  }
+
 
   #' Check required status
   #'
@@ -705,11 +719,10 @@
   #'
   #' This is the S3 method generic for eval_tkstats()
   #'
-  #' `eval_tkstats()` is an alias for `data_summary()`
   #'
   #' @param obj An object.
   #' @param ... Additional arguments currently not in use.
-  #' @seealso [data_summary.pk()] for the method for class [pk()]
+  #' @seealso [eval_tkstats.pk()] for the method for class [pk()]
   #' @export
   eval_tkstats <- function(obj, ...) {
     UseMethod("eval_tkstats", obj)
@@ -730,11 +743,10 @@
   #'
   #' This is the S3 method generic for get_fit()
   #'
-  #' `get_fit()` is an alias for `data_summary()`
   #'
   #' @param obj An object.
   #' @param ... Additional arguments currently not in use.
-  #' @seealso [data_summary.pk()] for the method for class [pk()]
+  #' @seealso [get_fit.pk()] for the method for class [pk()]
   #' @export
   get_fit <- function(obj, ...) {
     UseMethod("get_fit", obj)
@@ -755,11 +767,9 @@
   #'
   #' This is the S3 method generic for get_data_group()
   #'
-  #' `get_data_group()` is an alias for `data_summary()`
-  #'
   #' @param obj An object.
   #' @param ... Additional arguments currently not in use.
-  #' @seealso [data_summary.pk()] for the method for class [pk()]
+  #' @seealso [get_data_group.pk()] for the method for class [pk()]
   #' @export
   get_data_group <- function(obj, ...) {
     UseMethod("get_data_group", obj)
@@ -798,3 +808,50 @@
          toString(class(obj))
     )
   }
+
+  #' AFE()
+  #'
+  #' This is the S3 method generic for AFE()
+  #'
+  #' @param obj An object.
+  #' @param ... Additional arguments currently not in use.
+  #' @seealso [AFE.pk()] for the method for class [pk()]
+  #' @export
+ AFE <- function(obj, ...) {
+    UseMethod("AFE", obj)
+  }
+
+  #' Default method for AFE()
+  #'
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
+  #' @export
+  AFE.default <- function(obj, ...) {
+    stop("No 'AFE' method exists for object of class",
+         toString(class(obj))
+    )
+  }
+
+  #' AAFE()
+  #'
+  #' This is the S3 method generic for AAFE()
+  #'
+  #' @param obj An object.
+  #' @param ... Additional arguments currently not in use.
+  #' @seealso [AAFE.pk()] for the method for class [pk()]
+  #' @export
+  AAFE <- function(obj, ...) {
+    UseMethod("AFE", obj)
+  }
+
+  #' Default method for AAFE()
+  #'
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
+  #' @export
+  AAFE.default <- function(obj, ...) {
+    stop("No 'AAFE' method exists for object of class",
+         toString(class(obj))
+    )
+  }
+

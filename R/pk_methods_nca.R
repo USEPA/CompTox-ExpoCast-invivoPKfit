@@ -30,7 +30,9 @@
 #' @param dose_norm Logical: `TRUE` to perform NCA after dose-normalizing
 #'   concentrations. `FALSE` (default) to perform NCA on un-transformed
 #'   concentrations.
-#' @param suppress.messages Logical.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `obj$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments. Currently not in use.
 #' @return A `data.frame` with variables including all the grouping variables in
 #'   `nca_group`, `nca_group_id`; `design` (the auto-detected study design for
@@ -72,7 +74,7 @@ nca.pk <- function(obj,
     if (!(all(c("Route",
                "Media") %in%
              grp_vars))) {
-      stop(paste0("When dose_norm == TRUE, nca_group must include all of Route, Media.\n",
+      stop(paste0("nca.pk(): When dose_norm == TRUE, nca_group must include all of Route, Media.\n",
                   "nca_group is: ",
                   toString(grp_vars)
       ))
@@ -85,7 +87,7 @@ nca.pk <- function(obj,
                "Media") %in%
              grp_vars))) {
       stop(paste0("When dose_norm == FALSE, nca_group must include all of Dose, Route, Media.\n",
-                 "nca_group is: ",
+                 "nca.pk(): nca_group is: ",
                  toString(grp_vars)
       ))
     }

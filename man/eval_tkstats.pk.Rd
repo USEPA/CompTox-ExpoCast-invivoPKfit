@@ -13,6 +13,7 @@
   exclude = TRUE,
   dose_norm = FALSE,
   finite_only = TRUE,
+  suppress.messages = NULL,
   ...
 )
 }
@@ -68,6 +69,10 @@ this function. But it means that any values in the `Dose` variable of
 for which AUC is finite in both `nca` and `tkstats`. This also means it will
 by default never return instances where winning model == `model_flat`.}
 
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`obj$settings_preprocess$suppress.messages`}
+
 \item{...}{Additional arguments. Currently not in use.}
 }
 \value{
@@ -84,6 +89,8 @@ Evaluate TK statistics from a fitted model by comparing to NCA results
 }
 \seealso{
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},

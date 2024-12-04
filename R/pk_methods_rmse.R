@@ -96,6 +96,11 @@
 #'   in which case RMSE is calculated for each data group defined in the
 #'   object's `data_group` element (use [get_data_group.pk()] to access the
 #'   object's `data_group`).
+#' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
+#'   the LOQ before computing R-squared. FALSE: do not.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `obj$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments. Not currently used.
 #' @return A `data.frame` with calculated RMSE as the final column. There is one row per
 #'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
@@ -113,7 +118,13 @@ rmse.pk <- function(obj,
                     exclude = TRUE,
                     use_scale_conc = FALSE,
                     rmse_group = NULL,
+                    sub_pLOQ = TRUE,
+                    suppress.messages = NULL,
                     ...) {
+  if (is.null(suppress.messages)) {
+    suppress.messages <- obj$settings_preprocess$suppress.messages
+  }
+
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -147,9 +158,12 @@ rmse.pk <- function(obj,
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
+
+  if(suppress.messages %in% FALSE){
   message("rmse.pk(): Computing RMSE on transformed concentration scale. Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log10-transformation ", conc_scale$log10_trans)
+  }
 
   # Get predictions
   # do NOT apply transformations at this stage
@@ -159,13 +173,16 @@ rmse.pk <- function(obj,
                    method = method,
                    type = "conc",
                    exclude = exclude,
-                   use_scale_conc = FALSE)
+                   use_scale_conc = FALSE,
+                   suppress.messages = suppress.messages)
 
 
   # remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE && "exclude" %in% names(newdata)) {
       newdata <- subset(newdata, exclude %in% FALSE)
   }
+
+
 
   # Requested variables
   # Note that we take the NON-transformed concentrations.
@@ -176,11 +193,22 @@ rmse.pk <- function(obj,
                 "Conc_SD",
                 "N_Subjects",
                 "Detect",
-                "exclude")
+                "exclude",
+                "pLOQ")
+
 
   new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
     dplyr::select(dplyr::all_of(req_vars)) %>%
     dplyr::ungroup())
+
+  #replace below-LOQ preds with pLOQ if specified
+  if(sub_pLOQ %in% TRUE){
+    message("rmse.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    new_preds <- new_preds %>%
+      dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
+                                   pLOQ,
+                                   Conc_est))
+  }
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
@@ -212,13 +240,17 @@ rmse.pk <- function(obj,
     dplyr::ungroup()
 
   if (conc_scale$log10_trans == FALSE) {
+    if(suppress.messages %in% FALSE){
     message("rmse.pk(): RMSE calculated by groups: \n",
             toString(sapply(unlist(rmse_group), rlang::as_label)),
             ", method, model")
+    }
   } else {
+    if(suppress.messages %in% FALSE){
     message("rmse.pk(): RMSLE calculated by groups: \n",
             toString(sapply(unlist(rmse_group), rlang::as_label)),
             ", method, model")
+    }
     rmse_df <- rmse_df %>% rename(RMSLE = RMSE)
   }
 

@@ -39,11 +39,7 @@ get_fit.pk <- function(obj,
 
   model_ok <- check_model(obj = obj, model = model)
 
-  tmp <- subset(obj$fit, model %in% model) %>%
-    tidyr::unnest(fit) %>%
-    tidyr::pivot_longer(cols = starts_with("sigma_"),
-                 names_to = "error_group",
-                 values_to = "sigma_value")
+  tmp <- subset(obj$fit, model %in% model)
 
   return(tmp)
 }

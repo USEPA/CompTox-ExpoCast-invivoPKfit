@@ -63,7 +63,8 @@ coef_sd.pk <- function(obj,
     obj = obj,
     model = model,
     method = method,
-    drop_sigma = FALSE)
+    drop_sigma = FALSE,
+    suppress.messages = suppress.messages)
 
   other_vars <- ggplot2::vars(
     Value,
@@ -150,7 +151,7 @@ coef_sd.pk <- function(obj,
                    suppressWarnings(diag(chol(MASS::ginv(x),
                              pivot = TRUE))^(1 / 2)),
                    error = function(err) {
-                     if (!suppress.messages) {
+                     if (isFALSE(suppress.messages)) {
                        message("Pseudovariance matrix failed, returning NAs")
                      }
                      rep(NA_real_, nrow(x))
@@ -160,19 +161,21 @@ coef_sd.pk <- function(obj,
     }),
     alerts = purrr::map2(hessian_mat, coefs_vector, \(x, y) {
       tryCatch({
-        diag(solve(x))^(1 / 2) %>% as.numeric()
+        suppressWarnings(diag(solve(x))^(1 / 2) %>% as.numeric())
         return(paste0("Hessian successfully inverted"))
       },
       error = function(err) {
         tryCatch(
+          {
           suppressWarnings(diag(chol(MASS::ginv(x),
-                                     pivot = TRUE))^(1 / 2)),
+                                     pivot = TRUE))^(1 / 2))
+            return(paste0("Hessian can't be inverted, ",
+                            "using pseudovariance matrix."))
+            },
           error = function(err) {
-            message("Pseudovariance matrix failed, returning NAs")
+            return("Pseudovariance matrix failed, returning NAs")
           })
-        message("Hessian can't be inverted, ",
-                "using pseudovariance matrix ",
-                "to estimate parameter uncertainty.")
+
       }
       )
     }
@@ -192,6 +195,7 @@ coef_sd.pk <- function(obj,
                                               names_to = "param_name_sd",
                                               values_to = "param_sd"))) %>%
     tidyr::unnest(sds_tibble) %>%
+    dplyr::mutate(alerts = unlist(alerts)) %>%
     dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) as.list(x) %>%
                                               as.data.frame() %>%
                                               tidyr::pivot_longer(

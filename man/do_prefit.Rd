@@ -14,3 +14,6 @@ do_prefit(obj, ...)
 \description{
 Prefitting
 }
+\seealso{
+[do_prefit.pk()] for the `do_prefit` method for class [pk()]
+}

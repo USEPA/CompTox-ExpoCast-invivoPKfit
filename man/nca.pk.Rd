@@ -42,7 +42,9 @@ NCA, regardless of exclusion status. Default `TRUE`.}
 concentrations. `FALSE` (default) to perform NCA on un-transformed
 concentrations.}
 
-\item{suppress.messages}{Logical.}
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`obj$settings_preprocess$suppress.messages`}
 
 \item{...}{Additional arguments. Currently not in use.}
 }

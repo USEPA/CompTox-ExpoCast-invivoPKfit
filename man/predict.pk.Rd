@@ -12,7 +12,7 @@
   type = "conc",
   exclude = TRUE,
   use_scale_conc = FALSE,
-  suppress_messages = TRUE,
+  suppress.messages = NULL,
   include_NAs = FALSE,
   ...
 )
@@ -54,8 +54,9 @@ log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
 
-\item{suppress_messages}{Whether to suppress warnings and other
-diagnostic messages during plotting}
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`object$settings_preprocess$suppress.messages`}
 
 \item{include_NAs}{Logical: `FALSE` by default. Determines whether to include
 aborted fits which have NAs as coefficients.}
@@ -64,7 +65,7 @@ aborted fits which have NAs as coefficients.}
 }
 \value{
 A data.frame with one row for each `data_group`, `model` and `method`.
-  A column that contains the predicted concentration or AUC at that timepoint
+  Includes variable `Conc_est` that contains the predicted concentration or AUC at that timepoint
   given the TK parameters for that `model` and `method` specified in [coefs()].
   If `use_scale_conc %in% FALSE`, these predictions are
   un-transformed concentrations in the same units as `object$data$Conc.Units`.
@@ -76,6 +77,8 @@ Extract predictions from a fitted `pk` object.
 }
 \seealso{
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},

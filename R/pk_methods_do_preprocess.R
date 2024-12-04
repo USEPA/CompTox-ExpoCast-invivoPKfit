@@ -3,15 +3,31 @@
 #' Pre-process data for a `pk` object
 #'
 #' Data pre-processing for an object `obj` includes the following steps, in order:
-#' 1. Coerce data to class `data.frame` (if it is not already)
-#' 2. Rename variables to harmonized "`invivopkfit` aesthetic" variable names, using `obj$mapping`
-#' 3. Check that the data includes only one chemical and one species.
-#' 4. Check that the data includes only routes in `obj$settings_preprocess$routes_keep` and media in `obj$settings_preprocess$media_keep`
-#' 5. Check that the data includes only one unit for concentration, one unit for time, and one unit for dose.
-#' 6. Coerce Value, Value_SD, LOQ, Dose, and Time to numeric, if they are not already.
-#' 7. Coerce Species, Route, and Media to lowercase.
-#' 8. Replace any negative Value, Value_SD, Dose, or Time with `NA`
-#' 9. Replace any negative
+#'
+#' - Coerce data to class `data.frame` (if it is not already)
+#' - Rename variables to harmonized "`invivopkfit` aesthetic" variable names, using `obj$mapping`
+#' - Check that the data includes only routes in `obj$settings_preprocess$routes_keep` and media in `obj$settings_preprocess$media_keep`
+#' - Check that the data includes only one unit for concentration, one unit for time, and one unit for dose.
+#' - Coerce `Value`, `Value_SD`, `LOQ`, `Dose`, and `Time` to numeric, if they are not already.
+#' - Coerce `Species`, `Route`, and `Media` to lowercase.
+#' - Replace any negative `Value`, `Value_SD`, `Dose`, or `Time` with `NA`
+#' - If any non-NA `Value` is currently less than its non-NA LOQ, then replace it with NA
+#' -  Impute any NA `LOQ`: as `calc_loq_factor` * minimum non-NA `Value` in each `loq_group`
+#' - For any cases where `N_Subject`s is NA, impute `N_Subjects` = 1
+#' - For anything with `N_Subjects` == 1, set `Value_SD` to 0
+#' - Impute missing `Value_SD` as follows: For observations with `N_Subjects` > 1, take the minimum non-missing `Value_SD` for each `sd_group`. If all SDs are missing in an `sd_group`, then `Value_SD` for each observation in that group will be imputed as 0.
+#' - Mark data for exclusion according to the following criteria:
+#'     - Exclude any remaining observations where both Value and LOQ are NA
+#'     - For any cases where `N_Subjects` is NA, impute `N_Subjects` = 1
+#'     - Exclude any remaining observations with `N_Subjects` > 1 and `Value_SD` still NA. (This should never occur, if SD imputation is performed, but just in case.)
+#'     - Exclude any observations with `N_Subjects` > 1 where reported `Value` is NA, because log-likelihood for non-detect multi-subject observations has not been implemented.
+#'     - Exclude any observations with NA `Time` values
+#'     - Exclude any observations with `Dose` = 0
+#' - Apply any time transformations specified by user
+#' - Scale concentration by `ratio_conc_dose`
+#' - Apply any concentration transformations specified by the user.
+#' - If `Series_ID` is not included, then assign it as NA
+#' - Create variable `pLOQ` and set it equal to `LOQ`
 #'
 #'
 #' @param obj A `pk` object
@@ -458,7 +474,6 @@ do_preprocess.pk <- function(obj, ...) {
               toString(sapply(obj$settings_preprocess$sd_group, as_label)),
               ". If all SDs are missing in a group, ",
               "SD for each observation will be imputed as",
-              # "30% of the observed mean concentration. ",
               " 0. ",
               n_sd_est,
               " missing SDs will be estimated.\n"
@@ -474,7 +489,6 @@ do_preprocess.pk <- function(obj, ...) {
                 rep(all(is.na(
                   Value_SD_orig
                 )), dplyr::n()),
-                # 0.3 * Value,
                 0,
                 min(Value_SD_orig, na.rm = TRUE)
               ),
