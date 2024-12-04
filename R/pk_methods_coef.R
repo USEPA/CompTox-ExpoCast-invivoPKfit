@@ -14,19 +14,30 @@
 #'   default), coefficients will be returned for all of the models in
 #'   `obj$settings_optimx$method`.
 #' @param drop_sigma Logical: `FALSE` by default. Determines whether to include
-#'  sigma in the output.
+#'   sigma in the output.
 #' @param include_NAs Logical: `FALSE` by default. Determines whether to include
-#'  aborted fits which have NAs as coefficients.
+#'   aborted fits which have NAs as coefficients.
+#' @param include_type Character: `"use"` (default) will return all parameters
+#'   used in evaluating the model, including those that were held constant.
+#'   `"optimize"` will return only parameters that were optimized, dropping all
+#'   that were held constant. `"constant"` will return *only* parameters that
+#'   were held constant (used, but not optimized). (`"optimize"` and
+#'   `"constant"` are useful, for example, when evaluating the Hessian of the
+#'   log-likelihood function, which requires differentiating between parameters
+#'   that were optimized and those that were held constant.) Any value other
+#'   than `"use"`, `"optim"`, or `"const"` will return an error.
 #' @param suppress.messages Logical: `NULL` by default to use the setting in
 #'   `object$settings_preprocess$suppress.messages`. Determines whether to
 #'   display messages.
 #' @param ... Additional arguments currently not in use.
-#' @return A data.frame with a row for each `data_group` x `method` x `model` combination
-#'  in a fitted [pk()] object. When `drop_sigma = TRUE` there is also a row for each
-#'  unique standard deviation hyper-parameter defined by `error_group` in the fitted [pk()] object.
-#'  There is a column for all parameter estimates given each model in `model`.
-#'  A list-column `coefs_vector` summarizes all estimated parameters into a named vector.
-#'  This named vector is used in functions that call upon the model functions, such as [predict()].
+#' @return A data.frame with a row for each `data_group` x `method` x `model`
+#'   combination in a fitted [pk()] object. When `drop_sigma = TRUE` there is
+#'   also a row for each unique standard deviation hyper-parameter defined by
+#'   `error_group` in the fitted [pk()] object. There is a column for all
+#'   parameter estimates given each model in `model`. A list-column
+#'   `coefs_vector` summarizes all estimated parameters into a named vector.
+#'   This named vector is used in functions that call upon the model functions,
+#'   such as [predict()].
 #' @import glue
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
@@ -36,6 +47,7 @@ coef.pk <- function(object,
                     method = NULL,
                     drop_sigma = FALSE,
                     include_NAs = FALSE,
+                    include_type = "use",
                     suppress.messages = NULL,
                     ...) {
 
@@ -56,6 +68,16 @@ coef.pk <- function(object,
   method_ok <- check_method(obj = object, method = method)
   model_ok <- check_model(obj = object, model = model)
 
+  if(!(include_type %in% c("use",
+                           "const",
+                           "optim"))){
+    stop(paste0("Error in coef.pk(): `include_type` is\n",
+                deparse(substitute(include_type)),
+                "\n",
+                "but it must be one of ",
+                " 'use', 'optim', or 'const'."))
+  }
+
   data_group_vars <- sapply(object$data_group, rlang::as_label)
 
   # Get a unique list of possible parameters for each model used
@@ -63,41 +85,25 @@ coef.pk <- function(object,
     unlist() %>%
     unique()
 
-  # Get the parameters that were held constant from par_DF
-  # And only keep the name and starting value for the parameter
-  # along with the unique identifying columns model and data_group
-  parDF <- subset(
-    object$prefit$par_DF,
-    use_param == TRUE & optimize_param == FALSE &
-      param_name %in% possible_model_params) %>%
-    dplyr::select(model, !!!object$data_group, param_name, start)
-
-  coefs <- subset(
-    object$fit,
-    subset = (use_param == TRUE)) %>%
+  coefs <- object$fit %>%
     dplyr::select(model, method,
                   !!!object$data_group,
                   param_name,
                   estimate,
-                  convcode)
-
-  parDF <- coefs %>%
-    dplyr::distinct(model, method, !!!object$data_group, convcode) %>%
-    dplyr::inner_join(parDF, by = c(data_group_vars, "model")) %>%
-    dplyr::rename(estimate = "start")
-
-  coefs <- dplyr::bind_rows(coefs, parDF)
+                  convcode,
+                  optimize_param,
+                  use_param)
 
   # drop the sigma parameters (not used in some functions)
-  if (drop_sigma == TRUE) {
+  if (drop_sigma %in% TRUE) {
     coefs <- coefs %>%
       dplyr::filter(
         !startsWith(param_name, "sigma_")
       )
   }
 
-  # include NA values from aborted fits
-  if (!include_NAs) {
+  # include NA values from aborted fits?
+  if (include_NAs %in% FALSE) {
     coefs <- coefs %>%
       dplyr::filter(!(convcode %in% 9999),
                     !(convcode %in% -9999))
@@ -111,12 +117,22 @@ coef.pk <- function(object,
   # Create the coefs vector
   coefs_tidy <- coefs %>%
     dplyr::group_by(model, method, !!!object$data_group) %>%
-    dplyr::reframe(coefs_vector = purrr::map2(
-      estimate, param_name,
-      .f = \(x, y){
-        setNames(estimate, param_name)
-      }
-    )) %>%
+    dplyr::summarise(
+      coefs_vector = {
+          outval <- setNames(estimate, param_name)
+          #return only the selected "include_type"
+          #this will be an empty vector if there are no params of the selected type
+          if(include_type %in% "use"){
+            list(outval[use_param %in% TRUE])
+          }else if(include_type %in% "optim"){
+            list(outval[optimize_param %in% TRUE &
+                               use_param %in% TRUE])
+          }else if(include_type %in% "const"){
+            list(outval[optimize_param %in% FALSE &
+                               use_param %in% TRUE])
+          }
+        }
+      ) %>%
     dplyr::distinct() %>%
     dplyr::left_join(time_group,
                      by = data_group_vars)
