@@ -841,7 +841,7 @@
   #' @seealso [AAFE.pk()] for the method for class [pk()]
   #' @export
   AAFE <- function(obj, ...) {
-    UseMethod("AFE", obj)
+    UseMethod("AAFE", obj)
   }
 
   #' Default method for AAFE()
@@ -851,6 +851,29 @@
   #' @export
   AAFE.default <- function(obj, ...) {
     stop("No 'AAFE' method exists for object of class",
+         toString(class(obj))
+    )
+  }
+
+  #' hessian()
+  #'
+  #' This is the S3 method generic for hessian()
+  #'
+  #' @param obj An object.
+  #' @param ... Additional arguments currently not in use.
+  #' @seealso [hessian.pk()] for the method for class [pk()]
+  #' @export
+  hessian <- function(obj, ...) {
+    UseMethod("hessian", obj)
+  }
+
+  #' Default method for hessian()
+  #'
+  #' @param obj An object
+  #' @param ... Additional arguments currently not in use.
+  #' @export
+  hessian.default <- function(obj, ...) {
+    stop("No 'hessian' method exists for object of class",
          toString(class(obj))
     )
   }
