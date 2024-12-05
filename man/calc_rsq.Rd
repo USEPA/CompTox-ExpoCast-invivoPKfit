@@ -59,7 +59,7 @@ handle observations reported in summary format:
 \frac{
 \sum_{i=1}^G \mu_i n_i \bar{y}_i -
 (\bar{\mu} + \bar{y}) \sum_{i=1}^G n_i \mu_i +
-(\bar{mu} \bar{y}) \sum_{i=1}^G n_i
+(\bar{\mu} \bar{y}) \sum_{i=1}^G n_i
 }
 { \sqrt{
 \sum_{i=1}^G (n_i - 1) s_i^2 +

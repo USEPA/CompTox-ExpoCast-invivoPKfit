@@ -90,6 +90,7 @@ Other methods for fitted pk objects:
 \code{\link{eval_tkstats.pk}()},
 \code{\link{get_fit.pk}()},
 \code{\link{get_tkstats.pk}()},
+\code{\link{hessian.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{predict.pk}()},
 \code{\link{rmse.pk}()},
