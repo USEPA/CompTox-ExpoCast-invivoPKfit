@@ -1952,13 +1952,11 @@ pl <- plot(my_pk,
 cvt %>% filter(curation_set_tag == "CVT_Showa") %>%
   pull(analyte_dtxsid) -> Showa_chems
 
-combined_gof_df %>% filter(!(Chemical %in% Showa_chems)) %>% View()
-
 ex_fits <- pl %>%
   filter(Chemical %in% c("DTXSID2020139",
                          "DTXSID4023917",
                          "DTXSID3061635",
-                         "DTXSID8030760"), #azithromycin
+                         "DTXSID8030760"),
          Species %in% "rat") %>%
   pull(final_plot)
 
