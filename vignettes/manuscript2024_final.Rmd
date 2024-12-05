@@ -868,7 +868,7 @@ AUC_plot <- function(
 
 Run these plots for all fitting opts
 
-```{r}
+```{r, eval = FALSE}
 all_AUC_plots <- fitopts %>%
               dplyr::rowwise() %>%
   dplyr::summarise(this_plot = list(AUC_plot(this_error_model = error_model,
@@ -1192,7 +1192,7 @@ Now call these functions and do the evaluations.
 
 Winning model comparisons:
 
-```{r do_winmodel}
+```{r do_winmodel, eval = FALSE}
 
 #winning model
 system.time(wm_comp <- fitopts %>%
@@ -1207,7 +1207,7 @@ system.time(wm_comp <- fitopts %>%
 
 RMSLE for Cmax and AUC:
 
-```{r do_RMSLE_Cmax_AUC}
+```{r do_RMSLE_Cmax_AUC, eval = FALSE}
 
 #RMSLE for Cmax and AUC
 system.time(cmax_auc_rmsle_tbl <- fitopts %>%
@@ -1222,7 +1222,7 @@ system.time(cmax_auc_rmsle_tbl <- fitopts %>%
 
 Goodness-of-fit metrics table:
 
-```{r do_gof_tbl}
+```{r do_gof_tbl, eval = FALSE}
 
 #GOF table
 system.time(gof_tbl <- fitopts %>%
@@ -1237,7 +1237,7 @@ system.time(gof_tbl <- fitopts %>%
 
 Factor of two:
 
-```{r do_factor_two}
+```{r do_factor_two, eval = FALSE}
 
 #factor of two
 system.time(all_tf_tests <- fitopts %>%
@@ -1252,7 +1252,7 @@ system.time(all_tf_tests <- fitopts %>%
 
 Get all predictions:
 
-```{r do_all_preds}
+```{r do_all_preds, eval = FALSE}
 #all predictions
 system.time(all_preds <- fitopts %>%
               dplyr::rowwise() %>%
@@ -1264,7 +1264,7 @@ system.time(all_preds <- fitopts %>%
               tidyr::unnest(these_preds))
 ```
 
-```{r write_preds}
+```{r write_preds, eval = FALSE}
 
 #Save preds to a file as well
 saveRDS(all_preds, paste0(Sys.getenv("FIG_DIR"),
@@ -1276,7 +1276,7 @@ rm(all_preds)
 
 Produce and save tables for these evaluation metrics.
 
-```{r}
+```{r, eval = FALSE}
 (win_mdl_count_by_opts <- gof_tbl %>%
   group_by(Options, method, model) %>%
   count() %>%
@@ -1288,7 +1288,7 @@ Produce and save tables for these evaluation metrics.
 
 Rank fitting options by count of Chemical-Species data groups where RMSLE < 1
 
-```{r}
+```{r, eval = FALSE}
 gof_tbl %>%
   group_by(Options, method) %>%
   count(RMSLE < 1) %>%
@@ -1300,7 +1300,7 @@ gof_tbl %>%
 
 What about R-squared greater than 0.75?
 
-```{r}
+```{r, eval = FALSE}
 gof_tbl %>%
   group_by(Options, method) %>%
   count(Rsq > 0.75) %>%
@@ -1312,7 +1312,7 @@ gof_tbl %>%
 
 What about both RMSLE < 1 and R-squared greater than 0.75?
 
-```{r}
+```{r, eval = FALSE}
 rmsle_rsq_rank <- gof_tbl %>%
   group_by(Options, method) %>%
   count(RMSLE < 1 & Rsq > 0.75) %>%
@@ -1327,7 +1327,7 @@ Looking at both criteria together, it appears that the best set of fitting optio
 But also, let's add in the Cmax/AUC RMSLE calculations: Sort the fitting options from smallest to greatest RMSLE for Cmax and AUC, and see which set of fitting options yields the lowest RMSLE.
 
 
-```{r}
+```{r, eval = FALSE}
 cmax_auc_rmsle_rank <- cmax_auc_rmsle_tbl %>%
   arrange(RMSLE_Cmax, RMSLE_AUC) %>%
   select(Options, method, RMSLE_Cmax, RMSLE_AUC) 
@@ -1344,7 +1344,7 @@ This ranking strongly suggests 110p, with 100p as a second choice (both bobyqa).
 
 Write the evaluation results to a spreadsheet, including the rankings.
 
-```{r write_eval_results}
+```{r write_eval_results, eval = FALSE}
 
 # Write the results to file
 writexl::write_xlsx(x = list(
@@ -1361,9 +1361,7 @@ writexl::write_xlsx(x = list(
                 ".xlsx"))
 
 rm(wm_comp, cmax_auc_rmsle_tbl, gof_tbl, all_tf_tests)
-```
 
-```{r}
 gc()
 ```
 
@@ -1373,7 +1371,7 @@ gc()
 
 Plot R-sq vs. RMSLE for the various fitting options, color-coding by winning model.
 
-```{r plot_rsq_rmsle}
+```{r plot_rsq_rmsle, eval = FALSE}
 gof_tbl <- readxl::read_excel(path = paste0(Sys.getenv("FIG_DIR"),
                 "Manu_Files/",
                 read_date_results,
@@ -1414,7 +1412,7 @@ Second, when L-BFGS-B is the optimizer, the flat model is the winning model for 
 
 If we zoom in to RMSLE < 2:
 
-```{r plot_rsq_rmsle_zoom}
+```{r plot_rsq_rmsle_zoom, eval = FALSE}
 fig_rsq_rmsle_zoom <- ggplot(gof_tbl) +
   geom_point(aes(x = RMSLE,
                  y = Rsq,
@@ -1437,7 +1435,7 @@ When each time-scaling fit (when "1" is in the last place of the fit options sho
 
 Save these figures.
 
-```{r}
+```{r, eval = FALSE}
 #PDF versions
 ggsave(paste0(Sys.getenv("FIG_DIR"),
                 "Manu_Files/",
@@ -1484,7 +1482,7 @@ rm(fig_rsq_rmsle_zoom, fig_rsq_rmsle, gof_tbl)
 
 Plot Cmax RMSLE vs. AUC RMSLE.
 
-```{r plot_cmax_auc_rmsle}
+```{r plot_cmax_auc_rmsle, eval = FALSE}
 #read in table
 cmax_auc_rmsle_tbl <- readxl::read_xlsx(path = paste0(Sys.getenv("FIG_DIR"),
                                                    "Manu_Files/",
@@ -1538,7 +1536,7 @@ This figure reveals that overall, L-BFGS-B produced fits that did not match NCA-
 
 Plot predicted vs. observed concentrations for everything, using the winning fit options and the winning model for each data group.
 
-```{r}
+```{r, eval = FALSE}
 all_preds <- readRDS(paste0(Sys.getenv("FIG_DIR"),
                           read_date_results,
                           "_all_preds.Rds"))
@@ -1960,7 +1958,7 @@ ex_fits <- pl %>%
   filter(Chemical %in% c("DTXSID2020139",
                          "DTXSID4023917",
                          "DTXSID3061635",
-                         "DTXSID1034187"),
+                         "DTXSID8030760"), #azithromycin
          Species %in% "rat") %>%
   pull(final_plot)
 
@@ -1978,7 +1976,8 @@ cowplot::plot_grid(plotlist = list(ex_fits[[2]] +
                                                                    "grey40")) +
                                      theme(legend.position = "none"),
                                    ex_fits[[1]] +
-                                     scale_color_manual(values = c("magenta3")) +
+                                     scale_color_manual(values = c("#ae017e",
+                                                                   "#f768a1")) +
                                      theme(legend.position = "none"),
                                    ex_fits[[4]] +
                                      scale_color_manual(values = c("#006837")) +
@@ -2001,10 +2000,14 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 
 ```
 
-#### Supp. Fig 9: plots of the four chemicals that were best fit by the null model
-
+#### Supp. Fig 9: plots of the five data groups that were best fit by the null model
 
 ```{r}
+flat_chems <- winmodel %>%
+  filter(model %in% "model_flat") %>%
+  distinct(Chemical, Species)
+print(flat_chems)
+
 pl <- plot(my_pk,
 method = "bobyqa",
 best_fit = FALSE,
@@ -2012,14 +2015,8 @@ use_scale_conc = list(dose_norm = TRUE,
 log10_trans = FALSE),
 drop_nonDetect = FALSE)
 
-flat_fits <- pl %>% filter((Chemical %in% "DTXSID1021116" &
-                             Species %in% "rat") |
-                            ( Chemical %in% "DTXSID4020533" &
-                             Species %in% "mouse") |
-                              (Chemical %in% "DTXSID201029738" &
-                             Species %in% "rat") |
-                              (Chemical %in% "DTXSID2021315" &
-                                 Species %in% "rat")) %>%
+flat_fits <- pl %>% 
+  inner_join(flat_chems) %>%
                               pull(final_plot)
 
 cowplot::plot_grid(plotlist = flat_fits)
@@ -2028,16 +2025,19 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "Manu_Files/",
                          today,
                          "_Supp_Fig9.pdf"),
-       height = 12,
-       width = 12)
+       height = 8,
+       width = 16,
+       units = "in")
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "Manu_Files/",
                          today,
                          "_Supp_Fig9.png"),
        bg = "white",
-       height = 12,
-       width = 12,
-       dpi = 300)
+       height =8,
+       width = 16,
+       dpi = 300,
+       units = "in")
 ```
 
 
