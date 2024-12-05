@@ -135,7 +135,8 @@ coef.pk <- function(object,
       ) %>%
     dplyr::distinct() %>%
     dplyr::left_join(time_group,
-                     by = data_group_vars)
+                     by = data_group_vars) %>%
+    dplyr::ungroup()
 
   # Various filtering steps and checks
   # By optimization method
