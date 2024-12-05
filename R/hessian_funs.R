@@ -33,7 +33,6 @@
 #'  `pars_opt`. It will have rownames and column names that are the same as the
 #'  names of `pars_opt`.
 #'
-#'@importFrom numDeriv hessian
 #'@author Caroline Ring
 calc_hessian <- function(pars_opt,
                          pars_const,

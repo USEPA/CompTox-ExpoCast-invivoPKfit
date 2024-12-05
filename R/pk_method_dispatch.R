@@ -855,7 +855,7 @@
     )
   }
 
-  #' hessian()
+  #' get_hessian()
   #'
   #' This is the S3 method generic for hessian()
   #'
@@ -863,17 +863,17 @@
   #' @param ... Additional arguments currently not in use.
   #' @seealso [hessian.pk()] for the method for class [pk()]
   #' @export
-  hessian <- function(obj, ...) {
-    UseMethod("hessian", obj)
+  get_hessian <- function(obj, ...) {
+    UseMethod("get_hessian", obj)
   }
 
-  #' Default method for hessian()
+  #' Default method for get_hessian()
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
   #' @export
-  hessian.default <- function(obj, ...) {
-    stop("No 'hessian' method exists for object of class",
+  get_hessian.default <- function(obj, ...) {
+    stop("No 'get_hessian' method exists for object of class",
          toString(class(obj))
     )
   }

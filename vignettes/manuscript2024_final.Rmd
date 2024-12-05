@@ -1971,17 +1971,18 @@ cowplot::plot_grid(plotlist = list(ex_fits[[2]] +
                                                                    "#045a8d")) +
                                      theme(legend.position = "none") +
                                      xlim(0,30),
-                                   ex_fits[[3]] +
+                                   ex_fits[[1]] +
                                      scale_color_manual(values = c("black",
                                                                    "grey40")) +
                                      theme(legend.position = "none"),
-                                   ex_fits[[1]] +
+                                    ex_fits[[4]] +
+                                     scale_color_manual(values = c("#006837")) +
+                                     theme(legend.position = "none"),
+                                   ex_fits[[3]] +
                                      scale_color_manual(values = c("#ae017e",
                                                                    "#f768a1")) +
                                      theme(legend.position = "none"),
-                                   ex_fits[[4]] +
-                                     scale_color_manual(values = c("#006837")) +
-                                     theme(legend.position = "none")),
+                                  ),
                    scale = 0.85)
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),

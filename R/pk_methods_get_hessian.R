@@ -32,7 +32,7 @@
 #'@references Gill J, King G. (2004) What to Do When Your Hessian is Not
 #'  Invertible: Alternatives to Model Respecification in Nonlinear Estimation.
 #'  Sociological Methods & Research 33(1):54-87. DOI: 10.1177/0049124103262681
-hessian.pk <- function(obj,
+get_hessian.pk <- function(obj,
                        model = NULL,
                        method = NULL,
                        suppress.messages = TRUE, ...) {
