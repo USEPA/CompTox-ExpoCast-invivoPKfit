@@ -1954,13 +1954,11 @@ pl <- plot(my_pk,
 cvt %>% filter(curation_set_tag == "CVT_Showa") %>%
   pull(analyte_dtxsid) -> Showa_chems
 
-combined_gof_df %>% filter(!(Chemical %in% Showa_chems)) %>% View()
-
 ex_fits <- pl %>%
   filter(Chemical %in% c("DTXSID2020139",
                          "DTXSID4023917",
                          "DTXSID3061635",
-                         "DTXSID1034187"),
+                         "DTXSID8030760"),
          Species %in% "rat") %>%
   pull(final_plot)
 
@@ -1973,14 +1971,14 @@ cowplot::plot_grid(plotlist = list(ex_fits[[2]] +
                                                                    "#045a8d")) +
                                      theme(legend.position = "none") +
                                      xlim(0,30),
-                                   ex_fits[[3]] +
+                                   ex_fits[[1]] +
                                      scale_color_manual(values = c("black",
                                                                    "grey40")) +
                                      theme(legend.position = "none"),
-                                   ex_fits[[1]] +
+                                   ex_fits[[4]] +
                                      scale_color_manual(values = c("magenta3")) +
                                      theme(legend.position = "none"),
-                                   ex_fits[[4]] +
+                                   ex_fits[[3]] +
                                      scale_color_manual(values = c("#006837")) +
                                      theme(legend.position = "none")),
                    scale = 0.85)
