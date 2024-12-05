@@ -1952,16 +1952,50 @@ pl <- plot(my_pk,
 cvt %>% filter(curation_set_tag == "CVT_Showa") %>%
   pull(analyte_dtxsid) -> Showa_chems
 
-ex_fits <- pl %>%
+
+my_rsq <- rsq(my_pk, method = "bobyqa")
+my_rsq %>% semi_join(winmodel) %>% filter(Chemical %in% c("DTXSID2020139",
+                            "DTXSID4023917",
+                            "DTXSID3061635",
+                            "DTXSID8030760"))
+
+#High rsq: DTXSID2020139 and DTXSID4023917
+#Low rsq: DTXSID3061635 and DTXSID8030760
+
+fe_df %>% filter(Chemical %in% c("DTXSID2020139",
+                                  "DTXSID4023917",
+                                  "DTXSID3061635",
+                                  "DTXSID8030760"), Species %in% "rat") %>% group_by(Chemical, Species) %>% summarise(frac_2fold = sum(Fold_Error < 2 & Fold_Error > 0.5)/n())
+
+# # A tibble: 4 × 3
+# # Groups:   Chemical [4]
+#   Chemical      Species frac_2fold
+#   <chr>         <chr>        <dbl>
+# 1 DTXSID2020139 rat          0.271
+# 2 DTXSID3061635 rat          0.125
+# 3 DTXSID4023917 rat          0.953
+# 4 DTXSID8030760 rat          0.778
+
+#High frac 2fold: DTXSID4023917 and DTXSID8030760
+#Low frac 2fold: DTXSID2020139 and DTXSID3061635
+
+pl_sub <- pl %>%
   filter(Chemical %in% c("DTXSID2020139",
                          "DTXSID4023917",
                          "DTXSID3061635",
                          "DTXSID8030760"),
-         Species %in% "rat") %>%
+         Species %in% "rat") 
+
+ex_fits <- pl_sub %>%
   pull(final_plot)
+ex_fits <- set_names(ex_fits,
+          pl_sub$Chemical)
 
 
-cowplot::plot_grid(plotlist = list(ex_fits[[2]] +
+
+cowplot::plot_grid(plotlist = list(
+  #Low frac 2fold and high Rsq
+  ex_fits[["DTXSID2020139"]] +
                                      scale_color_manual(values = c("#a6bddb",
                                                                    "#74a9cf",
                                                                    "#41bbc4",
@@ -1969,17 +2003,21 @@ cowplot::plot_grid(plotlist = list(ex_fits[[2]] +
                                                                    "#045a8d")) +
                                      theme(legend.position = "none") +
                                      xlim(0,30),
-                                   ex_fits[[1]] +
+  #high frac 2fold and high Rsq
+                                   ex_fits[["DTXSID4023917"]] +
                                      scale_color_manual(values = c("black",
                                                                    "grey40")) +
                                      theme(legend.position = "none"),
-                                    ex_fits[[4]] +
+  
+  #low frac 2fold and low rsq
+                                    ex_fits[["DTXSID3061635"]] +
                                      scale_color_manual(values = c("#006837")) +
                                      theme(legend.position = "none"),
-                                   ex_fits[[3]] +
-                                     scale_color_manual(values = c("#ae017e",
-                                                                   "#f768a1")) +
-                                     theme(legend.position = "none"),
+  
+  #high frac2fold and low rsq
+                                   ex_fits[["DTXSID8030760"]] +
+                                     scale_color_manual(values = "magenta3") +
+                                     theme(legend.position = "none")
                                   ),
                    scale = 0.85)
 
