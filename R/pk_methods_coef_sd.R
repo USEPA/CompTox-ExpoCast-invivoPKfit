@@ -9,13 +9,15 @@
 #' for the model parameters. The square root of the diagonal elements of this
 #' matrix represent the parameter standard deviations.
 #'
-#' If the Hessian is not invertible, an attempt is made to calculate a
-#' pseudovariance matrix, following the procedure outlined in Gill & King
-#' (2004). First, the generalized inverse of the Hessian is calculated using
+#' A first attempt is made to invert the Hessian using [solve()] (see
+#' [hess_sd1()]). If the Hessian is singular, an attempt is made to calculate a
+#' pseudovariance matrix, following the procedure outlined in Gill & King (2004)
+#' (see [hess_sd2()]). First, the generalized inverse of the Hessian is calculated using
 #' [MASS::ginv()]. Then, a generalized Cholesky decomposition (to ensure
-#' positive-definiteness) is calculated using [base::chol()] with argument
-#' `pivot = TRUE`. The square root of the diagonal elements of this matrix
-#' represent the parameter standard deviations.
+#' positive-definiteness) is calculated using [Matrix::Cholesky] with argument
+#' `perm = TRUE`. The generalized inverse is reconstructed from the generalized
+#' Cholesky factorization. The square root of the diagonal elements of this
+#' matrix represent the parameter standard deviations.
 #'
 #' If neither of these procedures is successful, then `NA_real_` is returned for
 #' all coefficient standard deviations.
@@ -31,14 +33,12 @@
 #'   informative messages. `FALSE` to see them.
 #' @param ... Additional arguments. Not in use right now.
 #' @return A dataframe with one row for each `data_group`, `model` and `method`.
-#'   The remaining columns include the parameters & hyperparameters as returned by
-#'   [coef.pk()], as well as their calculated standard deviations.
+#'   The remaining columns include the parameters & hyperparameters as returned
+#'   by [coef.pk()], as well as their calculated standard deviations.
 #' @export
-#' @importFrom MASS ginv
 #' @import dplyr
 #' @import purrr
 #' @import tidyr
-#' @import numDeriv
 #' @author Caroline Ring and Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
 #' @references Gill J, King G. (2004) What to Do When Your Hessian is Not
@@ -55,6 +55,8 @@ coef_sd.pk <- function(obj,
   if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
+
+  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
 
   # get coefs data.frame for each model and method
   # but exclude non-optimized parameters and sigma values for error_group
@@ -90,8 +92,16 @@ coef_sd.pk <- function(obj,
     suppress.messages = suppress.messages)
 
   coefs <- coefs_opt %>%
-    dplyr::left_join(coefs_const) %>%
-    dplyr::left_join(coefs_use)
+    dplyr::left_join(coefs_const,
+                     by = c("model", "method",
+                            data_grp_vars,
+                            "Time.Units",
+                            "Time_trans.Units")) %>%
+    dplyr::left_join(coefs_use,
+                     by = c("model", "method",
+                            data_grp_vars,
+                            "Time.Units",
+                            "Time_trans.Units"))
 
   other_vars <- ggplot2::vars(
     Value,
@@ -103,7 +113,7 @@ coef_sd.pk <- function(obj,
     exclude
   )
 
-  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
+
 
   # Get required variables for log_likelihood()
   req_vars <- ggplot2::vars(Time,
@@ -183,13 +193,31 @@ coef_sd.pk <- function(obj,
     dplyr::select(-c(coefs_vector))
 
   output <- coefs_long %>%
-    dplyr::left_join(sds_alerts) %>%
+    dplyr::left_join(sds_alerts,
+                     by = c("model", "method",
+                                 data_grp_vars,
+                            "param_name")) %>%
   dplyr::ungroup() %>%
     dplyr::distinct() %>%
     dplyr::mutate(param_value = dplyr::na_if(param_value, NaN),
                   param_sd = dplyr::na_if(param_sd, NaN)) %>%
     dplyr::select(model, method, !!!obj$data_group,
                   param_name, param_value, param_sd, sd_alert)
+
+  #add information about whether each parameter was optimized or not
+  #to explain why some params don't have an SD
+  param_type <- obj$fit %>%
+    dplyr::select(model, method,
+                  !!!obj$data_group,
+                  param_name,
+                  optimize_param,
+                  use_param)
+
+  output <- output %>%
+    dplyr::left_join(param_type,
+                     by = c("model", "method",
+                            data_grp_vars,
+                            "param_name"))
 
 
   return(output)

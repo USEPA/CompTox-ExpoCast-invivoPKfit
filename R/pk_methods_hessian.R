@@ -1,35 +1,37 @@
-#' Get Hessian matrixes
+#'Get Hessian matrixes
 #'
-#' Extract Hessian matrixes from a fitted `pk` object
+#'Extract Hessian matrixes from a fitted `pk` object
 #'
-#' This function computes a numerical
-#' approximation to the model Hessian (the matrix of second derivatives of the
-#' model objective function with respect to each model parameter).
+#'This function computes a numerical approximation to the model Hessian for each
+#'data group and each model in a fitted `pk` object. The Hessian is the matrix
+#'of second derivatives of the model objective function with respect to each
+#'model parameter. Here, the objective function is the negative log-likelihood
+#'implemented in [log_likelihood()], evaluated jointly across the data that was
+#'used to fit the model.
 #'
 #'
-#' @param obj A [pk] object
-#' @param model Optional: Specify one or more of the fitted models whose
-#'   coefficients to return. If NULL (the default), coefficients will be
-#'   returned for all of the models in `obj$stat_model`.
-#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
-#'   whose coefficients to return. If NULL (the default), coefficients will be
-#'   returned for all of the models in `obj$settings_optimx$method`.
-#' @param suppress.messages Logical. `TRUE` (the default) to suppress
-#'   informative messages. `FALSE` to see them.
-#' @param ... Additional arguments. Not in use right now.
-#' @return A dataframe with one row for each `data_group`, `model` and `method`.
-#'   The remaining column is a `list` column containing the Hessian for each row.
-#' @export
-#' @importFrom MASS ginv
-#' @import dplyr
-#' @import purrr
-#' @import tidyr
-#' @import numDeriv
-#' @author Caroline Ring and Gilberto Padilla Mercado
-#' @family methods for fitted pk objects
-#' @references Gill J, King G. (2004) What to Do When Your Hessian is Not
-#'   Invertible: Alternatives to Model Respecification in Nonlinear Estimation.
-#'   Sociological Methods & Research 33(1):54-87. DOI: 10.1177/0049124103262681
+#'@param obj A [pk] object
+#'@param model Optional: Specify one or more of the fitted models whose
+#'  coefficients to return. If NULL (the default), coefficients will be returned
+#'  for all of the models in `obj$stat_model`.
+#'@param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'  whose coefficients to return. If NULL (the default), coefficients will be
+#'  returned for all of the models in `obj$settings_optimx$method`.
+#'@param suppress.messages Logical. `TRUE` (the default) to suppress informative
+#'  messages. `FALSE` to see them.
+#'@param ... Additional arguments. Not in use right now.
+#'@return A dataframe with one row for each `data_group`, `model` and `method`.
+#'  The remaining column is a `list` column containing the Hessian for each row.
+#'@export
+#'@import dplyr
+#'@import purrr
+#'@import tidyr
+#'@import numDeriv
+#'@author Caroline Ring and Gilberto Padilla Mercado
+#'@family methods for fitted pk objects
+#'@references Gill J, King G. (2004) What to Do When Your Hessian is Not
+#'  Invertible: Alternatives to Model Respecification in Nonlinear Estimation.
+#'  Sociological Methods & Research 33(1):54-87. DOI: 10.1177/0049124103262681
 hessian.pk <- function(obj,
                        model = NULL,
                        method = NULL,

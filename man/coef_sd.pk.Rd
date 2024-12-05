@@ -24,8 +24,8 @@ informative messages. `FALSE` to see them.}
 }
 \value{
 A dataframe with one row for each `data_group`, `model` and `method`.
-  The remaining columns include the parameters & hyperparameters as returned by
-  [coef.pk()], as well as their calculated standard deviations.
+  The remaining columns include the parameters & hyperparameters as returned
+  by [coef.pk()], as well as their calculated standard deviations.
 }
 \description{
 Extract coefficient/parameter standard deviations from a fitted `pk` object
@@ -38,13 +38,15 @@ attempting to invert it. This procedure yields a variance/covariance matrix
 for the model parameters. The square root of the diagonal elements of this
 matrix represent the parameter standard deviations.
 
-If the Hessian is not invertible, an attempt is made to calculate a
-pseudovariance matrix, following the procedure outlined in Gill & King
-(2004). First, the generalized inverse of the Hessian is calculated using
+A first attempt is made to invert the Hessian using [solve()] (see
+[hess_sd1()]). If the Hessian is singular, an attempt is made to calculate a
+pseudovariance matrix, following the procedure outlined in Gill & King (2004)
+(see [hess_sd2()]). First, the generalized inverse of the Hessian is calculated using
 [MASS::ginv()]. Then, a generalized Cholesky decomposition (to ensure
-positive-definiteness) is calculated using [base::chol()] with argument
-`pivot = TRUE`. The square root of the diagonal elements of this matrix
-represent the parameter standard deviations.
+positive-definiteness) is calculated using [Matrix::Cholesky] with argument
+`perm = TRUE`. The generalized inverse is reconstructed from the generalized
+Cholesky factorization. The square root of the diagonal elements of this
+matrix represent the parameter standard deviations.
 
 If neither of these procedures is successful, then `NA_real_` is returned for
 all coefficient standard deviations.
@@ -64,6 +66,7 @@ Other methods for fitted pk objects:
 \code{\link{eval_tkstats.pk}()},
 \code{\link{get_fit.pk}()},
 \code{\link{get_tkstats.pk}()},
+\code{\link{hessian.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{predict.pk}()},
 \code{\link{residuals.pk}()},
