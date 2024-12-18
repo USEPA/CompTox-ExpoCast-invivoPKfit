@@ -9,7 +9,7 @@
 #'log-likelihood implemented in [log_likelihood()], evaluated jointly across the
 #'data that was used to fit the model.
 
-#'This is a workhorse function called by [hessian.pk()] and, indirectly, by
+#'This is a workhorse function called by [get_hessian.pk()] and, indirectly, by
 #'[coef_sd.pk()].
 #'
 #'@param pars_opt Named numeric: A vector of parameter values for the parameters

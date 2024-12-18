@@ -857,7 +857,7 @@
 
   #' get_hessian()
   #'
-  #' This is the S3 method generic for hessian()
+  #' This is the S3 method generic for get_hessian()
   #'
   #' @param obj An object.
   #' @param ... Additional arguments currently not in use.
