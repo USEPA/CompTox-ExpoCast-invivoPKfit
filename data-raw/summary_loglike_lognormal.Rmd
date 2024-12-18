@@ -138,7 +138,7 @@ get_sample_moments <- function(meanlog, sdlog, n_samp){
   #samples
   y <- rlnorm(n = n_samp, meanlog = meanlog, sdlog = sdlog)
   #log-transformed samples
-  ylog <- log(y)
+  ylog <- log10(y)
   return(c("sample_mean" = mean(y),
            "sample_sd" = sd(y),
            "sample_meanlog" = mean(ylog),
@@ -171,7 +171,7 @@ Calculate the estimated log-scale sample moments from the arithmetic sample mome
 
 ```{r}
 samp[c("est_sample_meanlog",
-       "est_sample_sdlog")] <- convert_summary_to_log(sample_mean = samp$sample_mean,
+       "est_sample_sdlog")] <- convert_summary_to_log10(sample_mean = samp$sample_mean,
                                                                    sample_SD = samp$sample_sd)
 ```
 
@@ -195,7 +195,15 @@ ggplot(data = samp) +
 
 The estimated log-scale sample mean usually overestimates the "true" log-scale sample mean (most points are above the identity line).
 
-Log-scale sample SD. The "true" population log-scale SD (1.0) is indicated by vertical and horizontal dashed lines.
+Sampling error:
+
+```{r}
+ggplot(data = samp) +
+  geom_histogram(aes(x = est_sample_meanlog - sample_meanlog))
+```
+
+
+Log-scale sample SD. The "true" population log-scale SD (`log10(exp(1))`) is indicated by vertical and horizontal dashed lines.
 
 ```{r}
 ggplot(data = samp) +
@@ -203,15 +211,15 @@ ggplot(data = samp) +
                  y = est_sample_sdlog),
              color = "gray50") +
   geom_abline(intercept = 0, slope = 1, color = "black") +
-    geom_hline(yintercept = 1, linetype = 2) +
-  geom_vline(xintercept = 1, linetype = 2) +
+    geom_hline(yintercept = log10(exp(1)), linetype = 2) +
+  geom_vline(xintercept = log10(exp(1)), linetype = 2) +
   xlab("Actual log-scale sample SD") +
   ylab("Estimated log-scale sample SD") +
   ggtitle("Estimated vs. actual log-scale sample SD, n = 7") +
   theme_bw()
 ```
 
-The estimated log-scale sample SD usually underestimates the actual log-scale sample SD (most points are below the identity line).
+The estimated log-scale sample SD usually overestimates the actual log-scale sample SD (most points are above the identity line).
 
 ```{r}
 summary(lm(est_sample_sdlog ~ sample_sdlog, data = samp))

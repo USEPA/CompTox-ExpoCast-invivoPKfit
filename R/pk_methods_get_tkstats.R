@@ -184,6 +184,7 @@ get_tkstats.pk <- function(obj,
       }
     )) # ending tryCatch statement
     ) %>%
+    dplyr::ungroup() %>%
     tidyr::unnest(cols = TKstats)
 
 

@@ -85,6 +85,7 @@ Other methods for fitted pk objects:
 \code{\link{coef_sd.pk}()},
 \code{\link{eval_tkstats.pk}()},
 \code{\link{get_fit.pk}()},
+\code{\link{get_hessian.pk}()},
 \code{\link{get_tkstats.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{residuals.pk}()},

@@ -9,13 +9,15 @@
 #' for the model parameters. The square root of the diagonal elements of this
 #' matrix represent the parameter standard deviations.
 #'
-#' If the Hessian is not invertible, an attempt is made to calculate a
-#' pseudovariance matrix, following the procedure outlined in Gill & King
-#' (2004). First, the generalized inverse of the Hessian is calculated using
+#' A first attempt is made to invert the Hessian using [solve()] (see
+#' [hess_sd1()]). If the Hessian is singular, an attempt is made to calculate a
+#' pseudovariance matrix, following the procedure outlined in Gill & King (2004)
+#' (see [hess_sd2()]). First, the generalized inverse of the Hessian is calculated using
 #' [MASS::ginv()]. Then, a generalized Cholesky decomposition (to ensure
-#' positive-definiteness) is calculated using [base::chol()] with argument
-#' `pivot = TRUE`. The square root of the diagonal elements of this matrix
-#' represent the parameter standard deviations.
+#' positive-definiteness) is calculated using [Matrix::Cholesky] with argument
+#' `perm = TRUE`. The generalized inverse is reconstructed from the generalized
+#' Cholesky factorization. The square root of the diagonal elements of this
+#' matrix represent the parameter standard deviations.
 #'
 #' If neither of these procedures is successful, then `NA_real_` is returned for
 #' all coefficient standard deviations.
@@ -31,14 +33,12 @@
 #'   informative messages. `FALSE` to see them.
 #' @param ... Additional arguments. Not in use right now.
 #' @return A dataframe with one row for each `data_group`, `model` and `method`.
-#'   The remaining columns include the parameters & hyperparameters as returned by
-#'   [coef.pk()], as well as their calculated standard deviations.
+#'   The remaining columns include the parameters & hyperparameters as returned
+#'   by [coef.pk()], as well as their calculated standard deviations.
 #' @export
-#' @importFrom MASS ginv
 #' @import dplyr
 #' @import purrr
 #' @import tidyr
-#' @import numDeriv
 #' @author Caroline Ring and Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
 #' @references Gill J, King G. (2004) What to Do When Your Hessian is Not
@@ -56,15 +56,52 @@ coef_sd.pk <- function(obj,
     stop(attr(check, "msg"))
   }
 
+  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
+
   # get coefs data.frame for each model and method
   # but exclude non-optimized parameters and sigma values for error_group
   # coef does method & model checks
-  coefs <- coef(
+
+  #get optimized parameter vectors
+  coefs_opt <- coef(
     obj = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
+    include_type = "optim",
+    suppress.messages = suppress.messages) %>%
+    dplyr::rename(coefs_opt_vector = coefs_vector)
+
+  #get constant parameter vectors
+  coefs_const <- coef(
+    obj = obj,
+    model = model,
+    method = method,
+    drop_sigma = FALSE,
+    include_type = "const",
+    suppress.messages = suppress.messages) %>%
+    dplyr::rename(coefs_const_vector = coefs_vector)
+
+  #get all params used
+  coefs_use <- coef(
+    obj = obj,
+    model = model,
+    method = method,
+    drop_sigma = FALSE,
+    include_type = "use",
     suppress.messages = suppress.messages)
+
+  coefs <- coefs_opt %>%
+    dplyr::left_join(coefs_const,
+                     by = c("model", "method",
+                            data_grp_vars,
+                            "Time.Units",
+                            "Time_trans.Units")) %>%
+    dplyr::left_join(coefs_use,
+                     by = c("model", "method",
+                            data_grp_vars,
+                            "Time.Units",
+                            "Time_trans.Units"))
 
   other_vars <- ggplot2::vars(
     Value,
@@ -76,7 +113,7 @@ coef_sd.pk <- function(obj,
     exclude
   )
 
-  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
+
 
   # Get required variables for log_likelihood()
   req_vars <- ggplot2::vars(Time,
@@ -89,7 +126,8 @@ coef_sd.pk <- function(obj,
                             Conc_SD,
                             N_Subjects,
                             Detect,
-                            LOQ)
+                            LOQ,
+                            pLOQ)
 
   # Convert Time_trans to hours
   newdata <- obj$data %>%
@@ -121,81 +159,28 @@ coef_sd.pk <- function(obj,
     dplyr::ungroup() %>%
     dplyr::distinct()
 
-  newdata <- suppressWarnings(newdata %>%
+
+  sds_alerts <- newdata %>%
     dplyr::rowwise() %>%
-    dplyr::mutate(hessian_mat = list(numDeriv::hessian(func = function(x) {
-      log_likelihood(par = x,
-                     data = observations,
-                     data_sigma_group = observations$data_sigma_group,
-                     modelfun = model_fun,
-                     dose_norm = obj$scales$conc$dose_norm,
-                     log10_trans = obj$scales$conc$log10_trans,
-                     negative = TRUE,
-                     force_finite = TRUE)
-    },
-    x = coefs_vector,
-    method = 'Richardson'))) %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(sds = purrr::map2(hessian_mat, coefs_vector, \(x, y) {
-      tryCatch(diag(solve(x))^(1 / 2) %>% as.numeric(),
-               error = function(err) {
-                 if (isFALSE(suppress.messages)) {
-                   message("Hessian can't be inverted, ",
-                           "using pseudovariance matrix ",
-                           "to estimate parameter uncertainty."
-                   )
-                 }
-                 # pseudovariance matrix
-                 # see http://gking.harvard.edu/files/help.pdf
-                 tryCatch(
-                   suppressWarnings(diag(chol(MASS::ginv(x),
-                             pivot = TRUE))^(1 / 2)),
-                   error = function(err) {
-                     if (isFALSE(suppress.messages)) {
-                       message("Pseudovariance matrix failed, returning NAs")
-                     }
-                     rep(NA_real_, nrow(x))
-                   })
-               }) %>%
-        set_names(nm = paste0(names(y), "_sd"))
-    }),
-    alerts = purrr::map2(hessian_mat, coefs_vector, \(x, y) {
-      tryCatch({
-        suppressWarnings(diag(solve(x))^(1 / 2) %>% as.numeric())
-        return(paste0("Hessian successfully inverted"))
-      },
-      error = function(err) {
-        tryCatch(
-          {
-          suppressWarnings(diag(chol(MASS::ginv(x),
-                                     pivot = TRUE))^(1 / 2))
-            return(paste0("Hessian can't be inverted, ",
-                            "using pseudovariance matrix."))
-            },
-          error = function(err) {
-            return("Pseudovariance matrix failed, returning NAs")
-          })
-
-      }
+    dplyr::mutate(
+      sd_tbl = list(
+        calc_sds_alerts(pars_opt = coefs_opt_vector,
+                    pars_const = coefs_const_vector,
+                    observations = observations,
+                    modelfun = model_fun,
+                    dose_norm = obj$scales$conc$dose_norm,
+                    log10_trans = obj$scales$conc$log10_trans)
       )
-    }
-    ))
-  )
+    )  %>%
+    tidyr::unnest(sd_tbl) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(model, method, !!!obj$data_group,
+                  param_name, param_sd, sd_alert)
 
-  # Limit data.frame columns to those that unique identify needed values
-  newdata <- newdata %>%
-    dplyr::select(model, method, !!!obj$data_group, coefs_vector, sds, alerts)
 
-  newdata <- newdata %>%
-    dplyr::mutate(sds_tibble = purrr::map(sds,
-                                          \(x) as.list(x) %>%
-                                            as.data.frame() %>%
-                                            tidyr::pivot_longer(
-                                              cols = tidyselect::everything(),
-                                              names_to = "param_name_sd",
-                                              values_to = "param_sd"))) %>%
-    tidyr::unnest(sds_tibble) %>%
-    dplyr::mutate(alerts = unlist(alerts)) %>%
+  coefs_long <- newdata %>%
+    dplyr::select(model, method, !!!obj$data_group, coefs_vector) %>%
+    dplyr::group_by(model, method, !!!obj$data_group) %>%
     dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) as.list(x) %>%
                                               as.data.frame() %>%
                                               tidyr::pivot_longer(
@@ -204,14 +189,37 @@ coef_sd.pk <- function(obj,
                                                 values_to = "param_value"
                                               ))) %>%
     tidyr::unnest(coefs_tibble) %>%
-    dplyr::filter(stringr::str_detect(param_name_sd, param_name)) %>%
-    dplyr::select(-c(coefs_vector, sds, param_name_sd)) %>%
     dplyr::ungroup() %>%
+    dplyr::select(-c(coefs_vector))
+
+  output <- coefs_long %>%
+    dplyr::left_join(sds_alerts,
+                     by = c("model", "method",
+                                 data_grp_vars,
+                            "param_name")) %>%
+  dplyr::ungroup() %>%
     dplyr::distinct() %>%
     dplyr::mutate(param_value = dplyr::na_if(param_value, NaN),
                   param_sd = dplyr::na_if(param_sd, NaN)) %>%
-    dplyr::relocate(param_name, param_value, param_sd, .after = alerts)
+    dplyr::select(model, method, !!!obj$data_group,
+                  param_name, param_value, param_sd, sd_alert)
 
-  return(newdata)
+  #add information about whether each parameter was optimized or not
+  #to explain why some params don't have an SD
+  param_type <- obj$fit %>%
+    dplyr::select(model, method,
+                  !!!obj$data_group,
+                  param_name,
+                  optimize_param,
+                  use_param)
+
+  output <- output %>%
+    dplyr::left_join(param_type,
+                     by = c("model", "method",
+                            data_grp_vars,
+                            "param_name"))
+
+
+  return(output)
 
 }
