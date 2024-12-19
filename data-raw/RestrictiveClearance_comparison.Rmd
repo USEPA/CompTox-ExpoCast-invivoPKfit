@@ -12,8 +12,10 @@ knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 This vignette describes comparisons between invivoPKfit predicted and those from httk.
 
 ```{r library_loading}
+today <- format(Sys.Date(), "%d%b%Y")
 devtools::load_all()
 library(tidyverse)
+library(ctxR)
 my_pk <- readRDS("data-raw/all_cvt_pk.rds")
 source("data-raw/RC_comparison_bkgd.R") # httk loaded here
 ```
@@ -31,13 +33,19 @@ for those same chemicals with human data for Clint and Fup.
 Begin with the assumption that there is restrictive clearance, those chemicals
 that do not change when optimized (and produce reasonable fits) are likely to
 be _restrictively cleared_, whereas those that increase Fup during maximum
-likelihood estimation are _possibly non-restrictively clearaed_. 
+likelihood estimation are _possibly non-restrictively cleared_. 
 7. Other factors such as renal clearance may play a role in those cases.
 Validate the clearance estimate by measuring changes in predicted clearance.
 Important to identify whether there seems to be a "fraction missing".
 8. Wrap the previous steps into attempts to identify true positive
 categorizations for Restrictive and Potentially Non-Restrictively metabolized
 chemicals (include Lipinski's Rule of 5 too).
+9. Implement a _slow_ PBPK model that optimizes $f_{up}$ and $CL_{int}$ under
+restrictive and non-restrictive clearance conditions. Test whether these have a
+substantial difference from initial values. Use `coef_sd()` to evaluate
+uncertainty of these parameter estimates for a larger share of chemicals.
+10. Compare the results of 9 with the putative/predicted clearance from 1-6.
+
 
 The first thing I need to do is get the chemicals included in both the CvTdb subset
 and the httk empirical data for pbpk.
@@ -71,7 +79,7 @@ combined_clearance_df <- my_tkstats %>% inner_join(rat_pars_rat$clearance_df)
 Finally, let's visualize where the tkstats predictions land.
 
 ```{r clearance_viz}
-combined_clearance_df %>%
+clearance_guess <- combined_clearance_df %>%
   mutate(AD_restrictive = abs(CLtot.tkstats - restrictive_clearance),
          AD_nonrestrictive = abs(CLtot.tkstats - nonrestrictive_clearance),
          rough_determination = ifelse(
@@ -79,7 +87,10 @@ combined_clearance_df %>%
              CLtot.tkstats < nonrestrictive_clearance,
            "Restrictive", "Possibly non-Restrictive"
          )) %>% 
+  dplyr::ungroup()
+clearance_guess %>%
   dplyr::distinct(Chemical, rough_determination) %>%
+  group_by(rough_determination) %>%
   tally()
 
 # Preliminary viz, plot all clearances
@@ -130,7 +141,8 @@ ccd %>%
   facet_grid(rows = vars(Species), scales = "free", space = "free") +
   labs(
     x = "Total Clearance",
-    y = "Chemical"
+    y = "Chemical",
+    title = "Comparing clearance estimates of chemicals with rat CvT data"
   ) +
   theme(
     panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
@@ -150,7 +162,8 @@ clear_chem_levels <- levels(ccd$Chemical)
 
 ggsave(
   filename = paste0(
-    Sys.getenv("FIG_DIR"),
+    Sys.getenv("FIG_DIR"),"RestrictiveClearance_Analysis/",
+    today,
     "rat_tkClearance_comparison_httk_PBPK.png"
   ),
   height = 8,
@@ -181,7 +194,7 @@ fup_df %>%
   ) +
   geom_histogram(
     data = fup_df %>%
-      filter(Chemical %in% common_chems_rat),
+      filter(Chemical %in% rat_pars_rat$param_df$Chemical),
     # aes(y = after_stat(density)),
     fill = NA,
     color = "darkgreen", binwidth = 0.03
@@ -268,6 +281,9 @@ httk_bolus_gas_pbtk <- function(dtxsid, species = "Human",
   )
   retdf[which(retdf$Time %in% unique(round(times, 3))), ]
 }
+
+httk_preds_rat <- get_httk_preds(rat_pars_rat, my_pk, species = "rat") 
+
 ```
 
 We need to put the _in vivo_ data in an amenable format.
@@ -276,51 +292,90 @@ For this I will limit the species to "rat", the chemicals to
 
 
 ```{r rat_data}
-my_data <- get_data(my_pk)
+rat_df <- httk_preds_rat %>%
+  left_join(predict(my_pk)) %>%
+  semi_join(get_winning_model(my_pk))
 
-rat_df <- my_data %>%
-  distinct(Chemical, Species, Dose, Route, Media, Time, Conc, exclude, Detect,
-           pLOQ) %>%
-  filter(Species %in% "rat", Media %in% "plasma",
-         Chemical %in% common_chems_rat, !exclude, Detect) %>%
-  mutate(iv_dose = (Route == "iv"),
-         Time = round(Time, 3)) %>%
-  group_by(Chemical, Species, Dose, Route, Media) %>%
-  filter(n() > 4) %>%
-  nest(.key = "CvT") %>%
-  rowwise() %>%
-  mutate(
-    httk_solved = list(
-      tryCatch(
-        expr = do.call(httk_bolus_gas_pbtk,
-                       list(
-                         dtxsid = Chemical,
-                         species = Species,
-                         dose = Dose,
-                         times = CvT$Time,
-                         iv.dose = CvT$iv_dose,
-                         LOQ = CvT$pLOQ
-                       )
-        ) %>%
-          inner_join(tibble(Time = CvT$Time, Conc = CvT$Conc, pLOQ = CvT$pLOQ),
-                     by = join_by(Time)),
-        error = function(err) {
-          message(paste0("Unable to get solution for ", Chemical))
-          print(err)
-        } 
-      )
-    )
-  ) %>% filter(Chemical %in% clear_chem_levels)
+rat_df <- ggplot(mapping = aes(
+    x = Conc_est,
+    y = httk_Preds,
+    color = interaction(Route, Media)
+  )) +
+  geom_point() +
+  geom_line(mapping = aes(
+    group = interaction(Chemical, Media, Route, Reference)
+  )
+  ) +
+  geom_abline(slope = 1, intercept = 0, color = "black") +
+  coord_equal(ylim = c(0, 200), xlim = c(0, 200))
+
+rat_plots <- rat_df %>%
+  distinct(Chemical, Species, Dose, Route, Media, Reference,
+           Time, httk_Preds, Conc, Conc_est, pLOQ) %>%
+  mutate(Dose = as.factor(Dose)) %>%
+  group_by(Chemical, Species, Route, Media, Reference) %>%
+  nest(.key = "data_pl")
+
+rat_plots <- rat_plots %>%
+  reframe(plots = purrr::map(data_pl,
+                             \(x) {
+                               cowplot::plot_grid(
+                               ggplot(data = x %>%
+                                        group_by(Time, Dose) %>%
+                                        mutate(meanConc = mean(Conc,
+                                                           na.rm = TRUE)) %>%
+                                        select(-Conc) %>% distinct() %>%
+                                        pivot_longer(cols = c(httk_Preds,
+                                                              meanConc,
+                                                              Conc_est),
+                                                     names_to = "Measurement",
+                                                     values_to = "Concentration"
+                                                     ), 
+                                      mapping = aes(
+                                        x = Time,
+                                        y = Concentration,
+                                        color = Measurement,
+                                        shape = Dose
+                                      )) +
+                                 geom_point() +
+                                 geom_line(
+                                   aes(group = interaction(Measurement, Dose))
+                                   ) +
+                                 theme_bw() +
+                                 labs(
+                                   title = paste(Chemical, Species),
+                                   subtitle = paste(Route, Media)
+                                 ),
+                               ggplot(data = x) +
+                                 geom_point(aes(x = Conc_est, httk_Preds,
+                                                shape = Dose)) +
+                                 geom_abline(slope = 1, intercept = 0,
+                                             linetype = "dashed") +
+                                 theme_bw()
+                               )
+                             })
+  )
+
+pdf(file = paste0(Sys.getenv("FIG_DIR"), "RC_comparison_CvTplots.pdf"),
+    onefile = TRUE,
+    height = 7,
+    width = 10,
+    bg = "white")
+
+for (i in 1L:NROW(rat_plots)) {
+  message("Now plotting: ", i)
+  print(rat_plots %>% pull(plots) %>% .[[i]])
+}
+
+dev.off()
 
 length(unique(rat_df$Chemical))
 
 rat_df$Chemical <- factor(rat_df$Chemical, levels = clear_chem_levels)
 
-rat_df <- rat_df %>%
-  dplyr::select(Chemical, Species, Dose, Route, Media, httk_solved) %>%
-  unnest(cols = httk_solved)
-
 rat_out <- rat_df %>%
+  filter(Chemical %in% clear_chem_levels) %>%
+  group_by(Chemical, Species, Route, Reference, Media) %>%
   mutate(httk_Preds = ifelse(httk_Preds < pLOQ, pLOQ, httk_Preds)) %>% 
   mutate(SLE = (log2(Conc) - log2(httk_Preds))^2,
          AE = abs(Conc - httk_Preds)) %>%
@@ -398,7 +453,6 @@ rat_params %>%
   geom_point(aes(x = Clint), color = "darkred", shape = 1) +
   geom_abline(slope = 1, intercept = 0, color = "darkblue",
               linetype = "dashed")
-
 rat_params %>%
   mutate(fup_z = scale(Funbound.plasma),
          clint_z = scale(Clint)) %>%
@@ -444,7 +498,7 @@ as well as adding a restrictive_clearance argument in stat_model.
 ```{r running-invivoPKfit}
 # This is now updated to use dawson chem table
 minimal_pk <- pk(data = cvt %>%
-                   filter(analyte_dtxsid %in% common_chems_rat,
+                   filter(analyte_dtxsid %in% rat_pars_rat$param_df$Chemical,
                           species %in% "rat"))
 
 new_pk <- minimal_pk +
@@ -474,7 +528,7 @@ new_pk$prefit$par_DF %>%
   filter(param_name == "Fup") %>%
   View()
 
-new_pk <- do_fit(new_pk, n_cores = 14)
+new_pk <- do_fit(new_pk, n_cores = 12)
 gc()
 
 new_pk$fit %>%
@@ -482,6 +536,10 @@ new_pk$fit %>%
 
 saveRDS(new_pk, "data-raw/ratCVT_wHTTK_reformulated.rds")
 ```
+
+Here we begin the analysis by estimating the relative likelihood of
+"clearance aware" models. This provides an additional evaluation of the evidence
+that points towards a restrictive or non-restrictively cleared model.
 
 ```{r begin_analysis}
 new_pk <- readRDS("data-raw/ratCVT_wHTTK_reformulated.rds")
@@ -547,7 +605,9 @@ rel_ll %>%
                     x
                   )
                 })) %>% 
-  drop_na(model_1comp_fup)
+  # drop_na(model_1comp_fup) %>%
+  filter(Chemical %in% clear_chem_levels) %>% View()
+  glimpse()
 
 new_pk$fit %>%
   filter(param_name %in% "Fup",
@@ -568,6 +628,7 @@ new_pk$fit %>%
                             ifelse(estimate > start,
                                    "increase",
                                    "decrease"))) %>%
+  filter(Chemical %in% clear_chem_levels, direction %in% "similar (less than 10% difference)")
   pivot_longer(cols = c(estimate, start),
                names_to = "parameterization",
                values_to = "value") %>%
@@ -581,10 +642,9 @@ new_pk$fit %>%
   theme_bw()
 
 ggsave(filename = paste0(
-  Sys.getenv("FIG_DIR"),
-  format(today(), '%d%b%Y'),
-  "fup_optimization_generalFits"
-))
+  Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/",
+  today, "fup_optimization_generalFits.png"),
+  height = 5, width = 7)
 
 ```
 
@@ -682,7 +742,6 @@ ggsave(
 
 ```{r new_analysis}
 # Loading the new data
-new_pk <- readRDS("data-raw/someCVT_wHTTK_JOINT.rds")
 
 new_wm <- get_winning_model(new_pk)
 new_AIC <- AIC(new_pk)
@@ -1204,7 +1263,7 @@ arrange(Chemical, combo_cat) %>%
 ```
 
 
-## New reformulated models that estimate Clint!
+## New reformulated models that estimate Fup!
 
 ```{r reformMod}
 get_tkstats(new_pk) %>%
@@ -1237,3 +1296,91 @@ my_tkstats %>%
 ## To add into total clearance
 # Rb2p * Qalv/Kblood2air
 ```
+
+# Calculating uncertainty of parameter estimation
+
+Below I will use the `coef_sd` method to estimate standard deviation of
+the fraction unbound parameter and assess whether this may contribute
+to the uncertainty of 'declaration' of clearance for chemicals that have
+CvT data documented.
+
+```{r uncertainty_estimation}
+this_coefsd <- coef_sd(new_pk)
+
+this_coefsd %>% filter(param_name == "Clint", Chemical %in% clear_chem_levels) %>%
+  ggplot(aes(x = factor(Chemical, levels = clear_chem_levels), 
+             y = param_value,
+             color = model)) +
+  geom_point(alpha = 0.5) +
+  geom_linerange(aes(ymin = param_value-param_sd,
+                    ymax = param_value+param_sd),
+                 alpha = 0.5) +
+  theme_bw() +
+  coord_flip() +
+  scale_y_log10()
+
+ggsave(
+  filename = paste0(
+    Sys.getenv("FIG_DIR"),"RestrictiveClearance_Analysis/",
+    today,
+    "fup_sd_estimates.png"
+  ),
+  height = 8,
+  width = 8,
+  device = "png"
+)
+
+this_loglikelihood <- AIC(new_pk) %>%
+  filter(Chemical %in% clear_chem_levels) %>%
+  mutate(Chemical = factor(Chemical, levels = clear_chem_levels))
+
+this_loglikelihood %>%
+  ggplot(aes(x = model, y = Chemical, fill = log10(AIC))) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "mako", direction = -1) +
+  coord_fixed() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+ggsave(
+  filename = paste0(
+    Sys.getenv("FIG_DIR"),"RestrictiveClearance_Analysis/",
+    today,
+    "fup_AIC_heatmap.png"
+  ),
+  height = 10,
+  width = 4,
+  device = "png"
+)
+
+select_chem_info <- get_chem_info_batch(clear_chem_levels)
+
+select_chem_info %>%
+  filter(propertyId == "logkow-octanol-water") %>%
+  mutate(dtxsid = factor(dtxsid, levels = clear_chem_levels)) %>%
+  ggplot(aes(x = value, y = dtxsid, color = source)) +
+  geom_point() +
+  labs(title = "logKow") +
+  geom_vline(xintercept = 5)
+
+# Also check whether the Fup or CLint are at their respective extremes (1, 0)
+# If they are, it will be difficult to tell whether a chemical is cleared in a
+# particular way
+
+```
+
+# Slow PBPK model optimization of fup for more chemicals
+
+There may also be an opportunity to evaluate chemicals without _in vivo_ data
+by comparing them to those that do. Effectively, we can look at the uncertainty
+in the call between restrictive/non-restrictive and further look at estimates
+from PBPK models where $f_{up}$ is optimized and it is run through `solve_pbtk`.
+
+```{r slow_pbpk_optimizations}
+
+```
+
+
+```{r}
+sessionInfo()
+```
+
