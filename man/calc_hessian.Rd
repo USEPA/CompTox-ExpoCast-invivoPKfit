@@ -51,7 +51,7 @@ parameter values for a single model and a single data set.
 Here, the objective function is the negative
 log-likelihood implemented in [log_likelihood()], evaluated jointly across the
 data that was used to fit the model.
-This is a workhorse function called by [hessian.pk()] and, indirectly, by
+This is a workhorse function called by [get_hessian.pk()] and, indirectly, by
 [coef_sd.pk()].
 }
 \author{

@@ -12,7 +12,7 @@ get_hessian(obj, ...)
 \item{...}{Additional arguments currently not in use.}
 }
 \description{
-This is the S3 method generic for hessian()
+This is the S3 method generic for get_hessian()
 }
 \seealso{
 [hessian.pk()] for the method for class [pk()]
