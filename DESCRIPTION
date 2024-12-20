@@ -12,8 +12,8 @@ Authors@R: c(person("John", "Wambaugh", email = "wambaugh.john@epa.gov",
              person("Chris", "Cook", role = c("aut"))
              )
 Author: 
-  John Wambaugh <wambaugh.john@epa.gov> [aut, cre] (<https://orcid.org/0000-0002-4024-534X>),
-  Caroline Ring <Ring.Caroline@epa.gov> [aut] (<https://orcid.org/0000-0002-0463-1251>),
+  John Wambaugh [aut, cre] (<https://orcid.org/0000-0002-4024-534X>),
+  Caroline Ring [aut] (<https://orcid.org/0000-0002-0463-1251>),
   Gilberto Padilla Mercado [aut] (<https://orcid.org/0000-0001-5423-1646>),
   Chris Cook [aut]
 Maintainer: John Wambaugh <wambaugh.john@epa.gov>
