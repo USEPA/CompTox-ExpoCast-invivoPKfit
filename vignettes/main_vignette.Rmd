@@ -1,13 +1,18 @@
 ---
 title: "User Guide"
-output: word_document
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{invivoPKfit User Guide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  eval = FALSE
 )
 
 ```
