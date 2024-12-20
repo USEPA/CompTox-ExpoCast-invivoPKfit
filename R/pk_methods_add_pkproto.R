@@ -353,6 +353,10 @@ pk_add.uneval <- function(pkproto_obj, pk_obj, objectname) {
 #' @param pkproto_obj The `pk_facet_data` object to be added.
 #' @param pk_obj The [pk()] object to which the `pk_facet_data` object will be added.
 #' @param objectname The name of the `pk_facet_data` object.
+#'
+#' @return The [pk()] object, with the added `pk_facet_data`.
+#' @author Caroline Ring
+#' @export
 pk_add.pk_facet_data <- function(pkproto_obj, pk_obj, objectname) {
 
   # data pre-processing and everything downstream will change

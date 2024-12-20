@@ -13,6 +13,12 @@
 
 \item{objectname}{The name of the `pk_facet_data` object.}
 }
+\value{
+The [pk()] object, with the added `pk_facet_data`.
+}
 \description{
 Add facet_data()
+}
+\author{
+Caroline Ring
 }
