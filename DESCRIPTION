@@ -11,7 +11,11 @@ Authors@R: c(person("John", "Wambaugh", email = "wambaugh.john@epa.gov",
              comment = c(ORCID = "0000-0001-5423-1646")),
              person("Chris", "Cook", role = c("aut"))
              )
-Author: Caroline Ring, John Wambaugh, Chris Cook, Gilberto Padilla Mercado
+Author: 
+  John Wambaugh <wambaugh.john@epa.gov> [aut, cre] (<https://orcid.org/0000-0002-4024-534X>),
+  Caroline Ring <Ring.Caroline@epa.gov> [aut] (<https://orcid.org/0000-0002-0463-1251>),
+  Gilberto Padilla Mercado [aut] (<https://orcid.org/0000-0001-5423-1646>),
+  Chris Cook [aut]
 Maintainer: John Wambaugh <wambaugh.john@epa.gov>
 Description: Takes in vivo toxicokinetic concentration-time data and fits
     parameters of 1-compartment and 2-compartment models for each
