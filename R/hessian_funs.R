@@ -10,11 +10,11 @@
 #'data that was used to fit the model.
 
 #'This is a workhorse function called by [get_hessian.pk()] and, indirectly, by
-#'[coef_sd.pk()].
+#'[coef_sd.pk()]. When the number of optimized parameters is \eqn{n}, the
+#'respective Hessian matrix will be \eqn{n \times n}.
 #'
 #'@param pars_opt Named numeric: A vector of parameter values for the parameters
-#'  that were optimized. If the length of this vector is \eq{n}, the Hessian
-#'  matrix will be \eq{n \times n}. For example, you can get this using
+#'  that were optimized. For example, you can get this using
 #'  [coef.pk()] with `include_type = "optim"`.
 #'@param pars_const Named numeric: A vector of parameter values for parameters
 #'  that were held constant, not optimized (but are necessary to evaluate the
@@ -65,10 +65,11 @@ calc_hessian <- function(pars_opt,
 #'
 #' Get square root of diagonal of inverse matrix, first method
 #'
-#' Invert a matrix `m` using [solve()], then take the square root of the diagonal.
+#' Invert a square numeric matrix `m` of size \eqn{n \times n} using [solve()],
+#' then take the square root of the diagonal.
 #'
-#' @param m A square numeric matrix, \eq{n \times n}.
-#' @return A numeric vector of length \eq{n}.
+#' @param m A square numeric matrix.
+#' @return A numeric vector of length `n`.
 #'
 #' @author Caroline Ring
 #'
@@ -85,14 +86,14 @@ hess_sd1 <- function(m){
 #' perform a generalized Cholesky factorization of the generalized inverse using
 #' [Matrix::Cholesky()] with `perm = TRUE`. Reconstruct the generalized inverse as
 #'
-#' \deq{ \left( m^{-1} + E \right) = P_1^' L L^' P_1}
+#' \deqn{ \left( m^{-1} + E \right) = P_1^' L L^' P_1}
 #'
 #' This should ensure positive semi-definiteness of the reconstruction.
 #'
-#' Then, take the diagonal of \eq{\left( m^{-1} + E \right)}, and take the square root.
+#' Then, take the diagonal of \eqn{\left( m^{-1} + E \right)}, and take the square root.
 #'
-#' @param m A square numeric matrix, \eq{n \times n}.
-#' @return A numeric vector of length \eq{n}.
+#' @param m A square numeric matrix, \eqn{n \times n}.
+#' @return A numeric vector of length \eqn{n}.
 #'
 #' @importFrom MASS ginv
 #' @importFrom Matrix Cholesky expand1
@@ -139,6 +140,8 @@ hess_sd2 <- function(m){
 #' parameter values for a single model and a single data set.
 #'
 #' This is a workhorse function called by [coef_sd.pk()].
+#' If the length of this vector is \eqn{n}, the Hessian matrix will be
+#' \eqn{n \times n}.
 #'
 #' The coefficient standard deviations are estimated by computing a numerical
 #' approximation to the model Hessian (the matrix of second derivatives of the
@@ -163,8 +166,7 @@ hess_sd2 <- function(m){
 #' results. This is a workhorse function called by [coef_sd.pk()].
 #'
 #' @param pars_opt Named numeric: A vector of parameter values for the
-#'   parameters that were optimized. If the length of this vector is \eq{n}, the
-#'   Hessian matrix will be \eq{n \times n}. For example, you can get this using
+#'   parameters that were optimized. For example, you can get this using
 #'   [coef.pk()] with `include_type = "optim"`.
 #' @param pars_const Named numeric: A vector of parameter values for parameters
 #'   that were held constant, not optimized (but are necessary to evaluate the

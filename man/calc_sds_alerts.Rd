@@ -15,8 +15,7 @@ calc_sds_alerts(
 }
 \arguments{
 \item{pars_opt}{Named numeric: A vector of parameter values for the
-parameters that were optimized. If the length of this vector is \eq{n}, the
-Hessian matrix will be \eq{n \times n}. For example, you can get this using
+parameters that were optimized. For example, you can get this using
 [coef.pk()] with `include_type = "optim"`.}
 
 \item{pars_const}{Named numeric: A vector of parameter values for parameters
@@ -52,6 +51,8 @@ Calculate parameter SDs using inverse Hessian approach for a single set of
 parameter values for a single model and a single data set.
 
 This is a workhorse function called by [coef_sd.pk()].
+If the length of this vector is \eqn{n}, the Hessian matrix will be
+\eqn{n \times n}.
 
 The coefficient standard deviations are estimated by computing a numerical
 approximation to the model Hessian (the matrix of second derivatives of the

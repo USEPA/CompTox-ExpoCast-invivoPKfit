@@ -7,16 +7,17 @@
 hess_sd1(m)
 }
 \arguments{
-\item{m}{A square numeric matrix, \eq{n \times n}.}
+\item{m}{A square numeric matrix.}
 }
 \value{
-A numeric vector of length \eq{n}.
+A numeric vector of length `n`.
 }
 \description{
 Get square root of diagonal of inverse matrix, first method
 }
 \details{
-Invert a matrix `m` using [solve()], then take the square root of the diagonal.
+Invert a square numeric matrix `m` of size \eqn{n \times n} using [solve()],
+then take the square root of the diagonal.
 }
 \author{
 Caroline Ring
