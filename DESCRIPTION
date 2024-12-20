@@ -2,7 +2,7 @@ Type: Package
 Package: invivoPKfit
 Title: Fits HTTK Models to In Vivo PK Data Sets
 Version: 2.0.0
-Date: 2024-12-19
+Date: 2024-12-20
 Authors@R: c(person("John", "Wambaugh", email = "wambaugh.john@epa.gov", 
              role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4024-534X")),
              person("Caroline", "Ring", email = "Ring.Caroline@epa.gov", 
@@ -18,7 +18,7 @@ Description: Takes in vivo toxicokinetic concentration-time data and fits
     chemical.
 License: GPL-3
 Depends: 
-    R (>= 2.10)
+    R (>= 3.5.0)
 Imports: 
     cli,
     devtools,
