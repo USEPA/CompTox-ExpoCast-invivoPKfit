@@ -254,6 +254,11 @@ utils::globalVariables(
     "foldConc",
     "param_name_sd",
     "param_sd",
-    "preds_below_loq"
+    "preds_below_loq",
+    "Conc_est_tmp",
+    "coefs_opt_vector",
+    "coefs_const_vector",
+    "sd_tbl",
+    "sd_alert"
   )
 )
