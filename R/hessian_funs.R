@@ -86,11 +86,11 @@ hess_sd1 <- function(m){
 #' perform a generalized Cholesky factorization of the generalized inverse using
 #' [Matrix::Cholesky()] with `perm = TRUE`. Reconstruct the generalized inverse as
 #'
-#' \deqn{ \left( m^{-1} + E \right) = P_1^' L L^' P_1}
+#' \deqn{\left(m^{-1} + E\right) = P_1^{\prime} L L^{\prime} P_1}
 #'
 #' This should ensure positive semi-definiteness of the reconstruction.
 #'
-#' Then, take the diagonal of \eqn{\left( m^{-1} + E \right)}, and take the square root.
+#' Then, take the diagonal of \eqn{\left(m^{-1} + E \right)}, and take the square root.
 #'
 #' @param m A square numeric matrix, \eqn{n \times n}.
 #' @return A numeric vector of length \eqn{n}.
