@@ -27,7 +27,7 @@ Check whether a [pk()] object has a particular required status level
 This is a helper function to check whether a [pk()] object has the status
 required for certain operations. For example, status 4 (fitting complete) is
 required for any fit evaluation functions: [predict.pk()], [residuals.pk()],
-[coef.pk()], [coef_sd.pk()], [rmse.pk()], [fold_errors.pk()]
+[coef.pk()], [coef_sd.pk()], [rmse.pk()], [fold_error.pk()]
 }
 \author{
 Caroline Ring

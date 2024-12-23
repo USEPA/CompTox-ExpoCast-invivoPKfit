@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+An error, when a non-pk object is used for the first argument.
+}
 \description{
 Default method for get_nca()
 }

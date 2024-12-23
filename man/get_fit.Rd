@@ -11,6 +11,12 @@ get_fit(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A named list of objects of class `optimx`, named for the models in
+  `model`. As described in [optimx::optimx()]  If only one model is
+  specified, the return value will still be a list, but with only one
+  element.
+}
 \description{
 This is the S3 method generic for get_fit()
 }

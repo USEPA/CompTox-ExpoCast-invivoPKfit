@@ -1064,7 +1064,7 @@ writexl::write_xlsx(x = list(predictions = my_preds,
                                   "_Supp_Table2",
                                   ".xlsx"))
 
-fe_df <- fold_errors(my_pk) %>% semi_join(winmodel)
+fe_df <- fold_error(my_pk) %>% semi_join(winmodel)
 # May need to change the use_scale_conc defaults
 r2_df <- rsq(my_pk, use_scale_conc = FALSE) %>%
   semi_join(winmodel)

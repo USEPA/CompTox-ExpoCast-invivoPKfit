@@ -11,6 +11,10 @@ do_fit(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+The same [pk] object, with element `fit` containing the fitted
+  results for each model in `stat_model`.
+}
 \description{
 This is the S3 generic method for `do_fit`.
 }

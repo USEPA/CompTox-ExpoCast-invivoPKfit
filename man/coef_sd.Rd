@@ -17,6 +17,11 @@ coef_sd(obj, model, method, suppress.messages, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A dataframe with one row for each `data_group`, `model` and `method`.
+  The remaining columns include the parameters & hyperparameters as returned
+  by [coef.pk()], as well as their calculated standard deviations.
+}
 \description{
 This is the S3 method generic for `coef_sd`.
 }

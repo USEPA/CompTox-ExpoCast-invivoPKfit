@@ -1648,7 +1648,7 @@ writexl::write_xlsx(x = list(predictions = my_preds,
 Compute fold errors, r-squared, AIC, RMSLE, RMSE.
 ```{r}
 
-fe_df <- fold_errors(my_pk,
+fe_df <- fold_error(my_pk,
                      sub_pLOQ = TRUE,
                      method = "bobyqa") %>% semi_join(winmodel)
 

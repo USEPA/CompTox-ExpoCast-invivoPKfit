@@ -11,6 +11,9 @@ get_scale_time(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A `list`: `obj$scales$time`
+}
 \description{
 This is the S3 method generic for get_scale_time()
 }

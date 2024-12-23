@@ -11,6 +11,9 @@ get_data(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A `data.frame`: the `data` element of `obj`
+}
 \description{
 This is the S3 method generic for get_data()
 }

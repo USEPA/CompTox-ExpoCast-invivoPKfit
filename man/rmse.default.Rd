@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments.}
 }
+\value{
+An error, when a non-pk object is used for the first argument.
+}
 \description{
 Root mean squared error (RMSE) default method
 }

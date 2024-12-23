@@ -11,6 +11,13 @@ compare_models(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A `data.frame` with variables
+- `model`: The name of each model
+- `method`: The name of each method
+- A variable named for `criterion` (e.g. if `criterion = "AIC"` then the result will have a
+  variable named `AIC`): The criterion value for each model/method
+}
 \description{
 This is the S3 method generic for compare_models()
 }
