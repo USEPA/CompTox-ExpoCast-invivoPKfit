@@ -19,7 +19,7 @@ Author:
 Maintainer: John Wambaugh <wambaugh.john@epa.gov>
 Description: Takes in vivo toxicokinetic concentration-time data and fits
     parameters of 1-compartment and 2-compartment models for each
-    chemical.
+    chemical. These methods are described in detail in "Informatics for Toxicokinetics" (submitted).
 License: GPL-3
 Depends: 
     R (>= 3.5.0)
