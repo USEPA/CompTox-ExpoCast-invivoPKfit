@@ -10,6 +10,7 @@
   #' do_preprocess default method
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   do_preprocess.default <- function(obj, ...) {
     stop("No 'do_preprocess' method exists for object of class",
@@ -29,6 +30,7 @@
   #' do_data_info default method
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   do_data_info.default <- function(obj, ...) {
     stop("No 'do_data_info' method exists for object of class",
@@ -48,6 +50,7 @@
   #' do_prefit default method
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #'
   #' @export
   do_prefit.default <- function(obj, ...) {
@@ -70,6 +73,7 @@
   #' do_fit default method
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   do_fit.default <- function(obj, ...) {
     stop("No 'do_fit' method exists for object of class",
@@ -91,6 +95,7 @@
   #' Root mean squared error (RMSE) default method
   #' @param obj an object
   #' @param ... Additional arguments.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   rmse.default <- function(obj, ...) {
     stop("No 'rmse' method exists for object of class",
@@ -121,6 +126,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   coef_sd.default <- function(obj, ...) {
     stop("No 'coef_sd' method exists for object of class",
@@ -143,6 +149,7 @@
   #' Default method for getting status
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_status.default <- function(obj, ...) {
     stop("No 'get_status' method exists for object of class",
@@ -164,6 +171,7 @@
   #' fold_error default method
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   fold_error.default <- function(obj, ...) {
     stop("No 'fold_error' method exists for object of class",
@@ -200,6 +208,7 @@
   #'
   #' @param obj An object.
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   check_required_status.default <- function(obj, ...) {
     stop("No 'check_required_status' method exists for object of class",
@@ -222,6 +231,7 @@
   #' Default method for get_tkstats()
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_tkstats.default <- function(obj, ...) {
     stop("No 'get_tkstats' method exists for object of class",
@@ -244,6 +254,7 @@
   #' Default method for compare_models()
   #' @param obj an object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   compare_models.default <- function(obj, ...) {
     stop("No 'compare_models' method exists for object of class",
@@ -268,6 +279,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_data.default <- function(obj, ...) {
     stop("No 'get_data' method exists for object of class",
@@ -291,6 +303,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_nca.default <- function(obj, ...) {
     stop("No 'get_nca' method exists for object of class",
@@ -314,6 +327,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_data_info.default <- function(obj, ...) {
     stop("No 'get_data_info' method exists for object of class",
@@ -337,6 +351,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_prefit.default <- function(obj, ...) {
     stop("No 'get_prefit' method exists for object of class",
@@ -360,6 +375,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_settings_preprocess.default <- function(obj, ...) {
     stop("No 'get_settings_preprocess' method exists for object of class",
@@ -383,6 +399,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_settings_data_info.default <- function(obj, ...) {
     stop("No 'get_settings_data_info' method exists for object of class",
@@ -406,6 +423,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_stat_error_model.default <- function(obj, ...) {
     stop("No 'get_stat_error_model' method exists for object of class",
@@ -429,6 +447,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_data_sigma_group.default <- function(obj, ...) {
     stop("No 'get_data_sigma_group' method exists for object of class",
@@ -452,6 +471,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_settings_optimx.default <- function(obj, ...) {
     stop("No 'get_settings_optimx' method exists for object of class",
@@ -475,6 +495,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_scale_conc.default <- function(obj, ...) {
     stop("No 'get_scale_conc' method exists for object of class",
@@ -498,6 +519,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_scale_time.default <- function(obj, ...) {
     stop("No 'get_scale_time' method exists for object of class",
@@ -521,6 +543,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_error_group.default <- function(obj, ...) {
     stop("No 'get_error_group' method exists for object of class",
@@ -544,6 +567,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_stat_model.default <- function(obj, ...) {
     stop("No 'get_stat_model' method exists for object of class",
@@ -567,6 +591,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_data_original.default <- function(obj, ...) {
     stop("No 'get_data_original' method exists for object of class",
@@ -590,6 +615,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_mapping.default <- function(obj, ...) {
     stop("No 'get_mapping' method exists for object of class",
@@ -613,6 +639,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   rsq.default <- function(obj, ...) {
     stop("No 'rsq' method exists for object of class",
@@ -636,6 +663,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_winning_model.default <- function(obj, ...) {
     stop("No 'get_winning_model' method exists for object of class",
@@ -659,6 +687,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   nca.default <- function(obj, ...) {
     stop("No 'nca' method exists for object of class",
@@ -682,6 +711,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   data_summary.default <- function(obj, ...) {
     stop("No 'data_summary' method exists for object of class",
@@ -708,6 +738,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_data_summary.default <- function(obj, ...) {
     stop("No 'get_data_summary' method exists for object of class",
@@ -732,6 +763,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   eval_tkstats.default <- function(obj, ...) {
     stop("No 'eval_tkstats' method exists for object of class",
@@ -756,6 +788,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_fit.default <- function(obj, ...) {
     stop("No 'get_fit' method exists for object of class",
@@ -779,6 +812,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_data_group.default <- function(obj, ...) {
     stop("No 'get_data_group' method exists for object of class",
@@ -802,6 +836,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   twofold_test.default <- function(obj, ...) {
     stop("No 'twofold_test' method exists for object of class",
@@ -825,6 +860,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   AFE.default <- function(obj, ...) {
     stop("No 'AFE' method exists for object of class",
@@ -848,6 +884,7 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   AAFE.default <- function(obj, ...) {
     stop("No 'AAFE' method exists for object of class",
@@ -871,10 +908,10 @@
   #'
   #' @param obj An object
   #' @param ... Additional arguments currently not in use.
+  #' @return An error, when a non-pk object is used for the first argument.
   #' @export
   get_hessian.default <- function(obj, ...) {
     stop("No 'get_hessian' method exists for object of class",
          toString(class(obj))
     )
   }
-
