@@ -13,6 +13,9 @@
 
 \item{objectname}{The object name}
 }
+\value{
+The `pk` object modified by the addition.
+}
 \description{
 Subtract pkproto object default method
 }

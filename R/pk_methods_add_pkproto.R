@@ -59,6 +59,7 @@ add_pk <- function(pk_obj, pkproto_obj, objectname) {
 #' @param pkproto_obj The `pkproto` object to be added
 #' @param pk_obj The `pk` object to which the `pkproto` object is to be added
 #' @param objectname The object name
+#' @return The `pk` object modified by the addition.
 #'
 #' @export
 #' @seealso [pk_add.pk_scales()] for the method for adding `pk_scales` objects
@@ -78,6 +79,7 @@ pk_add <- function(pkproto_obj, pk_obj, objectname) {
 #' @param pkproto_obj The `pkproto` object to be added
 #' @param pk_obj The `pk` object to which the `pkproto` object is to be added
 #' @param objectname The object name
+#' @return The `pk` object modified by the addition.
 #' @export
 pk_add.default <- function(pkproto_obj, pk_obj, objectname) {
   stop("No 'pk_add' method exists for object of class",
@@ -91,6 +93,7 @@ pk_add.default <- function(pkproto_obj, pk_obj, objectname) {
 #' @param pkproto_obj The `pkproto` object to be subtracted
 #' @param pk_obj The `pk` object to which the `pkproto` object is to be subtracted
 #' @param objectname The object name
+#' @return The `pk` object modified by the subtraction.
 #'
 #' @export
 #' @seealso
@@ -104,6 +107,7 @@ pk_subtract <- function(pkproto_obj, pk_obj, objectname) {
 #' @param pkproto_obj The `pkproto` object to be subtracted
 #' @param pk_obj The `pk` object to which the `pkproto` object is to be subtracted
 #' @param objectname The object name
+#' @return The `pk` object modified by the addition.
 #' @export
 pk_subtract.default <- function(pkproto_obj, pk_obj, objectname) {
   stop("No 'pk_subtract' method exists for object of class",
