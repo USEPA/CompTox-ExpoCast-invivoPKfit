@@ -167,6 +167,7 @@ get_starts_1comp_fup <- function(data,
       httk::parameterize_gas_pbtk(
         dtxsid = unique(data[["Chemical"]]),
         species = this_species,
+        default.to.human = TRUE,
         restrictive.clearance = TRUE)))
 
   Fup <- parm_gas[["Funbound.plasma"]]
