@@ -16,8 +16,19 @@ today <- format(Sys.Date(), "%d%b%Y")
 devtools::load_all()
 library(tidyverse)
 library(ctxR)
-my_pk <- readRDS("data-raw/all_cvt_pk.rds")
+library(ggvenn)
 source("data-raw/RC_comparison_bkgd.R") # httk loaded here
+# Only use plasma 
+this_pk <- pk(cvt) +
+  settings_optimx(method = "bobyqa") +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(
+    keep_data_original = TRUE,
+    suppress.messages = FALSE
+  ) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  stat_error_model(error_group = vars(Chemical, Species))
+this_pk <- do_fit(this_pk, n_cores = 12)
 ```
 
 Steps in the analysis:
@@ -53,16 +64,84 @@ and the httk empirical data for pbpk.
 Next I need to get the clearances using the `calc_total_clearance(dtxsid, restrictive.clearance)`
 function from httk. Also need the clearances from invivoPKfit's winning models.
 
+Note: There is about 50 chemicals with rat data for both, but 3X that when
+we allow substitution of human numbers. However, this does not necessarily mean
+that we will get appropriate fits with the human numbers.
+The aforementioned set of rat data, for example, 33 of 51 chemicals find
+appropriate fits with invivoPKfit + httk.
+
+```{r selecting_chemical_params}
+chosen_list <- rat_pars_human
+# The following are derived from the above selected list (see environment)
+this_chem_v <- unique(chosen_list$param_df$Chemical)
+this_param_list <- chosen_list$named_params
+this_param_df <- chosen_list$param_df
+this_httk_clearance_df <- chosen_list$clearance_df
+this_species_v <- c("rat", "human")
+```
+
+We first want to see how many chemicals are in either _httk_ or _invivoPKfit_
+
+```{r venn_diagrams}
+member_list <- list(
+  httk_gas_pbtk = unique(get_cheminfo(info = "DTXSID",
+                                species = "human",
+                                model = "gas_pbtk",
+                                median.only = TRUE,
+                                physchem.exclude = TRUE,
+                                suppress.messages = TRUE)) %>% 
+    suppressWarnings(),
+  cvt = cvt %>% filter(species %in% c("human", "rat")) %>% pull(analyte_dtxsid)
+)
+
+ggvenn(member_list, fill_color = c("white", "white"))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         today, "httk_vs_CvT_VennDiagram_human.png"),
+       bg = "white",
+       height = 4, width = 6
+)
+
+member_list <- list(
+  httk_gas_pbtk = unique(get_cheminfo(info = "DTXSID",
+                                species = "rat",
+                                model = "gas_pbtk",
+                                median.only = TRUE,
+                                physchem.exclude = TRUE,
+                                suppress.messages = TRUE)) %>% 
+    suppressWarnings(),
+  cvt = cvt %>% filter(species %in% c("rat")) %>% pull(analyte_dtxsid)
+)
+
+ggvenn(member_list, fill_color = c("white", "white"))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         today, "httk_vs_CvT_VennDiagram_ratOnly.png"),
+       bg = "white",
+       height = 4, width = 6
+)
+
+new_chems <- clipr::read_clip()
+length(unique(new_chems %in% setdiff(member_list$cvt, member_list$httk_gas_pbtk)))
+length(unique(new_chems %in% member_list$cvt))
+
+intersect(setdiff(member_list$cvt, member_list$httk_gas_pbtk), new_chems)
+```
+
+
 ```{r combine_tkstats}
 # Start Here if you ran the background job
 
-my_tkstats <- eval_tkstats(my_pk) %>%
-  filter(Media %in% "plasma") %>%
+my_tkstats <- eval_tkstats(my_pk, finite_only = FALSE) %>%
+  filter(Media %in% "plasma",
+         Chemical %in% this_chem_v,
+         Species %in% this_species_v) %>%
+  semi_join(get_winning_model(my_pk)) %>%
   dplyr::select(Chemical, Species, CLtot.tkstats, CLtot.nca) %>%
   distinct() %>%
   filter(
-    Species %in% "rat",
-    Chemical %in% rat_pars_rat$clearance_df$Chemical,
     !is.na(CLtot.tkstats), !is.na(CLtot.nca)
   ) %>%
   group_by(Chemical, Species, CLtot.tkstats) %>%
@@ -72,7 +151,11 @@ my_tkstats <- eval_tkstats(my_pk) %>%
   )
 
 # Combine these two
-combined_clearance_df <- my_tkstats %>% inner_join(rat_pars_rat$clearance_df)
+combined_clearance_df <- this_httk_clearance_df %>%
+  inner_join(my_tkstats) %>%
+  distinct()
+
+length(unique(combined_clearance_df$Chemical))
 ```
 
 
@@ -88,16 +171,18 @@ clearance_guess <- combined_clearance_df %>%
            "Restrictive", "Possibly non-Restrictive"
          )) %>% 
   dplyr::ungroup()
+
 clearance_guess %>%
   dplyr::distinct(Chemical, rough_determination) %>%
   group_by(rough_determination) %>%
   tally()
 
 # Preliminary viz, plot all clearances
-ccd <- combined_clearance_df %>%
+ccd <- clearance_guess %>%
   relocate(CLtot.nca_mean, CLtot.nca_sd, .after = tidyselect::last_col()) %>%
   pivot_longer(
-    cols = 3:6,
+    cols = tidyselect::all_of(c("CLtot.tkstats", "CLtot.nca_mean",
+                              "restrictive_clearance", "nonrestrictive_clearance")),
     names_to = "Clearance_Source",
     values_to = "Value"
   ) %>%
@@ -109,12 +194,15 @@ ccd <- combined_clearance_df %>%
         "CLtot.tkstats", "CLtot.nca_mean",
         "nonrestrictive_clearance", "restrictive_clearance"
       )
-    )
+    ),
+    label_cols = ifelse(rough_determination == "Restrictive",
+                     "green4", "orange3")
   ) %>%
   transform(
     Chemical = fct_reorder(Chemical, Value, max)
   ) %>% 
-  as_tibble() 
+  as_tibble()
+
 
 ccd %>%
   ggplot(aes(
@@ -150,7 +238,6 @@ ccd %>%
     panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
     strip.background = element_rect(fill = "white"),
     strip.text = element_text(face = "bold", angle = 0),
-    # axis.text.y = element_blank(),
     axis.title.y = element_blank(),
     legend.position = "right",
     legend.direction = "vertical",
@@ -164,7 +251,7 @@ ggsave(
   filename = paste0(
     Sys.getenv("FIG_DIR"),"RestrictiveClearance_Analysis/",
     today,
-    "rat_tkClearance_comparison_httk_PBPK.png"
+    "all_tkClearance_comparison_httk_PBPK.png"
   ),
   height = 8,
   width = 8,
@@ -176,31 +263,34 @@ I would also like to know, how does the $f_{up}$ of this set of chemicals
 compare to that of all chemicals in `httk` (Dawson 2021).
 
 ```{r fup_comparison}
-fup_df <- data.frame(
-  Chemical = get_cheminfo("DTXSID", species = "Rat"),
-  fup = as.numeric(vapply(get_cheminfo("Funbound.plasma", species = "Rat"),
-                          gsub, pattern = ",.+", replacement = "",
-                          FUN.VALUE = character(1)
-  ))
-)
+fup_df <- this_param_df %>%
+  distinct(Chemical, Species, forced_human_values,
+           Funbound.plasma, Funbound.plasma.adjustment, 
+           Funbound.plasma.dist) %>%
+  mutate(
+    Funbound.plasma.median = as.numeric(str_extract(
+      Funbound.plasma.dist, pattern = "^\\d+\\.?\\d+e?-?\\d+(?=,)"
+    )),
+    Funbound.plasma.lower95 = as.numeric(str_extract(
+      Funbound.plasma.dist, pattern = "(?<=,)\\d+\\.?\\d+e?-?\\d+(?=,)"
+    )),
+    Funbound.plasma.upper95 = as.numeric(str_extract(
+      Funbound.plasma.dist, pattern = "(?<=,)\\d+\\.?\\d+e?-?\\d$"
+    ))
+    )
 
 
 fup_df %>%
-  ggplot(aes(x = fup)) +
-  geom_histogram(
-    # aes(y = after_stat(density)),
-    binwidth = 0.03,
-    color = "grey5", fill = "grey5"
-  ) +
+  ggplot(aes(x = Funbound.plasma.adjustment)) +
   geom_histogram(
     data = fup_df %>%
-      filter(Chemical %in% rat_pars_rat$param_df$Chemical),
+      filter(Chemical %in% this_httk_clearance_df$Chemical),
     # aes(y = after_stat(density)),
-    fill = NA,
+    fill = "white",
     color = "darkgreen", binwidth = 0.03
   ) +
   expand_limits(expand = c(0,0)) +
-  # geom_vline(xintercept = 0.05, linetype = "dashed") +
+  geom_vline(xintercept = 0.05, linetype = "dashed") +
   scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
   scale_x_continuous(expand = expansion(mult = c(0.01, 0.01))) +
   labs(
@@ -218,14 +308,18 @@ ggsave(paste0(Sys.getenv("FIG_DIR"), "fup_density_plots.png"),
 )
 
 test_fup <- fup_df %>%
-  # filter(Chemical %in% common_chems_dawson) %>%
-  pull(fup)
+  pull(Funbound.plasma)
 for (i in seq(0, 0.5, by = 1e-9)) {
   if (sum(test_fup > i) == sum(test_fup <= i)) {
     print(i)
     break
   }
 }
+
+fup_df %>%
+  ggplot(aes(x = Funbound.plasma, y = Funbound.plasma.adjustment)) +
+  geom_point()
+
 ```
 
 ## Exploring _httk_ parameters and solved values for `gas_pbtk`
@@ -498,8 +592,9 @@ as well as adding a restrictive_clearance argument in stat_model.
 ```{r running-invivoPKfit}
 # This is now updated to use dawson chem table
 minimal_pk <- pk(data = cvt %>%
-                   filter(analyte_dtxsid %in% rat_pars_rat$param_df$Chemical,
-                          species %in% "rat"))
+                   filter(analyte_dtxsid %in% this_chem_v,
+                          species %in% "rat",
+                          administration_route_normalized == "iv"))
 
 new_pk <- minimal_pk +
   facet_data(vars(Chemical, Species)) +
@@ -507,7 +602,6 @@ new_pk <- minimal_pk +
     keep_data_original = TRUE,
     suppress.messages = FALSE
   ) +
-  settings_optimx(method = c("L-BFGS-B")) +
   scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
   stat_error_model(error_group = vars(Chemical, Species)) +
   stat_model(model = c(
@@ -521,14 +615,11 @@ new_pk <- do_data_info(new_pk)
 new_pk <- do_prefit(new_pk)
 gc()
 
-unique(new_pk$prefit$par_DF$param_name)
+unique(new_pk$prefit$par_DF$param_name) # Check all parameters are there
+length(unique(new_pk$data$Chemical)) 
+length(unique(this_chem_v))
 
-new_pk$prefit$par_DF %>%
-  arrange(Chemical, Species) %>%
-  filter(param_name == "Fup") %>%
-  View()
-
-new_pk <- do_fit(new_pk, n_cores = 12)
+new_pk <- do_fit(new_pk, n_cores = 14)
 gc()
 
 new_pk$fit %>%
@@ -554,6 +645,8 @@ AIC(new_pk) %>%
   arrange(Chemical, Species) %>%
   group_by(model, method) %>% 
   count(is.finite(AIC))
+
+new_tkstats <- eval_tkstats(new_pk, finite_only = TRUE)
 
 pl2comp <- plot(new_pk,
                 use_scale_conc = FALSE,
@@ -605,18 +698,31 @@ rel_ll %>%
                     x
                   )
                 })) %>% 
+  count(is.na(model_1comp_fup))
   # drop_na(model_1comp_fup) %>%
-  filter(Chemical %in% clear_chem_levels) %>% View()
+  # filter(Chemical %in% clear_chem_levels) %>% View()
   glimpse()
 
 new_pk$fit %>%
   filter(param_name %in% "Fup",
          model %in% "model_1comp_fup") %>%
   ggplot(aes(x = estimate, y = start)) +
-  geom_point(size = 2) +
+  geom_point(size = 1.25) +
+  geom_point(data = new_pk$fit %>%
+               filter(param_name %in% "Fup",
+                      model %in% "model_1comp_fup",
+                      Chemical %in% combined_clearance_df$Chemical),
+             size = 1.5, color = "green4") +
   theme_bw() +
   coord_equal(xlim = c(0,1), ylim = c(0,1),
-              expand = TRUE)
+              expand = TRUE) +
+  coord_flip()
+
+ggsave(filename = paste0(
+  Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/",
+  today, "fup_optimization_allowingHuman.png"),
+  height = 5, width = 5)
+
 
 new_pk$fit %>%
   filter(param_name %in% "Fup",
@@ -628,7 +734,7 @@ new_pk$fit %>%
                             ifelse(estimate > start,
                                    "increase",
                                    "decrease"))) %>%
-  filter(Chemical %in% clear_chem_levels, direction %in% "similar (less than 10% difference)")
+  # filter(direction %in% "similar (less than 10% difference)") %>%
   pivot_longer(cols = c(estimate, start),
                names_to = "parameterization",
                values_to = "value") %>%
@@ -643,7 +749,7 @@ new_pk$fit %>%
 
 ggsave(filename = paste0(
   Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/",
-  today, "fup_optimization_generalFits.png"),
+  today, "fup_optimization_generalFits_allowingHuman.png"),
   height = 5, width = 7)
 
 ```
@@ -663,16 +769,14 @@ _prefit_ parameter estimations and first compare that with eventual optimized `k
 my_kelim_prefit <- my_pk$prefit$par_DF %>%
   filter(
     param_name %in% "kelim",
-    Chemical %in% common_chems_dawson
   ) %>%
   distinct(Chemical, Species, param_name, lower_bound, upper_bound, start)
 
-my_kelim_fit <- coef(my_pk) %>%
-  inner_join(get_winning_model(my_pk)) %>%
+my_kelim_fit <- get_fit(my_pk) %>%
+  semi_join(get_winning_model(my_pk)) %>%
   ungroup() %>%
-  distinct(model, Chemical, Species, kelim) %>%
-  rename(fit_kelim = "kelim") %>%
-  filter(Chemical %in% common_chems_dawson)
+  filter(param_name == "kelim") %>%
+  distinct(model, Chemical, Species, param_name, value)
 
 my_kelim_df <- inner_join(my_kelim_fit, my_kelim_prefit)
 
@@ -732,7 +836,7 @@ full_df %>%
 
 
 ggsave(
-  filename = paste0(Sys.getenv("FIG_DIR"), "kelim_compare_2024_0329.png"),
+  filename = paste0(Sys.getenv("FIG_DIR"), "kelim_compare.png"),
   height = 11,
   width = 8.5
 )
