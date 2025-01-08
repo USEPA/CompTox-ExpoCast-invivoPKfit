@@ -67,6 +67,7 @@ BIC.pk <- function(object,
 
   # obj$fit is a "long" data.frame with both parameters and sigma values
   params_df <- object$fit %>%
+    dplyr::filter(optimize_param == TRUE) %>%
     group_by(!!!object$data_group, model, method) %>%
     dplyr::summarize(npar = dplyr::n())
   data_grp_vars <- sapply(object$data_group, rlang::as_label)
