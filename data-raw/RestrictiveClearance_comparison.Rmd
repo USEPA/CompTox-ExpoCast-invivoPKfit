@@ -17,7 +17,12 @@ devtools::load_all()
 library(tidyverse)
 library(ctxR)
 library(ggvenn)
+library(ggalluvial)
+library(reticulate)
 source("data-raw/RC_comparison_bkgd.R") # httk loaded here
+```
+
+```{r quick-fit}
 # Only use plasma 
 this_pk <- pk(cvt) +
   settings_optimx(method = "bobyqa") +
@@ -103,56 +108,175 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        height = 4, width = 6
 )
 
-member_list <- list(
-  httk_gas_pbtk = unique(get_cheminfo(info = "DTXSID",
-                                species = "rat",
-                                model = "gas_pbtk",
-                                median.only = TRUE,
-                                physchem.exclude = TRUE,
-                                suppress.messages = TRUE)) %>% 
-    suppressWarnings(),
-  cvt = cvt %>% filter(species %in% c("rat")) %>% pull(analyte_dtxsid)
-)
 
-ggvenn(member_list, fill_color = c("white", "white"))
+# new_chems <- clipr::read_clip()
+# length(unique(new_chems %in% setdiff(member_list$cvt, member_list$httk_gas_pbtk)))
+# length(unique(new_chems %in% member_list$cvt))
 
-ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "RestrictiveClearance_Analysis/",
-                         today, "httk_vs_CvT_VennDiagram_ratOnly.png"),
-       bg = "white",
-       height = 4, width = 6
-)
+# intersect(setdiff(member_list$cvt, member_list$httk_gas_pbtk), new_chems)
 
-new_chems <- clipr::read_clip()
-length(unique(new_chems %in% setdiff(member_list$cvt, member_list$httk_gas_pbtk)))
-length(unique(new_chems %in% member_list$cvt))
+target_chems <- intersect(member_list$cvt, member_list$httk_gas_pbtk)
+```
 
-intersect(setdiff(member_list$cvt, member_list$httk_gas_pbtk), new_chems)
+Here I quickly check a few additional chemicals that will be added to _httk_.
+
+```{r new_httk_chems}
+new_chems_clint <- readxl::read_xlsx(path = paste0(Sys.getenv("OD_DIR"),
+                                             "162Clint_Com_ChemID_DTXSID.xlsx"))
+new_smiles <- readxl::read_xlsx(path = paste0(Sys.getenv("OD_DIR"),
+                                             "127NewSMILES_Caco2_Cyprotex_7.23.24.xlsx"))
+# New Clint
+intersect(
+  member_list$cvt[which(!(member_list$cvt %in% member_list$httk_gas_pbtk))], new_chems_clint$DTXSID
+  )
+
+# New SMILES
+intersect(
+  member_list$cvt[which(!(member_list$cvt %in% member_list$httk_gas_pbtk))], new_smiles$DTXSID
+  )
 ```
 
 
+
+## Lipinski's Rules
+
+Here I will look at the whether chemicals are "drug-like" by evaluating if:
+
+1. Molecular weight less than 500 Da.  
+2. logP (octanol-water partitioning coefficient) no greater than 5.  
+3. Less than 5 hydrogen bond donors and less than 10 acceptors.
+
+```{r lipinksi_test_data}
+target_chem_info <- get_chemical_details_batch(DTXSID = target_chems,
+                                               rate_limit = 1L)
+target_chem_properties <- get_chem_info_batch(DTXSID = target_chems, 
+                                              rate_limit = 1L) %>%
+  filter(name == "LogKow: Octanol-Water") %>% distinct()
+
+target_chem_properties %>%
+  ggplot(aes(x = source, y = value)) +
+  geom_point() +
+  geom_line(aes(group = dtxsid), color = "grey10", alpha = 0.1) +
+  geom_hline(yintercept = 5, linetype = "longdash") +
+  facet_grid(cols = vars(propType), scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.x = element_text(hjust = 1, angle = 45))
+
+target_chem_properties %>%
+  count(source)
+
+target_chem_info %>%
+  ggplot(aes(x = monoisotopicMass)) +
+  geom_histogram(binwidth = 20, fill = "grey5") +
+  geom_vline(xintercept = 500, linetype = "longdash") +
+  theme_bw()
+
+target_chem_info %>%
+  count(monoisotopicMass <= 500)
+
+```
+
+```{r reticulate-prep}
+smiles_list <- target_chem_info %>% pull(smiles) %>% unique()
+mykit <- import("rdkit")
+```
+
+
+```{python get_H_bonds}
+import rdkit
+from rdkit import Chem
+from rdkit.Chem import Descriptors
+
+py_smiles_list = r.smiles_list
+mol_from_smiles = [Chem.MolFromSmiles(x) for x in py_smiles_list]
+
+py_h_donors = [Chem.Descriptors.NOCount(x) for x in mol_from_smiles]
+py_h_acceptors = [Chem.Descriptors.NHOHCount(x) for x in mol_from_smiles]
+```
+
+
+```{r lipinksi_alluvial}
+target_chem_summary <- target_chem_info %>%
+  distinct(dtxsid, monoisotopicMass, smiles) %>%
+  right_join(data.frame(smiles = smiles_list)) %>%
+  bind_cols(data.frame(H_donors = py_to_r(py$py_h_donors),
+                       H_acceptors = py_to_r(py$py_h_acceptors))
+            ) %>%
+  left_join(
+    target_chem_properties %>%
+      filter(source == "ACD/Labs Consensus") %>%
+      distinct(dtxsid, source, value)
+  ) %>%
+  rename(LogKow = value)
+
+target_chem_lipinski <- target_chem_summary %>%
+  select(-c(smiles, source)) %>%
+  group_by(dtxsid) %>%
+  mutate("Mass <= 500 Da" = (monoisotopicMass <= 500),
+          "H-donors < 5" = (H_donors < 5),
+          "H-acceptors < 10" = (H_acceptors < 10),
+          "logP < 5" = (LogKow < 5),
+          .keep = "none") %>%
+  ungroup() %>%
+  mutate(Lipinski = rowSums(dplyr::select(., where(is.logical))) >= 3) 
+
+target_chem_lipinski %>%
+  group_by(Lipinski) %>%
+  count(`Mass <= 500 Da`, `H-donors < 5`, `H-acceptors < 10`, `logP < 5`,
+        name = "Count") %>%
+  ggplot(aes(
+    axis3 = `Mass <= 500 Da`,
+    axis4 = `logP < 5`,
+    axis2 = `H-donors < 5`,
+    axis1 = `H-acceptors < 10`,
+    y = Count
+  )) +
+  geom_alluvium(aes(fill = Lipinski)) +
+  geom_stratum() +
+  scale_x_discrete(limits = c( 
+    "H-acceptors < 10",
+    "H-donors < 5",
+    "<= 500 Da",
+    "logP < 5"
+  ),
+  position = "top",
+  expand = c(.2, .05)) +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  labs(title = "Overwhelmingly, this subset of chemicals passes Lipinksi's Rules of 5") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(face = "bold", color = "black"),
+        panel.grid = element_blank())
+
+```
+
+Overwhelmingly, we see that chemicals (by Lipinski's rules of 5) are "drug-like".
+While this may not matter effectively for clearance, it may be nice to look 
+at whether chemicals deemed not "drug-like" (11 total) are more likely to be
+restrictively or non-restrictively cleared.
+
 ```{r combine_tkstats}
 # Start Here if you ran the background job
-
-my_tkstats <- eval_tkstats(my_pk, finite_only = FALSE) %>%
+this_winmodel <- get_winning_model(this_pk)
+this_tkstats <- inner_join(this_winmodel %>% filter(model != "model_flat"),
+                          eval_tkstats(this_pk, finite_only = TRUE)) %>%
   filter(Media %in% "plasma",
          Chemical %in% this_chem_v,
-         Species %in% this_species_v) %>%
-  semi_join(get_winning_model(my_pk)) %>%
+         Species %in% this_species_v,
+         !is.na(CLtot.tkstats)) %>%
+  semi_join(get_winning_model(this_pk)) %>%
   dplyr::select(Chemical, Species, CLtot.tkstats, CLtot.nca) %>%
   distinct() %>%
-  filter(
-    !is.na(CLtot.tkstats), !is.na(CLtot.nca)
-  ) %>%
   group_by(Chemical, Species, CLtot.tkstats) %>%
   summarize(
-    CLtot.nca_mean = mean(CLtot.nca),
-    CLtot.nca_sd = sd(CLtot.nca)
+    CLtot.nca_mean = mean(CLtot.nca, na.rm = TRUE),
+    CLtot.nca_sd = sd(CLtot.nca, na.rm = TRUE)
   )
+message(length(unique(this_tkstats$Chemical)),
+        " unique chemicals with finite clearance.")
 
 # Combine these two
 combined_clearance_df <- this_httk_clearance_df %>%
-  inner_join(my_tkstats) %>%
+  inner_join(this_tkstats) %>%
   distinct()
 
 length(unique(combined_clearance_df$Chemical))
@@ -376,7 +500,7 @@ httk_bolus_gas_pbtk <- function(dtxsid, species = "Human",
   retdf[which(retdf$Time %in% unique(round(times, 3))), ]
 }
 
-httk_preds_rat <- get_httk_preds(rat_pars_rat, my_pk, species = "rat") 
+httk_preds_rat <- get_httk_preds(rat_pars_rat, this_pk, species = "rat") 
 
 ```
 
@@ -387,21 +511,18 @@ For this I will limit the species to "rat", the chemicals to
 
 ```{r rat_data}
 rat_df <- httk_preds_rat %>%
-  left_join(predict(my_pk)) %>%
-  semi_join(get_winning_model(my_pk))
+  left_join(predict(this_pk)) %>%
+  semi_join(this_winmodel)
 
-rat_df <- ggplot(mapping = aes(
+rat_df %>% ggplot(mapping = aes(
     x = Conc_est,
     y = httk_Preds,
-    color = interaction(Route, Media)
+    color = interaction(Route)
   )) +
   geom_point() +
-  geom_line(mapping = aes(
-    group = interaction(Chemical, Media, Route, Reference)
-  )
-  ) +
   geom_abline(slope = 1, intercept = 0, color = "black") +
-  coord_equal(ylim = c(0, 200), xlim = c(0, 200))
+  scale_x_log10() + scale_y_log10() +
+  facet_wrap(~Route)
 
 rat_plots <- rat_df %>%
   distinct(Chemical, Species, Dose, Route, Media, Reference,
@@ -625,7 +746,7 @@ gc()
 new_pk$fit %>%
   View()
 
-saveRDS(new_pk, "data-raw/ratCVT_wHTTK_reformulated.rds")
+# saveRDS(new_pk, "data-raw/ratCVT_wHTTK_reformulated.rds")
 ```
 
 Here we begin the analysis by estimating the relative likelihood of
@@ -633,13 +754,12 @@ Here we begin the analysis by estimating the relative likelihood of
 that points towards a restrictive or non-restrictively cleared model.
 
 ```{r begin_analysis}
-new_pk <- readRDS("data-raw/ratCVT_wHTTK_reformulated.rds")
-
+# new_pk <- readRDS("data-raw/ratCVT_wHTTK_reformulated.rds")
 coef(new_pk) %>% View()
-eval_tkstats(new_pk, finite_only = FALSE) %>% View()
-get_winning_model(new_pk) %>%
-  count(model)
-
+new_winmodel <- get_winning_model(new_pk)
+eval_tkstats(new_pk, finite_only = TRUE) %>% 
+  semi_join(new_winmodel) %>%
+  View()
 
 AIC(new_pk) %>%
   arrange(Chemical, Species) %>%
@@ -701,18 +821,12 @@ rel_ll %>%
   count(is.na(model_1comp_fup))
   # drop_na(model_1comp_fup) %>%
   # filter(Chemical %in% clear_chem_levels) %>% View()
-  glimpse()
 
 new_pk$fit %>%
   filter(param_name %in% "Fup",
          model %in% "model_1comp_fup") %>%
   ggplot(aes(x = estimate, y = start)) +
   geom_point(size = 1.25) +
-  geom_point(data = new_pk$fit %>%
-               filter(param_name %in% "Fup",
-                      model %in% "model_1comp_fup",
-                      Chemical %in% combined_clearance_df$Chemical),
-             size = 1.5, color = "green4") +
   theme_bw() +
   coord_equal(xlim = c(0,1), ylim = c(0,1),
               expand = TRUE) +
@@ -760,25 +874,25 @@ Well, we should take a look at the parameter which we are holding constant,
 `kelim` and whether the new starting points vastly differ from those in the
 starting points based on the data.
 
-For this I will just use the PK object I have saved `my_pk` and take the
+For this I will just use the PK object I have saved `this_pk` and take the
 _prefit_ parameter estimations and first compare that with eventual optimized `kelim`.
 
 ```{r kelim-questions}
 # Original data, filtered for common_chems
 # par_DF
-my_kelim_prefit <- my_pk$prefit$par_DF %>%
+this_kelim_prefit <- this_pk$prefit$par_DF %>%
   filter(
     param_name %in% "kelim",
   ) %>%
   distinct(Chemical, Species, param_name, lower_bound, upper_bound, start)
 
-my_kelim_fit <- get_fit(my_pk) %>%
-  semi_join(get_winning_model(my_pk)) %>%
+this_kelim_fit <- get_fit(this_pk) %>%
+  semi_join(get_winning_model(this_pk)) %>%
   ungroup() %>%
   filter(param_name == "kelim") %>%
   distinct(model, Chemical, Species, param_name, value)
 
-my_kelim_df <- inner_join(my_kelim_fit, my_kelim_prefit)
+this_kelim_df <- inner_join(this_kelim_fit, this_kelim_prefit)
 
 
 httk_df <- new_pk$prefit$par_DF %>%
@@ -793,7 +907,7 @@ httk_df <- new_pk$prefit$par_DF %>%
   )
 
 
-full_df <- inner_join(my_kelim_df, httk_df) %>%
+full_df <- inner_join(this_kelim_df, httk_df) %>%
   relocate(fit_kelim, .after = last_col())
 
 
@@ -856,7 +970,7 @@ new_tkstats <- eval_tkstats(new_pk, finite_only = FALSE)
 
 new_resid <- residuals(new_pk)
 
-my_data <- get_data(new_pk) %>%
+this_data <- get_data(new_pk) %>%
   distinct(Chemical, Species, Reference, Route, Media, Dose, Time, Conc) %>%
   right_join(new_resid)
 
@@ -1113,7 +1227,7 @@ dive below the fully optimized fit during elimination phase before crossing over
 again near the second inflection point.
 
 ```{r oxybenzene-test}
-old_AIC <- AIC(my_pk) %>%
+old_AIC <- AIC(this_pk) %>%
   filter(
     Chemical %in% "DTXSID3022405",
     Species %in% "mouse"
@@ -1139,7 +1253,7 @@ plot(new_pk,
   pull(final_plot) %>%
   .[[1]]
 
-old_rsquared <- rmse(my_pk) %>%
+old_rsquared <- rmse(this_pk) %>%
   filter(
     Chemical %in% "DTXSID3022405",
     Species %in% "mouse"
@@ -1197,7 +1311,7 @@ cor_mod <- mod_red %>%
   rename("wm_MSE" = "MSE")
 
 
-my_pl_1comp <- plot(new_pk,
+this_pl_1comp <- plot(new_pk,
                     n_interp = 11, use_scale_conc = FALSE,
                     model = c(
                       "model_1comp",
@@ -1206,7 +1320,7 @@ my_pl_1comp <- plot(new_pk,
                     )
 )
 
-my_pl_2comp <- plot(new_pk,
+this_pl_2comp <- plot(new_pk,
                     n_interp = 11, use_scale_conc = FALSE,
                     model = c(
                       "model_2comp",
@@ -1385,12 +1499,12 @@ get_tkstats(new_pk) %>%
 
 
 new_cl_tkstats <- get_tkstats(new_pk)
-my_tkstats <- my_pk %>%
+this_tkstats <- this_pk %>%
   get_winning_model() %>%
-  left_join(coef(my_pk)) %>%
-  left_join(rsq(my_pk)) %>%
+  left_join(coef(this_pk)) %>%
+  left_join(rsq(this_pk)) %>%
   distinct()
-my_tkstats %>%
+this_tkstats %>%
   select(-coefs_vector) %>%
   clipr::write_clip()
 # Send the R2 too.
