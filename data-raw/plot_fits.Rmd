@@ -1,0 +1,208 @@
+---
+title: "Plot curve fits"
+author: "Caroline Ring"
+date: "2023-01-04"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(results = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r, include = FALSE}
+library(tidyverse)
+library(data.table)
+library(readxl)
+devtools::load_all("../invivopkfit")
+```
+
+Timestamp
+
+```{r}
+timestamp <- "2023_01_23"
+```
+
+
+Read in CvTdb data pulled in `pulling_oral_iv_data_cvtdb.Rmd`.
+
+```{r, load_cvt, eval = TRUE}
+cvt <- fread(paste0("../inst/ext/cvt_preprocessed_",
+timestamp,
+".csv"))
+cvt[, Reference:=as.character(Reference)]
+cvt[, Reference_orig:=as.character(Reference_orig)]
+```
+
+
+
+# Plot fits for each combination of fitting & plotting options
+
+```{r}
+for(rescale_time in c(FALSE, TRUE)){
+  for(fit_conc_dose in c(FALSE, TRUE)){
+    for(fit_log_conc in c(FALSE, TRUE)){
+      #get fitting outputs file names
+      fit_outputs <- dir(path = "../inst/ext",
+                         pattern = paste0("PK_fit_table_",
+                                          ".+",
+                                          "_fit_log_conc_",
+                                          fit_log_conc, "_",
+                                          "_fit_conc_dose_",
+                                          fit_conc_dose, "_",
+                                          "_rescale_time_",
+                                          rescale_time, "_"
+                         ))
+      
+      fit_outputs <- paste0("../inst/ext/",
+                            fit_outputs)
+      
+      cat(paste0(paste(fit_outputs,
+                       collapse = "\n"), "\n"))
+      
+      #read in fitting outputs
+      #flat model
+      fit_flat <- fread(grep(x = fit_outputs,
+                             pattern = "flat",
+                             value = TRUE))
+      #1compartment model
+      fit_1comp <- fread(grep(x = fit_outputs,
+                              pattern = "1compartment",
+                              value = TRUE))
+      #2compartment model
+      fit_2comp <- fread(grep(x = fit_outputs,
+                              pattern = "2compartment",
+                              value = TRUE))
+      #add in fitting options
+      fit_flat[, c("fit_conc_dose",
+                   "fit_log_conc",
+                   "rescale_time") := .(fit_conc_dose,
+                                        fit_log_conc,
+                                        rescale_time)]
+      
+      fit_1comp[, c("fit_conc_dose",
+                    "fit_log_conc",
+                    "rescale_time") := .(fit_conc_dose,
+                                         fit_log_conc,
+                                         rescale_time)]
+      
+      fit_2comp[, c("fit_conc_dose",
+                    "fit_log_conc",
+                    "rescale_time") := .(fit_conc_dose,
+                                         fit_log_conc,
+                                         rescale_time)]
+      
+      #get unique combinations of DTXSID, Species, Analysis_Type, Studies. Analyzed
+      plot_combos <- unique(
+        fit_flat[Analysis_Type %in% "Joint",
+                 .(Analysis_Type,
+                   DTXSID,
+                   Species,
+                   Studies.Analyzed)])
+      setnames(plot_combos,
+               names(plot_combos),
+               paste(names(plot_combos),
+                     "in",
+                     sep = "_"))
+      
+      #now, loop over plotting options:
+      #plot log-scale, plot dose-normalized
+      
+      for(log10_scale_y in c(TRUE, FALSE)){
+        for(plot_dose_norm in c(TRUE, FALSE)){
+          cat(paste0("rescale_time = ", rescale_time,"\n",
+                     "fit_conc_dose = ", fit_conc_dose,"\n",
+                     "fit_log_conc = ", fit_log_conc,"\n",
+                     "log10_scale_y = ", log10_scale_y,"\n",
+                     "plot_dose_norm = ", plot_dose_norm,"\n"))
+          #for each row of plot_combos, create a plot
+          DT_plot <- plot_combos[,
+                                 .(plot_obj = list(
+                                   {
+                                     studies_list <- strsplit(Studies.Analyzed_in,
+                                                              split = ", ")[[1]]
+                                     #get data.table of newdata to be predicted
+                                     #leave out DTXSID, Species columns
+                                     #since these will be added back in from fit_combs
+                                     obs_data <- cvt[DTXSID %in% DTXSID_in &
+                                                       Species %in% Species_in &
+                                                       Study %in% studies_list]
+                                     
+                                     plot_fit(fit_flat = fit_flat,
+                                              fit_1comp = fit_1comp,
+                                              fit_2comp = fit_2comp,
+                                              DTXSID_in = DTXSID_in,
+                                              Species_in = Species_in,
+                                              obs_data = obs_data,
+                                              model_in = "all",
+                                               fit_log_conc = fit_log_conc,
+                     fit_conc_dose = fit_conc_dose,
+                     rescale_time = rescale_time,
+                                              Analysis_Type_in = "Joint",
+                                              plot_dose_norm = plot_dose_norm,
+                                              split_dose = (!plot_dose_norm),
+                                              n_interp_time = 10,
+                                              limit_y_axis = FALSE,
+                                              log10_scale_y = log10_scale_y,
+                                              plot_errbars = (!log10_scale_y),
+                                              log10_scale_time = FALSE,
+                                              return_plot = TRUE,
+                                              save_plot = FALSE,
+                                              file_suffix = NULL,
+                                              file_path = NULL,
+                                              verbose = FALSE
+                                     )
+                                   }
+                                 )
+                                 ),
+                                 by = .(DTXSID_in,
+                                        Species_in,
+                                        Analysis_Type_in,
+                                        Studies.Analyzed_in)]
+          
+          #save all plots as one big paginated file
+          pdf(paste0("../inst/ext/plots/",
+                     "plots_",
+                     "fit_log_conc_",
+                     fit_log_conc, "_",
+                     "fit_conc_dose_",
+                     fit_conc_dose, "_",
+                     "rescale_time_",
+                     rescale_time, "_",
+                     "plotlog10y_", log10_scale_y, "_",
+                     "plotdosenorm_", plot_dose_norm,
+                     ".pdf"),
+              width = 13.33,
+              height = 7.5)
+          print(DT_plot$plot_obj)
+          dev.off()
+        } #end for plot_dose_norm
+      }#end for log10_scale_y
+    } #end for fit_log_conc
+  }#end for fit_dose_norm
+}#end for rescale_time
+```
+
+
+Tradeoffs I notice:
+
+Fitting on the log scale gives a better fit to late elimination-phase points, sometimes at the expense of underpredicting Cmax. Solvent red 1 (DTXSID3061635) is a prime example. This happens because log-transforming observations before fitting tends to increase the scale of errors for points with small observed concentrations, and tends to decrease the scale of errors for points with large observed concentrations. 
+
+This effect is stronger if the range of observed concentrations is more than one order of magnitude. For example, for solvent red 1, concentrations range from about 0.05 down to about 1e-4. When fit on the natural scale, the 1-compartment model wins, because it fits the peak better. When fit on the log scale, the 2-compartment model wins, because it fits the tail better.
+
+Trichloroethylene (in rat) is another interesting case. When fitted on the natural scale without dose normalization, the 7.6 mg/kg dose is fitted well, but the 18 mg/kg dose is fitted poorly (underpredicted), and the 1-compartment model wins. When fitted on the log scale without dose normalization, the 18 mg/kg dose is fitted better, at the expense of overpredicting the 7.6 mg/kg dose, and the 2-compartment model wins. I'm not sure why the 18 mg/kg dose is underpredicted on the natural scale without dose normalization; the scale of the errors should be higher for the peak there. 
+
+Questions we want to ask:
+
+- Does error vary by dose?
+- Does error vary by time (absorption, elimination phases)?
+- How well do we predict Cmax on a non-dose-normalized basis?
+- How well do we predict Cmax on a dose-normalized basis?
+- How well do we predict tmax?
+- How well do we predict AUC infinity?
+
+
+Probably we should do something like assess percentage error (error as a percentage of observed value). That corresponds to, roughly, the visual difference between fitted curves and observed points on the split-dose plots.
+

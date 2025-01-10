@@ -1,0 +1,71 @@
+---
+title: "How to normalize residuals?"
+author: "Caroline Ring"
+date: "2023-01-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Further thoughts (2023-01-26)
+
+How should we "normalize" residuals in order to make comparisons?
+
+Is a residual error of 2 the same when the observed concentration is 1 and when the observed concentration is 10? 
+
+Let's take an example. Here are two plots of the same fit to the same data: one on the natural scale and one on the log scale,
+
+Here's a plot on the natural scale:
+![Solvent red 1, non-log-transformed, non-dose-normalized]("C:\Users\cring\invivoPKfit\inst\ext\plots\Joint Analysis\plots_solventred_nonlog_nondosenorm.pdf")
+
+Here's a plot on the log scale:
+![Solvent red 1, log-transformed, non-dose-normalized]("C:\Users\cring\invivoPKfit\inst\ext\plots\Joint Analysis\plots_solventred_log_nondosenorm.pdf")
+
+On the natural scale, residuals are large around Cmax, and small in the tail.
+
+On the log scale, residuals are small around Cmax, and large in the tail.
+
+Which is the better way to look at things?
+
+Does it matter that this fit was done on the natural scale -- so the optimizer "saw" the small residuals in the tail? 
+
+How should I compare this fit to one done on the log scale?
+
+Here's a plot of the second fit on the natural scale:
+![Solvent red 1, fit on log scale, non-log-transformed, non-dose-normalized]("C:\Users\cring\invivoPKfit\inst\ext\plots\Joint Analysis\plots_solventred_fitlog_plotnonlog_nondosenorm.pdf")
+
+Here's a plot of the second fit on the log scale:
+![Solvent red 1, fit on log scale, log-transformed, non-dose-normalized]("C:\Users\cring\invivoPKfit\inst\ext\plots\Joint Analysis\plots_solventred_fitlog_plotlog_nondosenorm.pdf")
+
+On the non-log scale, these residuals are much bigger at Cmax compared to the first fit, but still small in the tail. But on the log scale, the residuals are bigger at Cmax compared to the first fit, but smaller in the tail.
+
+Which is the most appropriate comparison between these two fits: residuals on the log scale or on the natural scale?
+
+For the first fit (natural-scale, non-dose-normalized fit), the natural-scale, dose-normalized RMSE is 0.007 and the log-scale, dose-normalized RMSE is 4.384. (This is for the winning model, 1-compartment.)
+
+For the second fit (log-scale, non-dose-normalized fit), the natural-scale, non-dose-normalized RMSE is 0.146452812243452. The log-scale, dose-normalized RMSE is 1.568. (Again, this is for the winning model, 2-compartment.)
+
+By log-scale RMSE, the log-scale fit wins. By natural-scale RMSE, the natural-scale fit wins. 
+
+This isn't exactly a shock: the log-scale fit minimizes log-scale errors, and the natural-scale fit minimizes natural-scale errors, so we would expect each fit to win on its own type of error.
+
+But how do we compare them? Is there any basis for deciding that one fit is overall better than the other? 
+
+We could compare predictions of Cmax. By that metric, the natural-scale fit would certainly win -- the log-scale fit vastly underpredicts Cmax.
+
+We could compare predictions of AUC. Again, by that metric, the natural-scale fit would win. This is because both Cmax and AUC really work on the natural scale. Cmean would be the same way, since it is calculated from AUC.
+
+Css: we have no 'experimental' Css to compare to, so there is no way of judging that one.
+
+If we look at TK summary stats -- then the natural fit really seems to win for this chemical. Is that what we should be looking at? In practice, that is usually what we want to predict with a TK model -- the blood/plasma concentration at a particular dose, whether that be peak, average, steady-state. That is what we use for reverse dosimetry.
+
+We could check out the "factor of two" criterion. We could compute residuals as a fraction of observed concentrations, and then compute the average (absolute) fractional residual, and the max (absolute) fractional residual. We could then see if the "factor of two" criterion actually correlates with how well Cmax, tmax, AUC are predicted.
+
+Also -- we never do that good a job of predicting Cmax. Why is that? Is it scaling issues with the optimizer? Would it help if we fit Vdist/Fgutabs, instead of Fgutabs/Vdist? Or would the scaling issue just be the same problem in the other direction?
+
+
+
+
+

@@ -1,0 +1,227 @@
+---
+title: "Log-likelihood for summary data"
+author: "Caroline Ring"
+date: "2022-12-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data
+
+Imagine we have $N$ observations of a dependent (response) variable, $\boldsymbol{z_1}, \boldsymbol{z_2}, \ldots, \boldsymbol{z_i), \ldots, \boldsymbol{z_N}$. Each of these corresponds to one or more independent predictor variables, $\boldsymbol{x_1}, \ldots, \boldsymbol{x_i}, \ldots, \boldsymbol{x_N}$.
+
+The $i^{th}$ observation is a summary composed of three values: the sample mean, sample standard deviation, and count of a sample of {M_i} underlying individual-subject observations.
+
+$$ \boldsymbol{z_i} =  \left(
+\begin{array}{c}
+\bar{y}_i  \\
+s_i \\
+M_i\\
+\end{array} 
+\right) $$
+
+where
+
+$$ \boldsymbol{y_i} = \left(
+\begin{array}{c}
+y_{i1} \\
+\cdots \\
+y_{ij}\\
+\cdots \\
+y_{iM_i} \\
+\end{array} 
+\right) $$
+
+For example, this might be a toxicokinetic study where, say, 36 rats were divided into 6 groups, and each group was dosed at a different level, resulting in 6 dose groups. Blood was drawn from the animals in each dose group at a series of time points, and the concentration of chemical X was analyzed. For each dose group and each time point, the mean and standard deviation of concentrations was reported. In this case, group $i$ represents one dose and one time point.
+
+# Definitions of sample mean and sample variance
+
+The sample mean and sample variance (or SD) were computed from the original individual-level data using the following definitions.
+
+## Sample mean
+
+$$ \bar{y}_i = \frac{1}{M_i} \sum_{j=1}^{M_i} y_{ij} $$
+## Sample variance
+
+$$ s_i^2 = \frac{1}{M_i - 1} \sum_{j=1}^{M_i} \left( y_{ij} - \bar{y}_i \right) ^2$$
+
+# Normal log-likelihood
+
+Assume we have a model that predicts a value $\mu_i$ for the $i^{th}$ observation, given the independent (predictor) variables $\boldsymbol{x_i}$ and some vector of parameters $\boldsymbol{\theta}$.
+
+$$ \mu_i = f(\boldsymbol{x_i}; \boldsymbol{\theta}) $$
+
+In the example of a TK study, $f$ might be a TK model -- e.g. a 1-compartment or 2-compartment model.
+
+Our goal is to get the maximum-likelihood estimates of the parameters $\boldsymbol{\theta}$ -- in other words, the parameter values that make it most likely that the model would produce the data actually observed. 
+
+To do that we need to formulate the likelihood of the data given the parameters.
+
+In this case, we assume a zero-mean normal distribution of the residual errors. This is equivalent to assuming the observed values are normally distributed around a mean given by the predicted values.
+
+Write this likelihood function for individual $j$ in group $i$. This is just the normal probability density function.
+
+$$ L_{ij} = \frac{1}{\sigma \sqrt{2 \pi}} \exp \left[ \frac{-1}{2} \left( \frac{\log y_{ij} -  \mu_i}{\sigma} \right) ^2 \right] $$
+
+## Log-likelihood for individual subjects in group i
+
+It's usually more convenient to work with the log-likelihood, so log-transform it.
+
+$$LL_{ij} = \log \left( \frac{1}{\sigma \sqrt{2 \pi}} \right) + \frac{-1}{2} \left( \frac{\log y_{ij} -  \mu_i}{\sigma} \right) ^2 $$
+## Total log-likelihood of group i
+
+The joint log-likelihood over all subjects in group $i$ is just the sum of individual log-likelihoods.
+
+$$ LL_i = \sum_{j=1}^{M_i} LL_{ij} =  \sum_{j=1}^{M_i} \left[ \log \left( \frac{1}{\sigma \sqrt{2 \pi}} \right) + \frac{-1}{2} \left( \frac{\log y_{ij} - \mu_i}{\sigma} \right) ^2 \right]$$
+Breaking apart the two terms inside the summation (square brackets), and expanding the square in the second term, this becomes
+
+$$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \frac{-1}{2 \sigma^2} \left[\sum_{j=1}^{M_i} \left( \left( \log y_{ij} \right) ^2 - 2  \mu_i \log y_{ij} + \mu_i^2  \right) \right] $$
+Further splitting apart the terms inside the summation (square brackets), this becomes
+
+$$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \\
+\frac{-1}{2 \sigma^2} \sum_{j=1}^{M_i} \left( \log y_{ij} \right)^2 + \\
+\frac{2 \mu_i}{2 \sigma^2} \sum_{j=1}^{M_i} \log y_{ij} + \\
+\frac{-\mu_i^2 M_i}{2 \sigma^2} $$
+
+Here is where things get complicated with a log-normal distribution. With a normal distribution, we could substitute in the definition of the sample mean for $\sum y_{ij}$. With a log-normal distribution, we instead have $\sum \log y_{ij}$, which does not correspond to the definition of the sample mean. At best we could do the log of the sample mean -- but that doesn't give us what we are looking for.
+
+$$\log \bar{y}_i = \log \sum_{j=1}^{M_i} y_{ij} \neq \sum_{j=1}^{M_i} \log y_{ij}$$
+If log-scale population mean is $m_i$ and log-scale standard deviation is $s_i$, and sample mean is $\bar{y}_i$ and sample standard deviation is $S_i$, then
+
+$$ m_i = \log \frac{\bar{y}_i^2}{\sqrt{S_i^2 + \bar{y}_i^2}} = \frac{1}{M_{i}} \sum_{j=1}^{M_i} \log y_{ij}$$
+and
+
+$$ s_i = \sqrt{ \log \left( 1 + \frac{S_i^2}{\bar{y}_i^2} \right)} = \sqrt{ \frac{1}{M_i - 1} \sum_{i=1}^{M_i} (\log y_{ij} - m_i)^2}$$
+
+Substitute in the definition of the log-scale mean for $\sum_{j=1}^{M_i} \log y_{ij}$
+
+$$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \\
+\frac{-1}{2 \sigma^2} \sum_{j=1}^{M_i} \log y_{ij}^2 + \\
+\frac{2 \mu_i}{2 \sigma^2} M_i \log \frac{\bar{y}_i^2}{\sqrt{S_i^2 + \bar{y}_i^2}} + \\
+\frac{-\mu_i^2 M_i}{2 \sigma^2} $$
+
+Using the definitions of the log-scale sample variance and log-scale sample mean, it can be shown that
+
+$$ \sum_{j=1}^{M_i}  \left( \log y_{ij} \right)^2 = \left(M_i - 1 \right)  s_i^2 + M_i m_i^2 = (M_i -1) \log \left( 1 + \frac{S_i^2}{\bar{y}_i^2} \right) + M_i  \left(\log \frac{\bar{y}_i^2}{\sqrt{S_i^2 + \bar{y}_i^2}}\right)^2 $$
+Substitute this back into the log-likelihood:
+
+$$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \\
+\frac{-1}{2 \sigma^2} \left( (M_i -1) \log \left( 1 + \frac{S_i^2}{\bar{y}_i^2} \right) + M_i  \left(\log \frac{\bar{y}_i^2}{\sqrt{S_i^2 + \bar{y}_i^2}}\right)^2 \right) + \\
+\frac{2  \mu_i}{2 \sigma^2} M_i \log \frac{\bar{y}_i^2}{\sqrt{S_i^2 + \bar{y}_i^2}} + \\
+\frac{-\mu_i^2 M_i}{2 \sigma^2} $$
+
+This looks horrible, but I think it is correct.
+
+# Appendix: Error in log-scale moments from arithmetic moments, a simulation study
+
+How much error is there in estimating the log-scale moments (mean and SD of log-transformed observations) from the arithmetic moments (mean and SD of natural-scale observations)?
+
+We can get an idea using a simulation study.
+
+Take a log-normal distribution with known log-scale mean and SD.
+
+Draw some number of samples from this distribution.
+
+Calculate the sample mean and SD of the log-scaled samples, and of the natural-scale samples.
+
+Repeat these steps some large number of times.
+
+Compare the log-scale sample means and SDs to the natural-scale sample means and SDs.
+
+Write a function to draw the samples and calculate the sample moments:
+
+```{r}
+get_sample_moments <- function(meanlog, sdlog, n_samp){
+  #samples
+  y <- rlnorm(n = n_samp, meanlog = meanlog, sdlog = sdlog)
+  #log-transformed samples
+  ylog <- log10(y)
+  return(c("sample_mean" = mean(y),
+           "sample_sd" = sd(y),
+           "sample_meanlog" = mean(ylog),
+           "sample_sdlog" = sd(ylog),
+           "sample_n" = n_samp))
+}
+```
+
+Choose values for meanlog, sdlog, and n_samp
+```{r}
+meanlog <- 0
+sdlog <- 1
+n_samp <- 7
+```
+
+Set a seed for reproducibility, and generate the values
+
+```{r}
+set.seed(42)
+n_rep <- 1000
+samp <- replicate(n = n_rep,
+          expr = get_sample_moments(meanlog = meanlog,
+                                    sdlog = sdlog,
+                                    n_samp = n_samp))
+samp <- t(samp)
+samp <- as.data.frame(samp)
+```
+
+Calculate the estimated log-scale sample moments from the arithmetic sample moments
+
+```{r}
+samp[c("est_sample_meanlog",
+       "est_sample_sdlog")] <- convert_summary_to_log10(sample_mean = samp$sample_mean,
+                                                                   sample_SD = samp$sample_sd)
+```
+
+Now, plot the estimated log-scale moments vs. the "actual" log-scale moments.
+
+Log-scale sample mean. The "true" population log-scale mean (0.0) is indicated by vertical and horizontal dashed lines.
+
+```{r}
+ggplot(data = samp) +
+  geom_point(aes(x = sample_meanlog,
+                 y = est_sample_meanlog),
+             color = "gray50") +
+  geom_abline(intercept = 0, slope = 1, color = "black") +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_vline(xintercept = 0, linetype = 2) +
+  xlab("Actual log-scale sample mean") +
+  ylab("Estimated log-scale sample mean") +
+  ggtitle("Estimated vs. actual log-scale sample mean, n = 7") +
+  theme_bw()
+```
+
+The estimated log-scale sample mean usually overestimates the "true" log-scale sample mean (most points are above the identity line).
+
+Sampling error:
+
+```{r}
+ggplot(data = samp) +
+  geom_histogram(aes(x = est_sample_meanlog - sample_meanlog))
+```
+
+
+Log-scale sample SD. The "true" population log-scale SD (`log10(exp(1))`) is indicated by vertical and horizontal dashed lines.
+
+```{r}
+ggplot(data = samp) +
+  geom_point(aes(x = sample_sdlog,
+                 y = est_sample_sdlog),
+             color = "gray50") +
+  geom_abline(intercept = 0, slope = 1, color = "black") +
+    geom_hline(yintercept = log10(exp(1)), linetype = 2) +
+  geom_vline(xintercept = log10(exp(1)), linetype = 2) +
+  xlab("Actual log-scale sample SD") +
+  ylab("Estimated log-scale sample SD") +
+  ggtitle("Estimated vs. actual log-scale sample SD, n = 7") +
+  theme_bw()
+```
+
+The estimated log-scale sample SD usually overestimates the actual log-scale sample SD (most points are above the identity line).
+
+```{r}
+summary(lm(est_sample_sdlog ~ sample_sdlog, data = samp))
+```
+

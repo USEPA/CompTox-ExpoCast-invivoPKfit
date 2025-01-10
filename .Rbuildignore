@@ -1,0 +1,7 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^doc$
+^Meta$
+^pk_object_tree\.txt$
+^data-raw$
+^cran-comments\.md$

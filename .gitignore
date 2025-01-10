@@ -1,4 +1,7 @@
 .Rproj.user
 .Rhistory
-.RData
-.Ruserdata
+pk_object_tree.txt
+testing_predictedConcentrations.R
+inst/doc
+/doc/
+/Meta/

@@ -1,0 +1,663 @@
+---
+title: "Evaluate fits"
+author: "Caroline Ring"
+date: "2023-01-23"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(results = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+```{r, include = FALSE}
+library(tidyverse)
+library(data.table)
+library(readxl)
+devtools::load_all("../invivopkfit")
+```
+
+# Introduction
+
+This document contains code to evaluate the goodness-of-fit of the models fit to data in `MainAnalysis.Rmd`.
+
+# Import preprocessed CvTdb data
+
+
+```{r}
+cvt <- fread(paste0("../inst/ext/cvt_preprocessed_",
+                 "2023_02_01",
+          ".csv"))
+```
+
+## Timestamp
+Timestamp the file name with the current date and time (at the beginning of the runs) in format YYYY_MM_DD_hh_mm.
+
+```{r}
+timestamp <- format(Sys.time(), "%Y_%m_%d")
+```
+
+
+# Evaluate fits
+
+## Table of all fit options
+
+This table defines all combinations of fitting options that were tried.
+
+```{r}
+fit_opts <- 
+  as.data.table(
+    expand.grid(
+  rescale_time = c(FALSE, TRUE),
+  fit_conc_dose = c(FALSE, TRUE),
+  fit_log_conc = c(FALSE, TRUE),
+  log_trans = c(FALSE, TRUE),
+  dose_norm = c(FALSE, TRUE),
+  method = c("bobyqa", "L-BFGS-B"),
+  model = c("flat", "1compartment", "2compartment"))
+  )
+```
+
+
+# pkfit object
+
+One "fitted model" is defined by the following information:
+
+* Dataset used for fitting: A subset of `cvt` defined by the following information: 
+    + DTXSID
+    + Species
+    + Studies.Analyzed
+    + routes analyzed (that last one in the case when there was not enough oral absorption-phase data to fit kgutabs, but there was IV data, so we fit the IV data only)
+* Analysis Type (error model): 
+    + Joint: one set of params across all studies, but separate error SDs for each study
+    + Separate: separate params & error SDs for each study
+    + Pooled: one set of params & one error SD across all studies
+* TK model:
+    + flat
+    + 1-compartment
+    + 2-compartment
+* Transformations applied to the data before fitting:
+    + log transformation (fit_log_conc TRUE or FALSE)
+    + dose-normalization (fit_conc_dose TRUE or FALSE)
+    + rescaling time when study spanned days, weeks, months, or years (rescale_time TRUE or FALSE)
+* Fitted model parameters
+    + Name
+    + Starting values
+    + Lower & upper bounds
+    + Fitted mean
+    + Fitted standard deviation
+* Information from `optimx`
+    + Algorithm used
+    + Control parameters used
+    + Convergence code
+    + Number of function evaluations
+    + Message
+    
+We can make this into an R object, essentially just a list with all of this information. Call it an object of class `pkfit` that inherits from class `list`.
+
+Then we can write methods to do things like predict, residuals, coeffs, get TK summary stats, etc. etc.
+
+We can also write a "plot" method to plot concentration vs. time with the fitted curve.
+
+## A pkanalysis object
+
+One "analysis" is a set of three "fit" objects: one for each of the three models, for the same dataset, analysis type, and fitting options. We can call this an object of class `pkanalysis`. Duplicated information (e.g. dataset) will be stored only once.
+
+Methods for a `pkanalysis` object include getting the winning model, and calculating the "p-value" for each model compared to the flat model (exp(AIC_model - AIC_flat)/2). 
+
+We can also get predictions, coeffs, resids, etc. but these will always return a list of 3 items, one for each model.
+
+The "plot" method for a `pkanalysis` object plots concentration vs. time with all three fitted curves, or with only the winning fitted curve.
+
+## Creating fitted objects from tables of fitted parameters & of pre-processed data
+
+It would be unwieldy to save lots of R objects for each fit, especially since the fitted dataset would be the same for many fits. Instead, we have saved the fit output data as a table. To get the fitted dataset, we have to index into the appropriate pre-processed version of CvT, taking the appropriate subset of DTXSID, Species, studies analyzed, and routes analyzed.
+
+We can write a method `pkfit()` to take one row of a fit output data table, and the full CvT pre-processed table, and produce a `pkfit` object.
+
+# Evaluate residuals for each fit
+
+```{r}
+verbose <- FALSE
+timestamp <- "2023_02_01"
+resids_all <- fit_opts[,
+         {
+           #Read in fits
+        #get fitting outputs file names
+  fit_outputs <- dir(path = "../inst/ext",
+      pattern = paste0("PK_fit_table_",
+                       model,
+        "_fit_log_conc_",
+                        fit_log_conc, "_",
+                        "fit_conc_dose_",
+                        fit_conc_dose, "_",
+                        "rescale_time_",
+                        rescale_time, "_",
+        "method_", method,
+        "_", timestamp
+                       ))
+  
+
+  fit_outputs <- paste0("../inst/ext/",
+                        fit_outputs)
+  if(verbose %in% TRUE){
+  cat(paste0(paste(fit_outputs,
+              collapse = "\n"), "\n"))
+  }
+  
+  #read in fitting output table for this model
+  fit <- fread(grep(x = fit_outputs,
+                         pattern = model,
+                         value = TRUE))
+  
+  #now: go by DTXSID, Species, Analysis Type.
+  fit[, {
+    if(verbose %in% TRUE){
+    cat(paste("DTXSID = ", DTXSID, "\n",
+              "Species = ", Species, "\n",
+              "Analysis Type = ", Analysis_Type, "\n",
+              "Studies Analyzed = ", Studies.Analyzed, "\n"))
+    }
+    obj <- pkfit(fit = .SD,
+                    dat = cvt)
+    rmse <- rmse.pkfit(obj,
+                       log_trans = log_trans,
+                       dose_norm = dose_norm)
+    rsq <- rsq.pkfit(obj,
+                       log_trans = log_trans,
+                       dose_norm = dose_norm)
+    # error_sd <- overall_error_sd.pkfit(obj,
+    #                    log_trans = log_trans,
+    #                    dose_norm = dose_norm)
+    
+    #calculate residuals
+    frac_resids <- frac_resids.pkfit(obj,
+                           dose_norm = dose_norm,
+                           log_trans = log_trans)
+    #normalize residuals by 
+    list("RMSE" = rmse,
+         "rsq" = rsq,
+         # "error_sd" = error_sd,
+         "frac_resids.mean" = mean(frac_resids),
+         "frac_resids.median" = median(frac_resids),
+         "frac_resids.min" = min(frac_resids),
+         "frac_resids.max" = max(frac_resids))
+  },
+  by = .(DTXSID, Species, Analysis_Type, Studies.Analyzed, LogLikelihood, AIC),
+  .SDcols = names(fit)]
+         },
+  by = .(rescale_time,
+         fit_conc_dose,
+         fit_log_conc,
+         log_trans,
+         dose_norm,
+         method,
+         model)]
+```
+
+Evaluate TK stats.
+
+This one will go a little bit differently. We'll loop over only the fitting options; then within that loop, we'll loop over a list of the possible models, and get the TK stats for each of those models. Then we'll rowbind the resulting list of three data.tables together. It needs to be done this way because the table of TK stats has different variable names depending on the model, so `data.table` can't row-bind them together directly inside the square brackets.
+
+
+```{r}
+fit_opts2 <- unique(fit_opts[, .(rescale_time,
+         fit_conc_dose,
+         fit_log_conc,
+         method)])
+
+model_list <- c("flat",
+                "1compartment",
+                "2compartment")
+
+out_DT_list <- sapply(model_list,
+                      function(this_model){
+                        fit_opts2[,
+                                  {
+                                    #Read in fits
+                                    #get fitting outputs file names
+                                    fit_outputs <- dir(path = "../inst/ext",
+                                                       pattern = paste0("PK_fit_table_",
+                                                                        this_model,
+                                                                        "_fit_log_conc_",
+                                                                        fit_log_conc, "_",
+                                                                        "fit_conc_dose_",
+                                                                        fit_conc_dose, "_",
+                                                                        "rescale_time_",
+                                                                        rescale_time, "_",
+                                                                        "method_", method,
+                                                                        "_", timestamp
+                                                       ))
+                                    
+                                    
+                                    fit_outputs <- paste0("../inst/ext/",
+                                                          fit_outputs)
+                                    
+                                    if(verbose %in% TRUE){
+                                      cat(paste0(paste(fit_outputs,
+                                                       collapse = "\n"), "\n"))
+                                    }
+                                    
+                                    #read in fitting output table for this model
+                                    fit <- fread(grep(x = fit_outputs,
+                                                      pattern = this_model,
+                                                      value = TRUE))
+                                    
+                                    fit[, {
+                                      if(verbose %in% TRUE){
+                                        cat(paste("DTXSID = ", DTXSID, "\n",
+                                                  "Species = ", Species, "\n",
+                                                  "Analysis Type = ", Analysis_Type, "\n",
+                                                  "Studies Analyzed = ", Studies.Analyzed, "\n"))
+                                      }
+                                      #create a 'pkfit' object
+                                      obj <- pkfit(fit = .SD,
+                                                      dat = cvt)
+                                      #calculate the TK stats for this object
+                                      tk <- calc_TK_stats.pkfit(obj)
+                                      nca <- as.data.frame(
+                                        nca.pkfit(obj,
+                                                  dose_norm = TRUE)
+                                      )
+                                      cbind(tk, nca)
+                                    },
+                                    by = .(DTXSID,
+                                           Species,
+                                           Analysis_Type,
+                                           Studies.Analyzed,
+                                           LogLikelihood,
+                                           AIC),
+                                    .SDcols = names(fit)
+                                    ]
+                                  },
+                                  by = .(fit_log_conc,
+                                         fit_conc_dose,
+                                         rescale_time,
+                                         method),
+                                  .SDcols = names(fit_opts2)
+                        ]
+                      },
+                      simplify = FALSE,
+                      USE.NAMES = TRUE)
+                      
+ out_DT <- rbindlist(out_DT_list,
+                     use.names = TRUE,
+                     fill = TRUE,
+                     idcol = "model")
+```
+
+# Visualization and analysis
+
+Questions to answer: 
+
+Which combination of fitting parameters best fits AUC? tmax? Cmax? Take the winning model for each combination of fitting parameters and each data set.
+
+Keep only the Joint analyses, for the sake of simplicity. (These are the ones where multiple studies were fit together, but with a different error SD allowed for each study.)
+
+```{r}
+tk_DT_sub <- out_DT[Analysis_Type %in% "Joint", ]
+```
+
+Get the winning model and the p-value vs. flat model.
+
+```{r}
+setorder(tk_DT_sub,
+         method,
+         rescale_time,
+         fit_conc_dose,
+         fit_log_conc,
+         DTXSID,
+         Species,
+         Studies.Analyzed,
+         AIC)
+
+tk_DT_sub[, winmodel := model[1],
+          by = .(method,
+         rescale_time,
+         fit_conc_dose,
+         fit_log_conc,
+         DTXSID,
+         Species,
+         Studies.Analyzed)]
+
+#p-value vs. flat model
+tk_DT_sub[, AIC_flat := AIC[model %in% "flat"], by = .(method,
+         rescale_time,
+         fit_conc_dose,
+         fit_log_conc,
+         DTXSID,
+         Species,
+         Studies.Analyzed)]
+tk_DT_sub[, rel_like_of_flat := exp((AIC - AIC_flat)/2)]
+```
+
+
+# AUC comparison
+
+## AUC oral
+
+### Rescale time = FALSE
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == FALSE &
+                   model == winmodel &
+                   method %in% "bobyqa"],
+       aes(x = nca.oral.AUC_inf_1mgkg,
+           y = AUC_inf_oral_1mgkg)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks() +
+  xlab("Non-compartmental AUC_inf (oral)") +
+  ylab("Winning model-predicted AUC_inf (oral)") +
+  ggtitle("AUC_inf (oral), rescale_time = FALSE")
+```
+
+Fitting on the log scale seems to result in more cases of over-predicted AUC_infinity for oral dosing. 
+
+Dose-normalizing concentration before fitting doesn't seem to make a huge difference one way or another.
+
+How about when time was rescaled?
+
+### Rescale time = TRUE
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == TRUE &
+                   model == winmodel &
+                   method %in% "bobyqa"],
+       aes(x = nca.oral.AUC_inf_1mgkg,
+           y = AUC_inf_oral_1mgkg)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks() +
+  xlab("Non-compartmental AUC_inf (oral)") +
+  ylab("Winning model-predicted AUC_inf (oral)") +
+  ggtitle("AUC_inf (oral), rescale_time = TRUE")
+```
+
+Rescaling time seems to make the overpredictions worse when they happen.
+
+What are some examples when model-preidcted AUC is very big?
+
+```{r}
+tk_DT_sub[rescale_time == TRUE &
+                   model == winmodel &
+                   method %in% "bobyqa" &
+            AUC_inf_oral_1mgkg > 1e5 &
+            fit_log_conc %in% TRUE &
+            fit_conc_dose %in% FALSE,
+          .(DTXSID, Species, model, rel_like_of_flat)]
+```
+
+
+## AUC IV
+
+### Rescale time = FALSE
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == FALSE &
+                   model == winmodel &
+                   method %in% "bobyqa"],
+       aes(x = nca.iv.AUC_tlast_1mgkg,
+           y = AUC_inf_iv_1mgkg)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose),
+             cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks() +
+  xlab("Non-compartmental AUC_inf (IV)") +
+  ylab("Winning model-predicted AUC_inf (IV)") +
+  ggtitle("AUC_inf (IV), rescale_time = FALSE")
+```
+
+Fitting on the log scale seems to result in a few more cases of over-predicted AUC_infinity for IV dosing. Dose-normalizing before fitting on the log scale reduces these cases.
+
+### Rescale time = TRUE
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == TRUE],
+       aes(x = AUC_inf_1mgkg,
+           y = AUC_iv_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10() +
+  annotation_logticks() +
+  xlab("Non-compartmental AUC_inf (IV)") +
+  ylab("Winning model-predicted AUC_inf (IV)") +
+  ggtitle("AUC_inf (IV), rescale_time = TRUE")
+```
+
+Rescaling time seems to make the overpredictions worse on the log scale (up to 1e6, rather than 1e4 without rescaling time).
+
+## Tmax comparison
+
+### Rescale time = FALSE
+```{r}
+ggplot(tk_DT_sub[rescale_time == FALSE],
+       aes(x = tmax,
+           y = tmax_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10() +
+  ggtitle("Tmax, rescale_time = FALSE")
+```
+
+### Rescale time = TRUE
+
+```{r}
+ggplot(tk_DT_sub[rescale_time == TRUE],
+       aes(x = tmax,
+           y = tmax_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10() +
+  ggtitle("Tmax, rescale_time = TRUE")
+```
+
+Note that a couple of points have appeared with tmax > 1000. These are points where the winning model was flat when time was not rescaled, but the winning model was 1- or 2-compartment when time was rescaled.
+
+## Cmax comparison
+
+### Rescale time = FALSE
+
+```{r}
+ggplot(tk_DT_sub[rescale_time %in% FALSE],
+       aes(x = Cmax_1mgkg,
+           y = Cmax_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10()  +
+  ggtitle("Cmax, rescale_time = FALSE") +
+  annotation_logticks()
+```
+
+### Rescale time = TRUE
+
+```{r}
+ggplot(tk_DT_sub[rescale_time %in% TRUE],
+       aes(x = Cmax_1mgkg,
+           y = Cmax_win)) +
+  geom_point(aes(color = winmodel)) +
+  geom_abline(intercept = 0, slope = 1) +
+  facet_grid(rows = vars(fit_conc_dose), cols = vars(fit_log_conc),
+             labeller = label_both) +
+  scale_x_log10() +
+  scale_y_log10()  +
+  ggtitle("Cmax, rescale_time = FALSE") +
+  annotation_logticks()
+```
+
+Overall, Cmax tends to be under-predicted, but fitting on the natural scale results in more cases of worse under-prediction. That surprises me. I would have thought the opposite, because there are so many cases where log-scaling seems to fit the late elimination tail at the expense of fitting the peak. 
+
+
+### Examples of bad Cmax cases
+
+What are some of those cases?
+
+```{r}
+tk_DT_sub[Cmax_win < 1e-4 & rescale_time %in% FALSE & !is.na(Cmax_1mgkg), ]
+```
+
+Look at the fitted parameters for these? 
+
+```{r}
+tmp <- tk_DT_sub[Cmax_win < 1e-4 & rescale_time %in% FALSE & !is.na(Cmax_1mgkg), .(fit_conc_dose, fit_log_conc, rescale_time, DTXSID, Species, Route, Media)]
+tmp[, Analysis_Type := "Joint"]
+```
+
+```{r}
+
+tk_DT[tmp, on = names(tmp)][winmodel =="1compartment", .(fit_conc_dose, fit_log_conc, DTXSID, Species, Route, Media, winmodel, N_Routes, Fgutabs.1compartment, Fgutabs_Vdist.1compartment, Vdist.1compartment, kelim.1compartment, kgutabs.1compartment, AIC.1compartment, AIC.flat)]
+```
+Looking at plots of the fit:
+
+DTXSID4032376 (dimethenamid) is a case where there is one very very high concentration for the oral dosing data, out of range with the others:
+
+```{r}
+cvt_sub <- cvt[DTXSID %in% "DTXSID4032376" & Species %in% "rat", .(Route, Dose, Time, Conc, Conc_Dose, Detect)]
+#sort by decreasing Conc_Dose
+setorder(cvt_sub, Route, -Conc_Dose)
+cvt_sub[Route %in% "po"]
+```
+This seems like a problem with the data itself -- as in, the "non-compartmental" Cmax is probably incorrect.
+
+DTXSID4032405 is another case where there is one very high point right at the beginning of the oral data, with nothing before it, and an awful lot of non-detects. 
+```{r}
+cvt_sub <- cvt[DTXSID %in% "DTXSID4032405" & Species %in% "rat", .(Route, Dose, Time, Conc, Conc_Dose, Detect)]
+#sort by decreasing Conc_Dose
+#setorder(cvt_sub, Route, -Conc_Dose)
+cvt_sub[Route %in% "po"]
+```
+
+
+In fact, I don't understand how the 1-compartment model actually "won" in this case. The AIC is technically lower than the flat model, but not by much, and I really don't understand how that happened. I suppose technically, because the 1-comaprtment model predicts some ridiculously tiny value like 1e-30, it makes the likelihood slightly higher for the non-detects?
+
+```{r}
+#prediction & likelihood for flat model, for a non-detect
+cp_flat(params = list(Vdist = 988, Fgutabs = 1e-4, sigma = 0.0204), time = 0.25, dose = 5, iv.dose = FALSE, medium = "plasma")
+pnorm(q = 0.000738/5, mean = 5.060729e-07/5, sd = 0.0204)
+```
+
+```{r}
+#prediction & likelihood for 1-compartment model, for a non-detect
+cp_1comp(params = list(Fgutabs = 0.9973610551, Vdist = 175.640477, kelim = 106.112252, kgutabs = 1e4), time = 0.25, dose = 5, iv.dose = FALSE, medium = "plasma")
+pnorm(q = 0.000738/5, mean = 8.646482e-14/5, sd = 0.0204)
+```
+
+Yes -- that is the situation. The lower mean produces a very slightly higher probability for the non-detects.
+
+Should we place some lower limit on predicted values -- like anything less than machine epsilon gets truncated at machine epsilon? Would that make the flat model "win" in this pathological cases? I think it would do so only if the lower limit was equal to or higher than the fitted flat value, which it might not be. 
+
+# Catching pathological cases
+
+The flat model does *not* always win in pathological cases (see above). So that can't be our only method of catching pathological cases.
+
+We could add a way to catch cases that are missing absorption phase or elimination phase for oral dosing. If there are not at least 3 detected points before the empirical tmax, flag for missing absorption phase. Or if there are not at least 3 detected points after the empirical tmax, flag for missing elimination phase. If we're fitting a 2-compartment model, I guess it should be at least 6 detected points after the empirical tmax, in order to possibly have enough data to fit both alpha and beta.
+
+# Defining a 'study'
+
+Currently, I'm defining a "study" as DTXSID + Species + Reference + Route + Media. John thinks it should be DTXSID + Species + Reference.
+
+My argument is that the different dosing routes (oral vs. IV) might result in different levels of plasma concentration, different enough that the analytical chemistry might behave differently. Maybe even more strongly, different media are likely to have media-specific effects on analytical chemistry.
+
+I guess what we need is a proper model of error.
+
+Wambaugh et al. 2019 had it as the following, where $A$ is the observed peak area, $\hat{A}$ is a predicted peak area, $[x]$ is the actual concentration:
+
+$$ A \sim \textrm{Normal} (\mu = \hat{A}, \quad \sigma =  k_1 + k_2 [x]) $$
+
+$$ \hat{A} = \theta([x] - t) ([x] - t) m + b $$
+where $\theta(\cdot)$ is the Heaviside step function (1 when the argument is positive, 0 otherwise); $t$ is a threshold concentration; $m$ is the calibration; $b$ is the background noise.
+
+But that doesn't handle inter-study variability.
+
+I think what we have is something like this:
+
+$i$ indexes chemical/species. $j$ indexes study (whatever that ends up being). $k$ indexes group --  a unique combination of dose, time, route, and medium within study. $m$ indexes individual observations within group $k$. $x_{ijkm}$ is observed concentration. $\hat{x}_{ijk}$ is model-predicted concentration for group $k$. 
+
+The residual error between $x$ and $\hat{x}$ has several components. One component is uncertainty in analytical chemistry.
+
+Wambaugh et al. (2019) cite Rocke & Lorenzato (1995), who model analytical chemistry observed concentration $x$ as the following function of true concentration $x^{\prime}$.
+
+$$ x =  x^{\prime} e^\eta + \epsilon $$
+
+Using our subscripts, I think it would be
+
+$$ x_{ijkm} = x^{\prime}_{ijkm} e^{\eta_{ijk}} + \epsilon_{ijk} $$
+Here, there are two measurement errors, $\eta$ and $\epsilon$. Each is zero-mean normal distributed with its own standard deviation.  $\eta_{ijk} \sim \textrm{Normal}(0, \sigma_{\eta})$ and $\epsilon_{ijk} \sim \textrm{Normal}(0, \sigma_{\epsilon})$.
+
+$\epsilon$ represents background noise. $\eta$ represents concentration-dependent noise. 
+Both $\epsilon$ and $\eta$ are likely to be lab-dependent, because they are likely to be instrument- and run-dependent.  
+
+Meanwhile, the "true" concentration $x^{\prime}_{ijkm}$ also has inter-individual variability around some group-specific mean. It could be modeled as
+
+$$ x^{\prime}_{ijkm} \sim \textrm{(Log)-Normal}(\mu = \hat{x}_{ijk}, \sigma_{\textrm{indiv}}) $$
+In this case, error is chemical- and species-specific, maybe lab-population-specific.
+
+Model-predicted concentration $\hat{x}_{ijkm}$ is the best estimate of group mean "true" concentration. It is a function of the model parameters for chemical/species $i$, along with dose $d$, time $t$, dosing route $r$, and analysis media $m$, for observation $m$ within group $k$ within study $j$ within chemical/species $i$.
+
+$$ \hat{x}_{ijkm} = f(\theta_i; \quad d_{ijk}, t_{ijk}, r_{ijk}, m_{ijk}) $$
+
+
+Could we in fact try to estimate the hyperparameters $\sigma_\eta$ and $\sigma_epsilon$?
+
+
+How would we write the likelihood function?
+
+Rocke & Lorenzato (1995) say "Any combination of $\eta$ and $\epsilon$ that satisfies $\epsilon = x - \x^{\prime} e^{\eta}$ is possible" (where I have substituted my notation of $x^{\prime}$ for the "true" concentration).
+
+They write the likelihood as
+
+$$ \int_{-\infty}^{\infty} \frac{1}{2 \pi \sigma_\epsilon \sigma_\eta}
+\exp \left(
+\frac{-\eta^2}
+{2 \sigma_\eta^2}
+\right)
+\exp \left(
+\frac{-(x-x^{\prime}e^\eta)^2}
+{2 \sigma_\epsilon^2}
+\right)
+d \eta $$
+
+In their Appendix 2, they explain how they implemented the numerical integration using Gauss-Hermite quadrature. This looks complicated but I think I can figure it out (?)
+
+Is there anything we can do without going to that full extent? Does log-transforming x help with this heteroscedasticity at all? At high concentrations, the errors do become approximately log-normal.
+
+
+$$ x =  x^{\prime} e^\eta + \epsilon $$
+
+Log-transforming, we get
+
+$$ \log x = \log(x^{\prime} e^\eta + \epsilon) $$
+
+If $\epsilon$ is small compared to $x^{\prime} e^\eta$ , then this is approximately equal to
+
+$$ \log x = \eta + \log(x^{\prime}) $$
+
+But if $\epsilon$ is not small compared to $x^{\prime} e^\eta$ -- for example, if $x^{\prime}$ is near zero -- then that approximation is not good.
+
+Could we say that likelihood is log-normal for detects, and normal for non-detects? And assume two different sigmas per study -- one for detects and one for non-detects? That would be a sort of piecewise approximation for the measurement error.

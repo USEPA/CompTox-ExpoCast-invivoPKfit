@@ -1,0 +1,109 @@
+---
+title: "Breusch-Pagan for summary data"
+author: "Caroline Ring"
+date: "2023-01-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The Breusch-Pagan test is a way of testing for heteroscedasticity in residuals. 
+
+In effect, you regress the squared residuals on one or more explanatory variables (e.g. the predicted values), then take the R-squared of the regression times the number of observations, which then takes a chi-squared distribution whose degrees of freedom are equal to the number of explanatory variables.
+
+My current problem: What to do with summary data?
+
+# Setup
+
+Assume data are organized into $i = 1, 2, \ldots, G$ groups, each containing $N_i$ individuals indexed as $j = 1, 2, \ldots, N_i$. A single individual observation would be indexed as $y_{ij}$.
+
+With summary data, we don't have individual observations. Instead, for each group $i$, we have the sample mean $\bar{y}_i$, sample standard deviation $s_i$, and the number of individuals in the sample $N_i$. We also know the dose for each group, $D_i$.
+
+We also have a TK model prediction for each group, $\mu_i$.
+
+The total number of individuals across all groups is $N = \sum_{i=1}^G N_i$.
+
+## If we did have individual data
+
+The residual for individual $j$ in group $i$ would be
+
+$$ \epsilon_{ij} = y_{ij} - \mu_{ij} $$
+
+# Linear model of squared residuals
+
+I'm going to leave this at one explanatory variable for the sake of simplicity. I expect to only use one in practice. Specifically, I plan to use the predicted value (by the fitted TK model).
+
+$$ (\epsilon_{ij})^2 = \beta_0 + \beta_1 \mu_{ij} + \delta_{ij} = \widehat{(\epsilon_{ij})^2} + \delta_{ij}$$
+Assume the $\delta_{ij}$ are iid zero-mean normal.
+
+# Goal: calculate R-squared of the above linear model
+
+$$ r^2 = 1 - \frac{
+\sum_{i=1}^G \sum_{j=i}^{N_i}
+\left(
+(\epsilon_{ij})^2 - \widehat{(\epsilon_{ij})^2}
+\right)^2 
+}
+{
+\sum_{i=1}^G \sum_{j=i}^{N_i} \left(
+(\epsilon_{ij})^2 - \overline{(\epsilon_{ij})^2}
+\right)^2 
+} $$
+
+where $\overline{(\epsilon_{ij})^2}$ is the overall average squared residual across all groups:
+
+$$ \overline{(\epsilon_{ij})^2} = \frac{1}{N} \sum_{i=1}^G \sum_{j=1}^{N_i}  (\epsilon_{ij})^2$$ 
+Let's rewrite this using our definitions above
+
+$$ r^2 = 1 - \frac{
+\sum_{i=1}^G \sum_{j=i}^{N_i}
+\left(
+(y_{ij} - \mu_{i})^2 - \left( \beta_0 + \beta_1 \mu_{i} \right)
+\right)^2 
+}
+{
+\sum_{i=1}^G \sum_{j=1}^{N_i} \left(
+(y_{ij} - \mu_{i})^2 - \frac{1}{N} \sum_{i=1}^G \sum_{j=1}^{N_i}  (y_{ij} - \mu_{i})^2
+\right)^2 
+} $$
+
+## Numerator
+
+Expand
+
+$$ \sum_{i=1}^G \sum_{j=i}^{N_i}
+\left(
+y_{ij}^2 - 2 y_{ij} \mu_{i} + \mu_{i}^2 - \beta_0 - \beta_1 \mu_{i}
+\right)^2 $$
+
+I think I worked it out in `bp_rsq_summary2.py`, using SymPy. It comes to
+
+```{r, eval = FALSE}
+sum(3*N*si^4 + 2*si^2*(b0 + b1*mui - 3*(ybari - mui)^2) + (b0^2 + 2*b0*(b1*mui - si^2 - (ybari - mui)^2) + b1^2*mui^2 + 2*b1*(-si^2 - (ybari - mui)^2)*mui + 6*si^2*mui^2 + ybari^4 - 4*ybari^3*mui + ybari^2*(6*si^2 + 6*mui^2) + ybari*(-12*si^2*mui - 4*mui^3) + mui^4)*Ni)
+```
+
+# Denominator
+
+Again, see SymPy. It comes to
+
+```{r, eval = FALSE}
+sum(3*N*si^4 + eps2bar^2*Ni + 4*eps2bar*ybari*Ni*mui - 2*eps2bar*(si^2*(Ni - 1) + ybari^2*Ni) - 2*eps2bar*Ni*mui^2 + 6*si^2*ybari^2*Ni - 6*si^2*ybari^2 + ybari^4*Ni - 4*ybari*(3*si^2*Ni - 3*si^2 + ybari^2*Ni)*mui - 4*ybari*Ni*mui^3 + 6*(si^2*(Ni - 1) + ybari^2*Ni)*mui^2 + Ni*mui^4)
+```
+
+where
+
+```{r, eval = FALSE}
+eps2bar = sum((Ni-1) * si^2 + Ni * ybari^2 - 2 * mui * Ni * ybari + Ni * mui^2)
+```
+
+Then I think we have it.
+
+For the likelihood for fitting:
+
+we use the same thing as the numerator
+
+```{r}
+sum(3*N*si^4 + 2*si^2*(b0 + b1*mui - 3*(ybari - mui)^2) + (b0^2 + 2*b0*(b1*mui - si^2 - (ybari - mui)^2) + b1^2*mui^2 + 2*b1*(-si^2 - (ybari - mui)^2)*mui + 6*si^2*mui^2 + ybari^4 - 4*ybari^3*mui + ybari^2*(6*si^2 + 6*mui^2) + ybari*(-12*si^2*mui - 4*mui^3) + mui^4)*Ni)
+```

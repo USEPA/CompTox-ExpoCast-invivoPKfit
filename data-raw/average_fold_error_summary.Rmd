@@ -1,0 +1,22 @@
+---
+title: "Fold error summary"
+author: "Caroline Ring"
+date: "2023-05-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Fold error for individual data within one group
+
+$$ AFE_{ij} =  \frac{1}{N_i} \sum_{j=1}^{N_i} \frac{y_{ij}}{\mu_{i}} $$
+
+This can be rewritten as
+
+$$ AFE = \frac{1}{N_i}  \frac{1}{\mu_i} \sum_{j=1}^{N_i} y_{ij}  $$
+which can in turn be rewritten as
+
+$$ AFE = \frac{ \bar{y}_i }{\mu_i} $$
+

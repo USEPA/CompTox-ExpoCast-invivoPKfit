@@ -1,0 +1,149 @@
+---
+title: "Log-likelihood for summary data"
+author: "Caroline Ring"
+date: "2022-12-19"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data
+
+Imagine we have $N$ observations of a dependent (response) variable, $\boldsymbol{z_1}, \boldsymbol{z_2}, \ldots, \boldsymbol{z_i), \ldots, \boldsymbol{z_N}$. Each of these corresponds to one or more independent predictor variables, $\boldsymbol{x_1}, \ldots, \boldsymbol{x_i}, \ldots, \boldsymbol{x_N}$.
+
+The $i^{th}$ observation is a summary composed of three values: the sample mean, sample standard deviation, and count of a sample of {M_i} underlying individual-subject observations.
+
+$$ \boldsymbol{z_i} =  \left(
+\begin{array}{c}
+\bar{y}_i  \\
+s_i \\
+M_i\\
+\end{array} 
+\right) $$
+
+where
+
+$$ \boldsymbol{y_i} = \left(
+\begin{array}{c}
+y_{i1} \\
+\cdots \\
+y_{ij}\\
+\cdots \\
+y_{iM_i} \\
+\end{array} 
+\right) $$
+
+For example, this might be a toxicokinetic study where, say, 36 rats were divided into 6 groups, and each group was dosed at a different level, resulting in 6 dose groups. Blood was drawn from the animals in each dose group at a series of time points, and the concentration of chemical X was analyzed. For each dose group and each time point, the mean and standard deviation of concentrations was reported. In this case, group $i$ represents one dose and one time point.
+
+# Definitions of sample mean and sample variance
+
+The sample mean and sample variance (or SD) were computed from the original individual-level data using the following definitions.
+
+## Sample mean
+
+$$ \bar{y}_i = \frac{1}{M_i} \sum_{j=1}^{M_i} y_{ij} $$
+## Sample variance
+
+$$ s_i^2 = \frac{1}{M_i - 1} \sum_{j=1}^{M_i} \left( y_{ij} - \bar{y}_i \right) ^2$$
+
+# Normal log-likelihood
+
+Assume we have a model that predicts a value $\mu_i$ for the $i^{th}$ observation, given the independent (predictor) variables $\boldsymbol{x_i}$ and some vector of parameters $\boldsymbol{\theta}$.
+
+$$ \mu_i = f(\boldsymbol{x_i}; \boldsymbol{\theta}) $$
+
+In the example of a TK study, $f$ might be a TK model -- e.g. a 1-compartment or 2-compartment model.
+
+Our goal is to get the maximum-likelihood estimates of the parameters $\boldsymbol{\theta}$ -- in other words, the parameter values that make it most likely that the model would produce the data actually observed. 
+
+To do that we need to formulate the likelihood of the data given the parameters.
+
+In this case, we assume a zero-mean normal distribution of the residual errors. This is equivalent to assuming the observed values are normally distributed around a mean given by the predicted values.
+
+Write this likelihood function for individual $j$ in group $i$. This is just the normal probability density function.
+
+$$ L_{ij} = \frac{1}{\sigma \sqrt{2 \pi}} \exp \left[ \frac{-1}{2} \left( \frac{y_{ij} - \mu_i}{\sigma} \right) ^2 \right] $$
+
+## Log-likelihood for individual subjects in group i
+
+It's usually more convenient to work with the log-likelihood, so log-transform it.
+
+$$LL_{ij} = \log \left( \frac{1}{\sigma \sqrt{2 \pi}} \right) + \frac{-1}{2} \left( \frac{y_{ij} - \mu_i}{\sigma} \right) ^2 $$
+## Total log-likelihood of group i
+
+The joint log-likelihood over all subjects in group $i$ is just the sum of individual log-likelihoods.
+
+$$ LL_i = \sum_{j=1}^{M_i} LL_{ij} =  \sum_{j=1}^{M_i} \left[ \log \left( \frac{1}{\sigma \sqrt{2 \pi}} \right) + \frac{-1}{2} \left( \frac{y_{ij} - \mu_i}{\sigma} \right) ^2 \right]$$
+Breaking apart the two terms inside the summation (square brackets), and expanding the square in the second term, this becomes
+
+$$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \frac{-1}{2 \sigma^2} \left[\sum_{j=1}^{M_i} \left( y_{ij}^2 - 2 \mu_i y_{ij} + \mu_i^2  \right) \right]  $$
+Further splitting apart the terms inside the summation (square brackets), this becomes
+
+$$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \\
+\frac{-1}{2 \sigma^2} \sum_{j=1}^{M_i} y_{ij}^2 + \\
+\frac{2 \mu_i}{2 \sigma^2} \sum_{j=1}^{M_i} y_{ij} + \\
+\frac{-\mu_i^2 M_i}{2 \sigma^2} $$
+
+Substitute in the definition of the sample mean:
+
+$$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \\
+\frac{-1}{2 \sigma^2} \sum_{j=1}^{M_i} y_{ij}^2 + \\
+\frac{2 \mu_i}{2 \sigma^2} M_i \bar{y}_i + \\
+\frac{-\mu_i^2 M_i}{2 \sigma^2} $$
+
+Using the definitions of the sample variance and sample mean, it can be shown (see the Appendix) that
+
+$$ \sum_{j=1}^{M_i}  y_{ij}^2 = \left(M_i - 1 \right)  s_i^2 + M_i \bar{y}_i^2  $$
+Substitute this back into the log-likelihood:
+
+$$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \\
+\frac{-1}{2 \sigma^2} \left[ \left(M_i - 1 \right)  s_i^2 + M_i \bar{y}_i^2 \right] + \\
+\frac{2 \mu_i}{2 \sigma^2} M_i \bar{y}_i + \\
+\frac{-\mu_i^2 M_i}{2 \sigma^2} $$
+
+This simplifies to
+
+$$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \\
+\frac{-1}{2 \sigma^2} \left( \\
+\left(M_i - 1 \right)  s_i^2 + M_i \bar{y}_i^2  + \\
+-2 \mu_i M_i \bar{y}_i + \\
+\mu_i^2 M_i \\
+\right) $$
+
+which further simplifies to
+
+$$ LL_i = M_i \log \left(\frac{1}{\sigma \sqrt{2 \pi}} \right) + \\
+\frac{-1}{2 \sigma^2} \left( \\
+\left(M_i - 1 \right)  s_i^2 + \\
+M_i \left( \bar{y}_i - \mu_i \right)^2 \\
+\right) $$
+
+# Appendix
+
+How to use the definition of the sample variance and smaple mean to show that
+
+$$ s_i^2 = \left( \frac{1}{M_i - 1} \sum_{j=1}^{M_i}  y_{ij}^2 \right) - \frac{M_i}{M_i - 1} \bar{y}_i^2 $$
+
+Start with the definition of the sample variance
+
+$$ s_i^2 = \frac{1}{M_i - 1} \sum_{j=1}^{M_i} \left( y_{ij} - \bar{y}_i \right) ^2$$
+Expand the square
+
+$$ s_i^2 = \frac{1}{M_i - 1} \sum_{j=1}^{M_i} \left( y_{ij}^2 - 2 y_{ij} \bar{y}_i + \bar{y}_i^2 \right) $$
+
+Split apart the terms in the summation
+
+$$ s_i^2 = \frac{1}{M_i - 1} \left( \sum_{j=1}^{M_i} y_{ij}^2  - 2 \bar{y}_i  \sum_{j=1}^{M_i} y_{ij} + M_i \bar{y}_i^2 \right)$$
+In the second term, substitute from the definition of the sample mean, $\sum_{j=1}^{M_i} y_{ij} = M_i \bar{y}_i $
+
+$$ s_i^2 = \frac{1}{M_i - 1} \left( \left[ \sum_{j=1}^{M_i} y_{ij}^2 \right]  - 2 M_i \bar{y}_i^2  + M_i \bar{y}_i^2 \right) $$
+This then simplifies to
+
+$$ s_i^2 = \frac{1}{M_i - 1} \left( \left[ \sum_{j=1}^{M_i} y_{ij}^2 \right]  -  M_i \bar{y}_i^2 \right) $$
+We canthen solve for $\sum_{j=1}^{M_i} y_{ij}^2$
+
+$$ \sum_{j=1}^{M_i} y_{ij}^2 = (M_i - 1) s_i^2 + M_i \bar{y}_i^2 $$

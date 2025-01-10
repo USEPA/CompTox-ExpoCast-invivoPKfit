@@ -1,0 +1,1239 @@
+---
+title: "Restrictive Clearance Comparison"
+author: "Gilberto Padilla Mercado"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+This vignette describes comparisons between invivoPKfit predicted and those from httk.
+
+```{r library_loading}
+devtools::load_all()
+library(tidyverse)
+my_pk <- readRDS("data-raw/all_cvt_pk.rds")
+source("data-raw/RC_comparison_bkgd.R") # httk loaded here
+```
+
+Steps in the analysis:
+
+1. Get chemicals + species combinations in CvTdb that have _httk_ predictions.
+2. Safely get parameters, clearance, and solutions for each of these groups.
+3. Compare clearances from _httk_ with those from _invivoPKfit_.
+4. Compare $f_{up}$ for subset of data with total values available via _httk_.
+5. Use new _clearance-aware_ optimization of 1-compartment parameters to
+benchmark _httk_ solutions.
+6. Estimate the fraction unbound in plasma for chemicals with rat data,
+for those same chemicals with human data for Clint and Fup. 
+Begin with the assumption that there is restrictive clearance, those chemicals
+that do not change when optimized (and produce reasonable fits) are likely to
+be _restrictively cleared_, whereas those that increase Fup during maximum
+likelihood estimation are _possibly non-restrictively clearaed_. 
+7. Other factors such as renal clearance may play a role in those cases.
+Validate the clearance estimate by measuring changes in predicted clearance.
+Important to identify whether there seems to be a "fraction missing".
+8. Wrap the previous steps into attempts to identify true positive
+categorizations for Restrictive and Potentially Non-Restrictively metabolized
+chemicals (include Lipinski's Rule of 5 too).
+
+The first thing I need to do is get the chemicals included in both the CvTdb subset
+and the httk empirical data for pbpk.
+
+Next I need to get the clearances using the `calc_total_clearance(dtxsid, restrictive.clearance)`
+function from httk. Also need the clearances from invivoPKfit's winning models.
+
+```{r combine_tkstats}
+# Start Here if you ran the background job
+
+my_tkstats <- eval_tkstats(my_pk) %>%
+  filter(Media %in% "plasma") %>%
+  dplyr::select(Chemical, Species, CLtot.tkstats, CLtot.nca) %>%
+  distinct() %>%
+  filter(
+    Species %in% "rat",
+    Chemical %in% rat_pars_rat$clearance_df$Chemical,
+    !is.na(CLtot.tkstats), !is.na(CLtot.nca)
+  ) %>%
+  group_by(Chemical, Species, CLtot.tkstats) %>%
+  summarize(
+    CLtot.nca_mean = mean(CLtot.nca),
+    CLtot.nca_sd = sd(CLtot.nca)
+  )
+
+# Combine these two
+combined_clearance_df <- my_tkstats %>% inner_join(rat_pars_rat$clearance_df)
+```
+
+
+Finally, let's visualize where the tkstats predictions land.
+
+```{r clearance_viz}
+combined_clearance_df %>%
+  mutate(AD_restrictive = abs(CLtot.tkstats - restrictive_clearance),
+         AD_nonrestrictive = abs(CLtot.tkstats - nonrestrictive_clearance),
+         rough_determination = ifelse(
+           min(AD_restrictive, AD_nonrestrictive) == AD_restrictive &
+             CLtot.tkstats < nonrestrictive_clearance,
+           "Restrictive", "Possibly non-Restrictive"
+         )) %>% 
+  dplyr::distinct(Chemical, rough_determination) %>%
+  tally()
+
+# Preliminary viz, plot all clearances
+ccd <- combined_clearance_df %>%
+  relocate(CLtot.nca_mean, CLtot.nca_sd, .after = tidyselect::last_col()) %>%
+  pivot_longer(
+    cols = 3:6,
+    names_to = "Clearance_Source",
+    values_to = "Value"
+  ) %>%
+  mutate(
+    Chemical = factor(Chemical),
+    Clearance_Source = factor(
+      Clearance_Source,
+      levels = c(
+        "CLtot.tkstats", "CLtot.nca_mean",
+        "nonrestrictive_clearance", "restrictive_clearance"
+      )
+    )
+  ) %>%
+  transform(
+    Chemical = fct_reorder(Chemical, Value, max)
+  ) %>% 
+  as_tibble() 
+
+ccd %>%
+  ggplot(aes(
+    x = Value,
+    y = Chemical,
+    fill = Clearance_Source
+  )) +
+  geom_point(shape = 21, alpha = 0.7) +
+  scale_x_log10() +
+  scale_fill_manual(
+    breaks = c(
+      "nonrestrictive_clearance", "CLtot.tkstats",
+      "CLtot.nca_mean",
+      "restrictive_clearance"
+    ),
+    labels = c(
+      "non-restrictive clearance (httk)",
+      "predicted clearance (invivoPKfit)",
+      "mean non-compartmental total clearance (invivoPKfit)",
+      "restrictive clearance (httk)"
+    ),
+    values = c("orange2", "grey5", "skyblue3", "green4")
+  ) +
+  facet_grid(rows = vars(Species), scales = "free", space = "free") +
+  labs(
+    x = "Total Clearance",
+    y = "Chemical"
+  ) +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+    panel.background = element_blank(),
+    panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+    strip.background = element_rect(fill = "white"),
+    strip.text = element_text(face = "bold", angle = 0),
+    # axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    legend.position = "right",
+    legend.direction = "vertical",
+    axis.ticks = element_blank(),
+    axis.line = element_blank()
+  )
+
+clear_chem_levels <- levels(ccd$Chemical)
+
+ggsave(
+  filename = paste0(
+    Sys.getenv("FIG_DIR"),
+    "rat_tkClearance_comparison_httk_PBPK.png"
+  ),
+  height = 8,
+  width = 8,
+  device = "png"
+)
+```
+
+I would also like to know, how does the $f_{up}$ of this set of chemicals
+compare to that of all chemicals in `httk` (Dawson 2021).
+
+```{r fup_comparison}
+fup_df <- data.frame(
+  Chemical = get_cheminfo("DTXSID", species = "Rat"),
+  fup = as.numeric(vapply(get_cheminfo("Funbound.plasma", species = "Rat"),
+                          gsub, pattern = ",.+", replacement = "",
+                          FUN.VALUE = character(1)
+  ))
+)
+
+
+fup_df %>%
+  ggplot(aes(x = fup)) +
+  geom_histogram(
+    # aes(y = after_stat(density)),
+    binwidth = 0.03,
+    color = "grey5", fill = "grey5"
+  ) +
+  geom_histogram(
+    data = fup_df %>%
+      filter(Chemical %in% common_chems_rat),
+    # aes(y = after_stat(density)),
+    fill = NA,
+    color = "darkgreen", binwidth = 0.03
+  ) +
+  expand_limits(expand = c(0,0)) +
+  # geom_vline(xintercept = 0.05, linetype = "dashed") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_x_continuous(expand = expansion(mult = c(0.01, 0.01))) +
+  labs(
+    title = "Distribution of Funbound.plasma values",
+    subtitle = "(chemicals fit by invivoPKfit in dark green)"
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_bw()
+
+ggsave(paste0(Sys.getenv("FIG_DIR"), "fup_density_plots.png"),
+       height = 5,
+       width = 6,
+       device = ragg::agg_png,
+       units = "in"
+)
+
+test_fup <- fup_df %>%
+  # filter(Chemical %in% common_chems_dawson) %>%
+  pull(fup)
+for (i in seq(0, 0.5, by = 1e-9)) {
+  if (sum(test_fup > i) == sum(test_fup <= i)) {
+    print(i)
+    break
+  }
+}
+```
+
+## Exploring _httk_ parameters and solved values for `gas_pbtk`
+
+Note that this is only for rats. This is supposed to be the best case,
+but of course _httk_ is "made" for predicting **human exposures**. Also,
+I will try to order some of this data the same way as the clearance figures.
+
+This will ultimately help understand whether Total Clearance
+differences and prediction differences relate. Of course it would
+be possible to do a formal test for correlation but that overdoes what we need
+to build this relationship for with the rather limited _rat_ data we have
+in both _httk_ and _invivoPKfit_.
+
+
+```{r rat_invivo_comparison}
+
+solve_gas_pbtk(
+  dtxsid = common_chems_dawson[10],
+  dose = 1, exp.conc = 0,
+  iv.dose = FALSE,
+  input.units = "mg/kg",
+  output.units = "mg/L",
+  suppress.messages = TRUE
+) %>%
+  ggplot(aes(x = time)) +
+  geom_line(aes(y = Cplasma)) +
+  geom_line(aes(y = Crest), color = "blue4") +
+  geom_line(aes(y = Cgut), color = "goldenrod") +
+  geom_line(aes(y = Cliver), color = "darkgreen") +
+  geom_line(aes(y = Clung), color = "hotpink") +
+  geom_line(aes(y = Ckidney), color = "purple4")
+
+# Functions wrapping httk single dose evaluation
+httk_bolus_gas_pbtk <- function(dtxsid, species = "Human",
+                                dose, times, iv.dose, LOQ) {
+  tmp_solution <- solve_gas_pbtk(
+    dtxsid = unique(dtxsid),
+    dose = unique(dose),
+    exp.conc = 0,
+    iv.dose = unique(iv.dose),
+    times = unique(c(0, times/24)),
+    input.units = "mg/kg",
+    output.units = "mg/L",
+    species = unique(stringr::str_to_title(species)),
+    default.to.human = TRUE,
+    suppress.messages = TRUE
+  )
+  # Remove the 0.0001 intermediate time value that is returned
+  retdf <- tibble(
+    Time = round(tmp_solution[, "time"]*24, digits = 3),
+    httk_Preds = tmp_solution[, "Cplasma"]
+  )
+  retdf[which(retdf$Time %in% unique(round(times, 3))), ]
+}
+```
+
+We need to put the _in vivo_ data in an amenable format.
+For this I will limit the species to "rat", the chemicals to
+`common_chems_rat`, and the medium to "plasma".
+
+
+```{r rat_data}
+my_data <- get_data(my_pk)
+
+rat_df <- my_data %>%
+  distinct(Chemical, Species, Dose, Route, Media, Time, Conc, exclude, Detect,
+           pLOQ) %>%
+  filter(Species %in% "rat", Media %in% "plasma",
+         Chemical %in% common_chems_rat, !exclude, Detect) %>%
+  mutate(iv_dose = (Route == "iv"),
+         Time = round(Time, 3)) %>%
+  group_by(Chemical, Species, Dose, Route, Media) %>%
+  filter(n() > 4) %>%
+  nest(.key = "CvT") %>%
+  rowwise() %>%
+  mutate(
+    httk_solved = list(
+      tryCatch(
+        expr = do.call(httk_bolus_gas_pbtk,
+                       list(
+                         dtxsid = Chemical,
+                         species = Species,
+                         dose = Dose,
+                         times = CvT$Time,
+                         iv.dose = CvT$iv_dose,
+                         LOQ = CvT$pLOQ
+                       )
+        ) %>%
+          inner_join(tibble(Time = CvT$Time, Conc = CvT$Conc, pLOQ = CvT$pLOQ),
+                     by = join_by(Time)),
+        error = function(err) {
+          message(paste0("Unable to get solution for ", Chemical))
+          print(err)
+        } 
+      )
+    )
+  ) %>% filter(Chemical %in% clear_chem_levels)
+
+length(unique(rat_df$Chemical))
+
+rat_df$Chemical <- factor(rat_df$Chemical, levels = clear_chem_levels)
+
+rat_df <- rat_df %>%
+  dplyr::select(Chemical, Species, Dose, Route, Media, httk_solved) %>%
+  unnest(cols = httk_solved)
+
+rat_out <- rat_df %>%
+  mutate(httk_Preds = ifelse(httk_Preds < pLOQ, pLOQ, httk_Preds)) %>% 
+  mutate(SLE = (log2(Conc) - log2(httk_Preds))^2,
+         AE = abs(Conc - httk_Preds)) %>%
+  summarize(
+    RMSLE = sqrt(mean(SLE, na.rm = TRUE)),
+    MAE = mean(AE, na.rm = TRUE)
+   ) %>% pivot_longer(cols = c(RMSLE, MAE),
+                      names_to = "metric",
+                      values_to = "value")
+
+rat_out %>%
+  na.omit() %>%
+  ggplot() +
+  geom_tile(data = rat_out %>% na.omit() %>%
+              filter(metric %in% "RMSLE"),
+            aes(x = metric, y = Chemical, fill = value)) +
+  scale_fill_gradient(low = "grey5", high = "grey90",
+                      name = "RMSLE") +
+  ggnewscale::new_scale_fill() +
+  geom_tile(data = rat_out %>% na.omit() %>%
+              filter(metric %in% "MAE"),
+            aes(x = metric, y = Chemical, fill = value)) +
+  scale_fill_gradient(low = "darkgreen", high = "seagreen1",
+                      limits = c(0, 80),
+                      labels = c("0", "20",
+                                 "40", "60",
+                                 "80+"),
+                      oob = scales::squish,
+                      name = "MAE") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(hjust = 1, angle = 50),
+        legend.title = element_text(hjust = 0.5)) +
+  coord_fixed(ratio = 0.75)
+
+ggsave(
+  filename = paste0(
+    Sys.getenv("FIG_DIR"),
+    "rat_httk_predictionRMSLE.png"
+  ),
+  height = 8.1,
+  width = 4,
+  device = "png"
+)
+
+rat_out2 <- rat_df %>%
+  group_by(Chemical, Species, Route, Dose) %>% nest() %>%
+  summarize(plot = map(
+    data,
+    \(d){
+      ggplot(d, aes(x = Time)) +
+        geom_point(aes(y = Conc)) +
+        geom_line(aes(y = httk_Preds),
+                    color = "forestgreen") +
+        geom_point(aes(y = httk_Preds),
+                   color = "forestgreen",
+                   shape = 1) +
+        labs(title = Chemical,
+             subtitle = paste(Dose, "mg/kg given via",
+                               Route, "bolus"),
+             y = "Plasma Concentration (mg/L)",
+             x = "Time (hrs)") +
+        theme_bw() +
+        theme(plot.title = element_text(hjust = 0.5),
+              plot.subtitle = element_text(hjust = 0.5))
+    }
+  ))
+```
+
+
+
+```{r httk_solution}
+
+rat_params %>%
+  ggplot(aes(y = fupClint)) + 
+  geom_point(aes(x = Clint), color = "darkred", shape = 1) +
+  geom_abline(slope = 1, intercept = 0, color = "darkblue",
+              linetype = "dashed")
+
+rat_params %>%
+  mutate(fup_z = scale(Funbound.plasma),
+         clint_z = scale(Clint)) %>%
+  dplyr::select(Chemical, fup_z, clint_z) %>%
+  pivot_longer(cols = c(fup_z, clint_z),
+               names_to = "pars", values_to = "vals") %>%
+  ggplot(aes(x = pars, y = vals, group = Chemical)) +
+  geom_line()
+
+httk::calc_tkstats(dtxsid = unique(rat_out$Chemical)[[5]])
+httk::parameterize_gas_pbtk(
+  restrictive.clearance = TRUE,
+  dtxsid = unique(rat_out$Chemical)[[5]]
+)
+
+httk::solve_gas_pbtk(
+  dtxsid = unique(combined_clearance_df$Chemical)[[5]],
+  parameters = httk::parameterize_gas_pbtk(
+    restrictive.clearance = TRUE,
+    dtxsid = unique(combined_clearance_df$Chemical)[[5]]
+  ),
+  dose = 10,
+  exp.conc = 0,
+  input.units = "mg",
+  output.units = "mg",
+  days = 3,
+  plots = TRUE
+)
+
+# For the invivoPKfit functions, we will hold kelim constant
+# This constant will be calculated as CLtot/Vdist (or V1, if 2-compartment)
+# This constant is derived by httk in the following way:
+calc_total_clearance(
+  dtxsid = common_chems[[10]],
+  restrictive.clearance = FALSE
+) /
+  calc_vdist(dtxsid = common_chems[[10]])
+```
+
+I have modified the starts of the 1- and 2-compartment models,
+as well as adding a restrictive_clearance argument in stat_model.
+
+```{r running-invivoPKfit}
+# This is now updated to use dawson chem table
+minimal_pk <- pk(data = cvt %>%
+                   filter(analyte_dtxsid %in% common_chems_rat,
+                          species %in% "rat"))
+
+new_pk <- minimal_pk +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(
+    keep_data_original = TRUE,
+    suppress.messages = FALSE
+  ) +
+  settings_optimx(method = c("L-BFGS-B")) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  stat_error_model(error_group = vars(Chemical, Species)) +
+  stat_model(model = c(
+    "model_1comp", "model_1comp_cl_rest", 
+    "model_1comp_cl_nonrest", "model_1comp_fup",
+    "model_flat")) +
+  settings_optimx(method = c("bobyqa"))
+
+new_pk <- do_data_info(new_pk)
+
+new_pk <- do_prefit(new_pk)
+gc()
+
+unique(new_pk$prefit$par_DF$param_name)
+
+new_pk$prefit$par_DF %>%
+  arrange(Chemical, Species) %>%
+  filter(param_name == "Fup") %>%
+  View()
+
+new_pk <- do_fit(new_pk, n_cores = 14)
+gc()
+
+new_pk$fit %>%
+  View()
+
+saveRDS(new_pk, "data-raw/ratCVT_wHTTK_reformulated.rds")
+```
+
+```{r begin_analysis}
+new_pk <- readRDS("data-raw/ratCVT_wHTTK_reformulated.rds")
+
+coef(new_pk) %>% View()
+eval_tkstats(new_pk, finite_only = FALSE) %>% View()
+get_winning_model(new_pk) %>%
+  count(model)
+
+
+AIC(new_pk) %>%
+  arrange(Chemical, Species) %>%
+  group_by(model, method) %>% 
+  count(is.finite(AIC))
+
+pl2comp <- plot(new_pk,
+                use_scale_conc = FALSE,
+                n_interp = 12
+)
+
+pl2comp %>%
+  filter(Chemical %in% "DTXSID4020533") %>%
+  pull(final_plot)
+
+rel_ll <- AIC(new_pk) %>% 
+  filter(is.finite(AIC)) %>% 
+  dplyr::select(-c(log_likelihood, npar)) %>% 
+  pivot_wider(names_from = model,
+              values_from = AIC) %>% 
+  rowwise() %>% 
+  mutate(minAIC = min(c_across(starts_with("model_")), na.rm = TRUE)) %>% 
+  ungroup() %>%
+  mutate(across(starts_with("model_"), \(x) {
+    signif(exp((minAIC - x)/2) * 100, 4)
+  }))
+
+# Test whether the flat model has lowest relative likelihood
+rel_ll %>%
+  dplyr::select(-c(Species, method))
+# We can inspect this visually
+rel_ll %>% arrange(desc(model_flat)) %>% head()
+rel_ll %>%
+  dplyr::select(-c(Species, method)) %>% 
+  rowwise() %>% 
+  mutate(across(contains("_1comp"),
+                \(x) {
+                  ifelse(
+                    x < model_flat | x < 1,
+                    NA_real_,
+                    x
+                  )
+                })) %>% 
+  filter(!if_all(contains("_1comp_"), is.na)) %>%
+  clipr::write_clip()
+
+rel_ll %>%
+  rowwise() %>% 
+  mutate(across(contains("_1comp"),
+                \(x) {
+                  ifelse(
+                    x < model_flat | x < 1,
+                    NA_real_,
+                    x
+                  )
+                })) %>% 
+  drop_na(model_1comp_fup)
+
+new_pk$fit %>%
+  filter(param_name %in% "Fup",
+         model %in% "model_1comp_fup") %>%
+  ggplot(aes(x = estimate, y = start)) +
+  geom_point(size = 2) +
+  theme_bw() +
+  coord_equal(xlim = c(0,1), ylim = c(0,1),
+              expand = TRUE)
+
+new_pk$fit %>%
+  filter(param_name %in% "Fup",
+         model %in% "model_1comp_fup") %>%
+  distinct(Chemical, Species, method, model,
+           param_name, estimate, start) %>%
+  mutate(direction = ifelse(abs(estimate - start) < 0.1,
+                            "similar (less than 10% difference)",
+                            ifelse(estimate > start,
+                                   "increase",
+                                   "decrease"))) %>%
+  pivot_longer(cols = c(estimate, start),
+               names_to = "parameterization",
+               values_to = "value") %>%
+  mutate(parameterization = factor(parameterization,
+                                   levels = c("start", "estimate"))) %>%
+  ggplot(aes(x = parameterization, y = value)) +
+  geom_point() +
+  geom_line(aes(group = Chemical)) +
+  facet_grid(cols = vars(direction)) +
+  labs(title = "Optimization of fraction unbound in plasma") +
+  theme_bw()
+
+ggsave(filename = paste0(
+  Sys.getenv("FIG_DIR"),
+  format(today(), '%d%b%Y'),
+  "fup_optimization_generalFits"
+))
+
+```
+
+
+Why are so many fits failing?
+Well, we should take a look at the parameter which we are holding constant,
+`kelim` and whether the new starting points vastly differ from those in the
+starting points based on the data.
+
+For this I will just use the PK object I have saved `my_pk` and take the
+_prefit_ parameter estimations and first compare that with eventual optimized `kelim`.
+
+```{r kelim-questions}
+# Original data, filtered for common_chems
+# par_DF
+my_kelim_prefit <- my_pk$prefit$par_DF %>%
+  filter(
+    param_name %in% "kelim",
+    Chemical %in% common_chems_dawson
+  ) %>%
+  distinct(Chemical, Species, param_name, lower_bound, upper_bound, start)
+
+my_kelim_fit <- coef(my_pk) %>%
+  inner_join(get_winning_model(my_pk)) %>%
+  ungroup() %>%
+  distinct(model, Chemical, Species, kelim) %>%
+  rename(fit_kelim = "kelim") %>%
+  filter(Chemical %in% common_chems_dawson)
+
+my_kelim_df <- inner_join(my_kelim_fit, my_kelim_prefit)
+
+
+httk_df <- new_pk$prefit$par_DF %>%
+  filter(param_name %in% "kelim") %>%
+  distinct(Chemical, Species, param_name, start) %>%
+  rename(init_restrictive = "start") %>%
+  inner_join(
+    nonrest_pk$prefit$par_DF %>%
+      filter(param_name %in% "kelim") %>%
+      distinct(Chemical, Species, param_name, start) %>%
+      rename(init_nonrestrictive = "start")
+  )
+
+
+full_df <- inner_join(my_kelim_df, httk_df) %>%
+  relocate(fit_kelim, .after = last_col())
+
+
+full_df %>%
+  ggplot(aes(x = Chemical)) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey30") +
+  geom_errorbar(aes(ymax = upper_bound, ymin = lower_bound)) +
+  geom_point(aes(y = fit_kelim, color = "Original Optimized")) +
+  geom_point(aes(y = init_restrictive, color = "Restrictive")) +
+  geom_point(aes(y = init_nonrestrictive, color = "Non-restrictive")) +
+  geom_point(aes(y = start, shape = "Original Initialized")) +
+  facet_grid(rows = vars(Species), scales = "free", space = "free") +
+  scale_color_manual(
+    name = "kelim",
+    breaks = c("Original Optimized", "Restrictive", "Non-restrictive"),
+    values = c(
+      "Original Optimized" = "skyblue4",
+      "Restrictive" = "orange2",
+      "Non-restrictive" = "green4"
+    )
+  ) +
+  scale_shape_manual(
+    name = "",
+    values = 4
+  ) +
+  coord_flip() +
+  scale_y_log10(labels = scales::label_math(format = log10)) +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+    panel.background = element_blank(),
+    panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+    strip.background = element_rect(fill = "white"),
+    strip.text = element_text(face = "bold"),
+    legend.direction = "vertical",
+    axis.ticks = element_blank(),
+    axis.line = element_blank(),
+    axis.text.y = element_blank(),
+    strip.text.y = element_text(angle = 0)
+  )
+
+
+ggsave(
+  filename = paste0(Sys.getenv("FIG_DIR"), "kelim_compare_2024_0329.png"),
+  height = 11,
+  width = 8.5
+)
+```
+
+
+
+```{r new_analysis}
+# Loading the new data
+new_pk <- readRDS("data-raw/someCVT_wHTTK_JOINT.rds")
+
+new_wm <- get_winning_model(new_pk)
+new_AIC <- AIC(new_pk)
+new_rsq <- rsq(new_pk)
+new_rmse <- rmse(new_pk, use_scale_conc = FALSE)
+
+new_tkstats <- eval_tkstats(new_pk, finite_only = FALSE)
+
+new_resid <- residuals(new_pk)
+
+my_data <- get_data(new_pk) %>%
+  distinct(Chemical, Species, Reference, Route, Media, Dose, Time, Conc) %>%
+  right_join(new_resid)
+
+
+pl <- plot(new_pk, n_interp = 12, use_scale_conc = FALSE)
+pdf(
+  file = paste0(
+    Sys.getenv("FIG_DIR"),
+    "AllFits_nonDoseNorm_newPK_reParametizedModels_2024_0412.pdf"
+  ),
+  height = 6, width = 10
+)
+for (i in seq_len(nrow(pl))) {
+  print(pl$final_plot[[i]])
+}
+dev.off()
+```
+
+Comparing total clearance estimates for those where a restrictive or non-restrictive model
+was the "best fit" as determined by AIC.
+
+```{r cltot-comparison}
+new_cltot2 <- new_tkstats %>%
+  filter(str_detect(model, "rest")) %>%
+  select(
+    Chemical, Species, Media, Route,
+    model, method,
+    CLtot.tkstats, CLtot.nca
+  ) %>%
+  filter(!is.na(CLtot.tkstats)) %>%
+  mutate(clearance_type = ifelse(str_detect(model, "nonrest"),
+                                 "NonRestrictive",
+                                 ifelse(str_detect(model, "rest"),
+                                        "Restrictive",
+                                        "optimized kelim"
+                                 )
+  )) %>%
+  rowwise() %>%
+  mutate(
+    CLtot.httk_rest = calc_total_clearance(
+      dtxsid = Chemical,
+      restrictive.clearance = TRUE
+    ),
+    CLtot.httk_nonrest = calc_total_clearance(
+      dtxsid = Chemical,
+      restrictive.clearance = FALSE
+    )
+  )
+
+
+
+new_cltot2 %>%
+  ggplot(aes(x = Chemical)) +
+  geom_point(aes(y = CLtot.httk_rest),
+             shape = 19, size = 2, color = "green4") +
+  geom_point(aes(y = CLtot.httk_nonrest),
+             shape = 19, size = 2, color = "orange2") +
+  geom_point(aes(y = CLtot.tkstats,
+                 shape = Species), size = 3, color = "black", stroke = 1) +
+  scale_y_log10(labels = scales::label_math(format = log10)) +
+  geom_hline(yintercept = c(0.01, 0.1, 1, 10)) +
+  scale_shape_manual(values = c(0, 1, 2, 5, 6)) +
+  coord_flip() +
+  facet_grid(
+    rows = vars(clearance_type),
+    scales = "free", space = "free"
+  ) +
+  labs(title = paste(
+    "CLtot for constant kelim \"best fits\" (empty)",
+    "and httk calculations (filled)",
+    sep = "\n"
+  )) +
+  theme_bw() +
+  theme(
+    axis.line = element_line(linewidth = 1),
+    axis.text = element_text(size = 12),
+    axis.title = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    plot.background = element_rect(fill = "white"),
+    strip.text.y = element_text(angle = 0),
+    strip.background = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  filename = paste0(Sys.getenv("FIG_DIR"),
+                    "Cltot_backcompare_wDawson_2024_0416.png"),
+  height = 8,
+  width = 9
+)
+```
+
+```{r chemical-correlation}
+new_AIC %>%
+  ungroup() %>%
+  filter(
+    model %in% c("model_1comp", "model_2comp"),
+    Species %in% "rat"
+  ) %>%
+  group_by(Chemical) %>%
+  filter(AIC == min(AIC)) %>%
+  mutate(estimate = "nonConst") %>%
+  distinct(Chemical, model, estimate) -> nAIC_nonConst
+new_AIC %>%
+  ungroup() %>%
+  filter(
+    model %in% c("model_1comp_rest", "model_2comp_rest"),
+    Species %in% "rat"
+  ) %>%
+  group_by(Chemical) %>%
+  filter(AIC == min(AIC)) %>%
+  mutate(estimate = "Rest") %>%
+  distinct(Chemical, model, estimate) -> nAIC_rest
+new_AIC %>%
+  ungroup() %>%
+  filter(
+    model %in% c("model_1comp_nonrest", "model_2comp_nonrest"),
+    Species %in% "rat"
+  ) %>%
+  group_by(Chemical) %>%
+  filter(AIC == min(AIC)) %>%
+  mutate(estimate = "nonRest") %>%
+  distinct(Chemical, model, estimate) -> nAIC_nonrest
+
+full_nAIC <- bind_rows(nAIC_nonConst, nAIC_rest) %>%
+  bind_rows(nAIC_nonrest)
+
+new_tkstats_full <- get_tkstats(new_pk)
+
+new_tkstats_full %>%
+  filter(Species %in% "rat", !(model %in% "model_flat")) %>%
+  distinct(Chemical, model, CLtot) %>%
+  inner_join(full_nAIC) %>%
+  na.omit() %>%
+  distinct(Chemical, estimate, CLtot) %>%
+  pivot_wider(
+    names_from = estimate,
+    values_from = CLtot
+  ) %>%
+  rowwise() %>%
+  mutate(
+    CLtot.httk_rest = calc_total_clearance(
+      dtxsid = Chemical,
+      restrictive.clearance = TRUE
+    ),
+    CLtot.httk_nonrest = calc_total_clearance(
+      dtxsid = Chemical,
+      restrictive.clearance = FALSE
+    )
+  ) %>%
+  ungroup() %>%
+  mutate(
+    A_rest = log(nonConst) - log(CLtot.httk_rest),
+    A_nonrest = log(nonConst) - log(CLtot.httk_nonrest),
+    B_rest = log(Rest) - log(CLtot.httk_rest),
+    B_nonrest = log(Rest) - log(CLtot.httk_nonrest),
+    C_rest = log(nonRest) - log(CLtot.httk_rest),
+    C_nonrest = log(nonRest) - log(CLtot.httk_nonrest)
+  ) %>%
+  select(Chemical, A_rest:C_nonrest) -> df_valcomp
+
+df_valcomp %>%
+  column_to_rownames(var = "Chemical") %>%
+  t() %>%
+  as.matrix() %>%
+  cor() %>%
+  signif() -> val_cormat
+
+hclust(d = as.dist((1 + val_cormat) / 2), method = "average") %>% plot()
+
+hclust(d = as.dist((1 + val_cormat) / 2), method = "average") -> val_hclust
+
+corrplot::corrplot(abs(val_cormat))
+
+# reorder the Chemical names prior to plotting
+df_valcomp %>%
+  mutate(Chemical = factor(
+    x = Chemical,
+    levels = val_hclust$labels[val_hclust$order]
+  )) %>%
+  pivot_longer(
+    cols = A_rest:C_nonrest,
+    names_to = "comparison", values_to = "logres"
+  ) %>%
+  mutate(
+    comparison = case_when(
+      comparison == "A_nonrest" ~ "free kelim vs httk nonrestrictive",
+      comparison == "A_rest" ~ "free kelim vs httk restrictive",
+      comparison == "B_nonrest" ~ "restrictive kelim vs httk nonrestrictive",
+      comparison == "B_rest" ~ "restrictive kelim vs httk restrictive",
+      comparison == "C_nonrest" ~ "nonrestrictive kelim vs httk nonrestrictive",
+      comparison == "C_rest" ~ "nonrestrictive kelim vs httk restrictive",
+    ),
+    comparison = factor(comparison,
+                        levels = c(
+                          "free kelim vs httk restrictive",
+                          "free kelim vs httk nonrestrictive",
+                          "restrictive kelim vs httk restrictive",
+                          "nonrestrictive kelim vs httk nonrestrictive",
+                          "nonrestrictive kelim vs httk restrictive",
+                          "restrictive kelim vs httk nonrestrictive"
+                        )
+    )
+  ) %>%
+  ggplot(aes(x = comparison, y = Chemical, fill = logres)) +
+  geom_tile() +
+  scale_fill_gradient2(
+    mid = "grey5", high = "orange", low = "green3",
+    name = "Total Clearance\nlog10-scale difference",
+    limits = c(-4, 4),
+    oob = scales::oob_squish
+  ) +
+  coord_fixed(ratio = 0.3) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(hjust = 1, angle = 45),
+    axis.ticks.y = element_blank(),
+    panel.grid = element_blank(),
+    axis.title.x = element_blank()
+  )
+
+ggsave(
+  filename = paste0(Sys.getenv("FIG_DIR"), "Cltot_compare_heatmap_2024_0409.png"),
+  height = 14,
+  width = 8
+)
+```
+
+# Winning models - An aside
+
+I am a little worried that I am not selecting the best fit model for each
+chemical all the time. Ultimately, the consequences for this being having parameters
+for chemicals with rather poor fits in general, when there is a better fitting
+model available. Here I want to do a quick analysis of the chemical
+*DTXSID3022405* in mouse. The one compartment fits best in the original data
+(by visual inspection) but the 2-compartment wins out in minimizing AIC.
+
+For each model, I can find how many distinct experimental timepoints have the minimum
+RMSE then investigate whether the model with the most _minimum RMSE_ timepoint
+corresponds to the winning model by AIC.
+
+*Update*: About half do not correspond. However, the lack of correspondance doesn't
+mean there is bad fits declared winning model. To address this I need to understand 
+_how_ different the AIC-based winning model and the RMSE-based winning models
+are and whether the data leaves something to be desired.
+This may be as simple as a Pearson correlation between residual values.
+The output of this analysis is how related both
+
+Another thing I am noticing in oral data: the constant _kelim_ fits sometimes are very similar
+to their respective non-constant _kelim_ fits and they actually intersect/cross over.
+I wonder if there is something special about the timepoints at which they intersect.
+For example, a restrictive fit will reach a slightly higher Cmax, but then
+dive below the fully optimized fit during elimination phase before crossing over
+again near the second inflection point.
+
+```{r oxybenzene-test}
+old_AIC <- AIC(my_pk) %>%
+  filter(
+    Chemical %in% "DTXSID3022405",
+    Species %in% "mouse"
+  )
+
+new_AIC <- new_AIC %>%
+  filter(
+    Chemical %in% "DTXSID3022405",
+    Species %in% "mouse"
+  )
+
+plot(new_pk,
+     model = c(
+       "model_2comp",
+       "model_1comp", "model_1comp_nonrest"
+     ),
+     use_scale_conc = FALSE
+) %>%
+  filter(
+    Chemical %in% "DTXSID3022405",
+    Species %in% "mouse"
+  ) %>%
+  pull(final_plot) %>%
+  .[[1]]
+
+old_rsquared <- rmse(my_pk) %>%
+  filter(
+    Chemical %in% "DTXSID3022405",
+    Species %in% "mouse"
+  )
+
+# Only test residual correlations with those not the same
+
+winmodel_conflict <- rmse(new_pk, use_scale_conc = FALSE) %>%
+  group_by(Chemical, Species, Route, Media, Dose, Time) %>%
+  filter(RMSE == min(RMSE)) %>%
+  group_by(Chemical, Species) %>%
+  count(model) %>%
+  filter(n == max(n)) %>%
+  inner_join(new_wm %>% rename("winmodel" = "model")) %>%
+  filter(!(model == winmodel))
+
+# need to map2 then have `residuals.pk(model = .x)` and .y
+# then correlate these values for each data group
+winmodel_conflict %>% names()
+
+mod_red <- winmodel_conflict %>%
+  dplyr::select(Chemical, Species, model) %>%
+  left_join(new_resid,
+            by = join_by(Chemical, Species, model)
+  ) %>%
+  rename("mod_residuals" = "Residuals") %>%
+  select(
+    Chemical, Species, Route, Media, Time, Detect, exclude,
+    model, mod_residuals
+  )
+
+wm_red <- winmodel_conflict %>%
+  dplyr::select(Chemical, Species, winmodel) %>%
+  left_join(new_resid,
+            by = join_by(Chemical, Species, "winmodel" == "model")
+  ) %>%
+  rename("wm_residuals" = "Residuals") %>%
+  select(
+    Chemical, Species, Route, Media, Time, Detect, exclude,
+    winmodel, wm_residuals
+  )
+sum_red <- new_resid %>%
+  group_by(Chemical, Species, model) %>%
+  summarize(MSE = sum(Residuals^2) / n())
+
+
+cor_mod <- mod_red %>%
+  inner_join(wm_red) %>%
+  select(Chemical, Species, model, mod_residuals, winmodel, wm_residuals) %>%
+  group_by(Chemical, Species, model, winmodel) %>%
+  summarize(cor_mods = cor(x = mod_residuals, y = wm_residuals)) %>%
+  left_join(sum_red, by = join_by(Chemical, Species, model)) %>%
+  rename("mod_MSE" = "MSE") %>%
+  left_join(sum_red, by = join_by(Chemical, Species, "winmodel" == "model")) %>%
+  rename("wm_MSE" = "MSE")
+
+
+my_pl_1comp <- plot(new_pk,
+                    n_interp = 11, use_scale_conc = FALSE,
+                    model = c(
+                      "model_1comp",
+                      "model_1comp_rest",
+                      "model_1comp_nonrest"
+                    )
+)
+
+my_pl_2comp <- plot(new_pk,
+                    n_interp = 11, use_scale_conc = FALSE,
+                    model = c(
+                      "model_2comp",
+                      "model_2comp_rest",
+                      "model_2comp_nonrest"
+                    )
+)
+
+
+# General trends about residual correlation and MSE
+cor_mod %>%
+  mutate(cor_bin = ifelse(abs(cor_mods) >= 0.60,
+                          "Taking win_model",
+                          "Taking low RMSE model"
+  )) %>%
+  na.omit() %>%
+  ggplot() +
+  geom_point(aes(x = mod_MSE, y = wm_MSE)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dotted") +
+  facet_grid(rows = vars(cor_bin))
+
+
+cor_mod %>%
+  filter(!(model %in% "model_flat")) %>%
+  mutate(cor_bin = ifelse(abs(cor_mods) >= 0.60,
+                          "Taking win_model",
+                          "Taking low RMSE model"
+  )) %>%
+  na.omit() %>%
+  ggplot() +
+  geom_histogram(aes(x = cor_mods, fill = model),
+                 binwidth = 0.05
+  ) +
+  facet_grid(rows = vars(winmodel)) +
+  scale_fill_viridis_d() +
+  theme_bw() +
+  theme(strip.text.y = element_text(angle = 0)) +
+  labs(
+    x = "Correlation of Residuals",
+    fill = "model by grouped RMSE"
+  )
+
+ggsave(
+  filename = paste0(
+    Sys.getenv("FIG_DIR"), "winModel_correlations_changes",
+    "_2024_Apr_16.png"
+  ),
+  height = 6,
+  width = 8
+)
+
+# Try oxybenzone fitting without dose-norm
+minimal_pk <- pk(
+  data = cvt %>%
+    filter(analyte_dtxsid %in% "DTXSID3022405"),
+  mapping = ggplot2::aes(
+    Chemical = analyte_dtxsid,
+    Chemical_Name = analyte_name_original,
+    DTXSID = analyte_dtxsid,
+    CASRN = analyte_casrn,
+    Species = species,
+    Reference = document_id,
+    Media = conc_medium_normalized,
+    Route = administration_route_normalized,
+    Dose = dose_level_normalized,
+    Dose.Units = "mg/kg",
+    Subject_ID = subject_id,
+    Series_ID = series_id,
+    Study_ID = study_id,
+    ConcTime_ID = conc_time_id,
+    N_Subjects = n_subjects_in_series,
+    Weight = weight_kg,
+    Weight.Units = "kg",
+    Time = time_hr,
+    Time.Units = "hours",
+    Value = conc,
+    Value.Units = "mg/L",
+    Value_SD = conc_sd_normalized,
+    LOQ = loq
+  )
+)
+new_pk <- minimal_pk +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(
+    keep_data_original = TRUE,
+    suppress.messages = FALSE
+  ) +
+  settings_optimx(method = c("L-BFGS-B")) +
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE) +
+  stat_error_model(error_group = vars(Chemical, Species, Reference)) +
+  stat_model(model = c(
+    "model_flat", "model_1comp", "model_2comp",
+    "model_1comp_rest", "model_1comp_nonrest",
+    "model_2comp_rest", "model_2comp_nonrest"
+  ))
+
+new_pk <- do_fit(new_pk, n_cores = 3)
+get_winning_model(new_pk)
+plot(new_pk, best_fit = TRUE) %>% pull(final_plot)
+```
+
+
+
+
+# Categorizing chemicals
+
+I first need to find the winning model for constant kelims and optimized kelims
+
+```{r categorization}
+grouped_wm <- new_AIC %>%
+  mutate(model_type = case_when(
+    str_detect(model, "_nonrest$") ~ "Nonrestrictive",
+    str_detect(model, "_rest$") ~ "Restrictive",
+    .default = "Free_kelim"
+  )) %>%
+  group_by(Chemical, Species, model_type) %>%
+  filter(AIC == min(AIC)) %>%
+  ungroup() %>%
+  arrange(Chemical, Species, model_type) %>%
+  select(Chemical, Species, model, method, model_type)
+
+
+grouped_tkstats <- get_tkstats(new_pk) %>%
+  inner_join(grouped_wm)
+
+grouped_tkstats %>%
+  select(
+    Chemical, Species, Reference,
+    Route, Media, model_type,
+    CLtot
+  ) %>%
+  pivot_wider(names_from = model_type, values_from = CLtot) %>%
+  mutate(
+    low_invivo_CL = ifelse(
+      Free_kelim < Nonrestrictive / 2 | Free_kelim < Restrictive / 2,
+      TRUE, FALSE
+    ),
+    high_extra_hepCL = ifelse(
+      Free_kelim > 1.5 * Nonrestrictive | Free_kelim > 1.5 * Restrictive,
+      TRUE, FALSE
+    ),
+    rest_metabol = ifelse(
+      Free_kelim > Restrictive / 2 & Free_kelim < 1.5 * Nonrestrictive,
+      TRUE, FALSE
+    ),
+    combo_cat = paste0(
+      low_invivo_CL + 0,
+      high_extra_hepCL + 0,
+      rest_metabol + 0
+    )
+  ) %>%
+  count(combo_cat)
+arrange(Chemical, combo_cat) %>%
+  na.omit() %>%
+  View()
+```
+
+
+## New reformulated models that estimate Clint!
+
+```{r reformMod}
+get_tkstats(new_pk) %>%
+  distinct(Chemical, Species, model, CLtot) %>%
+  pivot_wider(names_from = model, values_from = CLtot) %>%
+  left_join(new_pk$prefit$par_DF %>%
+              filter(param_name == "CLtot") %>%
+              select(Chemical, Species, model, start) %>%
+              mutate(model = paste0("start_", model)) %>%
+              pivot_wider(
+                names_from = model,
+                values_from = start
+              )) %>%
+  View("Clearance")
+
+
+new_cl_tkstats <- get_tkstats(new_pk)
+my_tkstats <- my_pk %>%
+  get_winning_model() %>%
+  left_join(coef(my_pk)) %>%
+  left_join(rsq(my_pk)) %>%
+  distinct()
+my_tkstats %>%
+  select(-coefs_vector) %>%
+  clipr::write_clip()
+# Send the R2 too.
+
+
+## Need to parameterize with gas_pbpk or new 3compartment
+## To add into total clearance
+# Rb2p * Qalv/Kblood2air
+```
