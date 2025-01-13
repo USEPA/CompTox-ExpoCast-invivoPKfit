@@ -27,7 +27,7 @@ If the observation is that the concentration was below a limit of quantitation (
 In this case we add to the likelihood all the probability from zero to the limit of quantitation
 We use the cumulative distribution function of the log-normal distribution for this:
 
-CDF(LOQ, í µí¼‡, í µí¼) =1/2+1/2 í µí±’í µí±Ÿí µí±“((lnâ¡í µí°¿í µí±‚í µí±„âˆ’í µí¼‡)/(âˆš2 í µí¼))
+CDF(LOQ, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½) =1/2+1/2 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½((lnâ¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½âˆ’ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)/(âˆš2 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½))
 
 We separate the observations into those above the LOQ and below the LOQ, above the LOQ we use the log-normal density, below the LOQ we use the CDF
 
@@ -93,6 +93,8 @@ Caroline Ring
 Christopher Cook
 [@Cook.Christopher@epa.gov]
 
+Gilberto Padilla Mercado
+[@padillamercado.gilberto@epa.gov]
 
 ## License
 
