@@ -3,12 +3,13 @@
 devtools::load_all()
 library(httk)
 httk::load_dawson2021()
+# Need to use a model that results in different values for restrictive & non-restrictive clearance
 
 get_common_chems <- function(species = "human") {
 
-  species_chems <- get_cheminfo(info = "DTXSID",
+  species_chems <- httk::get_cheminfo(info = "DTXSID",
                                 species = species,
-                                model = "gas_pbtk",
+                                model = "3compartment2",
                                 median.only = TRUE,
                                 physchem.exclude = TRUE,
                                 suppress.messages = TRUE)
@@ -21,7 +22,8 @@ get_common_chems <- function(species = "human") {
   return(chems)
 }
 
-parameterize_all_gas <- function(species = "human") {
+# Parameterize the parameters
+parameterize_all <- function(species = "human") {
   sp_chems <- get_common_chems(species = species)
   function(human_clint_fup = FALSE) {
     if (isTRUE(human_clint_fup)) {
@@ -29,15 +31,17 @@ parameterize_all_gas <- function(species = "human") {
     } else {
       human_clint_fup <- FALSE
     }
-  message(glue::glue("Total number of chemicals loaded: {length(sp_chems)}"))
-  message(glue::glue("Fup & Clint set to Human values? {human_clint_fup}"))
-    params <- tryCatch(
+    message(glue::glue("Total number of chemicals loaded: {length(sp_chems)}"))
+    message(glue::glue("Fup & Clint set to Human values? {human_clint_fup}"))
+    # Get restrictive and non-restrictive parameters
+    params_r <- tryCatch(
       expr = {
         lapply(sp_chems,
                \(x) {
-                 httk::parameterize_gas_pbtk(
+                 httk::parameterize_3comp2(
                    dtxsid = x,
                    species = species,
+                   restrictive.clearance = TRUE,
                    default.to.human = human_clint_fup,
                    force.human.clint.fup = human_clint_fup,
                    suppress.messages = TRUE)
@@ -49,23 +53,85 @@ parameterize_all_gas <- function(species = "human") {
       }
     )
 
-    if (any(is.na(params))) stop("Params not calculated for all DTXSIDs!")
+    params_nr <- tryCatch(
+      expr = {
+        lapply(sp_chems,
+               \(x) {
+                 httk::parameterize_3comp2(
+                   dtxsid = x,
+                   species = species,
+                   restrictive.clearance = FALSE,
+                   default.to.human = human_clint_fup,
+                   force.human.clint.fup = human_clint_fup,
+                   suppress.messages = TRUE)
+               }
+        )
+      }, error = function(msg) {
+        message("Not possible to parameterize_gas_pbtk for all dtxsid ",
+                "try to use default.to.human = TRUE.")
+      }
+    )
 
-    extr_params <- do.call(rbind,
-                           lapply(params, as.data.frame,
+    if (any(is.na(params_r)) || any(is.na(params_nr))) {
+      stop("Params not calculated for all DTXSIDs!")
+    }
+
+    # Get the additional Vdist (in case we need it) for each
+    vdist_params_r <- data.frame(
+      Vdist_r = vapply(params_r,
+                     \(x) {
+                       httk::calc_vdist(
+                         parameters = x,
+                         species = species,
+                         default.to.human = human_clint_fup,
+                         suppress.messages = TRUE)
+                     }, FUN.VALUE = numeric(1)
+      )
+    )
+    vdist_params_nr <- data.frame(
+      Vdist_nr = vapply(params_nr,
+                     \(x) {
+                       httk::calc_vdist(
+                         parameters = x,
+                         species = species,
+                         default.to.human = human_clint_fup,
+                         suppress.messages = TRUE)
+                     }, FUN.VALUE = numeric(1)
+      )
+    )
+
+    # Collate the parameters in a data.frame
+    extr_params_r <- do.call(rbind,
+                           lapply(params_r, as.data.frame,
                                   row.names = NULL))
+    colnames(extr_params_r) <- paste(colnames(extr_params_r),
+                                     "restrictive",
+                                     sep = ".")
+
+    extr_params_nr <- do.call(rbind,
+                           lapply(params_nr, as.data.frame,
+                                  row.names = NULL))
+    colnames(extr_params_nr) <- paste(colnames(extr_params_nr),
+                                     "nonrestrictive",
+                                     sep = ".")
+
     extr_params <- cbind(
       data.frame(
         Chemical = sp_chems,
         Species = species,
         forced_human_values = human_clint_fup),
-      extr_params)
+      extr_params_r, extr_params_nr,
+    vdist_params_r, vdist_params_nr
+    )
 
-    restrictive_clearance <- vapply(params,
+    # Calculate restrictive or nonrestrictive clearance using the
+    # appropriate parameterization
+    restrictive_clearance <- vapply(params_r,
                                     \(x) {
                                       httk::calc_total_clearance(
                                         parameters = x,
                                         species = species,
+                                        model = "3compartment2",
                                         suppress.messages = TRUE,
                                         restrictive.clearance = TRUE
                                       )
@@ -73,36 +139,73 @@ parameterize_all_gas <- function(species = "human") {
                                     FUN.VALUE = double(1)
     )
 
-    nonrestrictive_clearance <- vapply(params,
+    nonrestrictive_clearance <- vapply(params_nr,
                                        \(x) {
                                          httk::calc_total_clearance(
                                            parameters = x,
                                            species = species,
+                                           model = "3compartment2",
                                            suppress.messages = TRUE,
                                            restrictive.clearance = FALSE
                                          )
                                        },
                                        FUN.VALUE = double(1)
     )
+
+
+    # Get half-lives of each chemical
+    restrictive_halflife <- vapply(params_r,
+                                    \(x) {
+                                      httk::calc_half_life(
+                                        parameters = x,
+                                        species = species,
+                                        model = "3compartment2",
+                                        suppress.messages = TRUE,
+                                        restrictive.clearance = TRUE
+                                      )
+                                    },
+                                    FUN.VALUE = double(1)
+    )
+
+    nonrestrictive_halflife <- vapply(params_nr,
+                                    \(x) {
+                                      httk::calc_half_life(
+                                        parameters = x,
+                                        species = species,
+                                        model = "3compartment2",
+                                        suppress.messages = TRUE,
+                                        restrictive.clearance = FALSE
+                                      )
+                                    },
+                                    FUN.VALUE = double(1)
+    )
+
+    # Assemble the clearance and halflife data.frame
     clearance_df <- data.frame(
       Chemical = sp_chems,
       Species = species,
       restrictive_clearance,
-      nonrestrictive_clearance
+      nonrestrictive_clearance,
+      restrictive_halflife,
+      nonrestrictive_halflife
     )
 
-    names(params) <- sp_chems
+    # Give the parameters the chemical names
+    names(params_nr) <- sp_chems
+    names(params_r) <- sp_chems
 
+    # Return a list
     return(list(param_df = extr_params,
                 clearance_df = clearance_df,
-                named_params = params,
+                named_params_restrictive = params_r,
+                named_params_nonrestrictive = params_nr,
                 species = unique(species)))
   }
   # Implicitly returns the function above
 }
 
-parameterize_rat <- parameterize_all_gas(species = "rat")
-parameterize_human <- parameterize_all_gas(species = "human")
+parameterize_rat <- parameterize_all(species = "rat")
+parameterize_human <- parameterize_all(species = "human")
 
 rat_pars_rat <- parameterize_rat()
 rat_pars_human <- parameterize_rat(human_clint_fup = TRUE)
@@ -111,19 +214,13 @@ human_pars_human <- parameterize_human()
 
 
 get_httk_preds <- function(parameters, pk_obj, species = "human") {
-  this_species = parameters$species
-  all_params = parameters$named_params
-  if (this_species != species) {
-    message("Species do not match! ", "Parameters from species:",
-            this_species, " and ", species, "data will be used.")
-  }
   pk_df <- unique.data.frame(
     subset(
       get_data(pk_obj),
       subset = (
         Media %in% "plasma" &
           Species %in% species &
-          Chemical %in% names(all_params) &
+          Chemical %in% names(parameters) &
           exclude %in% FALSE &
           Detect %in% TRUE
       ),
@@ -146,9 +243,9 @@ get_httk_preds <- function(parameters, pk_obj, species = "human") {
 
   pk_dlist <- lapply(pk_data,
                      \(x) {
-                       this_params <- all_params[[unique(x$Chemical)]]
+                       this_params <- parameters[[unique(x$Chemical)]]
 
-                       tmp_solution <- httk::solve_gas_pbtk(
+                       tmp_solution <- httk::solve_3comp2(
                          parameters = this_params,
                          dose = unique(x$Dose),
                          exp.conc = 0,
