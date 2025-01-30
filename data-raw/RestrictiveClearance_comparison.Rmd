@@ -14,16 +14,55 @@ This vignette describes comparisons between invivoPKfit predicted and those from
 ```{r library_loading}
 today <- format(Sys.Date(), "%d%b%Y")
 devtools::load_all()
-library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 library(ctxR)
 library(ggvenn)
 library(ggalluvial)
 library(flextable)
 library(reticulate)
+library(patchwork)
 source("data-raw/RC_comparison_bkgd.R") # httk & dawson_2021 loaded here
 ```
 
+We first want to see how many chemicals are in either _httk_ or _invivoPKfit_
+
+```{r venn_diagrams}
+member_list <- list(
+  httk_gas_pbtk = unique(get_cheminfo(info = "DTXSID",
+                                species = "human",
+                                model = "gas_pbtk",
+                                median.only = TRUE,
+                                physchem.exclude = TRUE,
+                                suppress.messages = TRUE)) %>% 
+    suppressWarnings(),
+  cvt = cvt %>% 
+    filter(species %in% c("human", "rat"),
+           conc_medium_normalized == "plasma") %>%
+    pull(analyte_dtxsid)
+)
+
+ggvenn(member_list, fill_color = c("white", "white"))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "httk_vs_CvT_VennDiagram_human.png"),
+       bg = "white",
+       height = 3, width = 5
+)
+
+target_chems <- intersect(member_list$cvt, member_list$httk_gas_pbtk)
+
+filter_targets <- function(.data) {
+  stopifnot("Chemical" %in% names(.data))
+  dplyr::filter(.data = .data, Chemical %in% target_chems)
+}
+```
+
+
 I select which parameterization (based on species) that I will use.
+
 
 ```{r selecting_chemical_params}
 chosen_list <- rat_pars_human
@@ -42,8 +81,11 @@ count(this_httk_clearance_df, restrictive_clearance == nonrestrictive_clearance)
 Here I do a quick fit of the CvT data only for those that have plasma measurements.
 
 ```{r quick-fit}
+
 # Only use plasma for simplicity
-this_pk <- pk(cvt %>% filter(conc_medium_normalized == "plasma")) +
+this_pk <- pk(cvt %>% 
+                dplyr::filter(conc_medium_normalized == "plasma")
+              ) +
   settings_optimx(method = "bobyqa") +
   facet_data(vars(Chemical, Species)) +
   settings_preprocess(
@@ -103,34 +145,6 @@ that we will get appropriate fits with the human numbers.
 The aforementioned set of rat data, for example, 33 of 51 chemicals find
 appropriate fits with invivoPKfit + httk.
 
-We first want to see how many chemicals are in either _httk_ or _invivoPKfit_
-
-```{r venn_diagrams}
-member_list <- list(
-  httk_gas_pbtk = unique(get_cheminfo(info = "DTXSID",
-                                species = "human",
-                                model = "gas_pbtk",
-                                median.only = TRUE,
-                                physchem.exclude = TRUE,
-                                suppress.messages = TRUE)) %>% 
-    suppressWarnings(),
-  cvt = cvt %>% 
-    filter(species %in% c("human", "rat"),
-           conc_medium_normalized == "plasma") %>%
-    pull(analyte_dtxsid)
-)
-
-ggvenn(member_list, fill_color = c("white", "white"))
-
-ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
-                         "RestrictiveClearance_Analysis/",
-                         "CURRENT_", "httk_vs_CvT_VennDiagram_human.png"),
-       bg = "white",
-       height = 3, width = 5
-)
-
-target_chems <- intersect(member_list$cvt, member_list$httk_gas_pbtk)
-```
 
 ## Lipinski's Rules
 
@@ -200,6 +214,7 @@ py_h_acceptors = [Chem.Descriptors.NHOHCount(x) for x in mol_from_smiles]
 
 
 ```{r lipinksi_alluvial}
+
 target_chem_summary <- target_chem_info %>%
   distinct(dtxsid, monoisotopicMass, smiles) %>%
   right_join(data.frame(smiles = smiles_list)) %>%
@@ -293,13 +308,15 @@ nonrestrictive_preds <- get_httk_preds(
   .cols = starts_with("httk_")
 )
 
-all_httk_preds <- inner_join(restrictive_preds, nonrestrictive_preds)
+all_httk_preds <- inner_join(restrictive_preds, nonrestrictive_preds) %>%
+  filter_targets()
 
 this_nonflat_winmodel <- get_winning_model(this_pk) %>%
-  filter(model %in% c("model_1comp", "model_2comp"))
+  filter(model %in% c("model_1comp", "model_2comp")) %>%
+  filter_targets()
 
 winning_preds <- predict(this_pk) %>%
-  semi_join(this_nonflat_winmodel) %>%
+  semi_join(this_nonflat_winmodel) %>% # The targets already filtered here
   distinct(Chemical, Species, Chemical_Name,
            model, method, Dose, Media, Route, Reference, pLOQ, Time,
            N_Subjects, Conc, Conc_est)
@@ -353,12 +370,13 @@ combined_RMSLE %>%
   )) %>% 
   ggplot(aes(x = Chemical, y = RMSLE_invivoPKfit)) +
   geom_point(color = "green4") +
-  geom_point(aes(y = RMSLE_nonrestrictive), shape = 4, size = 0.5) +
+  geom_point(aes(y = RMSLE_nonrestrictive), shape = 6, size = 0.5) +
   geom_point(aes(y = RMSLE_restrictive), shape = 4, size = 0.5) +
   geom_linerange(aes(ymin = RMSLE_nonrestrictive, ymax = RMSLE_restrictive)) +
   facet_grid(~factor(comparison_group,
                      levels = c("Less than", "Between", "More than")),
              scales = "free_x", space = "free_x") +
+  labs(y = "RMSLE") +
   theme_bw() +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
@@ -371,6 +389,9 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        height = 4, width = 8
 )
 
+# Number of chemicals we have RMSLE's for
+combined_RMSLE %>% pull(Chemical) %>% unique() %>% length()
+
 ```
 
 Another weight that we may consider is relative log-likelihood. This can be
@@ -378,6 +399,7 @@ calculated using AIC, compared to the the flat model.
 
 ```{r relative-likelihood}
 this_rll_probs <- AIC(this_pk) %>%
+  filter_targets() %>%
   distinct(Chemical, Species, model, AIC) %>%
   pivot_wider(names_from = model, values_from = AIC) %>%
   rowwise() %>% 
@@ -443,7 +465,7 @@ will _not_ be calculated and instead `CLtot/Fgutabs.tkstats` will be available.
 ```{r combine_tkstats}
 # Get the winning model and only include chemicals in target_chems
 this_winmodel <- get_winning_model(this_pk) %>%
-    filter(Chemical %in% target_chems)
+    filter_targets()
 # How many overlapping chemicals have winning models that aren't flat?
 count(
   this_winmodel,
@@ -455,6 +477,7 @@ this_tkstats <- eval_tkstats(this_pk,
                              finite_only = TRUE,
                              dose_norm = TRUE
 ) %>%
+  filter_targets() %>%
   rename(CLtot_Fgutabs.tkstats = `CLtot/Fgutabs.tkstats`) %>%
   distinct(Chemical, Species, method, model, Dose, Route, Media,
            CLtot.tkstats, CLtot_Fgutabs.tkstats, halflife.tkstats, Css.tkstats) %>%
@@ -474,8 +497,8 @@ count(
     `!is.na(halflife.tkstats)` = "Valid halflife",
     n = "Number of Chemicals"
     )
-# 46 chemicals have valid total clearance
-# 144 chemicals have valid total clearance/Fgutabs
+# 83 chemicals have valid total clearance
+# 180 chemicals have valid total clearance/Fgutabs
 # 5 chemicals have only valid total clearance and no valid total clearance/Fgutabs
 
 count(this_tkstats, is.na(Css.tkstats))
@@ -514,7 +537,49 @@ css_httk_batch <- function(param_list,
 this_css_df <- inner_join(
   css_httk_batch(this_param_rest_l, restrictive = TRUE),
   css_httk_batch(this_param_nrest_l, restrictive = FALSE)
-) %>%
+)
+# Chart with relative differences (think steps) of Css between clearance types
+this_css_df %>%
+  mutate(relative_difference = log1p(Css_httk_r) - log1p(Css_httk_nr)) %>%
+  count(relative_difference == 0, Css_httk_r == 0) # 31 Chemicals have zero difference
+###
+this_css_df %>%
+  mutate(relative_difference = log1p(Css_httk_r) - log1p(Css_httk_nr)) %>%
+  filter(relative_difference > 0) %>%
+  ggplot(aes(x = forcats::fct_reorder(Chemical,
+                                      relative_difference, .desc = FALSE))) +
+  geom_linerange(aes(ymin = Css_httk_nr, ymax = Css_httk_r)) +
+  labs(title = "Differences between restrictive & nonrestrictive clearance",
+       y = "Css\n(mg/L)", x = "Chemicals") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid.major.x = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+
+this_css_df %>%
+  mutate(relative_difference = log1p(Css_httk_r) - log1p(Css_httk_nr)) %>%
+  filter(relative_difference > 0) %>%
+  ggplot(aes(x = forcats::fct_reorder(Chemical,
+                                      relative_difference))) +
+  geom_point(aes(size = relative_difference), y = 0, alpha = 0.2, shape = 16) +
+  annotate(x = 1, y = 150 ,label = "Min: 0 mg/L\n31 Chemicals", geom = "text") +
+  annotate(x = 140, y = 150 ,label = "Max: 30 mg/L\n", geom = "text") +
+  scale_y_continuous(limits = c(-150,150)) +
+  scale_size_area(max_size = 40) +
+  coord_cartesian(clip = "off") +
+  theme_void() +
+  theme(legend.position = "none",
+        plot.margin = unit(c(2,2,1,2), units = "inches"))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "Css_difference_httk_inkblot.png"),
+       bg = "white",
+       height = 5, width = 7)
+###
+
+this_css_df <- this_css_df %>%
   inner_join(this_tkstats) %>%
   distinct(Chemical, model, Route, Css_httk_r, Css_httk_nr, Css.tkstats) %>%
   filter(Css_httk_nr > 0, Css_httk_r > 0, Css.tkstats > 0) %>%
@@ -526,8 +591,20 @@ this_css_df <- inner_join(
       Css.tkstats < Css_httk_r & Css.tkstats < Css_httk_nr ~ "Below",
       Css.tkstats > Css_httk_r & Css.tkstats > Css_httk_nr ~ "Above"),
     levels = c("Above", "Between", "Below")
-  ), Chemical = factor(Chemical) %>% fct_reorder(Css_httk_r)
-  )
+  ), Chemical = factor(Chemical) %>% forcats::fct_reorder(Css_httk_r)
+  ) %>%
+  mutate(nearest_clearance = factor(
+    case_when(
+      between(log2(Css.tkstats),
+              log2(Css_httk_r)-1, log2(Css_httk_r)+1) |
+        (comparison_group_Css == "Above" &
+           log2(Css.tkstats) <= log2(Css_httk_r)+2) ~ "Restrictive",
+      between(log2(Css.tkstats),
+              log2(Css_httk_nr)-1, log2(Css_httk_nr)+1) |
+        comparison_group_Css == "Below" ~ "NonRestrictive",
+      .default = "Out of Range"
+    )
+  ))
 
 this_css_df %>%
   ggplot(aes(x = Chemical)) +
@@ -536,29 +613,46 @@ this_css_df %>%
   geom_linerange(aes(ymin = Css_httk_r,
                      ymax = Css_httk_nr)
   ) +
-  geom_point(aes(y = Css.tkstats, shape = Route), color = "turquoise4") +
+  geom_point(aes(y = Css.tkstats, shape = Route,
+                 color = nearest_clearance)) +
   facet_grid(rows = vars(comparison_group_Css),
              scales = "free_x",
              space = "free_x") +
   scale_y_log10(name = "Css") +
   scale_shape_manual(values = c(0,1)) +
+  scale_color_manual(values = c("magenta3", "green4", "black"),
+                     name = "Within 2-fold\nof clearance:",
+                     ) +
   theme_bw() +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
-        panel.grid = element_blank())
+        panel.grid = element_blank()) +
+  guide_area() +
+  plot_layout(widths = c(8,1))
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "RestrictiveClearance_Analysis/",
-                         "CURRENT_", "Css_comparison_fullChart.png"),
+                         "CURRENT_", "Css_comparison_2foldclearancefullChart.png"),
        bg = "white",
-       height = 4, width = 8
+       height = 5, width = 10
 )
+
+this_css_df %>% 
+  group_by(Chemical) %>%
+  count(nearest_clearance) %>%
+  filter(nearest_clearance != "Out of Range") %>% View()
 
 ```
 
-```{r}
-this_css_df %>%
-  distinct(Chemical, model, Route, Css_httk_r, Css_httk_nr, Css.tkstats) %>%
+Overwhelmingly, the results of this is a Restrictive clearance model...
+however it is important to flag 
+
+
+
+```{r Css_CLint}
+this_css_clint_df <- this_css_df %>%
+  distinct(Chemical, model, Route, Css_httk_r, Css_httk_nr, Css.tkstats,
+           nearest_clearance, comparison_group_Css) %>%
   filter(Css_httk_nr > 0, Css_httk_r > 0, Css.tkstats > 0) %>%
   left_join(data.frame(Chemical = names(this_param_rest_l),
                        CLint = vapply(names(this_param_rest_l),
@@ -567,26 +661,43 @@ this_css_df %>%
                                       },
                                       FUN.VALUE = numeric(1L)
                        ))) %>%
-  mutate(CLint = log10(CLint + 1)) %>%
+  dplyr::filter(CLint > 0)
+
+this_css_clint_df %>%
+  left_join(target_chem_lipinski %>% rename(Chemical = dtxsid)) %>%
   ggplot(aes(x = CLint)) +
   geom_point(aes(y = Css_httk_r), shape = 4, size = 0.5) +
   geom_point(aes(y = Css_httk_nr), shape = 4, size = 0.5) +
   geom_linerange(aes(ymin = Css_httk_r,
                      ymax = Css_httk_nr)
   ) +
-  scale_y_log10(name = "C<sub>SS</sub>") + 
-  labs(x = "CL<sub>int</sub>") +
-  geom_point(aes(y = Css.tkstats, shape = Route), color = "turquoise4") +
-  scale_shape_manual(values = c(0,1)) +
+  scale_y_log10(name = "C<sub>ss</sub>") + 
+  scale_x_log10(name = "CL<sub>int</sub>") +
+  geom_point(aes(y = Css.tkstats, 
+                 fill = `Mass <= 500 Da`,
+                 shape = Route,
+                 color = nearest_clearance)) +
+  facet_grid(rows = vars(nearest_clearance)) +
+  scale_color_manual(values = c("magenta3", "green4", "black"),
+                     guide = "none") +
+  scale_shape_manual(values = c(21,22)) +
+  scale_fill_manual(values = c("white", "grey5")) +
+  guides(fill = guide_legend(override.aes = list(shape = 21))) +
   theme_bw() +
   theme(axis.title = ggtext::element_markdown())
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "RestrictiveClearance_Analysis/",
-                         "CURRENT_", "Css_x_CLint.png"),
+                         "CURRENT_", "Css_x_CLint_wNearestClearanceGrid.png"),
        bg = "white",
-       height = 4, width = 8
+       height = 6, width = 10
 )
+
+this_css_clint_df %>%
+  # group_by(Route) %>%
+  group_modify(~broom::tidy(lm(Css.tkstats ~ nearest_clearance + CLint, data = .x)))
+
+
 ```
 
 Now I will try to triangulate the model weights witht the Css estimates.
@@ -594,7 +705,8 @@ Now I will try to triangulate the model weights witht the Css estimates.
 ```{r weighted_Css}
 combined_model_weights %>%
   inner_join(this_css_df) %>%
-  ggplot(aes(x = fct_reorder(Chemical, Css_httk_r))) +
+  filter_targets() %>%
+  ggplot(aes(x = forcats::fct_reorder(Chemical, Css_httk_r))) +
   geom_point(aes(y = Css_httk_r), shape = 4, size = 0.5) +
   geom_point(aes(y = Css_httk_nr), shape = 4, size = 0.5) +
   geom_linerange(aes(ymin = Css_httk_r,
@@ -607,8 +719,7 @@ combined_model_weights %>%
              space = "free_x") +
   scale_y_log10(name = "Css") +
   scale_shape_manual(values = c(0,1)) +
-  scale_color_viridis_b(option = "viridis", 
-                        guide = guide_colorbar(position = "bottom")) +
+  scale_color_viridis_b(option = "viridis") +
   labs(subtitle = "RMSLE for invivoPKfit compared to httk predictions",
        x = "Chemical\n(ordered by increasing restrictive Css prediction)",
        y = "Css",
@@ -618,7 +729,11 @@ combined_model_weights %>%
         axis.ticks.x = element_blank(),
         plot.subtitle = element_text(hjust = 0.5),
         panel.grid = element_blank(),
-        legend.title = element_text(vjust = 0.8))
+        legend.title = element_text(vjust = 0.8)) +
+  guide_area() +
+  plot_layout(widths = c(8,1))
+
+
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "RestrictiveClearance_Analysis/",
@@ -629,6 +744,109 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 
 ```
 
+First, there are about 80 chemicals which have a `CLtot.tkstats` which may
+give us some idea of the clearance alongside the _inverse confidence_ metric.
+
+```{r CLtot_subset}
+
+this_tkstats %>%
+  inner_join(this_httk_clearance_df) %>%
+  inner_join(combined_model_weights) %>%
+  filter(!is.na(CLtot.tkstats)) %>%
+  mutate(comparison_CLtot = factor(
+    case_when(
+    between(log2(CLtot.tkstats), 
+            log2(restrictive_clearance)-1,
+            log2(restrictive_clearance)+1) ~ "Restrictive",
+    between(log2(CLtot.tkstats), 
+            log2(nonrestrictive_clearance)-1,
+            log2(nonrestrictive_clearance)+1) ~ "Nonrestrictive",
+    between(CLtot.tkstats,
+            restrictive_clearance, nonrestrictive_clearance) ~ "Between",
+    .default = "Out of Range"
+  ), levels = c("Nonrestrictive", "Between", "Restrictive", "Out of Range")
+  )) %>%
+  ggplot(aes(forcats::fct_reorder(Chemical,
+                          gamma_weight))) +
+  geom_point(aes(y = CLtot.tkstats, fill = gamma_weight),
+             shape = 21) +
+  geom_linerange(aes(ymin = restrictive_clearance, 
+                     ymax = nonrestrictive_clearance)) +
+  geom_point(aes(y = restrictive_clearance),
+             shape = 2, size = 0.8) + # Note that this is the lower value
+  geom_point(aes(y = nonrestrictive_clearance),
+             shape = 6, size = 0.8) +
+  scale_fill_viridis_b(option = "viridis", 
+                        guide = guide_colorbar(position = "bottom"),
+                       limits = c(0,1.5)) +
+  scale_y_log10() +
+  facet_grid(cols = vars(comparison_CLtot),
+             scales = "free_x",
+             space = "free_x") +
+  labs(y = "Total Clearance", x = "Chemical", fill = "Inverse Confidence") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(hjust = 0.5),
+        legend.title = element_text(vjust = 0.8))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "TotalClearance_withRMSLEweights.png"),
+       bg = "white",
+       height = 4, width = 8
+)
+
+```
+
+```{r CLtot_subset_withCss}
+
+this_tkstats %>%
+  inner_join(this_httk_clearance_df) %>%
+  inner_join(combined_model_weights) %>%
+  left_join(this_css_df) %>%
+  filter(!is.na(CLtot.tkstats)) %>%
+  mutate(comparison_CLtot = factor(
+    case_when(
+      between(log2(CLtot.tkstats),log2(restrictive_clearance)-1,
+              log2(restrictive_clearance)+1) ~ "Restrictive",
+      between(log2(CLtot.tkstats),log2(nonrestrictive_clearance)-1,
+              log2(nonrestrictive_clearance)+1) ~ "Nonrestrictive",
+      between(CLtot.tkstats,
+              restrictive_clearance, nonrestrictive_clearance) ~ "Between",
+      .default = "Out of range"
+  ), levels = c("Nonrestrictive", "Between", "Restrictive", "Out of range"))) %>%
+  ggplot(aes(forcats::fct_reorder(Chemical,
+                          gamma_weight))) +
+  geom_point(aes(y = CLtot.tkstats, fill = gamma_weight),
+             shape = 21) +
+  geom_linerange(aes(ymin = restrictive_clearance, 
+                     ymax = nonrestrictive_clearance)) +
+  geom_point(aes(y = restrictive_clearance),
+             shape = 4, size = 0.8) + # Note that this is the lower value
+  geom_point(aes(y = nonrestrictive_clearance),
+             shape = 4, size = 0.8) +
+  scale_fill_viridis_b(option = "viridis", 
+                        guide = guide_colorbar(position = "bottom")) +
+  scale_y_log10() +
+  facet_grid(cols = vars(comparison_CLtot),
+             scales = "free_x") +
+  labs(y = "Total Clearance", x = "Chemical", fill = "Inverse Confidence",
+       subtitle = "Estimates within 20% of in vitro modelled predictions") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.subtitle = element_text(hjust = 0.5),
+        legend.title = element_text(vjust = 0.8))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "TotalClearance_withRMSLEweights.png"),
+       bg = "white",
+       height = 4, width = 8
+)
+
+```
 
 ```{r calc_CLtot_Fgutabs}
 this_tkstats2 <- this_tkstats %>%
@@ -675,9 +893,16 @@ combined_clearance_df %>%
   coord_equal(xlim = c(0, 200), y = c(0, 200))
 ```
 
-Notes:
+## Notes:
 Look at Css values for restrictive/nonrestrictive (httk solutions)
 AICs for models
+Important to look for potential reflective metrics and find associations 
+(CLtot, Css, fup) and also look at physiochemical properties that may create
+some distinctions once a prediction of clearance type is made.
+
+So the model will be something like `CLtot ~ Css + fup + Clearance_Type + GFR`
+and we can re-simplify certain things into `halflife` and `kelim` to see
+how likely this would be in a simple, classical PK model.
 
 
 ```{r clearance_viz}
