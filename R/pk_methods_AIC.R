@@ -31,9 +31,9 @@
 #'   status. Default `TRUE`.
 #' @param drop_obs Logical: `TRUE` to drop the observations column in the output
 #' of [logLik()].
-#' @param ... Additional argument. Not in use.
 #' @param k Default 2. The `k` parameter in the log-likelihood formula (see
 #'   Details). Must be named if used.
+#' @param ... Additional argument. Not in use.
 #' @return A data.frame with log-likelihood values and calculated AIC using `newdata`.
 #'   There is one row for each model in `obj`'s [stat_model()] element and
 #'   each [optimx::optimx()] method (specified in [settings_optimx()]).

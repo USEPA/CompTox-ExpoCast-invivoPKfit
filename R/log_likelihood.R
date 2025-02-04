@@ -124,6 +124,7 @@
 #' @param max_multiplier Numeric, but NULL by default. Determines which multiple
 #'  of the maximum concentration to use to limit possible predictions.
 #'  Note: only use this as part of the fitting function.
+#' @param includes_preds Logical: whether `data` includes predictions.
 #' @param suppress.messages Logical.
 #' @return A log-likelihood value for the data given the parameter values in
 #'  params
@@ -139,6 +140,7 @@ log_likelihood <- function(par,
                            negative = TRUE,
                            force_finite = FALSE,
                            max_multiplier = NULL,
+                           includes_preds = FALSE,
                            suppress.messages = TRUE) {
 
   # combine parameters to be optimized and held constant
@@ -162,18 +164,24 @@ log_likelihood <- function(par,
   pLOQ <- data$pLOQ
 
 
-  # get un-transformed predicted plasma concentration vs. time for the current parameter
-  # values, by dose and route
-  pred <- do.call(
-    modelfun,
-    args = list(
-      params = model.params,
-      time = Time_trans,
-      dose = Dose,
-      route = Route,
-      medium = Media
+  if (includes_preds) {
+    stopifnot("data must have Conc_est column." = "Conc_est" %in% names(data))
+    pred <- data$Conc_est
+
+  } else {
+    # get un-transformed predicted plasma concentration vs. time for the current parameter
+    # values, by dose and route
+    pred <- do.call(
+      modelfun,
+      args = list(
+        params = model.params,
+        time = Time_trans,
+        dose = Dose,
+        route = Route,
+        medium = Media
+      )
     )
-  )
+  }
 
   pred[which(pred < pLOQ)] <- pLOQ[which(pred < pLOQ)]
 
