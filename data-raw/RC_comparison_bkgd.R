@@ -77,19 +77,9 @@ parameterize_all <- function(species = "human") {
     }
 
     # Get the additional Vdist (in case we need it) for each
+    # This is the same for either clearance type (in this model)
     vdist_params_r <- data.frame(
       Vdist_r = vapply(params_r,
-                     \(x) {
-                       httk::calc_vdist(
-                         parameters = x,
-                         species = species,
-                         default.to.human = human_clint_fup,
-                         suppress.messages = TRUE)
-                     }, FUN.VALUE = numeric(1)
-      )
-    )
-    vdist_params_nr <- data.frame(
-      Vdist_nr = vapply(params_nr,
                      \(x) {
                        httk::calc_vdist(
                          parameters = x,
@@ -104,24 +94,35 @@ parameterize_all <- function(species = "human") {
     extr_params_r <- do.call(rbind,
                            lapply(params_r, as.data.frame,
                                   row.names = NULL))
-    colnames(extr_params_r) <- paste(colnames(extr_params_r),
-                                     "restrictive",
-                                     sep = ".")
+
+    names(extr_params_r)[which(
+      names(extr_params_r) %in% c("Clmetabolismc","Fabsgut")
+    )] <- paste(
+      names(extr_params_r)[which(
+        names(extr_params_r) %in% c("Clmetabolismc","Fabsgut")
+      )],
+      "restrictive",
+      sep = ".")
 
     extr_params_nr <- do.call(rbind,
                            lapply(params_nr, as.data.frame,
                                   row.names = NULL))
-    colnames(extr_params_nr) <- paste(colnames(extr_params_nr),
+
+    names(extr_params_nr)[which(
+      names(extr_params_nr) %in% c("Clmetabolismc","Fabsgut")
+    )] <- paste(
+      names(extr_params_nr)[which(
+        names(extr_params_nr) %in% c("Clmetabolismc","Fabsgut")
+      )],
                                      "nonrestrictive",
                                      sep = ".")
-
     extr_params <- cbind(
       data.frame(
         Chemical = sp_chems,
         Species = species,
         forced_human_values = human_clint_fup),
-      extr_params_r, extr_params_nr,
-    vdist_params_r, vdist_params_nr
+      merge(extr_params_r, extr_params_nr),
+    vdist_params_r
     )
 
     # Calculate restrictive or nonrestrictive clearance using the
