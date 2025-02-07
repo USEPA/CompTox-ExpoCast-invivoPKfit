@@ -95,7 +95,7 @@ this_pk <- pk(cvt %>%
   stat_error_model(error_group = vars(Chemical, Species))
 
 this_pk <- do_prefit(this_pk)
-this_pk <- do_fit(this_pk, n_cores = 14)
+this_pk <- do_fit(this_pk, n_cores = 12)
 ```
 
 Relationships in the mathematical PK models:  
@@ -104,33 +104,6 @@ Relationships in the mathematical PK models:
 will be calculated instead of the numerator alone.  
 - $C_{ss} \cdot CL_{tot} = C_{H,u}\cdot CL{int}$ (Bennet & Sodhi 2024)  
 - [Add More Here]
-
-
-Steps in the analysis:
-
-1. Get chemicals + species combinations in CvTdb that have _httk_ predictions.
-2. Safely get parameters, clearance, and solutions for each of these groups.
-3. Compare clearances from _httk_ with those from _invivoPKfit_.
-4. Compare $f_{up}$ for subset of data with total values available via _httk_.
-5. Use new _clearance-aware_ optimization of 1-compartment parameters to
-benchmark _httk_ solutions.
-6. Estimate the fraction unbound in plasma for chemicals with rat data,
-for those same chemicals with human data for Clint and Fup. 
-Begin with the assumption that there is restrictive clearance, those chemicals
-that do not change when optimized (and produce reasonable fits) are likely to
-be _restrictively cleared_, whereas those that increase Fup during maximum
-likelihood estimation are _possibly non-restrictively cleared_. 
-7. Other factors such as renal clearance may play a role in those cases.
-Validate the clearance estimate by measuring changes in predicted clearance.
-Important to identify whether there seems to be a "fraction missing".
-8. Wrap the previous steps into attempts to identify true positive
-categorizations for Restrictive and Potentially Non-Restrictively metabolized
-chemicals (include Lipinski's Rule of 5 too).
-9. Implement a _slow_ PBPK model that optimizes $f_{up}$ and $CL_{int}$ under
-restrictive and non-restrictive clearance conditions. Test whether these have a
-substantial difference from initial values. Use `coef_sd()` to evaluate
-uncertainty of these parameter estimates for a larger share of chemicals.
-10. Compare the results of 9 with the putative/predicted clearance from 1-6.
 
 
 The first thing I need to do is get the chemicals included in both the CvTdb subset
@@ -274,7 +247,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "RestrictiveClearance_Analysis/",
                          "CURRENT_", "Alluvium_Lipinski.png"),
        bg = "white",
-       height = 4, width = 6
+       height = 5, width = 6
 )
 ```
 
@@ -386,7 +359,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "RestrictiveClearance_Analysis/",
                          "CURRENT_", "RMSLE_comparison_fullChart.png"),
        bg = "white",
-       height = 4, width = 8
+       height = 4.5, width = 8
 )
 
 # Number of chemicals we have RMSLE's for
@@ -557,6 +530,12 @@ this_css_df %>%
         panel.grid.major.x = element_blank(),
         plot.title = element_text(hjust = 0.5))
 
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "Css_difference_httk_lineplot.png"),
+       bg = "white",
+       height = 5, width = 7)
+
 this_css_df %>%
   mutate(relative_difference = log1p(Css_httk_r) - log1p(Css_httk_nr)) %>%
   filter(relative_difference > 0) %>%
@@ -645,8 +624,7 @@ this_css_df %>%
 ```
 
 Overwhelmingly, the results of this is a Restrictive clearance model...
-however it is important to flag 
-
+however it is important to flag
 
 
 ```{r Css_CLint}
@@ -700,7 +678,7 @@ this_css_clint_df %>%
 
 ```
 
-Now I will try to triangulate the model weights witht the Css estimates.
+Now I will try to triangulate the model weights with the Css estimates.
 
 ```{r weighted_Css}
 combined_model_weights %>%
@@ -748,8 +726,7 @@ First, there are about 80 chemicals which have a `CLtot.tkstats` which may
 give us some idea of the clearance alongside the _inverse confidence_ metric.
 
 ```{r CLtot_subset}
-
-this_tkstats %>%
+enhanced_tkstats <- this_tkstats %>%
   inner_join(this_httk_clearance_df) %>%
   inner_join(combined_model_weights) %>%
   filter(!is.na(CLtot.tkstats)) %>%
@@ -765,7 +742,8 @@ this_tkstats %>%
             restrictive_clearance, nonrestrictive_clearance) ~ "Between",
     .default = "Out of Range"
   ), levels = c("Nonrestrictive", "Between", "Restrictive", "Out of Range")
-  )) %>%
+  ))
+enhanced_tkstats %>%
   ggplot(aes(forcats::fct_reorder(Chemical,
                           gamma_weight))) +
   geom_point(aes(y = CLtot.tkstats, fill = gamma_weight),
@@ -832,7 +810,7 @@ this_tkstats %>%
   facet_grid(cols = vars(comparison_CLtot),
              scales = "free_x") +
   labs(y = "Total Clearance", x = "Chemical", fill = "Inverse Confidence",
-       subtitle = "Estimates within 20% of in vitro modelled predictions") +
+       subtitle = "Estimates within 2-fold of in vitro modelled predictions") +
   theme_bw() +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
@@ -847,6 +825,37 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 )
 
 ```
+
+```{r rudimentary_clustering}
+
+# Set up a data.frame that has chemical, Css difference, Funbound z-score,
+# nearest_clearance (using Css), and model weight
+this_fupZ_df <- this_param_df %>% select(Chemical, Funbound.plasma.restrictive) %>%
+  mutate(Fup_Z = as.vector(scale(sqrt(Funbound.plasma.restrictive))),
+         .keep = "unused")
+
+this_dist_prepdf <- this_css_df %>% select(Chemical, model, Route,
+                       nearest_clearance, comparison_group_Css,
+                       Css_httk_r, Css_httk_nr) %>%
+  mutate(relative_difference = log1p(Css_httk_r) - log1p(Css_httk_nr),
+         .keep = "unused") %>%
+  inner_join(combined_model_weights %>%
+               select(Chemical, Species, gamma_weight)) %>%
+  inner_join(enhanced_tkstats %>%
+               select(Chemical, Species, comparison_CLtot)) %>%
+  inner_join(this_fupZ_df) %>%
+  distinct() %>%
+  mutate(ID = paste(Chemical, Species, model, Route, sep = "."), .keep = "unused")
+
+this_dist_prepdf %>%
+ggplot(aes(x = gamma_weight, y = Fup_Z, color = relative_difference)) + 
+  geom_point() +
+  scale_color_viridis_c() +
+  facet_grid(cols = vars(comparison_CLtot))
+  
+
+```
+
 
 ```{r calc_CLtot_Fgutabs}
 this_tkstats2 <- this_tkstats %>%
