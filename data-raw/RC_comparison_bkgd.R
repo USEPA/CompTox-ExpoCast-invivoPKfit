@@ -246,16 +246,18 @@ get_httk_preds <- function(parameters, pk_obj, species = "human") {
                      \(x) {
                        this_params <- parameters[[unique(x$Chemical)]]
 
-                       tmp_solution <- httk::solve_3comp2(
-                         parameters = this_params,
-                         dose = unique(x$Dose),
-                         exp.conc = 0,
-                         iv.dose = unique("iv" %in% x$Route),
-                         times = unique(c(0, x$Time/24)),
-                         input.units = "mg/kg",
-                         output.units = "mg/L",
-                         species = unique(stringr::str_to_title(x$Species)),
-                         suppress.messages = TRUE
+                       tmp_solution <- suppressWarnings(
+                         httk::solve_3comp2(
+                           parameters = this_params,
+                           dose = unique(x$Dose),
+                           exp.conc = 0,
+                           iv.dose = unique("iv" %in% x$Route),
+                           times = unique(c(0, x$Time/24)),
+                           input.units = "mg/kg",
+                           output.units = "mg/L",
+                           species = unique(stringr::str_to_title(x$Species)),
+                           suppress.messages = TRUE
+                         )
                        )
 
                        retdf <- data.frame(
