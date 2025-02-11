@@ -211,7 +211,7 @@ parameterize_human <- parameterize_all(species = "human")
 rat_pars_rat <- parameterize_rat()
 rat_pars_human <- parameterize_rat(human_clint_fup = TRUE)
 
-human_pars_human <- parameterize_human()
+#human_pars_human <- parameterize_human()
 
 
 get_httk_preds <- function(parameters, pk_obj, species = "human") {
