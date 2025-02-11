@@ -118,6 +118,12 @@ that we will get appropriate fits with the human numbers.
 The aforementioned set of rat data, for example, 33 of 51 chemicals find
 appropriate fits with invivoPKfit + httk.
 
+```{r load_Kd}
+load(paste0(Sys.getenv("OD_DIR"),
+            "Profile/Documents/New-HTTK-raw-2019-05-06.RData")
+)
+```
+
 
 ## Lipinski's Rules
 
@@ -132,14 +138,18 @@ target_chem_info <- get_chemical_details_batch(DTXSID = target_chems,
                                                rate_limit = 1L)
 target_chem_properties <- get_chem_info_batch(DTXSID = target_chems, 
                                               rate_limit = 1L) %>%
-  filter(name == "LogKow: Octanol-Water") %>% distinct()
+  filter(name %in% c("LogKow: Octanol-Water",
+                     "pKa Acidic Apparent",
+                     "pKa Basic Apparent")) %>% distinct()
 
 target_chem_properties %>%
   ggplot(aes(x = source, y = value)) +
-  geom_point() +
+  geom_violin() +
   geom_line(aes(group = dtxsid), color = "grey10", alpha = 0.1) +
   geom_hline(yintercept = 5, linetype = "longdash") +
-  facet_grid(cols = vars(propType), scales = "free_x") +
+  facet_grid(cols = vars(propType), scales = "free_x",
+             rows = vars(name)) +
+  scale_y_log10() +
   theme_bw() +
   theme(axis.text.x = element_text(hjust = 1, angle = 45))
 
@@ -165,6 +175,12 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 target_chem_info %>%
   count(monoisotopicMass <= 500)
 
+target_chem_pw_predicted <- target_chem_properties %>%
+  filter(source == "ACD/Labs") %>%
+  distinct(propertyId, value, dtxsid) %>%
+  pivot_wider(names_from = propertyId,
+              values_from = value)
+  
 ```
 
 ```{r reticulate-prep}
@@ -183,6 +199,7 @@ mol_from_smiles = [Chem.MolFromSmiles(x) for x in py_smiles_list]
 
 py_h_donors = [Chem.Descriptors.NOCount(x) for x in mol_from_smiles]
 py_h_acceptors = [Chem.Descriptors.NHOHCount(x) for x in mol_from_smiles]
+py_tpsa = [Chem.Descriptors.TPSA(x) for x in mol_from_smiles]
 ```
 
 
