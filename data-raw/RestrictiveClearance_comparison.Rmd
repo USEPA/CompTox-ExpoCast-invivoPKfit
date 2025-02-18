@@ -122,6 +122,40 @@ appropriate fits with invivoPKfit + httk.
 load(paste0(Sys.getenv("OD_DIR"),
             "Profile/Documents/New-HTTK-raw-2019-05-06.RData")
 )
+new.raw.httk.data %>%
+  distinct(DTXSID, Affinity.Kd.Med, Affinity.Kd.Low, Affinity.Kd.High,
+           Fit) %>%
+  na.omit() %>%
+  mutate(Target_Chemical = (DTXSID %in% target_chems)) %>%
+ggplot(
+       aes(
+         x = forcats::fct_reorder(DTXSID, Affinity.Kd.Low)
+         )) +
+  geom_linerange(aes(
+    ymin  = Affinity.Kd.Low,
+    ymax = Affinity.Kd.High,
+    color = Target_Chemical
+  ), alpha = 0.4) +
+  geom_point(aes(
+    y = Affinity.Kd.Med, color = Target_Chemical
+  ), size = 0.75) +
+  # facet_grid(cols = vars(Fit), space = "free_x", scales = "free_x") +
+  scale_y_log10(labels = scales::label_log(digits = 1)) +
+  scale_color_manual(values = c("black", "green4")) +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, face = "bold"),
+        legend.position = "bottom") +
+  labs(title = "Kd estimates across chemicals", x = NULL)
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "Kd_estimates_initialsummary.png"),
+       bg = "white",
+       height = 4, width = 9
+)
 ```
 
 

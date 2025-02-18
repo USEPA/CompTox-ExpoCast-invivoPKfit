@@ -679,6 +679,7 @@ diff_log_cvt <- function(new_cvt,
   }
   return(cat(msg_to_write, sep = "\n"))
 }
+diff_log_cvt(cvt_df)
 ```
 
 Save the pulled CVT data with the edits/normalizations, and also save the current date.
