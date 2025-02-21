@@ -16,6 +16,7 @@ today <- format(Sys.Date(), "%d%b%Y")
 devtools::load_all()
 library(dplyr)
 library(tidyr)
+library(stringr)
 library(ggplot2)
 library(ctxR)
 library(ggvenn)
@@ -30,9 +31,9 @@ We first want to see how many chemicals are in either _httk_ or _invivoPKfit_
 
 ```{r venn_diagrams}
 member_list <- list(
-  httk_gas_pbtk = unique(get_cheminfo(info = "DTXSID",
+  httk_3comp2 = unique(get_cheminfo(info = "DTXSID",
                                 species = "human",
-                                model = "gas_pbtk",
+                                model = "3compartment2",
                                 median.only = TRUE,
                                 physchem.exclude = TRUE,
                                 suppress.messages = TRUE)) %>% 
@@ -52,7 +53,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        height = 3, width = 5
 )
 
-target_chems <- intersect(member_list$cvt, member_list$httk_gas_pbtk)
+target_chems <- intersect(member_list$cvt, member_list$httk_3comp2)
 
 filter_targets <- function(.data) {
   stopifnot("Chemical" %in% names(.data))
@@ -95,7 +96,156 @@ this_pk <- pk(cvt %>%
   stat_error_model(error_group = vars(Chemical, Species))
 
 this_pk <- do_prefit(this_pk)
-this_pk <- do_fit(this_pk, n_cores = 12)
+this_pk <- do_fit(this_pk, n_cores = 14)
+```
+
+```{r load-other}
+# Here I want to load all other data and setup other data objects
+# Kd/binding affinity data
+load(paste0(Sys.getenv("OD_DIR"),
+            "Profile/Documents/New-HTTK-raw-2019-05-06.RData")
+)
+
+# Chemical info and properties (averaging the latter by chemical and experimental/predicted)
+target_chem_info <- get_chemical_details_batch(DTXSID = target_chems,
+                                               rate_limit = 1L)
+target_chem_properties <- get_chem_info_batch(DTXSID = target_chems, 
+                                              rate_limit = 1L) %>%
+  filter(name %in% c("LogKow: Octanol-Water",
+                     "pKa Acidic Apparent",
+                     "pKa Basic Apparent")) %>% 
+  group_by(dtxsid, propType, propertyId) %>%
+  summarize(Mean = mean(value, na.rm = TRUE),
+            StDev = sd(value, na.rm = TRUE)) %>%
+  ungroup() %>%
+  distinct()
+
+# Bring together all chemical properties
+target_chem_pw_predicted <- target_chem_properties %>%
+  filter(propType == "predicted") %>%
+  pivot_wider(names_from = propertyId,
+              names_prefix = "pr_",
+              id_cols = dtxsid,
+              values_from = c("Mean", "StDev"))
+target_chem_pw_experimental <- target_chem_properties %>%
+  filter(propType == "experimental") %>%
+  pivot_wider(names_from = propertyId,
+              names_prefix = "ex_",
+              values_from = c("Mean", "StDev"),
+              id_cols = dtxsid)
+
+target_chem_pw_full <- full_join(
+  target_chem_pw_experimental,
+  target_chem_pw_predicted
+) %>%
+  janitor::clean_names() %>%
+  mutate(dtxsid,
+         type_logkow = ifelse(is.na(mean_ex_logkow_octanol_water),
+                              NA, "experimental"),
+         logkow = ifelse(is.na(mean_ex_logkow_octanol_water),
+                         mean_pr_logkow_octanol_water,
+                         mean_ex_logkow_octanol_water),
+         type_apKa = ifelse(is.na(mean_ex_pka_acidic_apparent),
+                            NA, "experimental"),
+         apKa = ifelse(is.na(mean_ex_pka_acidic_apparent),
+                       mean_pr_pka_acidic_apparent,
+                       mean_ex_pka_acidic_apparent),
+         type_bpKa = ifelse(is.na(mean_ex_pka_basic_apparent),
+                            NA, "experimental"),
+         bpKa = ifelse(is.na(mean_ex_pka_basic_apparent),
+                       mean_pr_pka_basic_apparent,
+                       mean_ex_pka_basic_apparent),
+         .keep = "unused") %>%
+  mutate(type_logkow = ifelse(!is.na(logkow) & is.na(type_logkow),
+                              "predicted",
+                              ifelse(type_logkow == "experimental",
+                                     "experimental", NA)),
+         type_apKa = ifelse(!is.na(apKa) & is.na(type_apKa),
+                            "predicted",
+                            ifelse(type_apKa == "experimental",
+                                     "experimental", NA)),
+         type_bpKa = ifelse(!is.na(bpKa) & is.na(type_bpKa),
+                            "predicted",
+                            ifelse(type_bpKa == "experimental",
+                                     "experimental", NA))) %>%
+  mutate(logkow_sd = ifelse(type_logkow == "experimental",
+                            st_dev_ex_logkow_octanol_water,
+                            st_dev_pr_logkow_octanol_water),
+         apKa_sd = ifelse(type_apKa == "experimental",
+                          st_dev_ex_pka_acidic_apparent,
+                          st_dev_pr_pka_acidic_apparent),
+         bpKa_sd = ifelse(type_bpKa == "experimental",
+                          st_dev_ex_pka_basic_apparent,
+                          st_dev_pr_pka_basic_apparent)) %>%
+  select(-starts_with("st_dev")) %>%
+  distinct()
+# Remove the parts of this final dataset
+rm(target_chem_pw_experimental, target_chem_pw_predicted)
+
+# Predictions from httk(code retained but not run after 2.20.2025)
+restrictive_preds <- get_httk_preds(
+  parameters = this_param_rest_l,
+  pk_obj = this_pk,
+  species = c("rat", "human")
+) %>% rename_with(
+  .fn = ~paste0(.x, "_restrictive"),
+  .cols = starts_with("httk_")
+)
+
+nonrestrictive_preds <- get_httk_preds(
+  parameters = this_param_nrest_l,
+  pk_obj = this_pk,
+  species = c("rat", "human")
+) %>% rename_with(
+  .fn = ~paste0(.x, "_nonrestrictive"),
+  .cols = starts_with("httk_")
+)
+
+names(restrictive_preds)
+
+all_httk_preds <- inner_join(restrictive_preds, nonrestrictive_preds) %>%
+  filter_targets()
+rm(restrictive_preds, nonrestrictive_preds)
+# 
+readr::write_csv(all_httk_preds,
+                 file = paste0(Sys.getenv("FIG_DIR"),
+                               "RestrictiveClearance_Analysis/",
+                               "CURRENT_all_httk_preds.csv"))
+
+all_httk_preds <- readr::read_csv(file = paste0(Sys.getenv("FIG_DIR"), 
+                                                "RestrictiveClearance_Analysis/",
+                                                "CURRENT_all_httk_preds.csv"))
+
+this_nonflat_winmodel <- get_winning_model(this_pk) %>%
+  filter(model %in% c("model_1comp", "model_2comp")) %>%
+  filter_targets()
+
+# Get the winning model (including flats) and only include chemicals in target_chems
+this_winmodel <- get_winning_model(this_pk) %>%
+    filter_targets()
+
+winning_preds <- predict(this_pk) %>%
+  semi_join(this_nonflat_winmodel) %>% # The targets already filtered here
+  distinct(Chemical, Species, Chemical_Name,
+           model, method, Dose, Media, Route, Reference, pLOQ, Time,
+           N_Subjects, Conc, Conc_est)
+
+
+
+# TKstats for 1-/2-compartment model
+this_tkstats <- eval_tkstats(this_pk,
+                             model = c("model_1comp", "model_2comp"),
+                             finite_only = TRUE,
+                             dose_norm = TRUE
+) %>%
+  filter_targets()
+colnames(this_tkstats) <- gsub("/", "_", colnames(this_tkstats))
+this_tkstats <- this_tkstats %>%
+  inner_join(this_winmodel)
+
+
+
+
 ```
 
 Relationships in the mathematical PK models:  
@@ -119,9 +269,6 @@ The aforementioned set of rat data, for example, 33 of 51 chemicals find
 appropriate fits with invivoPKfit + httk.
 
 ```{r load_Kd}
-load(paste0(Sys.getenv("OD_DIR"),
-            "Profile/Documents/New-HTTK-raw-2019-05-06.RData")
-)
 new.raw.httk.data %>%
   distinct(DTXSID, Affinity.Kd.Med, Affinity.Kd.Low, Affinity.Kd.High,
            Fit) %>%
@@ -168,21 +315,14 @@ Here I will look at the whether chemicals are "drug-like" by evaluating if:
 3. Less than 5 hydrogen bond donors and less than 10 acceptors.
 
 ```{r lipinksi_test_data}
-target_chem_info <- get_chemical_details_batch(DTXSID = target_chems,
-                                               rate_limit = 1L)
-target_chem_properties <- get_chem_info_batch(DTXSID = target_chems, 
-                                              rate_limit = 1L) %>%
-  filter(name %in% c("LogKow: Octanol-Water",
-                     "pKa Acidic Apparent",
-                     "pKa Basic Apparent")) %>% distinct()
 
 target_chem_properties %>%
-  ggplot(aes(x = source, y = value)) +
+  ggplot(aes(x = propType, y = Mean)) +
   geom_violin() +
   geom_line(aes(group = dtxsid), color = "grey10", alpha = 0.1) +
   geom_hline(yintercept = 5, linetype = "longdash") +
-  facet_grid(cols = vars(propType), scales = "free_x",
-             rows = vars(name)) +
+  facet_grid(scales = "free_x",
+             rows = vars(propertyId)) +
   scale_y_log10() +
   theme_bw() +
   theme(axis.text.x = element_text(hjust = 1, angle = 45))
@@ -209,12 +349,21 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 target_chem_info %>%
   count(monoisotopicMass <= 500)
 
-target_chem_pw_predicted <- target_chem_properties %>%
-  filter(source == "ACD/Labs") %>%
-  distinct(propertyId, value, dtxsid) %>%
-  pivot_wider(names_from = propertyId,
-              values_from = value)
-  
+         
+target_chem_pw_full %>%
+  ggplot(aes(x = forcats::fct_reorder(dtxsid, logkow))) +
+  geom_pointrange(aes(y = logkow, ymin = logkow - logkow_sd,
+                      ymax = logkow + logkow_sd), size = 0.1) +
+  facet_grid(cols = vars(type_logkow)) +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+target_chem_pw_full %>%
+  ggplot(aes(x = logkow)) +
+  geom_histogram(color = "grey50", fill = "grey5",
+                 binwidth = 1) +
+  theme_bw()
+
 ```
 
 ```{r reticulate-prep}
@@ -227,13 +376,15 @@ mykit <- import("rdkit")
 import rdkit
 from rdkit import Chem
 from rdkit.Chem import Descriptors
+from rdkit.Chem import rdMolDescriptors
 
 py_smiles_list = r.smiles_list
 mol_from_smiles = [Chem.MolFromSmiles(x) for x in py_smiles_list]
 
-py_h_donors = [Chem.Descriptors.NOCount(x) for x in mol_from_smiles]
-py_h_acceptors = [Chem.Descriptors.NHOHCount(x) for x in mol_from_smiles]
-py_tpsa = [Chem.Descriptors.TPSA(x) for x in mol_from_smiles]
+py_h_donors = [Chem.rdMolDescriptors.CalcNumLipinskiHBD(x) for x in mol_from_smiles]
+py_h_acceptors = [Chem.rdMolDescriptors.CalcNumLipinskiHBA(x) for x in mol_from_smiles]
+py_tpsa = [Chem.rdMolDescriptors.CalcTPSA(x, False, True) for x in mol_from_smiles]
+py_rotbonds = [Chem.rdMolDescriptors.CalcNumRotatableBonds(x) for x in mol_from_smiles]
 ```
 
 
@@ -243,22 +394,23 @@ target_chem_summary <- target_chem_info %>%
   distinct(dtxsid, monoisotopicMass, smiles) %>%
   right_join(data.frame(smiles = smiles_list)) %>%
   bind_cols(data.frame(H_donors = py_to_r(py$py_h_donors),
-                       H_acceptors = py_to_r(py$py_h_acceptors))
+                       H_acceptors = py_to_r(py$py_h_acceptors),
+                       TPSA = py_to_r(py$py_tpsa),
+                       Rot_Bonds = py_to_r(py$py_rotbonds))
             ) %>%
   left_join(
-    target_chem_properties %>%
-      filter(source == "ACD/Labs Consensus") %>%
-      distinct(dtxsid, source, value)
+    target_chem_pw_full
   ) %>%
-  rename(LogKow = value)
+  rowwise() %>%
+  mutate(logD_7.4 = httk::calc_dow(dtxsid = dtxsid, pH = 7.4))
 
 target_chem_lipinski <- target_chem_summary %>%
-  select(-c(smiles, source)) %>%
+  select(-c(smiles)) %>%
   group_by(dtxsid) %>%
   mutate("Mass <= 500 Da" = (monoisotopicMass <= 500),
           "H-donors < 5" = (H_donors < 5),
           "H-acceptors < 10" = (H_acceptors < 10),
-          "logP < 5" = (LogKow < 5),
+          "logP < 5" = (logkow < 5),
           .keep = "none") %>%
   ungroup() %>%
   mutate(Lipinski = rowSums(dplyr::select(., where(is.logical))) >= 3) 
@@ -300,6 +452,87 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        bg = "white",
        height = 5, width = 6
 )
+
+# Molecular descriptors in bins
+bin_size <- 2
+logP_plot <- target_chem_summary %>%
+  distinct(dtxsid, logkow) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(logP_bin = factor(logkow %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = logP_bin, y = Funbound.plasma)) +
+  labs(x = "logKow", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 50
+TPSA_plot <- target_chem_summary %>%
+  distinct(dtxsid, TPSA) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(TPSA_bin = factor(TPSA %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = TPSA_bin, y = Funbound.plasma)) +
+  labs(x = "Topological Polar Surface Area", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 2
+RotBond_plot <- target_chem_summary %>%
+  distinct(dtxsid, Rot_Bonds) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(Rot_Bonds_bin = factor(Rot_Bonds %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = Rot_Bonds_bin, y = Funbound.plasma)) +
+  labs(x = "Rotatable Bonds", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 150
+MW_plot <- target_chem_summary %>%
+  distinct(dtxsid, monoisotopicMass) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(MW_bin = factor(monoisotopicMass %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = MW_bin, y = Funbound.plasma)) +
+  labs(x = "Molecular Mass", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 4
+HBA_plot <- target_chem_summary %>%
+  distinct(dtxsid, H_acceptors) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(HBA_bin = factor(H_acceptors %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = HBA_bin, y = Funbound.plasma)) +
+  labs(x = "Hydrogen bond acceptors", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 2
+HBD_plot <- target_chem_summary %>%
+  distinct(dtxsid, H_donors) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(HBD_bin = factor(H_donors %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = HBD_bin, y = Funbound.plasma)) +
+  labs(x = "Hydrogen bond donors", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 200
+target_chem_summary %>%
+  distinct(dtxsid, logD_7.4) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(logD_bin =  factor(logD_7.4 %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = logD_bin, y = Funbound.plasma)) +
+  labs(x = "logD_7.4", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+(MW_plot + TPSA_plot + HBA_plot) / (logP_plot + RotBond_plot + HBD_plot)
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "PhysChemProperties_rdkit.png"),
+       bg = "white",
+       height = 6, width = 8
+)
+
 ```
 
 Overwhelmingly, we see that chemicals (by Lipinski's rules of 5) are "drug-like".
@@ -313,37 +546,7 @@ clearances and whether they are more or less reasonable in their reflection of
 the reality. The metric used here will be RMSLE.
 
 
-```{r httk_predictions}
-restrictive_preds <- get_httk_preds(
-  parameters = this_param_rest_l,
-  pk_obj = this_pk,
-  species = c("rat", "human")
-) %>% rename_with(
-  .fn = ~paste0(.x, "_restrictive"),
-  .cols = starts_with("httk_")
-)
-
-nonrestrictive_preds <- get_httk_preds(
-  parameters = this_param_nrest_l,
-  pk_obj = this_pk,
-  species = c("rat", "human")
-) %>% rename_with(
-  .fn = ~paste0(.x, "_nonrestrictive"),
-  .cols = starts_with("httk_")
-)
-
-all_httk_preds <- inner_join(restrictive_preds, nonrestrictive_preds) %>%
-  filter_targets()
-
-this_nonflat_winmodel <- get_winning_model(this_pk) %>%
-  filter(model %in% c("model_1comp", "model_2comp")) %>%
-  filter_targets()
-
-winning_preds <- predict(this_pk) %>%
-  semi_join(this_nonflat_winmodel) %>% # The targets already filtered here
-  distinct(Chemical, Species, Chemical_Name,
-           model, method, Dose, Media, Route, Reference, pLOQ, Time,
-           N_Subjects, Conc, Conc_est)
+```{r httk_pr_rmsle}
 
 # RMSLE formula
 # LE = log1p(Conc_est) - log1p(Conc)
@@ -351,6 +554,7 @@ winning_preds <- predict(this_pk) %>%
 # RMSLE = sqrt(mean(SLE, na.rm = TRUE))
 
 combined_preds <- all_httk_preds %>%
+  mutate(Reference = as.character(Reference)) %>%
   left_join(winning_preds) %>%
   filter(!is.na(model))
 
@@ -361,7 +565,7 @@ combined_RMSLE <- combined_preds %>%
     nonrestrictive_SLE = (log1p(httk_Preds_nonrestrictive) - log1p(Conc))^2,
     invivoPK_SLE =  (log1p(Conc_est) - log1p(Conc))^2 
   ) %>%
-  group_by(Chemical, Species) %>%
+  group_by(Chemical, Species, Route) %>%
   summarize(RMSLE_restrictive = sqrt(mean(restrictive_SLE, na.rm = TRUE)),
             RMSLE_nonrestrictive = sqrt(mean(nonrestrictive_SLE, na.rm = TRUE)),
             RMSLE_invivoPKfit = sqrt(mean(invivoPK_SLE, na.rm = TRUE)))
@@ -404,16 +608,16 @@ combined_RMSLE %>%
   theme_bw() +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
-        panel.grid = element_blank())
+        panel.grid = element_blank(),
+        axis.title = element_text(size = 14),
+        strip.text = element_text(size = 12))
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "RestrictiveClearance_Analysis/",
                          "CURRENT_", "RMSLE_comparison_fullChart.png"),
        bg = "white",
-       height = 4.5, width = 8
-)
-
-# Number of chemicals we have RMSLE's for
+       height = 3.8, width = 10
+)# Number of chemicals we have RMSLE's for
 combined_RMSLE %>% pull(Chemical) %>% unique() %>% length()
 
 ```
@@ -422,6 +626,8 @@ Another weight that we may consider is relative log-likelihood. This can be
 calculated using AIC, compared to the the flat model.
 
 ```{r relative-likelihood}
+
+# AIC and relative likelihood
 this_rll_probs <- AIC(this_pk) %>%
   filter_targets() %>%
   distinct(Chemical, Species, model, AIC) %>%
@@ -442,6 +648,68 @@ this_rll_probs <- AIC(this_pk) %>%
 
 this_rll_probs %>%
   count(model_1comp >= 99, model_2comp >= 99)
+
+# LL from pre-calculated httk predictions
+restrictive_ll <- all_httk_preds %>% 
+  rename(Conc_est = httk_Preds_restrictive,
+         Time_trans = Time) %>%
+  select(!httk_Preds_nonrestrictive) %>%
+  distinct() %>%
+  group_by(Chemical, Species) %>%
+  nest(.key = "observations") %>%
+  inner_join(coef(this_pk) %>% semi_join(this_winmodel) %>% distinct()) %>%
+  rowwise() %>%
+  mutate(log_likelihood = log_likelihood(
+    par = coefs_vector,
+    data = observations,
+    data_sigma_group = observations$data_sigma_group,
+    dose_norm = FALSE,
+    log10_trans = FALSE,
+    negative = FALSE,
+    includes_preds = TRUE,
+    detect
+  )) %>%
+  select(!observations) %>%
+  mutate(model = "httk_3comp2_restrictive",
+         AIC = -2 * log_likelihood)
+
+nonrestrictive_ll <- all_httk_preds %>% 
+  rename(Conc_est = httk_Preds_nonrestrictive,
+         Time_trans = Time) %>%
+  select(!httk_Preds_restrictive) %>%
+  distinct() %>%
+  group_by(Chemical, Species) %>%
+  nest(.key = "observations") %>%
+  inner_join(coef(this_pk) %>% semi_join(this_winmodel) %>% distinct()) %>%
+  rowwise() %>%
+  mutate(log_likelihood = log_likelihood(
+    par = coefs_vector,
+    data = observations,
+    data_sigma_group = observations$data_sigma_group,
+    dose_norm = FALSE,
+    log10_trans = FALSE,
+    negative = FALSE,
+    includes_preds = TRUE,
+    detect
+  )) %>%
+  select(!observations) %>%
+  mutate(model = "httk_3comp2_nonrestrictive",
+         AIC = -2 * log_likelihood) # Simple formula when there are no optimized params
+
+httk_AIC <- bind_rows(restrictive_ll, nonrestrictive_ll)
+
+httk_AIC %>%
+  distinct(Chemical, Species, model, AIC) %>%
+  pivot_wider(names_from = model, values_from = AIC) %>%
+  rowwise() %>% 
+  mutate(minAIC = min(c_across(starts_with("httk_")), na.rm = TRUE)) %>% 
+  ungroup() %>%
+  mutate(across(starts_with("httk_"), \(x) {
+    signif(exp((minAIC - x)/2) * 100, 4)
+  })) %>%
+  mutate(across(starts_with("httk_"), \(x) {
+    ifelse(x < 1E-6, 0, x)
+  })) %>% View()
 
 ```
 
@@ -477,6 +745,13 @@ combined_model_weights <- combined_RMSLE %>%
                                                     "More than"))) %>%
   select(-all_models) %>% distinct()
 
+combined_model_weights %>%
+  ggplot(aes(x = gamma_weight, color = rmsle_comparison_group)) +
+  geom_freqpoly() +
+  labs(x = "Inverse Confidence",
+       color = "RMSLE relative to httk predictions") +
+  facet_grid(rows = vars(rmsle_comparison_group)) +
+  theme_bw()
 
 ```
 
@@ -487,26 +762,11 @@ available. For instance, if there is only oral data available, `CLtot.tkstats`
 will _not_ be calculated and instead `CLtot/Fgutabs.tkstats` will be available.
 
 ```{r combine_tkstats}
-# Get the winning model and only include chemicals in target_chems
-this_winmodel <- get_winning_model(this_pk) %>%
-    filter_targets()
 # How many overlapping chemicals have winning models that aren't flat?
 count(
   this_winmodel,
   model
 ) # 153 = 97 1-compartment + 56 2-compartment
-
-this_tkstats <- eval_tkstats(this_pk,
-                             model = c("model_1comp", "model_2comp"),
-                             finite_only = TRUE,
-                             dose_norm = TRUE
-) %>%
-  filter_targets() %>%
-  rename(CLtot_Fgutabs.tkstats = `CLtot/Fgutabs.tkstats`) %>%
-  distinct(Chemical, Species, method, model, Dose, Route, Media,
-           CLtot.tkstats, CLtot_Fgutabs.tkstats, halflife.tkstats, Css.tkstats) %>%
-  inner_join(this_winmodel)
-  
 
 count(
   this_tkstats,
@@ -562,6 +822,17 @@ this_css_df <- inner_join(
   css_httk_batch(this_param_rest_l, restrictive = TRUE),
   css_httk_batch(this_param_nrest_l, restrictive = FALSE)
 )
+
+# Table
+this_css_df %>%
+  count(Css_httk_r == Css_httk_nr,
+        Css_httk_r - Css_httk_nr < 0.1 & Css_httk_r - Css_httk_nr > 0,
+        Css_httk_r - Css_httk_nr >= 0.1) %>%
+  rename("No difference" = "Css_httk_r == Css_httk_nr",
+         "Less than 0.1" = "Css_httk_r - Css_httk_nr < 0.1 & Css_httk_r - Css_httk_nr > 0",
+         "At least 0.1" = "Css_httk_r - Css_httk_nr >= 0.1")
+  
+
 # Chart with relative differences (think steps) of Css between clearance types
 this_css_df %>%
   mutate(relative_difference = log1p(Css_httk_r) - log1p(Css_httk_nr)) %>%
@@ -572,20 +843,23 @@ this_css_df %>%
   filter(relative_difference > 0) %>%
   ggplot(aes(x = forcats::fct_reorder(Chemical,
                                       relative_difference, .desc = FALSE))) +
-  geom_linerange(aes(ymin = Css_httk_nr, ymax = Css_httk_r)) +
+  geom_linerange(aes(ymin = Css_httk_nr, ymax = Css_httk_r),
+                 linewidth = 1.25) +
   labs(title = "Differences between restrictive & nonrestrictive clearance",
-       y = "Css\n(mg/L)", x = "Chemicals") +
+       y = "Difference in Css\n(mg/L)", x = "Chemicals") +
   theme_bw() +
   theme(axis.text.x = element_blank(),
         axis.ticks = element_blank(),
         panel.grid.major.x = element_blank(),
-        plot.title = element_text(hjust = 0.5))
+        plot.title = element_text(hjust = 0.5, size = 18),
+        axis.title = element_text(size = 14),
+        axis.text.y = element_text(size = 10, color = "black"))
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "RestrictiveClearance_Analysis/",
                          "CURRENT_", "Css_difference_httk_lineplot.png"),
        bg = "white",
-       height = 5, width = 7)
+       height = 3.5, width = 11.5)
 
 this_css_df %>%
   mutate(relative_difference = log1p(Css_httk_r) - log1p(Css_httk_nr)) %>%
@@ -608,33 +882,75 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        bg = "white",
        height = 5, width = 7)
 ###
+```
 
-this_css_df <- this_css_df %>%
-  inner_join(this_tkstats) %>%
-  distinct(Chemical, model, Route, Css_httk_r, Css_httk_nr, Css.tkstats) %>%
-  filter(Css_httk_nr > 0, Css_httk_r > 0, Css.tkstats > 0) %>%
-  left_join(target_chem_lipinski %>% rename(Chemical = dtxsid)) %>%
-  mutate(comparison_group_Css = factor(
-    case_when(
-      between(Css.tkstats, Css_httk_r, Css_httk_nr) |
-        between(Css.tkstats, Css_httk_nr, Css_httk_r) ~ "Between",
-      Css.tkstats < Css_httk_r & Css.tkstats < Css_httk_nr ~ "Below",
-      Css.tkstats > Css_httk_r & Css.tkstats > Css_httk_nr ~ "Above"),
-    levels = c("Above", "Between", "Below")
-  ), Chemical = factor(Chemical) %>% forcats::fct_reorder(Css_httk_r)
-  ) %>%
-  mutate(nearest_clearance = factor(
-    case_when(
-      between(log2(Css.tkstats),
-              log2(Css_httk_r)-1, log2(Css_httk_r)+1) |
-        (comparison_group_Css == "Above" &
-           log2(Css.tkstats) <= log2(Css_httk_r)+2) ~ "Restrictive",
-      between(log2(Css.tkstats),
-              log2(Css_httk_nr)-1, log2(Css_httk_nr)+1) |
-        comparison_group_Css == "Below" ~ "NonRestrictive",
-      .default = "Out of Range"
+The next step is to assess Css, halflife, and total clearance
+deciding whether the invivoPKfit evidence points to more restrictive or non-restrictive
+clearance. To do this we will create a dummy variable that will accumulate
+the information.  
+  
+  Restrictive  = -1  
+  Nonrestrictive = +1  
+  Undetermined = 0  
+  
+We will keep track of this with labeled columns and sum at the end.
+
+```{r full-eval}
+this_evaluated_df <- this_css_df %>%
+  inner_join(this_tkstats) %>% # Css
+  inner_join(this_httk_clearance_df) %>% # CLtot and halflife
+  inner_join(data.frame(Chemical = names(this_param_rest_l),
+                        CLint = vapply(names(this_param_rest_l),
+                                       \(x) {
+                                         this_param_rest_l[[x]][["Clint"]]
+                                       },
+                                       FUN.VALUE = numeric(1L)
+                        ))) %>%
+  mutate(Css_clear = case_when(
+    between(log2(Css.tkstats),
+            log2(Css_httk_r)-1, log2(Css_httk_r)+1) &
+      abs(log2(Css.tkstats/Css_httk_r)) < abs(log2(Css.tkstats/Css_httk_nr))~ -1,
+    between(log2(Css.tkstats),
+            log2(Css_httk_nr)-1, log2(Css_httk_nr)+1) ~ 1,
+    .default = 0),
+    halflife_clear = case_when(
+      between(log2(halflife.tkstats),
+              log2(restrictive_halflife)-1,
+              log2(restrictive_halflife)+1) &
+        abs(
+          log2(halflife.tkstats/restrictive_halflife)
+        ) < abs(
+          log2(halflife.tkstats/nonrestrictive_halflife)
+        ) | (nonrestrictive_halflife == restrictive_halflife) ~ -1,
+      (log2(halflife.tkstats) < log2(nonrestrictive_halflife)+1) ~ 1,
+      .default = 0
+    ),
+    CLtot_clear = case_when(
+      between(log2(CLtot.tkstats),
+              log2(restrictive_clearance)-1,
+              log2(restrictive_clearance)+1) &
+        abs(
+          log2(CLtot.tkstats/restrictive_clearance)
+        ) < abs(
+          log2(CLtot.tkstats/nonrestrictive_clearance)
+        ) ~ -1,
+      between(log2(CLtot.tkstats),
+              log2(nonrestrictive_clearance)-1,
+              log2(nonrestrictive_clearance)+1) ~ 1,
+      .default = 0
     )
-  ))
+  )
+
+evaluated_df_summary <- this_evaluated_df %>%
+  group_by(Chemical) %>%
+  summarize(CLtot_clear = median(CLtot_clear),
+            halflife_clear = median(halflife_clear),
+            Css_clear = median(Css_clear)) %>%
+  rowwise() %>%
+  mutate(clearance_sum = sum(CLtot_clear, halflife_clear, Css_clear)) %>%
+  ungroup()
+  
+count(evaluated_df_summary, clearance_sum < 0, clearance_sum > 0)
 
 this_css_df %>%
   ggplot(aes(x = Chemical)) +
@@ -693,7 +1009,6 @@ this_css_clint_df <- this_css_df %>%
   dplyr::filter(CLint > 0)
 
 this_css_clint_df %>%
-  left_join(target_chem_lipinski %>% rename(Chemical = dtxsid)) %>%
   ggplot(aes(x = CLint)) +
   geom_point(aes(y = Css_httk_r), shape = 4, size = 0.5) +
   geom_point(aes(y = Css_httk_nr), shape = 4, size = 0.5) +
@@ -702,8 +1017,7 @@ this_css_clint_df %>%
   ) +
   scale_y_log10(name = "C<sub>ss</sub>") + 
   scale_x_log10(name = "CL<sub>int</sub>") +
-  geom_point(aes(y = Css.tkstats, 
-                 fill = `Mass <= 500 Da`,
+  geom_point(aes(y = Css.tkstats,
                  shape = Route,
                  color = nearest_clearance)) +
   facet_grid(rows = vars(nearest_clearance)) +
