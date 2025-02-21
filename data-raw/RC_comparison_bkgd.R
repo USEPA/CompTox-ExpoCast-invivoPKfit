@@ -213,7 +213,6 @@ rat_pars_human <- parameterize_rat(human_clint_fup = TRUE)
 
 #human_pars_human <- parameterize_human()
 
-
 get_httk_preds <- function(parameters, pk_obj, species = "human") {
   pk_df <- unique.data.frame(
     subset(
@@ -227,7 +226,8 @@ get_httk_preds <- function(parameters, pk_obj, species = "human") {
       ),
       select = c(
         Chemical, Species, Dose, Route, Media, Reference,
-        N_Subjects, pLOQ, Time, Conc
+        N_Subjects, pLOQ, Time, Conc, Conc_trans, Conc_SD,
+        data_sigma_group, Detect, exclude
       )
     )
   )
