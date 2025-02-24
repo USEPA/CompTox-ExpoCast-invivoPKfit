@@ -244,8 +244,47 @@ this_tkstats <- this_tkstats %>%
   inner_join(this_winmodel)
 
 
+# Fraction unbound data for target chemicals
+fup_df <- this_param_df %>%
+  distinct(Chemical, Species, forced_human_values,
+           Funbound.plasma, Funbound.plasma.adjustment, 
+           Funbound.plasma.dist) %>%
+  mutate(
+    Funbound.plasma.median = as.numeric(str_extract(
+      Funbound.plasma.dist, pattern = "^\\d+\\.?\\d+e?-?\\d+(?=,)"
+    )),
+    Funbound.plasma.lower95 = as.numeric(str_extract(
+      Funbound.plasma.dist, pattern = "(?<=,)\\d+\\.?\\d+e?-?\\d+(?=,)"
+    )),
+    Funbound.plasma.upper95 = as.numeric(str_extract(
+      Funbound.plasma.dist, pattern = "(?<=,)\\d+\\.?\\d+e?-?\\d$"
+    ))
+    )
 
 
+human_chems <- httk::get_cheminfo(info = "DTXSID",
+                                species = "human",
+                                model = "3compartment2",
+                                median.only = TRUE,
+                                physchem.exclude = TRUE,
+                                suppress.messages = TRUE)
+human_chems <- intersect(human_chems, new.raw.httk.data$DTXSID)
+
+all_hum_rat_fups <- chem.physical_and_invitro.data %>%
+  filter(DTXSID %in% human_chems) %>%
+  select(DTXSID, Human.Funbound.plasma, Rat.Funbound.plasma) %>%
+  mutate(Rat.Funbound.plasma = as.numeric(str_extract(Rat.Funbound.plasma,
+                                                      "^([^,]+)")),
+         Human.Funbound.plasma = as.numeric(str_extract(Human.Funbound.plasma,
+                                                        "^([^,]+)"))
+         )
+
+
+# Get restrictive and non-restrictive parameters
+human_chems_fup <- data.frame(
+  Chemical = human_chems,
+  fup_restrictive = chem.physical_and_invitro.data$Human.Funbound.plasma[],
+                              fup_nonrestrictive = params_nr)
 ```
 
 Relationships in the mathematical PK models:  
@@ -303,6 +342,33 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        bg = "white",
        height = 4, width = 9
 )
+
+
+kd_v_fup_plot <- new.raw.httk.data %>%
+  inner_join(all_hum_rat_fups) %>%
+  pivot_longer(cols = Human.Funbound.plasma:Rat.Funbound.plasma,
+               names_to = "Species", values_to = "httk_fup_med") %>%
+  ggplot(aes(x = Affinity.Kd.Med, y = httk_fup_med, color = Species)) +
+  geom_point(alpha = 0.5) +
+  scale_color_manual(values = c("green4", "purple2"),
+                     labels = c("Human", "Rat")) +
+  scale_x_log10(labels = scales::label_log(digits = 2)) +
+  labs(x = "Binding affinity ratio", y = "Fraction unbound\nin plasma") +
+  theme_bw() +
+  theme(legend.position = "top",
+        legend.text = element_text(size = 10),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "Kd_estimates_vs_fup_multispecies.png"),
+       bg = "white",
+       height = 3, width = 5
+)
+
+
 ```
 
 
@@ -415,7 +481,7 @@ target_chem_lipinski <- target_chem_summary %>%
   ungroup() %>%
   mutate(Lipinski = rowSums(dplyr::select(., where(is.logical))) >= 3) 
 
-target_chem_lipinski %>%
+lipinski_plot <- target_chem_lipinski %>%
   group_by(Lipinski) %>%
   count(`Mass <= 500 Da`, `H-donors < 5`, `H-acceptors < 10`, `logP < 5`,
         name = "Count") %>%
@@ -436,8 +502,9 @@ target_chem_lipinski %>%
   ),
   position = "top",
   expand = c(.2, .05)) +
-  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
-  labs(title = "Overwhelmingly, these chemicals passes Lipinksi's Rules of 5",
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)),
+            size = 2) +
+  labs(title = "Target chemicals passing Lipinksi's Rules of 5",
        fill = "Passes Lipinksi's Rules?") +
   scale_fill_manual(values = c("grey20", "green4")) +
   theme_minimal() +
@@ -446,16 +513,21 @@ target_chem_lipinski %>%
         plot.title = element_text(hjust = 0.5),
         legend.position = "bottom")
 
+lipinski_plot
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "RestrictiveClearance_Analysis/",
                          "CURRENT_", "Alluvium_Lipinski.png"),
        bg = "white",
-       height = 5, width = 6
+       height = 4, width = 5
 )
 
+chem_rell_label <- total_rel_evaluation_df %>% distinct(Chemical, ll_label) %>%
+  filter(ll_label %in% c("Restrictive", "Nonrestrictive"))
+
 # Molecular descriptors in bins
-bin_size <- 2
+bin_size <- 10
 logP_plot <- target_chem_summary %>%
+  inner_join(chem_rell_label, by = join_by(dtxsid == Chemical)) %>%
   distinct(dtxsid, logkow) %>% 
   left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
   mutate(logP_bin = factor(logkow %/% bin_size * bin_size)) %>%
@@ -463,6 +535,21 @@ logP_plot <- target_chem_summary %>%
   labs(x = "logKow", y = "fup") +
   ggbeeswarm::geom_beeswarm() +
   theme_bw()
+
+target_chem_summary %>%
+  inner_join(chem_rell_label, by = join_by(dtxsid == Chemical)) %>%
+  distinct(dtxsid, logkow, TPSA, Rot_Bonds, ll_label) %>% 
+  pivot_longer(cols = c(logkow, TPSA),
+               names_to = "Parameter", values_to = "Value") %>%
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  ggplot(aes(x = Value, y = Funbound.plasma)) +
+  labs(x = "", y = "fup") +
+  facet_grid(cols = vars(Parameter),
+             rows = vars(ll_label),
+             scales = "free_x") +
+  geom_point() +
+  theme_bw()
+
 
 bin_size <- 50
 TPSA_plot <- target_chem_summary %>%
@@ -669,8 +756,8 @@ restrictive_ll <- all_httk_preds %>%
     includes_preds = TRUE,
     detect
   )) %>%
-  select(!observations) %>%
-  mutate(model = "httk_3comp2_restrictive",
+  select(!c(observations, coefs_vector, Time.Units, Time_trans.Units)) %>%
+  mutate(model = "model_3comp2_restrictive",
          AIC = -2 * log_likelihood)
 
 nonrestrictive_ll <- all_httk_preds %>% 
@@ -692,25 +779,106 @@ nonrestrictive_ll <- all_httk_preds %>%
     includes_preds = TRUE,
     detect
   )) %>%
-  select(!observations) %>%
-  mutate(model = "httk_3comp2_nonrestrictive",
+  select(!c(observations, coefs_vector, Time.Units, Time_trans.Units)) %>%
+  mutate(model = "model_3comp2_nonrestrictive",
          AIC = -2 * log_likelihood) # Simple formula when there are no optimized params
 
-httk_AIC <- bind_rows(restrictive_ll, nonrestrictive_ll)
+httk_AIC <- bind_rows(restrictive_ll,
+                      nonrestrictive_ll,
+                      AIC(this_pk) %>% filter(model == "model_flat") %>%
+                        filter_targets())
 
-httk_AIC %>%
+httk_rel_ll <- httk_AIC %>%
   distinct(Chemical, Species, model, AIC) %>%
   pivot_wider(names_from = model, values_from = AIC) %>%
   rowwise() %>% 
-  mutate(minAIC = min(c_across(starts_with("httk_")), na.rm = TRUE)) %>% 
+  mutate(minAIC = min(c_across(starts_with("model_")), na.rm = TRUE)) %>% 
   ungroup() %>%
-  mutate(across(starts_with("httk_"), \(x) {
+  mutate(across(starts_with("model_"), \(x) {
     signif(exp((minAIC - x)/2) * 100, 4)
   })) %>%
-  mutate(across(starts_with("httk_"), \(x) {
+  mutate(across(starts_with("model_"), \(x) {
     ifelse(x < 1E-6, 0, x)
-  })) %>% View()
+  })) %>%
+  mutate(ll_label = factor(
+    case_when(model_flat > 95 ~ "Undetermined",
+              model_3comp2_nonrestrictive > 95 &
+                model_3comp2_restrictive > 95 ~ "Undetermined (non-flat)",
+              model_3comp2_nonrestrictive > 95 ~ "Nonrestrictive",
+              model_3comp2_restrictive > 95 ~ "Restrictive")
+  ))
 
+httk_rel_ll %>%
+  count(model_flat > 95, model_3comp2_nonrestrictive > 95,
+        model_3comp2_restrictive > 95)
+
+httk_rel_ll %>%
+  select(!minAIC) %>%
+  mutate(Chemical = forcats::fct_reorder2(Chemical,
+                                          model_3comp2_nonrestrictive,
+                                          model_flat,
+                                          .fun = mean)) %>%
+  pivot_longer(cols = starts_with("model_"),
+               names_to = "model", values_to = "relative_likelihood") %>%
+  ggplot(aes(x = Chemical, y = model)) +
+  geom_tile(aes(fill = relative_likelihood)) +
+  scale_fill_viridis_b(option = "cividis", breaks = c(0, 50, 80, 100)) +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 12, color = "black"),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        panel.border = element_blank())
+
+
+total_rel_evaluation_df <- httk_rel_ll %>%
+  inner_join(this_evaluated_df) %>%
+  inner_join(this_param_df %>% distinct(Chemical, forced_human_values)) %>%
+  distinct()
+
+total_rel_evaluation_df %>%
+  distinct(Chemical, Species, Css.tkstats, Css_httk_nr, Css_httk_r, Css_clear,
+         ll_label) %>%
+  filter(ll_label %in% c("Nonrestrictive", "Restrictive", "Undetermined")) %>%
+  ggplot(aes(x = forcats::fct_reorder(Chemical, Css_httk_r))) +
+  geom_pointrange(aes(y = Css.tkstats, ymin = Css_httk_nr, ymax = Css_httk_r),
+                  size = 0.1) +
+  facet_grid(cols = vars(ll_label), space = "free_x", scales = "free_x") +
+  scale_y_log10() +
+  labs(x = 'Chemicals', y = "Css") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.text = element_blank())
+
+total_rel_evaluation_df %>%
+  distinct(Chemical, Species, Css_httk_r,
+           halflife.tkstats, restrictive_halflife,
+           nonrestrictive_halflife, halflife_clear,
+           ll_label) %>%
+    filter(ll_label %in% c("Nonrestrictive", "Restrictive", "Undetermined")) %>%
+  ggplot(aes(x = forcats::fct_reorder(Chemical, restrictive_halflife))) +
+  geom_pointrange(aes(y = halflife.tkstats, 
+                      ymin = nonrestrictive_halflife,
+                      ymax = restrictive_halflife),
+                  size = 0.1) +
+  facet_grid(cols = vars(ll_label), space = "free_x", scales = "free_x") +
+  scale_y_log10() +
+  labs(x = "Chemicals", y = "halflife") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.text = element_blank(),
+        strip.background = element_blank(),
+        axis.text.y = element_text(color = "black", size = 10),
+        axis.title = element_text(size = 14))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "halflife_fullChart.png"),
+       bg = "white",
+       height = 3, width = 12
+)
 ```
 
 The weights to be applied are calculated as such:
@@ -1428,21 +1596,6 @@ I would also like to know, how does the $f_{up}$ of this set of chemicals
 compare to that of all chemicals in `httk` (Dawson 2021).
 
 ```{r fup_comparison}
-fup_df <- this_param_df %>%
-  distinct(Chemical, Species, forced_human_values,
-           Funbound.plasma, Funbound.plasma.adjustment, 
-           Funbound.plasma.dist) %>%
-  mutate(
-    Funbound.plasma.median = as.numeric(str_extract(
-      Funbound.plasma.dist, pattern = "^\\d+\\.?\\d+e?-?\\d+(?=,)"
-    )),
-    Funbound.plasma.lower95 = as.numeric(str_extract(
-      Funbound.plasma.dist, pattern = "(?<=,)\\d+\\.?\\d+e?-?\\d+(?=,)"
-    )),
-    Funbound.plasma.upper95 = as.numeric(str_extract(
-      Funbound.plasma.dist, pattern = "(?<=,)\\d+\\.?\\d+e?-?\\d$"
-    ))
-    )
 
 
 fup_df %>%
