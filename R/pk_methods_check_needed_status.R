@@ -5,7 +5,7 @@
 #' This is a helper function to check whether a [pk()] object has the status
 #' required for certain operations. For example, status 4 (fitting complete) is
 #' required for any fit evaluation functions: [predict.pk()], [residuals.pk()],
-#' [coef.pk()], [coef_sd.pk()], [rmse.pk()], [fold_errors.pk()]
+#' [coef.pk()], [coef_sd.pk()], [rmse.pk()], [fold_error.pk()]
 #'
 #' @param obj A [pk()] object
 #' @param required_status Integer: The required status. 1 = initialized; 2 =

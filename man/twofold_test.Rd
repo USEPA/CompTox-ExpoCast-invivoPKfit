@@ -11,6 +11,9 @@ twofold_test(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A list of data frames.
+}
 \description{
 This is the S3 method generic for twofold_test()
 }

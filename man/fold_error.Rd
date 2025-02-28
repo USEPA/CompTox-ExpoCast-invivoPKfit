@@ -11,6 +11,13 @@ fold_error(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A data.frame with one row for each `data_group`, `model` and
+  `method`. A column contains the fold errors (observed/predicted) of the
+  model fitted by the corresponding method. These residuals are
+  concentrations in the same units as `obj$data$Conc.Units`; any
+  concentration transformations (in `obj$scale$conc`) are *not* applied.
+}
 \description{
 This is the S3 method generic for `fold_error`.
 }

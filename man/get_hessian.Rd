@@ -11,6 +11,10 @@ get_hessian(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A dataframe with one row for each `data_group`, `model` and `method`.
+ The remaining column is a `list` column containing the Hessian for each row.
+}
 \description{
 This is the S3 method generic for get_hessian()
 }

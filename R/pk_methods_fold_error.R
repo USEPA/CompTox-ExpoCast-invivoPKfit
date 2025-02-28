@@ -24,6 +24,16 @@
 #'   for which to make predictions and calculate RMSEs. If NULL (the default),
 #'   fold errors will be returned for all of the models in
 #'   `obj$settings_optimx$method`.
+#' @param exclude Logical: `TRUE` to return `NA_real_` for any observations in
+#'   the data marked for exclusion (if there is a variable `exclude` in the
+#'   data, an observation is marked for exclusion when `exclude %in% TRUE`).
+#'   `FALSE` to return the prediction for each observation, regardless of
+#'   exclusion. Default `TRUE`.
+#' @param sub_pLOQ Logical: whether or not to include predictions below pLOQ.
+#'   when TRUE, values below pLOQ will be replaced by pLOQ.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `object$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments. Currently not in use.
 #' @return  A data.frame with one row for each `data_group`, `model` and
 #'   `method`. A column contains the fold errors (observed/predicted) of the

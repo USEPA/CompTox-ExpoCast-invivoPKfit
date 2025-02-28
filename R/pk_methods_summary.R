@@ -171,7 +171,7 @@ summary.pk <- function(object, ...) {
     dplyr::mutate(avg_rmse = mean(RMSE, na.rm = TRUE)) %>%
     tidyr::nest(full_rmse = c(Time, RMSE)))
 
-  fold_errors_all <- suppressMessages(fold_errors(object) %>%
+  fold_errors_all <- suppressMessages(fold_error(object) %>%
     dplyr::group_by(!!!object$data_group, model, method, Route, Media, Dose) %>%
     dplyr::mutate(avg_FoldErr = mean(Fold_Error, na.rm = TRUE),
                   median_FoldErr = median(Fold_Error, na.rm = TRUE),

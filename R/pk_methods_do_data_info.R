@@ -4,7 +4,9 @@
 #'
 #'
 #' @param obj An object of class [pk()].
-#' @param ... Additional arguemnts. Not currently in use.
+#' @param ... Additional arguments. Not currently in use.
+#' @return Object of class [pk()] with an added `$data_info` list containing
+#' non-compartmental analysis results.
 #' @export
 #' @importFrom magrittr `%>%`
 #' @author Caroline Ring

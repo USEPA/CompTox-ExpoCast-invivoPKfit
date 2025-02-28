@@ -37,6 +37,16 @@
 #'   data, an observation is marked for exclusion when `exclude %in% TRUE`).
 #'   `FALSE` to include all observations, regardless of exclusion status.
 #'   Default `TRUE`.
+#' @param use_scale_conc Possible values: `TRUE`, `FALSE`, or a named list with
+#'   elements `dose_norm` and `log10_trans` which themselves should be either
+#'   `TRUE` or `FALSE`. If `use_scale_conc = TRUE`, then the concentration
+#'   scaling/transformations in `object` will be applied to both predicted and
+#'   observed concentrations before the log-likelihood is computed. If
+#'   `use_scale_conc = FALSE` (the default for this function), then no
+#'   concentration scaling or transformation will be applied before the
+#'   log-likelihood is computed. If `use_scale_conc = list(dose_norm = ...,
+#'   log10_trans = ...)`, then the specified dose normalization and/or
+#'   log10-transformation will be applied.
 #' @param AFE_group Default: Chemical, Species. Determines what the data
 #' grouping that is used to calculate average fold error (AFE). Should be set to lowest number
 #' of variables that still would return unique experimental conditions.

@@ -7,10 +7,10 @@
 hess_sd2(m)
 }
 \arguments{
-\item{m}{A square numeric matrix, \eq{n \times n}.}
+\item{m}{A square numeric matrix, \eqn{n \times n}.}
 }
 \value{
-A numeric vector of length \eq{n}.
+A numeric vector of length \eqn{n}.
 }
 \description{
 Get square root of diagonal of inverse matrix, second method
@@ -21,11 +21,11 @@ Following the procedure outlined in Gill & King
 perform a generalized Cholesky factorization of the generalized inverse using
 [Matrix::Cholesky()] with `perm = TRUE`. Reconstruct the generalized inverse as
 
-\deq{ \left( m^{-1} + E \right) = P_1^' L L^' P_1}
+\deqn{\left(m^{-1} + E\right) = P_1^{\prime} L L^{\prime} P_1}
 
 This should ensure positive semi-definiteness of the reconstruction.
 
-Then, take the diagonal of \eq{\left( m^{-1} + E \right)}, and take the square root.
+Then, take the diagonal of \eqn{\left(m^{-1} + E \right)}, and take the square root.
 }
 \references{
 Gill J, King G. (2004) What to Do When Your Hessian is Not

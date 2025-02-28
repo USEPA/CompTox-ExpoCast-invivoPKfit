@@ -1,16 +1,21 @@
 ---
 title: "Manuscript Figures and Tables"
 output:
-  word_document:
+  html_vignette:
     toc: true
     toc_depth: 3  # upto three depths of headings (specified by #, ## and ###)
     number_sections: true  ## if you want number sections at each table header
+vignette: >
+  %\VignetteIndexEntry{Informatics for toxicokinetics}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r init, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  eval = FALSE
 )
 ```
 
@@ -124,7 +129,7 @@ distinct options for fitting and data transformation at once prior to processing
 and fitting the data.
 
 
-```{r outlining_all_options}
+```{r outlining_all_options, eval=FALSE}
 # Types of Choices:
 ## Dose Normalized
 ## Log10 transform
@@ -1635,7 +1640,7 @@ writexl::write_xlsx(x = list(predictions = my_preds,
 Compute fold errors, r-squared, AIC, RMSLE, RMSE.
 ```{r}
 
-fe_df <- fold_errors(my_pk,
+fe_df <- fold_error(my_pk,
                      sub_pLOQ = TRUE,
                      method = "bobyqa") %>% semi_join(winmodel)
 

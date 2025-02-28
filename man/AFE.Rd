@@ -11,6 +11,11 @@ AFE(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A dataframe with one row for each `data_group`, `model` and `method`.
+  The final column contains the AFE of the model fitted by the corresponding
+  method, using the data in `newdata`.
+}
 \description{
 This is the S3 method generic for AFE()
 }

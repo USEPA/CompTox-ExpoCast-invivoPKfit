@@ -26,8 +26,13 @@
 #' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
 #'   the LOQ before computing fold errors. FALSE: do not. Only used if `obj` has been fitted and predictions are possible.
 #' @param suppress.messages Logical: whether to suppress message printing. If
-#'   NULL (default), uses the setting in
-#'   `obj$settings_preprocess$suppress.messages`
+#'   NULL (default), uses the setting in `obj$settings_preprocess$suppress.messages`.
+#' @param model Optional: Specify one or more of the fitted models for which to
+#'   make predictions. If NULL (the default), predictions will be returned for
+#'   all of the models in `object$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   for which to make predictions. If NULL (the default), predictions will be
+#'   returned for all of the models in `object$settings_optimx$method`.
 #' @param ... Additional arguments. Currently unused.
 #'
 #' @return A list of data frames.

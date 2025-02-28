@@ -11,6 +11,9 @@ get_data_group(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+An object of class `call` giving the data grouping as a `dplyr::vars()` specification
+}
 \description{
 This is the S3 method generic for get_data_group()
 }

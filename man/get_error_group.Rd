@@ -11,6 +11,9 @@ get_error_group(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+The stat_error_model error grouping
+}
 \description{
 This is the S3 method generic for get_error_group()
 }

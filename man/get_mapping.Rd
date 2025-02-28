@@ -11,6 +11,9 @@ get_mapping(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A list of `quosure`s -- the `mapping` element of `obj`
+}
 \description{
 This is the S3 method generic for get_mapping()
 }

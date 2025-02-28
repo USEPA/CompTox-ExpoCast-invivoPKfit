@@ -11,6 +11,12 @@ rmse(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A `data.frame` with calculated RMSE as the final column. There is one row per
+  each model in `obj`'s [stat_model()] element, i.e. each PK model that was
+  fitted to the data, each [optimx::optimx()] methods (specified in
+  [settings_optimx()]), `rmse_group` specified.
+}
 \description{
 This is the S3 method generic for `rmse`.
 }

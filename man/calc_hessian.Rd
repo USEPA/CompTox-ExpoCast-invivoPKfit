@@ -15,8 +15,7 @@ calc_hessian(
 }
 \arguments{
 \item{pars_opt}{Named numeric: A vector of parameter values for the parameters
-that were optimized. If the length of this vector is \eq{n}, the Hessian
-matrix will be \eq{n \times n}. For example, you can get this using
+that were optimized. For example, you can get this using
 [coef.pk()] with `include_type = "optim"`.}
 
 \item{pars_const}{Named numeric: A vector of parameter values for parameters
@@ -52,7 +51,8 @@ Here, the objective function is the negative
 log-likelihood implemented in [log_likelihood()], evaluated jointly across the
 data that was used to fit the model.
 This is a workhorse function called by [get_hessian.pk()] and, indirectly, by
-[coef_sd.pk()].
+[coef_sd.pk()]. When the number of optimized parameters is \eqn{n}, the
+respective Hessian matrix will be \eqn{n \times n}.
 }
 \author{
 Caroline Ring
