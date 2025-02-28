@@ -3085,6 +3085,26 @@ plot_pooled %>%
 
 ```
 
+# All plots for best set of fitting options
+
+```{r}
+plot_pooled <- plot(pk_pooled,
+                    method = "bobyqa",
+                    use_scale_conc = TRUE,
+                    print_out = TRUE)
+
+ggsave(
+   filename = paste0(Sys.getenv("FIG_DIR"),
+                     "Manu_Files/",
+                     today,
+                     "_allplots.pdf"), 
+   plot = gridExtra::marrangeGrob(plot_pooled, nrow=1, ncol=1), 
+   width = 15, height = 9
+)
+
+```
+
+
 # Print sessionInfo()
 
 ```{r information}
