@@ -1,0 +1,305 @@
+---
+title: "Clearance Project - 4 - PhysChem Clustering"
+author: "Gilberto Padilla Mercado"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r data_loading}
+target_chem_properties <- readRDS("data-raw/ctxR_3comp2_cheminfo.rds")
+new_pk <- readRDS("data-raw/ratCVT_wHTTK_reformulated.rds")
+red_assay_res <- readRDS("data-raw/2019-05-06-REDassay_HTTK.rds")
+```
+
+
+## Lipinski's Rules
+
+Here I will look at the whether chemicals are "drug-like" by evaluating if:
+
+1. Molecular weight less than 500 Da.  
+2. logP (octanol-water partitioning coefficient) no greater than 5.  
+3. Less than 5 hydrogen bond donors and less than 10 acceptors.
+
+```{r lipinksi_test_data}
+
+
+target_chem_properties %>%
+  rename(Chemical = dtxsid) %>%
+  filter_targets() %>%
+  distinct(Chemical, monoisotopicMass) %>%
+  ggplot(aes(x = monoisotopicMass)) +
+  geom_histogram(binwidth = 50, fill = "grey5",
+                 boundary = 0) +
+  geom_vline(xintercept = 500, linetype = "longdash") +
+  scale_x_continuous(limits = c(0, 1000),
+                     breaks = seq(0, 1000, 100)) +
+  theme_bw()
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "target_chems_molmass.png"),
+       bg = "white",
+       height = 3, width = 5
+)
+
+target_chem_info %>%
+  count(monoisotopicMass <= 500)
+
+         
+target_chem_pw_full %>%
+  ggplot(aes(x = forcats::fct_reorder(dtxsid, logkow))) +
+  geom_pointrange(aes(y = logkow, ymin = logkow - logkow_sd,
+                      ymax = logkow + logkow_sd), size = 0.1) +
+  facet_grid(cols = vars(type_logkow)) +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+target_chem_pw_full %>%
+  ggplot(aes(x = logkow)) +
+  geom_histogram(color = "grey50", fill = "grey5",
+                 binwidth = 1) +
+  theme_bw()
+
+```
+
+```{r reticulate-prep}
+smiles_list <- target_chem_properties %>% 
+  rename(Chemical = dtxsid) %>%
+  filter_targets() %>%
+  pull(qsarReadySmiles) %>% unique()
+mykit <- import("rdkit")
+```
+
+
+```{python get_H_bonds}
+import rdkit
+from rdkit import Chem
+from rdkit.Chem import Descriptors
+from rdkit.Chem import rdMolDescriptors
+
+py_smiles_list = r.smiles_list
+mol_from_smiles = [Chem.MolFromSmiles(x) for x in py_smiles_list]
+
+py_h_donors = [Chem.rdMolDescriptors.CalcNumLipinskiHBD(x) for x in mol_from_smiles]
+py_h_acceptors = [Chem.rdMolDescriptors.CalcNumLipinskiHBA(x) for x in mol_from_smiles]
+py_tpsa = [Chem.rdMolDescriptors.CalcTPSA(x, False, True) for x in mol_from_smiles]
+py_rotbonds = [Chem.rdMolDescriptors.CalcNumRotatableBonds(x) for x in mol_from_smiles]
+```
+
+
+```{r chemical_summary_matrix}
+
+target_chem_summary <- target_chem_properties %>%
+  filter(propertyId == "logkow-octanol-water", source == "ACD/Labs") %>%
+  pivot_wider(names_from = propertyId, values_from = value) %>%
+  rename(logkow = `logkow-octanol-water`) %>%
+  distinct(dtxsid, monoisotopicMass, qsarReadySmiles, logkow) %>%
+  filter(qsarReadySmiles %in% smiles_list) %>%
+  right_join(data.frame(qsarReadySmiles = smiles_list,
+                        H_donors = py_to_r(py$py_h_donors),
+                        H_acceptors = py_to_r(py$py_h_acceptors),
+                        TPSA = py_to_r(py$py_tpsa),
+                        Rot_Bonds = py_to_r(py$py_rotbonds))
+            ) %>%
+  rowwise() %>%
+  mutate(logD_7.4 = httk::calc_dow(dtxsid = dtxsid, pH = 7.4)) %>%
+  left_join(red_assay_res %>%
+              distinct(DTXSID, Affinity.Kd.Med) %>%
+              na.omit(),
+            by = join_by(dtxsid == DTXSID)) %>%
+  distinct() %>%
+  left_join(cyp_data, join_by(dtxsid == Chemical))
+
+# Make a matrix of all properties so far
+tcs_mat <- target_chem_summary %>% 
+  select(dtxsid, monoisotopicMass, Affinity.Kd.Med,
+         H_donors:Rot_Bonds, logkow, apKa, bpKa, logD_7.4,
+         starts_with("CYP")) %>%
+  distinct()
+tcs_mat <- column_to_rownames(tcs_mat, var = "dtxsid") %>% as.matrix()
+
+# z-score all properties
+# Margin = 2 is columns
+tcs_mat_z <- apply(tcs_mat, MARGIN = 2, FUN = scale)
+rownames(tcs_mat_z) <- rownames(tcs_mat)
+summary(tcs_mat_z[, 1])
+summary(tcs_mat_z[(rownames(tcs_mat_z) %in% target_chems), 1])
+tcs_mat_z[is.na(tcs_mat_z)] <- 0
+pca_tcs <- prcomp(tcs_mat_z, scale = FALSE)
+
+pca_df <- pca_tcs$x %>% as.data.frame() %>% rownames_to_column(var = "Chemical")
+
+ggplot(data = pca_df %>% mutate(Target = (Chemical %in% target_chems)) %>%
+         left_join(target_chem_summary, by = join_by(Chemical == dtxsid)),
+       aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = TPSA), alpha = 0.8) +
+  scale_color_viridis_c(option = "magma") +
+  facet_wrap(~Target) +
+  theme_bw()
+
+
+target_chem_lipinski <- target_chem_summary %>%
+  select(-c(qsarReadySmiles)) %>%
+  group_by(dtxsid) %>%
+  mutate("Mass <= 500 Da" = (monoisotopicMass <= 500),
+          "H-donors < 5" = (H_donors < 5),
+          "H-acceptors < 10" = (H_acceptors < 10),
+          "logP < 5" = (logkow < 5),
+          .keep = "none") %>%
+  ungroup() %>%
+  mutate(Lipinski = rowSums(dplyr::select(., where(is.logical))) >= 3) 
+
+lipinski_plot <- target_chem_lipinski %>%
+  group_by(Lipinski) %>%
+  count(`Mass <= 500 Da`, `H-donors < 5`, `H-acceptors < 10`, `logP < 5`,
+        name = "Count") %>%
+  ggplot(aes(
+    axis3 = `Mass <= 500 Da`,
+    axis4 = `logP < 5`,
+    axis2 = `H-donors < 5`,
+    axis1 = `H-acceptors < 10`,
+    y = Count
+  )) +
+  geom_alluvium(aes(fill = Lipinski)) +
+  geom_stratum() +
+  scale_x_discrete(limits = c( 
+    "H-acceptors < 10",
+    "H-donors < 5",
+    "<= 500 Da",
+    "logP < 5"
+  ),
+  position = "top",
+  expand = c(.2, .05)) +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)),
+            size = 1.5) +
+  labs(title = "Target chemicals passing Lipinksi's Rules of 5",
+       fill = "Passes Lipinksi's Rules?") +
+  scale_fill_manual(values = c("grey20", "green4")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(face = "bold", color = "black", size = 8),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        legend.text = element_text(size = 8),
+        axis.title.x = element_blank(),
+        legend.position = "bottom")
+
+lipinski_plot
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "Alluvium_Lipinski.png"),
+       bg = "white",
+       height = 3, width = 4
+)
+
+chem_rell_label <- total_rel_evaluation_df %>% distinct(Chemical, ll_label) %>%
+  filter(ll_label %in% c("Restrictive", "Nonrestrictive"))
+
+# Molecular descriptors in bins
+bin_size <- 10
+logP_plot <- target_chem_summary %>%
+  inner_join(chem_rell_label, by = join_by(dtxsid == Chemical)) %>%
+  distinct(dtxsid, logkow) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(logP_bin = factor(logkow %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = logP_bin, y = Funbound.plasma)) +
+  labs(x = "logKow", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+target_chem_summary %>%
+  inner_join(chem_rell_label, by = join_by(dtxsid == Chemical)) %>%
+  distinct(dtxsid, logkow, TPSA, Rot_Bonds, ll_label) %>% 
+  pivot_longer(cols = c(logkow, TPSA),
+               names_to = "Parameter", values_to = "Value") %>%
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  ggplot(aes(x = Value, y = Funbound.plasma)) +
+  labs(x = "", y = "fup") +
+  facet_grid(cols = vars(Parameter),
+             rows = vars(ll_label),
+             scales = "free_x") +
+  geom_point() +
+  theme_bw()
+
+
+bin_size <- 50
+TPSA_plot <- target_chem_summary %>%
+  distinct(dtxsid, TPSA) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(TPSA_bin = factor(TPSA %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = TPSA_bin, y = Funbound.plasma)) +
+  labs(x = "Topological Polar Surface Area", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 2
+RotBond_plot <- target_chem_summary %>%
+  distinct(dtxsid, Rot_Bonds) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(Rot_Bonds_bin = factor(Rot_Bonds %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = Rot_Bonds_bin, y = Funbound.plasma)) +
+  labs(x = "Rotatable Bonds", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 150
+MW_plot <- target_chem_summary %>%
+  distinct(dtxsid, monoisotopicMass) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(MW_bin = factor(monoisotopicMass %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = MW_bin, y = Funbound.plasma)) +
+  labs(x = "Molecular Mass", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 4
+HBA_plot <- target_chem_summary %>%
+  distinct(dtxsid, H_acceptors) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(HBA_bin = factor(H_acceptors %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = HBA_bin, y = Funbound.plasma)) +
+  labs(x = "Hydrogen bond acceptors", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 2
+HBD_plot <- target_chem_summary %>%
+  distinct(dtxsid, H_donors) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(HBD_bin = factor(H_donors %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = HBD_bin, y = Funbound.plasma)) +
+  labs(x = "Hydrogen bond donors", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+bin_size <- 200
+target_chem_summary %>%
+  distinct(dtxsid, logD_7.4) %>% 
+  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
+  mutate(logD_bin =  factor(logD_7.4 %/% bin_size * bin_size)) %>%
+  ggplot(aes(x = logD_bin, y = Funbound.plasma)) +
+  labs(x = "logD_7.4", y = "fup") +
+  ggbeeswarm::geom_beeswarm() +
+  theme_bw()
+
+(MW_plot + TPSA_plot + HBA_plot) / (logP_plot + RotBond_plot + HBD_plot)
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "PhysChemProperties_rdkit.png"),
+       bg = "white",
+       height = 6, width = 8
+)
+
+```
+
+Overwhelmingly, we see that chemicals (by Lipinski's rules of 5) are "drug-like".
+While this may not matter effectively for clearance, it may be nice to look 
+at whether chemicals deemed not "drug-like" (11 total) are more likely to be
+restrictively or non-restrictively cleared.

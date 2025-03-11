@@ -23,11 +23,29 @@ get_common_chems <- function(species = "human") {
 }
 
 # Parameterize the parameters
-parameterize_all <- function(species = "human") {
-  sp_chems <- get_common_chems(species = species)
+parameterize_all <- function(species = "human", all = FALSE) {
+  if (isTRUE(all)) {
+    sp_chems <- httk::get_cheminfo(info = "DTXSID",
+                                   species = species,
+                                   model = "3compartment2",
+                                   median.only = TRUE,
+                                   physchem.exclude = TRUE,
+                                   suppress.messages = TRUE)
+  } else {
+    sp_chems <- get_common_chems(species = species)
+  }
   function(human_clint_fup = FALSE) {
     if (isTRUE(human_clint_fup)) {
-      sp_chems <- get_common_chems(species = "human")
+      if (isTRUE(all)) {
+        sp_chems <- httk::get_cheminfo(info = "DTXSID",
+                                       species = "human",
+                                       model = "3compartment2",
+                                       median.only = TRUE,
+                                       physchem.exclude = TRUE,
+                                       suppress.messages = TRUE)
+      } else {
+        sp_chems <- get_common_chems(species = "human")
+      }
     } else {
       human_clint_fup <- FALSE
     }
@@ -208,11 +226,6 @@ parameterize_all <- function(species = "human") {
 parameterize_rat <- parameterize_all(species = "rat")
 parameterize_human <- parameterize_all(species = "human")
 
-rat_pars_rat <- parameterize_rat()
-rat_pars_human <- parameterize_rat(human_clint_fup = TRUE)
-
-#human_pars_human <- parameterize_human()
-
 get_httk_preds <- function(parameters, pk_obj, species = "human") {
   pk_df <- unique.data.frame(
     subset(
@@ -275,3 +288,32 @@ get_httk_preds <- function(parameters, pk_obj, species = "human") {
   return(merge(pk_df, do.call(rbind, pk_dlist)))
 }
 
+css_httk_batch <- function(param_list,
+                           restrictive = TRUE) {
+  stopifnot(is.logical(restrictive))
+
+  css_list_r <- vapply(
+    param_list,
+    \(x) {
+      calc_analytic_css_3comp2(parameters = x,
+                               restrictive.clearance = restrictive)
+    },
+    FUN.VALUE = numeric(1L)
+  )
+  css_list_names <- names(param_list)
+
+  css_df <- data.frame(Chemical = css_list_names,
+                       Css_httk = css_list_r)
+  if (restrictive) {
+    css_df <- rename(css_df, Css_httk_r = Css_httk)
+  } else {
+    css_df <- rename(css_df, Css_httk_nr = Css_httk)
+  }
+  return(css_df)
+}
+
+
+filter_targets <- function(.data) {
+  stopifnot("Chemical" %in% names(.data))
+  dplyr::filter(.data = .data, Chemical %in% target_chems)
+}

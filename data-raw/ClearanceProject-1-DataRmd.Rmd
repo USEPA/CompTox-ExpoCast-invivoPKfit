@@ -1,0 +1,189 @@
+---
+title: "Clearance Project - 1 - Data Generation"
+author: "Gilberto Padilla Mercado"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+This vignette creates and describes data for downstream analysis.
+
+```{r library_loading}
+today <- format(Sys.Date(), "%d%b%Y")
+devtools::load_all()
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(ctxR)
+library(ggvenn)
+library(ggalluvial)
+library(flextable)
+library(reticulate)
+library(patchwork)
+source("data-raw/RC_comparison_bkgd.R") # httk & dawson_2021 loaded here
+```
+
+
+```{r chemical-lists}
+member_list <- list(
+  httk_3comp2 = unique(get_cheminfo(info = "DTXSID",
+                                species = "human",
+                                model = "3compartment2",
+                                median.only = TRUE,
+                                physchem.exclude = TRUE,
+                                suppress.messages = TRUE)) %>% 
+    suppressWarnings(),
+  cvt = cvt %>% 
+    filter(species %in% c("human", "rat"),
+           conc_medium_normalized == "plasma") %>%
+    pull(analyte_dtxsid)
+)
+# These are the chemicals we can evaluate!
+target_chems <- intersect(member_list$cvt, member_list$httk_3comp2)
+all_chems <- member_list$httk_3comp2
+
+# save in an .Rdata file
+save(target_chems, all_chems,
+     file = "data-raw/chem_lists.RData")
+
+```
+
+```{r external_data}
+# Here we load Kd/binding affinity data
+red_assay_res <- readRDS("data-raw/2019-05-06-REDassay_HTTK.rds")
+
+# ctxR download of all chemicals in 3comp2 model
+# Chemical info and properties (averaging the latter by chemical and experimental/predicted)
+chem_info <- get_chemical_details_batch(DTXSID = all_chems,
+                                               rate_limit = 0L) %>%
+  filter(!is.na(smiles))
+# 9086 total unique chemicals with SMILES data
+
+chem_properties <- get_chem_info_batch(
+  DTXSID = chem_info$dtxsid,
+  type = '', 
+  rate_limit = 0L,
+  verbose = TRUE
+) 
+# This takes a minute or so... save a reference RDS file to load
+# Also get rid of any that don't have SMILES
+chem_info %>% distinct(dtxsid, preferredName,
+                              qsarReadySmiles, monoisotopicMass) %>%
+  right_join(chem_properties) %>%
+  filter(!is.na(qsarReadySmiles)) %>%
+  saveRDS(file = "data-raw/ctxR_3comp2_cheminfo.rds")
+
+
+functional_uses_all <- readr::read_csv(paste0(
+  Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/",
+  "ChemExpo_bulk_functional_uses_20250304.csv"
+))
+
+```
+
+```{r inivopkfit}
+# Here we fit CvTdb data that has plasma measurements
+# Only use plasma for simplicity
+this_pk <- pk(cvt %>% 
+                dplyr::filter(conc_medium_normalized == "plasma")
+              ) +
+  settings_optimx(method = "bobyqa") +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(
+    keep_data_original = TRUE,
+    suppress.messages = FALSE) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  stat_error_model(error_group = vars(Chemical, Species))
+
+this_pk <- do_prefit(this_pk)
+this_pk <- do_fit(this_pk, n_cores = 14)
+saveRDS(this_pk, "data-raw/plasma_CvTfits.rds")
+
+# Related files for pre-calculated:
+# tkstats, winning model, AIC, coef_sd, predictions, etc...
+this_winmodel <- get_winning_model(this_pk)
+
+this_tkstats <- eval_tkstats(this_pk,
+                             model = c("model_1comp", "model_2comp"),
+                             finite_only = TRUE,
+                             dose_norm = TRUE) %>%
+  inner_join(this_winmodel)
+colnames(this_tkstats) <- gsub("/", "_", colnames(this_tkstats))
+
+winning_preds <- predict(this_pk) %>%
+  semi_join(this_winmodel) %>%
+  distinct(Chemical, Species, Chemical_Name,
+           model, method, Dose, Media, Route, Reference, pLOQ, Time,
+           N_Subjects, Conc, Conc_est)
+this_AIC <- AIC(this_pk)
+this_coef_win <- coef(this_pk) %>% semi_join(this_winmodel)
+this_coef_fit <- this_pk$fit %>% semi_join(this_winmodel)
+this_coef_sd_win <- coef_sd(this_pk) %>% semi_join(this_winmodel)
+
+save(this_winmodel, this_tkstats, winning_preds,
+     this_AIC, this_coef_win, this_coef_fit, this_coef_sd_win,
+     file = "data-raw/plasma_CvTfits_data.RData")
+```
+
+```{r getting_curent_params}
+
+# rat_pars_rat <- parameterize_rat()
+rat_pars_human <- parameterize_rat(human_clint_fup = TRUE)
+#human_pars_human <- parameterize_human()
+chosen_list <- rat_pars_human
+# The following are derived from the above selected list (see environment)
+this_param_rest_l <- chosen_list$named_params_restrictive
+this_param_nrest_l <- chosen_list$named_params_nonrestrictive
+this_param_df <- chosen_list$param_df
+this_httk_clearance_df <- chosen_list$clearance_df
+
+# HTTK predictions
+
+# Predictions from httk(code retained but not run after 2.20.2025)
+restrictive_preds <- get_httk_preds(
+  parameters = this_param_rest_l,
+  pk_obj = this_pk,
+  species = c("rat", "human")
+) %>% rename_with(
+  .fn = ~paste0(.x, "_restrictive"),
+  .cols = starts_with("httk_")
+)
+
+nonrestrictive_preds <- get_httk_preds(
+  parameters = this_param_nrest_l,
+  pk_obj = this_pk,
+  species = c("rat", "human")
+) %>% rename_with(
+  .fn = ~paste0(.x, "_nonrestrictive"),
+  .cols = starts_with("httk_")
+)
+
+names(restrictive_preds)
+
+all_httk_preds <- inner_join(restrictive_preds, nonrestrictive_preds) %>%
+  filter_targets()
+rm(restrictive_preds, nonrestrictive_preds)
+
+this_css_df <- inner_join(
+  css_httk_batch(this_param_rest_l, restrictive = TRUE),
+  css_httk_batch(this_param_nrest_l, restrictive = FALSE)
+) %>% filter_targets()
+
+this_clint_df <- data.frame(Chemical = names(this_param_rest_l),
+                            CLint = vapply(names(this_param_rest_l),
+                                           \(x) {
+                                             this_param_rest_l[[x]][["Clint"]]
+                                           },
+                                           FUN.VALUE = numeric(1L)
+                            ))
+
+save(this_param_rest_l, this_param_nrest_l,
+     this_param_df, this_httk_clearance_df,
+     all_httk_preds, this_css_df, this_clint_df,
+     file = "data-raw/rat_pars_human.RData")
+```
+
