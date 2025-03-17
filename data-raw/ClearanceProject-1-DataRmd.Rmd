@@ -29,25 +29,37 @@ source("data-raw/RC_comparison_bkgd.R") # httk & dawson_2021 loaded here
 
 
 ```{r chemical-lists}
-member_list <- list(
-  httk_3comp2 = unique(get_cheminfo(info = "DTXSID",
+human_3compchems <- unique(get_cheminfo(info = "DTXSID",
                                 species = "human",
                                 model = "3compartment2",
                                 median.only = TRUE,
                                 physchem.exclude = TRUE,
                                 suppress.messages = TRUE)) %>% 
-    suppressWarnings(),
-  cvt = cvt %>% 
+    suppressWarnings()
+
+rat_3compchems <- unique(get_cheminfo(info = "DTXSID",
+                                species = "rat",
+                                model = "3compartment2",
+                                median.only = TRUE,
+                                physchem.exclude = TRUE,
+                                suppress.messages = TRUE)) %>% 
+    suppressWarnings()
+
+cvt_plasma_chems <-  cvt %>% 
     filter(species %in% c("human", "rat"),
            conc_medium_normalized == "plasma") %>%
     pull(analyte_dtxsid)
-)
+
+
 # These are the chemicals we can evaluate!
-target_chems <- intersect(member_list$cvt, member_list$httk_3comp2)
-all_chems <- member_list$httk_3comp2
+target_chems_human <- intersect(cvt_plasma_chems,
+                                human_3compchems)
+target_chems_rat <- intersect(cvt_plasma_chems,
+                              rat_3compchems)
 
 # save in an .Rdata file
-save(target_chems, all_chems,
+save(target_chems_human, target_chems_rat, 
+     human_3compchems, rat_3compchems,
      file = "data-raw/chem_lists.RData")
 
 ```
@@ -129,23 +141,19 @@ save(this_winmodel, this_tkstats, winning_preds,
      file = "data-raw/plasma_CvTfits_data.RData")
 ```
 
-```{r getting_curent_params}
+```{r getting_curent_params_rpr}
 
-# rat_pars_rat <- parameterize_rat()
-rat_pars_human <- parameterize_rat(human_clint_fup = TRUE)
-#human_pars_human <- parameterize_human()
-chosen_list <- rat_pars_human
-# The following are derived from the above selected list (see environment)
-this_param_rest_l <- chosen_list$named_params_restrictive
-this_param_nrest_l <- chosen_list$named_params_nonrestrictive
-this_param_df <- chosen_list$param_df
-this_httk_clearance_df <- chosen_list$clearance_df
+rat_pars_rat <- parameterize_rat(human_clint_fup = FALSE)
+
+rpr_param_rest_l <- rat_pars_rat$named_params_restrictive
+rpr_param_nrest_l <- rat_pars_rat$named_params_nonrestrictive
+rpr_param_df <- rat_pars_rat$param_df
+rpr_httk_clearance_df <- rat_pars_rat$clearance_df
 
 # HTTK predictions
-
 # Predictions from httk(code retained but not run after 2.20.2025)
 restrictive_preds <- get_httk_preds(
-  parameters = this_param_rest_l,
+  parameters = rpr_param_rest_l,
   pk_obj = this_pk,
   species = c("rat", "human")
 ) %>% rename_with(
@@ -154,7 +162,7 @@ restrictive_preds <- get_httk_preds(
 )
 
 nonrestrictive_preds <- get_httk_preds(
-  parameters = this_param_nrest_l,
+  parameters = rpr_param_nrest_l,
   pk_obj = this_pk,
   species = c("rat", "human")
 ) %>% rename_with(
@@ -164,26 +172,79 @@ nonrestrictive_preds <- get_httk_preds(
 
 names(restrictive_preds)
 
-all_httk_preds <- inner_join(restrictive_preds, nonrestrictive_preds) %>%
-  filter_targets()
+rpr_httk_preds <- inner_join(restrictive_preds, nonrestrictive_preds) 
 rm(restrictive_preds, nonrestrictive_preds)
 
-this_css_df <- inner_join(
-  css_httk_batch(this_param_rest_l, restrictive = TRUE),
-  css_httk_batch(this_param_nrest_l, restrictive = FALSE)
-) %>% filter_targets()
+rpr_css_df <- inner_join(
+  css_httk_batch(rpr_param_rest_l, restrictive = TRUE),
+  css_httk_batch(rpr_param_nrest_l, restrictive = FALSE)
+) 
 
-this_clint_df <- data.frame(Chemical = names(this_param_rest_l),
-                            CLint = vapply(names(this_param_rest_l),
+rpr_clint_df <- data.frame(Chemical = names(rpr_param_rest_l),
+                           CLint = vapply(names(rpr_param_rest_l),
+                                          \(x) {
+                                            rpr_param_rest_l[[x]][["Clint"]]
+                                          },
+                                          FUN.VALUE = numeric(1L)
+                           ))
+
+save(rpr_param_rest_l, rpr_param_nrest_l,
+     rpr_param_df, rpr_httk_clearance_df,
+     rpr_httk_preds, rpr_css_df, rpr_clint_df,
+     file = "data-raw/rat_pars_rat.RData")
+```
+
+```{r getting_current_params_rph}
+
+rat_pars_human <- parameterize_rat(human_clint_fup = TRUE)
+#human_pars_human <- parameterize_human()
+# The following are derived from the above selected list (see environment)
+rph_param_rest_l <- rat_pars_human$named_params_restrictive
+rph_param_nrest_l <- rat_pars_human$named_params_nonrestrictive
+rph_param_df <- rat_pars_human$param_df
+rph_httk_clearance_df <- rat_pars_human$clearance_df
+
+# HTTK predictions
+# Predictions from httk(code retained but not run after 2.20.2025)
+restrictive_preds <- get_httk_preds(
+  parameters = rph_param_rest_l,
+  pk_obj = this_pk,
+  species = c("rat", "human")
+) %>% rename_with(
+  .fn = ~paste0(.x, "_restrictive"),
+  .cols = starts_with("httk_")
+)
+
+nonrestrictive_preds <- get_httk_preds(
+  parameters = rph_param_nrest_l,
+  pk_obj = this_pk,
+  species = c("rat", "human")
+) %>% rename_with(
+  .fn = ~paste0(.x, "_nonrestrictive"),
+  .cols = starts_with("httk_")
+)
+
+names(restrictive_preds)
+
+rph_httk_preds <- inner_join(restrictive_preds, nonrestrictive_preds)
+rm(restrictive_preds, nonrestrictive_preds)
+
+rph_css_df <- inner_join(
+  css_httk_batch(rph_param_rest_l, restrictive = TRUE),
+  css_httk_batch(rph_param_nrest_l, restrictive = FALSE)
+)
+
+rph_clint_df <- data.frame(Chemical = names(rph_param_rest_l),
+                            CLint = vapply(names(rph_param_rest_l),
                                            \(x) {
-                                             this_param_rest_l[[x]][["Clint"]]
+                                             rph_param_rest_l[[x]][["Clint"]]
                                            },
                                            FUN.VALUE = numeric(1L)
                             ))
 
-save(this_param_rest_l, this_param_nrest_l,
-     this_param_df, this_httk_clearance_df,
-     all_httk_preds, this_css_df, this_clint_df,
+save(rph_param_rest_l, rph_param_nrest_l,
+     rph_param_df, rph_httk_clearance_df,
+     rph_httk_preds, rph_css_df, rph_clint_df,
      file = "data-raw/rat_pars_human.RData")
 ```
 
