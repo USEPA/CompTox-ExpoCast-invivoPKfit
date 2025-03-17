@@ -22,6 +22,7 @@ get_common_chems <- function(species = "human") {
   return(chems)
 }
 
+
 # Parameterize the parameters
 parameterize_all <- function(species = "human", all = FALSE) {
   if (isTRUE(all)) {
@@ -29,6 +30,7 @@ parameterize_all <- function(species = "human", all = FALSE) {
                                    species = species,
                                    model = "3compartment2",
                                    median.only = TRUE,
+                                   default.to.human = FALSE,
                                    physchem.exclude = TRUE,
                                    suppress.messages = TRUE)
   } else {
@@ -51,6 +53,8 @@ parameterize_all <- function(species = "human", all = FALSE) {
     }
     message(glue::glue("Total number of chemicals loaded: {length(sp_chems)}"))
     message(glue::glue("Fup & Clint set to Human values? {human_clint_fup}"))
+
+    browser()
     # Get restrictive and non-restrictive parameters
     params_r <- tryCatch(
       expr = {
@@ -66,7 +70,7 @@ parameterize_all <- function(species = "human", all = FALSE) {
                }
         )
       }, error = function(msg) {
-        message("Not possible to parameterize_gas_pbtk for all dtxsid ",
+        message("Not possible to parameterize_3comp2 for all dtxsid ",
                 "try to use default.to.human = TRUE.")
       }
     )
@@ -85,7 +89,7 @@ parameterize_all <- function(species = "human", all = FALSE) {
                }
         )
       }, error = function(msg) {
-        message("Not possible to parameterize_gas_pbtk for all dtxsid ",
+        message("Not possible to parameterize_3comp2 for all dtxsid ",
                 "try to use default.to.human = TRUE.")
       }
     )
@@ -102,7 +106,7 @@ parameterize_all <- function(species = "human", all = FALSE) {
                        httk::calc_vdist(
                          parameters = x,
                          species = species,
-                         default.to.human = human_clint_fup,
+                         default.to.human = FALSE,
                          suppress.messages = TRUE)
                      }, FUN.VALUE = numeric(1)
       )
