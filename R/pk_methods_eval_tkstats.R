@@ -21,7 +21,8 @@
 #'   `Chemical`, `Species`, `Route`, `Media`, and `Dose`, because the TK stats
 #'   depend on these values, and it is required to have one unique set of TK
 #'   stats per group.
-#' @param model Character: One or more of the models fitted. Default `NULL` to
+#' @param model Character: One or more of the models fitted. Default `"winning"` to return
+#'   results for only the winning model(s). Supply `NULL` to
 #'   return TK stats for all models.
 #' @param method Character: One or more of the [optimx::optimx()] methods used.
 #'   Default `NULL` to return TK stats for all methods.
@@ -45,6 +46,9 @@
 #' @param finite_only Logical: `TRUE` (default) returns only rows (observations)
 #'   for which AUC is finite in both `nca` and `tkstats`. This also means it will
 #'   by default never return instances where winning model == `model_flat`.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `obj$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments. Currently not in use.
 #' @return A `data.frame` with one  row for each "winning" model in
 #'   `model` from [get_winning_model()]. The `data.frame` will have the variables
@@ -60,13 +64,18 @@
 
 eval_tkstats.pk <- function(obj,
                             newdata = NULL,
-                            model = NULL,
+                            model = "winning",
                             method = NULL,
                             tk_group = NULL,
                             exclude = TRUE,
                             dose_norm = FALSE,
                             finite_only = TRUE,
+                            suppress.messages = NULL,
                             ...) {
+
+  if (is.null(suppress.messages)) {
+    suppress.messages <- obj$settings_preprocess$suppress.messages
+  }
 
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -81,12 +90,19 @@ eval_tkstats.pk <- function(obj,
   if (is.null(tk_group)) tk_group <- obj$settings_data_info$summary_group
 
   method_ok <- check_method(obj = obj, method = method)
+  if(all(model %in% "winning")){
+  win <- TRUE
+  model <- names(obj$stat_model)
+  }else{
+    win <- FALSE
+  }
   model_ok <- check_model(obj = obj, model = model)
 
   # Grouping variables
   grp_vars <- sapply(tk_group, rlang::as_label)
   data_grp_vars <- sapply(obj$data_group, rlang::as_label)
-  error_grp_vars <- sapply(obj$stat_error_model$error_group, rlang::as_label)
+  error_grp_vars <- sapply(obj$stat_error_model$error_group,
+                           rlang::as_label)
 
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
@@ -114,10 +130,13 @@ eval_tkstats.pk <- function(obj,
     newdata$Dose <- newdata$Dose / newdata$Dose
   } # Need this transformation for get_tkstats
 
+  if(win %in% TRUE){
   # Get the winning model for filtering
   winmodel_df <- get_winning_model.pk(obj = obj,
                                    method = method) %>%
     dplyr::select(-c(near_flat, preds_below_loq))
+  }
+
 
   # calc NCA for newdata
   nca_df <- nca(obj = obj,
@@ -125,13 +144,19 @@ eval_tkstats.pk <- function(obj,
                 nca_group = tk_group,
                 dose_norm = dose_norm,
                 exclude = exclude,
-                suppress.messages = TRUE)
+                suppress.messages = suppress.messages)
 
   nca_df <- nca_df %>% dplyr::select(-param_sd_z, -param_units) %>%
     tidyr::pivot_wider(names_from = param_name,
-                       values_from = param_value) %>%
-    dplyr::right_join(winmodel_df) %>%
-    dplyr::relocate(model, method, .after = Media)
+                       values_from = param_value)
+
+  if(win %in% TRUE){
+ nca_df <- nca_df %>%
+    dplyr::right_join(winmodel_df,
+                      relationship = "many-to-many") %>%
+   dplyr::relocate(model, method, .after = Media)
+ }
+
 
   # get tkstats
   tkstats_df <- get_tkstats.pk(obj = obj,
@@ -140,28 +165,15 @@ eval_tkstats.pk <- function(obj,
                             method = method,
                             tk_group = tk_group,
                             dose_norm = dose_norm,
-                            exclude = exclude) %>%
+                            exclude = exclude,
+                            suppress.messages = suppress.messages) %>%
     ungroup()
 
+  if(win %in% TRUE){
   tkstats_df <- dplyr::left_join(winmodel_df %>% dplyr::ungroup(),
                                  tkstats_df,
                                  by = c(data_grp_vars, "method", "model"))
-
-  # Assess group variables
-  # Are all error_group variables in tk_group? Unlikely but error group might be subset
-  # Note that despite dose-normalization, each summary_group will have
-  # different NCA values.
-  if (!all(error_grp_vars %in% grp_vars)) {
-    remaining_vars <- error_grp_vars[!(error_grp_vars %in% data_grp_vars)]
-
-    tkstats_df <- tkstats_df %>%
-      dplyr::group_by(!!!tk_group) %>%
-      dplyr::summarize(dplyr::across(tidyselect::all_of(remaining_vars),
-                                     \(x) {paste0(x, collapse = ",")})) %>%
-      dplyr::ungroup() %>%
-      dplyr::distinct()
   }
-
 
   # prepare for merge
   nca_df_red <- nca_df %>%
@@ -190,7 +202,7 @@ eval_tkstats.pk <- function(obj,
       nca_df_red
       ))
 
-  # Filter out infinite values for AUC_infinity
+  # Filter out infinite and NA values for AUC_infinity
   if (finite_only) {
     tk_eval <- tk_eval %>%
       filter(is.finite(AUC_infinity.tkstats),

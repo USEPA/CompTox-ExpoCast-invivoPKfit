@@ -11,6 +11,11 @@ get_data_sigma_group(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A `factor` vector giving the error SD group ID for each observation,
+  as the interaction of the factors specified in
+  `obj$stat_error_model$error_group`.
+}
 \description{
 This is the S3 method generic for get_data_sigma_group()
 }

@@ -9,7 +9,11 @@
 \arguments{
 \item{obj}{An object of class [pk()].}
 
-\item{...}{Additional arguemnts. Not currently in use.}
+\item{...}{Additional arguments. Not currently in use.}
+}
+\value{
+Object of class [pk()] with an added `$data_info` list containing
+non-compartmental analysis results.
 }
 \description{
 Calculate summary data information, including non-compartmental analysis.

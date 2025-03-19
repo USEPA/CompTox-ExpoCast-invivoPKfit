@@ -11,6 +11,7 @@
   method = NULL,
   exclude = TRUE,
   use_scale_conc = FALSE,
+  suppress.messages = NULL,
   ...
 )
 }
@@ -51,6 +52,10 @@ scale concentration data). If `use_scale_conc = list(dose_norm = ...,
 log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied.}
 
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`object$settings_preprocess$suppress.messages`}
+
 \item{...}{Additional arguments not currently used.}
 }
 \value{
@@ -76,12 +81,15 @@ LOQ. Otherwise, the residual is the difference between the LOQ and `pred`.
 }
 \seealso{
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},
 \code{\link{coef_sd.pk}()},
 \code{\link{eval_tkstats.pk}()},
 \code{\link{get_fit.pk}()},
+\code{\link{get_hessian.pk}()},
 \code{\link{get_tkstats.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{predict.pk}()},

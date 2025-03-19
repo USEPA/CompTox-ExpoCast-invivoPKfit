@@ -11,6 +11,9 @@ get_prefit(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A list of `data.frame`s in the object's `prefit` element.
+}
 \description{
 This is the S3 method generic for get_prefit()
 }

@@ -11,6 +11,14 @@ do_prefit(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+The same `pk` object, but with a new element `prefit`, containing the
+  results of pre-fit calculations and checks for each model and for the error
+  model.
+}
 \description{
 Prefitting
+}
+\seealso{
+[do_prefit.pk()] for the `do_prefit` method for class [pk()]
 }

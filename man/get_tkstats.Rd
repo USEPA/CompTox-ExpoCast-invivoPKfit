@@ -11,6 +11,13 @@ get_tkstats(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A data.frame with one row for each `data_group`, `model` and `method`
+  with the variables in the `data.frame` returned by the `tkstats_fun` for
+  its corresponding model.
+  (For the built-in models `model_flat`, `model_1comp`, and `model_2comp`, these
+  variables are `param_name` and `param_value`.)
+}
 \description{
 This is the S3 method generic for get_tkstats(0)
 }

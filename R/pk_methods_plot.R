@@ -25,7 +25,7 @@
 #'  log10_trans = ...)`, then the specified dose normalization and/or
 #'  log10-transformation will be applied to the y-axis (concentration axis) of
 #'  the plots.
-#' @param time_trans Default `FLASE`. Determines whether time values will be transformed.
+#' @param time_trans Default `FALSE`. Determines whether time values will be transformed.
 #' @param log10_C Default `NULL`. Determines whether y-axis (concentration) should
 #'  be log10 transformed. Takes `TRUE` or `FALSE` values. Otherwise it defaults
 #'  to the value determined from `use_scale_conc`.
@@ -174,7 +174,8 @@ plot.pk <- function(x,
                          ggplot2::vars(Time_trans, Time_trans.Units))
   }
 
-  obs_vars <- ggplot2::vars(
+  obs_vars <- setdiff(
+    ggplot2::vars(
     Conc,
     Conc_SD,
     Conc.Units,
@@ -185,7 +186,8 @@ plot.pk <- function(x,
     Conc_trans,
     Conc_trans.Units,
     Reference
-  )
+  ),
+  x$data_group)
 
 
   # Default arguments and functions
@@ -254,7 +256,6 @@ plot.pk <- function(x,
     tidyr::nest(.key = "observations")
 
 
-
   newdata <- newdata %>%
     dplyr::mutate(observation_plot =
                     purrr::map(observations, \(x) {
@@ -320,7 +321,8 @@ plot.pk <- function(x,
 
                       p +
                         labs(
-                          title = paste(Chemical, Species),
+                          #title = paste(Chemical, Species),
+                          title = paste(!!!x$data_group),
                           x = paste0("Time (", t_units, ")"),
                           y = ifelse(
                             conc_scale$dose_norm,
@@ -412,12 +414,12 @@ plot.pk <- function(x,
       include_NAs = TRUE
     )
 
-    if (best_fit) {
+    if (best_fit %in% TRUE) {
       interp_data <- dplyr::left_join(get_winning_model(obj = x), interp_data)
     }
 
     # if plotting transformed time, then transform interpolated time points
-    if (time_trans) {
+    if (time_trans %in% TRUE) {
       conversion_table <- time_conversions %>%
         dplyr::filter(
           TimeFrom %in% interp_data$Time.Units,
@@ -444,8 +446,8 @@ plot.pk <- function(x,
     # Need to check if predicted is NULL before filtering below
     # NULL predicted values will occur when there was no adequate fit for the model
 
-    if (limit_predicted) {
-      if (log10_C) {
+    if (limit_predicted %in% TRUE) {
+      if (log10_C %in% TRUE) {
         newdata <- newdata %>%
           dplyr::mutate(predicted = purrr::map2(observations, predicted, \(x, y) {
             if (!is.null(y)) {

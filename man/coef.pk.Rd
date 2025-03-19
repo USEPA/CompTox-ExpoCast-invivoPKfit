@@ -10,7 +10,8 @@
   method = NULL,
   drop_sigma = FALSE,
   include_NAs = FALSE,
-  suppress_messages = FALSE,
+  include_type = "use",
+  suppress.messages = NULL,
   ...
 )
 }
@@ -32,18 +33,31 @@ sigma in the output.}
 \item{include_NAs}{Logical: `FALSE` by default. Determines whether to include
 aborted fits which have NAs as coefficients.}
 
-\item{suppress_messages}{Logical: `FALSE` by default. Determines whether to
+\item{include_type}{Character: `"use"` (default) will return all parameters
+used in evaluating the model, including those that were held constant.
+`"optimize"` will return only parameters that were optimized, dropping all
+that were held constant. `"constant"` will return *only* parameters that
+were held constant (used, but not optimized). (`"optimize"` and
+`"constant"` are useful, for example, when evaluating the Hessian of the
+log-likelihood function, which requires differentiating between parameters
+that were optimized and those that were held constant.) Any value other
+than `"use"`, `"optim"`, or `"const"` will return an error.}
+
+\item{suppress.messages}{Logical: `NULL` by default to use the setting in
+`object$settings_preprocess$suppress.messages`. Determines whether to
 display messages.}
 
 \item{...}{Additional arguments currently not in use.}
 }
 \value{
-A data.frame with a row for each `data_group` x `method` x `model` combination
- in a fitted [pk()] object. When `drop_sigma = TRUE` there is also a row for each
- unique standard deviation hyper-parameter defined by `error_group` in the fitted [pk()] object.
- There is a column for all parameter estimates given each model in `model`.
- A list-column `coefs_vector` summarizes all estimated parameters into a named vector.
- This named vector is used in functions that call upon the model functions, such as [predict()].
+A data.frame with a row for each `data_group` x `method` x `model`
+  combination in a fitted [pk()] object. When `drop_sigma = TRUE` there is
+  also a row for each unique standard deviation hyper-parameter defined by
+  `error_group` in the fitted [pk()] object. There is a column for all
+  parameter estimates given each model in `model`. A list-column
+  `coefs_vector` summarizes all estimated parameters into a named vector.
+  This named vector is used in functions that call upon the model functions,
+  such as [predict()].
 }
 \description{
 Extract coefficients from a fitted [pk()] object
@@ -54,11 +68,14 @@ object.
 }
 \seealso{
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef_sd.pk}()},
 \code{\link{eval_tkstats.pk}()},
 \code{\link{get_fit.pk}()},
+\code{\link{get_hessian.pk}()},
 \code{\link{get_tkstats.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{predict.pk}()},

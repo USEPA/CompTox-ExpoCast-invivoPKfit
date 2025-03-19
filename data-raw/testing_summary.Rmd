@@ -227,7 +227,7 @@ For coef.pk() :
 
 For predict.pk() :  
 
-+ fold_errors.pk()  
++ fold_error.pk()  
 + residuals.pk()  
 + rsq.pk()  
 + rmse.pk()
@@ -247,7 +247,7 @@ be simple.
 
 ```{r}
 my_residuals <- residuals(my_pk)
-my_fes <- fold_errors(my_pk)
+my_fes <- fold_error(my_pk)
 my_rmse <- rmse(my_pk)
 my_rmsle <- rmse(my_pk, use_scale_conc = list(dose_norm = FALSE,
                                               log10_trans = TRUE))

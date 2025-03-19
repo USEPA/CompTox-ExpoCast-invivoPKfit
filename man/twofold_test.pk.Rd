@@ -4,13 +4,31 @@
 \alias{twofold_test.pk}
 \title{Evaluate whether data and predictions are within two-fold of mean or concentration, respectively}
 \usage{
-\method{twofold_test}{pk}(obj, suppress_messages = FALSE, ...)
+\method{twofold_test}{pk}(
+  obj,
+  sub_pLOQ = TRUE,
+  suppress.messages = NULL,
+  model = NULL,
+  method = NULL,
+  ...
+)
 }
 \arguments{
 \item{obj}{A pk object.}
 
-\item{suppress_messages}{Logical, default: FALSE.
-Should there be no printed output?}
+\item{sub_pLOQ}{TRUE (default): Substitute all predictions below the LOQ with
+the LOQ before computing fold errors. FALSE: do not. Only used if `obj` has been fitted and predictions are possible.}
+
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in `obj$settings_preprocess$suppress.messages`.}
+
+\item{model}{Optional: Specify one or more of the fitted models for which to
+make predictions. If NULL (the default), predictions will be returned for
+all of the models in `object$stat_model`.}
+
+\item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
+for which to make predictions. If NULL (the default), predictions will be
+returned for all of the models in `object$settings_optimx$method`.}
 
 \item{...}{Additional arguments. Currently unused.}
 }
@@ -38,6 +56,8 @@ Furthermore if `pk` object `status == 5` then it calculates the model error by
 evaluating _prediction/concentration_ at each timepoint for all data. Each test
 is done for data from individual subject observations and for all data by summarizing the
 observations.
+
+Only non-excluded detects are included in this analysis.
 }
 \author{
 Gilberto Padilla Mercado

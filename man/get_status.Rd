@@ -11,6 +11,9 @@ get_status(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+The status of the `pk` object as an integer.
+}
 \description{
 This is the S3 method generic.
 }

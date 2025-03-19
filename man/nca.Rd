@@ -11,6 +11,14 @@ nca(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A `data.frame` with variables including all the grouping variables in
+  `nca_group`, `nca_group_id`; `design` (the auto-detected study design for
+  this group); `param_name` (the name of the NCA parameter); `param_value`
+  (the NCA parameter value); `param_sd_z` (standard deviation of the
+  estimated NCA parameter value, if available); `param_units` (the units of
+  the NCA parameter, derived from the units of the data).
+}
 \description{
 This is the S3 method generic for nca()
 }

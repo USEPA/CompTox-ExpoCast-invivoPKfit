@@ -52,6 +52,9 @@
 #'   groupings, regardless of exclusion status. Default `TRUE`.
 #' @param vol_unit Character: Specifies the unit of volume. Defaults to "L" for liters.
 #' @param dose_norm Logical: `TRUE` (default) specifies whether the concentrations are dose-normalized.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `obj$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments not currently in use.
 #' @return  A data.frame with one row for each `data_group`, `model` and `method`
 #'   with the variables in the `data.frame` returned by the `tkstats_fun` for
@@ -69,7 +72,11 @@ get_tkstats.pk <- function(obj,
                            exclude = TRUE,
                            vol_unit = "L",
                            dose_norm = TRUE,
+                           suppress.messages = NULL,
                            ...) {
+  if (is.null(suppress.messages)) {
+    suppress.messages <- obj$settings_preprocess$suppress.messages
+  }
 
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$settings_optimx$method
@@ -115,8 +122,7 @@ get_tkstats.pk <- function(obj,
                       Dose,
                       Dose.Units,
                       Route,
-                      Media,
-                      data_sigma_group)
+                      Media)
   )
 
   # check that tk_group is valid: it must produce groups with a unique
@@ -138,7 +144,7 @@ get_tkstats.pk <- function(obj,
 
   # if more than one distinct row per group, stop
   if (any(newdata_grouped_count$N > 1)) {
-    stop("tk_group does not produce groups with unique combinations of Chemical, Species, Route, Media, and Dose.")
+    stop("get_tkstats.pk(): tk_group does not produce groups with unique combinations of Chemical, Species, Route, Media, and Dose.")
   }
 
 
@@ -173,22 +179,25 @@ get_tkstats.pk <- function(obj,
                        vol_unit = "L"
                      )),
       error = function(e) {
-        message("Failed to run:", tk_fun, "error reads: ")
+        message("get_tkstats.pk(): Failed to run:", tk_fun, "error reads: ")
         print(e)
       }
     )) # ending tryCatch statement
     ) %>%
+    dplyr::ungroup() %>%
     tidyr::unnest(cols = TKstats)
 
 
+  if(suppress.messages %in% FALSE){
   # Print reference list of units for the parameters
   # The column is filtered out after pivoting
-  message("Here are the units for the estimated TK statistics: ")
+  message("get_tkstats.pk(): Here are the units for the estimated TK statistics: ")
   print(
     tkstats_all %>%
       dplyr::ungroup() %>%
       dplyr::distinct(param_name, param_units)
   )
+  }
 
   tkstats_all <- tkstats_all %>%
     dplyr::select(-param_units) %>%
@@ -199,8 +208,9 @@ get_tkstats.pk <- function(obj,
   if (dose_norm) {
     tkstats_all <- tkstats_all %>%
       dplyr::select(!Dose)
-
-    message("Dose column removed because these TK statistics are dose normalized")
+if(suppress.messages %in% FALSE){
+    message("get_tkstats.pk(): Dose column removed because these TK statistics are dose normalized")
+}
   }
 
   # Final filtering of tkstats_all

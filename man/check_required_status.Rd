@@ -11,6 +11,12 @@ check_required_status(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+If the [pk()] object has the required status or greater, returns
+  TRUE. If the [pk()] object has less than the required status, returns
+  FALSE. Returned value has an attribute `msg`, containing an informative
+  message as a string.
+}
 \description{
 This is the S3 method generic.
 }

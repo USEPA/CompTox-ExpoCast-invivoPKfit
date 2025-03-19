@@ -7,12 +7,13 @@
 \method{eval_tkstats}{pk}(
   obj,
   newdata = NULL,
-  model = NULL,
+  model = "winning",
   method = NULL,
   tk_group = NULL,
   exclude = TRUE,
   dose_norm = FALSE,
   finite_only = TRUE,
+  suppress.messages = NULL,
   ...
 )
 }
@@ -26,7 +27,8 @@ compute the TK stats. Must contain at least variables `Chemical`,
 `Time_trans.Units` or `Time.Units`, and any other variables named in
 `tk_grouping`. Default `NULL`, to use the data in `obj$data`.}
 
-\item{model}{Character: One or more of the models fitted. Default `NULL` to
+\item{model}{Character: One or more of the models fitted. Default `"winning"` to return
+results for only the winning model(s). Supply `NULL` to
 return TK stats for all models.}
 
 \item{method}{Character: One or more of the [optimx::optimx()] methods used.
@@ -68,6 +70,10 @@ this function. But it means that any values in the `Dose` variable of
 for which AUC is finite in both `nca` and `tkstats`. This also means it will
 by default never return instances where winning model == `model_flat`.}
 
+\item{suppress.messages}{Logical: whether to suppress message printing. If
+NULL (default), uses the setting in
+`obj$settings_preprocess$suppress.messages`}
+
 \item{...}{Additional arguments. Currently not in use.}
 }
 \value{
@@ -84,11 +90,14 @@ Evaluate TK statistics from a fitted model by comparing to NCA results
 }
 \seealso{
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{AIC.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},
 \code{\link{coef_sd.pk}()},
 \code{\link{get_fit.pk}()},
+\code{\link{get_hessian.pk}()},
 \code{\link{get_tkstats.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{predict.pk}()},

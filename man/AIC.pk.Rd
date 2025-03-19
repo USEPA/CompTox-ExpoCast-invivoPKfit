@@ -67,6 +67,8 @@ where \eqn{n_{par}} is the number of parameters in the fitted model, and
 }
 \seealso{
 Other fit evaluation metrics: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{rmse.pk}()},
@@ -77,11 +79,14 @@ Other log likelihood functions:
 \code{\link{logLik.pk}()}
 
 Other methods for fitted pk objects: 
+\code{\link{AAFE.pk}()},
+\code{\link{AFE.pk}()},
 \code{\link{BIC.pk}()},
 \code{\link{coef.pk}()},
 \code{\link{coef_sd.pk}()},
 \code{\link{eval_tkstats.pk}()},
 \code{\link{get_fit.pk}()},
+\code{\link{get_hessian.pk}()},
 \code{\link{get_tkstats.pk}()},
 \code{\link{logLik.pk}()},
 \code{\link{predict.pk}()},

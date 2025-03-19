@@ -96,7 +96,7 @@
 #'
 #' @param obj A `pk` object
 #' @param newdata Optional: A `data.frame` with new data for which to make
-#'   predictions and compute RMSsE. If NULL (the default), then R-squared will be
+#'   predictions and compute R-squared. If NULL (the default), then R-squared will be
 #'   computed for the data in `obj$data`. `newdata` is required to contain at
 #'   least the following variables: `Time`, `Time.Units`, `Dose`, `Route`,
 #'   `Media`, `Conc`, `Conc_SD`, `N_Subjects`, `Detect`.
@@ -126,6 +126,11 @@
 #' grouping that is used to calculate R-squared value. Should be set to lowest number
 #' of variables that still would return unique experimental conditions.
 #' Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.
+#' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
+#'   the LOQ before computing R-squared. FALSE: do not.
+#' @param suppress.messages Logical: whether to suppress message printing. If
+#'   NULL (default), uses the setting in
+#'   `obj$settings_preprocess$suppress.messages`
 #' @param ... Additional arguments. Not currently in use.
 #' @return  A dataframe with one row for each `data_group`, `model` and `method`.
 #'   The final column contains the R-squared of the model fitted by the corresponding
@@ -142,7 +147,14 @@ rsq.pk <- function(obj,
                    exclude = TRUE,
                    use_scale_conc = FALSE,
                    rsq_group = NULL,
+                   sub_pLOQ = TRUE,
+                   suppress.messages = NULL,
                    ...) {
+
+  if (is.null(suppress.messages)) {
+    suppress.messages <- obj$settings_preprocess$suppress.messages
+  }
+
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -170,17 +182,20 @@ rsq.pk <- function(obj,
                                            "Conc_SD",
                                            "N_Subjects",
                                            "LOQ",
-                                           "Detect"),
+                                           "Detect",
+                                           "pLOQ"),
                               exclude = exclude)
 
 
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
+  if(suppress.messages %in% FALSE){
   message("rsq.pk(): Calculating R-squared on transformed concentration scale. ",
           "Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
           "log-transformation ", conc_scale$log10_trans)
+  }
 
 
   rsq_group_char <- sapply(rsq_group, rlang::as_label)
@@ -209,12 +224,24 @@ req_vars <- unique(c(names(preds),
                      "Conc_SD",
                      "N_Subjects",
                      "Detect",
-                     "exclude"))
+                     "exclude",
+                     "pLOQ"))
 
 
   new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
     dplyr::select(dplyr::all_of(req_vars)) %>%
     dplyr::ungroup())
+
+  #replace below-LOQ preds with pLOQ if specified
+  if(sub_pLOQ %in% TRUE){
+    if(suppress.messages %in% FALSE){
+    message("rsq.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    }
+    new_preds <- new_preds %>%
+      dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
+                                              pLOQ,
+                                              Conc_est))
+  }
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
@@ -249,9 +276,11 @@ req_vars <- unique(c(names(preds),
     # dplyr::distinct() %>%
     dplyr::ungroup()
 
+  if(suppress.messages %in% FALSE){
   message("rsq.pk)(): Groups: \n",
           toString(rsq_group_char),
           ", method, model")
+  }
 
   return(rsq_df)
 }

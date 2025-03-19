@@ -10,4 +10,15 @@ The invivoPKfit package takes in vivo concentration-time data from TNO, RTI,
 and NHEERL, and fits parameters of 1-compartment and 2-compartment models
 for each chemical.
 }
+\author{
+\strong{Maintainer}: John Wambaugh \email{wambaugh.john@epa.gov} (\href{https://orcid.org/0000-0002-4024-534X}{ORCID})
+
+Authors:
+\itemize{
+  \item Caroline Ring \email{Ring.Caroline@epa.gov} (\href{https://orcid.org/0000-0002-0463-1251}{ORCID})
+  \item Gilberto Padilla Mercado (\href{https://orcid.org/0000-0001-5423-1646}{ORCID})
+  \item Chris Cook
+}
+
+}
 \keyword{internal}

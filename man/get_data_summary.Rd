@@ -11,6 +11,12 @@ get_data_summary(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A `data.frame` with variables including all the grouping variables in
+  `summary_group`, `group_id`; `param_name` (the name of the summary
+  statistic; see Details); `param_value` (the summary statistic value);  `param_units`
+  (the units of the summary statistic, derived from the units of the data).
+}
 \description{
 This is the S3 method generic for get_data_summary()
 }

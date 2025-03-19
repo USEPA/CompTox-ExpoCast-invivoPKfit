@@ -13,6 +13,9 @@ pk_subtract(pkproto_obj, pk_obj, objectname)
 
 \item{objectname}{The object name}
 }
+\value{
+The `pk` object modified by the subtraction.
+}
 \description{
 This is the S3 generic method.
 }

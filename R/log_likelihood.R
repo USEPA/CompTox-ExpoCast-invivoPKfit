@@ -194,9 +194,9 @@ log_likelihood <- function(par,
       stop("Argument max_multiplier expects a numeric value or NULL")
     }
     if (!("groupCmax" %in% names(data))) {
-      stop(cat("Using max_multiplier requires a column in data named groupCmax ",
+      stop("Using max_multiplier requires a column in data named groupCmax ",
                "which stores the maximum concentration per ",
-               "Reference, Dose, Route, and Media group."))
+               "Reference, Dose, Route, and Media group.")
     }
 
     max_conc <- data$groupCmax * max_multiplier

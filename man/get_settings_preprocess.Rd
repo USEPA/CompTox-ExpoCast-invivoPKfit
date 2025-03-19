@@ -11,6 +11,9 @@ get_settings_preprocess(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A named list of the preprocessing settings
+}
 \description{
 This is the S3 method generic for get_settings_preprocess()
 }

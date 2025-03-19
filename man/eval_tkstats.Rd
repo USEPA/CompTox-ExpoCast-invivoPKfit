@@ -11,12 +11,18 @@ eval_tkstats(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A `data.frame` with one  row for each "winning" model in
+  `model` from [get_winning_model()]. The `data.frame` will have the variables
+  returned by the `tkstats_fun` for its corresponding model. (For the
+  built-in models `model_flat`, `model_1comp`, and `model_2comp`, these
+  variables are `param_name` and `param_value`.) Additionally, there will be
+  a variable `method` denoting the [optimx::optimx()] method used to optimize
+  the set of model parameters used to derive each set of TK statistics.
+}
 \description{
 This is the S3 method generic for eval_tkstats()
 }
-\details{
-`eval_tkstats()` is an alias for `data_summary()`
-}
 \seealso{
-[data_summary.pk()] for the method for class [pk()]
+[eval_tkstats.pk()] for the method for class [pk()]
 }

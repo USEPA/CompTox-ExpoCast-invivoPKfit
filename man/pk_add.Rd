@@ -13,6 +13,9 @@ pk_add(pkproto_obj, pk_obj, objectname)
 
 \item{objectname}{The object name}
 }
+\value{
+The `pk` object modified by the addition.
+}
 \description{
 This is the S3 generic method.
 }

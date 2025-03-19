@@ -11,6 +11,13 @@ do_preprocess(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+The same `pk` object, with added elements `data` (containing the
+  cleaned, gap-filled data) and `data_info` (containing summary information
+  about the data, e.g. number of observations by route, media,
+  detect/nondetect; empirical tmax, time of peak concentration for oral data;
+  number of observations before and after empirical tmax)
+}
 \description{
 Preprocess data generic
 }

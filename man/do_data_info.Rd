@@ -11,6 +11,10 @@ do_data_info(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+Object of class [pk()] with an added `$data_info` list containing
+non-compartmental analysis results.
+}
 \description{
 do_data_info generic
 }

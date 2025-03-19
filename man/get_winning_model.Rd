@@ -11,6 +11,11 @@ get_winning_model(obj, ...)
 
 \item{...}{Additional arguments currently not in use.}
 }
+\value{
+A data.frame with one row for each `data_group`, `model` and `method` and
+ The return value has attribute `criterion` giving the name of the criterion function used to compare
+ models.
+}
 \description{
 This is the S3 method generic for get_winning_model()
 }
