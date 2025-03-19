@@ -55,7 +55,7 @@ rat_3compchems <- unique(get_cheminfo(info = "DTXSID",
 cvt_plasma_chems <-  cvt %>% 
     filter(species %in% c("human", "rat"),
            conc_medium_normalized == "plasma") %>%
-    pull(analyte_dtxsid)
+    pull(analyte_dtxsid) %>% unique()
 
 
 # These are the chemicals we can evaluate!
@@ -67,6 +67,7 @@ target_chems_rat <- intersect(cvt_plasma_chems,
 # save in an .Rdata file
 save(target_chems_human, target_chems_rat, 
      human_3compchems, rat_3compchems,
+     cvt_plasma_chems,
      file = "data-raw/chem_lists.RData")
 
 ```
