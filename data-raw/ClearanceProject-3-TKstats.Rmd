@@ -32,10 +32,10 @@ library(httk)
 # RCdata/ is a directory that is not tracked by git because it contains
 # large files 
 this_pk <- readRDS("data-raw/plasma_CvTfits.rds")
-load("data-raw/RCdata/chem_lists.RData")
+load("data-raw/chem_lists.RData")
 load("data-raw/plasma_CvTfits_data.RData")
-load("data-raw/RCdata/rat_pars_human.RData")
-load("data-raw/RCdata/rat_pars_rat.RData")
+load("data-raw/rat_pars_human.RData")
+load("data-raw/rat_pars_rat.RData")
 all_chem_properties <- readRDS("data-raw/RCdata/ctxR_3comp2_cheminfo.rds")
 full_pk <- readRDS("data-raw/all_cvt_pk.rds")
 full_tkstats <- get_tkstats(full_pk)

@@ -193,7 +193,7 @@ rpr_httk_clearance_df <- merge(rpr_httk_clearance_df, rpr_css_df)
 
 save(rpr_param_rest_l, rpr_param_nrest_l,
      rpr_param_df, rpr_httk_clearance_df,
-     rpr_httk_preds, file = "data-raw/RCdata/rat_pars_rat.RData")
+     rpr_httk_preds, file = "data-raw/rat_pars_rat.RData")
 ```
 
 ```{r getting_current_params_rph}
@@ -251,6 +251,6 @@ rph_httk_clearance_df <- merge(rph_httk_clearance_df, rph_css_df)
 save(rph_param_rest_l, rph_param_nrest_l,
      rph_param_df, rph_httk_clearance_df,
      rph_httk_preds,
-     file = "data-raw/RCdata/rat_pars_human.RData")
+     file = "data-raw/rat_pars_human.RData")
 ```
 
