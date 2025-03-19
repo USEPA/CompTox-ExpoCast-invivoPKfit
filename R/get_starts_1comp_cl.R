@@ -169,6 +169,7 @@ get_starts_1comp_cl <- function(data,
       httk::parameterize_gas_pbtk(
         dtxsid = unique(data[["Chemical"]]),
         species = this_species,
+        default.to.human = TRUE,
         restrictive.clearance = restrictive)))
 
   if (restrictive) {
