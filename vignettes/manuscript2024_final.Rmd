@@ -1,5 +1,5 @@
 ---
-title: "Manuscript Figures and Tables"
+title: "Manuscript Figures and Tables (2024, submitted)"
 output:
   html_vignette:
     toc: true
