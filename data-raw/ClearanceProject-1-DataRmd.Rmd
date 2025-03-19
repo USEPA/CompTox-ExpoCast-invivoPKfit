@@ -27,6 +27,13 @@ library(patchwork)
 source("data-raw/RC_comparison_bkgd.R") # httk & dawson_2021 loaded here
 ```
 
+This code chunk creates and `.RData` file that contains character vectors
+of DTXSIDs for:
+
+1. All chemicals with human parameterization available for a 3-compartment model w/ inhalation.  
+2. All chemicals with rat parameterization available for a 3-compartment model w/ inhalation.  
+3. All chemicals with human and rat plasma concentration over time data.  
+
 
 ```{r chemical-lists}
 human_3compchems <- unique(get_cheminfo(info = "DTXSID",
@@ -64,13 +71,24 @@ save(target_chems_human, target_chems_rat,
 
 ```
 
+Below read in some external data which is publicly available already.
+ 
+- `red_assay_res` is the named object that contains the data from the RED assay
+including the dissociation constant $K_d$ for plasma protein binding.  
+- `chem_info` is a combined data.frame from calls to `get_chemical_details_batch`
+and `get_chem_info_batch`. This uses the `ctxR` API to fetch chemical information
+such as physio-chemical properties and SMILES from the CompTox dashboard.  
+- `cyp_data` is data from Sipes 2017 predicting the CLint fraction for each CYP enzyme.
+- `functional_uses_all` is a list of functional use categories for each chemical
+from the Chemical and Products Database.
+
 ```{r external_data}
 # Here we load Kd/binding affinity data
 red_assay_res <- readRDS("data-raw/2019-05-06-REDassay_HTTK.rds")
 
 # ctxR download of all chemicals in 3comp2 model
 # Chemical info and properties (averaging the latter by chemical and experimental/predicted)
-chem_info <- get_chemical_details_batch(DTXSID = all_chems,
+chem_info <- get_chemical_details_batch(DTXSID = human_3compchems,
                                                rate_limit = 0L) %>%
   filter(!is.na(smiles))
 # 9086 total unique chemicals with SMILES data
@@ -89,13 +107,35 @@ chem_info %>% distinct(dtxsid, preferredName,
   filter(!is.na(qsarReadySmiles)) %>%
   saveRDS(file = "data-raw/RCdata/ctxR_3comp2_cheminfo.rds")
 
-
+# Sipes 2017 data
+cyp_data <- readr::read_csv(paste0(
+  Sys.getenv("FIG_DIR"),
+  "RestrictiveClearance_Analysis/",
+  "CLint_CYP_Sipes2017.csv"
+)) %>%
+  left_join(
+    chem.physical_and_invitro.data %>%
+      select(CAS = CAS, Chemical = DTXSID) %>%
+      distinct()
+  ) %>%
+  select(Chemical, CAS, starts_with("MET_")) %>%
+  filter(!is.na(Chemical))
+names(cyp_data) <- c("Chemical", "CAS", "CYP1A2",
+                     "CYP2C9", "CYP2C19", "CYP2D6", "CYP3A4")
+# Functional use categories from CPdat
 functional_uses_all <- readr::read_csv(paste0(
   Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/",
   "ChemExpo_bulk_functional_uses_20250304.csv"
 ))
 
+save(cyp_data,
+     file = "data-raw/CYP_Sipes2017.Rdata")
+
 ```
+
+Next we fit the plasma data from CvTdb, which we already have in the `invivoPKfit`
+package using `cvt` object. We also get a few downstream statistics and save them
+in an `.RData` file.
 
 ```{r inivopkfit}
 # Here we fit CvTdb data that has plasma measurements
@@ -140,6 +180,14 @@ save(this_winmodel, this_tkstats, winning_preds,
      this_AIC, this_coef_win, this_coef_fit, this_coef_sd_win,
      file = "data-raw/plasma_CvTfits_data.RData")
 ```
+
+The next two chunks take a while. These will parameterize the `3compartment2`
+`httk` model with restrictive and nonrestrictive clearance.
+It also creates data.frames for evaluating predictions, steady-state concentration,
+and other PK statistics.
+In the first chunk rats are limited parameterized as rats (for _fup_ and _CLint_), and in
+the second chunk human parameterization of _fup_ and _CLint_ are allowed.
+
 
 ```{r getting_curent_params_rpr}
 
