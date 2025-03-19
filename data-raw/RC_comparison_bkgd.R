@@ -3,6 +3,25 @@
 devtools::load_all()
 library(httk)
 httk::load_dawson2021()
+
+# Convenience function that takes named list and outputs data.frame with names as column
+nlist2df <- function(.list = list(),
+                     .name = "Chemical") {
+  stopifnot(!is.null(names(.list))) # must be named list
+
+  this_df <-  do.call(rbind,
+                      lapply(.list,
+                             \(x) {
+                               as.data.frame(x, row.names = NULL)
+                             }
+                      )
+  )
+  this_df[.name] <- rownames(this_df)
+  rownames(this_df) <- NULL
+
+  return(this_df)
+}
+
 # Need to use a model that results in different values for restrictive & non-restrictive clearance
 
 get_common_chems <- function(species = "human") {
@@ -54,11 +73,10 @@ parameterize_all <- function(species = "human", all = FALSE) {
     message(glue::glue("Total number of chemicals loaded: {length(sp_chems)}"))
     message(glue::glue("Fup & Clint set to Human values? {human_clint_fup}"))
 
-    browser()
     # Get restrictive and non-restrictive parameters
     params_r <- tryCatch(
       expr = {
-        lapply(sp_chems,
+        sapply(sp_chems,
                \(x) {
                  httk::parameterize_3comp2(
                    dtxsid = x,
@@ -67,17 +85,20 @@ parameterize_all <- function(species = "human", all = FALSE) {
                    default.to.human = human_clint_fup,
                    force.human.clint.fup = human_clint_fup,
                    suppress.messages = TRUE)
-               }
+               },
+               simplify = FALSE,
+               USE.NAMES = TRUE
         )
       }, error = function(msg) {
         message("Not possible to parameterize_3comp2 for all dtxsid ",
                 "try to use default.to.human = TRUE.")
       }
     )
+    browser()
 
     params_nr <- tryCatch(
       expr = {
-        lapply(sp_chems,
+        sapply(sp_chems,
                \(x) {
                  httk::parameterize_3comp2(
                    dtxsid = x,
@@ -86,7 +107,9 @@ parameterize_all <- function(species = "human", all = FALSE) {
                    default.to.human = human_clint_fup,
                    force.human.clint.fup = human_clint_fup,
                    suppress.messages = TRUE)
-               }
+               },
+               simplify = FALSE,
+               USE.NAMES = TRUE
         )
       }, error = function(msg) {
         message("Not possible to parameterize_3comp2 for all dtxsid ",
@@ -98,25 +121,11 @@ parameterize_all <- function(species = "human", all = FALSE) {
       stop("Params not calculated for all DTXSIDs!")
     }
 
-    # Get the additional Vdist (in case we need it) for each
-    # This is the same for either clearance type (in this model)
-    vdist_params_r <- data.frame(
-      Vdist_r = vapply(params_r,
-                     \(x) {
-                       httk::calc_vdist(
-                         parameters = x,
-                         species = species,
-                         default.to.human = FALSE,
-                         suppress.messages = TRUE)
-                     }, FUN.VALUE = numeric(1)
-      )
-    )
-
     # Collate the parameters in a data.frame
-    extr_params_r <- do.call(rbind,
-                           lapply(params_r, as.data.frame,
-                                  row.names = NULL))
+    extr_params_r <- nlist2df(params_r)
+    extr_params_nr <- nlist2df(params_nr)
 
+    # Specify changed parameters between restrictive and non-restrictive
     names(extr_params_r)[which(
       names(extr_params_r) %in% c("Clmetabolismc","Fabsgut")
     )] <- paste(
@@ -126,32 +135,78 @@ parameterize_all <- function(species = "human", all = FALSE) {
       "restrictive",
       sep = ".")
 
-    extr_params_nr <- do.call(rbind,
-                           lapply(params_nr, as.data.frame,
-                                  row.names = NULL))
-
     names(extr_params_nr)[which(
       names(extr_params_nr) %in% c("Clmetabolismc","Fabsgut")
     )] <- paste(
       names(extr_params_nr)[which(
         names(extr_params_nr) %in% c("Clmetabolismc","Fabsgut")
       )],
-                                     "nonrestrictive",
-                                     sep = ".")
+      "nonrestrictive",
+      sep = ".")
+
+    # Get the additional Vdist (in case we need it) for each
+    # This is the same for either clearance type (in this model)
+    vdist_params <- data.frame(
+      Chemical = names(params_r),
+      Vdist_r = vapply(params_r,
+                       \(x) {
+                         httk::calc_vdist(
+                           parameters = x,
+                           species = species,
+                           default.to.human = FALSE,
+                           suppress.messages = TRUE)
+                       }, FUN.VALUE = numeric(1),
+                       USE.NAMES = TRUE
+      )
+    )
+
     extr_params <- cbind(
-      data.frame(
-        Chemical = sp_chems,
-        Species = species,
-        forced_human_values = human_clint_fup),
-      merge(extr_params_r, extr_params_nr),
-    vdist_params_r
+      data.frame(forced_human_values = human_clint_fup),
+      merge(
+        merge(extr_params_r, extr_params_nr),
+        vdist_params
+      )
     )
 
     # Calculate restrictive or nonrestrictive clearance using the
     # appropriate parameterization
-    restrictive_clearance <- vapply(params_r,
+    restrictive_clearance <- data.frame(
+      Chemical = names(params_r),
+      CLtot_restrictive = vapply(params_r,
+                                 \(x) {
+                                   httk::calc_total_clearance(
+                                     parameters = x,
+                                     species = species,
+                                     model = "3compartment2",
+                                     suppress.messages = TRUE,
+                                     restrictive.clearance = TRUE
+                                   )
+                                 },
+                                 FUN.VALUE = double(1)
+      )
+    )
+    nonrestrictive_clearance <- data.frame(
+      Chemical = names(params_nr),
+      CLtot_nonrestrictive = vapply(params_nr,
+                                 \(x) {
+                                   httk::calc_total_clearance(
+                                     parameters = x,
+                                     species = species,
+                                     model = "3compartment2",
+                                     suppress.messages = TRUE,
+                                     restrictive.clearance = FALSE
+                                   )
+                                 },
+                                 FUN.VALUE = double(1)
+      )
+    )
+
+    # Get half-lives of each chemical
+    restrictive_halflife <- data.frame(
+      Chemical = names(params_nr),
+      halflife_restrictive = vapply(params_r,
                                     \(x) {
-                                      httk::calc_total_clearance(
+                                      httk::calc_half_life(
                                         parameters = x,
                                         species = species,
                                         model = "3compartment2",
@@ -160,11 +215,14 @@ parameterize_all <- function(species = "human", all = FALSE) {
                                       )
                                     },
                                     FUN.VALUE = double(1)
+      )
     )
 
-    nonrestrictive_clearance <- vapply(params_nr,
+    nonrestrictive_halflife <- data.frame(
+      Chemical = names(params_nr),
+      halflife_nonrestrictive = vapply(params_nr,
                                        \(x) {
-                                         httk::calc_total_clearance(
+                                         httk::calc_half_life(
                                            parameters = x,
                                            species = species,
                                            model = "3compartment2",
@@ -173,49 +231,20 @@ parameterize_all <- function(species = "human", all = FALSE) {
                                          )
                                        },
                                        FUN.VALUE = double(1)
-    )
-
-
-    # Get half-lives of each chemical
-    restrictive_halflife <- vapply(params_r,
-                                    \(x) {
-                                      httk::calc_half_life(
-                                        parameters = x,
-                                        species = species,
-                                        model = "3compartment2",
-                                        suppress.messages = TRUE,
-                                        restrictive.clearance = TRUE
-                                      )
-                                    },
-                                    FUN.VALUE = double(1)
-    )
-
-    nonrestrictive_halflife <- vapply(params_nr,
-                                    \(x) {
-                                      httk::calc_half_life(
-                                        parameters = x,
-                                        species = species,
-                                        model = "3compartment2",
-                                        suppress.messages = TRUE,
-                                        restrictive.clearance = FALSE
-                                      )
-                                    },
-                                    FUN.VALUE = double(1)
+      )
     )
 
     # Assemble the clearance and halflife data.frame
-    clearance_df <- data.frame(
-      Chemical = sp_chems,
-      Species = species,
-      restrictive_clearance,
-      nonrestrictive_clearance,
-      restrictive_halflife,
-      nonrestrictive_halflife
+    clearance_df <- merge(
+      data.frame(
+        Chemical = sp_chems,
+        Species = species
+      ),
+      merge(
+        merge(restrictive_clearance, nonrestrictive_clearance),
+        merge(restrictive_halflife,nonrestrictive_halflife)
+      )
     )
-
-    # Give the parameters the chemical names
-    names(params_nr) <- sp_chems
-    names(params_r) <- sp_chems
 
     # Return a list
     return(list(param_df = extr_params,

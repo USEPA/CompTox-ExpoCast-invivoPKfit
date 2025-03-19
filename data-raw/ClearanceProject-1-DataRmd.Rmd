@@ -87,7 +87,7 @@ chem_info %>% distinct(dtxsid, preferredName,
                               qsarReadySmiles, monoisotopicMass) %>%
   right_join(chem_properties) %>%
   filter(!is.na(qsarReadySmiles)) %>%
-  saveRDS(file = "data-raw/ctxR_3comp2_cheminfo.rds")
+  saveRDS(file = "data-raw/RCdata/ctxR_3comp2_cheminfo.rds")
 
 
 functional_uses_all <- readr::read_csv(paste0(
@@ -187,11 +187,13 @@ rpr_clint_df <- data.frame(Chemical = names(rpr_param_rest_l),
                                           },
                                           FUN.VALUE = numeric(1L)
                            ))
+rownames(rpr_clint_df) <- NULL
+rpr_param_df <- merge(rpr_param_df, rpr_clint_df)
+rpr_httk_clearance_df <- merge(rpr_httk_clearance_df, rpr_css_df)
 
 save(rpr_param_rest_l, rpr_param_nrest_l,
      rpr_param_df, rpr_httk_clearance_df,
-     rpr_httk_preds, rpr_css_df, rpr_clint_df,
-     file = "data-raw/rat_pars_rat.RData")
+     rpr_httk_preds, file = "data-raw/RCdata/rat_pars_rat.RData")
 ```
 
 ```{r getting_current_params_rph}
@@ -242,9 +244,13 @@ rph_clint_df <- data.frame(Chemical = names(rph_param_rest_l),
                                            FUN.VALUE = numeric(1L)
                             ))
 
+rownames(rph_clint_df) <- NULL
+rph_param_df <- merge(rph_param_df, rph_clint_df)
+rph_httk_clearance_df <- merge(rph_httk_clearance_df, rph_css_df)
+
 save(rph_param_rest_l, rph_param_nrest_l,
      rph_param_df, rph_httk_clearance_df,
-     rph_httk_preds, rph_css_df, rph_clint_df,
-     file = "data-raw/rat_pars_human.RData")
+     rph_httk_preds,
+     file = "data-raw/RCdata/rat_pars_human.RData")
 ```
 
