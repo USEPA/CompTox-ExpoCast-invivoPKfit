@@ -62,6 +62,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        bg = "white",
        height = 3, width = 5
 )
+
 ```
 
 ```{r httk_pr_rmsle}
@@ -371,7 +372,7 @@ upset_pl <- this_rel_evaluated_df %>%
            halflife.tkstats, halflife_restrictive,
            halflife_nonrestrictive,
            ll_label) %>%
-left_join(functional_uses_all %>%
+  left_join(functional_uses_all %>%
             distinct(DTXSID, `Harmonized Functional Use`) %>%
             rename(Chemical = DTXSID) %>%
             filter(`Harmonized Functional Use` %in% c(
@@ -479,12 +480,12 @@ The aforementioned set of rat data, for example, 33 of 51 chemicals find
 appropriate fits with invivoPKfit + httk.
 
 ```{r load_Kd}
-
 red_assay_res %>%
   distinct(DTXSID, Affinity.Kd.Med, Affinity.Kd.Low, Affinity.Kd.High,
            Fit) %>%
   na.omit() %>%
   mutate(Target_Chemical = (DTXSID %in% target_chems_human)) %>%
+  
 ggplot(
        aes(
          x = forcats::fct_reorder(DTXSID, Affinity.Kd.Low)
@@ -568,7 +569,6 @@ The weights to be applied are calculated as such:
 $$
 \gamma = \frac{100\cdot \rm{RMSLE}}{\theta}
 $$
-
 Where $\theta$ is the relative log-likelihood. The smaller number the better.
 If the RMSLE is zero, then it means that it is a "perfect" fit and we are highly
 confident in using other metrics to gauge clearance. Below I put these together.
@@ -845,8 +845,6 @@ this_fupZ_df <- rph_param_df %>% select(Chemical, Funbound.plasma) %>%
   mutate(Fup_Z = as.vector(scale(sqrt(Funbound.plasma))),
          .keep = "unused")
 
-  
-
 ```
 
 
@@ -922,7 +920,6 @@ in both _httk_ and _invivoPKfit_.
 
 
 ```{r rat_invivo_comparison}
-
 solve_3comp2(
   dtxsid = target_chems_rat[10],
   dose = 1, exp.conc = 0,
@@ -935,6 +932,7 @@ solve_3comp2(
   geom_line(aes(y = Cplasma)) +
   geom_line(aes(y = Csyscomp), color = "blue4") +
   geom_line(aes(y = Cliver), color = "darkgreen")
+
 
 
 ```

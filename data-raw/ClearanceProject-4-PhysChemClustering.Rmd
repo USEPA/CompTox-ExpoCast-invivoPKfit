@@ -215,7 +215,6 @@ logP_plot <- target_chem_summary %>%
   ggbeeswarm::geom_beeswarm() +
   theme_bw()
 
-
 bin_size <- 50
 TPSA_plot <- target_chem_summary %>%
   distinct(dtxsid, TPSA) %>% 

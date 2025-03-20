@@ -27,12 +27,14 @@ library(patchwork)
 source("data-raw/RC_comparison_bkgd.R") # httk & dawson_2021 loaded here
 ```
 
+
 This code chunk creates and `.RData` file that contains character vectors
 of DTXSIDs for:
 
 1. All chemicals with human parameterization available for a 3-compartment model w/ inhalation.  
 2. All chemicals with rat parameterization available for a 3-compartment model w/ inhalation.  
 3. All chemicals with human and rat plasma concentration over time data.  
+
 
 
 ```{r chemical-lists}
@@ -188,7 +190,6 @@ It also creates data.frames for evaluating predictions, steady-state concentrati
 and other PK statistics.
 In the first chunk rats are limited parameterized as rats (for _fup_ and _CLint_), and in
 the second chunk human parameterization of _fup_ and _CLint_ are allowed.
-
 
 ```{r getting_curent_params_rpr}
 
