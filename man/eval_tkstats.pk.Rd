@@ -7,7 +7,7 @@
 \method{eval_tkstats}{pk}(
   obj,
   newdata = NULL,
-  model = NULL,
+  model = "winning",
   method = NULL,
   tk_group = NULL,
   exclude = TRUE,
@@ -27,7 +27,8 @@ compute the TK stats. Must contain at least variables `Chemical`,
 `Time_trans.Units` or `Time.Units`, and any other variables named in
 `tk_grouping`. Default `NULL`, to use the data in `obj$data`.}
 
-\item{model}{Character: One or more of the models fitted. Default `NULL` to
+\item{model}{Character: One or more of the models fitted. Default `"winning"` to return
+results for only the winning model(s). Supply `NULL` to
 return TK stats for all models.}
 
 \item{method}{Character: One or more of the [optimx::optimx()] methods used.

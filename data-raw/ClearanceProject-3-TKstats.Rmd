@@ -1,0 +1,438 @@
+---
+title: "Clearance Project - 3 - TKstats"
+author: "Gilberto Padilla Mercado"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r library-loading}
+today <- format(Sys.Date(), "%d%b%Y")
+devtools::load_all()
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(ctxR)
+library(ggdist)
+library(patchwork)
+library(httk)
+.onUnload <- function(libpath) {
+  library.dynam.unload("httk", libpath)
+}
+```
+
+
+```{r data-loading}
+# Note that you should run ...-1-Data.Rmd before this
+# RCdata/ is a directory that is not tracked by git because it contains
+# large files 
+this_pk <- readRDS("data-raw/plasma_CvTfits.rds")
+load("data-raw/chem_lists.RData")
+load("data-raw/plasma_CvTfits_data.RData")
+load("data-raw/rat_pars_human.RData")
+load("data-raw/rat_pars_rat.RData")
+all_chem_properties <- readRDS("data-raw/RCdata/ctxR_3comp2_cheminfo.rds")
+full_pk <- readRDS("data-raw/all_cvt_pk.rds")
+full_tkstats <- get_tkstats(full_pk)
+```
+
+## Species-specific differences in fraction unbound and intrinsic clearance
+
+We first want to establish that there is a difference between human and rat
+parameterization. Because one of our `param_df`s is only rat and the other has
+substituted human parameters (scaled to a rat).
+
+```{r rat_human_diff_fupClint}
+fup_rh <- rpr_param_df %>% 
+  distinct(Chemical, MW,
+           Clint, Funbound.plasma) %>% 
+  rename_with(\(x) {paste0(x, "_rat")},
+              .cols = c(Clint, Funbound.plasma)) %>%
+  left_join(
+    rph_param_df %>%
+      distinct(Chemical, MW,
+               Clint, Funbound.plasma) %>% 
+      rename_with(\(x) {paste0(x, "_human")},
+                  .cols = c(Clint, Funbound.plasma))
+    )
+
+species_fup_pl <- fup_rh %>%
+  ggplot(aes(
+    Funbound.plasma_human,
+    Funbound.plasma_rat
+  )) +
+  geom_abline(slope = 1) +
+  geom_point() +
+  geom_smooth(method = "lm", linetype = "dashed",
+              color = "forestgreen") +
+  labs(title = expression(f[up]),
+       x = "Human", y = "Rat") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_equal(xlim = c(0,1), ylim = c(0,1), expand = TRUE)
+
+fup_pl <- ggExtra::ggMarginal(
+  species_fup_pl,
+  type = "histogram",
+  binwidth = 0.025,
+  fill = "white"
+)
+
+lm(
+  Funbound.plasma_rat ~ Funbound.plasma_human,
+  data = fup_rh
+)
+
+cor.test(fup_rh$Funbound.plasma_human,
+            fup_rh$Funbound.plasma_rat)
+
+
+## Clint
+species_clint_pl <- subset(
+  fup_rh, Clint_human < 500, Clint_rat < 500
+) %>%
+  ggplot(aes(
+    Clint_human,
+    Clint_rat
+  )) +
+  geom_abline(slope = 1) +
+  geom_abline(slope = 1, intercept = c(-50,50), linetype = "longdash") +
+  geom_point() +
+  # geom_smooth(method = "lm", linetype = "dashed", color = "forestgreen") +
+  labs(title = expression(CL[int]),
+       x = "Human", y = "Rat") +
+  coord_equal(xlim = c(0,500), ylim = c(0,500)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5,vjust = -1))
+
+clint_pl <- ggExtra::ggMarginal(
+  species_clint_pl,
+  type = "histogram",
+  fill = "white"
+)
+
+lm(
+  Clint_rat ~ Clint_human,
+  data = fup_rh
+)
+
+cor.test(fup_rh$Clint_human,
+            fup_rh$Clint_rat)
+
+# Both plots
+species_fup_pl + species_clint_pl +
+  plot_layout(axis_titles = "collect")
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/",
+                         "Rat_Human_Interspecies_FupCLint_compare.png"),
+       height = 3, width = 6)
+
+
+# Get the "close" estimates (+/-50)
+close_clint <- fup_rh %>%
+  filter(between(Clint_rat, Clint_human - 50, Clint_human + 50)) %>%
+  pull(Chemical)
+
+rph_rmsle <- rph_httk_preds %>%
+  mutate(fupSpecies = "human",
+         rest_sqerror = (log10(httk_Preds_restrictive) - log10(Conc))^2,
+         nonrest_sqerror = (log10(httk_Preds_nonrestrictive) - log10(Conc))^2) %>%
+  group_by(
+    Chemical, Species, fupSpecies
+  ) %>%
+  summarize(rest_rmsle = sqrt(sum(rest_sqerror)/n()),
+            nonrest_rmsle = sqrt(sum(nonrest_sqerror)/n())
+  ) %>%
+  ungroup()
+
+rpr_rmsle <- rpr_httk_preds %>%
+  mutate(fupSpecies = "rat",
+        rest_sqerror = (log10(httk_Preds_restrictive) - log10(Conc))^2,
+         nonrest_sqerror = (log10(httk_Preds_nonrestrictive) - log10(Conc))^2) %>%
+  group_by(
+    Chemical, Species, fupSpecies
+  ) %>%
+  summarize(rest_rmsle = sqrt(sum(rest_sqerror)/n()),
+            nonrest_rmsle = sqrt(sum(nonrest_sqerror)/n())
+  ) %>%
+  ungroup()
+
+bind_rows(rpr_rmsle, rph_rmsle) %>%
+  mutate(close_clint = ifelse(Chemical %in% close_clint,
+                              "|CLint| within 50", "|CLint| > 50")
+  ) %>% 
+  filter(Chemical %in% unique(rpr_rmsle$Chemical)) %>%
+  ggplot(aes(nonrest_rmsle, rest_rmsle)) +
+  geom_abline(slope = 1, color = "blue") +
+  geom_point(aes(color = fupSpecies), shape = 21) +
+  scale_color_manual(values = c("green4", "magenta3")) +
+  facet_grid(cols = vars(close_clint)) +
+  geom_line(aes(group = paste0(Chemical)),
+            alpha = 0.4) +
+  labs(x = "Nonrestrictive RMSLE", y = "Restrictive RMSLE") +
+  theme_bw() +
+  coord_equal()
+  
+
+interspecies_rmsle_trends <- bind_rows(rpr_rmsle, rph_rmsle) %>%
+  mutate(
+    close_clint = ifelse(Chemical %in% close_clint,
+                         "|\U0394 CLint| within 50", "|\U0394 CLint| > 50")
+  ) %>% 
+  filter(Chemical %in% unique(rpr_rmsle$Chemical)) %>% 
+  pivot_longer(cols = contains("_rmsle"),
+               names_to = "clearance_type",
+               values_to = "RMSLE") %>%
+  pivot_wider(names_from = fupSpecies,
+              values_from = RMSLE) %>%
+  mutate(norm_diff = (human - rat)/rat) %>%
+  filter(!is.na(norm_diff)) %>% 
+  group_by(Chemical, close_clint, clearance_type) %>%
+  ggplot(aes(x = forcats::fct_reorder(Chemical, norm_diff, mean),
+             y = norm_diff,
+             fill = clearance_type)) +
+  geom_col(
+    width = 0.6,
+    # fill = "grey5", 
+    position = position_dodge(),
+    color = NA
+    ) +
+  labs(
+    x = "Chemical",
+    y = "Fold Change RMSLE\nHuman more accurate <<     >> Rat more accurate"
+  ) +
+  scale_fill_manual(values = c("grey20", "seagreen"),
+                    breaks = c("nonrest_rmsle", "rest_rmsle"),
+                    labels = c("Nonrestrictive", "Restrictive"),
+                    name = "Clearance") +
+  geom_hline(yintercept = 0) +
+  theme_minimal() + 
+  facet_grid(cols = vars(close_clint),
+             # rows = vars(clearance_type),
+             space = "free_x", scales = "free_x") +
+  theme(axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = "grey5"),
+        panel.background = element_rect(color = "grey5"),
+        axis.title = element_text(size = 10),
+        legend.position = "bottom")
+
+species_clint_pl + interspecies_rmsle_trends +
+  plot_layout(widths = c(5,8))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/",
+                         "Rat_Human_Interspecies_RMSLE_trends.png"),
+       height = 5, width = 7,
+       bg = "white")
+```
+
+This next analysis looks at bootstrapping to look at specific variation in downstream
+parameters (like Css and halflife) which depend on _kelim_ which cannot be estimated
+at times. However, it is noted that even this method does not provide much more information.
+
+```{r combination-function}
+# Only need a simple bootstrapping method
+combo_gen_splitter <- function(df, num = 1000L) {
+  # Checks
+  num = as.integer(num)
+  stopifnot(
+    is.data.frame(df),
+    !is.na(num)
+  )
+  
+  start <- 100L
+  end <- 100L+num
+  seed_seq <- seq.int(start, end)
+  full_df_combos <- lapply(
+    seed_seq,
+    \(x) {
+      set.seed(x)
+      sample_df <- df %>%
+        group_by(Chemical, Species, Reference, Route, Media, Dose, Time) %>%
+        slice_sample(prop = 1, replace = TRUE) %>%
+        ungroup()
+      return(sample_df)
+    }
+  )
+  
+  
+  message(paste("Samples: ", num))
+  set.seed(NULL)
+  invisible(full_df_combos)
+}
+
+
+```
+
+```{r example_chemical}
+# Using the example chemical
+trial_coefsd <- coef_sd(full_pk)
+trial_coefsd_reduced <- trial_coefsd %>% 
+  filter(param_name %in% c("kelim", "Vdist", "V1")) %>%
+  distinct()
+
+trial_coefsd_reduced %>%
+  filter(is.na(param_sd), model == "model_1comp") %>%
+  distinct(Chemical, Species) -> selected_trial
+
+
+test_chem_data <- get_data(full_pk) %>% filter(Conc > pLOQ) %>%
+  count(Chemical, Species, Reference, Route, Media, Dose, Time) %>% arrange(-n) %>%
+  filter(n > 4) %>%
+  inner_join(selected_trial) %>%
+  distinct(Chemical, Species, Reference, Route, Media, Dose) %>%
+  inner_join(get_data(full_pk))
+
+# Make 1000 sample data sets
+system.time(
+  test_chem_data_listsplits <- combo_gen_splitter(test_chem_data)
+)
+
+# Takes way too long, parallelize it
+
+clust <- parallel::makeCluster(parallel::detectCores()-4L)
+parallel::clusterCall(clust, function() devtools::load_all())
+system.time(
+  Css_list <- parallel::parLapply(
+    clust,
+    test_chem_data_listsplits,
+    \(x) {
+      tmp_pk <- pk(x,
+                   mapping = ggplot2::aes(
+                     Chemical = Chemical,
+                     Chemical_Name = Chemical_Name,
+                     DTXSID = DTXSID,
+                     CASRN = CASRN,
+                     Species = Species,
+                     Reference = Reference,
+                     Media = Media,
+                     Route = Route,
+                     Dose = Dose,
+                     Dose.Units = "mg/kg",
+                     Subject_ID = Subject_ID,
+                     Series_ID = Series_ID,
+                     Study_ID = Study_ID,
+                     ConcTime_ID = ConcTime_ID,
+                     N_Subjects = N_Subjects,
+                     Weight = Weight,
+                     Weight.Units = "kg",
+                     Time = Time,
+                     Time.Units = "hours",
+                     Value = Value,
+                     Value.Units = "mg/L",
+                     Value_SD = Value_SD,
+                     LOQ = LOQ
+                   )
+      ) +
+        scale_conc(dose_norm = TRUE,
+                   log10_trans = TRUE) +
+        settings_optimx(method = c(
+          "bobyqa"
+        ))
+      
+      tmp_pk <- do_fit(tmp_pk)
+      tmp_tkstats <- get_tkstats(tmp_pk) %>%
+        distinct(Chemical, Species, Reference,
+                 Route, Media,
+                 model, method,
+                 Css, CLtot, halflife)
+      
+      return(tmp_tkstats)
+    })
+)
+parallel::stopCluster(clust)
+
+Css_df_full <- bind_rows(Css_list)
+
+```
+
+
+```{r plotting-bootstraps}
+num_samples <- length(Css_list)
+
+test_chem_full_tkstats <- full_tkstats %>%
+  filter(model != "model_flat") %>%
+  inner_join(selected_trial) %>%
+  distinct(Chemical, Species, model, Css)
+
+
+
+Css_df_full %>%
+  filter(model != "model_flat") %>%
+  left_join(this_winmodel %>% 
+              mutate(winmodel = TRUE) %>%
+              select(-c(near_flat, preds_below_loq))) %>% 
+  mutate(winmodel = ifelse(is.na(winmodel), FALSE, winmodel)) %>%
+  ggplot(aes(x = halflife, y = Chemical, fill = winmodel)) +
+  stat_slab() +
+  # xlim(0,40) +
+  scale_x_log10() +
+  facet_grid(rows = vars(model),
+             cols = vars(Route)) +
+  scale_fill_manual(values = c("grey5", "green3")) +
+  theme_bw() +
+  labs(title = "halflife (hours)") +
+  theme(
+    axis.text.y = element_text(size = 6),
+    axis.text.x = element_text(size = 10),
+    plot.title = element_text(hjust = 0.5, size = 12),
+    axis.title = element_blank()
+  )
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "select_",
+                         "halflife_bootstrapping.png"),
+       bg = "white",
+       height = 4, width = 6
+)
+
+
+css_hist <- Css_df_full %>%
+  filter(model != "model_flat") %>%
+  ggplot(aes(x = Css)) +
+  geom_histogram(fill = "grey5", binwidth = 0.2) +
+  geom_vline(data = test_chem_full_tkstats,
+             aes(xintercept = Css),
+             color = "green4",
+             linetype = "dashed") +
+  facet_grid(rows = vars(model)) +
+  labs(title = unique(test_chem_data$Chemical_Name),
+       subtitle = paste("Number of samples: ", num_samples)) +
+  scale_x_log10() +
+  xlim(0,50) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 1),
+        plot.subtitle = element_text(hjust = 1))
+
+css_lines <- Css_df_full %>%
+  filter(model != "model_flat") %>%
+  group_by(model) %>%
+  mutate(grouping = row_number()) %>%
+  ggplot(aes(x = model, y = Css)) +
+  geom_point(alpha = 0.4) +
+  geom_line(aes(group=grouping), alpha = 0.02) +
+  scale_y_log10() +
+  labs(subtitle = "N per timepoint: 4") +
+  theme_bw()
+
+get_winning_model(full_pk) %>% filter(Chemical == test_chem) %>% glimpse()
+
+css_hist + css_lines
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", test_chem,
+                         "_Css_pseudobootstrapping.png"),
+       bg = "white",
+       height = 3, width = 5
+)
+```
+
+
+

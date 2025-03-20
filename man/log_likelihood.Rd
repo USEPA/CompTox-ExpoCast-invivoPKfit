@@ -15,6 +15,7 @@ log_likelihood(
   negative = TRUE,
   force_finite = FALSE,
   max_multiplier = NULL,
+  includes_preds = FALSE,
   suppress.messages = TRUE
 )
 }
@@ -55,6 +56,8 @@ replaced with `.Machine$double.xmax`.}
 \item{max_multiplier}{Numeric, but NULL by default. Determines which multiple
 of the maximum concentration to use to limit possible predictions.
 Note: only use this as part of the fitting function.}
+
+\item{includes_preds}{Logical: whether `data` includes predictions.}
 
 \item{suppress.messages}{Logical.}
 }

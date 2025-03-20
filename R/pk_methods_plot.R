@@ -25,7 +25,7 @@
 #'  log10_trans = ...)`, then the specified dose normalization and/or
 #'  log10-transformation will be applied to the y-axis (concentration axis) of
 #'  the plots.
-#' @param time_trans Default `FLASE`. Determines whether time values will be transformed.
+#' @param time_trans Default `FALSE`. Determines whether time values will be transformed.
 #' @param log10_C Default `NULL`. Determines whether y-axis (concentration) should
 #'  be log10 transformed. Takes `TRUE` or `FALSE` values. Otherwise it defaults
 #'  to the value determined from `use_scale_conc`.
@@ -174,7 +174,8 @@ plot.pk <- function(x,
                          ggplot2::vars(Time_trans, Time_trans.Units))
   }
 
-  obs_vars <- ggplot2::vars(
+  obs_vars <- setdiff(
+    ggplot2::vars(
     Conc,
     Conc_SD,
     Conc.Units,
@@ -185,7 +186,8 @@ plot.pk <- function(x,
     Conc_trans,
     Conc_trans.Units,
     Reference
-  )
+  ),
+  x$data_group)
 
 
   # Default arguments and functions
@@ -254,7 +256,6 @@ plot.pk <- function(x,
     tidyr::nest(.key = "observations")
 
 
-
   newdata <- newdata %>%
     dplyr::mutate(observation_plot =
                     purrr::map(observations, \(x) {
@@ -320,7 +321,8 @@ plot.pk <- function(x,
 
                       p +
                         labs(
-                          title = paste(Chemical, Species),
+                          #title = paste(Chemical, Species),
+                          title = paste(!!!x$data_group),
                           x = paste0("Time (", t_units, ")"),
                           y = ifelse(
                             conc_scale$dose_norm,

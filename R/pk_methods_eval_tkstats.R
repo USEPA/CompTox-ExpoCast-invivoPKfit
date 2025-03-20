@@ -21,7 +21,8 @@
 #'   `Chemical`, `Species`, `Route`, `Media`, and `Dose`, because the TK stats
 #'   depend on these values, and it is required to have one unique set of TK
 #'   stats per group.
-#' @param model Character: One or more of the models fitted. Default `NULL` to
+#' @param model Character: One or more of the models fitted. Default `"winning"` to return
+#'   results for only the winning model(s). Supply `NULL` to
 #'   return TK stats for all models.
 #' @param method Character: One or more of the [optimx::optimx()] methods used.
 #'   Default `NULL` to return TK stats for all methods.
@@ -63,7 +64,7 @@
 
 eval_tkstats.pk <- function(obj,
                             newdata = NULL,
-                            model = NULL,
+                            model = "winning",
                             method = NULL,
                             tk_group = NULL,
                             exclude = TRUE,
@@ -89,12 +90,19 @@ eval_tkstats.pk <- function(obj,
   if (is.null(tk_group)) tk_group <- obj$settings_data_info$summary_group
 
   method_ok <- check_method(obj = obj, method = method)
+  if(all(model %in% "winning")){
+  win <- TRUE
+  model <- names(obj$stat_model)
+  }else{
+    win <- FALSE
+  }
   model_ok <- check_model(obj = obj, model = model)
 
   # Grouping variables
   grp_vars <- sapply(tk_group, rlang::as_label)
   data_grp_vars <- sapply(obj$data_group, rlang::as_label)
-  error_grp_vars <- sapply(obj$stat_error_model$error_group, rlang::as_label)
+  error_grp_vars <- sapply(obj$stat_error_model$error_group,
+                           rlang::as_label)
 
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
@@ -122,10 +130,12 @@ eval_tkstats.pk <- function(obj,
     newdata$Dose <- newdata$Dose / newdata$Dose
   } # Need this transformation for get_tkstats
 
+  if(win %in% TRUE){
   # Get the winning model for filtering
   winmodel_df <- get_winning_model.pk(obj = obj,
                                    method = method) %>%
     dplyr::select(-c(near_flat, preds_below_loq))
+  }
 
 
   # calc NCA for newdata
@@ -138,10 +148,15 @@ eval_tkstats.pk <- function(obj,
 
   nca_df <- nca_df %>% dplyr::select(-param_sd_z, -param_units) %>%
     tidyr::pivot_wider(names_from = param_name,
-                       values_from = param_value) %>%
+                       values_from = param_value)
+
+  if(win %in% TRUE){
+ nca_df <- nca_df %>%
     dplyr::right_join(winmodel_df,
                       relationship = "many-to-many") %>%
-    dplyr::relocate(model, method, .after = Media)
+   dplyr::relocate(model, method, .after = Media)
+ }
+
 
   # get tkstats
   tkstats_df <- get_tkstats.pk(obj = obj,
@@ -154,9 +169,11 @@ eval_tkstats.pk <- function(obj,
                             suppress.messages = suppress.messages) %>%
     ungroup()
 
+  if(win %in% TRUE){
   tkstats_df <- dplyr::left_join(winmodel_df %>% dplyr::ungroup(),
                                  tkstats_df,
                                  by = c(data_grp_vars, "method", "model"))
+  }
 
   # prepare for merge
   nca_df_red <- nca_df %>%

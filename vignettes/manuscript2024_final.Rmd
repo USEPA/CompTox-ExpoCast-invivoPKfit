@@ -1,5 +1,5 @@
 ---
-title: "Manuscript Figures and Tables"
+title: "Manuscript Figures and Tables (2024, submitted)"
 output:
   html_vignette:
     toc: true
@@ -43,19 +43,17 @@ devtools::load_all() #load invivopkfit
 today <- format(Sys.Date(), "%d%B%Y")
 ```
 
-This file refers to two environment variables, `OD_DIR` and `FIG_DIR`. `OD_DIR` should be set to the path where you have placed the necessary input files. `FIG_DIR` should be set to the path where you want to save the figures and tables. You can set those environment variables locally inside R like this:
+This file refers to two environment variables, `OD_DIR` and `FIG_DIR`. `OD_DIR` should be set to the path where you have placed the necessary input files. `FIG_DIR` should be set to the path where you want to save the figures and tables. You can set those environment variables locally inside R like this, replacing "path/to/inputs" and "path/to/outputs" with your actual paths. You'll want to make sure the paths end with a slash!
 
 ```{r, eval = FALSE}
 Sys.setenv(OD_DIR = "path/to/inputs/",
            FIG_DIR = "path/to/outputs/")
 ```
 
-You'll want to make sure the paths end with a slash.
-
-Additionally, at one point, this code uses package `ctxR` to query the CompTox Chemicals Dashboard. In order to run that portion of the code, you will need to have an API key (free), which you can request by emailing `ccte_api@epa.gov`. Set another environment variable to contain that code as a string, like this:
+Additionally, at one point, this code uses package `ctxR` to query the CompTox Chemicals Dashboard. In order to run that portion of the code, you will need to have an API key (free), which you can request by emailing `ccte_api@epa.gov`. You can register your API key for the duration of your R session so that `ctxR` will not need to ask you for it: simply replace "<YOUR-API-KEY>" in the following line of code with your actual API key. (Remember not to commit your actual API key to any version-control repository, or otherwise share it with anyone else!)
 
 ```{r, eval = FALSE}
-Sys.setenv(ccd_api_key = "your_api_key")
+ctxR::register_ctx_api_key(key = "<YOUR-API-KEY>")
 ```
 
 Define a date for the pre-fit pk objects to read in:
@@ -148,7 +146,6 @@ fitopts <- expand.grid(error_model = c("pooled",
 ```
 
 ```{r fitting_choices, eval=FALSE}
-# Make function similar to that in test_vignette authored by Caroline Ring
 fit_data <- function(this_error_model,
                      this_dose_norm,
                      this_log10_trans,
@@ -739,24 +736,15 @@ winmodel_comparison <- function(this_error_model,
   
   current_rds <- readRDS(file = file_str)
   
-  pf <- current_rds$fit %>%
-    distinct(Chemical, Species, model, method, convcode) %>%
-    group_by(method, .drop = FALSE) %>%
-    count(convcode) %>%
-    pivot_wider(names_from = convcode,
-                names_prefix = "convcode.",
-                values_from = n)
-    
-  
-  
   # Wide winning model
   suppressMessages({
-    winning_model <- get_winning_model(obj = current_rds)
+    winning_model <- get_winning_model(obj = current_rds) 
+    
     wide_winning_model <- winning_model %>%
-      group_by(method, model) %>%
-      count() %>%
-      pivot_wider(names_from = model, values_from = n) %>%
-      left_join(pf)
+      dplyr::group_by(method, model) %>%
+      dplyr::count() %>%
+      tidyr::pivot_wider(names_from = model,
+                         values_from = n)
   })
   return(wide_winning_model)
 }
@@ -873,7 +861,7 @@ AUC_plot <- function(
 
 Run these plots for all fitting opts
 
-```{r, eval = FALSE}
+```{r}
 all_AUC_plots <- fitopts %>%
               dplyr::rowwise() %>%
   dplyr::summarise(this_plot = list(AUC_plot(this_error_model = error_model,
@@ -1197,7 +1185,7 @@ Now call these functions and do the evaluations.
 
 Winning model comparisons:
 
-```{r do_winmodel, eval = FALSE}
+```{r do_winmodel}
 
 #winning model
 system.time(wm_comp <- fitopts %>%
@@ -1212,7 +1200,7 @@ system.time(wm_comp <- fitopts %>%
 
 RMSLE for Cmax and AUC:
 
-```{r do_RMSLE_Cmax_AUC, eval = FALSE}
+```{r do_RMSLE_Cmax_AUC}
 
 #RMSLE for Cmax and AUC
 system.time(cmax_auc_rmsle_tbl <- fitopts %>%
@@ -1227,7 +1215,7 @@ system.time(cmax_auc_rmsle_tbl <- fitopts %>%
 
 Goodness-of-fit metrics table:
 
-```{r do_gof_tbl, eval = FALSE}
+```{r do_gof_tbl}
 
 #GOF table
 system.time(gof_tbl <- fitopts %>%
@@ -1242,7 +1230,7 @@ system.time(gof_tbl <- fitopts %>%
 
 Factor of two:
 
-```{r do_factor_two, eval = FALSE}
+```{r do_factor_two}
 
 #factor of two
 system.time(all_tf_tests <- fitopts %>%
@@ -1257,7 +1245,7 @@ system.time(all_tf_tests <- fitopts %>%
 
 Get all predictions:
 
-```{r do_all_preds, eval = FALSE}
+```{r do_all_preds}
 #all predictions
 system.time(all_preds <- fitopts %>%
               dplyr::rowwise() %>%
@@ -1269,7 +1257,7 @@ system.time(all_preds <- fitopts %>%
               tidyr::unnest(these_preds))
 ```
 
-```{r write_preds, eval = FALSE}
+```{r write_preds}
 
 #Save preds to a file as well
 saveRDS(all_preds, paste0(Sys.getenv("FIG_DIR"),
@@ -1281,7 +1269,7 @@ rm(all_preds)
 
 Produce and save tables for these evaluation metrics.
 
-```{r, eval = FALSE}
+```{r}
 (win_mdl_count_by_opts <- gof_tbl %>%
   group_by(Options, method, model) %>%
   count() %>%
@@ -1293,7 +1281,7 @@ Produce and save tables for these evaluation metrics.
 
 Rank fitting options by count of Chemical-Species data groups where RMSLE < 1
 
-```{r, eval = FALSE}
+```{r}
 gof_tbl %>%
   group_by(Options, method) %>%
   count(RMSLE < 1) %>%
@@ -1305,7 +1293,7 @@ gof_tbl %>%
 
 What about R-squared greater than 0.75?
 
-```{r, eval = FALSE}
+```{r}
 gof_tbl %>%
   group_by(Options, method) %>%
   count(Rsq > 0.75) %>%
@@ -1317,7 +1305,7 @@ gof_tbl %>%
 
 What about both RMSLE < 1 and R-squared greater than 0.75?
 
-```{r, eval = FALSE}
+```{r}
 rmsle_rsq_rank <- gof_tbl %>%
   group_by(Options, method) %>%
   count(RMSLE < 1 & Rsq > 0.75) %>%
@@ -1332,7 +1320,7 @@ Looking at both criteria together, it appears that the best set of fitting optio
 But also, let's add in the Cmax/AUC RMSLE calculations: Sort the fitting options from smallest to greatest RMSLE for Cmax and AUC, and see which set of fitting options yields the lowest RMSLE.
 
 
-```{r, eval = FALSE}
+```{r}
 cmax_auc_rmsle_rank <- cmax_auc_rmsle_tbl %>%
   arrange(RMSLE_Cmax, RMSLE_AUC) %>%
   select(Options, method, RMSLE_Cmax, RMSLE_AUC) 
@@ -1349,7 +1337,7 @@ This ranking strongly suggests 110p, with 100p as a second choice (both bobyqa).
 
 Write the evaluation results to a spreadsheet, including the rankings.
 
-```{r write_eval_results, eval = FALSE}
+```{r write_eval_results}
 
 # Write the results to file
 writexl::write_xlsx(x = list(
@@ -1376,10 +1364,10 @@ gc()
 
 Plot R-sq vs. RMSLE for the various fitting options, color-coding by winning model.
 
-```{r plot_rsq_rmsle, eval = FALSE}
+```{r plot_rsq_rmsle}
 gof_tbl <- readxl::read_excel(path = paste0(Sys.getenv("FIG_DIR"),
                 "Manu_Files/",
-                read_date_results,
+                today,
                 "_Supp_Table2_eval_results",
                 ".xlsx"),
                 sheet = "Prediction_Evaluations")
@@ -1417,7 +1405,7 @@ Second, when L-BFGS-B is the optimizer, the flat model is the winning model for 
 
 If we zoom in to RMSLE < 2:
 
-```{r plot_rsq_rmsle_zoom, eval = FALSE}
+```{r plot_rsq_rmsle_zoom}
 fig_rsq_rmsle_zoom <- ggplot(gof_tbl) +
   geom_point(aes(x = RMSLE,
                  y = Rsq,
@@ -1440,7 +1428,7 @@ When each time-scaling fit (when "1" is in the last place of the fit options sho
 
 Save these figures.
 
-```{r, eval = FALSE}
+```{r}
 #PDF versions
 ggsave(paste0(Sys.getenv("FIG_DIR"),
                 "Manu_Files/",
@@ -1487,11 +1475,11 @@ rm(fig_rsq_rmsle_zoom, fig_rsq_rmsle, gof_tbl)
 
 Plot Cmax RMSLE vs. AUC RMSLE.
 
-```{r plot_cmax_auc_rmsle, eval = FALSE}
+```{r plot_cmax_auc_rmsle}
 #read in table
 cmax_auc_rmsle_tbl <- readxl::read_xlsx(path = paste0(Sys.getenv("FIG_DIR"),
                                                    "Manu_Files/",
-                                                  read_date_results,
+                                                  today,
                                                   "_Supp_Table2_eval_results.xlsx"),
                                      sheet = "AUC_and_Cmax_RMSLE_summary")
 #make plot
@@ -1541,9 +1529,9 @@ This figure reveals that overall, L-BFGS-B produced fits that did not match NCA-
 
 Plot predicted vs. observed concentrations for everything, using the winning fit options and the winning model for each data group.
 
-```{r, eval = FALSE}
+```{r}
 all_preds <- readRDS(paste0(Sys.getenv("FIG_DIR"),
-                          read_date_results,
+                          today,
                           "_all_preds.Rds"))
 
 #select winning fit opts: 110p bobyqa
@@ -1609,13 +1597,17 @@ rm(sp_plots, split_preds, all_preds_prep, all_preds)
 
 Begin by collating the data needed for plots. These data are generally accessible using functions/methods for evaluating fitted `pk` objects.
 
-```{r data_aggregation}
+Read in the fitted `pk` object for the best set of fitting options.
+
+```{r}
 my_pk <- readRDS(paste0(Sys.getenv("OD_DIR"),
                         read_date_pk,
                         "mypk_fit_110p.Rds"))
+```
 
-# Need the following data for any of the subsequent plots
+Get winning model; predictions; residuals; TK stats; NCA results; twofold test results; coefficients; coefficient SDs.
 
+```{r data_aggregation}
 # after fitting pk object for all cvt objects or reading the fitted pk object in `setup`
 winmodel <- get_winning_model(my_pk, method = "bobyqa")
 my_preds <- semi_join(predict(my_pk, use_scale_conc = FALSE, method = "bobyqa"), winmodel) 
@@ -1652,11 +1644,12 @@ fe_df <- fold_error(my_pk,
                      sub_pLOQ = TRUE,
                      method = "bobyqa") %>% semi_join(winmodel)
 
-# May need to change the use_scale_conc defaults
-r2_df <- rsq(my_pk, use_scale_conc = FALSE,
+r2_df <- rsq(my_pk,
+             use_scale_conc = FALSE,
              sub_pLOQ = TRUE,
              method = "bobyqa") %>%
-  semi_join(winmodel)  
+  semi_join(winmodel)
+
 myAIC <- AIC(my_pk, method = "bobyqa") %>%
   semi_join(winmodel)
 
@@ -1676,15 +1669,6 @@ myRMSE <- rmse(my_pk,
                sub_pLOQ = TRUE,
                method = "bobyqa") %>%
   semi_join(winmodel) 
-
-chem_name_translate <- all_my_data %>%
-  dplyr::select(Chemical, Chemical_Name) %>%
-  dplyr::filter(!(Chemical_Name %in% c("2,4-d",
-                                     "methylene chloride",
-                                     "benzo[a]pyrene"))) %>%
-  dplyr::distinct() 
-#these chemical names are filtered out because they are alternate/secondary versions of names for the same DTXSID that is already identified by another name
-
 ```
 
 ### Supp Figure 7: invivoPKfit model performance
@@ -1944,7 +1928,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 ```
 
 
-### Supp. Fig. 8 Examples fits for chemicals with R-squared and within 2-fold
+### Figure 7: Examples fits for chemicals with R-squared and within 2-fold
 
 ```{r goodness-of-fit_exampleFits}
 pl <- plot(my_pk,
@@ -2007,42 +1991,46 @@ cowplot::plot_grid(plotlist = list(
                                                                    "#2b8cbe",
                                                                    "#045a8d")) +
                                      theme(legend.position = "none") +
-                                     xlim(0,30),
+                                     xlim(0,30) +
+    ggtitle("A: DTXSID2020139 rat"),
   #high frac 2fold and high Rsq
                                    ex_fits[["DTXSID4023917"]] +
                                      scale_color_manual(values = c("black",
                                                                    "grey40")) +
-                                     theme(legend.position = "none"),
+                                     theme(legend.position = "none") +
+    ggtitle("B: DTXSID4023917 rat"),
   
   #low frac 2fold and low rsq
                                     ex_fits[["DTXSID3061635"]] +
                                      scale_color_manual(values = c("#006837")) +
-                                     theme(legend.position = "none"),
+                                     theme(legend.position = "none") +
+    ggtitle("C: DTXSID3061635 rat"),
   
   #high frac2fold and low rsq
                                    ex_fits[["DTXSID8030760"]] +
                                      scale_color_manual(values = "magenta3") +
-                                     theme(legend.position = "none")
+                                     theme(legend.position = "none") +
+    ggtitle("D: DTXSID8030760 rat")
                                   ),
                    scale = 0.85)
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "Manu_Files/",
                          today,
-                         "_Supp_Fig8.png"),
+                         "_Fig7.png"),
        height = 12,
        width = 12)
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "Manu_Files/",
                          today,
-                         "_Supp_Fig8.pdf"),
+                         "_Fig7.pdf"),
        height = 12,
        width = 12)
 
 ```
 
-#### Supp. Fig 9: plots of the five data groups that were best fit by the null model
+#### Supp. Fig 8: plots of the five data groups that were best fit by the null model
 
 ```{r}
 flat_chems <- winmodel %>%
@@ -2066,7 +2054,7 @@ cowplot::plot_grid(plotlist = flat_fits)
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "Manu_Files/",
                          today,
-                         "_Supp_Fig9.pdf"),
+                         "_Supp_Fig8.pdf"),
        height = 8,
        width = 16,
        units = "in")
@@ -2074,7 +2062,7 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "Manu_Files/",
                          today,
-                         "_Supp_Fig9.png"),
+                         "_Supp_Fig8.png"),
        bg = "white",
        height =8,
        width = 16,
@@ -2098,33 +2086,32 @@ lombardo <- readxl::read_xlsx(
 
 #use ctxR to search the Dashboard for DTXSIDs corresponding to these CASRNs
 lombardo_dtxsid <- ctxR::chemical_equal_batch(
-  word_list = unique(lombardo$`CAS #`),
-  API_key = Sys.getenv("ccd_api_key")
+  word_list = unique(lombardo$`CAS #`)
 )
 
 #merge in the DTXSIDs
 lombardo <- lombardo %>%
-  left_join(lombardo_dtxsid %>% select(searchValue, dtxsid, preferredName),
+   dplyr::left_join(lombardo_dtxsid$valid %>%
+               dplyr::select(searchValue, dtxsid, preferredName),
             by = c("CAS #" = "searchValue"))
 
 #any left unidentified: search by name
 lombardo_missing <- lombardo %>%
-  filter(is.na(dtxsid))
+  dplyr:: filter(is.na(dtxsid))
 
 missing_names <- lombardo_missing %>%
-  pull(Name)
+   dplyr::pull(Name)
 
 lombardo_dtxsid_name <- ctxR::chemical_equal_batch(
-  word_list = unique(missing_names),
-  API_key = Sys.getenv("ccd_api_key")
+  word_list = unique(missing_names)
 )
 
 lombardo_missing <- lombardo_missing %>%
-  left_join(lombardo_dtxsid_name %>% 
-              select(searchValue, dtxsid, preferredName),
+   dplyr::left_join(lombardo_dtxsid_name$valid %>% 
+               dplyr::select(searchValue, dtxsid, preferredName),
             by = c("Name" = "searchValue") )
 
-lombardo <- bind_rows(lombardo %>% filter(!is.na(dtxsid)),
+lombardo <-  dplyr::bind_rows(lombardo %>% filter(!is.na(dtxsid)),
                       lombardo_missing)
 
 lombard_abbr <- lombardo %>%
@@ -2137,7 +2124,7 @@ lombard_abbr <- lombardo %>%
                 source = "Lombardo et al.",
                 CLtot = CLtot*60/1000 # Lombardo reports this as mL/min/kg, need L/h/kg
   ) %>%
-  arrange(halflife)
+   dplyr::arrange(halflife)
 
 my_pk_vals <- my_tkstats %>%
   dplyr::select(dtxsid = Chemical,
@@ -2152,16 +2139,16 @@ my_pk_vals <- my_tkstats %>%
                 !is.na(halflife))
 
 lombardo_inner <- my_pk_vals %>%
-  inner_join(lombard_abbr, by = "dtxsid")
+   dplyr::inner_join(lombard_abbr, by = "dtxsid")
 #79 chemicals in common
 
-lombardo_comparison <- bind_rows(lombard_abbr %>%
-                                   filter(
+lombardo_comparison <-  dplyr::bind_rows(lombard_abbr %>%
+                                    dplyr::filter(
                                      dtxsid %in%
                                        lombardo_inner$dtxsid
                                    ),
                                  my_pk_vals %>%
-                                   filter(
+                                    dplyr::filter(
                                      dtxsid %in%
                                        lombardo_inner$dtxsid
                                    )
@@ -2169,52 +2156,72 @@ lombardo_comparison <- bind_rows(lombard_abbr %>%
 
 #merge in chemical names
 
+#get preferred names by DTXSID
+all_details <- ctxR::get_chemical_details_batch(
+  unique(lombardo_comparison$dtxsid)
+)
+
 lombardo_comparison <- lombardo_comparison %>%
-  left_join(chem_name_translate,
-            by = c("dtxsid" = "Chemical"))
+  select(-preferredName) %>%
+  left_join(all_details %>% select(dtxsid, preferredName))
 
 #create a factor variable for chemical names that sorts chemicals from highest to lowest Lombardo halflife
 
 chemnames_levels <- lombardo_comparison %>%
-  filter(source %in% "Lombardo et al.") %>%
-  arrange(halflife) %>%
-  pull(Chemical_Name)
+   dplyr::filter(source %in% "Lombardo et al.") %>%
+   dplyr::arrange(halflife) %>%
+   dplyr::pull(preferredName)
 
 
 lombardo_comparison <- lombardo_comparison %>%
-  mutate(Chemical_Name = factor(Chemical_Name,
+   dplyr::mutate(preferredName = factor(preferredName,
                                 levels = chemnames_levels))
+
+#get invivoPKfit species for plot-splitting purposes
+ivpk_species <- lombardo_comparison %>%
+  dplyr::filter(source %in% "invivoPKfit") %>%
+  dplyr::distinct(dtxsid, Species) %>%
+  dplyr::rename(invivopkfit_species = Species)
+
+lombardo_comparison <- lombardo_comparison %>%
+  dplyr::left_join(ivpk_species,
+                   by = "dtxsid")
 
 #reshape longer and plot
 lombardo_comparison %>%
-  pivot_longer(cols = c("Vss", "CLtot", "halflife")) %>%
-  mutate(name = factor(name, levels = c("halflife", "Vss", "CLtot"))) %>%
+   tidyr::pivot_longer(cols = c("Vss", "CLtot", "halflife")) %>%
+   dplyr::mutate(name = factor(name,
+                               levels = c("halflife", "Vss", "CLtot")
+                               )
+                 ) %>%
   ggplot(mapping = aes(
     x = value,
-    y = Chemical_Name
+    y = preferredName
   )) +
-  geom_point(aes(color = source,
-                 shape = Species),
+  geom_point(aes(shape = source,
+                 color = source),
              #position = position_dodge(0.7),
              size = 5/.pt, stroke = 2.5/.pt) +
   facet_grid(cols = vars(name),
-             scales = "free_x") +
+             rows = vars(invivopkfit_species),
+             scales = "free",
+             space =  "free_y",
+             drop = TRUE) +
   scale_x_log10( labels = scales::label_math(format = log10)) +
-  annotation_logticks(sides = "b") +
-  scale_shape_manual(values = c("human" = 3, "rat" = 21)) +
-  scale_color_manual(values = c("black", "#1064c9")) +
-  guides(color = guide_legend(override.aes = list(shape = 21),
-                              nrow = 2,
-                              title.position = "top",
-                              title.hjust = 0.5),
-         shape = guide_legend(nrow = 2,
-                              title.position = "top",
-                              title.hjust = 0.5)) +
-  theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+  #annotation_logticks(sides = "b") +
+  scale_shape_manual(values = c("Lombardo et al." = 3,
+                                "invivoPKfit" = 22)) +
+  scale_color_manual(values = c("#d95f02", "#1b9e77")) +
+  guides(x = "axis_logticks") +
+  theme(panel.border = element_rect(color = "black",
+                                    fill = NA,
+                                    linewidth = 1.5),
         panel.background = element_blank(),
         panel.grid.major = element_line(color = "grey90", linewidth = 0.5),
+         panel.spacing.y = unit(0, "line"),
         strip.background = element_rect(fill = "white"),
-        strip.text = element_text(face = "bold", size = 12),
+        strip.text.x = element_text(face = "bold", size = 12),
+       strip.text.y = element_blank(),
         text = element_text(size = 10),
         axis.ticks = element_blank(),
         axis.line = element_blank(),
@@ -2231,20 +2238,23 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "Manu_Files/",
                          today,
                          "_Fig6.png"),
-       height = 7,
-       width = 6.5,
-       device = "png", dpi = 300)
+       height = 11,
+       width = 10,
+       units = "in",
+       device = "png",
+       dpi = 300)
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "Manu_Files/",
                          today,
                          "_Fig6.pdf"),
-       height = 7,
-       width = 6.5)
+       height = 11,
+       width = 10,
+       units = "in")
 
 ```
 
-### Supp. Fig. 10: Fgutabs comparison with literature values compiled by Musther et al. (2014)
+### Supp. Fig. 9: Fgutabs comparison with literature values compiled by Musther et al. (2014)
 
 Compare with literature values of Fgutabs from the supplemental material of Musther et al. 2014.
 
@@ -2334,10 +2344,10 @@ musther2014_long <- musther2014 %>%
 Use `ctxR` to get DTXSIDs from CAS number.
 
 ```{r musther-ccd}
-musther2014_dtxsid <- ctxR::chemical_equal_batch(word_list = unique(musther2014_long$CAS), API_key = Sys.getenv("ccd_api_key"))
+musther2014_dtxsid <- ctxR::chemical_equal_batch(word_list = unique(musther2014_long$CAS))
 
 musther2014_long <- musther2014_long %>%
-  left_join(musther2014_dtxsid %>% select(searchValue, dtxsid, preferredName),
+  left_join(musther2014_dtxsid$valid %>% select(searchValue, dtxsid, preferredName),
             by = c("CAS" = "searchValue"))
 ```
 
@@ -2406,20 +2416,20 @@ ggplot(fgutabs_pk_musther) +
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                          "Manu_Files/",
                          today,
-                         "_Supp_Fig10.pdf"),
+                         "_Supp_Fig9.pdf"),
        height = 5,
        width = 8)
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
                           "Manu_Files/",
                          today,
-                         "_Supp_Fig10.png"),
+                         "_Supp_Fig9.png"),
        height = 5,
        width = 8,
        device = "png", dpi = 300)
 ```
 
-### Supp. Fig. 11: Parallelization decreases runtime of invivoPKfit
+### Supp. Fig. 10: Parallelization decreases runtime of invivoPKfit
 
 Benchmarking for parallelization vs. non-parallelization
 
@@ -2512,12 +2522,588 @@ ggplot(full_long,
 ggsave(paste0(Sys.getenv("FIG_DIR"),
               "Manu_Files/",
               today,
-              "_Supp_Fig11.png"),
+              "_Supp_Fig10.png"),
        width = 5,
        height = 2.5,
        units = "in")
 
 ```
+
+# Summary fit data for all fitting options, all models, all data groups
+
+```{r fit_summary_bydatagrp}
+fit_summary_bydatagrp <- function(this_error_model,
+                             this_dose_norm,
+                             this_log10_trans,
+                             this_time_scale) {
+  dose_indic <- as.numeric(this_dose_norm)
+  log10_indic <- as.numeric(this_log10_trans)
+  time_indic <- as.numeric(this_time_scale)
+  errmodel_indic <- substr(this_error_model, 1, 1)
+  
+  file_str <- paste0(Sys.getenv("OD_DIR"),
+                     read_date_pk,
+                     "mypk_fit_",
+                     dose_indic,
+                     log10_indic,
+                     time_indic,
+                     errmodel_indic,
+                     ".Rds")
+  pk_name <- paste0(dose_indic, log10_indic, time_indic, errmodel_indic)
+  
+  my_pk <- readRDS(file = file_str)
+  
+    pk_name <- paste0(dose_indic, log10_indic, time_indic, errmodel_indic)
+  
+  message(paste0("Summary by data group for: ", pk_name))
+
+myAFE <- AFE(my_pk,
+              use_scale_conc = FALSE,
+             sub_pLOQ = TRUE)
+
+myAAFE <- AAFE(my_pk,
+              use_scale_conc = FALSE,
+             sub_pLOQ = TRUE)
+
+my_r2 <- rsq(my_pk,
+             use_scale_conc = FALSE,
+             sub_pLOQ = TRUE) 
+
+myAIC <- AIC(my_pk) 
+
+myRMSLE <- rmse(my_pk,
+               use_scale_conc = list(dose_norm = FALSE,
+                                     log10_trans = TRUE),
+               sub_pLOQ = TRUE)
+
+
+myRMSE <- rmse(my_pk,
+               use_scale_conc = FALSE,
+               sub_pLOQ = TRUE) 
+
+winmodel <- get_winning_model(my_pk) %>%
+  select(Chemical, Species, method, model) %>%
+  dplyr::mutate(is_winning_model = TRUE)
+
+
+ #note convergence codes for each model
+  pf <- my_pk$fit %>%
+    dplyr::distinct(Chemical, Species, model, method, convcode)
+  
+  
+  convcode_labels <- data.frame(convcode =c(0,
+                                               1,
+                                               20,
+                                               21,
+                                               10,
+                                               51,
+                                               52,
+                                               9999,
+                                               -9999),
+                                convcode_label = c('Successful convergence (see ?optimx::optimx)',
+                                                   'The iteration limit maxit had been reached (see ?optimx::optimx)',
+                                'the initial set of parameters is inadmissible, that is, that the function cannot be computed or returns an infinite, NULL, or NA value (see ?optimx::optimx))',
+  'an intermediate set of parameters is inadmissible (see ?optimx::optimx)',
+  'degeneracy of the Nelder–Mead simplex (see ?optimx::optimx)',
+  'a warning from the "L-BFGS-B" method (see ?optimx::optimx)',
+  'an error from the "L-BFGS-B" method (see ?optimx::optimx)',
+  'error in optimx::optimx()',
+  'model status was "abort"')
+  )
+  
+  pf <- pf %>%
+    dplyr::left_join(convcode_labels)
+  
+#join absolutely everything together
+summ_by_datagroup <- pf %>%
+  left_join(winmodel) %>%
+  left_join(myAIC) %>%
+  left_join(myAFE) %>%
+  left_join(myAAFE) %>%
+  left_join(my_r2) %>%
+  left_join(myRMSLE) %>%
+  left_join(myRMSE) %>%
+mutate(is_winning_model = case_when(is_winning_model %in% TRUE ~ TRUE,
+                                    is.na(is_winning_model) ~ FALSE,
+                                    .default = FALSE)) %>%
+  arrange(Chemical, Species, method, model)
+
+return(summ_by_datagroup)
+}
+```
+
+```{r}
+fit_summary_byexpt <- function(this_error_model,
+                             this_dose_norm,
+                             this_log10_trans,
+                             this_time_scale) {
+  dose_indic <- as.numeric(this_dose_norm)
+  log10_indic <- as.numeric(this_log10_trans)
+  time_indic <- as.numeric(this_time_scale)
+  errmodel_indic <- substr(this_error_model, 1, 1)
+  
+  file_str <- paste0(Sys.getenv("OD_DIR"),
+                     read_date_pk,
+                     "mypk_fit_",
+                     dose_indic,
+                     log10_indic,
+                     time_indic,
+                     errmodel_indic,
+                     ".Rds")
+  pk_name <- paste0(dose_indic, log10_indic, time_indic, errmodel_indic)
+  
+  my_pk <- readRDS(file = file_str)
+  
+      pk_name <- paste0(dose_indic, log10_indic, time_indic, errmodel_indic)
+  
+  message(paste0("Summary by experiment for: ", pk_name))
+
+my_tkstats <- eval_tkstats(my_pk,
+                           model = NULL)
+
+winmodel <- get_winning_model(my_pk) %>%
+  select(Chemical, Species, method, model) %>%
+  dplyr::mutate(is_winning_model = TRUE)
+
+pf <- my_pk$fit %>%
+    dplyr::distinct(Chemical, Species, model, method, convcode)
+  
+  
+  convcode_labels <- data.frame(convcode =c(0,
+                                               1,
+                                               20,
+                                               21,
+                                               10,
+                                               51,
+                                               52,
+                                               9999,
+                                               -9999),
+                                convcode_label = c('Successful convergence (see ?optimx::optimx)',
+                                                   'The iteration limit maxit had been reached (see ?optimx::optimx)',
+                                'the initial set of parameters is inadmissible, that is, that the function cannot be computed or returns an infinite, NULL, or NA value (see ?optimx::optimx))',
+  'an intermediate set of parameters is inadmissible (see ?optimx::optimx)',
+  'degeneracy of the Nelder–Mead simplex (see ?optimx::optimx)',
+  'a warning from the "L-BFGS-B" method (see ?optimx::optimx)',
+  'an error from the "L-BFGS-B" method (see ?optimx::optimx)',
+  'error in optimx::optimx()',
+  'model status was "abort"')
+  )
+  
+  pf <- pf %>%
+    dplyr::left_join(convcode_labels)
+  
+
+summ_by_expt <- pf %>%
+  left_join(winmodel) %>%
+  left_join(my_tkstats) %>%
+mutate(is_winning_model = case_when(is_winning_model %in% TRUE ~ TRUE,
+                                    is.na(is_winning_model) ~ FALSE,
+                                    .default = FALSE))  %>%
+  arrange(Chemical, Species, method, model)
+
+return(summ_by_expt)
+}
+
+```
+
+```{r}
+summary_datagrp_all <- fitopts %>%
+              dplyr::rowwise() %>%
+  dplyr::mutate(summ = list(
+    fit_summary_bydatagrp(this_error_model = error_model,
+                                             this_dose_norm = dose_norm,
+                                             this_log10_trans = log10_trans,
+                                             this_time_scale = time_scale)
+    )
+    ) %>%
+  tidyr::unnest(cols = c(summ))
+
+summary_expt_all <- fitopts %>%
+              dplyr::rowwise() %>%
+  dplyr::mutate(summ_expt = list(
+    fit_summary_byexpt(this_error_model = error_model,
+                                             this_dose_norm = dose_norm,
+                                             this_log10_trans = log10_trans,
+                                             this_time_scale = time_scale)
+    )
+    ) %>%
+  tidyr::unnest(cols = c(summ_expt))
+
+writexl::write_xlsx(list("Summary by data grp" = summary_datagrp_all,
+                         "Summary by expt" = summary_expt_all),
+                    paste0(Sys.getenv("FIG_DIR"),
+              "Manu_Files/",
+              today,
+              "_Supp_Table4.xlsx"))
+```
+
+# Individual study level analysis
+
+While there is no convenient external data set for evaluation, one way of evaluating the generalizability of the model fits is to compare the pooled fits to fits done on an individual-study basis, where a "study" is defined as a unique combination of Chemical, Species, and Reference.
+
+This means setting the `data_group` to `vars(Chemical, Species, Reference)` and also setting the `error_group` to `vars(Chemical, Species, Reference)`.
+
+For comparison purposes, we will use the same "best set" of options that was used for the pooled analysis: dose-normalization, log10-transformation, no time transformation, and the "bobyqa" optimization algorithm.
+
+```{r}
+#set up pk analysis for single-study
+pk_study <- minimal_pk +
+  facet_data(
+    facets = vars(Chemical, Species, Reference)
+  ) +
+  stat_error_model(
+    error_group = vars(Chemical, Species, Reference)
+  ) +
+  settings_preprocess(keep_data_original = FALSE,
+                      suppress.messages = TRUE) +
+  scale_conc(dose_norm = TRUE,
+             log10_trans = TRUE) +
+  settings_optimx(method = "bobyqa") +
+  stat_model(model = c("model_flat",
+                       "model_1comp",
+                       "model_2comp"))
+
+#do pk analysis
+system.time(
+  pk_study <- do_fit(pk_study,
+                     n_cores = 11)
+)
+```
+
+```{r}
+saveRDS(pk_study,
+        paste0(Sys.getenv("OD_DIR"),
+               today,
+               "studylevel_pk_fit_110p.Rds"))
+```
+
+
+Get TK statistics for the winning models. Do them dose-normalized so that they won't vary by dose. Keep only halflife and Vss, which shouldn't vary by Route and Media.
+
+```{r}
+tkstats_study <- eval_tkstats(pk_study,
+                              finite_only = FALSE,
+                              dose_norm = TRUE,
+                              model = "winning") %>%
+  dplyr::select(Chemical,
+                Species, 
+                Reference,
+                method,
+                model,
+                halflife.tkstats,
+                Vss.tkstats,
+                `Vss/Fgutabs.tkstats`) %>%
+  dplyr::rename(halflife = halflife.tkstats,
+                Vss = Vss.tkstats,
+                `Vss/Fgutabs` = `Vss/Fgutabs.tkstats`) %>%
+  dplyr::distinct()
+
+#Also: get coefficients and try to pull Fgutabs (if it was optimized)
+coef_study <- coef_sd(pk_study,
+                      method = "bobyqa",
+                       include_type = "optimize") %>%
+  dplyr::filter(param_name %in% "Fgutabs") %>%  dplyr::select(Chemical,
+                Species, 
+                Reference,
+                method,
+                model,
+                param_name,
+                param_value) %>%
+  dplyr::distinct()
+
+#keep only winning model coefs
+win_study <- get_winning_model(pk_study) %>%
+  dplyr::select(-near_flat, -preds_below_loq)
+
+coef_study <- coef_study %>%
+  dplyr::semi_join(win_study)
+
+fgutabs_study <- coef_study %>%
+  select(-param_name) %>%
+  rename(Fgutabs = param_value)
+
+tkstats_study2 <- full_join(tkstats_study,
+                            fgutabs_study)
+```
+
+For comparison, read in the saved data from the best options with pooled data. Get those TK statistics and winning model as well, for the "bobyqa" method.
+
+```{r}
+  file_str <- paste0(Sys.getenv("OD_DIR"),
+                     read_date_pk,
+                     "mypk_fit_110p.Rds")
+  pk_pooled <- readRDS(file = file_str)
+  
+ tkstats_pooled <- eval_tkstats(pk_pooled,
+                              finite_only = FALSE,
+                              dose_norm = TRUE,
+                              method = "bobyqa",
+                              model = "winning") %>%
+    dplyr::select(Chemical,
+                Species, 
+                Reference,
+                method,
+                model,
+                halflife.tkstats,
+                Vss.tkstats,
+                `Vss/Fgutabs.tkstats`) %>%
+  dplyr::rename(halflife = halflife.tkstats,
+                Vss = Vss.tkstats,
+                `Vss/Fgutabs` = `Vss/Fgutabs.tkstats`) %>%
+   dplyr::group_by(Chemical,
+                   Species,
+                   method,
+                   model,
+                   halflife,
+                   Vss,
+                   `Vss/Fgutabs`) %>%
+   dplyr::summarise(n_ref = n_distinct(Reference)) %>%
+   dplyr::ungroup()
+
+ #Also: get coefficients and try to pull Fgutabs
+coef_pooled <- coef_sd(pk_pooled,
+                       method = "bobyqa",
+                       include_type = "optimize") %>%
+  dplyr::filter(param_name %in% "Fgutabs") %>%  dplyr::select(Chemical,
+                Species, 
+                method,
+                model,
+                param_name,
+                param_value) %>%
+  dplyr::distinct()
+
+#keep only winning model coefs
+win_pooled <- get_winning_model(pk_pooled,
+                                method = "bobyqa") %>%
+  dplyr::select(-near_flat, -preds_below_loq)
+
+coef_pooled <- coef_pooled %>%
+  dplyr::semi_join(win_pooled)
+
+fgutabs_pooled <- coef_pooled %>%
+  select(-param_name) %>%
+  rename(Fgutabs = param_value)
+
+tkstats_pooled2 <- full_join(tkstats_pooled,
+                            fgutabs_pooled)
+```
+
+For plotting: Pivot the TK stats tables longer, add an identifier column for single-study vs. pooled, and merge.
+
+```{r}
+tkstats_study3 <- tkstats_study2 %>%
+  dplyr::rename(model_study = model) %>%
+  pivot_longer(cols = c(halflife,
+                        Vss,
+                        `Vss/Fgutabs`,
+                        Fgutabs),
+               names_to = "name",
+               values_to = "value_study") 
+
+tkstats_pooled3 <- tkstats_pooled2 %>%
+  dplyr::rename(model_pooled = model,
+                n_ref_pooled = n_ref) %>%
+  pivot_longer(cols = c(halflife,
+                        Vss,
+                        `Vss/Fgutabs`,
+                        Fgutabs),
+               names_to = "name",
+               values_to = "value_pooled") 
+
+tkstats_all <- full_join(tkstats_study3,
+                         tkstats_pooled3)
+```
+
+Exclude those for which the winning model was flat. (They will have infinite half-life.)
+
+```{r}
+tkstats_all <- tkstats_all %>%
+  filter(!(model_pooled %in% "model_flat") &
+           !(model_study %in% "model_flat"))
+```
+
+
+```{r}
+ggplot(tkstats_all %>%
+         filter( !is.na(value_study) &
+                  !is.na(value_pooled))) +
+  geom_point(aes(x = value_pooled,
+                 y = value_study,
+                 color = factor(n_ref_pooled))) +
+  facet_wrap(facets = vars(name),
+             scales = "free") +
+  scale_x_log10(guide = "axis_logticks") +
+  scale_y_log10(guide = "axis_logticks") 
+```
+
+Plot only the ones with more than one reference.
+
+```{r}
+ggplot(tkstats_all %>%
+         filter(n_ref_pooled > 1 &
+                  !is.na(value_study) &
+                  !is.na(value_pooled))) +
+  geom_point(aes(x = value_pooled,
+                 y = value_study),
+             color = "gray50",
+             shape = 1) +
+  geom_line(aes(x = value_pooled,
+                 y = value_study,
+                 group = interaction(Chemical, Species)),
+             color = "gray50") +
+  facet_wrap(facets = vars(name),
+             scales = "free") +
+  geom_abline(intercept = 0, slope = 1,
+              color = "black") +
+  geom_smooth(aes(x = value_pooled,
+                 y = value_study),
+              method = "lm",
+              se = FALSE,
+              color = "black",
+              linetype = 2) +
+  scale_x_log10(guide = "axis_logticks") +
+  scale_y_log10(guide = "axis_logticks") +
+  theme_bw() +
+  theme(strip.background = element_blank()) 
+```
+
+Get R-sq for each of these, including only those with more than one reference:
+
+
+```{r}
+rsq_df <- tkstats_all %>%
+         filter(n_ref_pooled > 1 &
+                  !is.na(value_study) &
+                  !is.na(value_pooled)) %>%
+  mutate(log10_value_pooled = log10(value_pooled),
+         log10_value_study = log10(value_study)) %>%
+  group_by(name) %>%
+  summarise(n = n(),
+            n_grp = n_distinct(Chemical, Species),
+    rsq_log10 = summary(
+      lm(
+        log10_value_study ~ log10_value_pooled,
+        na.action = "na.omit"
+        )
+      )[[
+    "r.squared"
+  ]],
+  rsq = summary(lm(value_study ~ value_pooled))[[
+    "r.squared"
+  ]]) %>%
+  ungroup() %>%
+  mutate(label = sprintf("R^2 == %.3f",
+                         rsq_log10))
+
+rsq_df %>% select(-label) %>% print()
+```
+
+Re-make plot with R-sq information as text annotation, and save.
+
+```{r}
+ggplot(tkstats_all %>%
+         filter(n_ref_pooled > 1 &
+                  !is.na(value_study) &
+                  !is.na(value_pooled))) +
+  geom_point(aes(x = value_pooled,
+                 y = value_study),
+             color = "gray50",
+             shape = 1) +
+  geom_line(aes(x = value_pooled,
+                 y = value_study,
+                 group = interaction(Chemical, Species)),
+             color = "gray50") +
+  geom_text(data = rsq_df,
+            aes(x = 0,
+                y = Inf,
+                label = label),
+            parse = TRUE,
+            hjust = -0.3,
+            vjust = 1.8) +
+  facet_wrap(facets = vars(name),
+             scales = "free") +
+  geom_abline(intercept = 0, slope = 1,
+              color = "black") +
+  geom_smooth(aes(x = value_pooled,
+                 y = value_study),
+              method = "lm",
+              se = FALSE,
+              color = "black",
+              linetype = 2) +
+  scale_x_log10(guide = "axis_logticks") +
+  scale_y_log10(guide = "axis_logticks") +
+  xlab("Pooled value") +
+  ylab("Single-study value") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(size = 12))
+
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              "Manu_Files/",
+              today,
+              "_Fig8.png"),
+       height = 5,
+       width = 7)
+
+ggsave(paste0(Sys.getenv("FIG_DIR"),
+              today,
+              "Manu_Files/",
+              "_Fig8.pdf"),
+       height = 5,
+       width = 7)
+```
+
+Save the data as a supplemental table
+
+```{r}
+tkstats_all_wide <- tkstats_all %>%
+  pivot_wider(id_cols = c(Chemical, Species,
+                          Reference, method,
+                          model_study,
+                          model_pooled,
+                          n_ref_pooled),
+              names_from = name,
+              values_from = c(value_study, value_pooled))
+
+tkstats_all_wide %>% filter(n_ref_pooled > 1) %>%
+  writexl::write_xlsx(path = paste0(Sys.getenv("FIG_DIR"),
+                                    "Manu_Files/",
+                                    today,
+                                    "Supp_Table5.xlsx"))
+```
+
+Plot the case with a large Vdist:
+
+```{r}
+plot_pooled <- plot(pk_pooled,
+                    method = "bobyqa",
+                    use_scale_conc = TRUE,
+                    best_fit = TRUE)
+plot_pooled %>%
+  filter(Chemical %in% "DTXSID2020139" & Species %in% "rat") %>%
+  pull(final_plot[[1]])
+
+```
+
+# All plots for best set of fitting options
+
+```{r}
+plot_pooled <- plot(pk_pooled,
+                    method = "bobyqa",
+                    use_scale_conc = TRUE,
+                    print_out = TRUE)
+
+ggsave(
+   filename = paste0(Sys.getenv("FIG_DIR"),
+                     "Manu_Files/",
+                     today,
+                     "_allplots.pdf"), 
+   plot = gridExtra::marrangeGrob(plot_pooled, nrow=1, ncol=1), 
+   width = 15, height = 9
+)
+
+```
+
 
 # Print sessionInfo()
 
