@@ -232,16 +232,9 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/"
        bg = "white")
 ```
 
-Next what we want to do is get httk predictions for nonrestrictive & 
-restrictive chemicals, but going from 
-
-```{r}
-
-```
-
-
-
-
+This next analysis looks at bootstrapping to look at specific variation in downstream
+parameters (like Css and halflife) which depend on _kelim_ which cannot be estimated
+at times. However, it is noted that even this method does not provide much more information.
 
 ```{r combination-function}
 # Only need a simple bootstrapping method

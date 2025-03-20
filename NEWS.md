@@ -1,3 +1,12 @@
+# invivoPKfit 2.0.1
+
+* Ensured only optimized parameters will be used when calculating AIC. This is really
+only a concern when using models that hold many of the total parameters constant.  
+* Added a new feature allowing users to calculate log-likelihood from predictions
+generated outside invivoPKfit.
+* Updated documentation and cleaned up vignettes.
+
+
 # invivoPKfit 2.0.0
 
 * Initial CRAN submission.  

@@ -346,7 +346,8 @@ css_httk_batch <- function(param_list,
 }
 
 
-filter_targets <- function(.data) {
+filter_targets <- function(.data, .targets = target_chems_human) {
   stopifnot("Chemical" %in% names(.data))
-  dplyr::filter(.data = .data, Chemical %in% target_chems)
+  dplyr::filter(.data = .data, Chemical %in% .targets)
+
 }

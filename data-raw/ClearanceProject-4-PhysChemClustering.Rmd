@@ -11,9 +11,10 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r data_loading}
-target_chem_properties <- readRDS("data-raw/ctxR_3comp2_cheminfo.rds")
+target_chem_properties <- readRDS("data-raw/RCdata/ctxR_3comp2_cheminfo.rds")
 new_pk <- readRDS("data-raw/ratCVT_wHTTK_reformulated.rds")
 red_assay_res <- readRDS("data-raw/2019-05-06-REDassay_HTTK.rds")
+load("data-raw/CYP_Sipes2017.RData")
 ```
 
 
@@ -51,11 +52,11 @@ target_chem_info %>%
   count(monoisotopicMass <= 500)
 
          
-target_chem_pw_full %>%
+target_chem_properties %>%
   ggplot(aes(x = forcats::fct_reorder(dtxsid, logkow))) +
   geom_pointrange(aes(y = logkow, ymin = logkow - logkow_sd,
                       ymax = logkow + logkow_sd), size = 0.1) +
-  facet_grid(cols = vars(type_logkow)) +
+  # facet_grid(cols = vars(type_logkow)) +
   theme_bw() +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
@@ -117,8 +118,7 @@ target_chem_summary <- target_chem_properties %>%
 
 # Make a matrix of all properties so far
 tcs_mat <- target_chem_summary %>% 
-  select(dtxsid, monoisotopicMass, Affinity.Kd.Med,
-         H_donors:Rot_Bonds, logkow, apKa, bpKa, logD_7.4,
+  select(dtxsid, monoisotopicMass, logkow:Affinity.Kd.Med,
          starts_with("CYP")) %>%
   distinct()
 tcs_mat <- column_to_rownames(tcs_mat, var = "dtxsid") %>% as.matrix()
@@ -128,13 +128,13 @@ tcs_mat <- column_to_rownames(tcs_mat, var = "dtxsid") %>% as.matrix()
 tcs_mat_z <- apply(tcs_mat, MARGIN = 2, FUN = scale)
 rownames(tcs_mat_z) <- rownames(tcs_mat)
 summary(tcs_mat_z[, 1])
-summary(tcs_mat_z[(rownames(tcs_mat_z) %in% target_chems), 1])
+summary(tcs_mat_z[(rownames(tcs_mat_z) %in% target_chems_human), 1])
 tcs_mat_z[is.na(tcs_mat_z)] <- 0
 pca_tcs <- prcomp(tcs_mat_z, scale = FALSE)
 
 pca_df <- pca_tcs$x %>% as.data.frame() %>% rownames_to_column(var = "Chemical")
 
-ggplot(data = pca_df %>% mutate(Target = (Chemical %in% target_chems)) %>%
+ggplot(data = pca_df %>% mutate(Target = (Chemical %in% target_chems_human)) %>%
          left_join(target_chem_summary, by = join_by(Chemical == dtxsid)),
        aes(x = PC1, y = PC2)) +
   geom_point(aes(color = TPSA), alpha = 0.8) +
@@ -198,9 +198,11 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
        height = 3, width = 4
 )
 
-chem_rell_label <- total_rel_evaluation_df %>% distinct(Chemical, ll_label) %>%
+chem_rell_label <- this_rel_evaluated_df %>% distinct(Chemical, ll_label) %>%
   filter(ll_label %in% c("Restrictive", "Nonrestrictive"))
 
+
+fup_df <- rph_param_df %>% distinct(Chemical, Funbound.plasma)
 # Molecular descriptors in bins
 bin_size <- 10
 logP_plot <- target_chem_summary %>%
@@ -212,21 +214,6 @@ logP_plot <- target_chem_summary %>%
   labs(x = "logKow", y = "fup") +
   ggbeeswarm::geom_beeswarm() +
   theme_bw()
-
-target_chem_summary %>%
-  inner_join(chem_rell_label, by = join_by(dtxsid == Chemical)) %>%
-  distinct(dtxsid, logkow, TPSA, Rot_Bonds, ll_label) %>% 
-  pivot_longer(cols = c(logkow, TPSA),
-               names_to = "Parameter", values_to = "Value") %>%
-  left_join(fup_df, by = join_by(dtxsid == Chemical)) %>%
-  ggplot(aes(x = Value, y = Funbound.plasma)) +
-  labs(x = "", y = "fup") +
-  facet_grid(cols = vars(Parameter),
-             rows = vars(ll_label),
-             scales = "free_x") +
-  geom_point() +
-  theme_bw()
-
 
 bin_size <- 50
 TPSA_plot <- target_chem_summary %>%
