@@ -51,7 +51,7 @@ log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied to the y-axis (concentration axis) of
 the plots.}
 
-\item{time_trans}{Default `FLASE`. Determines whether time values will be transformed.}
+\item{time_trans}{Default `FALSE`. Determines whether time values will be transformed.}
 
 \item{log10_C}{Default `NULL`. Determines whether y-axis (concentration) should
 be log10 transformed. Takes `TRUE` or `FALSE` values. Otherwise it defaults
