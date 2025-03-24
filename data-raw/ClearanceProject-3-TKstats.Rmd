@@ -190,9 +190,10 @@ interspecies_rmsle_trends <- bind_rows(rpr_rmsle, rph_rmsle) %>%
                values_to = "RMSLE") %>%
   pivot_wider(names_from = fupSpecies,
               values_from = RMSLE) %>%
-  mutate(norm_diff = (human - rat)/rat) %>%
+  mutate(norm_diff = (human - rat)/rat)
+
+irt_pl <- interspecies_rmsle_trends %>%
   filter(!is.na(norm_diff)) %>% 
-  group_by(Chemical, close_clint, clearance_type) %>%
   ggplot(aes(x = forcats::fct_reorder(Chemical, norm_diff, mean),
              y = norm_diff,
              fill = clearance_type)) +
@@ -223,7 +224,7 @@ interspecies_rmsle_trends <- bind_rows(rpr_rmsle, rph_rmsle) %>%
         axis.title = element_text(size = 10),
         legend.position = "bottom")
 
-species_clint_pl + interspecies_rmsle_trends +
+species_clint_pl + irt_pl +
   plot_layout(widths = c(5,8))
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/",
@@ -231,6 +232,31 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/"
        height = 5, width = 7,
        bg = "white")
 ```
+
+From this we notice that CLint specifically can have drastic differences which
+we want to explore. We also glean that there are potential drastic improvements
+in model accuracy. We next want to compare how a changing human CLint towards rat
+CLint by 1% steps changes RMSE.
+
+```{r}
+combo_clint <- rpr_param_df %>%
+  select(Chemical, rCLint = CLint) %>% 
+  left_join(rph_param_df %>%
+              select(Chemical, hCLint = CLint)) %>%
+  mutate(hclint_1p = (1/10)*hCLint, 
+         direction = sign(hCLint - rCLint)) %>%
+  mutate(Nstep = ifelse(direction == 0, 
+                        0, abs(hCLint - rCLint) %/% hclint_1p))
+
+combo_clint %>%
+  left_join(interspecies_rmsle_trends) %>%
+  ggplot(aes(Nstep, norm_diff)) +
+  geom_point() +
+  scale_x_log10() +
+  theme_bw()
+```
+
+
 
 This next analysis looks at bootstrapping to look at specific variation in downstream
 parameters (like Css and halflife) which depend on _kelim_ which cannot be estimated
