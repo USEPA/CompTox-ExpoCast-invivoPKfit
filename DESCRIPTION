@@ -22,7 +22,7 @@ Description: Takes in vivo toxicokinetic concentration-time data and fits
     chemical. These methods are described in detail in "Informatics for Toxicokinetics" (submitted).
 License: GPL-3
 Depends: 
-    R (>= 3.5.0)
+    R (>= 4.1.0)
 Imports: 
     cli,
     devtools,
