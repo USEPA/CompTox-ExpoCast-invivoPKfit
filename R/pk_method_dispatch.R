@@ -1000,3 +1000,31 @@ get_hessian.default <- function(obj, ...) {
        toString(class(obj))
   )
 }
+
+#' fit_sigma()
+#'
+#' This is the S3 method generic for fit_sigma()
+#'
+#' @param obj An object.
+#' @param ... Additional arguments.
+#' @return A [pk()] object with a list of externally predicted values and optimized
+#' hyper-parameter values and resulting AIC computations.
+#' @seealso [fit_sigma.pk()] for the method for class [pk()]
+#' @export
+fit_sigma <- function(obj, ...) {
+  UseMethod("fit_sigma", obj)
+}
+
+#' Default method for fit_sigma()
+#'
+#' @param obj An object
+#' @param ... Additional arguments currently.
+#' @return An error, when a non-pk object is used for the first argument.
+#' @export
+fit_sigma.default <- function(obj, ...) {
+  stop("No 'get_hessian' method exists for object of class",
+       toString(class(obj))
+  )
+}
+
+
