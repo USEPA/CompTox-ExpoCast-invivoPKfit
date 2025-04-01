@@ -63,7 +63,7 @@ Yamaoka, Kiyoshi, Terumichi Nakagawa, and Toyozo Uno. "Application of Akaike's i
 ### Dependencies
 
 * Users will need the freely available R statistical computing language: <https://www.r-project.org/>
-* Users will likely want a development environment like RStudio: <https://www.rstudio.com/products/rstudio/download/>
+* Users will likely want a development environment like RStudio: <https://posit.co/download/rstudio-desktop/>
 
 ### Installing
 
