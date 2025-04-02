@@ -94,7 +94,10 @@ parameterize_all <- function(species = "human", all = FALSE) {
                 "try to use default.to.human = TRUE.")
       }
     )
-    browser()
+    message("Pausing briefly between restrictive and ",
+            "nonrestrictive parameterization...")
+    Sys.sleep(2)
+    gc()
 
     params_nr <- tryCatch(
       expr = {

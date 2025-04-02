@@ -21,9 +21,6 @@ library(ctxR)
 library(ggdist)
 library(patchwork)
 library(httk)
-.onUnload <- function(libpath) {
-  library.dynam.unload("httk", libpath)
-}
 ```
 
 
@@ -256,7 +253,51 @@ combo_clint %>%
   theme_bw()
 ```
 
+Next I want to categorize each chemical based on putative hepatic extraction ratio.
+This is calculated as:
+$$
+E_H = \frac{f_{up}\cdot CL_{int}}{Q_{hep} + f_{up}\cdot CL_{int}}
+$$
+```{r extraction_ratio}
+rat_er <- rpr_param_df %>%
+  group_by(Chemical) %>%
+  reframe(fupClint = (Funbound.plasma * Clint),
+          Qhep = (Qcardiacc*Qliverf)) %>%
+  mutate(extraction_ratio = fupClint/(Qhep + fupClint),
+         clearance_type_by_er = case_when(
+           extraction_ratio >= 0.7 ~ "Nonrestrictive",
+           extraction_ratio < 0.3 ~ "Restrictive",
+           between(extraction_ratio, 0.3, 0.7) ~ "Ambiguous"
+         )
+  )
 
+human_er <- rph_param_df %>%
+  group_by(Chemical) %>%
+  reframe(fupClint = (Funbound.plasma * Clint),
+          Qhep = (Qcardiacc*Qliverf)) %>%
+  mutate(extraction_ratio = fupClint/(Qhep + fupClint),
+         clearance_type_by_er = case_when(
+           extraction_ratio >= 0.7 ~ "Nonrestrictive",
+           extraction_ratio < 0.3 ~ "Restrictive",
+           between(extraction_ratio, 0.3, 0.7) ~ "Ambiguous"
+         )
+  ) 
+
+combo_pretable <- inner_join(
+  rat_er %>% select(Chemical,
+                    "rat_er" = extraction_ratio, 
+                    "rat_cl" = clearance_type_by_er),
+  human_er %>% select(Chemical,
+                    "human_er" = extraction_ratio, 
+                    "human_cl" = clearance_type_by_er)
+)
+# Row, Columns
+# In this case, rat is rows, human is columns
+clearance_contingency_tbl <- table(combo_pretable$rat_cl, combo_pretable$human_cl)
+addmargins(clearance_contingency_tbl)
+
+
+```
 
 This next analysis looks at bootstrapping to look at specific variation in downstream
 parameters (like Css and halflife) which depend on _kelim_ which cannot be estimated

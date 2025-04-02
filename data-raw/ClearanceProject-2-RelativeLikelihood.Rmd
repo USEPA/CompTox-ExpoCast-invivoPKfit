@@ -149,63 +149,35 @@ calculated using AIC, compared to the the flat model.
 
 # AIC and relative likelihood
 # LL from pre-calculated httk predictions
-restrictive_ll <- rph_httk_preds %>% 
-  select(!httk_Preds_nonrestrictive) %>%
-  rename(Conc_est = httk_Preds_restrictive,
-         Time_trans = Time) %>%
-  distinct() %>%
-  group_by(Chemical, Species) %>%
-  nest(.key = "observations") %>%
-  inner_join(coef(this_pk) %>% semi_join(this_winmodel) %>% distinct()) %>%
-  rowwise() %>%
-  mutate(log_likelihood = log_likelihood(
-    par = coefs_vector,
-    data = observations,
-    data_sigma_group = observations$data_sigma_group,
-    dose_norm = FALSE,
-    log10_trans = FALSE,
-    negative = FALSE,
-    includes_preds = TRUE,
-    detect
-  )) %>%
-  select(!c(observations, coefs_vector, Time.Units, Time_trans.Units)) %>%
-  mutate(model = "model_3comp2_restrictive",
-         AIC = -2 * log_likelihood)
+this_pk <- this_pk %>% fit_sigma.pk(preds = rpr_httk_preds,
+                                    pred_col = "httk_Preds_restrictive")
+this_pk <- this_pk %>% fit_sigma.pk(preds = rpr_httk_preds,
+                                    pred_col = "httk_Preds_nonrestrictive")
 
-nonrestrictive_ll <- rph_httk_preds %>% 
-  select(!httk_Preds_restrictive) %>%
-  rename(Conc_est = httk_Preds_nonrestrictive,
-         Time_trans = Time) %>%
-  distinct() %>%
-  group_by(Chemical, Species) %>%
-  nest(.key = "observations") %>%
-  inner_join(coef(this_pk) %>% semi_join(this_winmodel) %>% distinct()) %>%
-  rowwise() %>%
-  mutate(log_likelihood = log_likelihood(
-    par = coefs_vector,
-    data = observations,
-    data_sigma_group = observations$data_sigma_group,
-    dose_norm = FALSE,
-    log10_trans = FALSE,
-    negative = FALSE,
-    includes_preds = TRUE,
-    detect
-  )) %>%
-  select(!c(observations, coefs_vector, Time.Units, Time_trans.Units)) %>%
-  mutate(model = "model_3comp2_nonrestrictive",
-         AIC = -2 * log_likelihood) # Simple formula when there are no optimized params
+restrictive_ll <- this_pk$ext_fits.httk_Preds_restrictive$sigma_AIC
 
-httk_AIC <- bind_rows(restrictive_ll,
-                      nonrestrictive_ll,
-                      this_AIC %>% filter(model == "model_flat") %>%
-                        filter_targets()
-                      )
+nonrestrictive_ll <- this_pk$ext_fits.httk_Preds_nonrestrictive$sigma_AIC
+
+# Get NULL models and winning models AICs (call them empirical model)
+invivoPKfit_AIC <- bind_rows(
+  this_AIC %>% semi_join(this_winmodel) %>%
+    mutate(model = "model_empirical"),
+  this_AIC %>% filter(model == "model_flat")
+) %>% distinct()
+
+httk_AIC <- bind_rows(
+  restrictive_ll %>% mutate(model = "model_3comp2_restrictive"),
+  nonrestrictive_ll %>% mutate(model = "model_3comp2_nonrestrictive"),
+  invivoPKfit_AIC
+)
 
 httk_rel_ll <- httk_AIC %>%
   distinct(Chemical, Species, model, AIC) %>%
   pivot_wider(names_from = model, values_from = AIC) %>%
+  filter(!is.na(model_3comp2_nonrestrictive)) %>%
   rowwise() %>% 
-  mutate(minAIC = min(c_across(starts_with("model_")), na.rm = TRUE)) %>% 
+  mutate(minAIC = min(c_across(starts_with("model_")), 
+                      na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(across(starts_with("model_"), \(x) {
     signif(exp((minAIC - x)/2) * 100, 4)
@@ -215,11 +187,54 @@ httk_rel_ll <- httk_AIC %>%
   })) %>%
   mutate(ll_label = factor(
     case_when(model_flat > 95 ~ "Undetermined",
-              model_3comp2_nonrestrictive > 95 &
-                model_3comp2_restrictive > 95 ~ "Undetermined (non-flat)",
-              model_3comp2_nonrestrictive > 95 ~ "Nonrestrictive",
-              model_3comp2_restrictive > 95 ~ "Restrictive")
+              model_3comp2_nonrestrictive > 50 &
+                model_3comp2_restrictive > 50 ~ "Undetermined (non-flat)",
+              model_3comp2_nonrestrictive > 50 ~ "Nonrestrictive",
+              model_3comp2_restrictive > 50 ~ "Restrictive")
   ))
+
+httk_rel_ll %>% 
+  select(Chemical, Species, starts_with("model_"), minAIC) %>%
+  mutate(Chemical = forcats::fct_reorder2(Chemical,
+                                         model_flat,
+                                         minAIC,
+                                         mean)
+         ) %>%
+  pivot_longer(cols = starts_with("model_"),
+               names_to = "model", values_to = "relative_ll") %>%
+  mutate(
+    source = ifelse(grepl("_3comp2_", model), "httk", "invivoPKfit")
+  ) %>%
+  ggplot(aes(x = Chemical, y = relative_ll, color = model, shape = source)) +
+  geom_point(size = 0.75, alpha = 0.9) +
+  scale_color_manual(
+    values = c('#33a02c', '#cc88ff', '#7b3294', 'orange'),
+    breaks = c('model_empirical',
+               'model_3comp2_restrictive',
+               'model_3comp2_nonrestrictive',
+               'model_flat')
+  ) +
+  scale_shape_manual(values = c(2, 3)) +
+  labs(
+    title = "Relative likelihoods",
+    subtitle = "(rat parameterized with human CLint and fup values)",
+    y = "More Likely Model >>>",
+    color = ''
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "bottom",
+        plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "AIC_comparisons.png"),
+       bg = "white",
+       height = 5, width = 10
+)
+
 
 this_rel_evaluated_df <- rph_httk_clearance_df %>%
   inner_join(httk_rel_ll %>% distinct(Chemical, Species, ll_label)) %>%
