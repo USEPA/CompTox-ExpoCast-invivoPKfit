@@ -21,9 +21,8 @@ library(ctxR)
 library(ggdist)
 library(patchwork)
 library(httk)
-.onUnload <- function(libpath) {
-  library.dynam.unload("httk", libpath)
-}
+load_dawson2021()
+
 ```
 
 
@@ -190,9 +189,10 @@ interspecies_rmsle_trends <- bind_rows(rpr_rmsle, rph_rmsle) %>%
                values_to = "RMSLE") %>%
   pivot_wider(names_from = fupSpecies,
               values_from = RMSLE) %>%
-  mutate(norm_diff = (human - rat)/rat) %>%
+  mutate(norm_diff = (human - rat)/rat)
+
+irt_pl <- interspecies_rmsle_trends %>%
   filter(!is.na(norm_diff)) %>% 
-  group_by(Chemical, close_clint, clearance_type) %>%
   ggplot(aes(x = forcats::fct_reorder(Chemical, norm_diff, mean),
              y = norm_diff,
              fill = clearance_type)) +
@@ -223,7 +223,7 @@ interspecies_rmsle_trends <- bind_rows(rpr_rmsle, rph_rmsle) %>%
         axis.title = element_text(size = 10),
         legend.position = "bottom")
 
-species_clint_pl + interspecies_rmsle_trends +
+species_clint_pl + irt_pl +
   plot_layout(widths = c(5,8))
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/",
@@ -231,6 +231,385 @@ ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/"
        height = 5, width = 7,
        bg = "white")
 ```
+
+From this we notice that CLint specifically can have drastic differences which
+we want to explore. We also glean that there are potential drastic improvements
+in model accuracy. We next want to compare how a changing human CLint towards rat
+CLint by 1% steps changes RMSE.
+
+```{r}
+combo_clint <- rpr_param_df %>%
+  select(Chemical, rCLint = CLint) %>% 
+  left_join(rph_param_df %>%
+              select(Chemical, hCLint = CLint)) %>%
+  mutate(hclint_1p = (1/10)*hCLint, 
+         direction = sign(hCLint - rCLint)) %>%
+  mutate(Nstep = ifelse(direction == 0, 
+                        0, abs(hCLint - rCLint) %/% hclint_1p))
+
+combo_clint %>%
+  left_join(interspecies_rmsle_trends) %>%
+  ggplot(aes(Nstep, norm_diff)) +
+  geom_point() +
+  scale_x_log10() +
+  theme_bw()
+```
+
+Next I want to categorize each chemical based on putative hepatic extraction ratio.
+This is calculated as:
+
+$$
+E_H = \frac{f_{up}\cdot CL_{int}}{Q_{hep} + f_{up}\cdot CL_{int}}
+$$
+```{r extraction_ratio}
+rat_er <- rpr_param_df %>%
+  group_by(Chemical) %>%
+  reframe(fupClint = (Funbound.plasma * Clint),
+          Qhep = (Qcardiacc*Qliverf)) %>%
+  mutate(extraction_ratio = fupClint/(Qhep + fupClint),
+         clearance_type_by_er = case_when(
+           extraction_ratio >= 0.7 ~ "Nonrestrictive",
+           extraction_ratio < 0.3 ~ "Restrictive",
+           between(extraction_ratio, 0.3, 0.7) ~ "Ambiguous"
+         )
+  )
+
+human_er <- rph_param_df %>%
+  group_by(Chemical) %>%
+  reframe(fupClint = (Funbound.plasma * Clint),
+          Qhep = (Qcardiacc*Qliverf)) %>%
+  mutate(extraction_ratio = fupClint/(Qhep + fupClint),
+         clearance_type_by_er = case_when(
+           extraction_ratio >= 0.7 ~ "Nonrestrictive",
+           extraction_ratio < 0.3 ~ "Restrictive",
+           between(extraction_ratio, 0.3, 0.7) ~ "Ambiguous"
+         )
+  ) 
+
+combo_pretable <- inner_join(
+  rat_er %>% select(Chemical,
+                    "rat_er" = extraction_ratio, 
+                    "rat_cl" = clearance_type_by_er),
+  human_er %>% select(Chemical,
+                    "human_er" = extraction_ratio, 
+                    "human_cl" = clearance_type_by_er)
+)
+# Row, Columns
+# In this case, rat is rows, human is columns
+clearance_contingency_tbl <- table(combo_pretable$rat_cl, combo_pretable$human_cl)
+addmargins(clearance_contingency_tbl)
+
+
+```
+
+I want to do some sensitivity analysis for hepatic blood flow.
+The logic here is that, with nonrestrictive clearance, the clearance is
+flow-dependent and therefore would be sensitive to increases in hepatic
+blood flow. Restrictive compounds should not.  
+
+For rats, the default hepatic blood flow (in mL/min/kg^(3/4)) is 33.38.
+I will increase this by 1% (i.e. 0.3338) and look at the sensitivity of
+steady-state concentration and total clearance.
+
+
+```{r hbf_sensitivity}
+# Find 1% increment
+liver_tissue_new <- subset(tissue.data,
+                           Tissue == "liver" &
+                             Species == "Rat")
+
+new_hepblfl_increment <- liver_tissue_new[
+  liver_tissue_new$variable == "Flow (mL/min/kg^(3/4))",
+  "value"
+] * (1/100) # Get the increment amount (this is delta r)
+# Calculate numerator for normalized sensitivity coefficient, 1%
+drr <- new_hepblfl_increment/liver_tissue_new[
+  liver_tissue_new$variable == "Flow (mL/min/kg^(3/4))",
+  "value"
+]
+
+# Decrease "rest" of body blood flow
+tissue.data[
+  tissue.data$Tissue == "rest" &
+    tissue.data$Species == "Rat" &
+    tissue.data$variable == "Flow (mL/min/kg^(3/4))",
+  "value"
+  ] <- tissue.data[
+  tissue.data$Tissue == "rest" &
+    tissue.data$Species == "Rat" &
+    tissue.data$variable == "Flow (mL/min/kg^(3/4))",
+  "value"
+  ] - new_hepblfl_increment
+# Increase hepatic blood flow
+tissue.data[
+  tissue.data$Tissue == "liver" &
+    tissue.data$Species == "Rat" &
+    tissue.data$variable == "Flow (mL/min/kg^(3/4))",
+  "value"
+  ] <- 
+  tissue.data[
+  tissue.data$Tissue == "liver" &
+    tissue.data$Species == "Rat" &
+    tissue.data$variable == "Flow (mL/min/kg^(3/4))",
+  "value"
+  ] + new_hepblfl_increment
+```
+
+```{r}
+# Next we need to re-parameterize the chemicals...
+# I only need to do this under the assumption of restrictive clearance.
+# The test is that under this assumption these chemicals should NOT be sensitive
+# to the changes in hepatic blood flow.
+
+rpr_sparams_rest <- tryCatch(
+  expr = {
+    sapply(
+      target_chems_rat,
+      \(x) {
+        httk::parameterize_3comp2(
+          dtxsid = x,
+          species = "Rat",
+          restrictive.clearance = TRUE,
+          default.to.human = FALSE,
+          force.human.clint.fup = FALSE,
+          suppress.messages = TRUE
+        )
+      },
+      simplify = FALSE,
+      USE.NAMES = TRUE
+    )
+  }, error = function(msg) {
+    message("Not possible to parameterize_3comp2 for all dtxsid ",
+            "try to use default.to.human = TRUE.")
+  }
+)
+# For these same chemicals, I also want to test sensitivity
+# when parameterized as human for fup and Clint
+rph_sparams_rest <- tryCatch(
+  expr = {
+    sapply(
+      target_chems_rat,
+      \(x) {
+        httk::parameterize_3comp2(
+          dtxsid = x,
+          species = "Rat",
+          restrictive.clearance = TRUE,
+          default.to.human = TRUE,
+          force.human.clint.fup = TRUE,
+          suppress.messages = TRUE
+        )
+      },
+      simplify = FALSE,
+      USE.NAMES = TRUE
+    )
+  }, error = function(msg) {
+    message("Not possible to parameterize_3comp2 for all dtxsid ",
+            "try to use default.to.human = TRUE.")
+  }
+)
+
+
+# Copied from RC_comparison_bkgd.R
+css_httk_batch <- function(param_list,
+                           restrictive = TRUE) {
+  stopifnot(is.logical(restrictive))
+
+  css_list_r <- vapply(
+    param_list,
+    \(x) {
+      calc_analytic_css_3comp2(parameters = x,
+                               restrictive.clearance = restrictive)
+    },
+    FUN.VALUE = numeric(1L)
+  )
+  css_list_names <- names(param_list)
+
+  css_df <- data.frame(Chemical = css_list_names,
+                       Css_httk_r.1p = css_list_r)
+  return(css_df)
+}
+
+rpr_css_sensitivity <- css_httk_batch(rpr_sparams_rest)
+rph_css_sensitivity <- css_httk_batch(rph_sparams_rest)
+
+rpr_cltot_sensitivity <- data.frame(
+      Chemical = names(rpr_sparams_rest),
+      CLtot_restrictive.1p = vapply(
+        rpr_sparams_rest,
+        \(x) {
+          httk::calc_total_clearance(
+            parameters = x,
+            species = "Rat",
+            model = "3compartment2",
+            suppress.messages = TRUE,
+            restrictive.clearance = TRUE
+          )
+        },
+        FUN.VALUE = double(1)
+      ),
+      halflife_restrictive.1p = vapply(
+        rpr_sparams_rest,
+        \(x) {
+          httk::calc_half_life(
+            parameters = x,
+            species = "Rat",
+            model = "3compartment2",
+            suppress.messages = TRUE,
+            restrictive.clearance = TRUE
+          )
+        },
+        FUN.VALUE = double(1)
+      )
+)
+
+rph_cltot_sensitivity <- data.frame(
+      Chemical = names(rph_sparams_rest),
+      CLtot_restrictive.1p = vapply(
+        rph_sparams_rest,
+        \(x) {
+          httk::calc_total_clearance(
+            parameters = x,
+            species = "Rat",
+            model = "3compartment2",
+            suppress.messages = TRUE,
+            restrictive.clearance = TRUE
+          )
+        },
+        FUN.VALUE = double(1)
+      ),
+      halflife_restrictive.1p = vapply(
+        rph_sparams_rest,
+        \(x) {
+          httk::calc_half_life(
+            parameters = x,
+            species = "Rat",
+            model = "3compartment2",
+            suppress.messages = TRUE,
+            restrictive.clearance = TRUE
+          )
+        },
+        FUN.VALUE = double(1)
+      )
+)
+
+rpr_sensitivity <- merge(rpr_cltot_sensitivity,
+                         rpr_css_sensitivity)
+
+rph_sensitivity <- merge(rph_cltot_sensitivity,
+                         rph_css_sensitivity)
+
+rpr_sensitivity <- rpr_sensitivity %>%
+  merge(rpr_httk_clearance_df) %>%
+  mutate(
+    nsc_css = ((Css_httk_r.1p - 
+                  Css_httk_r)/Css_httk_r)/drr,
+    nsc_cltot = ((CLtot_restrictive.1p -
+                    CLtot_restrictive)/CLtot_restrictive)/drr,
+    nsc_halflife = ((halflife_restrictive.1p -
+                       halflife_restrictive)/halflife_restrictive)/drr
+  ) %>%
+  select(Chemical, Species, starts_with("nsc_"))
+
+rph_sensitivity <- rph_sensitivity %>%
+  merge(rpr_httk_clearance_df) %>%
+  mutate(
+    nsc_css = ((Css_httk_r.1p - 
+                  Css_httk_r)/Css_httk_r)/drr,
+    nsc_cltot = ((CLtot_restrictive.1p -
+                    CLtot_restrictive)/CLtot_restrictive)/drr,
+    nsc_halflife = ((halflife_restrictive.1p -
+                       halflife_restrictive)/halflife_restrictive)/drr
+  ) %>%
+  select(Chemical, Species, starts_with("nsc_"))
+  
+rpr_sensitivity %>%
+  mutate(across(starts_with("nsc_"),
+                \(x) {
+                  factor(
+                    case_when(
+                      abs(x) < 0.2 ~ 'Low',
+                      between(abs(x), 0.2, 0.5) ~ 'Medium',
+                      abs(x) > 0.5 ~ 'High'
+                    ), levels = c('High', 'Medium', 'Low')
+                  )
+                })) %>% 
+  count(nsc_css, nsc_cltot, nsc_halflife)
+
+addmargins(clearance_contingency_tbl)
+
+rph_sense_tables <- rph_sensitivity %>%
+  mutate(across(starts_with("nsc_"),
+                \(x) {
+                  factor(
+                    case_when(
+                      abs(x) < 0.2 ~ 'Low',
+                      between(abs(x), 0.2, 0.5) ~ 'Medium',
+                      abs(x) > 0.5 ~ 'High'
+                    ), levels = c('High', 'Medium', 'Low')
+                  )
+                })) %>%
+  rename_with(\(x) {paste0(x, "_h")}, .cols = starts_with("nsc_"))
+
+rpr_sense_tables <- rpr_sensitivity %>%
+  mutate(across(starts_with("nsc_"),
+                \(x) {
+                  factor(
+                    case_when(
+                      abs(x) < 0.2 ~ 'Low',
+                      between(abs(x), 0.2, 0.5) ~ 'Medium',
+                      abs(x) > 0.5 ~ 'High'
+                    ), levels = c('High', 'Medium', 'Low')
+                  )
+                })) %>% 
+  left_join(combo_pretable) %>% 
+  arrange(nsc_css, nsc_cltot, nsc_halflife) %>%
+  relocate(rat_cl, human_cl, .after = Species) %>%
+  mutate(
+    cl = paste0("Rat:", rat_cl, "/Human:", human_cl),
+  .keep = "unused", .after = Species) %>%
+  left_join(rph_sense_tables) %>%
+  left_join(fup_rh)
+
+with(rpr_sense_tables,
+     table(cl, nsc_halflife))
+
+rpr_sense_tables %>%
+  mutate(Rat_ambi = str_detect(cl, "Rat:Ambi")) %>%
+  filter(!is.na(nsc_css)) %>%
+  ggplot(aes(x = Clint_human, 
+             y = Clint_rat, 
+             color=cl)) +
+  geom_point(alpha = 0.7, aes(shape = Rat_ambi)) +
+  scale_shape_manual(values = c(16,21)) +
+  scale_color_manual(
+    values = c(
+      "#d6604d", "red2", "#b2182b",
+      "#fdb863", "#e08214", "#b35806",
+      "#b2abd2", "#8073ac", "#542788")
+  ) +
+  labs(x = "Human", y = "Rat",
+       title = "CL<sub>int</sub>",
+       color = "Clearance Determination\nby Hepatic Extraction",
+       shape = "Rat Clearance\ndetermined Ambiguous?") +
+  facet_grid(rows = vars(nsc_halflife),
+             scales = "free",
+             space = "free_x") +
+  geom_abline(slope = 1, color = "grey20") +
+  theme_bw() +
+  theme(plot.title = ggtext::element_markdown(hjust = 0.5))
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "Rat_Human_Clint_Clearance_by_extractionRatio.png"),
+       height = 7, width = 8,
+       bg = "white")
+
+```
+
+Unfortunately, it seems that the sensitivity for Css, CLtot, and halflife
+when parameterized with human fup and CLint values is quite high,
+meaning they don't provide as much information as other metrics.
+
 
 This next analysis looks at bootstrapping to look at specific variation in downstream
 parameters (like Css and halflife) which depend on _kelim_ which cannot be estimated

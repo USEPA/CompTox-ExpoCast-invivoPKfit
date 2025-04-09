@@ -10,12 +10,137 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
+```{r library-loading}
+today <- format(Sys.Date(), "%d%b%Y")
+devtools::load_all()
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(ctxR)
+library(ggdist)
+library(patchwork)
+library(httk)
+load_dawson2021()
+```
+
 ```{r data_loading}
 target_chem_properties <- readRDS("data-raw/RCdata/ctxR_3comp2_cheminfo.rds")
 new_pk <- readRDS("data-raw/ratCVT_wHTTK_reformulated.rds")
 red_assay_res <- readRDS("data-raw/2019-05-06-REDassay_HTTK.rds")
 load("data-raw/CYP_Sipes2017.RData")
 ```
+
+# Binding kinetics
+
+Here what I want to do is understand the binding kinetics for available chemicals.
+These don't all 
+```{r Kd}
+kd_halfway <- red_assay_res %>%
+  select(DTXSID, Name, CAS, starts_with("Affinity.Kd.")) %>%
+  distinct()
+kd_halfway <- kd_halfway[apply(!is.na(kd_halfway[4:6]), MARGIN = 1, any), ]
+
+t1.2_halfway <- kd_halfway %>%
+  mutate(across(.cols = starts_with("Affinity"),
+                \(x) {log(2)/(x*7E9)},
+                .names = "t1.2min_{col}"),
+         across(.cols = starts_with("Affinity"),
+                \(x) {log(2)/(x*3.5E4)},
+                .names = "t1.2max_{col}"),
+         across(.cols = starts_with("Affinity"),
+                \(x) {log(100)/(x*7E9)},
+                .names = "t99min_{col}"),
+         across(.cols = starts_with("Affinity"),
+                \(x) {log(100)/(x*3.5E4)},
+                .names = "t99max_{col}"))
+
+t50_pl <- t1.2_halfway %>%
+  ggplot(aes(x = forcats::fct_reorder(DTXSID, t1.2min_Affinity.Kd.Low))) +
+  geom_pointinterval(aes(y = t1.2min_Affinity.Kd.Med,
+                         ymin = t1.2min_Affinity.Kd.High,
+                         ymax = t1.2min_Affinity.Kd.Low),
+                     alpha = 0.5, shape = 20) +
+  geom_pointinterval(aes(y = t1.2max_Affinity.Kd.Med,
+                         ymin = t1.2max_Affinity.Kd.High, 
+                         ymax = t1.2max_Affinity.Kd.Low), 
+                     alpha = 0.5, shape = 20, color = "purple3") +
+  scale_y_log10(labels = scales::label_math(format = log10)) + 
+  labs(x = "Chemicals",y = "Binding t<sub>1/2</sub>",
+       title = "t<sub>1/2</sub> = ln(2)/(K<sub>D</sub>*k<sub>on</sub>)") +
+  ggtext::geom_richtext(
+    x = 200, y = 1, vjust = 0,
+    label = "k<sub>on,max</sub> = 7E9 M<sup>-1</sup>s<sup>-1</sup>") +
+  ggtext::geom_richtext(
+    x = 100, y = 1, vjust = 0,
+    label = "k<sub>on,min</sub> = 3.5E4 M<sup>-1</sup>s<sup>-1</sup>", 
+    color = "purple4") +
+  geom_hline(yintercept = median(t1.2_halfway$t1.2min_Affinity.Kd.Med), 
+             linetype = "dotted", color = "grey10") +
+  geom_hline(yintercept = median(t1.2_halfway$t1.2max_Affinity.Kd.Med), 
+             linetype = "dotted", color = "purple3") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = ggtext::element_markdown(), 
+        plot.title = ggtext::element_markdown(hjust = 0.5),
+        panel.grid.major.x = element_blank())
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "Binding_halflife_toEquilibrium.png"),
+       bg = "white",
+       height = 5, width = 10
+)
+
+# What about 99% time
+t99_pl <- t1.2_halfway %>%
+  ggplot(aes(x = forcats::fct_reorder(DTXSID, t99min_Affinity.Kd.Low))) +
+  geom_pointinterval(aes(y = t99min_Affinity.Kd.Med,
+                         ymin = t99min_Affinity.Kd.High,
+                         ymax = t99min_Affinity.Kd.Low),
+                     alpha = 0.5, shape = 20) +
+  geom_pointinterval(aes(y = t99max_Affinity.Kd.Med,
+                         ymin = t99max_Affinity.Kd.High, 
+                         ymax = t99max_Affinity.Kd.Low), 
+                     alpha = 0.5, shape = 20, color = "purple3") +
+  scale_y_log10(labels = scales::label_math(format = log10)) + 
+  labs(x = "Chemicals",y = "Binding t<sub>0.99</sub>",
+       title = "t<sub>0.99</sub> = ln(100)/(K<sub>D</sub>*k<sub>on</sub>)") +
+  ggtext::geom_richtext(
+    x = 200, y = 1, vjust = 0,
+    label = "k<sub>on,max</sub> = 7E9 M<sup>-1</sup>s<sup>-1</sup>") +
+  ggtext::geom_richtext(
+    x = 100, y = 1, vjust = 0,
+    label = "k<sub>on,min</sub> = 3.5E4 M<sup>-1</sup>s<sup>-1</sup>", 
+    color = "purple4") +
+  geom_hline(yintercept = median(t1.2_halfway$t99min_Affinity.Kd.Med), 
+             linetype = "dotted", color = "grey10") +
+  geom_hline(yintercept = median(t1.2_halfway$t99max_Affinity.Kd.Med), 
+             linetype = "dotted", color = "purple3") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title = ggtext::element_markdown(), 
+        plot.title = ggtext::element_markdown(hjust = 0.5),
+        panel.grid.major.x = element_blank())
+
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "Binding_99percent_toEquilibrium.png"),
+       bg = "white",
+       height = 5, width = 10
+)
+
+t50_pl/t99_pl
+ggsave(filename = paste0(Sys.getenv("FIG_DIR"),
+                         "RestrictiveClearance_Analysis/",
+                         "CURRENT_", "Binding_time_toEquilibrium.png"),
+       bg = "white",
+       height = 10, width = 10
+)
+```
+
 
 
 ## Lipinski's Rules
