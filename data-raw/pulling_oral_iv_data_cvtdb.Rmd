@@ -216,12 +216,12 @@ diff_log_cvt <- function(new_cvt,
     } else if (length(diff_col_add) > 0 && length(diff_col_sub) > 0) {
       # Check renaming
       
-      
       diff_columns <- function(x, y) {
         out_list <- character()
-        for (ix in names(x)) {
-          for (iy in names(y)) {
-            if (identical(x[[c(key_id,ix)]], y[[c(key_id, iy)]])) {
+        for (ix in setdiff(names(x), key_id)) {
+          for (iy in setdiff(names(y), key_id)) {
+            tmp <- merge(x[c(key_id,ix)], y[c(key_id, iy)], by=key_id)
+            if (identical(tmp[[2]], tmp[[3]])) {
               out_list <- c(out_list, paste0(ix, " -> ", iy))
             }
           }
@@ -229,8 +229,8 @@ diff_log_cvt <- function(new_cvt,
         return(out_list)
       }
       
-      renamed_cols <- diff_columns(common_row_cvt[diff_col_sub],
-                                   common_row_new[diff_col_add])
+      renamed_cols <- diff_columns(common_row_cvt[c(key_id,diff_col_sub)],
+                                   common_row_new[c(key_id, diff_col_add)])
       if (length(renamed_cols) > 0) {
         msg_to_write <- c(msg_to_write,
                           "Renamed columns (non-exhaustive):",
@@ -397,6 +397,15 @@ sql_query <- query_db(query = query,
 }
 
 
+# Unfortunately, there are some "fancy" or curly quotes that need to be replaced
+# with "straight" quotes to be more machine read-able
+force_straight_quotes <- function(x) {
+  temp <- gsub("(’|′)", "'", x)
+  temp <- gsub("(, | ,)", ",", temp)
+  return(temp)
+}
+force_straight_quotes("3,3’,4,4’-tetrachloro-5-biphenylol")
+
 
 # Harmonize values for easier analysis
 cvt_df <- sql_query %>%
@@ -417,7 +426,10 @@ cvt_df <- sql_query %>%
     year = as.character(year),
     species = tolower(species),
     sex = tolower(sex),
-    analyte_name_original = tolower(analyte_name_original),
+    analyte_name_original = force_straight_quotes(tolower(analyte_name_original)),
+    analyte_name_secondary_original = force_straight_quotes(tolower(
+      analyte_name_secondary_original
+      )),
     dose_volume_units = stringr::str_extract(dose_volume,
                                     pattern = "(?<=[:space:]).+"),
     dose_volume = as.numeric(stringr::str_extract(dose_volume,
@@ -426,7 +438,7 @@ cvt_df <- sql_query %>%
                                       pattern = "(?<=[space]).+"),
     dose_duration = as.numeric(stringr::str_extract(dose_duration,
                                 pattern = "^\\d")),
-    radiolabeled = ifelse(radiolabeled == 1, TRUE, FALSE),
+    radiolabeled = ifelse(is.na(radiolabeled), FALSE, as.logical(radiolabeled)),
     n_subjects_normalized = ifelse(n_subjects_in_series %in% "NR", NA_real_,
       as.numeric(stringr::str_extract(n_subjects_in_series,
                                                  pattern = "\\d+")))
@@ -439,9 +451,14 @@ cvt_df <- cvt_df %>%
 
 
 # There are some missing DTXSIDs that we need to fix
-# cvt_df %>%
-#   distinct(analyte_dtxsid, analyte_name_original, fk_analyzed_chemical_id) %>%
-#   filter(is.na(analyte_dtxsid)) %>% nrow()
+cvt_df %>% 
+    filter(is.na(analyte_dtxsid),
+           !(radiolabeled %in% TRUE)) %>%
+  distinct(fk_analyzed_chemical_id,fk_dosed_chemical_id,
+           analyte_dtxsid, analyte_name_original,
+           analyte_name_secondary_original) %>%
+  View("NA_dtxsid")
+  
 
 dtxsid_query <- paste0(
   "SELECT distinct * FROM chemicals"
@@ -450,38 +467,104 @@ dtxsid_query <- paste0(
 dtxsid_query <- query_db(query = dtxsid_query,
          schema = "cvt")
 
-dq_cols <- dtxsid_query %>%
-  select("analyte_dtxsid2" = "dsstox_substance_id",
-         "fk_analyzed_chemical_id" = "id",
-         "analyte_name_original" = "chemical_name_original") %>%
-  mutate(analyte_name_original =  tolower(analyte_name_original)) %>%
+dtxsid_query <- dtxsid_query %>%
+  filter(id %in% as.numeric(
+    union(cvt_df$fk_analyzed_chemical_id, cvt_df$fk_dosed_chemical_id))
+  ) %>%
+  mutate(id = as.character(id),
+         chemical_name_original = force_straight_quotes(tolower(
+           chemical_name_original
+         )),
+         chemical_name_secondary_original = force_straight_quotes(tolower(
+           chemical_name_secondary_original
+         ))
+  )
+
+cvt_df %>% 
+  filter(fk_analyzed_chemical_id != fk_dosed_chemical_id,
+         !(radiolabeled %in% TRUE)) %>%
+  distinct(fk_analyzed_chemical_id,fk_dosed_chemical_id,fk_test_chemical_id) %>%
+  left_join(dtxsid_query %>%
+              select("fk_analyzed_chemical_id" = "id",
+                     "analyzed_chemical_name" = "chemical_name_original")) %>%
+  left_join(dtxsid_query %>%
+              select("fk_dosed_chemical_id" = "id",
+                     "dosed_chemical_name" = "chemical_name_original")) %>%
+  View("errors")
+
+# Rather than hope most of these chemicals have dtxsids within CvTdb,
+# I cross-referenced it with the CompTox database batch search.
+dtxsid_batch_idless <- readr::read_csv(
+  "data-raw/CCD-Batch-Search_2025-04-17_DTXSIDless.csv",
+  na = "N/A"
+) %>% filter(!is.na(DTXSID)) %>%
+  select("dsstox_substance_id" = "DTXSID",
+         "chemical_name_original" = "INPUT") %>%
   distinct()
 
-dq_cols <- dq_cols %>% distinct(analyte_dtxsid2, analyte_name_original) %>%
-  group_by(analyte_name_original) %>%
-  summarize(analyte_dtxsid2 = if_else(any(complete.cases(analyte_dtxsid2)),
-                                      first(analyte_dtxsid2[!is.na(analyte_dtxsid2)]),
-                                      NA)) %>%
-  left_join(dq_cols %>% select(-analyte_dtxsid2),
-            join_by(analyte_name_original)) %>%
-  mutate(fk_analyzed_chemical_id = as.character(fk_analyzed_chemical_id))
+quick_message(c(
+  "Erroneous DTXSID assignments (identified via duplication):",
+  "perfluorohexanesulfonate == DTXSID80873012",
+  "tacrolimus == DTXSID5046354",
+  "hippuric acid == DTXSID9046073"
+))
+
+dtxsid_batch_idless <- dtxsid_batch_idless %>%
+  mutate(dsstox_substance_id = case_when(
+    chemical_name_original == "perfluorohexanesulfonate" ~ "DTXSID80873012",
+    chemical_name_original == "tacrolimus" ~ "DTXSID5046354",
+    chemical_name_original == "hippuric acid" ~ "DTXSID9046073",
+    .default = dsstox_substance_id
+  )) %>% distinct()
+
+# Fixing the missing DTXSID to prevent premature filtering
+cvt_df <- cvt_df %>%
+  left_join(
+    dtxsid_batch_idless,
+    by = join_by(analyte_name_original == chemical_name_original)
+  ) %>%
+  mutate(analyte_dtxsid = coalesce(analyte_dtxsid, dsstox_substance_id)) %>%
+  select(!dsstox_substance_id)
+
+quick_stats(cvt_df)
+
+# Now we need to pre-emptively address the chemicals that have different
+# dosed_id and analyzed_ids but are actually the same chemical
+quick_message(c(
+  "The following have resolvable errors:",
+  "If dosed chemical id is 47, change this to 46 to match analyte id. tamoxifen, salt dosed.",
+  "If dosed chemical id is 893, change this to 929 to match analyte id. trichloroethylene, duplicate.",
+  "If dosed chemical id is 671, change to 672 to match analyte id. PFHS, salt dosed.",
+  "If dosed chemical id is 673, change to 675 to match analyte id. PFNA, capitalization.",
+  "If dosed chemical id is 674, change to 676 to match analyte id, PFDA, capitalization."
+))
+
+cvt_df <- cvt_df %>%
+  rowwise() %>%
+  mutate(fk_dosed_chemical_id = case_when(
+    fk_dosed_chemical_id == "47" &&
+      fk_analyzed_chemical_id == "46" ~ "46",
+    fk_dosed_chemical_id == "893" &&
+      fk_analyzed_chemical_id == "929" ~ "929",
+    fk_dosed_chemical_id == "671" &&
+      fk_analyzed_chemical_id == "672" ~ "672",
+    fk_dosed_chemical_id == "673" &&
+      fk_analyzed_chemical_id == "673" ~ "673",
+    fk_dosed_chemical_id == "674" &&
+      fk_analyzed_chemical_id == "676" ~ "676",
+    .default = fk_dosed_chemical_id
+  )) %>%
+  ungroup()
+
 
 # glimpse(dq_cols)
 
 
 # names(cvt_df)
 
-study_query <- query_db(query = "SELECT distinct * FROM studies",
-         schema = "cvt")
+# study_query <- query_db(query = "SELECT distinct * FROM studies",
+#          schema = "cvt")
 
-# Here we join to make sure all chemical ids are represented
-full_set <- cvt_df %>%
-  left_join(dq_cols, 
-            by = join_by("fk_analyzed_chemical_id", "analyte_name_original")) %>%
-  mutate(analyte_dtxsid = coalesce(analyte_dtxsid, analyte_dtxsid2)) %>%
-  select(-analyte_dtxsid2)
-
-cvt_df <- full_set
 quick_stats(cvt_df)
 
 
@@ -489,15 +572,46 @@ quick_stats(cvt_df)
 # And only keep non-radiolabeling experiments, where analyte_dtxsid is known
 # and where analyzed chemical is equivalent to the dosed chemical
 cvt_df <- cvt_df %>% mutate(conc_unit_norm_factor = signif(conc/conc_original, 1),
-                            .after = conc_units_normalized) %>%
+                            .after = conc_units_normalized) 
+
+cat("Current # chemicals: ", length(unique(cvt_df$analyte_dtxsid)), "\n")
+cat("Number of chemicals where analyte_dtxsid is NA: ",
+    sum(is.na(unique(cvt_df[c("fk_analyzed_chemical_id",
+                               "analyte_dtxsid")])$analyte_dtxsid)),
+    "\n")
+
+
+cat("Number of radiolabelling experiments: ",
+    sum(distinct(cvt_df, analyte_dtxsid, radiolabeled) %>% pull(radiolabeled) %>%
+          {. %in% TRUE}
+        )
+    )
+distinct(cvt_df, analyte_dtxsid, analyte_name_original, radiolabeled) %>%
+  filter(radiolabeled %in% TRUE, !is.na(analyte_dtxsid))
+
+
+
+cat("Number of chemicals with non-matching ids ",
+    cvt_df %>%
+      filter(!is.na(analyte_dtxsid),
+             !(radiolabeled %in% TRUE),
+             fk_analyzed_chemical_id != fk_dosed_chemical_id) %>%
+      distinct(analyte_dtxsid) %>%
+      NROW()
+)
+
+
+cvt_df <- cvt_df %>%
   filter(!(radiolabeled %in% TRUE),
          !is.na(analyte_dtxsid),
-         fk_analyzed_chemical_id == fk_dosed_chemical_id)
+         (fk_analyzed_chemical_id == fk_dosed_chemical_id)) %>%
+  distinct()
 
 quick_message(text = c("Filtering out:",
                        "Missing {.code analyte_dtxsid}",
                        "Radiolabeling experiments",
                        "Data where the analyzed chemicals and dosed chemicals are different"))
+quick_stats(cvt_df)
 diff_log_cvt(cvt_df)
 ```
 
@@ -541,6 +655,7 @@ cvt_df <- cvt_df %>%
   filter(n() > 1) %>%
   ungroup()
 ###
+quick_stats(cvt_df)
 ```
 
 
@@ -549,7 +664,7 @@ cvt_df <- cvt_df %>%
 To summarize these changes:  
 
 +  Convert original dose units for CEBS study _S0916_ to mg/kg.  
-+  ~~Convert original dose units for CEBS study _S0624_ to mg/kg.~~ Data got corrected in CEBS, trusting that.  
++  Convert original dose units for CEBS study _S0624_ to mg/kg. Data got corrected in CEBS, trusting that.  
 +  Input the LOQ for studies _S0976_.  
 +  Infer the LOQ for study _S0328_ as 1, given the values near it deemed above and below LOQ.   
 
@@ -560,6 +675,7 @@ To summarize these changes:
 quick_message(paste0("Looking at dose units not equivalent to mg/kg where ",
                      "dose_level_original and dose_level_normalized ",
                      "{.emph remain the same}"))
+
 cvt_df %>% filter(!(dose_level_units_original %in% equiv_mgkg),
                   dose_level_normalized == dose_level_original) %>%
   distinct(fk_study_id, 
@@ -608,23 +724,23 @@ quick_message(c(
   "Data Modification:",
   "Adjusting LOQ values for L-ephedrine to 3.39 as stated in CEBS study S0976.",
   "Set LOQ units to ng/mL as detailed in the same CEBS study.",
-  "Caffeine and Pseudoephedine have been removed as of April 2025."
+  "S0976 has been removed as of April 2025."
 ))
 # Here I create new columns for loq and loq_units b/c I have modified them.
-cvt_df <- cvt_df %>%
-  mutate(invivPK_loq = if_else(
-    other_study_identifier %in% "S0976",
-    case_when(
-      # analyte_name_original %in% "caffeine" ~ 4.00,
-      analyte_name_original %in% "l-ephedrine" ~ 3.39,
-      # analyte_name_original %in% "pseudoephedrine" ~ 4.43
-    ),
-    loq),
-    invivPK_loq_units = if_else(
-      other_study_identifier %in% "S0976",
-      "ng/mL",
-      loq_units
-    ))
+# cvt_df <- cvt_df %>%
+#   mutate(invivPK_loq = if_else(
+#     other_study_identifier %in% "S0976",
+#     case_when(
+#       analyte_name_original %in% "caffeine" ~ 4.00,
+#       analyte_name_original %in% "l-ephedrine" ~ 3.39,
+#       analyte_name_original %in% "pseudoephedrine" ~ 4.43
+#     ),
+#     loq),
+#     invivPK_loq_units = if_else(
+#       other_study_identifier %in% "S0976",
+#       "ng/mL",
+#       loq_units
+#     ))
 
 # Some pentachlorophenol studies
 quick_message(c(
@@ -646,7 +762,7 @@ quick_message(c(
 #   ))
 
 
-# quick_stats(cvt_df)
+quick_stats(cvt_df)
 diff_log_cvt(cvt_df)
 ```
 
@@ -680,6 +796,7 @@ cvt_df <- cvt_df %>%
 quick_message("Uniqe LOQ units:")
 table(cvt_df$invivPK_loq_units)
 diff_log_cvt(cvt_df)
+quick_stats(cvt_df)
 
 quick_message(c(
   "Modifying Data:",
@@ -720,14 +837,14 @@ cvt_df <- cvt_df %>%
 
 quick_message("Are there chemicals with very few (less than 5) observations still?")
 cvt_df %>% count(analyte_dtxsid) %>% arrange(n) %>% head()
-
-quick_message(c(
-  "Filtering Data:",
-  "Removing DTXSID6038299 due to insufficient data",
-  "Removing all data points that still have recorded concentrations of zero"
-))
-cvt_df <- cvt_df %>%
-  dplyr::filter(!(analyte_dtxsid %in% "DTXSID6038299"))
+# This has been resolved now
+# quick_message(c(
+#   "Filtering Data:",
+#   "Removing DTXSID6038299 due to insufficient data",
+#   "Removing all data points that still have recorded concentrations of zero"
+# ))
+# cvt_df <- cvt_df %>%
+#   dplyr::filter(!(analyte_dtxsid %in% "DTXSID6038299"))
 
 # This is the final filtering so that the dataset is most consistent with the
 # most current near future pull in the new year
@@ -739,10 +856,13 @@ cvt_df <- cvt_df %>%
 # More notes:
 # DTXSID6020438 & DTXSID0020868 rat is from water (top) and oil (bottom curve) gavage
 
-glimpse(cvt_df, width = 80)
+glimpse(cvt_df)
 quick_stats(cvt_df)
+
 diff_log_cvt(cvt_df, 
-             notes = "Relaxed conc > 0 filter to conc >= 0.")
+             notes = c("Used CompTox name - DTXSID matching to fill in NAs.",
+                       "Fixed names that used non-standard single quotes.")
+)
 
 ```
 
@@ -757,8 +877,10 @@ Save the pulled CVT data with the edits/normalizations, and also save the curren
 
 ```{r saving_data, include=FALSE, eval=FALSE}
 cvt_date <- Sys.Date()
-cat(diff_log_cvt(cvt_df,
-                 notes = "Relaxed conc > 0 filter to conc >= 0."),
+cat(diff_log_cvt(cvt_df, 
+             notes = c("Used CompTox name - DTXSID matching to fill in NAs.",
+                       "Fixed names that used non-standard single quotes.")
+),
     file = "data-raw/cvt_changelog.txt",
     append = TRUE)
 
