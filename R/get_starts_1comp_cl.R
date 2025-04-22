@@ -166,7 +166,7 @@ get_starts_1comp_cl <- function(data,
 
   parm_gas <- suppressMessages(
     suppressWarnings(
-      httk::parameterize_gas_pbtk(
+      httk::parameterize_3comp2(
         dtxsid = unique(data[["Chemical"]]),
         species = this_species,
         default.to.human = TRUE,
