@@ -143,8 +143,8 @@
 #' # Data
 #'
 #' `Route` values should be either `"oral"` (oral bolus administration) or `"iv"`
-#' (IV bolus administration), and `Media` values should be either `"blood"` or
-#' `"plasma"`.
+#' (IV bolus administration), and `Media` values should be either `"blood"`,
+#' `"plasma"`, or `"excreta"`.
 #'
 #' If `data` contains data for more than one `Chemical` and `Species`, then you
 #' should use [facet_data()] to run a "faceted" analysis. A faceted analysis will

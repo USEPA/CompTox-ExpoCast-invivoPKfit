@@ -168,6 +168,7 @@ Other built-in model functions:
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},

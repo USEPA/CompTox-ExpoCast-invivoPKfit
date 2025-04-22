@@ -76,6 +76,7 @@ Other built-in model functions:
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
@@ -96,6 +97,7 @@ Other 1-compartment model functions:
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
@@ -105,6 +107,7 @@ Other 1-compartment model functions:
 
 Other model concentration functions: 
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_flat}()}
 }
