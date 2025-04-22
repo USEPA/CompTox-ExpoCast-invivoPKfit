@@ -61,7 +61,7 @@
 #' @return A vector of blood or plasma concentration values  corresponding
 #'  to `time`.
 #'
-#' @author Caroline Ring, John Wambaugh
+#' @author Caroline Ring, John Wambaugh, Gilberto Padilla Mercado
 #'
 #' @export cp_1comp
 #' @family built-in model functions
@@ -84,7 +84,8 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
 
   # compute total clearance
   Clhep <- (Q_totli * Fup * Clint) / (Q_totli + (Fup * Clint / Rblood2plasma))
-  Cltot <- (Fup * Q_gfr) + Clhep
+  Clren <- Fup * Q_gfr
+  Cltot <- CLren + Clhep
   Cltot_Vdist <- Cltot / Vdist
 
   # compute plasma concentration
