@@ -9,13 +9,15 @@ get_starts_1comp_cl(data, par_DF, restrictive)
 \arguments{
 \item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}
 
-\item{par_DF}{A `data.frame` with the following variables (e.g., as produced by [get_params_1comp()])
-- `param_name`: Character: Names of the model parameters
-- `param_units`: Character: Units of the model parameters
-- `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-- `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
--`lower_bounds`: Numeric: The lower bounds for each parameter
-- `upper_bounds`: Numeric: The upper bounds for each parameter}
+\item{par_DF}{A `data.frame` with the following variables
+\itemize{
+\item `param_name`: Character: Names of the model parameters
+\item `param_units`: Character: Units of the model parameters
+\item `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+\item `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+\item`lower_bounds`: Numeric: The lower bounds for each parameter
+\item `upper_bounds`: Numeric: The upper bounds for each parameter
+}}
 
 \item{restrictive}{A boolean value determinining whether to assume restrictive
 or non-restrictive clearance when getting starting values.}
@@ -95,8 +97,9 @@ log-transformed) peak concentration (`Cmax_log10`), are identified using [get_pe
 As a very rough guess,`tmax` is assumed to
 occur at one absorption half-life. Under this assumption, `kgutabs` is equal
 to `log(2)/tmax`, and this is taken as the starting value.
+}
+\section{Starting value for `Fgutabs_Vdist`}{
 
-# Starting value for `Fgutabs_Vdist`
 
 If any oral data exist (whether or not IV data also exist), then the oral data
 are used to derive a starting value for `Fgutabs_Vdist`.
@@ -117,24 +120,28 @@ value for `kelim`. So `log10(A) = Cmax_log10 + kelim*tmax`.
 
 Using the previously-derived starting values for `kgutabs` and `kelim`, then,
 the starting value for `Fgutabs_Vdist` can be derived as `A * (kgutabs-kelim)/kgutabs`.
+}
 
-# Starting value for `Fgutabs`
+\section{Starting value for `Fgutabs`}{
+
 
 If both oral and IV data exist, then the derived starting values for `Vdist`
 (from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
 yield a derived starting value for `Fgutabs`.
+}
 
-#Starting value for `Rblood2plasma`
+\section{Starting value for `Rblood2plasma`}{
+
 
 The starting value for `Rblood2plasma` is set to the value given by [httk::parameterize_gas_pbtk()].
 }
+
 \seealso{
 Other 1-compartment model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
-\code{\link{cp_1comp_rad}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},

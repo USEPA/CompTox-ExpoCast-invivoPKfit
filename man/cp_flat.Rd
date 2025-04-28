@@ -35,8 +35,9 @@ Evaluates a "flat" model for concentration vs. time
 \details{
 This function is used for model comparison: does a 1- or 2-compartment TK
 model fit the data any better than this naive "flat" model?
+}
+\section{Required parameters}{
 
-# Required parameters
 
 `params` must include the following named items:
   \describe{
@@ -78,6 +79,7 @@ chemical concentration in blood plasma.
 
 \deqn{\textrm{Conc} = \frac{F_{\textrm{gutabs}} \textrm{Dose}}{V_{\textrm{dist}}}}
 }
+
 \seealso{
 Other built-in model functions: 
 \code{\link{auc_1comp}()},

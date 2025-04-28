@@ -3,7 +3,7 @@
 #' Calculates plasma concentrations vs. time according to the analytical solution
 #' for the 1-compartment model, for single bolus doses (IV and/or oral).
 #'
-#' # Required parameters
+#' @section Required parameters:
 #'
 #' `params` must include the following named items:
 #'   \describe{
@@ -55,7 +55,7 @@
 #'
 #' @export cp_1comp
 #' @family built-in model functions
-#' @family 1-compartment model functions
+#' @family 1-compartment radiation model functions
 #' @family model concentration functions
 cp_1comp_rad <- function(params, time, dose, route, medium = 'plasma',
                         restrictive = FALSE) {

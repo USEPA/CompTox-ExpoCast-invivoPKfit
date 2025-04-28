@@ -9,18 +9,18 @@
 #' will simply be doing data summary *de novo* (which may be what you want).
 #'
 #' Summary statistics include, for each group:
-#'
-#' - `n_obs`: the number of observations
-#' - `n_exclude`: The number of excluded observations
-#' - `n_detect`: The number of non-excluded detected observations
-#' - `n_series_id`: The number of unique series IDs
-#' - `n_timepts`: The number of unique time points
-#' - `n_ref`: The number of unique reference IDs
-#' - `tlast`: The time of the latest non-excluded observation
-#' - `tlast_detect`: The time of the latest non-excluded detected observation
-#' - `tfirst`: The time of the earliest non-excluded observation
-#' - `tfirst_detect`: The time of the earliest non-excluded detected observation
-#'
+#' \itemize{
+#' \item `n_obs`: the number of observations
+#' \item `n_exclude`: The number of excluded observations
+#' \item `n_detect`: The number of non-excluded detected observations
+#' \item `n_series_id`: The number of unique series IDs
+#' \item `n_timepts`: The number of unique time points
+#' \item `n_ref`: The number of unique reference IDs
+#' \item `tlast`: The time of the latest non-excluded observation
+#' \item `tlast_detect`: The time of the latest non-excluded detected observation
+#' \item `tfirst`: The time of the earliest non-excluded observation
+#' \item `tfirst_detect`: The time of the earliest non-excluded detected observation
+#' }
 #'
 #' @param obj A [pk()] model object. Must be fitted, or the function will exit
 #'   with an error.
@@ -42,7 +42,7 @@
 #'   statistic; see Details); `param_value` (the summary statistic value);  `param_units`
 #'   (the units of the summary statistic, derived from the units of the data).
 #' @export
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 
 data_summary.pk <- function(obj,
                             newdata = NULL,

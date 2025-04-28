@@ -97,7 +97,6 @@ Other 1-compartment model functions:
 \code{\link{auc_1comp_cl}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
-\code{\link{cp_1comp_rad}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},

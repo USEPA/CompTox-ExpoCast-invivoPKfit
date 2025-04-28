@@ -4,21 +4,21 @@
 #' time units such that, when time is rescaled to the new units, the midpoint of
 #' the time vector is as close to 10 as possible.
 #'
-#' # Acceptable/understood time units in `period_units`
+#' Acceptable/understood time units in `period_units`
 #'
-#' ```
+#' \preformatted{
 #' c("picoseconds",
-#' "nanoseconds",
-#' "microseconds",
-#' "milliseconds",
-#' "seconds",
-#' "minutes",
-#' "hours",
-#' "days",
-#' "weeks",
-#' "months",
-#' "years")
-#' ```
+#'   "nanoseconds",
+#'   "microseconds",
+#'   "milliseconds",
+#'   "seconds",
+#'   "minutes",
+#'   "hours",
+#'   "days",
+#'   "weeks",
+#'   "months",
+#'   "years")
+#' }
 #'
 #' @param y A numeric vector of time values
 #' @param from The original units of `y`

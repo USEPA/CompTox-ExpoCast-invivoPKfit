@@ -25,7 +25,7 @@
 #' set. (It is possible that either IV or oral data may not be
 #' available for a chemical.)
 #'
-#' # Starting value for `kelim`
+#' @section Starting value for `kelim`:
 #'
 #' If IV data exist, then only IV data are used to derive starting estimates for
 #' `kelim`, even if oral data also exist.
@@ -44,7 +44,7 @@
 #' will yield a starting guess for `kelim` that is at least on the right order of
 #' magnitude.
 #'
-#' # Starting value for `Vdist`
+#' @section Starting value for `Vdist`:
 #'
 #' If IV data exist, then only IV data are used to derive a starting estimate
 #' for `Vdist`.
@@ -79,7 +79,7 @@
 #' but none is needed, because with only oral data, `Vdist` will not be estimated
 #' from the data).
 #'
-#' # Starting value for `kgutabs`
+#' @section Starting value for `kgutabs`:
 #'
 #' If oral data exist (whether or not IV data also exist), then the oral data
 #' are used to derive a starting value for `kgutabs`.
@@ -94,7 +94,7 @@
 #' occur at one absorption half-life. Under this assumption, `kgutabs` is equal
 #' to `log(2)/tmax`, and this is taken as the starting value.
 #'
-#' # Starting value for `Fgutabs_Vdist`
+#' @section Starting value for `Fgutabs_Vdist`:
 #'
 #' If any oral data exist (whether or not IV data also exist), then the oral data
 #' are used to derive a starting value for `Fgutabs_Vdist`.
@@ -116,25 +116,17 @@
 #' Using the previously-derived starting values for `kgutabs` and `kelim`, then,
 #' the starting value for `Fgutabs_Vdist` can be derived as `A * (kgutabs-kelim)/kgutabs`.
 #'
-#' # Starting value for `Fgutabs`
+#' @section Starting value for `Fgutabs`:
 #'
 #' If both oral and IV data exist, then the derived starting values for `Vdist`
 #' (from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
 #' yield a derived starting value for `Fgutabs`.
 #'
-#' #Starting value for `Rblood2plasma`
+#' @section Starting value for `Rblood2plasma`:
 #'
 #' The starting value for `Rblood2plasma` is always set at a constant 1.
 #'
-#' @param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#' @param par_DF A `data.frame` with the following variables (e.g., as produced by [get_params_1comp()])
-#' - `param_name`: Character: Names of the model parameters
-#' - `param_units`: Character: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-#' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
-#' -`lower_bounds`: Numeric: The lower bounds for each parameter
-#' - `upper_bounds`: Numeric: The upper bounds for each parameter
-#'
+#' @inheritParams get_starts_flat
 #' @return The same `data.frame` as `par_DF`, with an additional variable
 #'  `starts` containing the derived starting value for each parameter. If a
 #'  parameter cannot be estimated from the available data, then its starting value

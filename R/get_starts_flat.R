@@ -36,8 +36,7 @@
 #' concentration is calculated (call it `Cmean_log10`). `Fgutabs_Vdist` starting value is
 #' then set equal to `10^Cmean_log10` .
 #'
-#' #Starting value for `Rblood2plasma`
-#'
+#' @section Starting value for `Rblood2plasma`:
 #' If both blood and plasma data are available, then the starting value for `Rblood2plasma` is derived as follows.
 #'
 #' If IV data are available for both blood and plasma, then the starting value
@@ -51,14 +50,15 @@
 #' If only blood data or only plasma data are available, then the starting value for `Rblood2plasma` is set at a constant 1.
 #'
 #' @param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#' @param par_DF A `data.frame` with the following variables (e.g., as produced by [get_params_flat()])
-#' - `param_name`: Character: Names of the model parameters
-#' - `param_units`: Character: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-#' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
-#' -`lower_bounds`: Numeric: The lower bounds for each parameter
-#' - `upper_bounds`: Numeric: The upper bounds for each parameter
-#'
+#' @param par_DF A `data.frame` with the following variables
+#' \itemize{
+#' \item `param_name`: Character: Names of the model parameters
+#' \item `param_units`: Character: Units of the model parameters
+#' \item `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+#' \item `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+#' \item`lower_bounds`: Numeric: The lower bounds for each parameter
+#' \item `upper_bounds`: Numeric: The upper bounds for each parameter
+#' }
 #' @return The same `data.frame` as `par_DF`, with an additional variable
 #'  `starts` containing the derived starting value for each parameter. If a
 #'  parameter cannot be estimated from the available data, then its starting value

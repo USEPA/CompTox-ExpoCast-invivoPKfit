@@ -96,19 +96,11 @@
 #' (from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
 #' yield a derived starting value for `Fgutabs`.
 #'
-#' #Starting value for `Rblood2plasma`
+#' @section Starting value for `Rblood2plasma`:
 #'
 #' The starting value for `Rblood2plasma` is set to the value given by [httk::parameterize_gas_pbtk()].
 #'
-#' @param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#' @param par_DF A `data.frame` with the following variables (e.g., as produced by [get_params_1comp()])
-#' - `param_name`: Character: Names of the model parameters
-#' - `param_units`: Character: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-#' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
-#' -`lower_bounds`: Numeric: The lower bounds for each parameter
-#' - `upper_bounds`: Numeric: The upper bounds for each parameter
-#'
+#' @inheritParams get_starts_flat
 #' @return The same `data.frame` as `par_DF`, with an additional variable
 #'  `starts` containing the derived starting value for each parameter. If a
 #'  parameter cannot be estimated from the available data, then its starting value

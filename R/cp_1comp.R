@@ -4,7 +4,7 @@
 #' for the 1-compartment model, for single bolus doses (IV and/or oral).
 #'
 #'
-#' # Required parameters
+#' @section Required parameters:
 #'
 #' `params` must include the following named items:
 #'   \describe{

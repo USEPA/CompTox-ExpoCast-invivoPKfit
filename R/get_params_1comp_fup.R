@@ -8,7 +8,7 @@
 #' Whether each one can be estimated from the data depends on which routes of administration
 #' are included in the data.
 #'
-#' # Constant parameters from `httk`
+#' @section Constant parameters from `httk`:
 #' `Q_totli` is the flow through the portal vein from the gut to the liver
 #' and is estimated in this model via [httk::tissue.data] in a species-specific manner.
 #' `Q_gfr` is the glomular filtration rate of kidneys. It is estimated via
@@ -16,14 +16,14 @@
 #' `Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_1comp()]
 #' For each of these parameters default lower bounds are 10% and 110% of the starting value
 #'
-#' # IV data, no oral data
+#' @section IV data, no oral data:
 #'
 #' If IV dosing data are available, but no oral dosing data are available, then
 #' only the parameters `Vdist` and `kelim` will be estimated from the data. The
 #' parameters `kgutabs` and `Fgutabs` cannot be estimated from IV data alone, and
 #' will not be used in evaluating the model.
 #'
-#' # Oral data, no IV data
+#' @section Oral data, no IV data:
 #'
 #' If oral dosing data are available, but no IV dosing data are available, then
 #' the parameters `kelim` and `kgutabs` can be estimated from the data. However,
@@ -33,25 +33,16 @@
 #' `Vdist` will not be used to evaluate the model nor be estimated from data, but
 #' `Fgutabs_Vdist` will be estimated from data, along with `kelim` and `kgutabs`.
 #'
-#' # Oral data and IV data
+#' @section Oral data and IV data:
 #'
 #' If both oral and IV dosing data are available, then `Vdist`, `kelim`,
 #' `kgutabs`, and `Fgutabs` will all be estimated from the data.
 #'
-#' # Blood and plasma data
+#' @inheritSection get_params_flat Blood and plasma data
+#' @inheritSection get_params_flat Only one of blood or plasma data
 #'
-#' If both blood and plasma data are available, then `Rblood2plasma` will be
-#' estimated from the data.
-#'
-#' # Only one of blood or plasma data
-#'
-#' If only one of blood or plasma data are available, then `Rblood2plasma` will be
-#' held constant at 1, not estimated from the data.
-#'
-#' # Default lower and upper bounds for each parameter
-#'
-#' ## Default lower and upper bounds for `kelim` and `kgutabs`
-#'
+#' @section Default lower and upper bounds for each parameter:
+#' \subsection{Default lower and upper bounds for `kelim` and `kgutabs`}{
 #' Default bounds for time constants `kelim` and `kgutabs` are set based on
 #' the time scale of the available data.
 #'
@@ -72,30 +63,27 @@
 #' `log(2)/(0.5*min(Time_trans[Time_trans>0]))`. Therefore, the default lower
 #' bounds for `kelim` and `kgutabs` are
 #' `log(2)/(0.5*min(Time_trans[Time_trans>0]))`.
-#'
-#' ## Default lower and upper bounds for `Vdist`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Vdist`}{
 #' By default, the lower bound for `Vdist` is 0.01, and the upper bound for
 #' `Vdist` is 100. These values were chosen based on professional judgment.
-#'
-#' ## Default lower and upper bounds for `Fgutabs`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Fgutabs`}{
 #' By default, the lower bound for `Fgutabs` is 0.0, and the upper bound for
 #' `Fgutabs` is 1. These are simply the bounds of the physically-meaningful
 #' range for a fraction.
-#'
-#' ## Default lower and upper bounds for `Fgutabs_Vdist`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Fgutabs_Vdist`}{
 #' By default, the lower bound for the ratio `Fgutabs_Vdist` is 0.01, and the
 #' upper bound is 100. These values were chosen based on professional judgment.
-#'
-#' ## Default lower and upper bounds for `Rblood2plasma`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Rblood2plasma`}{
 #' By default, the lower bound for the blood:plasma partition coefficient
 #' `Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
 #' based on professional judgment.
+#' }
 #'
-#' # Starting values for each parameter
+#' @section Starting values for each parameter:
 #'
 #' Starting values for each parameter (starting guesses for the numerical
 #' optimizer) are derived from the data using [get_starts_1comp()].
@@ -115,13 +103,15 @@
 #'  giving the units for each variable, as expressions which may include
 #'  variables in `data`.
 #' @return A `data.frame`with the following variables:
-#' - `param_name`: Character: Names of the model parameters
-#' - `param_units`: Character: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-#' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
-#' -`lower_bounds`: Numeric: The lower bounds for each parameter
-#' - `upper_bounds`: Numeric: The upper bounds for each parameter
-#' - `start`: Numeric: The starting guesses for each parameter
+#' \itemize{
+#' \item `param_name`: Character: Names of the model parameters
+#' \item `param_units`: Character: Units of the model parameters
+#' \item `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+#' \item `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+#' \item`lower_bounds`: Numeric: The lower bounds for each parameter
+#' \item `upper_bounds`: Numeric: The upper bounds for each parameter
+#' \item `start`: Numeric: The starting guesses for each parameter
+#' }
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family 1-compartment model functions
 #' @family get_params functions

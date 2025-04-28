@@ -37,26 +37,9 @@
 #' set. (It is possible that either IV or oral data may not be
 #' available for a chemical.)
 #'
-#' # Starting value for `kelim`
+#' @inheritSection get_starts_1comp Starting value for `kelim`
 #'
-#' If IV data exist, then only IV data are used to derive starting estimates for
-#' `kelim`, even if oral data also exist.
-#'
-#' If only oral data exist, then the oral data are used to derive a starting
-#' estimate for `kelim`.
-#'
-#' Whichever data set is used (IV or oral), the starting value for `kelim` is
-#' derived by assuming that the range of observed time values in the data set
-#' spans two elimination half-lives. This implies that the elimination half-life
-#' is equal to the midpoint of observed time values, and that the starting value
-#' for the elimination time constant `kelim` is therefore `log(2)` divided by the
-#' midpoint of observed time values.
-#'
-#' Of course, this assumption is unlikely to be correct. However, we hope that it
-#' will yield a starting guess for `kelim` that is at least on the right order of
-#' magnitude.
-#'
-#' # Starting value for `V1`
+#' @section Starting value for `V1`:
 #'
 #' If IV data exist, then only IV data are used to derive a starting estimate
 #' for `V1`.
@@ -91,22 +74,9 @@
 #' but none is needed, because with only oral data, `V1` will not be estimated
 #' from the data).
 #'
-#' # Starting value for `kgutabs`
+#' @inheritSection get_starts_1comp Starting value for `kgutabs`
 #'
-#' If oral data exist (whether or not IV data also exist), then the oral data
-#' are used to derive a starting value for `kgutabs`.
-#'
-#' First, concentrations are dose-normalized by dividing them by their corresponding
-#' doses. Then the normalized concentrations are log10-transformed.
-#'
-#' The time of peak concentration (`tmax`), and the median (normalized,
-#' log-transformed) peak concentration (`Cmax_log10`), are identified using [get_peak()].
-#'
-#' As a very rough guess,`tmax` is assumed to
-#' occur at one absorption half-life. Under this assumption, `kgutabs` is equal
-#' to `log(2)/tmax`, and this is taken as the starting value.
-#'
-#' # Starting value for `Fgutabs_V1`
+#' @section Starting value for `Fgutabs_V1`:
 #'
 #' If any oral data exist (whether or not IV data also exist), then the oral data
 #' are used to derive a starting value for `Fgutabs_V1`.
@@ -128,24 +98,15 @@
 #' Using the previously-derived starting values for `kgutabs` and `kelim`, then,
 #' the starting value for `Fgutabs_V1` can be derived as `A * (kgutabs-kelim)/kgutabs`.
 #'
-#' # Starting value for `Fgutabs`
+#' @section Starting value for `Fgutabs`:
 #'
 #' If both oral and IV data exist, then the derived starting values for `V1`
 #' (from the IV data) and `Fgutabs_V1` (from the oral data) are multiplied to
 #' yield a derived starting value for `Fgutabs`.
-#' #Starting value for `Rblood2plasma`
 #'
-#' The starting value for `Rblood2plasma` is always set at a constant 1.
+#' @inheritSection get_starts_1comp Starting value for `Rblood2plasma`
 #'
-#' @param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#' @param par_DF A `data.frame` with the following variables (e.g., as produced by [get_params_2comp()])
-#' - `param_name`: Character: Names of the model parameters
-#' - `param_units`: Character: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-#' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
-#' -`lower_bounds`: Numeric: The lower bounds for each parameter
-#' - `upper_bounds`: Numeric: The upper bounds for each parameter
-#'
+#' @inheritParams get_starts_flat
 #' @return The same `data.frame` as `par_DF`, with an additional variable
 #'  `starts` containing the derived starting value for each parameter. If a
 #'  parameter cannot be estimated from the available data, then its starting value

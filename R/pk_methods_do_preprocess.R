@@ -3,32 +3,34 @@
 #' Pre-process data for a `pk` object
 #'
 #' Data pre-processing for an object `obj` includes the following steps, in order:
-#'
-#' - Coerce data to class `data.frame` (if it is not already)
-#' - Rename variables to harmonized "`invivopkfit` aesthetic" variable names, using `obj$mapping`
-#' - Check that the data includes only routes in `obj$settings_preprocess$routes_keep` and media in `obj$settings_preprocess$media_keep`
-#' - Check that the data includes only one unit for concentration, one unit for time, and one unit for dose.
-#' - Coerce `Value`, `Value_SD`, `LOQ`, `Dose`, and `Time` to numeric, if they are not already.
-#' - Coerce `Species`, `Route`, and `Media` to lowercase.
-#' - Replace any negative `Value`, `Value_SD`, `Dose`, or `Time` with `NA`
-#' - If any non-NA `Value` is currently less than its non-NA LOQ, then replace it with NA
-#' -  Impute any NA `LOQ`: as `calc_loq_factor` * minimum non-NA `Value` in each `loq_group`
-#' - For any cases where `N_Subject`s is NA, impute `N_Subjects` = 1
-#' - For anything with `N_Subjects` == 1, set `Value_SD` to 0
-#' - Impute missing `Value_SD` as follows: For observations with `N_Subjects` > 1, take the minimum non-missing `Value_SD` for each `sd_group`. If all SDs are missing in an `sd_group`, then `Value_SD` for each observation in that group will be imputed as 0.
-#' - Mark data for exclusion according to the following criteria:
-#'     - Exclude any remaining observations where both Value and LOQ are NA
-#'     - For any cases where `N_Subjects` is NA, impute `N_Subjects` = 1
-#'     - Exclude any remaining observations with `N_Subjects` > 1 and `Value_SD` still NA. (This should never occur, if SD imputation is performed, but just in case.)
-#'     - Exclude any observations with `N_Subjects` > 1 where reported `Value` is NA, because log-likelihood for non-detect multi-subject observations has not been implemented.
-#'     - Exclude any observations with NA `Time` values
-#'     - Exclude any observations with `Dose` = 0
-#' - Apply any time transformations specified by user
-#' - Scale concentration by `ratio_conc_dose`
-#' - Apply any concentration transformations specified by the user.
-#' - If `Series_ID` is not included, then assign it as NA
-#' - Create variable `pLOQ` and set it equal to `LOQ`
-#'
+#' \itemize{
+#' \item Coerce data to class `data.frame` (if it is not already)
+#' \item Rename variables to harmonized "`invivopkfit` aesthetic" variable names, using `obj$mapping`
+#' \item Check that the data includes only routes in `obj$settings_preprocess$routes_keep` and media in `obj$settings_preprocess$media_keep`
+#' \item Check that the data includes only one unit for concentration, one unit for time, and one unit for dose.
+#' \item Coerce `Value`, `Value_SD`, `LOQ`, `Dose`, and `Time` to numeric, if they are not already.
+#' \item Coerce `Species`, `Route`, and `Media` to lowercase.
+#' \item Replace any negative `Value`, `Value_SD`, `Dose`, or `Time` with `NA`
+#' \item If any non-NA `Value` is currently less than its non-NA LOQ, then replace it with NA
+#' \item  Impute any NA `LOQ`: as `calc_loq_factor` * minimum non-NA `Value` in each `loq_group`
+#' \item For any cases where `N_Subject`s is NA, impute `N_Subjects` = 1
+#' \item For anything with `N_Subjects` == 1, set `Value_SD` to 0
+#' \item Impute missing `Value_SD` as follows: For observations with `N_Subjects` > 1, take the minimum non-issing `Value_SD` for each `sd_group`. If all SDs are missing in an `sd_group`, then `Value_SD` for each observation in that group will be imputed as 0.
+#' \item Mark data for exclusion according to the following criteria:
+#' \itemize{
+#'     \item Exclude any remaining observations where both Value and LOQ are NA
+#'     \item For any cases where `N_Subjects` is NA, impute `N_Subjects` = 1
+#'     \item Exclude any remaining observations with `N_Subjects` > 1 and `Value_SD` still NA. (This should never occur, if SD imputation is performed, but just in case.)
+#'     \item Exclude any observations with `N_Subjects` > 1 where reported `Value` is NA, because log-likelihood for non-detect multi-subject observations has not been implemented.
+#'     \item Exclude any observations with NA `Time` values
+#'     \item Exclude any observations with `Dose` = 0
+#'     }
+#' \item Apply any time transformations specified by user
+#' \item Scale concentration by `ratio_conc_dose`
+#' \item Apply any concentration transformations specified by the user.
+#' \item If `Series_ID` is not included, then assign it as NA
+#' \item Create variable `pLOQ` and set it equal to `LOQ`
+#' }
 #'
 #' @param obj A `pk` object
 #' @param ... Additional arguments. Not in use currently.
@@ -145,6 +147,7 @@ do_preprocess.pk <- function(obj, ...) {
 
     # If data has passed all these initial checks, then proceed with pre-processing
     data_group <- obj$data_group
+    summary_group <- obj$settings_data_info$summary_group
 
     n_grps <- dplyr::group_by(data, !!!data_group) %>%
       dplyr::group_keys() %>%
@@ -367,7 +370,6 @@ do_preprocess.pk <- function(obj, ...) {
 
     # Impute LOQ:
     # as calc_loq_factor * minimum non-NA value in each loq_group
-
     if (obj$settings_preprocess$impute_loq %in% TRUE) {
       if (anyNA(data$LOQ)) {
         if (!obj$settings_preprocess$suppress.messages) {
@@ -790,6 +792,21 @@ do_preprocess.pk <- function(obj, ...) {
       data$Value.Units,
       paste0(data$Value.Units, "/", ratio_conc_dose)
     )
+
+    # where it is excreta make cumulative sum, if needed
+    data <- data %>%
+      group_by(!!!summary_group, Subject) %>%
+      arrange(Time) %>%
+      mutate(
+        Conc = ifelse(
+          Media %in% "excreta",
+          cumsum(Conc),
+          Conc
+        )
+      )
+
+
+
 
     # apply concentration transformation.
     #

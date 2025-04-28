@@ -68,7 +68,7 @@
 #' occur at one absorption half-life. Under this assumption, `kgutabs` is equal
 #' to `log(2)/tmax`, and this is taken as the starting value.
 #'
-#' # Starting value for `Fgutabs_Vdist`
+#' @section Starting value for `Fgutabs_Vdist`:
 #'
 #' If any oral data exist (whether or not IV data also exist), then the oral data
 #' are used to derive a starting value for `Fgutabs_Vdist`.
@@ -90,24 +90,17 @@
 #' Using the previously-derived starting values for `kgutabs` and `kelim`, then,
 #' the starting value for `Fgutabs_Vdist` can be derived as `A * (kgutabs-kelim)/kgutabs`.
 #'
-#' # Starting value for `Fgutabs`
+#' @section Starting value for `Fgutabs`:
 #'
 #' If both oral and IV data exist, then the derived starting values for `Vdist`
 #' (from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
 #' yield a derived starting value for `Fgutabs`.
 #'
-#' #Starting value for `Rblood2plasma`
+#' @section Starting value for `Rblood2plasma`:
 #'
 #' The starting value for `Rblood2plasma` is set to the value given by [httk::parameterize_gas_pbtk()].
 #'
-#' @param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#' @param par_DF A `data.frame` with the following variables (e.g., as produced by [get_params_1comp()])
-#' - `param_name`: Character: Names of the model parameters
-#' - `param_units`: Character: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-#' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
-#' -`lower_bounds`: Numeric: The lower bounds for each parameter
-#' - `upper_bounds`: Numeric: The upper bounds for each parameter
+#' @inheritParams get_starts_flat
 #' @param restrictive A boolean value determinining whether to assume restrictive
 #'   or non-restrictive clearance when getting starting values.
 #'

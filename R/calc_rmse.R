@@ -33,7 +33,7 @@
 #'
 #' \deqn{\sqrt{\frac{1}{N} \sum_{i=1}^N (y_i - \mu_i)^2}}
 #'
-#' # Left-censored data
+#' @section Left-censored data:
 #'
 #' If the observed value is censored, and the predicted value is less than the
 #' reported LOQ, then the observed value is (temporarily) set equal to the
@@ -42,7 +42,7 @@
 #' If the observed value is censored, and the predicted value is greater than
 #' the reported LOQ, the the observed value is set equal to the reported LOQ.
 #'
-#' # Log10 transformation
+#' @section Log10 transformation:
 #'
 #' If `log10_trans %in% TRUE`, then both the observed and predicted values will be
 #' log10-transformed before calculating the RMSE. In the case where

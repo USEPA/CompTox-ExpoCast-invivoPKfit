@@ -5,13 +5,13 @@
 #' from the data depends on what routes of administration are included in the
 #' data.
 #'
-#' ## IV data, no oral data
+#' @section IV data, no oral data:
 #'
 #' If IV dosing data are available, but no oral dosing data are available, then
 #' only the parameter `Vdist` will be estimated from the data. The
 #' parameter `Fgutabs` cannot be estimated from IV data alone and will not be used to evaluate the model.
 #'
-#' ## Oral data, no IV data
+#' @section Oral data, no IV data:
 #'
 #' If oral dosing data are available, but no IV dosing data are available, then
 #' the parameters `Fgutabs` and `Vdist` cannot be identified separately. From
@@ -19,44 +19,41 @@
 #' is represented by a single parameter named `Fgutabs_Vdist`. `Fgutabs` and
 #' `Vdist` will not be estimated nor used in model evaluation, but `Fgutabs_Vdist` will be estimated.
 #'
-#' ## Oral data and IV data
+#' @section Oral data and IV data:
 #'
 #' If both oral and IV dosing data are available, then `Vdist` and `Fgutabs` will both be estimated from the data.
 #'
-#' # Blood and plasma data
+#' @section Blood and plasma data:
 #'
 #' If both blood and plasma data are available, then `Rblood2plasma` will be estimated from the data.
 #'
-#' # Only one of blood or plasma data
+#' @section Only one of blood or plasma data:
 #'
 #' If only one of blood or plasma data are available, then `Rblood2plasma` will be
 #' held constant at 1, not estimated from the data.
 #'
-#' # Default lower and upper bounds for each parameter
-#'
-#' ## Default lower and upper bounds for `Vdist`
-#'
+#' @section Default lower and upper bounds for each parameter:
+#' \subsection{Default lower and upper bounds for `Vdist`}{
 #' By default, the lower bound for `Vdist` is 0.01, and the upper bound for
 #' `Vdist` is 100. These values were chosen based on professional judgment.
-#'
-#' ## Default lower and upper bounds for `Fgutabs`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Fgutabs`}{
 #' By default, the lower bound for `Fgutabs` is 0.0, and the upper bound for
 #' `Fgutabs` is 1. These are simply the bounds of the physically-meaningful
 #' range for a fraction.
-#'
-#' ## Default lower and upper bounds for `Fgutabs_Vdist`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Fgutabs_Vdist`}{
 #' By default, the lower bound for the ratio `Fgutabs_Vdist` is 0.01, and the
 #' upper bound is 100. These values were chosen based on professional judgment.
-#'
-#' ## Default lower and upper bounds for `Rblood2plasma`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Rblood2plasma`}{
 #' By default, the lower bound for the blood:plasma partition coefficient
 #' `Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
 #' based on professional judgment.
+#' }
 #'
-#' # Starting values for each parameter
+#'
+#' @section Starting values for each parameter:
 #'
 #' Starting values for each parameter (starting guesses for the numerical
 #' optimizer) are derived from the data using [get_starts_flat()].
@@ -75,14 +72,17 @@
 #' @param param_units A mapping specified using a call to [ggplot2::aes()],
 #'  giving the units for each variable, as expressions which may include
 #'  variables in `data`.
+#'
 #' @return A `data.frame`with the following variables:
-#' - `param_name`: Character: Names of the model parameters
-#' - `param_units`: Character: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-#' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
-#' -`lower_bounds`: Numeric: The lower bounds for each parameter
-#' - `upper_bounds`: Numeric: The upper bounds for each parameter
-#' - `start`: Numeric: The starting guesses for each parameter
+#' \itemize{
+#' \item `param_name`: Character: Names of the model parameters
+#' \item `param_units`: Character: Units of the model parameters
+#' \item `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+#' \item `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+#' \item`lower_bounds`: Numeric: The lower bounds for each parameter
+#' \item `upper_bounds`: Numeric: The upper bounds for each parameter
+#' \item `start`: Numeric: The starting guesses for each parameter
+#' }
 #' @author Caroline Ring
 #' @family flat model functions
 #' @family get_params functions

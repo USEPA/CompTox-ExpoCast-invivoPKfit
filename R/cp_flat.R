@@ -5,7 +5,7 @@
 #' This function is used for model comparison: does a 1- or 2-compartment TK
 #' model fit the data any better than this naive "flat" model?
 #'
-#' # Required parameters
+#' @section Required parameters:
 #'
 #' `params` must include the following named items:
 #'   \describe{

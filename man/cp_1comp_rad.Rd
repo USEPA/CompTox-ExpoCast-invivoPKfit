@@ -38,8 +38,8 @@ A vector of blood or plasma concentration values  corresponding
 Calculates plasma concentrations vs. time according to the analytical solution
 for the 1-compartment model, for single bolus doses (IV and/or oral).
 }
-\details{
-# Required parameters
+\section{Required parameters}{
+
 
 `params` must include the following named items:
   \describe{
@@ -66,6 +66,7 @@ If `any(medium %in% 'blood')`, then `params` must also include
 `Rblood2plasma`, the ratio of chemical concentration in whole blood to the
 chemical concentration in blood plasma.
 }
+
 \seealso{
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
@@ -90,18 +91,6 @@ Other built-in model functions:
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 
-Other 1-compartment model functions: 
-\code{\link{auc_1comp}()},
-\code{\link{auc_1comp_cl}()},
-\code{\link{cp_1comp}()},
-\code{\link{cp_1comp_cl}()},
-\code{\link{get_params_1comp}()},
-\code{\link{get_params_1comp_cl}()},
-\code{\link{get_params_1comp_fup}()},
-\code{\link{get_starts_1comp}()},
-\code{\link{get_starts_1comp_cl}()},
-\code{\link{get_starts_1comp_fup}()}
-
 Other model concentration functions: 
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
@@ -111,6 +100,6 @@ Other model concentration functions:
 \author{
 Caroline Ring, John Wambaugh, Gilberto Padilla Mercado
 }
-\concept{1-compartment model functions}
+\concept{1-compartment radiation model functions}
 \concept{built-in model functions}
 \concept{model concentration functions}
