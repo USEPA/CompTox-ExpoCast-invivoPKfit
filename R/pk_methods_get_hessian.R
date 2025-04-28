@@ -79,7 +79,8 @@ get_hessian.pk <- function(obj,
 
   coefs <- coefs_opt %>%
     dplyr::left_join(coefs_const) %>%
-    dplyr::left_join(coefs_use)
+    dplyr::left_join(coefs_use) %>%
+    suppressMessages()
 
   other_vars <- ggplot2::vars(
     Value,

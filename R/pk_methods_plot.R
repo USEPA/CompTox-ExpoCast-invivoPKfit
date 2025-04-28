@@ -415,7 +415,9 @@ plot.pk <- function(x,
     )
 
     if (best_fit %in% TRUE) {
-      interp_data <- dplyr::left_join(get_winning_model(obj = x), interp_data)
+      interp_data <- dplyr::left_join(get_winning_model(obj = x),
+                                      interp_data) %>%
+        suppressMessages()
     }
 
     # if plotting transformed time, then transform interpolated time points
@@ -441,7 +443,10 @@ plot.pk <- function(x,
       dplyr::group_by(!!!x$data_group) %>%
       tidyr::nest(.key = "predicted")
 
-    newdata <- dplyr::left_join(newdata, interp_data)
+
+    data_group_vars <- sapply(x$data_group, rlang::as_label)
+    newdata <- dplyr::left_join(newdata, interp_data,
+                                by = c(data_group_vars))
 
     # Need to check if predicted is NULL before filtering below
     # NULL predicted values will occur when there was no adequate fit for the model

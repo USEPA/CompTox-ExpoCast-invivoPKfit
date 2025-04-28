@@ -63,19 +63,23 @@ get_winning_model.pk <- function(obj,
     dplyr::summarize(preds_below_loq = 100 * round(sum(Conc_est < LOQ) / n(), 3)) %>%
     dplyr::ungroup()
 
-
+  # Get the criteria (AIC or BIC)
   model_compare <- do.call(criterion,
                            args = list(obj = obj,
                                        newdata = newdata,
                                        method = method)) %>%
-    left_join(suppressMessages(
+    suppressMessages()
+  # Join information criteria with RMSE and prediction checks for output
+  model_compare <- model_compare %>%
+    left_join(
       rmse.pk(obj = obj,
               newdata = newdata,
-              method = method)
-      ), by = c(data_grp_vars, "model", "method")
+              method = method),
+      by = c(data_grp_vars, "model", "method")
       ) %>%
     left_join(pred_check,
-              c(data_grp_vars, "model", "method"))
+              c(data_grp_vars, "model", "method")) %>%
+    suppressMessages()
 
   # return the winning model for each method
   # Winmodel should have RMSE of at least 95% of flat model
@@ -91,10 +95,14 @@ get_winning_model.pk <- function(obj,
          tidyselect::everything())$RMSE[which(
          dplyr::pick(tidyselect::everything())$model == "model_flat")] >= 0.95),
        FALSE, missing = NA)
-     ) %>%
+   )
+ # match the methods
+ winmodels <- winmodels %>%
    dplyr::group_by(!!!obj$data_group) %>%
    dplyr::arrange(method, model) %>%
-   dplyr::filter(method == method) %>%
+   dplyr::filter(method == method)
+ # Filter by lowest AIC or BIC
+ winmodels <- winmodels %>%
    dplyr::group_by(!!!obj$data_group, method) %>%
    dplyr::slice_min(
      order_by = pick({{ criterion }}),

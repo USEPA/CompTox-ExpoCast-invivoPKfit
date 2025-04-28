@@ -81,7 +81,7 @@ do_preprocess.pk <- function(obj, ...) {
     ### Coerce Species, Route, and Media to lowercase
     if (!obj$settings_preprocess$suppress.messages) {
       message(
-        "Species, Route, and Media",
+        "Species, Route, and Media ",
         "will be coerced to lowercase.\n"
       )
     }
@@ -156,7 +156,7 @@ do_preprocess.pk <- function(obj, ...) {
     if (!obj$settings_preprocess$suppress.messages) {
       ### display messages describing loaded data
       message(
-        nrow(data), "concentration vs. time observations loaded.\n",
+        nrow(data), " concentration vs. time observations loaded.\n",
         "Number of unique data groups ",
         "(unique combinations of ",
         toString(sapply(data_group, rlang::as_label)),
@@ -544,6 +544,8 @@ do_preprocess.pk <- function(obj, ...) {
         n_grps
       )
     }
+    # Update the remaining observations
+    obs_num <- nrow(data)
 
     # Exclude any remaining multi-subject observations where Value is NA
     if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value))) {
@@ -574,7 +576,7 @@ do_preprocess.pk <- function(obj, ...) {
 
     }
 
-    if (!obj$settings_preprocess$suppress.messages) {
+    if (!obj$settings_preprocess$suppress.messages & (nrow(data) != obs_num)) {
       n_grps <- dplyr::group_by(data, !!!data_group) %>%
         dplyr::group_keys() %>%
         dplyr::n_distinct()
@@ -586,6 +588,7 @@ do_preprocess.pk <- function(obj, ...) {
           "): ",
           n_grps
       )
+      obs_num <- nrow(data)
     }
 
     # Exclude any NA time values
@@ -608,7 +611,7 @@ do_preprocess.pk <- function(obj, ...) {
       )
     }
 
-    if (!obj$settings_preprocess$suppress.messages) {
+    if (!obj$settings_preprocess$suppress.messages & (nrow(data) != obs_num)) {
       n_grps <- dplyr::group_by(data, !!!data_group) %>%
         dplyr::group_keys() %>%
         dplyr::n_distinct()
@@ -620,6 +623,7 @@ do_preprocess.pk <- function(obj, ...) {
               "): ",
               n_grps
       )
+      obs_num <- nrow(data)
     }
 
     # Exclude any Dose = 0 observations
@@ -642,7 +646,7 @@ do_preprocess.pk <- function(obj, ...) {
 
     }
 
-    if (!obj$settings_preprocess$suppress.messages) {
+    if (!obj$settings_preprocess$suppress.messages & (nrow(data) != obs_num)) {
       n_grps <- dplyr::group_by(data, !!!data_group) %>%
         dplyr::group_keys() %>%
         dplyr::n_distinct()
@@ -654,6 +658,7 @@ do_preprocess.pk <- function(obj, ...) {
           "): ",
           n_grps
         )
+      obs_num <- nrow(data)
     }
 
     # apply time transformation
@@ -795,7 +800,7 @@ do_preprocess.pk <- function(obj, ...) {
 
     # where it is excreta make cumulative sum, if needed
     data <- data %>%
-      group_by(!!!summary_group, Subject) %>%
+      group_by(!!!summary_group, Subject_ID) %>%
       arrange(Time) %>%
       mutate(
         Conc = ifelse(
@@ -804,8 +809,6 @@ do_preprocess.pk <- function(obj, ...) {
           Conc
         )
       )
-
-
 
 
     # apply concentration transformation.
@@ -884,7 +887,7 @@ do_preprocess.pk <- function(obj, ...) {
 
 
     # add data & data info to object
-    obj$data <- data
+    obj$data <- ungroup(data)
 
     if (is.null(obj$settings_preprocess$keep_data_original)) {
       obj$settings_preprocess$keep_data_original <- TRUE

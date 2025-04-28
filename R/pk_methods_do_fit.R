@@ -90,6 +90,7 @@ do_fit.pk <- function(obj,
     LOQ, exclude, Detect, pLOQ,
     N_Subjects, data_sigma_group, Time_trans
   )
+
   data <- data %>%
     dplyr::select(!!!obj$stat_error_model$error_group,
                   !!!req_data_vars)
@@ -171,6 +172,7 @@ do_fit.pk <- function(obj,
     # we can likely save some memory by only passing what we need from obj
     # like this
     tidy_fit <- info_nest %>%
+      dplyr::ungroup() %>%
       dplyr::rowwise(!!!data_group, model) %>%
       multidplyr::partition(cluster) %>%
       dplyr::summarise(
@@ -193,6 +195,7 @@ do_fit.pk <- function(obj,
   } else {
 
     tidy_fit <- info_nest %>%
+      dplyr::ungroup() %>%
       dplyr::rowwise(!!!data_group, model) %>%
       dplyr::summarize(
         fit = list(fit_group(data = data,

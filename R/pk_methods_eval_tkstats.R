@@ -45,9 +45,9 @@ eval_tkstats.pk <- function(obj,
   if (is.null(tk_group)) tk_group <- obj$settings_data_info$summary_group
 
   method_ok <- check_method(obj = obj, method = method)
-  if(all(model %in% "winning")){
-  win <- TRUE
-  model <- names(obj$stat_model)
+  if (all(model %in% "winning")) {
+    win <- TRUE
+    model <- names(obj$stat_model)
   }else{
     win <- FALSE
   }
@@ -106,11 +106,12 @@ eval_tkstats.pk <- function(obj,
                        values_from = param_value)
 
   if(win %in% TRUE){
- nca_df <- nca_df %>%
-    dplyr::right_join(winmodel_df,
-                      relationship = "many-to-many") %>%
-   dplyr::relocate(model, method, .after = Media)
- }
+    nca_df <- nca_df %>%
+      dplyr::right_join(winmodel_df,
+                        relationship = "many-to-many",
+                        by = c(data_grp_vars)) %>%
+      dplyr::relocate(model, method, .after = Media)
+  }
 
 
   # get tkstats
@@ -125,9 +126,9 @@ eval_tkstats.pk <- function(obj,
     ungroup()
 
   if(win %in% TRUE){
-  tkstats_df <- dplyr::left_join(winmodel_df %>% dplyr::ungroup(),
-                                 tkstats_df,
-                                 by = c(data_grp_vars, "method", "model"))
+    tkstats_df <- dplyr::left_join(winmodel_df %>% dplyr::ungroup(),
+                                   tkstats_df,
+                                   by = c(data_grp_vars, "method", "model"))
   }
 
   # prepare for merge
