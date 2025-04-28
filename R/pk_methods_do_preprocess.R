@@ -309,9 +309,9 @@ do_preprocess.pk <- function(obj, ...) {
       if (any((data$Value < 0) %in% TRUE)) {
         message(
           paste(
-            'If value < 0, replacing Value with NA.',
+            'If value < 0, replacing Value with NA. ',
             sum((data$Value < 0) %in% TRUE),
-            "Values will be replaced with NA.\n"
+            " Values will be replaced with NA.\n"
           )
         )
       }

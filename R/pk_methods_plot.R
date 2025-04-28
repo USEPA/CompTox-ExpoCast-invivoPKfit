@@ -156,7 +156,7 @@ plot.pk <- function(x,
     }
   }
 
-
+  # Selecting variable used for time (either transformed or untransformed time)
   time_var <- ifelse(time_trans, as.name("Time_trans"), as.name("Time"))
 
   time_units_var <- ifelse(time_trans,
@@ -321,7 +321,6 @@ plot.pk <- function(x,
 
                       p +
                         labs(
-                          #title = paste(Chemical, Species),
                           title = paste(!!!x$data_group),
                           x = paste0("Time (", t_units, ")"),
                           y = ifelse(
@@ -344,10 +343,9 @@ plot.pk <- function(x,
                             size = 1
                           )
                         )
-
-
-
-                    }))
+                    }
+                    )
+    )
 
   # For predictions, interpolate time
   if (get_status(obj = x) == 5) {
@@ -362,7 +360,7 @@ plot.pk <- function(x,
               dplyr::mutate(Time_trans.Units = Time.Units)
           }
 
-          x %>%
+          x <- x %>%
             dplyr::select(!!!union(common_vars, obs_vars)) %>%
             dplyr::group_by(Dose, Route, Media) %>%
             dplyr::reframe(Time = max(Time), # Change to Time
@@ -372,25 +370,23 @@ plot.pk <- function(x,
               maxTime = max(Time),
               Time.Units = unique(Time.Units),
               Time_trans.Units = unique(Time_trans.Units)
-            ) %>%
-            tidyr::uncount(n_interp) %>%
-            dplyr::group_by(Dose, Route, Media) %>%
-            dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
-                            (dplyr::row_number() - 1))
+            )
         } else if (time_trans %in% FALSE) {
-          x %>%
+          x <- x %>%
             dplyr::select(!!!union(common_vars, obs_vars)) %>%
             dplyr::group_by(Dose, Route, Media) %>%
             dplyr::reframe(Time = max(Time), # Change to Time
                            Time.Units, Conc.Units) %>%
             dplyr::mutate(maxTime = max(Time),
-                          Time.Units = unique(Time.Units)) %>%
-            tidyr::uncount(n_interp) %>%
-            dplyr::group_by(Dose, Route, Media) %>%
-            dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
-                            (dplyr::row_number() - 1))
+                          Time.Units = unique(Time.Units))
         }
-      }))
+        x  %>%
+          tidyr::uncount(n_interp) %>%
+          dplyr::group_by(Dose, Route, Media) %>%
+          dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
+                          (dplyr::row_number() - 1))
+      }, .progress = TRUE)
+      )
 
     interp_data <- interp_data %>%
       dplyr::select(!!!x$data_group, interpolated) %>%
@@ -509,8 +505,7 @@ plot.pk <- function(x,
     message("Note that the final plots do not contain any fits")
   }
 
-  if (print_out)
-    return(newdata$final_plot)
+  if (print_out) return(newdata$final_plot)
 
   return(newdata)
 }

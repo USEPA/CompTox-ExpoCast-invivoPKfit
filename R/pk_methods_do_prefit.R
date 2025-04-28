@@ -86,7 +86,7 @@ do_prefit.pk <- function(obj,
   # get bounds and starting points for each error sigma to be fitted
 
   if (suppress.messages %in% FALSE) {
-    message("do_prefit.pk():",
+    message("do_prefit.pk(): ",
             "Getting bounds and starting guesses for each error SD to be fitted"
     )
   }
@@ -201,7 +201,7 @@ do_prefit.pk <- function(obj,
       # check whether there are enough observations to optimize the requested parameters plus sigmas
       # number of parameters to optimize
       if (suppress.messages %in% FALSE) {
-        message("do_prefit.pk():",
+        message("do_prefit.pk(): ",
                 "Checking whether sufficient observations to fit models"
         )
       }
