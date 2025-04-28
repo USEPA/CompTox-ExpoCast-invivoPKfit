@@ -2,54 +2,9 @@
 #'
 #' Evaluate TK statistics from a fitted model by comparing to NCA results
 #'
-#' @param obj A [pk()] model object. Must be fitted, or the function will exit
-#'   with an error.
-#' @param newdata Optional: A `data.frame` containing new data for which to
-#'   compute the TK stats. Must contain at least variables `Chemical`,
-#'   `Species`, `Route`, `Media`, `Dose`, `Dose.Units`, `Conc.Units`, either
-#'   `Time_trans.Units` or `Time.Units`, and any other variables named in
-#'   `tk_grouping`. Default `NULL`, to use the data in `obj$data`.
-#' @param tk_group A list of variables provided using a `dplyr::vars()` call.
-#'   The data (either `newdata` or `obj$data`) will be grouped according to the
-#'   unique combinations of these variables. For each unique combination of
-#'   these variables in the data, a set of TK statistics will be computed. The
-#'   default is `obj$settings_data_info$summary_group`, to derive TK statistics for
-#'   the same groups of data as non-compartmental analysis statistics. With the
-#'   default, you can directly compare e.g. a model-predicted AUC_inf to the
-#'   corresponding NCA-estimated AUC_inf. However, you may specify a different
-#'   data grouping if you wish. Each group should have a unique combination of
-#'   `Chemical`, `Species`, `Route`, `Media`, and `Dose`, because the TK stats
-#'   depend on these values, and it is required to have one unique set of TK
-#'   stats per group.
-#' @param model Character: One or more of the models fitted. Default `"winning"` to return
-#'   results for only the winning model(s). Supply `NULL` to
-#'   return TK stats for all models.
-#' @param method Character: One or more of the [optimx::optimx()] methods used.
-#'   Default `NULL` to return TK stats for all methods.
-#' @param exclude Logical: `TRUE` to get the TK groupings after removing any
-#'   observations in the data marked for exclusion (if there is a variable
-#'   `exclude` in the data, an observation is marked for exclusion when `TRUE`).
-#'   `FALSE` to include all observations when getting the TK
-#'   groupings, regardless of exclusion status. Default `TRUE`.
-#' @param dose_norm Logical: `TRUE` (default) to dose-normalize before
-#'   calculating both the NCA statistics and the fitted TK statistics (i.e. all
-#'   dose-dependent statistics will be for a unit dose of 1 mg/kg, including
-#'   Cmax, AUC, Css). `FALSE` to calculate NCA and fitted TK stats separately
-#'   for each dose group (you must specify `Dose` as one of the variables in
-#'   `tk_group` for this to work). If `dose_norm` is `TRUE` and you also specify
-#'   `Dose` as one of the `tk_group` variables, then the dose part of the
-#'   grouping will be ignored in the output. (If `TRUE`, under
-#'   the hood, this function will temporarily overwrite the `Dose` column in its
-#'   local copy of `newdata` with 1's. This doesn't affect the data outside of
-#'   this function. But it means that any values in the `Dose` variable of
-#'   `newdata` will be ignored if `TRUE`.)
-#' @param finite_only Logical: `TRUE` (default) returns only rows (observations)
-#'   for which AUC is finite in both `nca` and `tkstats`. This also means it will
-#'   by default never return instances where winning model == `model_flat`.
-#' @param suppress.messages Logical: whether to suppress message printing. If
-#'   NULL (default), uses the setting in
-#'   `obj$settings_preprocess$suppress.messages`
-#' @param ... Additional arguments. Currently not in use.
+#' @inheritParams get_tkstats.pk
+#' @param finite_only Logical (Default: TRUE). If FALSE, will include non-finite values
+#'   for `AUC_infinity` from both compartmental and noncompartmental analysis.
 #' @return A `data.frame` with one  row for each "winning" model in
 #'   `model` from [get_winning_model()]. The `data.frame` will have the variables
 #'   returned by the `tkstats_fun` for its corresponding model. (For the

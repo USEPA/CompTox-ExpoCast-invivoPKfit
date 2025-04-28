@@ -2,70 +2,46 @@
 #'
 #' Calculate predicted toxicokinetic statistics for a 1-compartment model.
 #'
-#' # Statistics computed
+#' @section Statistics computed:
 #'
-#' ## Total clearance
-#'
+#' \subsection{Total clearance}{
 #' \deqn{\textrm{CL}_{tot} = k_{elim} + V_{1}}
-#'
-#' ## Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day
-#'
+#' }
+#' \subsection{Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day}{
 #' To convert to steady-state *blood* concentration, multiply by the
 #' blood-to-plasma ratio.
 #'
 #' The dosing interval \eqn{\tau = \frac{1}{\textrm{day}}} will be converted to
 #' the same units as \eqn{k_{elim}}.
-#'
-#' ### Oral route
-#'
+#' }
+#' \subsubsection{Oral route}{
 #' \deqn{C_{ss} = \frac{F_{gutabs} V_{1}}{k_{elim} \tau}}
-#'
-#' ### Intravenous route
-#'
+#' }
+#' \subsubsection{Intravenous route}{
 #' \deqn{C_{ss} = \frac{1}{\textrm{CL}_{tot} \tau}}
-#'
-#' ## Half-life of elimination
-#'
+#' }
+#' \subsection{Half-life of elimination}{
 #' \deqn{\textrm{Halflife} = \frac{\log(2)}{k_{elim}}}
-#'
-#' ## Time of peak concentration
-#'
+#' }
+#' \subsection{Time of peak concentration}{
 #' For oral route:
 #'
 #' \deqn{\frac{\log \left( \frac{k_{gutabs}}{k_{elim}} \right)}{k_{gutabs} -
 #' k_{elim}}}
 #'
 #' For intravenous route, time of peak concentration is always 0.
-#'
-#' ## Peak concentration
-#'
+#' }
+#' \subsection{Peak concentration}{
 #' Evaluate [cp_1comp()] at the time of peak concentration.
-#'
-#' ## AUC evaluated at infinite time
-#'
+#' }
+#' \subsection{AUC evaluated at infinite time}{
 #' Evaluate [auc_1comp()] at time = `Inf`.
-#'
-#' ## AUC evaluated at the time of the last observation
-#'
+#' }
+#' \subsection{AUC evaluated at the time of the last observation}{
 #' Evaluate [auc_1comp()] at time = `tlast`.
+#' }
 #'
-#'
-#'
-#'
-#' @param pars A named numeric vector of model parameters (e.g. from [coef.pk()]).
-#' @param route Character: The route for which to compute TK stats. Currently
-#'  only "oral" and "iv" are supported.
-#' @param medium Character: the media (tissue) for which to compute TK stats..
-#'  Currently only "blood" and "plasma" are supported.
-#' @param dose Numeric: A dose for which to calculate TK stats.
-#' @param time_unit Character: the units of time used for the parameters `par`.
-#'  For example, if `par["kelim"]` is in units of 1/weeks, then `time_unit =
-#'  "weeks"`. If `par["kelim"]` is in units of 1/hours, then `time_unit =
-#'  "hours"`. This is used to calculate the steady-state plasma/blood
-#'  concentration for long-term daily dosing of 1 mg/kg/day.
-#' @param conc_unit Character: The units of concentration.
-#' @param vol_unit Character: The units of dose.
-#' @param ... Additional arguments not currently in use.
+#' @inheritParams tkstats_1comp
 #' @return A `data.frame` with two variables:
 #' - `param_name` = `c("CLtot", "CLtot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity", "A", "B", "alpha", "beta", "Vbeta", "Vbeta_Fgutabs", "Vss", "Vss_Fgutabs")`
 #' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed; e.g. all of the `"x_Fgutabs"` parameters can only be computed if `route = "oral"` ).

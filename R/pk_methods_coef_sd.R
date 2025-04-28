@@ -22,7 +22,7 @@
 #' If neither of these procedures is successful, then `NA_real_` is returned for
 #' all coefficient standard deviations.
 #'
-#' @param obj A [pk] object
+#' @param object A [pk] object.
 #' @param model Optional: Specify one or more of the fitted models whose
 #'   coefficients to return. If NULL (the default), coefficients will be
 #'   returned for all of the models in `obj$stat_model`.

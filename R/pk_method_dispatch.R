@@ -124,7 +124,7 @@ rmse.default <- function(obj, ...) {
 #'
 #' This is the S3 method generic for `coef_sd`.
 #'
-#' @param obj An object
+#' @param object An object
 #' @param model The TK model used.
 #' @param method Optimizer method used.
 #' @param suppress.messages Boolean. Whether messages will be printed.
@@ -134,22 +134,22 @@ rmse.default <- function(obj, ...) {
 #'   by [coef.pk()], as well as their calculated standard deviations.
 #' @export
 #' @seealso [coef_sd.pk()] for the `coef_sd` method for class [pk()]
-coef_sd <- function(obj,
+coef_sd <- function(object,
                     model,
                     method,
                     suppress.messages, ...) {
-  UseMethod("coef_sd", obj)
+  UseMethod("coef_sd", object)
 }
 
 #' Coefficient standard deviation default
 #'
-#' @param obj An object
+#' @param object An object
 #' @param ... Additional arguments currently not in use.
 #' @return An error, when a non-pk object is used for the first argument.
 #' @export
-coef_sd.default <- function(obj, ...) {
+coef_sd.default <- function(object, ...) {
   stop("No 'coef_sd' method exists for object of class",
-       toString(class(obj))
+       toString(class(object))
   )
 }
 

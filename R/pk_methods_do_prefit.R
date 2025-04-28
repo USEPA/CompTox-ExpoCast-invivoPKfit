@@ -22,9 +22,7 @@
 #' substituted.
 #'
 #' The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
-#'
-#' @param obj A `pk` object
-#' @param ... Additional arguments. Not in use.
+#' @inheritParams do_preprocess.pk
 #' @return The same `pk` object, but with a new element `prefit`, containing the
 #'   results of pre-fit calculations and checks for each model and for the error
 #'   model.

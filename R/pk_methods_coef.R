@@ -5,14 +5,7 @@
 #' This function extracts fitted model parameter values from a fitted [pk()]
 #' object.
 #'
-#' @param object A [pk()] object
-#' @param model Optional: Specify (as a `character` vector) one or more of the
-#'   fitted models whose coefficients to return. If `NULL` (the default),
-#'   coefficients will be returned for all of the models in `obj$stat_model`.
-#' @param method Optional: Specify (as a `character` vector)one or more of the
-#'   [optimx::optimx()] methods whose coefficients to return. If `NULL` (the
-#'   default), coefficients will be returned for all of the models in
-#'   `obj$settings_optimx$method`.
+#' @inheritParams coef_sd.pk
 #' @param drop_sigma Logical: `FALSE` by default. Determines whether to include
 #'   sigma in the output.
 #' @param include_NAs Logical: `FALSE` by default. Determines whether to include

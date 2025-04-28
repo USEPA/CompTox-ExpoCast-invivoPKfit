@@ -9,7 +9,7 @@
 \arguments{
 \item{obj}{A `pk` object}
 
-\item{...}{Additional arguments. Not in use.}
+\item{...}{Additional arguments. Not in use currently.}
 }
 \value{
 The same `pk` object, but with a new element `prefit`, containing the

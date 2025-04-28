@@ -4,10 +4,10 @@
 \alias{coef_sd}
 \title{Coefficient standard deviations}
 \usage{
-coef_sd(obj, model, method, suppress.messages, ...)
+coef_sd(object, model, method, suppress.messages, ...)
 }
 \arguments{
-\item{obj}{An object}
+\item{object}{An object}
 
 \item{model}{The TK model used.}
 

@@ -23,12 +23,11 @@
 #' [AIC()], which check the log-likelihood *without* forcing it to return finite
 #' values.
 #'
-#' @param obj A [pk] object.
+#' @inheritParams do_preprocess.pk
 #' @param n_cores Number of cores used for parallel computing.
 #' @param rate_names The names of the rate units. Leave NULL to utilize default 1/hour.
 #' @param max_multiplier Numeric value for upper prediction limit (this number multiplied
 #' by maximum concentrations in each experiment). Default set to NULL does not apply this limit.
-#' @param ... Additional arguments. Not currently in use.
 #' @return The same [pk] object, with element `fit` containing the fitted
 #'   results for each model in `stat_model`.
 #' @export

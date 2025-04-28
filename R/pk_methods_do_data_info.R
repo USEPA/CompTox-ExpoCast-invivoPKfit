@@ -2,9 +2,8 @@
 #'
 #' Calculate summary data information, including non-compartmental analysis.
 #'
+#' @inheritParams do_preprocess.pk
 #'
-#' @param obj An object of class [pk()].
-#' @param ... Additional arguments. Not currently in use.
 #' @return Object of class [pk()] with an added `$data_info` list containing
 #' non-compartmental analysis results.
 #' @export

@@ -27,7 +27,7 @@
 #'@import purrr
 #'@import tidyr
 #'@import numDeriv
-#'@author Caroline Ring and Gilberto Padilla Mercado
+#'@author Caroline Ring, Gilberto Padilla Mercado
 #'@family methods for fitted pk objects
 #'@references Gill J, King G. (2004) What to Do When Your Hessian is Not
 #'  Invertible: Alternatives to Model Respecification in Nonlinear Estimation.
