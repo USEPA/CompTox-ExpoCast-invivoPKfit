@@ -63,7 +63,7 @@
 #'
 #' @author Caroline Ring, John Wambaugh, Gilberto Padilla Mercado
 #'
-#' @export cp_1comp
+#' @export cp_1comp_cl
 #' @family built-in model functions
 #' @family 1-compartment model functions
 #' @family model concentration functions

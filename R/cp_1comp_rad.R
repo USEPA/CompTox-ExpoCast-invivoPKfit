@@ -53,7 +53,7 @@
 #'
 #' @author Caroline Ring, John Wambaugh, Gilberto Padilla Mercado
 #'
-#' @export cp_1comp
+#' @export cp_1comp_rad
 #' @family built-in model functions
 #' @family 1-compartment radiation model functions
 #' @family model concentration functions

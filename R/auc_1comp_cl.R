@@ -60,7 +60,7 @@
 #' @return A vector of plasma AUC values (concentration*time) corresponding to `time`.
 #'
 #' @author Caroline Ring, John Wambaugh
-#' @export auc_1comp
+#' @export auc_1comp_cl
 #' @family built-in model functions
 #' @family 1-compartment model functions
 #' @family model AUC functions

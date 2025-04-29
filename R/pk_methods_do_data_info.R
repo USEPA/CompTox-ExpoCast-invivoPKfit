@@ -86,11 +86,15 @@ do_data_info.pk <- function(obj, ...) {
                        vars(Dose, Route, Media))
   }
 
+  # Filter out any data from non-blood/plasma media collected
+  data <- dplyr::filter(data, Route %in% c("blood", "plasma"))
+
+  # Do NCA
   nca_dose_norm_long <- nca(obj = obj,
-                       newdata = NULL,
-                       nca_group = nca_group,
-                       exclude = TRUE,
-                       dose_norm = TRUE)
+                            newdata = NULL,
+                            nca_group = nca_group,
+                            exclude = TRUE,
+                            dose_norm = TRUE)
 
   # pivot wider
   grp_vars_nca <- sapply(nca_group,

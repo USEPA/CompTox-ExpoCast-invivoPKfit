@@ -65,7 +65,7 @@
 #' \item `Dose.Units`: A `character` variable giving the units of the administered doses.
 #' \item `Time`: A `numeric` variable giving the time of tissue collection.
 #' \item `Time.Units`: A `numeric` variable giving the units of `Time`.
-#' \item `Media`: A `character` variable giving the tissue that was analyzed. Either `blood` or `plasma`. Other tissues are not currently supported.
+#' \item `Media`: A `character` variable giving the tissue that was analyzed. Either `blood`, `plasma`, or `excreta`. Other tissues are not currently supported.
 #' \item `Value`: A `numeric` variable giving the tissue concentration in units of mg/L. If `N_Subjects > 1`, `Value` is assumed to represent the mean tissue concentration for this group of subjects. If the tissue concentration was below the limit of quantification (LOQ), this value may be `NA_real_`.
 #' \item `Value_SD`: A `numeric` variable giving the standard deviation of the tissue concentration in units of mg/L, if available and relevant. If `N_Subjects > 1`, `Value_SD` is assumed to represent the standard deviation of tissue concentrations for this group of subjects. If `N_Subjects == 1`, then `Value_SD` may be `NA_real_`.
 #' \item `LOQ`: A `numeric` variable giving the limit of quantification applicable to this tissue concentration in units of mg/L, if available.

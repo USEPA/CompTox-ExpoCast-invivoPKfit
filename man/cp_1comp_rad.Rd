@@ -81,6 +81,7 @@ Other built-in model functions:
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
 \code{\link{get_starts_1comp}()},
