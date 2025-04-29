@@ -58,7 +58,8 @@
 #' @family 1-compartment radiation model functions
 #' @family model concentration functions
 cp_1comp_rad <- function(params, time, dose, route, medium = 'plasma',
-                        restrictive = FALSE) {
+                        restrictive = TRUE) {
+
   params <- fill_params_1comp_cl(params)
 
   check_msg <- check_params_1comp_cl(params = params,
@@ -76,38 +77,38 @@ cp_1comp_rad <- function(params, time, dose, route, medium = 'plasma',
   # note: Qgfr is based on plasma wheras Q_totli is based on blood
   Clhep <- (Q_totli * Fup * Clint) / (Q_totli + (Fup * Clint / Rblood2plasma))
   Clren <- Fup * Q_gfr
-  Cltot <- CLren + Clhep
+  Cltot <- Clren + Clhep
   Cltot_Vdist <- Cltot / Vdist
 
   A_t <- rep(NA_real_, length(time))
   iv_vec <- (route == "iv")
   oral_vec <- (route == "oral")
-  circ_vec <- (media %in% c("blood", "plasma"))
-  excr_vec <- (media %in% c("excreta"))
+  circ_vec <- (medium %in% c("blood", "plasma"))
+  excr_vec <- (medium %in% c("excreta"))
 
   # Setup short names for indices
   ivc <- (iv_vec & circ_vec)
   ive <- (iv_vec & excr_vec)
   orc <- (oral_vec & circ_vec)
-  ore <- (oral_vec & circ_vec)
+  ore <- (oral_vec & excr_vec)
 
   # For IV, CLtot_vdist == kgutabs has no bearing
-  A_t[ivc] <- dose[ivc] * exp(-CLtot_Vdist * time[ivc])
-  A_t[ive] <- dose[ive] * Frec * exp(-CLtot_Vdist * time[ive])
+  A_t[ivc] <- dose * exp(-Cltot_Vdist * time[ivc])
+  A_t[ive] <- dose * Frec * (1 - exp(-Cltot_Vdist * time[ive]))
 
   # Check "static conditions" for oral absorption
-  if (CLtot_Vdist != kgutabs & any(orc & ore)) {
-    A_t[orc] <- dose[orc] * (Fgutabs * kgutabs) / (kgutabs - Cltot_Vdist) *
+  if (Cltot_Vdist != kgutabs & any(orc & ore)) {
+    A_t[orc] <- dose * (Fgutabs * kgutabs) / ((kgutabs - Cltot_Vdist)) *
       (exp(-Cltot_Vdist * time[orc]) - exp(-kgutabs * time[orc]))
 
-    A_t[ore] <- dose[ore] * (Fgutabs * Frec) / (Cltot_Vdist - kgutabs) *
+    A_t[ore] <- dose * (Fgutabs * Frec) / ((Cltot_Vdist - kgutabs)) *
       (Cltot_Vdist * (1 - exp(-kgutabs * time[ore])) -
          kgutabs * (1 - exp(-Cltot_Vdist * time[ore])))
   } else {
-    A_t[orc] <- dose[orc] * (Fgutabs * CLtot_Vdist) *
+    A_t[orc] <- dose * (Fgutabs * Cltot_Vdist * time[orc]) *
       (exp(-Cltot_Vdist * time[orc]))
 
-    A_t[ore] <- dose[ore] * (Fgutabs * Frec) *
+    A_t[ore] <- dose * (Fgutabs * Frec) *
       (1 - exp(-Cltot_Vdist * time[ore]) - time[ore] *
          Cltot_Vdist * exp(-Cltot_Vdist * time[ore]))
   }
