@@ -1,4 +1,4 @@
-#' Analytic AUC for 1-compartment model with specific clearance
+#' Analytic AUC for 1-compartment model with total radiolabeled compound
 #'
 #' Calculate area under the plasma concentration vs. time curve for the
 #' 1-compartment model, using an analytical equation (the integral of the
@@ -65,17 +65,17 @@
 #' @family 1-compartment model functions
 #' @family model AUC functions
 
-auc_1comp_cl <- function(params,
-                      time,
-                      dose,
-                      route,
-                      medium) {
+auc_1comp_rad <- function(params,
+                         time,
+                         dose,
+                         route,
+                         medium) {
 
   params <- fill_params_1comp_cl(params)
 
   check_msg <- check_params_1comp_cl(params = params,
-                                  route = route,
-                                  medium = medium)
+                                     route = route,
+                                     medium = medium)
 
   if (check_msg != "Parameters OK") {
     stop("cp_1comp_cl(): ", check_msg)
@@ -84,38 +84,48 @@ auc_1comp_cl <- function(params,
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
-
+  # note: Qgfr is based on plasma wheras Q_totli is based on blood
   Clhep <- (Q_totli * Fup * Clint) / (Q_totli + (Fup * Clint / Rblood2plasma))
   Clren <- Fup * Q_gfr
   Cltot <- Clren + Clhep
   kelim <- Cltot / Vdist
 
-  auc <- dose * ifelse(route %in% "iv",
-                       1 / (kelim) - # IV model
-                         exp(-time * kelim) /
-                         (Cltot), # iv route
-                       ifelse(rep(kelim != kgutabs, # oral route
-                                  length(route)),
-                              # equation when kelim != kgutabs
-                              -1 *
-                                Fgutabs_Vdist * kgutabs *
-                                (1 / kgutabs - 1 / kelim) /
-                                ((-kelim + kgutabs)) +
-                                1 *
-                                Fgutabs_Vdist * kgutabs *
-                                (exp(-time * kgutabs) / kgutabs -
-                                   exp(-time * kelim) / kelim) /
-                                ((-kelim + kgutabs)),
-                              # alternate equation when kelim == kgutabs
-                              1 * Fgutabs_Vdist /
-                                (kelim) +
-                                (-1 * Fgutabs_Vdist *
-                                   time * kelim -
-                                   1 * Fgutabs) *
-                                exp(-time * kelim) /
-                                (kelim)
-                       )
-  )
+  auc <- rep(NA_real_, length(time))
+  iv_vec <- (route == "iv")
+  oral_vec <- (route == "oral")
+  circ_vec <- (medium %in% c("blood", "plasma"))
+  excr_vec <- (medium %in% c("excreta"))
+
+  # Setup short names for indices
+  ivc <- (iv_vec & circ_vec)
+  ive <- (iv_vec & excr_vec)
+  orc <- (oral_vec & circ_vec)
+  ore <- (oral_vec & excr_vec)
+
+  # IV
+  auc[ivc] <- dose * (1 / (kelim) - exp(-time * kelim) / Cltot)
+
+  # ORAL
+  # kelim != kgutabs
+  if (kelim != kgutabs) {
+    auc[orc] <-  dose *
+      (-1 * Fgutabs_Vdist * kgutabs * (1 / kgutabs - 1 / kelim) /
+      ((-kelim + kgutabs)) +
+      Fgutabs_Vdist * kgutabs * (exp(-time * kgutabs) / kgutabs -
+         exp(-time * kelim) / kelim) /
+      ((-kelim + kgutabs))
+      )
+  } else { # kelim == kgutabs
+    auc[orc] <- dose *
+      (Fgutabs_Vdist / (kelim) +
+         (-Fgutabs_Vdist * time * kelim - Fgutabs) * exp(-time * kelim) / (kelim)
+      )
+  }
+
+  # excreta are transformed to cumulative values therefore
+  # AUC is simply proportional to `Frec` and `Fgutabs` and `Dose`.
+  auc[ive] <- dose * Frec
+  auc[ore] <- dose * Frec * Fgutabs
 
   auc <- ifelse(medium %in% "blood",
                 Rblood2plasma * auc,

@@ -1,7 +1,7 @@
-#' Toxicokinetic statistics for 1-compartment model with specific clearance
+#' Toxicokinetic statistics for 1-compartment model for radiolabelling experiments
 #'
 #' Calculate predicted toxicokinetic statistics for a 1-compartment model.
-#' This does use the parameters for the `model_1comp_cl` that are taken from
+#' This does use the parameters for the `model_1comp_rad` that are taken from
 #' [httk] estimates.
 #'
 #' @section Statistics computed:
@@ -34,13 +34,13 @@
 #' For intravenous route, time of peak concentration is always 0.
 #' }
 #' \subsection{Peak concentration}{
-#' Evaluate [cp_1comp_cl()] at the time of peak concentration.
+#' Evaluate [cp_1comp_rad()] at the time of peak concentration.
 #' }
 #' \subsection{AUC evaluated at infinite time}{
-#' Evaluate [auc_1comp_cl()] at time = `Inf`.
+#' Evaluate [auc_1comp_rad()] at time = `Inf`.
 #' }
 #' \subsection{AUC evaluated at the time of the last observation}{
-#' Evaluate [auc_1comp_cl()] at time = `tlast`.
+#' Evaluate [auc_1comp_rad()] at time = `tlast`.
 #' }
 #'
 #' @inheritParams tkstats_1comp
@@ -50,13 +50,13 @@
 #' @export
 #' @author John Wambaugh, Caroline Ring, Gilberto Padilla Mercado
 tkstats_1comp_cl <- function(pars,
-                          route,
-                          medium,
-                          dose,
-                          time_unit,
-                          conc_unit,
-                          vol_unit,
-                          ...) {
+                             route,
+                             medium,
+                             dose,
+                             time_unit,
+                             conc_unit,
+                             vol_unit,
+                             ...) {
 
   params <- fill_params_1comp(pars)
 
@@ -73,8 +73,8 @@ tkstats_1comp_cl <- function(pars,
   dose_int <- 1 / 24
 
   Css <- dose * ifelse(route %in% "oral",
-                     Fgutabs_Vdist / (CLtot / Vdist) / dose_int,
-                     1 / (CLtot * dose_int)) *
+                       Fgutabs_Vdist / (CLtot / Vdist) / dose_int,
+                       1 / (CLtot * dose_int)) *
     ifelse(medium %in% "blood",
            Rblood2plasma,
            1)
@@ -85,17 +85,17 @@ tkstats_1comp_cl <- function(pars,
                  log(kgutabs / (CLtot / Vdist)) / (kgutabs - (CLtot / Vdist)),
                  0)
 
-  Cmax <- cp_1comp_cl(params = pars,
-                   time = tmax,
-                   dose = dose,
-                   route = route,
-                   medium = medium)
-
-  AUC_inf <- auc_1comp_cl(params = pars,
-                       time = Inf,
+  Cmax <- cp_1comp_rad(params = pars,
+                       time = tmax,
                        dose = dose,
                        route = route,
                        medium = medium)
+
+  AUC_inf <- auc_1comp_rad(params = pars,
+                           time = Inf,
+                           dose = dose,
+                           route = route,
+                           medium = medium)
 
   return(data.frame(param_name = c("CLtot",
                                    "CLtot/Fgutabs",

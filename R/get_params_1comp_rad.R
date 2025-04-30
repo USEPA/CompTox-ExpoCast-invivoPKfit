@@ -94,7 +94,7 @@
 #' \item `start`: Numeric: The starting guesses for each parameter
 #' }
 #' @author Gilberto Padilla Mercado
-#' @family 1-compartment model functions
+#' @family 1-compartment radiation model functions
 #' @family get_params functions
 #' @family built-in model functions
 
@@ -169,7 +169,8 @@ get_params_1comp_rad <- function(
                                      Fgutabs = 0,
                                      kgutabs = log(2) / (2 * max(Time_trans)),
                                      Fgutabs_Vdist = 0.01,
-                                     Rblood2plasma = 1e-2)
+                                     Rblood2plasma = 1e-2,
+                                     Frec = 0.001)
   # which parameters did not have lower bounds specified in the `lower_bound`
   # argument?
   lower_bound_missing <- setdiff(names(lower_bound_default),
@@ -191,7 +192,8 @@ get_params_1comp_rad <- function(
                                      Fgutabs = 1,
                                      kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
                                      Fgutabs_Vdist = 1e2,
-                                     Rblood2plasma = 100)
+                                     Rblood2plasma = 100,
+                                     Frec = 1)
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
   upper_bound_missing <- setdiff(names(upper_bound_default),
@@ -263,5 +265,27 @@ get_params_1comp_rad <- function(
                        "upper_bound" = upper_bound_vect)
 
   # Get starts goes here and the rest of the function
+  par_DF <- get_starts_1comp_rad(
+    data = data,
+    par_DF = par_DF,
+    restrictive = restrictive
+  )
 
+  # check to ensure starting values are within bounds
+  # if not, then replace them by a value halfway between bounds
+  # Note here that parameter lower and upper bounds can be EQUAL to start value
+  # This is useful for non-optimized parameters
+  start_low <- (par_DF$start < par_DF$lower_bound) %in% TRUE
+  start_high <- (par_DF$start > par_DF$upper_bound) %in% TRUE
+  start_nonfin <- !is.finite(par_DF$start)
+
+  par_DF[start_low | start_high | start_nonfin,
+         "start"] <- rowMeans(
+           cbind(par_DF[start_low | start_high | start_nonfin,
+                        c("lower_bound",
+                          "upper_bound")]
+           )
+         )
+
+  return(par_DF)
 }

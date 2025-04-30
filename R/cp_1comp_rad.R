@@ -78,7 +78,7 @@ cp_1comp_rad <- function(params, time, dose, route, medium = 'plasma',
   Clhep <- (Q_totli * Fup * Clint) / (Q_totli + (Fup * Clint / Rblood2plasma))
   Clren <- Fup * Q_gfr
   Cltot <- Clren + Clhep
-  Cltot_Vdist <- Cltot / Vdist
+  kelim <- Cltot / Vdist # Cltot is L/hr and Vdist is in L
 
   A_t <- rep(NA_real_, length(time))
   iv_vec <- (route == "iv")
@@ -92,25 +92,25 @@ cp_1comp_rad <- function(params, time, dose, route, medium = 'plasma',
   orc <- (oral_vec & circ_vec)
   ore <- (oral_vec & excr_vec)
 
-  # For IV, CLtot_vdist == kgutabs has no bearing
-  A_t[ivc] <- dose * exp(-Cltot_Vdist * time[ivc])
-  A_t[ive] <- dose * Frec * (1 - exp(-Cltot_Vdist * time[ive]))
+  # For IV, kelim == kgutabs has no bearing
+  A_t[ivc] <- dose * exp(-kelim * time[ivc])
+  A_t[ive] <- dose * Frec * (1 - exp(-kelim * time[ive]))
 
   # Check "static conditions" for oral absorption
-  if (Cltot_Vdist != kgutabs & any(orc & ore)) {
-    A_t[orc] <- dose * (Fgutabs * kgutabs) / ((kgutabs - Cltot_Vdist)) *
-      (exp(-Cltot_Vdist * time[orc]) - exp(-kgutabs * time[orc]))
+  if (kelim != kgutabs & any(orc & ore)) {
+    A_t[orc] <- dose * (Fgutabs * kgutabs) / ((kgutabs - kelim)) *
+      (exp(-kelim * time[orc]) - exp(-kgutabs * time[orc]))
 
-    A_t[ore] <- dose * (Fgutabs * Frec) / ((Cltot_Vdist - kgutabs)) *
-      (Cltot_Vdist * (1 - exp(-kgutabs * time[ore])) -
-         kgutabs * (1 - exp(-Cltot_Vdist * time[ore])))
+    A_t[ore] <- dose * (Fgutabs * Frec) / ((kelim - kgutabs)) *
+      (kelim * (1 - exp(-kgutabs * time[ore])) -
+         kgutabs * (1 - exp(-kelim * time[ore])))
   } else {
-    A_t[orc] <- dose * (Fgutabs * Cltot_Vdist * time[orc]) *
-      (exp(-Cltot_Vdist * time[orc]))
+    A_t[orc] <- dose * (Fgutabs * kelim * time[orc]) *
+      (exp(-kelim * time[orc]))
 
     A_t[ore] <- dose * (Fgutabs * Frec) *
-      (1 - exp(-Cltot_Vdist * time[ore]) - time[ore] *
-         Cltot_Vdist * exp(-Cltot_Vdist * time[ore]))
+      (1 - exp(-kelim * time[ore]) - time[ore] *
+         kelim * exp(-kelim * time[ore]))
   }
 
   A_t <- ifelse(medium %in% "blood",

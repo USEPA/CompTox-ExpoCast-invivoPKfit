@@ -29,76 +29,24 @@
 #' set. (It is possible that either IV or oral data may not be
 #' available for a chemical.)
 #'
-#' @section Starting value for `kelim`:
+#' @inheritSection get_starts_1comp_cl Starting value for `kelim`
+#' @inheritSection get_starts_1comp_cl Starting value for `Vdist`
+#' @inheritSection get_starts_1comp_cl Starting value for `kgutabs`
+#' @inheritSection get_starts_1comp_cl Starting value for `Fgutabs_Vdist`
+#' @inheritSection get_starts_1comp_cl Starting value for `Fgutabs`
+#' @inheritSection get_starts_1comp_cl Starting value for `Rblood2plasma`
+#' @section Starting value for `Frec`:
 #'
-#' If IV data exist, then only IV data are used to derive starting estimates for
-#' `kelim`, even if oral data also exist.
+#' The empirical value of `Frec` is attainable when the experimental collection
+#' of excreta goes on until there is no detectable compound. In this case,
+#' the values will be equal to the maximum cumulative amount recovered divided
+#' by `Dose` or `Dose` * `Fgutabs` for intravenous and oral administration, respectively.
 #'
-#' If only oral data exist, then the oral data are used to derive a starting
-#' estimate for `kelim`.
+#' If all `excreta` data are 'detectable', the assumption that we can necessarily
+#' obtain an empirical estimate of `Frec` may not hold. While in this case still,
+#' the maximum is used, the model fitting steps will help realize a better estimate
+#' for this fraction recovered.
 #'
-#' Whichever data set is used (IV or oral), the starting value for `kelim` is
-#' derived by assuming that the range of observed time values in the data set
-#' spans two elimination half-lives. This implies that the elimination half-life
-#' is equal to the midpoint of observed time values, and that the starting value
-#' for the elimination time constant `kelim` is therefore `log(2)` divided by the
-#' midpoint of observed time values.
-#'
-#' Of course, this assumption is unlikely to be correct. However, we hope that it
-#' will yield a starting guess for `kelim` that is at least on the right order of
-#' magnitude.
-#'
-#' @section Starting value for `Vdist`:
-#'
-#' Using a calculated value for total clearance, `Cl_tot`, `Vdist` is estimated
-#' by dividing this by the estimation of `kelim`.
-#'
-#' @section Starting value for `kgutabs`:
-#'
-#' If oral data exist (whether or not IV data also exist), then the oral data
-#' are used to derive a starting value for `kgutabs`.
-#'
-#' First, concentrations are dose-normalized by dividing them by their corresponding
-#' doses. Then the normalized concentrations are log10-transformed.
-#'
-#' The time of peak concentration (`tmax`), and the median (normalized,
-#' log-transformed) peak concentration (`Cmax_log10`), are identified using [get_peak()].
-#'
-#' As a very rough guess,`tmax` is assumed to
-#' occur at one absorption half-life. Under this assumption, `kgutabs` is equal
-#' to `log(2)/tmax`, and this is taken as the starting value.
-#'
-#' @section Starting value for `Fgutabs_Vdist`:
-#'
-#' If any oral data exist (whether or not IV data also exist), then the oral data
-#' are used to derive a starting value for `Fgutabs_Vdist`.
-#'
-#' If the kinetics obey a one-compartment model, then if concentrations are
-#' dose-normalized, log-transformed, and plotted vs. time, then at late time
-#' points (after concentration has peaked), the concentration vs. time
-#' relationship will approach a straight line with slope `-kelim`.
-#'
-#' If this straight line is extrapolated back to time 0, then the resulting
-#' intercept (call it `A`), expressed on the natural scale, is equal to
-#' `Fgutabs_Vdist * kgutabs/(kgutabs-kelim)`. See
-#' https://www.boomer.org/c/p4/c09/c0902.php .
-#'
-#' Roughly, we approximate `A` on the log10 scale by extrapolating back from the peak along a
-#' straight line with slope `-kelim`, using the previously-derived starting
-#' value for `kelim`. So `log10(A) = Cmax_log10 + kelim*tmax`.
-#'
-#' Using the previously-derived starting values for `kgutabs` and `kelim`, then,
-#' the starting value for `Fgutabs_Vdist` can be derived as `A * (kgutabs-kelim)/kgutabs`.
-#'
-#' @section Starting value for `Fgutabs`:
-#'
-#' If both oral and IV data exist, then the derived starting values for `Vdist`
-#' (from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
-#' yield a derived starting value for `Fgutabs`.
-#'
-#' @section Starting value for `Rblood2plasma`:
-#'
-#' The starting value for `Rblood2plasma` is set to the value given by [httk::parameterize_gas_pbtk()].
 #'
 #' @inheritParams get_starts_flat
 #' @param restrictive A boolean value determinining whether to assume restrictive
@@ -109,14 +57,14 @@
 #'  parameter cannot be estimated from the available data, then its starting value
 #'  will be `NA_real_`
 #' @import httk
-#' @author Caroline Ring
-#' @family 1-compartment model functions
+#' @author Gilberto Padilla Mercado, Caroline Ring
+#' @family 1-compartment radiation model functions
 #' @family get_starts functions
 #' @family built-in model functions
 #'
-get_starts_1comp_cl <- function(data,
-                             par_DF,
-                             restrictive) {
+get_starts_1comp_rad <- function(data,
+                                par_DF,
+                                restrictive) {
   # initialize starting values for each parameter.
   # if no IV data exist, then Vdist starting value will remain NA.
   # if no oral data exist, then Fgutabs_Vdist and Fgutabs starting values will remain NA.
@@ -136,13 +84,13 @@ get_starts_1comp_cl <- function(data,
                         names_to = "Species",
                         values_to = "param_value")
   Q_gfr <- setNames(object = Q_gfr[["param_value"]],
-                         nm = tolower(Q_gfr[["Species"]]))
+                    nm = tolower(Q_gfr[["Species"]]))
 
   Q_totli <- httk::tissue.data %>%
     dplyr::filter(variable %in% "Flow (mL/min/kg^(3/4))",
                   Tissue %in% "liver")
   Q_totli <- setNames(object = Q_totli[["value"]],
-                           nm = tolower(Q_totli[["Species"]]))
+                      nm = tolower(Q_totli[["Species"]]))
 
   names_Q_gfr <- names(Q_gfr)
   this_species <- unique(data$Species)
@@ -233,6 +181,21 @@ get_starts_1comp_cl <- function(data,
     Fgutabs <- Fgutabs_Vdist * Vdist
   }
 
+  # Get the initial guess for fraction recovered
+  # Does the excreta data have any non-detects?
+  # Get the time at which the maximum cumulative concentration occurs
+  data_exc <- subset(data, subset = Media %in% 'excreta')
+  tmax_exc <- data_exc[
+    which(data_exc[["Conc"]] == max(data_exc[["Conc"]])),
+    "Time"
+    ]
+
+  # Take the median of the concentrations at that timepoint
+  # (accounting for multiple individual observations)
+  Frec <- median(data_exc[data_exc[["Time"]] == tmax_exc, "Conc"],
+                 na.rm = TRUE)
+
+
 
   starts <- c("Q_totli" = Q_totli,
               "Q_gfr" = Q_gfr,
@@ -242,7 +205,8 @@ get_starts_1comp_cl <- function(data,
               "Vdist" = Vdist,
               "Fgutabs_Vdist" = Fgutabs_Vdist,
               "Fgutabs" = Fgutabs,
-              "Rblood2plasma" = Rblood2plasma)
+              "Rblood2plasma" = Rblood2plasma,
+              "Frec" = Frec)
 
   par_DF$start <- starts[par_DF$param_name]
 
