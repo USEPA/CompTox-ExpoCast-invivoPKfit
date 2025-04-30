@@ -163,18 +163,30 @@ is represented by a single parameter named `Fgutabs_Vdist`. `Fgutabs` and
 `Fgutabs_Vdist` will be estimated from data, along with `kelim` and `kgutabs`.
 }
 
+\section{Oral data and IV data}{
+
+
+If both oral and IV dosing data are available, then `Vdist`, `kelim`,
+`kgutabs`, and `Fgutabs` will all be estimated from the data.
+}
+
+\section{Blood and plasma data}{
+
+
+If both blood and plasma data are available, then `Rblood2plasma` will be estimated from the data.
+}
+
+\section{Only one of blood or plasma data}{
+
+
+If only one of blood or plasma data are available, then `Rblood2plasma` will be
+held constant at 1, not estimated from the data.
+}
+
 \seealso{
-Other 1-compartment model functions: 
-\code{\link{auc_1comp}()},
-\code{\link{auc_1comp_cl}()},
-\code{\link{cp_1comp}()},
-\code{\link{cp_1comp_cl}()},
-\code{\link{get_params_1comp}()},
-\code{\link{get_params_1comp_cl}()},
-\code{\link{get_params_1comp_fup}()},
-\code{\link{get_starts_1comp}()},
-\code{\link{get_starts_1comp_cl}()},
-\code{\link{get_starts_1comp_fup}()}
+Other 1-compartment radiation model functions: 
+\code{\link{cp_1comp_rad}()},
+\code{\link{get_starts_1comp_rad}()}
 
 Other get_params functions: 
 \code{\link{get_params_1comp}()},
@@ -186,6 +198,7 @@ Other get_params functions:
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
@@ -202,6 +215,7 @@ Other built-in model functions:
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
 \code{\link{tkstats_2comp}()},
@@ -210,6 +224,6 @@ Other built-in model functions:
 \author{
 Gilberto Padilla Mercado
 }
-\concept{1-compartment model functions}
+\concept{1-compartment radiation model functions}
 \concept{built-in model functions}
 \concept{get_params functions}

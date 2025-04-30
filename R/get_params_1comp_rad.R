@@ -13,7 +13,7 @@
 #' @inheritSection get_params_1comp_cl Constant parameters from `httk`
 #' @inheritSection get_params_1comp_cl IV data, no oral data
 #' @inheritSection get_params_1comp_cl Oral data, no IV data
-#' @inheritSection get_params_1comp_cl Oral data and IV data:
+#' @inheritSection get_params_1comp_cl Oral data and IV data
 #' @inheritSection get_params_flat Blood and plasma data
 #' @inheritSection get_params_flat Only one of blood or plasma data
 #'

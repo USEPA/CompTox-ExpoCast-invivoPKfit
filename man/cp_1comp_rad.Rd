@@ -4,7 +4,7 @@
 \alias{cp_1comp_rad}
 \title{Analytical 1-compartment model for total radiolabeled material}
 \usage{
-cp_1comp_rad(params, time, dose, route, medium = "plasma", restrictive = FALSE)
+cp_1comp_rad(params, time, dose, route, medium = "plasma", restrictive = TRUE)
 }
 \arguments{
 \item{params}{A named numeric vector of model parameter values. See Details for
@@ -71,6 +71,7 @@ chemical concentration in blood plasma.
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
@@ -87,10 +88,15 @@ Other built-in model functions:
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
+
+Other 1-compartment radiation model functions: 
+\code{\link{get_params_1comp_rad}()},
+\code{\link{get_starts_1comp_rad}()}
 
 Other model concentration functions: 
 \code{\link{cp_1comp}()},
