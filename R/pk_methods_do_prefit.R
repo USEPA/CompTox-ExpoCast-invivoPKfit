@@ -22,6 +22,12 @@
 #' substituted.
 #'
 #' The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
+#'
+#' If there are less detected observations than timepoints, or if there are
+#' parameters necessary for model fitting that have missing values,
+#' these models will not be fit.
+#'
+#'
 #' @inheritParams do_preprocess.pk
 #' @return The same `pk` object, but with a new element `prefit`, containing the
 #'   results of pre-fit calculations and checks for each model and for the error
@@ -205,11 +211,12 @@ do_prefit.pk <- function(obj,
                 "Checking whether sufficient observations to fit models"
         )
       }
-
+      # Are any parameters used initialized to NA?
       n_par_DF <- par_DF_out %>%
         dplyr::filter(model %in% this_model) %>%
         dplyr::group_by(!!!obj$data_group) %>%
-        dplyr::summarise(n_par = sum(optimize_param))
+        dplyr::summarise(n_par = sum(optimize_param),
+                         used_par_na = any(use_param & is.na(start)))
 
       n_sigma_DF <- sigma_DF %>%
         dplyr::group_by(!!!obj$data_group) %>%
@@ -235,16 +242,21 @@ do_prefit.pk <- function(obj,
       fit_check_DF <- fit_check_DF %>%
         dplyr::mutate(
           n_par_opt = n_par + n_sigma,
-          fit_decision = ifelse(n_par_opt < n_detect,
+          fit_decision = ifelse(n_par_opt < n_detect | !used_par_na,
                                 "continue",
                                 "abort"),
-          fit_reason = ifelse(n_par_opt < n_detect,
-                              paste("Number of parameters to estimate is ",
-                                    "less than number of non-excluded detected observations"),
-                              paste("Number of parameters to estimate is ",
-                                    "greater than or equal to number of non-excluded detected observations")
-                              )
-          ) %>% as.data.frame()
+          fit_reason = ifelse(
+            used_par_na,
+            "Some parameters necessary for model fitting are NA.",
+            ifelse(
+              n_par_opt < n_detect,
+              paste("Number of parameters to estimate is ",
+                    "less than number of non-excluded detected observations"),
+              paste("Number of parameters to estimate is ",
+                    "greater than or equal to number of non-excluded detected observations")
+            )
+          )
+        ) %>% as.data.frame()
 
       fit_check_DF
     },

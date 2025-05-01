@@ -40,6 +40,10 @@ value less than the lower bound, then a constant value of 1000 is
 substituted.
 
 The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
+
+If there are less detected observations than timepoints, or if there are
+parameters necessary for model fitting that have missing values,
+these models will not be fit.
 }
 \author{
 Caroline Ring
