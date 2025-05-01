@@ -134,7 +134,8 @@ pseudo_cvt <- function(
                               pmax(sqrt(.Machine$double.eps),
                                    rnorm(1, mean = Conc, sd = var*log2(dose))
                               )
-    ))
+    )) |>
+    ungroup()
 
   return(tmp_cvt)
 }
