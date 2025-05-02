@@ -73,87 +73,11 @@ the maximum is used, the model fitting steps will help realize a better estimate
 for this fraction recovered.
 }
 
-\section{Starting value for `kelim`}{
-
-
-If IV data exist, then only IV data are used to derive starting estimates for
-`kelim`, even if oral data also exist.
-
-If only oral data exist, then the oral data are used to derive a starting
-estimate for `kelim`.
-
-Whichever data set is used (IV or oral), the starting value for `kelim` is
-derived by assuming that the range of observed time values in the data set
-spans two elimination half-lives. This implies that the elimination half-life
-is equal to the midpoint of observed time values, and that the starting value
-for the elimination time constant `kelim` is therefore `log(2)` divided by the
-midpoint of observed time values.
-
-Of course, this assumption is unlikely to be correct. However, we hope that it
-will yield a starting guess for `kelim` that is at least on the right order of
-magnitude.
-}
-
 \section{Starting value for `Vdist`}{
 
 
-Using a calculated value for total clearance, `Cl_tot`, `Vdist` is estimated
+Using a calculated value for total clearance, `Cltot`, `Vdist` is estimated
 by dividing this by the estimation of `kelim`.
-}
-
-\section{Starting value for `kgutabs`}{
-
-
-If oral data exist (whether or not IV data also exist), then the oral data
-are used to derive a starting value for `kgutabs`.
-
-First, concentrations are dose-normalized by dividing them by their corresponding
-doses. Then the normalized concentrations are log10-transformed.
-
-The time of peak concentration (`tmax`), and the median (normalized,
-log-transformed) peak concentration (`Cmax_log10`), are identified using [get_peak()].
-
-As a very rough guess,`tmax` is assumed to
-occur at one absorption half-life. Under this assumption, `kgutabs` is equal
-to `log(2)/tmax`, and this is taken as the starting value.
-}
-
-\section{Starting value for `Fgutabs_Vdist`}{
-
-
-If any oral data exist (whether or not IV data also exist), then the oral data
-are used to derive a starting value for `Fgutabs_Vdist`.
-
-If the kinetics obey a one-compartment model, then if concentrations are
-dose-normalized, log-transformed, and plotted vs. time, then at late time
-points (after concentration has peaked), the concentration vs. time
-relationship will approach a straight line with slope `-kelim`.
-
-If this straight line is extrapolated back to time 0, then the resulting
-intercept (call it `A`), expressed on the natural scale, is equal to
-`Fgutabs_Vdist * kgutabs/(kgutabs-kelim)`. See
-https://www.boomer.org/c/p4/c09/c0902.php .
-
-Roughly, we approximate `A` on the log10 scale by extrapolating back from the peak along a
-straight line with slope `-kelim`, using the previously-derived starting
-value for `kelim`. So `log10(A) = Cmax_log10 + kelim*tmax`.
-
-Using the previously-derived starting values for `kgutabs` and `kelim`, then,
-the starting value for `Fgutabs_Vdist` can be derived as `A * (kgutabs-kelim)/kgutabs`.
-}
-
-\section{Starting value for `Fgutabs`}{
-
-
-If both oral and IV data exist, then the derived starting values for `Vdist`
-(from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
-yield a derived starting value for `Fgutabs`.
-}
-
-\section{Starting value for `Rblood2plasma`}{
-
-
-The starting value for `Rblood2plasma` is set to the value given by [httk::parameterize_gas_pbtk()].
 }
 
 \seealso{

@@ -29,12 +29,7 @@
 #' set. (It is possible that either IV or oral data may not be
 #' available for a chemical.)
 #'
-#' @inheritSection get_starts_1comp_cl Starting value for `kelim`
 #' @inheritSection get_starts_1comp_cl Starting value for `Vdist`
-#' @inheritSection get_starts_1comp_cl Starting value for `kgutabs`
-#' @inheritSection get_starts_1comp_cl Starting value for `Fgutabs_Vdist`
-#' @inheritSection get_starts_1comp_cl Starting value for `Fgutabs`
-#' @inheritSection get_starts_1comp_cl Starting value for `Rblood2plasma`
 #' @section Starting value for `Frec`:
 #'
 #' The empirical value of `Frec` is attainable when the experimental collection
@@ -105,13 +100,35 @@ get_starts_1comp_rad <- function(data,
 
   }
 
-  parm_gas <- suppressMessages(
-    suppressWarnings(
-      httk::parameterize_3comp2(
-        dtxsid = unique(data[["Chemical"]]),
-        species = this_species,
-        default.to.human = TRUE,
-        restrictive.clearance = restrictive)))
+  parm_gas <- tryCatch(expr = {
+    suppressMessages(
+      suppressWarnings(
+        httk::parameterize_3comp2(
+          dtxsid = unique(data[["Chemical"]]),
+          species = this_species,
+          default.to.human = TRUE,
+          restrictive.clearance = restrictive)))
+  }, error = function(e) {
+    warning("There are no parameters for: ", unique(data[["Chemical"]]))
+    response = tolower(
+      trimws(
+        readline(prompt = "Do you wish to substitute Bis-phenol A's parameters?")
+      )
+    )
+    if (response %in% c("y", "yes")) {
+      suppressMessages(
+        suppressWarnings(
+          httk::parameterize_3comp2(
+            "bisphenol a",
+            species = this_species,
+            default.to.human = TRUE,
+            restrictive.clearance = restrictive)))
+    } else {
+      stop("You have elected not to substitute, prefit cannot continue.")
+    }
+  }
+  )
+
 
   if (restrictive) {
     Fup <- parm_gas[["Funbound.plasma"]]

@@ -82,30 +82,38 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
 
   list2env(as.list(params), envir = as.environment(-1))
 
+  # Set a Fup specific to the liver for clearance
+  if (!restrictive) {
+    Fup_hep <- 1
+  } else {
+    Fup_hep <- Fup
+  }
+
   # compute total clearance
-  Clhep <- (Q_totli * Fup * Clint) / (Q_totli + (Fup * Clint / Rblood2plasma))
+  Clhep <- (Q_totli * Fup_hep * Clint) / (Q_totli + (Fup_hep * Clint / Rblood2plasma))
   Clren <- Fup * Q_gfr
-  Cltot <- CLren + Clhep
-  Cltot_Vdist <- Cltot / Vdist
+  Clair <- (Rblood2plasma * Q_alv / Kblood2air)
+  Cltot <- Clren + Clhep + Clair
+  kelim <- Cltot / Vdist
 
   # compute plasma concentration
   cp <- dose * ifelse(
     route %in% "iv",
-    exp(-Cltot_Vdist * time) / Vdist,
+    exp(-kelim * time) / Vdist,
     # iv route
     ifelse(
-      rep(Cltot_Vdist != kgutabs, # oral route
+      rep(kelim != kgutabs, # oral route
           length(route)),
       # equation when kelim != kgutabs
       (Fgutabs_Vdist *
          kgutabs) /
-        (kgutabs - Cltot_Vdist) *
-        (exp(-Cltot_Vdist * time) -
+        (kgutabs - kelim) *
+        (exp(-kelim * time) -
            exp(-kgutabs * time)),
       # alternate equation when kelim == kgutabs
-      Fgutabs_Vdist * Cltot_Vdist *
+      Fgutabs_Vdist * kelim *
         time *
-        exp(-Cltot_Vdist * time)
+        exp(-kelim * time)
     )
   )
 

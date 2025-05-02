@@ -2,35 +2,34 @@
 #'
 #' Derive starting values for 1-compartment model parameters from available data
 #'
-#' This function is called internally by [get_params_1comp()] and should
+#' This function is called internally by [get_params_1comp_cl()] and should
 #' generally not be called directly by the user.
 #'
 #' The full set of model parameters for the 1-compartment model includes `Vdist`,
-#' `kelim`, `kgutabs`, `Fgutabs`, and `Rblood2plasma`. Whether each one can be
-#' estimated from the data depends on what routes of administration are included
-#' in the data. However, in this version of the one-compartment model,
-#' we use the liver and glomerular flow rates (`Q_totli` and `Q_gfr`, respectively)
-#' provided by [httk] as well as intrisic clearance `Clint` and fraction unbound
-#' in plasma, `Fup`. These starting values are established and then are used
-#' to calculate the other parameters in the 1-compartment model.
+#' `kelim`, `kgutabs`, `Fgutabs`, and `Rblood2plasma`.
+#' However, in this version of the one-compartment model,
+#' we use the liver, alveolar glomerular flow rates (`Q_totli`, `Q_alv`, and `Q_gfr`,
+#' respectively) provided by [httk].
+#' Other parameters provided by [httk] include:
+#' `Fup`, `Clint`, `Kblood2air`, `Rblood2plasma`, `kgutabs`, and `Fgutabs`.
+#'
+#' `Vdist` is calculated from estimated total clearance and `kelim`, which is
+#' calculated from the data.
 #'
 #' The numerical optimizer requires starting guesses for the value of each
-#' parameter to be estimated from the data. Default starting guesses are derived from the available data.
+#' parameter to be estimated from the data.
 #'
 #' These are intended to be *very* rough starting guesses, so the algorithm here
 #' is extremely naive. This function is not itself intended to produce valid
 #' estimates for any of the model parameters, and it is highly unlikely to do so.
 #'
-#' The derivation process is as follows.
+#' @section Estimation of `kelim`:
 #'
 #' First, data are filtered to exclude any non-detects.
 #'
 #' Then, data are split by route of administration, into an IV data set and an oral data
 #' set. (It is possible that either IV or oral data may not be
 #' available for a chemical.)
-#'
-#' @section Starting value for `kelim`:
-#'
 #' If IV data exist, then only IV data are used to derive starting estimates for
 #' `kelim`, even if oral data also exist.
 #'
@@ -50,55 +49,8 @@
 #'
 #' @section Starting value for `Vdist`:
 #'
-#' Using a calculated value for total clearance, `Cl_tot`, `Vdist` is estimated
+#' Using a calculated value for total clearance, `Cltot`, `Vdist` is estimated
 #' by dividing this by the estimation of `kelim`.
-#'
-#' @section Starting value for `kgutabs`:
-#'
-#' If oral data exist (whether or not IV data also exist), then the oral data
-#' are used to derive a starting value for `kgutabs`.
-#'
-#' First, concentrations are dose-normalized by dividing them by their corresponding
-#' doses. Then the normalized concentrations are log10-transformed.
-#'
-#' The time of peak concentration (`tmax`), and the median (normalized,
-#' log-transformed) peak concentration (`Cmax_log10`), are identified using [get_peak()].
-#'
-#' As a very rough guess,`tmax` is assumed to
-#' occur at one absorption half-life. Under this assumption, `kgutabs` is equal
-#' to `log(2)/tmax`, and this is taken as the starting value.
-#'
-#' @section Starting value for `Fgutabs_Vdist`:
-#'
-#' If any oral data exist (whether or not IV data also exist), then the oral data
-#' are used to derive a starting value for `Fgutabs_Vdist`.
-#'
-#' If the kinetics obey a one-compartment model, then if concentrations are
-#' dose-normalized, log-transformed, and plotted vs. time, then at late time
-#' points (after concentration has peaked), the concentration vs. time
-#' relationship will approach a straight line with slope `-kelim`.
-#'
-#' If this straight line is extrapolated back to time 0, then the resulting
-#' intercept (call it `A`), expressed on the natural scale, is equal to
-#' `Fgutabs_Vdist * kgutabs/(kgutabs-kelim)`. See
-#' https://www.boomer.org/c/p4/c09/c0902.php .
-#'
-#' Roughly, we approximate `A` on the log10 scale by extrapolating back from the peak along a
-#' straight line with slope `-kelim`, using the previously-derived starting
-#' value for `kelim`. So `log10(A) = Cmax_log10 + kelim*tmax`.
-#'
-#' Using the previously-derived starting values for `kgutabs` and `kelim`, then,
-#' the starting value for `Fgutabs_Vdist` can be derived as `A * (kgutabs-kelim)/kgutabs`.
-#'
-#' @section Starting value for `Fgutabs`:
-#'
-#' If both oral and IV data exist, then the derived starting values for `Vdist`
-#' (from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
-#' yield a derived starting value for `Fgutabs`.
-#'
-#' @section Starting value for `Rblood2plasma`:
-#'
-#' The starting value for `Rblood2plasma` is set to the value given by [httk::parameterize_gas_pbtk()].
 #'
 #' @inheritParams get_starts_flat
 #' @param restrictive A boolean value determinining whether to assume restrictive
@@ -128,7 +80,7 @@ get_starts_1comp_cl <- function(data,
   Vdist <- NA_real_
   Fgutabs <- NA_real_
   Fgutabs_Vdist <- NA_real_
-  Fup <- 1
+  Fup <- NA_real_
 
   Q_gfr <- httk::physiology.data %>%
     dplyr::filter(Parameter %in% "GFR") %>%
@@ -144,7 +96,19 @@ get_starts_1comp_cl <- function(data,
   Q_totli <- setNames(object = Q_totli[["value"]],
                            nm = tolower(Q_totli[["Species"]]))
 
+  Q_alv <- httk::physiology.data %>%
+    dplyr::filter(Parameter == "Pulmonary Ventilation Rate") %>%
+    dplyr::select(dplyr::where(is.numeric)) %>%
+    tidyr::pivot_longer(cols = everything(),
+                        names_to = "Species",
+                        values_to = "value") %>%
+    dplyr::mutate(value = 0.67 * value) # httk Qalvc calculation, at rest
+  Q_alv <- setNames(object = Q_alv[["value"]],
+                    nm = tolower(Q_alv[["Species"]]))
+
+  # Get species-specific flow rates, or default to human
   names_Q_gfr <- names(Q_gfr)
+  names_Q_alv <- names(Q_alv)
   this_species <- unique(data$Species)
 
   if (this_species %in% names_Q_gfr) {
@@ -154,8 +118,64 @@ get_starts_1comp_cl <- function(data,
     Q_gfr <- Q_gfr[["human"]] * (60 / 1000)
     Q_totli <- Q_totli[["human"]] * (60 / 1000)
     message("Species not in database, using human values for Q_gfr & Q_totli")
-
   }
+
+  if (this_species %in% names_Q_alv) {
+    Q_alv <- Q_alv[[this_species]]
+  } else {
+    Q_alv <- Q_alv[["human"]]
+    message("Species not in database, using human values for Q_alv")
+  }
+
+  parm_gas <- tryCatch(
+    expr = {
+      httk::parameterize_3comp2(
+        dtxsid = unique(data[["Chemical"]]),
+        species = this_species,
+        default.to.human = TRUE,
+        restrictive.clearance = restrictive
+      ) |>
+        suppressWarnings() |>
+        suppressMessages()
+    }, error = function(e) {
+      message("Error: ", e)
+      if (interactive()) {
+        response <- readline(
+          prompt = paste0(
+            "There has been an error, ",
+            "substitute with starting parameters for bisphenol A?"
+          )
+        ) |>
+          tolower() |>
+          trimws()
+        if (startsWith(response, 'y')) {
+          httk::parameterize_3comp2(
+            dtxsid = "DTXSID7020182",
+            species = this_species,
+            default.to.human = TRUE,
+            restrictive.clearance = restrictive
+          ) |>
+            suppressWarnings() |>
+            suppressMessages()
+        } else {
+          # Early return with all values set to NA_real_
+          starts <- c("Q_totli" = NA_real_,
+                      "Q_gfr" = NA_real_,
+                      "Q_alv" = NA_real_,
+                      "Kblood2air" = NA_real_,
+                      "Fup" = NA_real_,
+                      "Clint" = NA_real_,
+                      "kgutabs" = NA_real_,
+                      "Vdist" = NA_real_,
+                      "Fgutabs" = NA_real_,
+                      "Rblood2plasma" = NA_real_)
+
+          par_DF$start <- starts[par_DF$param_name]
+          return(par_DF)
+        }
+      }
+    }
+  )
 
   parm_gas <- suppressMessages(
     suppressWarnings(
@@ -165,17 +185,15 @@ get_starts_1comp_cl <- function(data,
         default.to.human = TRUE,
         restrictive.clearance = restrictive)))
 
-  if (restrictive) {
-    Fup <- parm_gas[["Funbound.plasma"]]
-  }
 
+  # Set parameters needed for model
+  Fup <- parm_gas[["Funbound.plasma"]]
   Rblood2plasma <- parm_gas[["Rblood2plasma"]]
-
   Clint <- parm_gas[["Clint"]]
-
   Kblood2air <- parm_gas[["Kblood2air"]]
-
-  Qalvc <- parm_gas[["Qalvc"]]
+  Q_alv <- parm_gas[["Qalvc"]]
+  kgutabs <- parm_gas[["kgutabs"]]
+  Fgutabs <- parm_gas[["Fabsgut"]]
 
 
   # Get starting Concs from data
@@ -190,8 +208,18 @@ get_starts_1comp_cl <- function(data,
   podat <- subset(tmpdat,
                   Route %in% "oral")
 
-  Cl_hep <- Q_totli * Fup * Clint / (Q_totli + (Fup * Clint / Rblood2plasma))
-  Cl_tot <- Q_gfr + Cl_hep + (Rblood2plasma * Qalvc / Kblood2air)
+  # Set a Fup specific to the liver for clearance
+  if (!restrictive) {
+    Fup_hep <- 1
+  } else {
+    Fup_hep <- Fup
+  }
+  Clhep <- Q_totli * Fup_hep * Clint / (Q_totli + (Fup_hep * Clint / Rblood2plasma))
+  # Need to include Fup for renal clearance
+  Clren <- Fup * Q_gfr
+  Clair <- (Rblood2plasma * Q_alv / Kblood2air)
+
+  Cltot <- Clren + Clhep + Clair
 
 
   # Quick and dirty:
@@ -203,7 +231,7 @@ get_starts_1comp_cl <- function(data,
     kelim <- log(2) / halflife
 
     # Vdist: calculate this based on Cltot/kelim
-    Vdist <- Cl_tot / kelim
+    Vdist <- Cltot / kelim
   }
 
   if (nrow(podat) > 0) {
@@ -214,33 +242,25 @@ get_starts_1comp_cl <- function(data,
     tmax <- tCmax[[1]]
     Cmax <- tCmax[[2]]
 
-    # assume peak time occurs at 1 absorption halflife
-    # so kgutabs = log(2)/tmax
-    kgutabs <- log(2) / tmax
 
     # if no IV data, then calculate kelim from oral data
     if (nrow(ivdat) == 0) {
       # and assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
       halflife <- mean(range(podat$Time))
       kelim <- log(2) / halflife
-      Vdist <- Cl_tot / kelim
+      Vdist <- Cltot / kelim
     }
-
-
-    # then extrapolate back from Cmax to time 0 with slope -kelim
-    Fgutabs_Vdist <- 10^((Cmax + kelim * tmax)) * (kgutabs - kelim) / (kgutabs)
-    # if we had IV data, then we had a Vdist estimate, so we can estimate Fgutabs too
-    Fgutabs <- Fgutabs_Vdist * Vdist
   }
 
 
   starts <- c("Q_totli" = Q_totli,
               "Q_gfr" = Q_gfr,
+              "Q_alv" = Q_alv,
+              "Kblood2air" = Kblood2air,
               "Fup" = Fup,
               "Clint" = Clint,
               "kgutabs" = kgutabs,
               "Vdist" = Vdist,
-              "Fgutabs_Vdist" = Fgutabs_Vdist,
               "Fgutabs" = Fgutabs,
               "Rblood2plasma" = Rblood2plasma)
 

@@ -139,7 +139,7 @@ and is estimated in this model via [httk::tissue.data] in a species-specific man
 `Q_gfr` is the glomular filtration rate of kidneys. It is estimated via
 [httk::physiology.data] in a species specific manner.
 `Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_1comp()]
-For each of these parameters default lower bounds are 10% and 110% of the starting value
+For each of these parameters default lower bounds are +/-10% of the starting value.
 }
 
 \section{IV data, no oral data}{

@@ -258,12 +258,24 @@ do_prefit.pk <- function(obj,
           )
         ) %>% as.data.frame()
 
+
       fit_check_DF
     },
     simplify = FALSE,
     USE.NAMES = TRUE)
 
   fit_check_out <- dplyr::bind_rows(fit_check_out, .id = "model")
+  par_DF_out <- par_DF_out %>%
+    dplyr::mutate(
+      lower_bound = ifelse(
+        is.na(lower_bound) & !is.na(start),
+        start, lower_bound
+      ),
+      upper_bound = ifelse(
+        is.na(upper_bound) & !is.na(start),
+        start, upper_bound
+      )
+    )
 
   obj$prefit$par_DF <- par_DF_out
   obj$prefit$fit_check <- fit_check_out

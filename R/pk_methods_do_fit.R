@@ -115,7 +115,7 @@ do_fit.pk <- function(obj,
   )
 
   # merge it all together
-  info_nest <- suppressMessages(dplyr::inner_join(
+  info_nest <- dplyr::inner_join(
     dplyr::inner_join(
       dplyr::inner_join(data_nest,
                         par_DF_nest,
@@ -125,7 +125,8 @@ do_fit.pk <- function(obj,
     fit_check,
     by = c("model", data_group_vars)) %>%
     dplyr::relocate(model, .after = data_group_vars[-1]) %>%
-    dplyr::left_join(fun_models, join_by(model == model_name)))
+    dplyr::left_join(fun_models, join_by(model == model_name)) %>%
+    suppressMessages()
 
 
   this_settings_optimx <- get_settings_optimx(obj)

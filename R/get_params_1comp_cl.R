@@ -1,12 +1,14 @@
 #' Get parameters for 1-compartment model with clearance assumption
 #'
-#' Get parameters for 1-compartment model and determine whether each is to be
-#' estimated from the data
+#' Get parameters for 1-compartment model and set intrinsic clearance
+#' to be optimized.
 #'
-#' The full set of model parameters for the 1-compartment model includes `Vdist`,
-#' `Clint`, `kgutabs`, `Fgutabs`, `Q_totli`, `Q_gfr`, `Fup`, and `Rblood2plasma`.
-#' Whether each one can be estimated from the data depends on which routes of administration
-#' are included in the data.
+#' The full set of model parameters for the 1-compartment model includes
+#' `Clint`,  `Fup`, `kgutabs`, `Fgutabs`, `Vdist`,
+#' `Q_totli`, `Q_gfr`, `Q_alv`, `Kblood2air`, and `Rblood2plasma`.
+#' Since these are directly taken from `httk`, many of the usual route-dependent
+#' estimations of these parameters are not necessary.
+#'
 #'
 #' @section Constant parameters from `httk`:
 #' `Q_totli` is the flow through the portal vein from the gut to the liver
@@ -14,7 +16,7 @@
 #' `Q_gfr` is the glomular filtration rate of kidneys. It is estimated via
 #' [httk::physiology.data] in a species specific manner.
 #' `Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_1comp()]
-#' For each of these parameters default lower bounds are 10% and 110% of the starting value
+#' For each of these parameters default lower bounds are +/-10% of the starting value.
 #'
 #' @section IV data, no oral data:
 #'
@@ -115,24 +117,28 @@ get_params_1comp_cl <- function(
     data,
     lower_bound = ggplot2::aes(Q_totli = NA,
                                Q_gfr = NA,
+                               Q_alv = NA,
+                               Kblood2air = NA,
                                Fup = 0,
                                Clint = 0,
-                               Vdist = 0.01,
-                               Fgutabs = 0.0,
-                               kgutabs = log(2) / (2 * max(Time_trans)),
-                               Fgutabs_Vdist = 0.01,
-                               Rblood2plasma = 1e-2),
+                               Vdist = NA,
+                               Fgutabs = NA,
+                               kgutabs = NA,
+                               Rblood2plasma = NA),
     upper_bound = ggplot2::aes(Q_totli = NA,
                                Q_gfr = NA,
+                               Q_alv = NA,
+                               Kblood2air = NA,
                                Fup = 1,
                                Clint = 1E5,
-                               Vdist = 100,
-                               Fgutabs = 1,
-                               kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                               Fgutabs_Vdist = 1e2,
-                               Rblood2plasma = 100),
+                               Vdist = NA,
+                               Fgutabs = NA,
+                               kgutabs = NA,
+                               Rblood2plasma = NA),
     param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4",
                                Q_gfr = "L/h/kg ^3/4",
+                               Q_alv = "L/h/kg ^3/4",
+                               Kblood2air = "unitless ratio",
                                Fup = "unitless fraction",
                                Clint = "L/h/kg",
                                Vdist = paste0("(", # Vdist
@@ -145,24 +151,18 @@ get_params_1comp_cl <- function(
                                Fgutabs = "unitless fraction", # Fgutabs
                                kgutabs = paste0("1/", # kgutabs
                                                 unique(Time_trans.Units)),
-                               Fgutabs_Vdist = paste0("(", # Fgutabs_Vdist
-                                                      unique(Conc.Units),
-                                                      ")",
-                                                      "/",
-                                                      "(",
-                                                      unique(Dose.Units),
-                                                      ")"),
                                Rblood2plasma = "unitless ratio"),
     restrictive = FALSE) {
   # param names
   param_name <- c("Q_totli",
                   "Q_gfr",
+                  "Q_alv",
+                  "Kblood2air",
                   "Fup",
                   "Clint",
                   "Vdist",
                   "Fgutabs",
                   "kgutabs",
-                  "Fgutabs_Vdist",
                   "Rblood2plasma")
 
 
@@ -171,15 +171,17 @@ get_params_1comp_cl <- function(
   # parameters. Any parameters not specified in the `lower_bound` argument will
   # take their default lower bounds defined here. This should be the same as the
   # default value for the `lower_bound` argument.
+  # NOTE: Many of these are NA because the start values are given by httk
   lower_bound_default = ggplot2::aes(Q_totli = NA,
                                      Q_gfr = NA,
+                                     Q_alv = NA,
+                                     Kblood2air = NA,
                                      Fup = 0,
                                      Clint = 0,
-                                     Vdist = 0.01,
-                                     Fgutabs = 0,
-                                     kgutabs = log(2) / (2 * max(Time_trans)),
-                                     Fgutabs_Vdist = 0.01,
-                                     Rblood2plasma = 1e-2)
+                                     Vdist = NA,
+                                     Fgutabs = NA,
+                                     kgutabs = NA,
+                                     Rblood2plasma = NA)
   # which parameters did not have lower bounds specified in the `lower_bound`
   # argument?
   lower_bound_missing <- setdiff(names(lower_bound_default),
@@ -195,13 +197,14 @@ get_params_1comp_cl <- function(
   # default value for the `upper_bound` argument.
   upper_bound_default = ggplot2::aes(Q_totli = NA,
                                      Q_gfr = NA,
+                                     Q_alv = NA,
+                                     Kblood2air = NA,
                                      Fup = 1,
                                      Clint = 1E5,
-                                     Vdist = 100,
-                                     Fgutabs = 1,
-                                     kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                                     Fgutabs_Vdist = 1e2,
-                                     Rblood2plasma = 100)
+                                     Vdist = NA,
+                                     Fgutabs = NA,
+                                     kgutabs = NA,
+                                     Rblood2plasma = NA)
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
   upper_bound_missing <- setdiff(names(upper_bound_default),
@@ -210,38 +213,18 @@ get_params_1comp_cl <- function(
   # defined in the `upper_bound` argument
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
 
-  # initialize optimization: start with optimize = TRUE for all params
-  optimize_param <- rep(TRUE, length(param_name))
+  # initialize optimization: start with optimize = FALSE for all params
+  optimize_param <- rep(FALSE, length(param_name))
   # but then will hold constant some of these
-  optimize_param[param_name %in% c("Fup", "Q_gfr", "Q_totli", "Rblood2plasma")] <- FALSE
+  optimize_param[param_name %in% c("Clint")] <- TRUE
 
   # initialize whether each param is used: start with use = TRUE for all params
   use_param <- rep(TRUE, length(param_name))
 
-  # now follow the logic described in the documentation for this function:
-  if ("oral" %in% data$Route) {
-    # if yes oral data:
-    if ("iv" %in% data$Route) {
-      # if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
-      optimize_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
-      use_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
-    } else {
-      # if oral ONLY:
-      # cannot fit Fgutabs and Vdist separately, so turn them off.
-      optimize_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
-      use_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
-    }
-  } else {
-    # if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_Vdist,
-    # and they won't be used.
-    optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
-    use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
-  }
-
-  # if both "blood" and "plasma" are not in data,
+  # if both "blood" and "plasma" are in data,
   # then Rblood2plasma will not be optimized
-  if (!(all(c("blood", "plasma") %in% data$Media))) {
-    optimize_param[param_name %in% "Rblood2plasma"] <- FALSE
+  if (all(c("blood", "plasma") %in% data$Media)) {
+    optimize_param[param_name %in% "Rblood2plasma"] <- TRUE
   }
 
   param_units_vect <- sapply(param_units,
@@ -286,13 +269,37 @@ get_params_1comp_cl <- function(
   start_high <- (par_DF$start > par_DF$upper_bound) %in% TRUE
   start_nonfin <- !is.finite(par_DF$start)
 
-  par_DF[start_low | start_high | start_nonfin,
-         "start"] <- rowMeans(
-           cbind(par_DF[start_low | start_high | start_nonfin,
-                        c("lower_bound",
-                          "upper_bound")]
-           )
-         )
+  # Notify user which starts are out of bounds:
+  if (any(start_low | start_high | start_nonfin)) {
+
+    oob_counts <- parDF[start_low | start_high,]["param_name"] |>
+      dplyr::count(param_name, name = "oob_starts")
+    inf_counts <- partDF[start_nonfin,]["param_name"] |>
+      dplyr::count(param_name, name = "non-finite_starts")
+    fin_counts <- partDF[!(start_low | start_high | start_nonfin),]["param_name"] |>
+      dplyr::count(param_name, name = "in-bound_starts")
+    message("There are out of bounds starting values detected!\n",
+            "See summary below:\n"
+    )
+
+    print(
+      merge(
+        merge(oob_counts, inf_counts, all = TRUE, by = "param_name"),
+        fin_counts,
+        all = TRUE, by = "param_name"
+      )
+    )
+
+    message("Values will be replaced by the mean of lower and upper bounds ",
+            "when possible.\n"
+            )
+  }
+
+  par_DF[start_low | start_high | start_nonfin, "start"] <- rowMeans(
+    cbind(
+      par_DF[start_low | start_high | start_nonfin, c("lower_bound", "upper_bound")]
+    )
+  )
 
   return(par_DF)
 }
