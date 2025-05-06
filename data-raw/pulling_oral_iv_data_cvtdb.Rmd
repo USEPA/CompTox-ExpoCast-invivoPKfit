@@ -57,7 +57,7 @@ query_db <- function(query = NULL, schema) {
   query_result <- tryCatch(
     return(dbGetQuery(con, query %>%
                         gsub("FROM ", paste0("FROM ", schema, "."), .) %>%
-                        gsub("JOIN ", paste0("JOIN ", schema, "."), .))),
+                        gsub("JOIN (?=\\w)", paste0("JOIN ", schema, "."), ., perl = TRUE))),
   error = function(cond){ 
     cat(paste0("\nError message: ", cond))
     return(NULL)
@@ -348,21 +348,44 @@ the entire database, so I think they are a little bit lower on the priority list
 # the FROM and LEFT JOIN statments
 query <- paste0(
   "SELECT distinct ",
-  "a.id, a.time_original,  a.time_hr, a.conc_original, a.conc_sd_original, a.conc, a.conc_sd, ",
-  #
-  "a.fk_series_id, b.analyte_name_original, b.analyte_dtxsid, b.analyte_casrn, ",
-  "b.fk_analyzed_chemical_id, b.fk_test_chemical_id, ",
-  "b.test_substance_dtxsid, b.analyte_name_secondary_original, ",
-  "b.conc_medium_normalized, b.conc_medium_original, b.time_units_original, b.conc_units_original, ",
-  "b.conc_units_normalized, b.loq, b.loq_units, b.n_subjects_in_series, b.radiolabeled, ",
-  #
-  "b.fk_study_id, c.administration_route_normalized, c.fk_dosed_chemical_id, ",
+  # Conc_Time_Values table fields
+  "a.id, a.fk_series_id, a.time_original, a.time_hr, ",
+  "a.conc_original, a.conc_sd_original, a.conc, a.conc_sd, ",
+  
+  # Series table fields
+  "b.fk_analyzed_chemical_id, ",
+  ## Chemical dictionary fields (analyzed chemical information)
+  "l.analyzed_chem_dtxsid, l.analyzed_chem_name_original, ",
+  "l.analyzed_chem_casrn, l.analyzed_chem_name, ",
+  
+  "b.time_units_original, b.conc_units_original, ",
+  "b.conc_units_normalized, b.loq, b.loq_units, ",
+  "b.n_subjects_in_series, b.radiolabeled, b.fk_study_id, ",
+  
+  # Studies table fields
+  "c.fk_dosed_chemical_id, ",
+  ## Chemical dictionary fields (dosed chemical information)
+  "k.dosed_chem_dtxsid, k.dosed_chem_name_original, ",
+  "k.dosed_chem_casrn, k.dosed_chem_name, ",
+  
   "c.dose_volume, c.dose_volume_units, c.dose_vehicle, ",
-  "c.dose_duration, c.dose_duration_units, c.dose_frequency, c.fasting_period, ",
+  "c.dose_duration, c.dose_duration_units, ",
+  ## dose_frequency dictionary fields
+  "j.dose_frequency_original, j.dose_frequency_normalized, ",
+  "c.fasting_period, ",
   "c.dose_level_normalized, c.dose_level_original, c.dose_level_units_original, ",
-  #
+  ## conc_medium dictionary fields
+  "i.conc_medium_original, i.conc_medium_normalized, ", 
+  ## administration_route dictionary fields
+  "h.administration_route_original, h.administration_route_normalized, ",
+  ## administration_method dictionary fields
+  "g.administration_method_original, g.administration_method_normalized, ",
+  ## administration_form dictionary fields
+  "f.administration_form_original, f.administration_form_normalized, ",
+  
+  # Subjects table fields
   "b.fk_subject_id, d.weight_kg, d.species, d.sex, d.age, d.age_units, d.age_category, ",
-  #
+  # Documents table fields
   "c.fk_extraction_document_id, e.pmid, e.year, e.other_study_identifier, ",
   "e.url, e.doi, e.extracted, e.curation_set_tag ",
   
@@ -380,11 +403,28 @@ query <- paste0(
   
   # Join to documents table by extraction document ID
   "LEFT JOIN documents e ON c.fk_extraction_document_id = e.id ",
+
+  # Join to dictionary tables
+  "LEFT JOIN administration_form_dict f ON c.fk_administration_form_id = f.id ",
+  "LEFT JOIN administration_method_dict g ON c.fk_administration_method_id = g.id ",
+  "LEFT JOIN administration_route_dict h ON c.fk_administration_route_id = h.id ",
+  "LEFT JOIN conc_medium_dict i ON b.fk_conc_medium_id = i.id ",
+  "LEFT JOIN dose_frequency_dict j ON c.fk_dose_frequency_id = j.id ",
+  
+  # Rename chemical fields for dosed vs. analyzed chemical record foreign keys
+  "LEFT JOIN (SELECT id, dsstox_substance_id as dosed_chem_dtxsid, ",
+  "chemical_name_original as dosed_chem_name_original, ", 
+  "dsstox_casrn as dosed_chem_casrn, preferred_name as dosed_chem_name ",
+  "FROM chemicals) as k ON c.fk_dosed_chemical_id = k.id ",
+  "LEFT JOIN (SELECT id, dsstox_substance_id as analyzed_chem_dtxsid, ",
+  "chemical_name_original as analyzed_chem_name_original, ",
+  "dsstox_casrn as analyzed_chem_casrn, preferred_name as analyzed_chem_name ",
+  "FROM chemicals) as l ON b.fk_analyzed_chemical_id = l.id ",
   
   # Filtering steps
-  "WHERE c.administration_route_normalized IN ('iv', 'oral') AND ",
-  "(b.conc_medium_normalized IN ('blood', 'plasma') OR ",
-  "b.conc_medium_original IN ('blood', 'plasma'))"
+  "WHERE h.administration_route_normalized IN ('iv', 'oral') AND ",
+  "(i.conc_medium_normalized IN ('blood', 'plasma', 'excreta') OR ",
+  "i.conc_medium_original IN ('blood', 'plasma', 'excreta'))"
 )
 
 sql_query <- query_db(query = query,
