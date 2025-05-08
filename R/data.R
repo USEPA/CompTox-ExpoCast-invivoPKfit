@@ -207,6 +207,14 @@
 #'
 "cvt_date"
 
+#' CvTdb data for invivoPKfit 2.0.0 release (old)
+#'
+#' The CvTdb data released for the manuscript Informatics for toxicokinetics (2025).
+#'
+#' A data.frame with similar data to [`cvt`]
+#'
+"cvt_2.0.0"
+
 #' Status ID for initialization
 #'
 #' An integer status that denotes a [pk()] object has been initialized.
