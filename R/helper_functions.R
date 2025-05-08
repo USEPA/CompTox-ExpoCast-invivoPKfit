@@ -1,7 +1,7 @@
 
 #' Converting common quotation mark symbols into basic ASCII forms.
 #'
-#' `force_ascii()` Takes curly quotes commonly found in chemical names and
+#' `force_ascii_quotes()` Takes curly quotes commonly found in chemical names and
 #' converts them to simple ASCII equivalent. This can be important for
 #' cross-compatibility with other databases and systems that use simple
 #' apostrophes `'` and quotes `"` instead of curly quotes or prime symbols.
@@ -12,9 +12,9 @@
 #' @returns Character vector with converted characters.
 #'
 #' @examples
-#' try(cat(force_ascii("3,3’,4,4′-tetrachloro-5-biphenylol")))
+#' try(cat(force_ascii_quotes("3,3’,4,4′-tetrachloro-5-biphenylol")))
 #'
-force_ascii <- function(x) {
+force_ascii_quotes <- function(x) {
   single_quote_chars <- c("\x91", "\x92", "\xB4")
   double_quote_chars <- c("\x93", "\x94")
   prime_char <- c("\u2032")
@@ -46,10 +46,54 @@ force_ascii <- function(x) {
 }
 
 
+#' Converting comma-delimited string representations of numeric vectors to numerics
+#'
+#' @param x A character vector that represents numeric value(s)
+#'
+#' @return A numeric vector of values or `NA_real_`
+#'
+#' @examples
+#' char2num(" ")
+#' char2num("22.2")
+#' char2num("12.3,4.1,10.1")
+#'
+string2num <- function(x) {
+  stopifnot(is.character(x))
+
+  num <- trimws(x)
+
+  if (!nzchar(num)) {
+    return(NA_real_)
+  }
+
+  num <- strsplit(num, split = ",") |> unlist() |> as.numeric()
+
+  return(num)
+}
+
+
+#' Converts numeric vector to comma-delimited string representation
+#'
+#' @param x A numeric vector.
+#' @return A string with comma-delimited values of `x` or an 'empty' string.
+#' @examples
+#' num2string(c(1,2.3))
+#' num2string(NA_real_)
+#'
+#'
+num2string <- function(x) {
+  stopifnot(is.numeric(x))
+
+  if (length(x) == 1 && is.na(x)) {
+    return(" ")
+  }
+
+  return(paste0(x, collapse = ","))
+}
+
+
+
 #' Creating a simple test CvT dataset
-#'
-#'
-#'
 #'
 #' @param params A named numeric vector of model parameter values.
 #' @param time A numeric vector of times, reflecting the time point when
