@@ -123,13 +123,10 @@ get_hessian.pk <- function(obj,
     dplyr::ungroup()
 
   # This setup allows for a more stable call to the model functions later on
-  fun_models <- data.frame(
-    model_name = unname(sapply(obj$stat_model, \(x) {x$name})),
-    model_fun = unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
-  )
+  fun_models <- get_stat_model(obj)
 
   newdata <- dplyr::left_join(coefs, newdata, by = data_grp_vars) %>%
-    dplyr::left_join(fun_models, join_by(model == model_name))
+    dplyr::left_join(fun_models, join_by(model))
 
 
   newdata <- newdata %>%
@@ -146,7 +143,7 @@ get_hessian.pk <- function(obj,
         calc_hessian(pars_opt = coefs_opt_vector,
                         pars_const = coefs_const_vector,
                         observations = observations,
-                        modelfun = model_fun,
+                        modelfun = modelfun,
                         dose_norm = obj$scales$conc$dose_norm,
                         log10_trans = obj$scales$conc$log10_trans)
       )

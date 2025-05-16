@@ -143,6 +143,9 @@ log_likelihood <- function(par,
                            includes_preds = FALSE,
                            suppress.messages = TRUE) {
 
+  # Fix the modelfun_args and modelfun variables
+  modelfun_args <- modelfun[[1]][["conc_fun_args"]]
+  modelfun <- modelfun[[1]][["conc_fun"]]
 
   # Used variables such that there is no need to reference 'data'
   Time_trans <- data$Time_trans
@@ -170,19 +173,25 @@ log_likelihood <- function(par,
     pred <- data$Conc_est
 
   } else {
-
-    # get un-transformed predicted plasma concentration vs. time for the current parameter
-    # values, by dose and route
-    pred <- do.call(
-      modelfun,
-      args = list(
+    # assemble arguments for do.call
+    if (class(modelfun_args) != "list") {
+      modelfun_args <- as.list(modelfun_args)
+    }
+    these_args <- append(
+      list(
         params = model.params,
         time = Time_trans,
         dose = Dose,
         route = Route,
         medium = Media
-      )
+      ),
+      modelfun_args
     )
+
+    # get un-transformed predicted plasma concentration vs. time for the current parameter
+    # values, by dose and route
+    pred <- do.call(modelfun,
+      args = these_args)
   }
 
   pred[which(pred < pLOQ)] <- pLOQ[which(pred < pLOQ)]

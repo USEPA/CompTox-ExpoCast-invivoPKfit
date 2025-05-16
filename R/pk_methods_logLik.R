@@ -189,27 +189,21 @@ logLik.pk <- function(object,
                             pLOQ)
 
 
-
   newdata <- suppressMessages(newdata %>%
     dplyr::select(!!!union(object$data_group, req_vars),
                   !!!other_vars))
-
-
-
 
     newdata <- newdata %>%
       dplyr::group_by(!!!object$data_group) %>%
       tidyr::nest(.key = "observations") %>%
       dplyr::ungroup()
 
-
   newdata <- tidyr::expand_grid(tidyr::expand_grid(model, method),
                                 newdata)
+
   # This setup allows for a more stable call to the model functions later on
-  fun_models <- data.frame(
-    model_name = unname(sapply(object$stat_model, \(x) {x$name})),
-    model_fun = unname(sapply(object$stat_model, \(x) {x$conc_fun}))
-  )
+  # make a join-able data.frame with all the possible models
+  fun_models <- get_stat_model(object)
 
   newdata <- dplyr::left_join(coefs, newdata,
                               by = c("model", "method",
@@ -219,22 +213,26 @@ logLik.pk <- function(object,
   newdata <- newdata %>%
     dplyr::rowwise() %>%
     dplyr::filter(!is.null(observations)) %>%
-    dplyr::left_join(fun_models, join_by(model == model_name)) %>%
+    dplyr::left_join(fun_models, join_by(model)) %>%
     dplyr::ungroup() %>%
     dplyr::distinct()
 
   newdata <- newdata %>%
     dplyr::rowwise() %>%
-    dplyr::mutate(log_likelihood = log_likelihood(
-      par = coefs_vector,
-      data = observations,
-      data_sigma_group = observations$data_sigma_group,
-      modelfun = model_fun,
-      dose_norm = conc_scale$dose_norm,
-      log10_trans = conc_scale$log10_trans,
-      negative = negative,
-      force_finite = force_finite,
-      suppress.messages = suppress.messages))
+    dplyr::mutate(
+      log_likelihood = log_likelihood(
+        par = coefs_vector,
+        data = observations,
+        data_sigma_group = observations$data_sigma_group,
+        modelfun = modelfun,
+        dose_norm = conc_scale$dose_norm,
+        log10_trans = conc_scale$log10_trans,
+        negative = negative,
+        force_finite = force_finite,
+        suppress.messages = suppress.messages
+      )
+    ) %>%
+    dplyr::select(-modelfun)
 
  if (drop_obs == TRUE) {
    newdata <- newdata %>%

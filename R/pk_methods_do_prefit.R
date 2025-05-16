@@ -242,7 +242,7 @@ do_prefit.pk <- function(obj,
       fit_check_DF <- fit_check_DF %>%
         dplyr::mutate(
           n_par_opt = n_par + n_sigma,
-          fit_decision = ifelse(n_par_opt < n_detect | !used_par_na,
+          fit_decision = ifelse(n_par_opt < n_detect & !used_par_na,
                                 "continue",
                                 "abort"),
           fit_reason = ifelse(

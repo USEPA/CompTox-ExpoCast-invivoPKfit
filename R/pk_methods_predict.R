@@ -79,14 +79,31 @@ predict.pk <- function(object,
     dplyr::select(-c(Time.Units, Time_trans.Units))
 
   # This setup allows for a more stable call to the model functions later on
-  fun_models <- data.frame(
-    model_name = unname(vapply(object$stat_model, \(x) {x$name}, character(1))),
-    model_fun = if (type == "auc") {
-      unname(sapply(object$stat_model, \(x) {x$auc_fun}))
-    } else {
-      unname(sapply(object$stat_model, \(x) {x$conc_fun}))
-    }
-  )
+  # make a join-able data.frame with all the possible models
+  fun_models <- get_stat_model.pk(object) %>%
+    dplyr::mutate(
+      predfun = unlist(
+        purrr::map(modelfun,
+                   \(x) {
+                     if (type == "auc") {
+                       unname(x$auc_fun)
+                     } else {
+                       unname(x$conc_fun)
+                     }
+                   }
+        )
+      ),
+      predfun_args = unname(purrr::map(modelfun,
+                                       \(x) {
+                                         if (type == "auc") {
+                                           as.list(x$auc_fun_args)
+                                         } else {
+                                           as.list(x$conc_fun_args)
+                                         }
+                                       }
+      )
+      )
+    )
 
   data_group_vars <- sapply(object$data_group,
                             rlang::as_label)
@@ -145,7 +162,7 @@ predict.pk <- function(object,
   # Set a new column for the model function
   newdata <- newdata %>%
     dplyr::left_join(fun_models,
-                     join_by(model == model_name)) %>%
+                     join_by(model)) %>%
     dplyr::distinct()
 
   # Get predictions
@@ -160,17 +177,20 @@ predict.pk <- function(object,
                                     1.0,
                                     Dose),
           Estimate = tryCatch(
-            do.call(model_fun,
-                    list(coefs_vector,
-                         time = Time,
-                         dose = Dose_tmp,
-                         route = Route,
-                         medium = Media
-                         )),
+            do.call(predfun,
+                    c(
+                      list(coefs_vector,
+                           time = Time,
+                           dose = Dose_tmp,
+                           route = Route,
+                           medium = Media),
+                      predfun_args
+                    )
+            ),
             error = function(err) {
               if (suppress.messages %in% FALSE) {
                 message("predict.pk(): Unable to run ",
-                        model_fun, " for ",
+                        predfun, " for ",
                         toString(data_group_vars),
                         " data grouping.\n",
                         "Likely an aborted fit, ",

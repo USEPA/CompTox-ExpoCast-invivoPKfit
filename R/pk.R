@@ -195,10 +195,10 @@
 
 pk <- function(data = NULL,
                mapping = ggplot2::aes(
-                 Chemical = analyte_dtxsid,
-                 Chemical_Name = analyte_name_original,
-                 DTXSID = analyte_dtxsid,
-                 CASRN = analyte_casrn,
+                 Chemical = analyzed_chem_dtxsid,
+                 Chemical_Name = analyzed_chem_name_original,
+                 DTXSID = analyzed_chem_dtxsid,
+                 CASRN = analyzed_chem_casrn,
                  Species = species,
                  Reference = fk_extraction_document_id,
                  Media = conc_medium_normalized,
@@ -229,6 +229,8 @@ pk <- function(data = NULL,
                facet_data_args = list()
 
 ) {
+
+  stopifnot(inherits(data, "data.frame"))
 
   # Check to ensure the mapping contains all required harmonized column names
   mapping_default <- ggplot2::aes(

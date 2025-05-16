@@ -122,8 +122,7 @@ plot.pk <- function(x,
 
   newdata <- subset(newdata, exclude %in% FALSE)
 
-  if (is.null(log10_C))
-    log10_C <- conc_scale$log10_trans
+  if (is.null(log10_C)) log10_C <- conc_scale$log10_trans
 
 
   if (is.null(fit_limits)) {
@@ -177,17 +176,20 @@ plot.pk <- function(x,
   obs_vars <- setdiff(
     ggplot2::vars(
     Conc,
-    Conc_SD,
-    Conc.Units,
-    Value,
-    Value.Units,
-    Detect,
-    exclude,
-    Conc_trans,
-    Conc_trans.Units,
+    Conc_SD, Conc.Units,
+    Value, Value.Units,
+    Detect, exclude,
+    Conc_trans, Conc_trans.Units,
     Reference
   ),
   x$data_group)
+
+  name_subtitle <- FALSE
+  if ("Chemical_Name" %in% names(newdata) &&
+      !identical(newdata$Chemical, newdata$Chemical_Name)) {
+    obs_vars <- union(ggplot2::vars(Chemical_Name), obs_vars)
+    name_subtitle <- TRUE
+  }
 
 
   # Default arguments and functions
@@ -199,9 +201,11 @@ plot.pk <- function(x,
     color = factor(Dose)
   )
 
-  plot_point_aes_default <- ggplot2::aes(fill = factor(Dose),
-                                         shape = Reference,
-                                         alpha = Detect)
+  plot_point_aes_default <- ggplot2::aes(
+    fill = factor(ifelse(Detect %in% "Detect", Dose, NA)),
+    shape = Reference
+  )
+
 
   plot_fit_aes_default <- ggplot2::aes(
     x = !!time_var,
@@ -257,94 +261,102 @@ plot.pk <- function(x,
 
 
   newdata <- newdata %>%
-    dplyr::mutate(observation_plot =
-                    purrr::map(observations, \(x) {
-                      # Need to write this into a mutate + map pattern function
-                      # initialize plot
-                      p <- ggplot(data = x, mapping = plot_data_aes) +
-                        geom_point(mapping = plot_point_aes, stroke = 1) + # plots points
-                        geom_errorbar(mapping = plot_data_aes)
+    dplyr::mutate(
+      observation_plot =
+        purrr::map(observations, \(x) {
 
-                      t_units <- x %>%
-                        dplyr::pull(!!time_units_var) %>%
-                        unique()
+          # Need to write this into a mutate + map pattern function
+          # initialize plot
+          p <- ggplot(data = x, mapping = plot_data_aes) +
+            geom_point(mapping = plot_point_aes, stroke = 1) + # plots points
+            geom_errorbar(mapping = plot_data_aes, na.rm = TRUE)
 
-                      # if alpha = Detect then we have to do some trickery to implement that
-                      # that is the objective of plot_point_aes
-                      if (rlang::as_label(plot_point_aes$alpha) %in% "Detect") {
-                        # plot the data
-                        p <- p +
-                          geom_point()
-                        # plots here are un-filled points (only inherits color variable by default)
 
-                        if ("shape" %in% c(names(plot_data_aes), names(plot_point_aes))) {
-                          # Ensure shapes can take both fill and color if alpha is set
-                          p <- p +
-                            scale_shape_manual(values = 21:25)
-                        }
+          t_units <- x %>%
+            dplyr::pull(!!time_units_var) %>%
+            unique()
 
-                        # set an alpha scale
-                        p <- p + scale_alpha_manual(
-                          values = c("Detect" = 1, "Non-Detect" = 0),
-                          breaks = c("Detect", "Non-Detect"),
-                          drop = FALSE,
-                          name = NULL
-                        )
+          # if alpha = Detect then we have to do some trickery to implement that
+          # that is the objective of plot_point_aes
+          if (rlang::quo_get_expr(plot_point_aes$fill) == quote(
+            factor(ifelse(Detect %in% "Detect", Dose, NA)) # The default
+          )) {
 
-                        # Need to check whether there are two values in Detect
-                        # some might be all Non-Detect or all Detect
-                        if (length(unique(x$Detect)) > 1) {
-                          alpha_fill <- c("black", NA)
-                        } else {
-                          alpha_fill <- ifelse(unique(x$Detect) == "Detect", "black", NA)
-                        }
-                        p <- p +
-                          guides(alpha = guide_legend(
-                            override.aes = list(
-                              shape = 21,
-                              color = "black",
-                              stroke = 1,
-                              fill = alpha_fill,
-                              alpha = 1
-                            ),
-                            order = 2
-                          ))
+            if ("shape" %in% c(names(plot_data_aes), names(plot_point_aes))) {
+              # Ensure shapes can take both fill and color if alpha is set
+              p <- p +
+                scale_shape_manual(values = 21:25)
+            }
 
-                      }
-
-                      p <- p +
-                        do.call(facet_fun, args = facet_fun_args)
-
-                      if (log10_C) {
-                        p <- p + scale_y_continuous(trans = "log10", labels = scales::label_log())
-                      }
-
-                      p +
-                        labs(
-                          title = paste(!!!x$data_group),
-                          x = paste0("Time (", t_units, ")"),
-                          y = ifelse(
-                            conc_scale$dose_norm,
-                            "Concentration/Dose",
-                            "Concentration"
-                          )
-                        ) +
-                        theme_bw() +
-                        theme(
-                          panel.border = element_rect(
-                            color = "black",
-                            fill = NA,
-                            linewidth = 1
-                          ),
-                          plot.title = element_text(hjust = 0.5, face = "bold"),
-                          strip.background = element_rect(
-                            fill = "white",
-                            color = "black",
-                            size = 1
-                          )
-                        )
-                    }
+            # get limits and breaks
+            # if there is an NA, include in breaks
+            if ("Non-Detect" %in% x$Detect) {
+              alpha_breaks <- max(x$Dose, na.rm = TRUE)
+              p <- p +
+                scale_fill_discrete(
+                  na.value = "transparent",
+                  breaks = alpha_breaks,
+                  labels = "Non-Detect",
+                  guide = guide_legend(
+                    title = NULL,
+                    order = 2,
+                    override.aes = list(
+                      shape = 21,
+                      fill = NA,
+                      color = "black",
+                      stroke = 1
                     )
+                  )
+                )
+            } else {
+              p <- p +
+                guides(fill = "none")
+            }
+          }
+
+          p <- p +
+            do.call(facet_fun, args = facet_fun_args)
+
+          if (log10_C) {
+            p <- p + scale_y_continuous(trans = "log10", labels = scales::label_log())
+          }
+
+          p <- p +
+            labs(
+              title = paste(!!!x$data_group),
+              x = paste0("Time (", t_units, ")"),
+              y = ifelse(
+                conc_scale$dose_norm,
+                "Concentration/Dose",
+                "Concentration"
+              )
+            ) +
+            theme_bw() +
+            theme(
+              panel.border = element_rect(
+                color = "black",
+                fill = NA,
+                linewidth = 1
+              ),
+              plot.title = element_text(hjust = 0.5, face = "bold"),
+              strip.background = element_rect(
+                fill = "white",
+                color = "black",
+                size = 1
+              )
+            )
+
+          # Add name if not already Chemical
+          if (name_subtitle) {
+            p <- p +
+              labs(subtitle = unique(x$Chemical_Name)) +
+              theme(plot.subtitle = element_text(hjust = 0.5))
+          }
+
+          # Return value
+          p
+        }
+        )
     )
 
   # For predictions, interpolate time
@@ -479,9 +491,9 @@ plot.pk <- function(x,
     newdata <- newdata %>%
       dplyr::mutate(predicted_plot = purrr::map(predicted, \(x) {
         if (!is.null(x)) {
-        ggplot2::geom_line(data = x,
-                           mapping = plot_fit_aes,
-                           inherit.aes = FALSE)
+          ggplot2::geom_line(data = x,
+                             mapping = plot_fit_aes,
+                             inherit.aes = FALSE)
         } else {
           NULL
         }
@@ -492,9 +504,8 @@ plot.pk <- function(x,
         \(x, y) x + y +
           guides(
             color = guide_legend(title = "Dose", order = 1),
-            fill = "none",
             linetype = guide_legend(title = "Model & Method", order = 3),
-            shape = guide_legend(order = 4)
+            shape = guide_legend(order = 4, override.aes=list(fill = "black"))
           )
       ))
 
