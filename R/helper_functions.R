@@ -12,7 +12,7 @@
 #' @returns Character vector with converted characters.
 #'
 #' @examples
-#' try(cat(force_ascii_quotes("3,3’,4,4′-tetrachloro-5-biphenylol")))
+#' try(cat(invivoPKfit:::force_ascii_quotes("3,3’,4,4′-tetrachloro-5-biphenylol")))
 #'
 force_ascii_quotes <- function(x) {
   single_quote_chars <- c("\x91", "\x92", "\xB4")
@@ -53,9 +53,9 @@ force_ascii_quotes <- function(x) {
 #' @return A numeric vector of values or `NA_real_`
 #'
 #' @examples
-#' char2num(" ")
-#' char2num("22.2")
-#' char2num("12.3,4.1,10.1")
+#' invivoPKfit:::string2num(" ")
+#' invivoPKfit:::string2num("22.2")
+#' invivoPKfit:::string2num("12.3,4.1,10.1")
 #'
 string2num <- function(x) {
   stopifnot(is.character(x))
@@ -77,8 +77,8 @@ string2num <- function(x) {
 #' @param x A numeric vector.
 #' @return A string with comma-delimited values of `x` or an 'empty' string.
 #' @examples
-#' num2string(c(1,2.3))
-#' num2string(NA_real_)
+#' invivoPKfit:::num2string(c(1,2.3))
+#' invivoPKfit:::num2string(NA_real_)
 #'
 #'
 num2string <- function(x) {
