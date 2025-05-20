@@ -2,7 +2,7 @@ test_that("data preprocessing works without errors",
           {
             my_pk <- pk(
               data = subset(cvt,
-                            analyte_dtxsid %in% "DTXSID3061635"
+                            analyzed_chem_dtxsid %in% "DTXSID3061635"
               )
             )
             expect_no_error(do_preprocess(my_pk))
@@ -24,7 +24,7 @@ test_that("data preprocessing adds an element 'data'",
           {
             my_pk <- pk(
               data = subset(cvt,
-                            analyte_dtxsid %in% "DTXSID3061635"
+                            analyzed_chem_dtxsid %in% "DTXSID3061635"
               ))
             my_pk <- do_preprocess(my_pk)
             expect_true("data" %in% names(my_pk))
@@ -35,7 +35,7 @@ test_that("preprocessed data has all of the required harmonized variable names",
           {
             my_pk <- pk(
               data = subset(cvt,
-                            analyte_dtxsid %in% "DTXSID3061635"
+                            analyzed_chem_dtxsid %in% "DTXSID3061635"
               )
             )
             my_pk <- do_preprocess(my_pk)
