@@ -174,7 +174,7 @@ log_likelihood <- function(par,
 
   } else {
     # assemble arguments for do.call
-    if (class(modelfun_args) != "list") {
+    if (!is.list(modelfun_args)) {
       modelfun_args <- as.list(modelfun_args)
     }
     these_args <- append(

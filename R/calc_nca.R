@@ -83,14 +83,13 @@
 #' @import PK
 #' @author Caroline Ring
 calc_nca <- function(time,
-                    conc,
-                    detect,
-                   series_id = NULL,
-                   dose,
-                   route,
-                   method = "z",
-                   ...) {
-
+                     conc,
+                     detect,
+                     series_id = NULL,
+                     dose,
+                     route,
+                     method = "z",
+                     ...) {
 
   if (length(time) > 0 && length(conc) > 0 && length(dose) > 0 &&
       !all(is.na(time)) && !all(is.na(conc)) && !all(is.na(dose)) &&
@@ -154,20 +153,24 @@ calc_nca <- function(time,
       min_time_nz <- min(time[time > 0])
       min_time_step <- min(diff(time))
 
-      time_split <- sapply(time_split,
-                           function(this_time) {
-                             if (length(this_time) == 1) {
-                               this_time
-                             } else {
-                               # add a small fuzz factor: spread times evenly along 1/100 of smallest time step
-                               this_time + seq(from = this_time[1] - 0.005*min_time_step,
-                                               to = this_time[1] + 0.005*min_time_step,
-                                               length.out = length(this_time)
-                                               )
-                             }
-                           })
+      time_split <- sapply(
+        time_split,
+        function(this_time) {
+          if (length(this_time) == 1) {
+            this_time
+          } else {
+            # add a small fuzz factor: spread times evenly along 1/100 of smallest time step
+            this_time + seq(from = this_time[1] - 0.005*min_time_step,
+                            to = this_time[1] + 0.005*min_time_step,
+                            length.out = length(this_time)
+            )
+          }
+        }
+      )
+
       time <- unsplit(time_split, time)
       design <- "complete"
+
     } else if (all(obs_per_time > 1) && length(unique(obs_per_seriesID)) > 1) {
       # multiple observations for every time point, but not all subjects at every time point
       # note this will break if there is 1 time point for some subjects and multiple for others

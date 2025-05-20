@@ -29,6 +29,7 @@
 #' @return Numeric: the standard deviation of the combined population (i.e. if
 #'   all the groups were concatenated into one large group).
 #' @author Caroline Ring
+
 combined_sd <- function(group_mean,
                         group_sd,
                         group_n,

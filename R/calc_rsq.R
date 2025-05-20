@@ -62,7 +62,7 @@
 #'  } \right)^2
 #'  }
 #'
-#' # Left-censored data
+#' @section Left-censored data:
 #'
 #' If the observed value is censored, and the predicted value is less than the
 #' reported LOQ, then the observed value is (temporarily) set equal to the
@@ -72,7 +72,7 @@
 #' the reported LOQ, the the observed value is (temporarily) set equal to the
 #' reported LOQ, for an effective error of (LOQ - predicted).
 #'
-#' # Log-10 transformation
+#' @section Log-10 transformation:
 #'
 #' If `log10 %in% TRUE`, then both the observed and predicted values will be
 #'  log10-transformed before calculating the RMSE. In the case where

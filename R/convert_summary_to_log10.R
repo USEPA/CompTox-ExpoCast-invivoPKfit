@@ -1,7 +1,7 @@
 #' Convert sample mean and SD to log10-scale
 #'
 #' Estimate log10-scale sample mean and standard deviation from natural-scale
-#' sample mean and standard deviation
+#' sample mean and standard deviation.
 #'
 #' \eqn{\bar{y}_i} is the natural-scale sample mean for group \eqn{i}. \eqn{s_i}
 #' is the natural-scale sample standard deviation for group \eqn{i}.
