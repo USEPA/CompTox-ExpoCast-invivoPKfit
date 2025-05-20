@@ -81,6 +81,11 @@ auc_1comp_cl <- function(params,
     stop("cp_1comp_cl(): ", check_msg)
   }
 
+  # Variables to NULL for circumventing global variable NOTE
+  Q_totli = Q_gfr = Clint = Fup = Vdist = NULL
+  Fgutabs = kgutabs = Fgutabs_Vdist = NULL
+  Rblood2plasma = NULL
+
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 

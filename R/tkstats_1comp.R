@@ -62,8 +62,10 @@ tkstats_1comp <- function(pars,
                           vol_unit,
                           ...) {
 
-  Fgutabs_Vdist <- Rblood2plasma <- NULL
   params <- fill_params_1comp(pars)
+
+  Fgutabs_Vdist = Rblood2plasma = Fgutabs = Vdist = NULL
+  kelim = kgutabs = NULL
 
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))

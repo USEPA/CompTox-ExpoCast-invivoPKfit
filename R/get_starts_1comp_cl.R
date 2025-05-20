@@ -67,8 +67,8 @@
 #' @family built-in model functions
 #'
 get_starts_1comp_cl <- function(data,
-                             par_DF,
-                             restrictive) {
+                                par_DF,
+                                restrictive) {
   # initialize starting values for each parameter.
   # if no IV data exist, then Vdist starting value will remain NA.
   # if no oral data exist, then Fgutabs_Vdist and Fgutabs starting values will remain NA.
@@ -79,32 +79,30 @@ get_starts_1comp_cl <- function(data,
   kgutabs <- NA_real_
   Vdist <- NA_real_
   Fgutabs <- NA_real_
-  Fgutabs_Vdist <- NA_real_
   Fup <- NA_real_
 
-  Q_gfr <- httk::physiology.data %>%
-    dplyr::filter(Parameter %in% "GFR") %>%
-    tidyr::pivot_longer(cols = Mouse:Monkey,
-                        names_to = "Species",
-                        values_to = "param_value")
-  Q_gfr <- setNames(object = Q_gfr[["param_value"]],
-                         nm = tolower(Q_gfr[["Species"]]))
+  Q_gfr <- httk::physiology.data[
+    httk::physiology.data$Parameter == "GFR",
+    c("Mouse", "Rat", "Dog", "Human", "Rabbit", "Monkey")
+  ]
+  Q_gfr <- setNames(object = unlist(Q_gfr),
+                    nm = tolower(names(Q_gfr)))
 
-  Q_totli <- httk::tissue.data %>%
-    dplyr::filter(variable %in% "Flow (mL/min/kg^(3/4))",
-                  Tissue %in% "liver")
+
+  Q_totli <- httk::tissue.data[
+    httk::tissue.data$Tissue == "liver" &
+      httk::tissue.data$variable == "Flow (mL/min/kg^(3/4))",
+    c("Species", "value")
+  ]
   Q_totli <- setNames(object = Q_totli[["value"]],
-                           nm = tolower(Q_totli[["Species"]]))
+                      nm = tolower(Q_totli[["Species"]]))
 
-  Q_alv <- httk::physiology.data %>%
-    dplyr::filter(Parameter == "Pulmonary Ventilation Rate") %>%
-    dplyr::select(dplyr::where(is.numeric)) %>%
-    tidyr::pivot_longer(cols = everything(),
-                        names_to = "Species",
-                        values_to = "value") %>%
-    dplyr::mutate(value = 0.67 * value) # httk Qalvc calculation, at rest
-  Q_alv <- setNames(object = Q_alv[["value"]],
-                    nm = tolower(Q_alv[["Species"]]))
+  Q_alv <- httk::physiology.data[
+    httk::physiology.data$Parameter == "Pulmonary Ventilation Rate",
+    c("Mouse", "Rat", "Dog", "Human", "Rabbit", "Monkey")
+  ]
+  Q_alv <- setNames(object = unlist(Q_alv),
+                    nm = tolower(names(Q_alv)))
 
   # Get species-specific flow rates, or default to human
   names_Q_gfr <- names(Q_gfr)
@@ -126,7 +124,6 @@ get_starts_1comp_cl <- function(data,
     Q_alv <- Q_alv[["human"]]
     message("Species not in database, using human values for Q_alv")
   }
-
   parm_gas <- tryCatch(
     expr = {
       httk::parameterize_3comp2(
@@ -159,32 +156,26 @@ get_starts_1comp_cl <- function(data,
             suppressMessages()
         } else {
           # Early return with all values set to NA_real_
-          starts <- c("Q_totli" = NA_real_,
-                      "Q_gfr" = NA_real_,
-                      "Q_alv" = NA_real_,
-                      "Kblood2air" = NA_real_,
-                      "Fup" = NA_real_,
-                      "Clint" = NA_real_,
-                      "kgutabs" = NA_real_,
-                      "Vdist" = NA_real_,
-                      "Fgutabs" = NA_real_,
-                      "Rblood2plasma" = NA_real_)
-
-          par_DF$start <- starts[par_DF$param_name]
-          return(par_DF)
+          c("Q_totli" = NA_real_,
+            "Q_gfr" = NA_real_,
+            "Q_alv" = NA_real_,
+            "Kblood2air" = NA_real_,
+            "Fup" = NA_real_,
+            "Clint" = NA_real_,
+            "kgutabs" = NA_real_,
+            "Vdist" = NA_real_,
+            "Fgutabs" = NA_real_,
+            "Rblood2plasma" = NA_real_)
         }
       }
     }
   )
 
-  parm_gas <- suppressMessages(
-    suppressWarnings(
-      httk::parameterize_3comp2(
-        dtxsid = unique(data[["Chemical"]]),
-        species = this_species,
-        default.to.human = TRUE,
-        restrictive.clearance = restrictive)))
-
+  if (all(sapply(parm_gas, is.na))) {
+    starts <- parm_gas
+    par_DF$start <- starts[par_DF$param_name]
+    return(par_DF)
+  }
 
   # Set parameters needed for model
   Fup <- parm_gas[["Funbound.plasma"]]

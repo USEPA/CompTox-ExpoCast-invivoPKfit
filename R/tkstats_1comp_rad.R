@@ -43,46 +43,61 @@
 #' Evaluate [auc_1comp_rad()] at time = `tlast`.
 #' }
 #'
-#' @inheritParams tkstats_1comp
+#' @inheritParams tkstats_1comp_cl
 #' @return A `data.frame` with two variables:
-#' - `param_name` = `c("CLtot", "CLtot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity")`
+#' - `param_name` = `c("Cltot", "Cltot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity")`
 #' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed).
 #' @export
 #' @author John Wambaugh, Caroline Ring, Gilberto Padilla Mercado
-tkstats_1comp_cl <- function(pars,
-                             route,
-                             medium,
-                             dose,
-                             time_unit,
-                             conc_unit,
-                             vol_unit,
-                             ...) {
+tkstats_1comp_rad <- function(pars,
+                              route,
+                              medium,
+                              dose,
+                              time_unit,
+                              conc_unit,
+                              vol_unit,
+                              restrictive = FALSE,
+                              ...) {
 
-  params <- fill_params_1comp(pars)
+  params <- fill_params_1comp_cl(pars)
+
+  Q_totli = Q_gfr = Q_alv = Fup = Clint = NULL
+  Kblood2air = Rblood2plasma = NULL
+  kgutabs = Vdist = Fgutabs_Vdist = NULL
 
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
-  Cl_hep <- Q_totli * Fup * Clint / (Q_totli + (Fup * Clint / Rblood2plasma))
-  CLtot <- Q_gfr + Cl_hep
 
-  CLtot_Fgutabs <- (CLtot / Vdist) / Fgutabs_Vdist
+  # Set a Fup specific to the liver for clearance
+  if (!restrictive) {
+    Fup_hep <- 1
+  } else {
+    Fup_hep <- Fup
+  }
+
+  # compute total clearance
+  Clhep <- (Q_totli * Fup_hep * Clint) / (Q_totli + (Fup_hep * Clint / Rblood2plasma))
+  Clren <- Fup * Q_gfr
+  Clair <- (Rblood2plasma * Q_alv / Kblood2air)
+  Cltot <- Clren + Clhep + Clair
+  Cltot_Fgutabs <- (Cltot / Vdist) / Fgutabs_Vdist
 
   # convert dose interval of (1/day) into time units
   # this is now standardized because time_units will always be hours
   dose_int <- 1 / 24
 
   Css <- dose * ifelse(route %in% "oral",
-                       Fgutabs_Vdist / (CLtot / Vdist) / dose_int,
-                       1 / (CLtot * dose_int)) *
+                       Fgutabs_Vdist / (Cltot / Vdist) / dose_int,
+                       1 / (Cltot * dose_int)) *
     ifelse(medium %in% "blood",
            Rblood2plasma,
            1)
 
-  halflife <- log(2) / (CLtot / Vdist)
+  halflife <- log(2) / (Cltot / Vdist)
 
   tmax <- ifelse(route %in% "oral",
-                 log(kgutabs / (CLtot / Vdist)) / (kgutabs - (CLtot / Vdist)),
+                 log(kgutabs / (Cltot / Vdist)) / (kgutabs - (Cltot / Vdist)),
                  0)
 
   Cmax <- cp_1comp_rad(params = pars,
@@ -97,8 +112,8 @@ tkstats_1comp_cl <- function(pars,
                            route = route,
                            medium = medium)
 
-  return(data.frame(param_name = c("CLtot",
-                                   "CLtot/Fgutabs",
+  return(data.frame(param_name = c("Cltot",
+                                   "Cltot/Fgutabs",
                                    "Css",
                                    "halflife",
                                    "tmax",
@@ -107,8 +122,8 @@ tkstats_1comp_cl <- function(pars,
                                    "Vss",
                                    "Vss/Fgutabs"
   ),
-  param_value = c(CLtot,
-                  CLtot_Fgutabs,
+  param_value = c(Cltot,
+                  Cltot_Fgutabs,
                   Css,
                   halflife,
                   tmax,
@@ -117,8 +132,8 @@ tkstats_1comp_cl <- function(pars,
                   Vdist,
                   1 / (Fgutabs_Vdist)
   ),
-  param_units = c(paste0(vol_unit, "/", time_unit), # CLtot
-                  paste0(vol_unit, "/", time_unit), # CLtot/Fgutabs
+  param_units = c(paste0(vol_unit, "/", time_unit), # Cltot
+                  paste0(vol_unit, "/", time_unit), # Cltot/Fgutabs
                   conc_unit, # Css
                   time_unit, # halflife
                   time_unit, # tmax

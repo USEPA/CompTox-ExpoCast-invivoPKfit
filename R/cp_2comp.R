@@ -75,6 +75,9 @@ cp_2comp <- function(params,
   # get transformed parameters for 2-comp model
   trans_params <- transformed_params_2comp(params)
 
+  A_iv_unit = B_iv_unit = alpha = beta = A_oral_unit = B_oral_unit = NULL
+  kgutabs = Rblood2plasma = NULL
+
   list2env(as.list(params), envir = as.environment(-1))
 
   # for readability, assign transformed params to variables inside this function

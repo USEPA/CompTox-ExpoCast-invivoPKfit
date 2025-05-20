@@ -69,6 +69,7 @@
 #' @family model concentration functions
 cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
                         restrictive = FALSE) {
+
   params <- fill_params_1comp_cl(params)
 
   check_msg <- check_params_1comp_cl(params = params,
@@ -79,8 +80,12 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
     stop("cp_1comp(): ", check_msg)
   }
 
+  Q_totli = Q_gfr = Q_alv = Fup = Clint = NULL
+  Kblood2air = Rblood2plasma = NULL
+  kgutabs = Vdist = Fgutabs_Vdist = NULL
 
   list2env(as.list(params), envir = as.environment(-1))
+
 
   # Set a Fup specific to the liver for clearance
   if (!restrictive) {

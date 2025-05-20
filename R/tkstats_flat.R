@@ -35,6 +35,8 @@ tkstats_flat <- function(pars,
     stop("cp_flat():", check_msg)
   }
 
+  Vdist = NULL
+
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 

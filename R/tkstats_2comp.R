@@ -14,10 +14,10 @@
 #' The dosing interval \eqn{\tau = \frac{1}{\textrm{day}}} will be converted to
 #' the same units as \eqn{k_{elim}}.
 #' }
-#' \subsubsection{Oral route}{
+#' \subsection{Oral route}{
 #' \deqn{C_{ss} = \frac{F_{gutabs} V_{1}}{k_{elim} \tau}}
 #' }
-#' \subsubsection{Intravenous route}{
+#' \subsection{Intravenous route}{
 #' \deqn{C_{ss} = \frac{1}{\textrm{CL}_{tot} \tau}}
 #' }
 #' \subsection{Half-life of elimination}{
@@ -58,13 +58,16 @@ tkstats_2comp <- function(pars,
                           vol_unit,
                           ...) {
 
-  Fgutabs_V1 <- Rblood2plasma <- NULL
 
   params <- fill_params_2comp(pars)
 
   # get transformed parameters for 2-comp model
   # these are parameters such alpha, beta
   trans_params <- transformed_params_2comp(params = params)
+
+  Fgutabs_V1 = Rblood2plasma = Fgutabs = V1 = NULL
+  kelim = kgutabs = k12 = k21 = NULL
+  beta = alpha = NULL
 
   list2env(as.list(params), envir = as.environment(-1))
   list2env(as.list(trans_params), envir = as.environment(-1))

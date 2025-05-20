@@ -4,11 +4,11 @@
 #' estimated from the data. This is intended for use with collected radiolabeling
 #' data.
 #'
-#' The full set of model parameters for the 1-compartment model includes `Vdist`,
-#' `Clint`, `kgutabs`, `Fgutabs`, `Q_totli`, `Q_gfr`,
-#' `Frec`, `Fup`, and `Rblood2plasma`.
-#' Whether each one can be estimated from the data depends on which routes of administration
-#' are included in the data.
+#' The full set of model parameters for the 1-compartment model includes
+#' `Clint`,  `Fup`, `kgutabs`, `Fgutabs`, `Vdist`,
+#' `Q_totli`, `Q_gfr`, `Q_alv`, `Kblood2air`, and `Rblood2plasma`.
+#' Since these are directly taken from `httk`, many of the usual route-dependent
+#' estimations of these parameters are not necessary.
 #'
 #' @inheritSection get_params_1comp_cl Constant parameters from `httk`
 #' @inheritSection get_params_1comp_cl IV data, no oral data
@@ -102,26 +102,30 @@ get_params_1comp_rad <- function(
     data,
     lower_bound = ggplot2::aes(Q_totli = NA,
                                Q_gfr = NA,
+                               Q_alv = NA,
+                               Kblood2air = NA,
                                Fup = 0,
                                Clint = 0,
-                               Vdist = 0.01,
-                               Fgutabs = 0.0,
-                               kgutabs = log(2) / (2 * max(Time_trans)),
-                               Fgutabs_Vdist = 0.01,
-                               Rblood2plasma = 1e-2,
+                               Vdist = NA,
+                               Fgutabs = NA,
+                               kgutabs = NA,
+                               Rblood2plasma = NA,
                                Frec = 0.001),
     upper_bound = ggplot2::aes(Q_totli = NA,
                                Q_gfr = NA,
+                               Q_alv = NA,
+                               Kblood2air = NA,
                                Fup = 1,
                                Clint = 1E5,
-                               Vdist = 100,
-                               Fgutabs = 1,
-                               kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                               Fgutabs_Vdist = 1e2,
-                               Rblood2plasma = 100,
+                               Vdist = NA,
+                               Fgutabs = NA,
+                               kgutabs = NA,
+                               Rblood2plasma = NA,
                                Frec = 1),
     param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4",
                                Q_gfr = "L/h/kg ^3/4",
+                               Q_alv = "L/h/kg ^3/4",
+                               Kblood2air = "unitless ratio",
                                Fup = "unitless fraction",
                                Clint = "L/h/kg",
                                Vdist = paste0("(", # Vdist
@@ -134,25 +138,19 @@ get_params_1comp_rad <- function(
                                Fgutabs = "unitless fraction", # Fgutabs
                                kgutabs = paste0("1/", # kgutabs
                                                 unique(Time_trans.Units)),
-                               Fgutabs_Vdist = paste0("(", # Fgutabs_Vdist
-                                                      unique(Conc.Units),
-                                                      ")",
-                                                      "/",
-                                                      "(",
-                                                      unique(Dose.Units),
-                                                      ")"),
                                Rblood2plasma = "unitless ratio",
                                Frec = "unitless fraction"),
     restrictive = TRUE) {
   # param names
   param_name <- c("Q_totli",
                   "Q_gfr",
+                  "Q_alv",
+                  "Kblood2air",
                   "Fup",
                   "Clint",
                   "Vdist",
                   "Fgutabs",
                   "kgutabs",
-                  "Fgutabs_Vdist",
                   "Rblood2plasma",
                   "Frec")
 
@@ -278,6 +276,39 @@ get_params_1comp_rad <- function(
   start_low <- (par_DF$start < par_DF$lower_bound) %in% TRUE
   start_high <- (par_DF$start > par_DF$upper_bound) %in% TRUE
   start_nonfin <- !is.finite(par_DF$start)
+
+  # Notify user which starts are out of bounds:
+  if (any(start_low | start_high | start_nonfin)) {
+
+    oob_starts <- par_DF[start_low | start_high,][["param_name"]]
+    inf_starts <- par_DF[start_nonfin,][["param_name"]]
+    if (!all(start_nonfin)) {
+      message("There are out of bounds starting values detected for ",
+              paste(unique(data$Chemical), unique(data$Species), collapse = "|"),
+              "\n",
+              "See summary below:"
+      )
+
+      if (length(oob_starts) > 0) {
+        message("Out of bounds parameter starts: ",
+                paste(oob_starts, collapse = ", "))
+      }
+      if (length(inf_starts) > 0) {
+        message("Non-finite parameter starts: ",
+                paste(inf_starts, collapse = ", "))
+      }
+
+      message("Values will be replaced by the mean of lower and upper bounds ",
+              "when possible.\n"
+      )
+    } else {
+      message(
+        "Unable to parameterize ",
+        paste(unique(data$Chemical), unique(data$Species), collapse = "|")
+      )
+    }
+
+  }
 
   par_DF[start_low | start_high | start_nonfin,
          "start"] <- rowMeans(

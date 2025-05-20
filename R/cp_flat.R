@@ -75,6 +75,7 @@ cp_flat <- function(params,
                     dose,
                     route,
                     medium = "plasma") {
+
   params <- fill_params_flat(params)
 
   check_msg <- check_params_flat(params = params,
@@ -84,6 +85,8 @@ cp_flat <- function(params,
   if (check_msg != "Parameters OK") {
     stop("cp_flat(): ", check_msg)
   }
+
+  Vdist = Fgutabs_Vdist = Rblood2plasma = NULL
 
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))

@@ -70,6 +70,9 @@ cp_2comp_dt <- function(params, time, dose, route, medium)
   # get transformed parameters for 2-comp model
   trans_params <- transformed_params_2comp(params)
 
+  A_iv_unit = B_iv_unit = B_oral_unit = A_oral_unit = NULL
+  kgutabs = Rblood2plasma = NULL
+
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
@@ -80,7 +83,7 @@ cp_2comp_dt <- function(params, time, dose, route, medium)
   dcpdt <- dose * ifelse(route %in% "iv",
                  A_iv_unit * -alpha *
                     exp(-alpha * time) +
-                   B_iv_oral * -beta *
+                   B_iv_unit * -beta *
                     exp(-beta * time),
                 A_oral_unit * -alpha *
                    exp(-alpha * time) +

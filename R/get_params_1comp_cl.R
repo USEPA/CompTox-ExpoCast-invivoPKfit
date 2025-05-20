@@ -14,8 +14,9 @@
 #' `Q_totli` is the flow through the portal vein from the gut to the liver
 #' and is estimated in this model via [httk::tissue.data] in a species-specific manner.
 #' `Q_gfr` is the glomular filtration rate of kidneys. It is estimated via
-#' [httk::physiology.data] in a species specific manner.
-#' `Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_1comp()]
+#' [httk::physiology.data] in a species specific manner, as is `Q_alv`,
+#' the alveolar pulmonary ventilation rate.
+#' `Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_3comp2()]
 #' For each of these parameters default lower bounds are +/-10% of the starting value.
 #'
 #' @section IV data, no oral data:
@@ -272,27 +273,34 @@ get_params_1comp_cl <- function(
   # Notify user which starts are out of bounds:
   if (any(start_low | start_high | start_nonfin)) {
 
-    oob_counts <- parDF[start_low | start_high,]["param_name"] |>
-      dplyr::count(param_name, name = "oob_starts")
-    inf_counts <- partDF[start_nonfin,]["param_name"] |>
-      dplyr::count(param_name, name = "non-finite_starts")
-    fin_counts <- partDF[!(start_low | start_high | start_nonfin),]["param_name"] |>
-      dplyr::count(param_name, name = "in-bound_starts")
-    message("There are out of bounds starting values detected!\n",
-            "See summary below:\n"
-    )
-
-    print(
-      merge(
-        merge(oob_counts, inf_counts, all = TRUE, by = "param_name"),
-        fin_counts,
-        all = TRUE, by = "param_name"
+    oob_starts <- par_DF[start_low | start_high,][["param_name"]]
+    inf_starts <- par_DF[start_nonfin,][["param_name"]]
+    if (!all(start_nonfin)) {
+      message("There are out of bounds starting values detected for ",
+              paste(unique(data$Chemical), unique(data$Species), collapse = "|"),
+              "\n",
+              "See summary below:"
       )
-    )
 
-    message("Values will be replaced by the mean of lower and upper bounds ",
-            "when possible.\n"
-            )
+      if (length(oob_starts) > 0) {
+        message("Out of bounds parameter starts: ",
+                paste(oob_starts, collapse = ", "))
+      }
+      if (length(inf_starts) > 0) {
+        message("Non-finite parameter starts: ",
+                paste(inf_starts, collapse = ", "))
+      }
+
+      message("Values will be replaced by the mean of lower and upper bounds ",
+              "when possible.\n"
+      )
+    } else {
+      message(
+        "Unable to parameterize ",
+        paste(unique(data$Chemical), unique(data$Species), collapse = "|")
+      )
+    }
+
   }
 
   par_DF[start_low | start_high | start_nonfin, "start"] <- rowMeans(

@@ -78,6 +78,8 @@ cp_1comp <- function(params,
     stop("cp_1comp(): ", check_msg)
   }
 
+  kelim = Vdist = kelim = kgutabs = Fgutabs_Vdist = Rblood2plasma = NULL
+
   list2env(as.list(params), envir = as.environment(-1))
 
   # compute plasma concentration

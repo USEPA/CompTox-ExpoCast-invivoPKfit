@@ -70,6 +70,9 @@ cp_1comp_rad <- function(params, time, dose, route, medium = 'plasma',
     stop("cp_1comp(): ", check_msg)
   }
 
+  Q_totli = Q_gfr = Q_alv = Fup = Clint = Kblood2air = NULL
+  Rblood2plasma = kelim = kgutabs = Fgutabs = Frec = Vdist = NULL
+
 
   list2env(as.list(params), envir = as.environment(-1))
 
@@ -77,7 +80,8 @@ cp_1comp_rad <- function(params, time, dose, route, medium = 'plasma',
   # note: Qgfr is based on plasma wheras Q_totli is based on blood
   Clhep <- (Q_totli * Fup * Clint) / (Q_totli + (Fup * Clint / Rblood2plasma))
   Clren <- Fup * Q_gfr
-  Cltot <- Clren + Clhep
+  Clair <- (Rblood2plasma * Q_alv / Kblood2air)
+  Cltot <- Clren + Clhep + Clair
   kelim <- Cltot / Vdist # Cltot is L/hr and Vdist is in L
 
   A_t <- rep(NA_real_, length(time))

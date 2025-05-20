@@ -4,7 +4,7 @@
 #' 1-compartment model, using an analytical equation (the integral of the
 #' 1-compartment model equation with respect to time).
 #'
-#' # Required parameters
+#' @section Required parameters:
 #'
 #' `params` must include the following named items:
 #'   \describe{
@@ -77,6 +77,10 @@ auc_1comp <- function(params,
   if (check_msg != "Parameters OK") {
     stop("cp_1comp(): ", check_msg)
   }
+
+  # params used (assigned NULL to prevent global variable hiccup)
+  Vdist = kelim = kgutabs = Fgutabs_Vdist = Fgutabs = NULL
+  Rblood2plasma = NULL
 
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
