@@ -124,7 +124,7 @@ rmse.default <- function(obj, ...) {
 #'
 #' This is the S3 method generic for `coef_sd`.
 #'
-#' @param object An object
+#' @param obj A pk object.
 #' @param model The TK model used.
 #' @param method Optimizer method used.
 #' @param suppress.messages Boolean. Whether messages will be printed.
@@ -134,22 +134,22 @@ rmse.default <- function(obj, ...) {
 #'   by [coef.pk()], as well as their calculated standard deviations.
 #' @export
 #' @seealso [coef_sd.pk()] for the `coef_sd` method for class [pk()]
-coef_sd <- function(object,
+coef_sd <- function(obj,
                     model,
                     method,
                     suppress.messages, ...) {
-  UseMethod("coef_sd", object)
+  UseMethod("coef_sd", obj)
 }
 
 #' Coefficient standard deviation default
 #'
-#' @param object An object
+#' @param obj An object.
 #' @param ... Additional arguments currently not in use.
 #' @return An error, when a non-pk object is used for the first argument.
 #' @export
-coef_sd.default <- function(object, ...) {
+coef_sd.default <- function(obj, ...) {
   stop("No 'coef_sd' method exists for object of class",
-       toString(class(object))
+       toString(class(obj))
   )
 }
 
@@ -1001,30 +1001,5 @@ get_hessian.default <- function(obj, ...) {
   )
 }
 
-#' fit_sigma()
-#'
-#' This is the S3 method generic for fit_sigma()
-#'
-#' @param obj An object.
-#' @param ... Additional arguments.
-#' @return A [pk()] object with a list of externally predicted values and optimized
-#' hyper-parameter values and resulting AIC computations.
-#' @seealso [fit_sigma.pk()] for the method for class [pk()]
-#' @export
-fit_sigma <- function(obj, ...) {
-  UseMethod("fit_sigma", obj)
-}
-
-#' Default method for fit_sigma()
-#'
-#' @param obj An object
-#' @param ... Additional arguments currently.
-#' @return An error, when a non-pk object is used for the first argument.
-#' @export
-fit_sigma.default <- function(obj, ...) {
-  stop("No 'get_hessian' method exists for object of class",
-       toString(class(obj))
-  )
-}
 
 
