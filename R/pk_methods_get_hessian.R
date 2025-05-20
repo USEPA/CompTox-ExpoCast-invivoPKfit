@@ -33,9 +33,9 @@
 #'  Invertible: Alternatives to Model Respecification in Nonlinear Estimation.
 #'  Sociological Methods & Research 33(1):54-87. DOI: 10.1177/0049124103262681
 get_hessian.pk <- function(obj,
-                       model = NULL,
-                       method = NULL,
-                       suppress.messages = TRUE, ...) {
+                           model = NULL,
+                           method = NULL,
+                           suppress.messages = TRUE, ...) {
 
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -50,7 +50,7 @@ get_hessian.pk <- function(obj,
 
   #get optimized parameter vectors
   coefs_opt <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
@@ -60,7 +60,7 @@ get_hessian.pk <- function(obj,
 
   #get constant parameter vectors
   coefs_const <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
@@ -70,7 +70,7 @@ get_hessian.pk <- function(obj,
 
   #get all params used
   coefs_use <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,

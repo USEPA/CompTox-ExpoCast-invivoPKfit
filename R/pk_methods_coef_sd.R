@@ -22,7 +22,7 @@
 #' If neither of these procedures is successful, then `NA_real_` is returned for
 #' all coefficient standard deviations.
 #'
-#' @param object A [pk] object.
+#' @param obj A [pk] object.
 #' @param model Optional: Specify one or more of the fitted models whose
 #'   coefficients to return. If NULL (the default), coefficients will be
 #'   returned for all of the models in `obj$stat_model`.
@@ -64,7 +64,7 @@ coef_sd.pk <- function(obj,
 
   #get optimized parameter vectors
   coefs_opt <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
@@ -74,7 +74,7 @@ coef_sd.pk <- function(obj,
 
   #get constant parameter vectors
   coefs_const <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
@@ -84,7 +84,7 @@ coef_sd.pk <- function(obj,
 
   #get all params used
   coefs_use <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,

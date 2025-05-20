@@ -169,7 +169,7 @@ logLik.pk <- function(object,
   # get coefs data.frame for each model and method
   # must include sigma value
   coefs <- coef(
-    obj = object,
+    object = object,
     model = model,
     method = method,
     drop_sigma = FALSE,

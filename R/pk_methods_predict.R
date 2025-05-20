@@ -69,14 +69,14 @@ predict.pk <- function(object,
   # for the model functions
   # Responsibility for some checks done in coefs
   coefs <- coef(
-    obj = object,
+    object = object,
     model = model,
     method = method,
     drop_sigma = TRUE,
     include_NAs = include_NAs,
     suppress.messages = suppress.messages
   ) %>%
-    dplyr::select(-c(Time.Units, Time_trans.Units))
+    dplyr::select(!c(Time.Units, Time_trans.Units))
 
   # This setup allows for a more stable call to the model functions later on
   # make a join-able data.frame with all the possible models
@@ -170,18 +170,19 @@ predict.pk <- function(object,
   newdata <- newdata %>% # Rowwise drops
     dplyr::rowwise(model, method, !!!object$data_group) %>% # Needs to include columns outside the nest
     dplyr::summarise(predictions = list(
-      observations %>%
+      .data$observations %>%
         dplyr::mutate(
-          Dose_tmp = dplyr::if_else(rep(conc_scale$dose_norm,
-                                        NROW(Dose)),
-                                    1.0,
-                                    Dose),
+          Dose_pred = dplyr::if_else(
+            rep(conc_scale$dose_norm, NROW(Dose)),
+            1.0,
+            Dose
+          ),
           Estimate = tryCatch(
             do.call(predfun,
                     c(
                       list(coefs_vector,
                            time = Time,
-                           dose = Dose_tmp,
+                           dose = .data$Dose_pred,
                            route = Route,
                            medium = Media),
                       predfun_args
@@ -190,7 +191,7 @@ predict.pk <- function(object,
             error = function(err) {
               if (suppress.messages %in% FALSE) {
                 message("predict.pk(): Unable to run ",
-                        predfun, " for ",
+                        .data$predfun, " for ",
                         toString(data_group_vars),
                         " data grouping.\n",
                         "Likely an aborted fit, ",
@@ -200,10 +201,10 @@ predict.pk <- function(object,
               # Return Value
               NA_real_
             }), # end tryCatch
-          .after = Conc.Units) %>% # end dplyr::mutate
-        dplyr::select(-Dose_tmp)
+          .after = Conc.Units)  %>% # end dplyr::mutate
+        dplyr::select(!c("Dose_pred"))
     )) %>%
-    tidyr::unnest(predictions)
+    tidyr::unnest("predictions")
 
 
 
