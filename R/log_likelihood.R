@@ -143,9 +143,6 @@ log_likelihood <- function(par,
                            includes_preds = FALSE,
                            suppress.messages = TRUE) {
 
-  # Fix the modelfun_args and modelfun variables
-  modelfun_args <- modelfun[[1]][["conc_fun_args"]]
-  modelfun <- modelfun[[1]][["conc_fun"]]
 
   # Used variables such that there is no need to reference 'data'
   Time_trans <- data$Time_trans
@@ -158,6 +155,12 @@ log_likelihood <- function(par,
   N_Subjects <- data$N_Subjects
   Detect <- data$Detect
   pLOQ <- data$pLOQ
+  CHEMICAL <- unique(data$Chemical)
+  SPECIES <- unique(data$Species)
+
+  # Fix the modelfun_args and modelfun variables
+  modelfun_args <- modelfun[[1]][["conc_fun_args"]]
+  modelfun <- modelfun[[1]][["conc_fun"]]
 
   # combine parameters to be optimized and held constant
   params <- c(par, const_params)
@@ -176,6 +179,9 @@ log_likelihood <- function(par,
     # assemble arguments for do.call
     if (!is.list(modelfun_args)) {
       modelfun_args <- as.list(modelfun_args)
+    } else {
+      # Need to evaluate some quoted arguments (CHEMICAL and SPECIES)
+      modelfun_args <- lapply(modelfun_args, eval)
     }
     these_args <- append(
       list(
