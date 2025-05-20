@@ -208,8 +208,9 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
     dplyr::summarize(ll = sum(value),
                      npar = n(),
                      data_sigma_group = c(data_sigma_group)
-    ) %>% dplyr::group_by(!!!data_group, model, method) %>%
-    dplyr::mutate(AIC = (k * npar) - (2 * ll))
+    ) %>%
+    dplyr::group_by(!!!data_group, model, method) %>%
+    dplyr::mutate(AIC = (k * .data$npar) - (2 * .data$ll))
   # Usually only one parameter is optimized, but sometimes there is more than one
   # sigma value per data group.
 

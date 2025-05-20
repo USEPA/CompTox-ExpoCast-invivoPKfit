@@ -167,7 +167,7 @@ nca.pk <- function(obj,
                      dose_norm = dose_norm,
                      {
                        calc_nca(time = Time[exclude %in% FALSE], # calculate NCA
-                                dose = Dose_nca[exclude %in% FALSE],
+                                dose = .data$Dose_nca[exclude %in% FALSE],
                                 conc = Conc_nca[exclude %in% FALSE],
                                 detect = Detect[exclude %in% FALSE],
                                 route = unique(Route[exclude %in% FALSE]),
@@ -205,7 +205,7 @@ nca.pk <- function(obj,
                                          ")"),
           param_name %in% "Cmax" ~ Conc.Units
         )) %>%
-      dplyr::select(-c(Conc.Units,
+      dplyr::select(!c(Conc.Units,
                        Time.Units,
                        Dose.Units))
 

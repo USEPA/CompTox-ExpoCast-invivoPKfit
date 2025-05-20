@@ -88,7 +88,7 @@ BIC.pk <- function(object,
 
   BIC <- ll %>%
     dplyr::group_by(!!!object$data_group, model, method) %>%
-    dplyr::mutate(BIC = (log(N_ROW) * npar) - (2 * log_likelihood))
+    dplyr::mutate(BIC = log(.data$N_ROW) * .data$npar) - (2 * .data$log_likelihood)
 
 
   return(BIC)

@@ -63,8 +63,7 @@ twofold_test.pk <- function(obj,
 
   # Only get observations where 'Detect' is TRUE and 'exclude' is FALSE
   # because other observations won't have credible variability from mean
-  data_cvt <- subset(data_cvt,
-                    subset = (Detect | !exclude | Conc > LOQ))
+  data_cvt <- subset(data_cvt, subset = (Detect | !exclude | Conc > LOQ))
 
 
 
@@ -102,7 +101,8 @@ twofold_test.pk <- function(obj,
   # Find how many detected observations per Chemical + Species + Route + Media + Dose
   data_counts <- data_cvt %>%
     dplyr::filter(Detect) %>%
-    dplyr::count(Chemical, Species, Reference, Route, Media, Dose, Time, N_Subjects,
+    dplyr::count(Chemical, Species, Reference,
+                 Route, Media, Dose, Time, N_Subjects,
                  name = "Count")
 
   # There must be at least 2 values per timepoint for individual data or else
@@ -288,10 +288,10 @@ twofold_test.pk <- function(obj,
     # Summarizing number of fold concentrations from the mean
     data_pred_summary <- data_preds %>%
       dplyr::group_by(model, method) %>%
-      dplyr::summarise(across(c(both_within:data_outside), sum))
+      dplyr::summarise(across(c(.data$both_within:.data$data_outside), sum))
     data_pred_summary_combo <- data_preds %>%
       dplyr::group_by(method) %>%
-      dplyr::summarise(across(c(both_within:data_outside), sum)) %>%
+      dplyr::summarise(across(c(.data$both_within:.data$data_outside), sum)) %>%
       dplyr::mutate(model = "All", .before = 1)
     data_pred_summary <- dplyr::bind_rows(data_pred_summary, data_pred_summary_combo)
 
@@ -325,7 +325,7 @@ twofold_test.pk <- function(obj,
     # Summarizing number of fold concentrations from the mean
     data95_pred_summary <- data95_preds %>%
       dplyr::group_by(model, method) %>%
-      dplyr::summarise(across(c(both_within:data_outside), sum))
+      dplyr::summarise(across(c(.data$both_within:.data$data_outside), sum))
 
     data95_pred_summary <- rowwise_calc_percentages(data95_pred_summary,
                                                   group_cols = c("model",

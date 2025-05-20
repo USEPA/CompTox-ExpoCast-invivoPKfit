@@ -117,10 +117,10 @@ plot.pk <- function(x,
   conc_scale <- conc_scale_use(obj = x, use_scale_conc = use_scale_conc)
 
   if (drop_nonDetect %in% TRUE) {
-    newdata <- subset(newdata, Detect %in% TRUE)
+    newdata <- newdata[newdata$Detect %in% TRUE, ]
   }
 
-  newdata <- subset(newdata, exclude %in% FALSE)
+  newdata <- newdata[newdata$exclude %in% FALSE, ]
 
   if (is.null(log10_C)) log10_C <- conc_scale$log10_trans
 
@@ -395,14 +395,14 @@ plot.pk <- function(x,
         x  %>%
           tidyr::uncount(n_interp) %>%
           dplyr::group_by(Dose, Route, Media) %>%
-          dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
+          dplyr::mutate(Time = (.data$maxTime / (dplyr::n() - 1)) *
                           (dplyr::row_number() - 1))
       }, .progress = TRUE)
       )
 
     interp_data <- interp_data %>%
-      dplyr::select(!!!x$data_group, interpolated) %>%
-      tidyr::unnest(cols = c(interpolated)) %>%
+      dplyr::select(!!!x$data_group, c("interpolated")) %>%
+      tidyr::unnest(cols = c("interpolated")) %>%
       dplyr::ungroup()
 
 
@@ -432,20 +432,17 @@ plot.pk <- function(x,
     if (time_trans %in% TRUE) {
       conversion_table <- time_conversions %>%
         dplyr::filter(
-          TimeFrom %in% interp_data$Time.Units,
-          TimeTo %in% interp_data$Time_trans.Units
+          .data$TimeFrom %in% interp_data$Time.Units,
+          .data$TimeTo %in% interp_data$Time_trans.Units
         ) %>%
         dplyr::rename(Time.Units = "TimeFrom", Time_trans.Units = "TimeTo")
 
       interp_data <- interp_data %>%
         dplyr::left_join(conversion_table,
                          by = dplyr::join_by(Time.Units, Time_trans.Units)) %>%
-        dplyr::mutate(Time_trans = Time * conversion) %>%
-        dplyr::select(!conversion)
+        dplyr::mutate(Time_trans = Time * .data$conversion) %>%
+        dplyr::select(!c("conversion"))
     }
-
-
-
 
     interp_data <- interp_data %>%
       dplyr::group_by(!!!x$data_group) %>%
@@ -462,34 +459,42 @@ plot.pk <- function(x,
     if (limit_predicted %in% TRUE) {
       if (log10_C %in% TRUE) {
         newdata <- newdata %>%
-          dplyr::mutate(predicted = purrr::map2(observations, predicted, \(x, y) {
-            if (!is.null(y)) {
-              dplyr::filter(y,
-                            Conc_est <= (fit_limits[1] * max(x$Conc_set)),
-                            Conc_est >= (fit_limits[2] * min(x$Conc_set)))
-            } else {
-              message(paste(
-                Chemical, Species, "did not have adequate fit"
-              ))
-            }
+          dplyr::mutate(
+            predicted = purrr::map2(
+              .data$observations,
+              .data$predicted,
+              \(x, y) {
+                if (!is.null(y)) {
+                  dplyr::filter(y,
+                                Conc_est <= (fit_limits[1] * max(x$Conc_set)),
+                                Conc_est >= (fit_limits[2] * min(x$Conc_set)))
+                } else {
+                  message(paste(
+                    Chemical, Species, "did not have adequate fit"
+                  ))
+                }
 
-          }))
+              }))
       } else {
         newdata <- newdata %>%
-          dplyr::mutate(predicted = purrr::map2(observations, predicted, \(x, y) {
-            if (!is.null(y)) {
-              dplyr::filter(y, Conc_est <= (fit_limits[1] * max(x$Conc_set)))
-            } else {
-              message(paste(
-                Chemical, Species, "did not have adequate fit"
-              ))
-            }
-          }))
+          dplyr::mutate(
+            predicted = purrr::map2(
+              .data$observations,
+              .data$predicted,
+              \(x, y) {
+                if (!is.null(y)) {
+                  dplyr::filter(y, Conc_est <= (fit_limits[1] * max(x$Conc_set)))
+                } else {
+                  message(paste(
+                    Chemical, Species, "did not have adequate fit"
+                  ))
+                }
+              }))
       }
     }
 
     newdata <- newdata %>%
-      dplyr::mutate(predicted_plot = purrr::map(predicted, \(x) {
+      dplyr::mutate(predicted_plot = purrr::map(.data$predicted, \(x) {
         if (!is.null(x)) {
           ggplot2::geom_line(data = x,
                              mapping = plot_fit_aes,
@@ -499,8 +504,8 @@ plot.pk <- function(x,
         }
       })) %>%
       dplyr::mutate(final_plot = purrr::map2(
-        observation_plot,
-        predicted_plot,
+        .data$observation_plot,
+        .data$predicted_plot,
         \(x, y) x + y +
           guides(
             color = guide_legend(title = "Dose", order = 1),
