@@ -21,8 +21,10 @@ Load necessary packages: **DBI, dplyr, tidyr**
 
 ```{r}
 library(DBI)
+devtools::load_all() # So this loads the previous cvt object
 library(dplyr)
 library(tidyr)
+library(readr)
 ```
 
 
@@ -57,7 +59,8 @@ query_db <- function(query = NULL, schema) {
   query_result <- tryCatch(
     return(dbGetQuery(con, query %>%
                         gsub("FROM ", paste0("FROM ", schema, "."), .) %>%
-                        gsub("JOIN (?=\\w)", paste0("JOIN ", schema, "."), ., perl = TRUE))),
+                        gsub("JOIN (?=\\w)", paste0("JOIN ", schema, "."), ., 
+                             perl = TRUE))),
   error = function(cond){ 
     cat(paste0("\nError message: ", cond))
     return(NULL)
@@ -86,29 +89,63 @@ quick_message <- function(text = character()) {
 
 }
 
-quick_stats <- function(.data) {
+quick_stats <- function(.data, old_version = FALSE) {
   stopifnot(is.data.frame(.data))
+  
   cli::cli_h2("Statistics on the current data")
   message(paste0("Total number of data points: ", nrow(.data)))
   message("Unique Species and data counts:")
   print(table(.data$species))
   
-  message(paste0("Number of unique studies: ",
-                 length(unique(.data$fk_study_id))))
-  message(paste0("Number of unique series: ",
-                 length(unique(.data$fk_series_id))))
-  message(paste0("Number of unique chemicals: ",
-                 length(unique(.data$analyte_dtxsid))))
-  message(paste0("Unique Dose units: ",
-                 toString(unique(.data$dose_level_units_original))))
-  message(paste0("Unique Concentration units: ", 
-                 toString(unique(.data$conc_units_original))))
+  message("Number of unique studies: ",
+          length(unique(.data$fk_study_id)))
+  message("Number of unique series: ",
+          length(unique(.data$fk_series_id)))
+  
+  if (old_version) {
+    message("Number of unique chemicals: ",
+          length(unique(.data$analyte_dtxsid)),
+          "\n")
+    chem_by_medium <- .data[c("conc_medium_normalized", "analyte_dtxsid")] %>%
+      filter(!is.na(analyte_dtxsid)) %>%
+      distinct()
+    chem_by_curset <- .data[c("curation_set_tag", "analyte_dtxsid")] %>%
+      filter(!is.na(analyte_dtxsid)) %>%
+      distinct()
+  } else {
+    message("Number of unique chemicals: ",
+          length(unique(.data$analyzed_chem_dtxsid)),
+          "\n")
+    chem_by_medium <- .data[c("conc_medium_normalized", "analyzed_chem_dtxsid")] %>%
+      filter(!is.na(analyzed_chem_dtxsid)) %>%
+      distinct()
+    chem_by_curset <- .data[c("curation_set_tag", "analyzed_chem_dtxsid")] %>%
+      filter(!is.na(analyzed_chem_dtxsid)) %>%
+      distinct()
+  }
+  
+  message("Unique Dose units: ",
+          toString(unique(.data$dose_level_units_original)),
+          "\n")
+  if (all(is.na(.data$conc_units_normalized))) {
+    message("Unique Concentration units: ", 
+            toString(unique(.data$conc_units_original)),
+            "\n")
+  } else {
+    message("Unique Concentration units: ", 
+            toString(unique(.data$conc_units_normalized)),
+            "\n")
+  }
   message("Data by unique route of administration:")
   print(table(.data$administration_route_normalized))
   message("Data by medium collected:")
   print(table(.data$conc_medium_normalized))
   message("Data by curation set:")
   print(table(.data$curation_set_tag))
+  message("\n\nUnique chemicals per medium:")
+  print(table(chem_by_medium$conc_medium_normalized))
+  message("Unique chemicals per curation set:")
+  print(table(chem_by_curset$curation_set_tag))
 }
 
 ```
@@ -117,10 +154,9 @@ quick_stats <- function(.data) {
 ```{r diff_log_function}
 # Now I want to write a quick function that will log relevant changes
 # from previous 'cvt' objects
-devtools::load_all() # So this loads the previous cvt object
 diff_log_cvt <- function(new_cvt,
                          key_id = "conc_time_id",
-                         grp_ids = c("analyte_dtxsid",
+                         grp_ids = c("analyzed_chem_dtxsid",
                                      "species"),
                          notes = character(0L)) {
   stopifnot(
@@ -345,7 +381,47 @@ the entire database, so I think they are a little bit lower on the priority list
 # Need to make this in a specified ordered
 # First all IDs (so I can check them quickly)
 # Note that this uses an ALIAS for each table which is later specified in
-# the FROM and LEFT JOIN statments
+# the FROM and LEFT JOIN statements
+series_chems <- paste0(
+  "SELECT DISTINCT a.id, a.fk_analyzed_chemical_id, ",
+  "b.analyzed_chem_dtxsid, b.analyzed_chem_name_original, ",
+  "b.analyzed_chem_name_secondary_original, ",
+  "b.analyzed_chem_casrn, b.analyzed_chem_name, ",
+  "a.time_units_original, a.conc_units_original, ",
+  "a.conc_units_normalized, a.loq, a.loq_units, ",
+  "a.n_subjects_in_series, a.radiolabeled, a.fk_study_id, ",
+  "a.qc_notes, a.qc_status, a.qc_flags, c.conc_medium_normalized ",
+  "FROM series a ",
+  "LEFT JOIN (SELECT id, dsstox_substance_id as analyzed_chem_dtxsid, ",
+  "chemical_name_original as analyzed_chem_name_original, ",
+  "chemical_name_secondary_original as analyzed_chem_name_secondary_original, ",
+  "dsstox_casrn as analyzed_chem_casrn, preferred_name as analyzed_chem_name ",
+  "FROM chemicals) as b ON a.fk_analyzed_chemical_id = b.id ",
+  "LEFT JOIN conc_medium_dict as c ON a.fk_conc_medium_id = c.id"
+)
+
+study_docs <- paste0(
+  "SELECT a.id, a.fk_extraction_document_id, a.fk_dosed_chemical_id, ",
+  "b.pmid, b.doi, b.year, b.other_study_identifier, ",
+  "b.url, b.extracted, b.curation_set_tag ",
+  "FROM studies a ",
+  "LEFT JOIN documents b ON a.fk_extraction_document_id = b.id"
+)
+
+audit_query <- query_db(paste0("SELECT DISTINCT * FROM cvt_audit ",
+                               "WHERE fk_table_name IN ('documents', 'series', 'studies')"),
+                        "cvt")
+study_query <- query_db(study_docs, "cvt")
+series_query <- query_db(series_chems, "cvt")
+dtxsid_query <- query_db("SELECT DISTINCT * FROM chemicals", "cvt") %>%
+  mutate(
+    across(ends_with("id"), as.character),
+    across(contains("chemical_name"), \(x) {
+      tolower(force_ascii_quotes(x))
+    })
+  )
+  
+# There are a lot of duplicate DTXSIDs
 query <- paste0(
   "SELECT distinct ",
   # Conc_Time_Values table fields
@@ -379,9 +455,9 @@ query <- paste0(
   ## administration_route dictionary fields
   "h.administration_route_original, h.administration_route_normalized, ",
   ## administration_method dictionary fields
-  "g.administration_method_original, g.administration_method_normalized, ",
+  # "g.administration_method_original, g.administration_method_normalized, ",
   ## administration_form dictionary fields
-  "f.administration_form_original, f.administration_form_normalized, ",
+  # "f.administration_form_original, f.administration_form_normalized, ",
   
   # Subjects table fields
   "b.fk_subject_id, d.weight_kg, d.species, d.sex, d.age, d.age_units, d.age_category, ",
@@ -404,9 +480,9 @@ query <- paste0(
   # Join to documents table by extraction document ID
   "LEFT JOIN documents e ON c.fk_extraction_document_id = e.id ",
 
-  # Join to dictionary tables
-  "LEFT JOIN administration_form_dict f ON c.fk_administration_form_id = f.id ",
-  "LEFT JOIN administration_method_dict g ON c.fk_administration_method_id = g.id ",
+  # # Join to dictionary tables
+  # "LEFT JOIN administration_form_dict f ON c.fk_administration_form_id = f.id ",
+  # "LEFT JOIN administration_method_dict g ON c.fk_administration_method_id = g.id ",
   "LEFT JOIN administration_route_dict h ON c.fk_administration_route_id = h.id ",
   "LEFT JOIN conc_medium_dict i ON b.fk_conc_medium_id = i.id ",
   "LEFT JOIN dose_frequency_dict j ON c.fk_dose_frequency_id = j.id ",
@@ -414,38 +490,35 @@ query <- paste0(
   # Rename chemical fields for dosed vs. analyzed chemical record foreign keys
   "LEFT JOIN (SELECT id, dsstox_substance_id as dosed_chem_dtxsid, ",
   "chemical_name_original as dosed_chem_name_original, ", 
+  "chemical_name_secondary_original as dosed_chem_name_secondary_original, ",
   "dsstox_casrn as dosed_chem_casrn, preferred_name as dosed_chem_name ",
   "FROM chemicals) as k ON c.fk_dosed_chemical_id = k.id ",
   "LEFT JOIN (SELECT id, dsstox_substance_id as analyzed_chem_dtxsid, ",
   "chemical_name_original as analyzed_chem_name_original, ",
+  "chemical_name_secondary_original as analyzed_chem_name_secondary_original, ",
   "dsstox_casrn as analyzed_chem_casrn, preferred_name as analyzed_chem_name ",
   "FROM chemicals) as l ON b.fk_analyzed_chemical_id = l.id ",
   
   # Filtering steps
   "WHERE h.administration_route_normalized IN ('iv', 'oral') AND ",
-  "(i.conc_medium_normalized IN ('blood', 'plasma', 'excreta') OR ",
-  "i.conc_medium_original IN ('blood', 'plasma', 'excreta'))"
+  "(i.conc_medium_normalized IN ('blood', 'plasma') OR ",
+  "i.conc_medium_original IN ('blood', 'plasma')) AND ",
+  "(j.dose_frequency_normalized IN ('Once') OR e.curation_set_tag IN ('CVT_Showa'))"
 )
 
-sql_query <- query_db(query = query,
-         schema = "cvt")
+sql_query <- query_db(query = query, schema = "cvt")
 
+# Need to change the column name for this
+names(sql_query)[1] <- "conc_time_id"
 
-# Need to change column names for this
-{
-  names(sql_query)[1] <- "conc_time_id"
-}
+# cvtdb_original <- sql_query
+# save(cvtdb_original, file = "data/cvtdb_original.rda", compress = "bzip2")
+```
 
-
-# Unfortunately, there are some "fancy" or curly quotes that need to be replaced
-# with "straight" quotes to be more machine read-able
-force_straight_quotes <- function(x) {
-  temp <- gsub("(’|′)", "'", x)
-  temp <- gsub("(, | ,)", ",", temp)
-  return(temp)
-}
-force_straight_quotes("3,3’,4,4’-tetrachloro-5-biphenylol")
-
+```{r harmonizing}
+load("data/cvtdb_original.rda")
+sql_query <- cvtdb_original
+rm(cvtdb_original)
 
 # Harmonize values for easier analysis
 cvt_df <- sql_query %>%
@@ -466,146 +539,274 @@ cvt_df <- sql_query %>%
     year = as.character(year),
     species = tolower(species),
     sex = tolower(sex),
-    analyte_name_original = force_straight_quotes(tolower(analyte_name_original)),
-    analyte_name_secondary_original = force_straight_quotes(tolower(
-      analyte_name_secondary_original
-      )),
-    dose_volume_units = stringr::str_extract(dose_volume,
-                                    pattern = "(?<=[:space:]).+"),
-    dose_volume = as.numeric(stringr::str_extract(dose_volume,
-                                         pattern = "^(\\d|\\.)*")),
-    dose_duration_units = stringr::str_extract(dose_duration,
-                                      pattern = "(?<=[space]).+"),
+    across(contains("chem_name"), \(x) {
+      tolower(force_ascii_quotes(x))
+    }),
+    dose_volume_units = ifelse(
+      dose_volume_units %in% c("NR", "ND"),
+      NA_character_,
+      gsub(" / ", "/", gsub("ml", "mL", dose_volume_units))
+      ),
+    dose_volume = signif(as.numeric(dose_volume), digits = 7),
+    dose_duration_units = trimws(dose_duration_units),
     dose_duration = as.numeric(stringr::str_extract(dose_duration,
-                                pattern = "^\\d")),
+                                pattern = "^\\d+")),
+    dose_frequency_normalized = "Once", # Showa is not annotated
     radiolabeled = ifelse(is.na(radiolabeled), FALSE, as.logical(radiolabeled)),
-    n_subjects_normalized = ifelse(n_subjects_in_series %in% "NR", NA_real_,
-      as.numeric(stringr::str_extract(n_subjects_in_series,
-                                                 pattern = "\\d+")))
+    # for n_subject ranges, take integer value of median 
+    # otherwise pull number or NA
+    n_subjects_normalized = case_when(
+      n_subjects_in_series %in% "NR" ~ NA_real_,
+      grepl("-", n_subjects_in_series) ~ floor(mean(
+        as.numeric(unlist(strsplit(n_subjects_in_series, split = "-"))),
+        na.rm = TRUE
+        )),
+      .default = as.numeric(
+        stringr::str_extract(n_subjects_in_series, pattern = "\\d+")
+        )
+      )
   )
 
-cvt_df <- cvt_df %>%
-  mutate(conc_medium_normalized = ifelse(is.na(conc_medium_normalized),
-                                         conc_medium_original,
-                                         conc_medium_normalized))
+```
+
+## Some data malformations
+
+There are some duplications in chemical entries such that not all unique chemical ids
+represent a unique DTXSID, but rather a unique original name entry.
+To fix this, when DTXSIDs for dosed and analyzed chemicals match, I will
+be setting `fk_dosed_chemical_id` to `fk_analyzed_chemical_id`.
+
+There is also some radiolabeling experiments that aren't described as such.
+We can use `stringr::str_detect(x,"(13|14)c")` to recode `radiolabeled = TRUE`
+for these.
+
+Then we should address the fact that the `invivoPKfit_2.0.0` version of the `cvt`
+object has 228 chemicals, while the recent query only has 145. This is a
+difference of 83.
+
+By hand, I can add back the DTXSIDs for about 15 chemicals. Some of these will
+be ChEMBLIDs actually.
 
 
-# There are some missing DTXSIDs that we need to fix
-cvt_df %>% 
-    filter(is.na(analyte_dtxsid),
-           !(radiolabeled %in% TRUE)) %>%
-  distinct(fk_analyzed_chemical_id,fk_dosed_chemical_id,
-           analyte_dtxsid, analyte_name_original,
-           analyte_name_secondary_original) %>%
-  View("NA_dtxsid")
-  
-
-dtxsid_query <- paste0(
-  "SELECT distinct * FROM chemicals"
-)
-
-dtxsid_query <- query_db(query = dtxsid_query,
-         schema = "cvt")
-
-dtxsid_query <- dtxsid_query %>%
-  filter(id %in% as.numeric(
-    union(cvt_df$fk_analyzed_chemical_id, cvt_df$fk_dosed_chemical_id))
-  ) %>%
-  mutate(id = as.character(id),
-         chemical_name_original = force_straight_quotes(tolower(
-           chemical_name_original
-         )),
-         chemical_name_secondary_original = force_straight_quotes(tolower(
-           chemical_name_secondary_original
-         ))
-  )
-
-cvt_df %>% 
-  filter(fk_analyzed_chemical_id != fk_dosed_chemical_id,
-         !(radiolabeled %in% TRUE)) %>%
-  distinct(fk_analyzed_chemical_id,fk_dosed_chemical_id,fk_test_chemical_id) %>%
-  left_join(dtxsid_query %>%
-              select("fk_analyzed_chemical_id" = "id",
-                     "analyzed_chemical_name" = "chemical_name_original")) %>%
-  left_join(dtxsid_query %>%
-              select("fk_dosed_chemical_id" = "id",
-                     "dosed_chemical_name" = "chemical_name_original")) %>%
-  View("errors")
-
-# Rather than hope most of these chemicals have dtxsids within CvTdb,
-# I cross-referenced it with the CompTox database batch search.
-dtxsid_batch_idless <- readr::read_csv(
-  "data-raw/CCD-Batch-Search_2025-04-17_DTXSIDless.csv",
-  na = "N/A"
-) %>% filter(!is.na(DTXSID)) %>%
-  select("dsstox_substance_id" = "DTXSID",
-         "chemical_name_original" = "INPUT") %>%
-  distinct()
-
-quick_message(c(
-  "Erroneous DTXSID assignments (identified via duplication):",
-  "perfluorohexanesulfonate == DTXSID80873012",
-  "tacrolimus == DTXSID5046354",
-  "hippuric acid == DTXSID9046073"
-))
-
-dtxsid_batch_idless <- dtxsid_batch_idless %>%
-  mutate(dsstox_substance_id = case_when(
-    chemical_name_original == "perfluorohexanesulfonate" ~ "DTXSID80873012",
-    chemical_name_original == "tacrolimus" ~ "DTXSID5046354",
-    chemical_name_original == "hippuric acid" ~ "DTXSID9046073",
-    .default = dsstox_substance_id
-  )) %>% distinct()
-
-# Fixing the missing DTXSID to prevent premature filtering
-cvt_df <- cvt_df %>%
-  left_join(
-    dtxsid_batch_idless,
-    by = join_by(analyte_name_original == chemical_name_original)
-  ) %>%
-  mutate(analyte_dtxsid = coalesce(analyte_dtxsid, dsstox_substance_id)) %>%
-  select(!dsstox_substance_id)
-
-quick_stats(cvt_df)
-
-# Now we need to pre-emptively address the chemicals that have different
-# dosed_id and analyzed_ids but are actually the same chemical
-quick_message(c(
-  "The following have resolvable errors:",
-  "If dosed chemical id is 47, change this to 46 to match analyte id. tamoxifen, salt dosed.",
-  "If dosed chemical id is 893, change this to 929 to match analyte id. trichloroethylene, duplicate.",
-  "If dosed chemical id is 671, change to 672 to match analyte id. PFHS, salt dosed.",
-  "If dosed chemical id is 673, change to 675 to match analyte id. PFNA, capitalization.",
-  "If dosed chemical id is 674, change to 676 to match analyte id, PFDA, capitalization."
-))
+```{r malformed_data}
+# First quick check to see if any chemical_ids are NA
+any(is.na(cvt_df$fk_analyzed_chemical_id))
+any(is.na(cvt_df$fk_dosed_chemical_id))
+length(unique(cvt_df$analyzed_chem_dtxsid))
 
 cvt_df <- cvt_df %>%
   rowwise() %>%
-  mutate(fk_dosed_chemical_id = case_when(
-    fk_dosed_chemical_id == "47" &&
-      fk_analyzed_chemical_id == "46" ~ "46",
-    fk_dosed_chemical_id == "893" &&
-      fk_analyzed_chemical_id == "929" ~ "929",
-    fk_dosed_chemical_id == "671" &&
-      fk_analyzed_chemical_id == "672" ~ "672",
-    fk_dosed_chemical_id == "673" &&
-      fk_analyzed_chemical_id == "673" ~ "673",
-    fk_dosed_chemical_id == "674" &&
-      fk_analyzed_chemical_id == "676" ~ "676",
-    .default = fk_dosed_chemical_id
+  mutate(fk_dosed_chemical_id = ifelse(
+    identical(analyzed_chem_dtxsid, dosed_chem_dtxsid),
+    fk_analyzed_chemical_id,
+    fk_dosed_chemical_id
   )) %>%
   ungroup()
 
+cvt_df %>%
+  distinct(analyzed_chem_name_original, dosed_chem_name_original, radiolabeled) %>%
+  filter(!radiolabeled) %>%
+  filter(stringr::str_detect(dosed_chem_name_original, "(13|14)c"))
 
-# glimpse(dq_cols)
-
-
-# names(cvt_df)
-
-# study_query <- query_db(query = "SELECT distinct * FROM studies",
-#          schema = "cvt")
+cvt_df <- cvt_df %>%
+  mutate(
+    radiolabeled = ifelse(
+      stringr::str_detect(dosed_chem_name_original, "(13|14)c"),
+      TRUE,
+      radiolabeled
+    )
+  )
 
 quick_stats(cvt_df)
+quick_stats(cvt_2.0.0, old_version = TRUE)
+# Note unique chemical counts
+
+# Rather than hope most of these chemicals have dtxsids within CvTdb,
+# I cross-referenced it with the CompTox database batch search.
+# Here I have curated the input by hand
+dtxsid_byhand_idless <- data.frame(
+  chem_name_original = c(
+    "paracetmol", #misspelling
+    "antipyrene", #synonym phenazone
+    "r-(+)-metoprolol", # using R/S and +/- confused search
+    "s-(-)-metoprolol",
+    "deacetyl diltiazem", # should be desacetyl
+    "valproate (vpa)", # valproic acid
+    "valproic acid",
+    "clotiapine", # clothiapine
+    "padsevonil", # found a ChEMBL_ID...
+    "2,2',4,4',5,'5-hexachlorobiphenyl",
+    "2,4,5,2',4','5-hexachlorobiphenyl", # number/prime order confused
+    "quinidine sulfate",
+    "quinidine",
+    "quinidine gluconate",
+    "furosemide",
+    "theophylline",
+    "fentanyl",
+    "ammonium perfluorooctonoate",
+    "perfluorohexanesulfonate anion", # anion confused search
+    "3'-azido-3'-deoxythymidine (aids)", # parenthetical confuses search
+    "3'-azido-3'-deoxythymidine", # repeat/duplicate of above
+    "2,4,5,2'5'-pentachlorobiphenyl", # number/prime order incorrect
+    "4,4'-sufonylbisphenol-d8", # deuterium but same as bisphenol S
+    "hydroxy-tebuconazole", # CAS 212267-64-6
+    "3'-amino-3'-deoxythimidine",
+    "bosentan sodium salt",
+    "bosentan micronized free sulfonamide",
+    "dichloroacetate",
+    "fluorotelomer acid 7+3",
+    "furosemide",
+    "morphine hydrochloride",
+    "perfluorohexanesulfonate,potassium salt",
+    "potassium perfluorooctane",
+    "sodium hexobarbital"
+  ),
+  comptox_dtxsid = c(
+    "DTXSID2020006",
+    "DTXSID6021117",
+    "DTXSID20230862",
+    "DTXSID20230861",
+    "DTXSID00881093",
+    "DTXSID6023733",
+    "DTXSID6023733",
+    "DTXSID5022851",
+    "CHEMBL4297521",
+    "DTXSID2032180",
+    "DTXSID2032180",
+    "DTXSID101017271",
+    "DTXSID4023549",
+    "DTXSID80102749",
+    "DTXSID6020648",
+    "DTXSID5021336",
+    "DTXSID9023049",
+    "DTXSID8037708",
+    "DTXSID80873012",
+    "DTXSID8020127",
+    "DTXSID8020127",
+    "DTXSID8038304",
+    "DTXSID3022409",
+    "DTXSID50891627",
+    "DTXSID00966879",
+    "DTXSID7046627",
+    "DTXSID7046627",
+    "DTXSID2020428",
+    "DTXSID90382620",
+    "DTXSID6020648",
+    "DTXSID9023336",
+    "DTXSID3037709",
+    "DTXSID0059794",
+    "DTXSID9023122"
+  )
+) %>%
+  distinct()
+
+# Fill in the missing DTXSIDs for these
+cvt_df <- cvt_df %>%
+  # Fill for analyzed chemicals
+  left_join(
+    dtxsid_byhand_idless %>%
+      inner_join(cvt_df %>%
+                   distinct(analyzed_chem_name_original, fk_analyzed_chemical_id),
+                 by = join_by(chem_name_original == analyzed_chem_name_original)),
+    by = join_by(fk_analyzed_chemical_id,
+                 analyzed_chem_name_original == chem_name_original)
+  ) %>%
+  mutate(analyzed_chem_dtxsid = coalesce(analyzed_chem_dtxsid, comptox_dtxsid)) %>%
+  select(!comptox_dtxsid) %>%
+  # Now do the same for dosed chemical
+  left_join(
+    dtxsid_byhand_idless %>%
+      inner_join(
+        cvt_df %>%
+          distinct(dosed_chem_name_original, fk_dosed_chemical_id),
+        by = join_by(chem_name_original == dosed_chem_name_original)
+      ),
+    by = join_by(fk_dosed_chemical_id,
+                 dosed_chem_name_original == chem_name_original)
+  ) %>%
+  mutate(dosed_chem_dtxsid = coalesce(dosed_chem_dtxsid, comptox_dtxsid)) %>%
+  select(!comptox_dtxsid)
+
+# Now that we've added some missing DTXSIDs, redo the chemical id 
+cvt_df <- cvt_df %>%
+  rowwise() %>%
+  mutate(fk_dosed_chemical_id = ifelse(
+    identical(analyzed_chem_dtxsid, dosed_chem_dtxsid),
+    fk_analyzed_chemical_id,
+    fk_dosed_chemical_id
+  )) %>%
+  ungroup()
+
+any(is.na(cvt_df$fk_analyzed_chemical_id))
+any(is.na(cvt_df$fk_dosed_chemical_id))
+
+quick_stats(cvt_df)
+
+
+# Now we need to pre-emptively address the chemicals that have different
+# dosed_id and analyzed_ids but are actually the same chemical
+cvt_df %>%
+  filter(fk_analyzed_chemical_id != fk_dosed_chemical_id, 
+         analyzed_chem_dtxsid != dosed_chem_dtxsid) %>%
+  distinct(analyzed_chem_name_original, dosed_chem_name_original,
+           fk_analyzed_chemical_id, fk_dosed_chemical_id,
+           analyzed_chem_dtxsid, dosed_chem_dtxsid) %>%
+  arrange(analyzed_chem_name_original) %>%
+  head()
+  # View()
+
+# TO FIX: SALTS
+# perfluorooctanesulfonate 692 -> 694, 763 -> 764
+# perfluorooctanoate 761 -> 762
+# phenobarbital 1147 -> 291
+# perfluorobutyrate (two different salts, could be interesting but removing for now)
+# perfluorobutanesulfonate 679 -> 680, 777 -> 778
+# perfluorohexanesulfonate 671 -> 672, 791 -> 792, 681 -> 682
+# tamoxifen 1008 -> 1010
+# thiopenal 1148 -> 1150
+# imipramine 1158 -> 1159, 1154 -> 1159
+# valproate 1163 -> 1164
+# nitrite 1013 -> 1014
+# odansetron 1117 -> 1118
+
+cvt_df <- cvt_df %>%
+  mutate(
+    fk_dosed_chemical_id = case_when(
+      fk_dosed_chemical_id %in% "692" &
+        fk_analyzed_chemical_id %in% "694" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "763" &
+        fk_analyzed_chemical_id %in% "764" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "761" &
+        fk_analyzed_chemical_id %in% "762" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "1147" &
+        fk_analyzed_chemical_id %in% "291" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "679" &
+        fk_analyzed_chemical_id %in% "680" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "777" &
+        fk_analyzed_chemical_id %in% "778" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "671" &
+        fk_analyzed_chemical_id %in% "672" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "791" &
+        fk_analyzed_chemical_id %in% "792" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "681" &
+        fk_analyzed_chemical_id %in% "682" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "1008" &
+        fk_analyzed_chemical_id %in% "1010" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "1148" &
+        fk_analyzed_chemical_id %in% "1150" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "1158" &
+        fk_analyzed_chemical_id %in% "1159" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "1154" &
+        fk_analyzed_chemical_id %in% "1159" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "1163" &
+        fk_analyzed_chemical_id %in% "1164" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "1013" &
+        fk_analyzed_chemical_id %in% "1014" ~ fk_analyzed_chemical_id,
+      fk_dosed_chemical_id %in% "1117" &
+        fk_analyzed_chemical_id %in% "1118" ~ fk_analyzed_chemical_id,
+      .default = fk_dosed_chemical_id
+    )
+  ) 
 
 
 # For figuring out whether there was a change from the original units to reported conc
@@ -614,45 +815,38 @@ quick_stats(cvt_df)
 cvt_df <- cvt_df %>% mutate(conc_unit_norm_factor = signif(conc/conc_original, 1),
                             .after = conc_units_normalized) 
 
-cat("Current # chemicals: ", length(unique(cvt_df$analyte_dtxsid)), "\n")
-cat("Number of chemicals where analyte_dtxsid is NA: ",
+cat("Current # chemicals: ", length(unique(cvt_df$analyzed_chem_dtxsid)), "\n")
+cat("Number of chemicals where analyzed_chem_dtxsid is NA: ",
     sum(is.na(unique(cvt_df[c("fk_analyzed_chemical_id",
-                               "analyte_dtxsid")])$analyte_dtxsid)),
+                               "analyzed_chem_dtxsid")])$analyzed_chem_dtxsid)),
     "\n")
 
 
 cat("Number of radiolabelling experiments: ",
-    sum(distinct(cvt_df, analyte_dtxsid, radiolabeled) %>% pull(radiolabeled) %>%
+    sum(distinct(cvt_df, analyzed_chem_dtxsid, radiolabeled) %>%
+          pull(radiolabeled) %>%
           {. %in% TRUE}
         )
     )
-distinct(cvt_df, analyte_dtxsid, analyte_name_original, radiolabeled) %>%
-  filter(radiolabeled %in% TRUE, !is.na(analyte_dtxsid))
+distinct(cvt_df, analyzed_chem_dtxsid,
+         analyzed_chem_name_original, radiolabeled) %>%
+  filter(radiolabeled %in% TRUE, !is.na(analyzed_chem_dtxsid))
 
 
 
 cat("Number of chemicals with non-matching ids ",
     cvt_df %>%
-      filter(!is.na(analyte_dtxsid),
+      filter(!is.na(analyzed_chem_dtxsid),
              !(radiolabeled %in% TRUE),
              fk_analyzed_chemical_id != fk_dosed_chemical_id) %>%
-      distinct(analyte_dtxsid) %>%
+      distinct(analyzed_chem_dtxsid) %>%
       NROW()
 )
 
 
-cvt_df <- cvt_df %>%
-  filter(!(radiolabeled %in% TRUE),
-         !is.na(analyte_dtxsid),
-         (fk_analyzed_chemical_id == fk_dosed_chemical_id)) %>%
-  distinct()
-
-quick_message(text = c("Filtering out:",
-                       "Missing {.code analyte_dtxsid}",
-                       "Radiolabeling experiments",
-                       "Data where the analyzed chemicals and dosed chemicals are different"))
 quick_stats(cvt_df)
-diff_log_cvt(cvt_df)
+# This should be the base CvTdb prior to filtering steps
+
 ```
 
 
@@ -676,26 +870,75 @@ I begin with a couple of filtering steps:
 + Exclude data with only one observation per *study_id*
 
 ```{r preliminary_filtering}
+
+cvt_df <- cvt_df %>%
+  filter(!(radiolabeled %in% TRUE),
+         !is.na(analyzed_chem_dtxsid),
+         (fk_analyzed_chemical_id == fk_dosed_chemical_id)) %>%
+  distinct()
+
+quick_message(text = c("Filtering out:",
+                       "Missing {.code analyzed_chem_dtxsid}",
+                       "Radiolabeling experiments",
+                       "Data where the analyzed chemicals and dosed chemicals are different"))
+
+
+quick_stats(cvt_df)
+
+
+# Filtering out non-circulation mediums (these are retained in cvtdb_original)
+cvt_df <- cvt_df %>%
+  filter(conc_medium_normalized %in% c("blood", "plasma")) 
+
+quick_message(text = c("Filtering out:",
+                       "Non-plasma/blood medium collected."))
+
+# Filter out where all values in experiment are missing values/below LOQ
+# Also filter out observations where 
+cvt_df <- cvt_df %>%
+  mutate(
+    conc = ifelse(conc < 0, NA_real_, conc),
+    conc_original = ifelse(conc_original < 0, NA_real_, conc_original)
+  ) %>%
+  group_by(analyzed_chem_dtxsid, species, fk_extraction_document_id,
+           administration_route_normalized, conc_medium_normalized) %>%
+  filter(
+    !(if_all(conc, is.na) & if_all(conc_original, is.na))
+  ) %>%
+  ungroup() %>%
+  distinct()
+
+
+quick_message(text = c("Filtering out:",
+                       "Experiments missing concentration values altogether."))
+
+quick_stats(cvt_df)
+
 # Dose Units: Need mg/kg... = ug/mg = ng/ug, and kg = L
 # Conc Units: Need mg/L... = ug/mL = ng/uL = pg/nL, and kg = L, g = mL
 cvt_df <- cvt_df %>% mutate(
+  conc_units_normalized = stringr::str_replace(
+    conc_units_original, "(?<=/m?)l", "L"
+  ),
+  loq_units = stringr::str_replace(loq_units, "(?<=/m?)l", "L"),
   invivPK_dose_level_units = "mg/kg",
-  invivPK_conc_units = "ug/mL",
-  invivPK_conc = NA_real_,
-  invivPK_dose_level = NA_real_
+  invivPK_conc_units = "ug/mL"
   )
 # Set the equivalent units
 equiv_mgkg <- c("mg/kg", "ug/g", "ng/mg")
 equiv_mgL <- c("mg/L", "ug/mL", "ng/uL", "mg/kg", "mg/g", "ug/mg")
 
-# Filtering out entries with no concentration information available
+
+quick_stats(cvt_df)
+
+# Filtering out entries with only single observations per study_id
 cvt_df <- cvt_df %>%
-  filter(!(is.na(conc) & is.na(conc_original))) %>%
   group_by(fk_study_id) %>%
   filter(n() > 1) %>%
   ungroup()
-###
+
 quick_stats(cvt_df)
+
 ```
 
 
@@ -721,89 +964,138 @@ cvt_df %>% filter(!(dose_level_units_original %in% equiv_mgkg),
   distinct(fk_study_id, 
            dose_level_original, dose_level_normalized,
            dose_level_units_original,
-           pmid,
-           other_study_identifier)
+           administration_route_normalized,
+           pmid, fk_extraction_document_id,
+           other_study_identifier) %>%
+  glimpse()
 
+# Set units
+# Fix some dosing units which are not weight normalized
 cvt_df <- cvt_df %>%
   mutate(invivPK_dose_level = dose_level_normalized,
          invivPK_loq = loq,
          invivPK_loq_units = loq_units,
          invivPK_conc_sd = conc_sd,
          invivPK_conc = conc)
-diff_log_cvt(cvt_df)
 
-# Checking other_study_identifier == S0916
-quick_message(text = c(
-  "Data Modification:",
-  paste("For study 1713 and 1714, tamoxifen was administered at 5mL/kg, ",
-        "meaning these doses are 5/1000th of current value to convert ug/mL -> mg/kg."
-),
- "This entry has since been removed from CvT as of April 2025"
-)
-)
-
-# In CEBS "S0916" the Dose is 300,100 ug/mL with 5mL/kg administered by gavage (the only data left)
-# Making it 5/1000 mg/kg x either doses in study_ids 1714,1713 (the latter was filtered out prior to this)
-# cvt_df <- cvt_df %>%
-#   mutate(
-#     invivPK_dose_level = if_else(
-#       fk_study_id %in% c("1714", "1713"),
-#       5/1000 * dose_level_normalized,
-#       dose_level_normalized
-#     )
-#   )
-
-
-# In CEBS "S0624" it was in ng/kg not mg/kg in the summary, but that has been deleted from CEBS
-# Assuming that was a error of record
-
-
-quick_message("CEBS datasets S0976 and S0328 contain data on LOQ or ELOQ")
-# For study S0976, Caffeine, L-ephedrine, and psuedoephedrine 
+# Now only a few studies need "extra" normalizing
 quick_message(c(
-  "Data Modification:",
-  "Adjusting LOQ values for L-ephedrine to 3.39 as stated in CEBS study S0976.",
-  "Set LOQ units to ng/mL as detailed in the same CEBS study.",
-  "S0976 has been removed as of April 2025."
+  "Data Modification: Changing `conc` for following chemicals",
+  "hexobarbital, phenobarbital, thiopental"
 ))
-# Here I create new columns for loq and loq_units b/c I have modified them.
-# cvt_df <- cvt_df %>%
-#   mutate(invivPK_loq = if_else(
-#     other_study_identifier %in% "S0976",
-#     case_when(
-#       analyte_name_original %in% "caffeine" ~ 4.00,
-#       analyte_name_original %in% "l-ephedrine" ~ 3.39,
-#       analyte_name_original %in% "pseudoephedrine" ~ 4.43
-#     ),
-#     loq),
-#     invivPK_loq_units = if_else(
-#       other_study_identifier %in% "S0976",
-#       "ng/mL",
-#       loq_units
-#     ))
-
-# Some pentachlorophenol studies
 quick_message(c(
-  "Data Modification:",
-  "Looked at ELOQ in CEBS study S0328 and found it to be around 1",
-  "This only is relevant for {.code study_id} 1779.",
-  "This record is no longer present as of April 2025."
+  "Data Modification: Changing `conc_units_normalized` for following chemicals",
+  "hexobarbital, phenobarbital, thiopental, TAME, chlorpyrifos, benzo(a)pyrene",
+  "phenacetin, perfluorononanoic acid, perfluorodecanoic acid, perfluorooctanoic acid"
+))
+quick_message(c(
+  "Data Modification: Changing `invivPK_loq` for following chemicals",
+  "TAME"
+))
+quick_message(c(
+  "Data Modification: Changing `invivPK_loq_units` for following chemicals",
+  "TAME",
+  "Any NA value for invivPK_loq_units to 'ug/mL'",
+  "Any 'ng' value to 'ng/mL'"
 ))
 
-# cvt_df <- cvt_df %>%
-#   mutate(
-#   invivPK_loq = if_else(
-#     fk_study_id %in% "1779",
-#     1, invivPK_loq),
-#   invivPK_loq_units = if_else(
-#     other_study_identifier %in% "S0328",
-#     "ug/mL",
-#     invivPK_loq_units
-#   ))
+cvt_df <- cvt_df %>%
+  mutate(
+    invivPK_conc = case_when(
+      # TAME OK
+      # chlorpyrifos OK
+      # benzo(a)pyrene OK
+      # hexobarbital
+      conc_units_normalized %in% "x 10^-3 M" &
+        analyzed_chem_dtxsid %in% "DTXSID9023122" ~ conc_original * 0.23611,
+      # phenobarbital
+      conc_units_normalized %in% "x 10^-3 M" &
+        analyzed_chem_dtxsid %in% "DTXSID5021122" ~ conc_original * 0.23208,
+      # thiopental
+      conc_units_normalized %in% "x 10^-3 M" &
+        analyzed_chem_dtxsid %in% "DTXSID1023653" ~ conc_original * 0.24211,
+      .default = invivPK_conc
+    ),
+    conc_units_normalized = case_match(
+      analyzed_chem_dtxsid,
+      c("DTXSID9023122",
+        "DTXSID5021122",
+        "DTXSID1023653",
+        "DTXSID8024521",
+        "DTXSID4020458",
+        "DTXSID2020139",
+        "DTXSID1021116",
+        "DTXSID8031865",
+        "DTXSID3031860",
+        "DTXSID8031863"
+        ) ~ "ug/mL",
+      .default = conc_units_normalized
+    ),
+    invivPK_loq = case_when(
+      # TAME
+      invivPK_loq_units %in% "nmol/mL" &
+        analyzed_chem_dtxsid %in% "DTXSID8024521" ~ loq * 0.102,
+      .default = invivPK_loq
+    ),
+    invivPK_loq_units = case_when(
+      invivPK_loq_units %in% "nmol/mL" &
+        analyzed_chem_dtxsid %in% "DTXSID8024521" ~ "ug/mL",
+      is.na(invivPK_loq_units) ~ "ug/mL",
+      other_study_identifier %in% "K02922" ~ "ng/mL", # incorrect extraction
+      invivPK_loq_units %in% "ng" ~ "ng/mL",
+      .default = invivPK_loq_units
+    ),
+    weight_kg = case_when(
+      fk_subject_id %in% "41249" ~ 76, # extraction typo
+      .default = weight_kg
+    )
+  )
 
+# Fixing DOSE units
+unique(cvt_df$dose_level_units_original)
+
+cvt_df %>% 
+  filter(!(dose_level_units_original %in% equiv_mgkg),
+                  dose_level_normalized == dose_level_original) %>%
+  distinct(fk_study_id, 
+           dose_level_original, dose_level_normalized,
+           dose_level_units_original,
+           administration_route_normalized, fk_extraction_document_id)
+
+# Adjust invivPK_dose_level for non-standard units
+cvt_df %>% filter(is.na(invivPK_dose_level)) %>% count(dose_level_units_original)
+
+cvt_df <- cvt_df %>% 
+  mutate(
+    invivPK_dose_level = case_when(
+      # Standard weight of human (75kg)
+      is.na(invivPK_dose_level) &
+        is.na(weight_kg) &
+        species %in% "human" &
+        dose_level_units_original %in% "mg" ~ dose_level_original / 75,
+      dose_level_units_original %in% "mg" ~ signif(
+        invivPK_dose_level / weight_kg, digits = 5
+      ),
+      dose_level_units_original %in% "g" ~ signif(
+        1E3 * invivPK_dose_level / weight_kg, digits = 5
+      ),
+      dose_level_units_original %in% "ug" ~ signif(
+        1E-3 * invivPK_dose_level / weight_kg, digits = 5
+      ),
+      is.na(invivPK_dose_level) &
+        dose_level_units_original %in% "ug/kg" ~ dose_level_original * 1E-3,
+      is.na(invivPK_dose_level) &
+        dose_level_units_original %in% "ng/kg" ~ dose_level_original * 1E-6,
+      is.na(invivPK_dose_level) &
+        dose_level_units_original %in% c("mg/kg", "ug/mL") ~ dose_level_original,
+      .default = invivPK_dose_level
+    )
+  )
+
+cvt_df %>% filter(is.na(invivPK_dose_level)) %>% count(dose_level_units_original)
+cvt_df %>% filter(is.na(invivPK_dose_level)) %>% glimpse()
 
 quick_stats(cvt_df)
-diff_log_cvt(cvt_df)
 ```
 
 ## Routine Unit Conversions and final filtering steps
@@ -821,95 +1113,138 @@ even when these are not below LOQ.
 
 
 ```{r general_unit_conversions}
-quick_message(c(
-  "Filtering data:",
-  "Only including data with a single dose.",
-  "{.code dose_frequency} of {.code NA} is assumed to be single bolus dose."
-))
-# Eliminate study that gave chemical each day, not single dose
-# This may be used in another type of model, but right now we deal with single bolus
-# Only include those that have NA or 1 for dose frequency
-cvt_df <- cvt_df %>%
-  filter(dose_frequency %in% c("1", NA))
+apply(cvt_df, 2, \(x) {
+  sum(is.na(x))
+})
+
 
 # quick_stats(cvt_df)
-quick_message("Uniqe LOQ units:")
-table(cvt_df$invivPK_loq_units)
-diff_log_cvt(cvt_df)
-quick_stats(cvt_df)
+quick_message("Unique LOQ units:")
+print(table(cvt_df$invivPK_loq_units))
+
 
 quick_message(c(
   "Modifying Data:",
   "Converting loq units to concentration unit standard mg/L",
   "Converting concentration units to standard mg/L",
-  "Converting concentration sd units to the standard mg/L",
-  "Keeping concentration values for series 23340 and 23380 to original records"
+  "Converting concentration sd units to the standard mg/L"
 ))
 # Normalize LOQ units
 cvt_df <- cvt_df %>%
-  mutate(invivPK_loq = if_else(
-    invivPK_loq_units %in% c("ug/L", "ng/mL", "ng/g"),
-    invivPK_loq * 1E-3, invivPK_loq)) %>% 
-  mutate(ivivPK_loq_units = "ug/mL") # mg/L and ug/mL are same scale
+  mutate(invivPK_loq = case_match(
+    invivPK_loq_units,
+    c("ug/L", "ng/mL", "ng/g") ~ invivPK_loq * 1E-3,
+    c("pg/mL") ~ invivPK_loq * 1E-6,
+    .default = invivPK_loq
+    )) %>% 
+  mutate(invivPK_loq_units = "ug/mL") # mg/L and ug/mL are same scale
+
 # Normalize conc_sd and conc units manually
+quick_message("Unique conc units:")
+print(table(cvt_df$conc_units_normalized))
 
 # Some concentrations are already normalized
 cvt_df <- cvt_df %>%
+  filter(!(conc_units_normalized %in% "molar percentage")) %>%
   mutate(invivPK_conc_sd = case_when(
-    conc_units_original %in% c("ng-eq/mL", "ng/mL", "ng/ml",
-                               "ng/g", "ng/g tissue", "ug/L") ~ conc_sd_original*1E-3,
-    conc_units_original %in% c("g/dL") ~ conc_sd_original*1E-4,
-    conc_units_original %in% c("pg/mL") ~ conc_sd_original*1E-6,
-    !is.na(conc_sd) ~ conc_sd, 
-    .default = conc_sd_original
+    conc_units_normalized %in% c("ng/mL", "ng/g", "ug/L") ~ conc_sd_original*1E-3,
+    conc_units_normalized %in% c("g/dL") ~ conc_sd_original*1E-4,
+    conc_units_normalized %in% c("pg/mL") ~ conc_sd_original*1E-6,
+    conc_units_normalized %in% "percent of dose" ~ conc_sd_original * 
+      invivPK_dose_level/100,
+    .default = invivPK_conc_sd
   ))
 # Need to normalize the ng-eq/mL sample, conc is generally already normalized
 # 
 cvt_df <- cvt_df %>%
   mutate(invivPK_conc = case_when(
-    conc_units_original %in% c("ng-eq/mL", "ng/mL", "ng/ml",
-                               "ng/g", "ng/g tissue", "ug/L") ~ conc_original*1E-3,
-    conc_units_original %in% c("g/dL") ~ conc_original*1E-4,
-    conc_units_original %in% c("pg/mL") ~ conc_original*1E-6,
-    fk_series_id %in% c("23340", "23380") ~ conc_original, # Special case of rounding errors
-    .default = conc
+    conc_units_normalized %in% c("ng/mL", "ng/g", "ug/L") ~ conc_original*1E-3,
+    conc_units_normalized %in% c("g/dL") ~ conc_original*1E-4,
+    conc_units_normalized %in% c("pg/mL") ~ conc_original*1E-6,
+    conc_units_normalized %in% "percent of dose" ~ conc_original * invivPK_dose_level/100,
+    is.na(invivPK_conc) ~ conc_original,
+    .default = invivPK_conc
   ))
 
 quick_message("Are there chemicals with very few (less than 5) observations still?")
-cvt_df %>% count(analyte_dtxsid) %>% arrange(n) %>% head()
-# This has been resolved now
-# quick_message(c(
-#   "Filtering Data:",
-#   "Removing DTXSID6038299 due to insufficient data",
-#   "Removing all data points that still have recorded concentrations of zero"
-# ))
-# cvt_df <- cvt_df %>%
-#   dplyr::filter(!(analyte_dtxsid %in% "DTXSID6038299"))
-
-# This is the final filtering so that the dataset is most consistent with the
-# most current near future pull in the new year
-# This will include some zero values, but should work itself out during preprocessing
-cvt_df <- cvt_df %>%
-  filter(invivPK_conc >= 0)
+cvt_df %>% count(analyzed_chem_dtxsid) %>% arrange(n) %>% head()
+# No
 
 
 # More notes:
 # DTXSID6020438 & DTXSID0020868 rat is from water (top) and oil (bottom curve) gavage
 
-glimpse(cvt_df)
-quick_stats(cvt_df)
 
-diff_log_cvt(cvt_df, 
-             notes = c("Used CompTox name - DTXSID matching to fill in NAs.",
-                       "Fixed names that used non-standard single quotes.")
-)
+cvt_df <- cvt_df %>%
+  mutate(time_hr = case_when(
+    is.na(time_hr) &
+      !is.na(time_original) & 
+      time_units_original %in% c("hours", "hour") ~ time_original,
+    .default = time_hr
+  ))
+
+# Filter out negative timepoints
+# Set subjects to 1 if conc_sd is NA
+cvt_df <- cvt_df %>%
+  filter(time_hr >= 0) %>%
+  mutate(
+    n_subjects_normalized = case_when(
+      is.na(invivPK_conc_sd) ~ 1,
+      is.na(n_subjects_normalized) ~ 1,
+      .default = n_subjects_normalized
+    )
+  ) 
+
+quick_message(c(
+  "Modifying dataset:",
+  "Set missing time_hr to time_original if these are in hour(s).",
+  "Filter out negative timepoints.",
+  "Set n_subjects_normalized to 1 if conc_sd or n_subjects_normalized is missing."
+))
+
+
+
+glimpse(cvt_df)
+apply(cvt_df, 2, \(x) {
+  sum(is.na(x))
+})
+
+quick_stats(cvt_df)
 
 ```
 
 Note the columns prefixed by _invivPK_. These are generated as a non-destructive form
 of modifying the data that we will use for _invivoPKfit_. The only column from the
-SQL query result of CvTdb that is actually changed is the `analyte_dtxsid` as 
+SQL query result of CvTdb that is actually changed is the `analyzed_chem_dtxsid` as 
 described earlier.
+
+```{r plot_by_dtxsid}
+
+cvt_df %>%
+  ggplot(aes(x = time_hr, y = invivPK_conc, group = analyzed_chem_dtxsid,
+             color = analyzed_chem_dtxsid)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  theme_bw() +
+  scale_y_log10() +
+  theme(legend.position = "none")
+```
+
+
+```{r final_checks}
+
+cvt_df %>%
+  count(is.na(dose_level_normalized), 
+        is.na(invivPK_dose_level),
+        is.na(dose_level_original)) %>% glimpse()
+
+cvt_df %>%
+  count(is.na(invivPK_conc_sd) & n_subjects_normalized > 1)
+
+cvt_df %>%
+  count(is.na(n_subjects_normalized))
+
+```
 
 
 
@@ -917,18 +1252,85 @@ Save the pulled CVT data with the edits/normalizations, and also save the curren
 
 ```{r saving_data, include=FALSE, eval=FALSE}
 cvt_date <- Sys.Date()
+
 cat(diff_log_cvt(cvt_df, 
-             notes = c("Used CompTox name - DTXSID matching to fill in NAs.",
-                       "Fixed names that used non-standard single quotes.")
+                 notes = c(
+                   ""
+                 )
 ),
-    file = "data-raw/cvt_changelog.txt",
-    append = TRUE)
+file = "data-raw/cvt_changelog.txt",
+append = TRUE
+)
 
 cvt <- cvt_df
 save(cvt, file = "data/cvt.rda", compress = "bzip2")
 save(cvt_date, file = "data/cvt_date.rda")
 
 ```
+
+# QSAR Bakeoff Run
+
+```{r running}
+my_pk <- pk(cvt,
+            mapping = ggplot2::aes(
+              Chemical = analyzed_chem_dtxsid,
+              Chemical_Name = analyzed_chem_name_original,
+              DTXSID = analyzed_chem_dtxsid,
+              CASRN = analyzed_chem_casrn,
+              Species = species,
+              Reference = fk_extraction_document_id,
+              Media = conc_medium_normalized,
+              Route = administration_route_normalized,
+              Dose = invivPK_dose_level,
+              Dose.Units = "mg/kg",
+              Subject_ID = fk_subject_id,
+              Series_ID = fk_series_id,
+              Study_ID = fk_study_id,
+              ConcTime_ID = conc_time_id,
+              N_Subjects = n_subjects_normalized,
+              Weight = weight_kg,
+              Weight.Units = "kg",
+              Time = time_hr,
+              Time.Units = "hours",
+              Value = invivPK_conc,
+              Value.Units = "mg/L",
+              Value_SD = invivPK_conc_sd,
+              LOQ = invivPK_loq
+            ))
+
+my_pk <- my_pk +
+  stat_error_model(error_group = vars(Chemical, Species)) +
+  settings_optimx(method = "bobyqa") +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(keep_data_original = TRUE,
+                      suppress.messages = TRUE) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE)
+
+my_pk <- do_preprocess(my_pk)
+apply(my_pk$data, 2, \(x) { any(is.na(x)) })
+
+my_pk <- do_data_info(my_pk)
+my_pk <- do_prefit(my_pk)
+
+my_pk <- do_fit(my_pk, n_cores = 12)
+
+
+fit_pl <- plot(my_pk, best_fit = TRUE, log10_C = FALSE, use_scale_conc = TRUE)
+
+fit_pl %>% filter(Chemical %in% "DTXSID1021116", Species %in% "human") %>%
+  pull(final_plot) %>% .[[1]]
+fit_pl %>% filter(Chemical %in% "DTXSID9025617", Species %in% "mouse") %>%
+  pull(final_plot) %>% .[[1]]
+fit_pl %>% filter(Chemical %in% "DTXSID9025617", Species %in% "rat") %>%
+  pull(final_plot) %>% .[[1]]
+fit_pl %>% filter(Chemical %in% "DTXSID2021781", Species %in% "mouse") %>%
+  pull(final_plot) %>% .[[1]]
+
+save(my_pk, file = "data-raw/temp_pk.rda")
+
+```
+
+
 
 
 
