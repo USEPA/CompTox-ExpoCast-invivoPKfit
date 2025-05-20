@@ -34,8 +34,8 @@ Calculate area under the plasma concentration vs. time curve for the
 1-compartment model, using an analytical equation (the integral of the
 1-compartment model equation with respect to time).
 }
-\details{
-# Required parameters
+\section{Required parameters}{
+
 
 `params` must include the following named items:
   \describe{
@@ -69,6 +69,7 @@ If `any(medium %in% 'blood')`, then `params` must also include
 `Rblood2plasma`, the ratio of chemical concentration in whole blood to the
 chemical concentration in blood plasma.
 }
+
 \seealso{
 Other built-in model functions: 
 \code{\link{auc_1comp_cl}()},
@@ -81,6 +82,7 @@ Other built-in model functions:
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},

@@ -7,9 +7,9 @@
 auto_units(y, from, target = 10, period_units = time_units)
 }
 \arguments{
-\item{y}{A numeric vector of time values}
+\item{y}{A numeric vector of time values.}
 
-\item{from}{The original units of `y`}
+\item{from}{The original units of `y`.}
 
 \item{target}{The target value (order of magnitude) for the midpoint of rescaled time values. Default 10.}
 
@@ -21,7 +21,7 @@ Character: Automatically-selected new time units, which will be one of `period_u
 \description{
 Given a vector of time values in original units, this function selects new
 time units such that, when time is rescaled to the new units, the midpoint of
-the time vector is as close to 10 as possible.
+the time vector is as close to a target (default: 10) as possible.
 }
 \details{
 Acceptable/understood time units in `period_units`

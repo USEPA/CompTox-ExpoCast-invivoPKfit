@@ -28,8 +28,8 @@ A vector of plasma concentration values (mg/L) corresponding to
 \description{
 Evaluates the area under the concentration-time curve for a "flat" model
 }
-\details{
-# Required parameters
+\section{Required parameters}{
+
 
 `params` must include the following named items:
   \describe{
@@ -61,6 +61,7 @@ If `any(medium %in% 'blood')`, then `params` must also include
 `Rblood2plasma`, the ratio of chemical concentration in whole blood to the
 chemical concentration in blood plasma.
 }
+
 \seealso{
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
@@ -73,6 +74,7 @@ Other built-in model functions:
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},

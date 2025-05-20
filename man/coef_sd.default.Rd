@@ -4,10 +4,10 @@
 \alias{coef_sd.default}
 \title{Coefficient standard deviation default}
 \usage{
-\method{coef_sd}{default}(object, ...)
+\method{coef_sd}{default}(obj, ...)
 }
 \arguments{
-\item{object}{An object}
+\item{obj}{An object.}
 
 \item{...}{Additional arguments currently not in use.}
 }

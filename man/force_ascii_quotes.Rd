@@ -19,6 +19,6 @@ cross-compatibility with other databases and systems that use simple
 apostrophes `'` and quotes `"` instead of curly quotes or prime symbols.
 }
 \examples{
-try(cat(force_ascii_quotes("3,3’,4,4′-tetrachloro-5-biphenylol")))
+try(cat(invivoPKfit:::force_ascii_quotes("3,3’,4,4′-tetrachloro-5-biphenylol")))
 
 }

@@ -6,15 +6,16 @@
 \usage{
 pk(
   data = NULL,
-  mapping = ggplot2::aes(Chemical = analyte_dtxsid, Chemical_Name =
-    analyte_name_original, DTXSID = analyte_dtxsid, CASRN = analyte_casrn, Species =
-    species, Reference = fk_extraction_document_id, Media = conc_medium_normalized, Route
-    = administration_route_normalized, Dose = invivPK_dose_level, Dose.Units = "mg/kg",
-    Subject_ID = fk_subject_id, Series_ID = fk_series_id, Study_ID = fk_study_id,
-    ConcTime_ID = conc_time_id, N_Subjects = n_subjects_normalized, Weight = weight_kg,
-    Weight.Units = "kg", Time = time_hr, 
-     Time.Units = "hours", Value =
-    invivPK_conc, Value.Units = "mg/L", Value_SD = invivPK_conc_sd, LOQ = invivPK_loq),
+  mapping = ggplot2::aes(Chemical = analyzed_chem_dtxsid, Chemical_Name =
+    analyzed_chem_name_original, DTXSID = analyzed_chem_dtxsid, CASRN =
+    analyzed_chem_casrn, Species = species, Reference = fk_extraction_document_id, Media
+    = conc_medium_normalized, Route = administration_route_normalized, Dose =
+    invivPK_dose_level, Dose.Units = "mg/kg", Subject_ID = fk_subject_id, Series_ID =
+    fk_series_id, Study_ID = fk_study_id, ConcTime_ID = conc_time_id, N_Subjects =
+    n_subjects_normalized, Weight = weight_kg, Weight.Units = "kg", 
+     Time = time_hr,
+    Time.Units = "hours", Value = invivPK_conc, Value.Units = "mg/L", Value_SD =
+    invivPK_conc_sd, LOQ = invivPK_loq),
   settings_preprocess_args = list(),
   settings_data_info_args = list(),
   settings_optimx_args = list(),
@@ -178,27 +179,29 @@ variable names in the built-in dataset [cvt]):
 
 \preformatted{
 ggplot2::aes(
-Chemical = chemicals_analyzed.dsstox_substance_id,
-DTXSID = chemicals_analyzed.dsstox_substance_id,
-CASRN = chemicals_analyzed.dsstox_casrn,
-Species = subjects.species,
-Reference = as.character(ifelse(is.na(documents_reference.id),
-                                documents_extraction.id,
-                                documents_reference.id)),
-Media = series.conc_medium_normalized,
-Route = studies.administration_route_normalized,
-Dose = studies.dose_level_normalized,
-Dose.Units = "mg/kg",
-Subject = subjects.id,
-N_Subjects =  series.n_subjects_in_series,
-Weight = subjects.weight_kg,
-Weight.Units = "kg",
-Time = conc_time_values.time_hr,
-Time.Units = "hours",
-Value = conc_time_values.conc,
-Value.Units = "mg/L",
-LOQ = series.loq_normalized,
-Value_SD  = conc_time_values.conc_sd_normalized
+  Chemical = analyzed_chem_dtxsid,
+  Chemical_Name = analyzed_chem_name_original,
+  DTXSID = analyzed_chem_dtxsid,
+  CASRN = analyzed_chem_casrn,
+  Species = species,
+  Reference = fk_extraction_document_id,
+  Media = conc_medium_normalized,
+  Route = administration_route_normalized,
+  Dose = invivPK_dose_level,
+  Dose.Units = "mg/kg",
+  Subject_ID = fk_subject_id,
+  Series_ID = fk_series_id,
+  Study_ID = fk_study_id,
+  ConcTime_ID = conc_time_id,
+  N_Subjects = n_subjects_normalized,
+  Weight = weight_kg,
+  Weight.Units = "kg",
+  Time = time_hr,
+  Time.Units = "hours",
+  Value = invivPK_conc,
+  Value.Units = "mg/L",
+  Value_SD = invivPK_conc_sd,
+  LOQ = invivPK_loq
 )
 }
 

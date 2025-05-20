@@ -6,18 +6,18 @@
 \usage{
 get_params_1comp_rad(
   data,
-  lower_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Fup = 0, Clint = 0, Vdist = 0.01,
-    Fgutabs = 0, kgutabs = log(2)/(2 * max(Time_trans)), Fgutabs_Vdist = 0.01,
-    Rblood2plasma = 0.01, Frec = 0.001),
-  upper_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Fup = 1, Clint = 1e+05, Vdist =
-    100, Fgutabs = 1, kgutabs = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
-    Fgutabs_Vdist = 100, Rblood2plasma = 100, Frec = 1),
-  param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4", Q_gfr = "L/h/kg ^3/4", Fup =
-    "unitless fraction", Clint = "L/h/kg", Vdist = paste0("(", unique(Dose.Units), ")",
-    "/", "(", unique(Conc.Units), ")"), Fgutabs = "unitless fraction", kgutabs =
-    paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist = paste0("(",
-    unique(Conc.Units), ")", "/", "(", unique(Dose.Units), ")"), Rblood2plasma =
-    "unitless ratio", Frec = "unitless fraction"),
+  lower_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Q_alv = NA, Kblood2air = NA, Fup =
+    0, Clint = 0, Vdist = NA, Fgutabs = NA, kgutabs = NA, Rblood2plasma = NA, Frec =
+    0.001),
+  upper_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Q_alv = NA, Kblood2air = NA, Fup =
+    1, Clint = 1e+05, Vdist = NA, Fgutabs = NA, kgutabs = NA, Rblood2plasma = NA, Frec =
+    1),
+  param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4", Q_gfr = "L/h/kg ^3/4", Q_alv =
+    "L/h/kg ^3/4", Kblood2air = "unitless ratio", Fup = "unitless fraction", Clint =
+    "L/h/kg", Vdist = paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units),
+    ")"), Fgutabs = "unitless fraction", kgutabs = paste0("1/",
+    unique(Time_trans.Units)), Rblood2plasma = "unitless ratio", Frec =
+    "unitless fraction"),
   restrictive = TRUE
 )
 }
@@ -57,11 +57,11 @@ estimated from the data. This is intended for use with collected radiolabeling
 data.
 }
 \details{
-The full set of model parameters for the 1-compartment model includes `Vdist`,
-`Clint`, `kgutabs`, `Fgutabs`, `Q_totli`, `Q_gfr`,
-`Frec`, `Fup`, and `Rblood2plasma`.
-Whether each one can be estimated from the data depends on which routes of administration
-are included in the data.
+The full set of model parameters for the 1-compartment model includes
+`Clint`,  `Fup`, `kgutabs`, `Fgutabs`, `Vdist`,
+`Q_totli`, `Q_gfr`, `Q_alv`, `Kblood2air`, and `Rblood2plasma`.
+Since these are directly taken from `httk`, many of the usual route-dependent
+estimations of these parameters are not necessary.
 }
 \section{Fraction recovered `Frec`}{
 
@@ -137,8 +137,9 @@ halfway between the lower and upper bounds for that parameter.
 `Q_totli` is the flow through the portal vein from the gut to the liver
 and is estimated in this model via [httk::tissue.data] in a species-specific manner.
 `Q_gfr` is the glomular filtration rate of kidneys. It is estimated via
-[httk::physiology.data] in a species specific manner.
-`Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_1comp()]
+[httk::physiology.data] in a species specific manner, as is `Q_alv`,
+the alveolar pulmonary ventilation rate.
+`Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_3comp2()]
 For each of these parameters default lower bounds are +/-10% of the starting value.
 }
 
@@ -207,6 +208,7 @@ Other built-in model functions:
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},

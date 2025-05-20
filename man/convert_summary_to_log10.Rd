@@ -17,7 +17,7 @@ A list with two named elements: "log10mean" and "log10SD", the log10-scale
 }
 \description{
 Estimate log10-scale sample mean and standard deviation from natural-scale
-sample mean and standard deviation
+sample mean and standard deviation.
 }
 \details{
 \eqn{\bar{y}_i} is the natural-scale sample mean for group \eqn{i}. \eqn{s_i}

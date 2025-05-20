@@ -7,6 +7,8 @@
 \method{coef_sd}{pk}(obj, model = NULL, method = NULL, suppress.messages = TRUE, ...)
 }
 \arguments{
+\item{obj}{A [pk] object.}
+
 \item{model}{Optional: Specify one or more of the fitted models whose
 coefficients to return. If NULL (the default), coefficients will be
 returned for all of the models in `obj$stat_model`.}
@@ -19,8 +21,6 @@ returned for all of the models in `obj$settings_optimx$method`.}
 informative messages. `FALSE` to see them.}
 
 \item{...}{Additional arguments. Not in use right now.}
-
-\item{object}{A [pk] object.}
 }
 \value{
 A dataframe with one row for each `data_group`, `model` and `method`.

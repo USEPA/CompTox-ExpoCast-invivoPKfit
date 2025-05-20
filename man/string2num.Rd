@@ -16,8 +16,8 @@ A numeric vector of values or `NA_real_`
 Converting comma-delimited string representations of numeric vectors to numerics
 }
 \examples{
-char2num(" ")
-char2num("22.2")
-char2num("12.3,4.1,10.1")
+invivoPKfit:::string2num(" ")
+invivoPKfit:::string2num("22.2")
+invivoPKfit:::string2num("12.3,4.1,10.1")
 
 }

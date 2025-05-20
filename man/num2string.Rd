@@ -16,8 +16,8 @@ A string with comma-delimited values of `x` or an 'empty' string.
 Converts numeric vector to comma-delimited string representation
 }
 \examples{
-num2string(c(1,2.3))
-num2string(NA_real_)
+invivoPKfit:::num2string(c(1,2.3))
+invivoPKfit:::num2string(NA_real_)
 
 
 }

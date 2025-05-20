@@ -4,7 +4,7 @@
 \alias{get_starts_1comp_fup}
 \title{Get starting values for 1-compartment model with specific clearance}
 \usage{
-get_starts_1comp_fup(data, par_DF)
+get_starts_1comp_fup(data, par_DF, restrictive = TRUE)
 }
 \arguments{
 \item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}
@@ -18,6 +18,9 @@ get_starts_1comp_fup(data, par_DF)
 \item`lower_bounds`: Numeric: The lower bounds for each parameter
 \item `upper_bounds`: Numeric: The upper bounds for each parameter
 }}
+
+\item{restrictive}{Optional boolean value which determines whether the function
+assumes restrictive (TRUE) or nonrestrictive (FALSE, default) clearance.}
 }
 \value{
 The same `data.frame` as `par_DF`, with an additional variable
@@ -161,6 +164,7 @@ Other built-in model functions:
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},

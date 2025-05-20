@@ -50,10 +50,10 @@ blood-to-plasma ratio.
 The dosing interval \eqn{\tau = \frac{1}{\textrm{day}}} will be converted to
 the same units as \eqn{k_{elim}}.
 }
-\subsubsection{Oral route}{
+\subsection{Oral route}{
 \deqn{C_{ss} = \frac{F_{gutabs} V_{1}}{k_{elim} \tau}}
 }
-\subsubsection{Intravenous route}{
+\subsection{Intravenous route}{
 \deqn{C_{ss} = \frac{1}{\textrm{CL}_{tot} \tau}}
 }
 \subsection{Half-life of elimination}{
@@ -91,6 +91,7 @@ Other built-in model functions:
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},

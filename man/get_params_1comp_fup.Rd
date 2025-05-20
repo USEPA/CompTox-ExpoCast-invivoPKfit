@@ -6,18 +6,16 @@
 \usage{
 get_params_1comp_fup(
   data,
-  lower_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Fup = 0, Clint = 0, Vdist = 0.01,
-    Fgutabs = 0, kgutabs = log(2)/(2 * max(Time_trans)), Fgutabs_Vdist = 0.01,
-    Rblood2plasma = 0.01),
-  upper_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Fup = 1, Clint = 1e+05, Vdist =
-    100, Fgutabs = 1, kgutabs = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
-    Fgutabs_Vdist = 100, Rblood2plasma = 100),
-  param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4", Q_gfr = "L/h/kg ^3/4", Fup =
-    "unitless fraction", Clint = "L/h/kg", Vdist = paste0("(", unique(Dose.Units), ")",
-    "/", "(", unique(Conc.Units), ")"), Fgutabs = "unitless fraction", kgutabs =
-    paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist = paste0("(",
-    unique(Conc.Units), ")", "/", "(", unique(Dose.Units), ")"), Rblood2plasma =
-    "unitless ratio")
+  lower_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Q_alv = NA, Kblood2air = NA, Fup =
+    0, Clint = 0, Vdist = NA, Fgutabs = NA, kgutabs = NA, Rblood2plasma = NA),
+  upper_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Q_alv = NA, Kblood2air = NA, Fup =
+    1, Clint = 1e+05, Vdist = NA, Fgutabs = NA, kgutabs = NA, Rblood2plasma = NA),
+  param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4", Q_gfr = "L/h/kg ^3/4", Q_alv =
+    "L/h/kg ^3/4", Kblood2air = "unitless ratio", Fup = "unitless fraction", Clint =
+    "L/h/kg", Vdist = paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units),
+    ")"), Fgutabs = "unitless fraction", kgutabs = paste0("1/",
+    unique(Time_trans.Units)), Rblood2plasma = "unitless ratio"),
+  restrictive = TRUE
 )
 }
 \arguments{
@@ -34,6 +32,9 @@ variables in `data`.}
 \item{param_units}{A mapping specified using a call to [ggplot2::aes()],
 giving the units for each variable, as expressions which may include
 variables in `data`.}
+
+\item{restrictive}{Optional boolean value which determines whether the function
+assumes restrictive (TRUE) or nonrestrictive (FALSE, default) clearance.}
 }
 \value{
 A `data.frame`with the following variables:
@@ -52,49 +53,12 @@ Get parameters for 1-compartment model and determine whether each is to be
 estimated from the data
 }
 \details{
-The full set of model parameters for the 1-compartment model includes `Vdist`,
-`Clint`, `kgutabs`, `Fgutabs`, `Q_totli`, `Q_gfr`, `Fup`, and `Rblood2plasma`.
-Whether each one can be estimated from the data depends on which routes of administration
-are included in the data.
+The full set of model parameters for the 1-compartment model includes
+`Clint`,  `Fup`, `kgutabs`, `Fgutabs`, `Vdist`,
+`Q_totli`, `Q_gfr`, `Q_alv`, `Kblood2air`, and `Rblood2plasma`.
+Since these are directly taken from `httk`, many of the usual route-dependent
+estimations of these parameters are not necessary.
 }
-\section{Constant parameters from `httk`}{
-
-`Q_totli` is the flow through the portal vein from the gut to the liver
-and is estimated in this model via [httk::tissue.data] in a species-specific manner.
-`Q_gfr` is the glomular filtration rate of kidneys. It is estimated via
-[httk::physiology.data] in a species specific manner.
-`Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_1comp()]
-For each of these parameters default lower bounds are 10% and 110% of the starting value
-}
-
-\section{IV data, no oral data}{
-
-
-If IV dosing data are available, but no oral dosing data are available, then
-only the parameters `Vdist` and `kelim` will be estimated from the data. The
-parameters `kgutabs` and `Fgutabs` cannot be estimated from IV data alone, and
-will not be used in evaluating the model.
-}
-
-\section{Oral data, no IV data}{
-
-
-If oral dosing data are available, but no IV dosing data are available, then
-the parameters `kelim` and `kgutabs` can be estimated from the data. However,
-the parameters `Fgutabs` and `Vdist` cannot be identified separately. From
-oral data alone, only the ratio `Fgutabs/Vdist` can be identified. This ratio
-is represented by a single parameter named `Fgutabs_Vdist`. `Fgutabs` and
-`Vdist` will not be used to evaluate the model nor be estimated from data, but
-`Fgutabs_Vdist` will be estimated from data, along with `kelim` and `kgutabs`.
-}
-
-\section{Oral data and IV data}{
-
-
-If both oral and IV dosing data are available, then `Vdist`, `kelim`,
-`kgutabs`, and `Fgutabs` will all be estimated from the data.
-}
-
 \section{Default lower and upper bounds for each parameter}{
 
 \subsection{Default lower and upper bounds for `kelim` and `kgutabs`}{
@@ -150,6 +114,45 @@ bounds for any parameter(s), then the starting value will be reset to a value
 halfway between the lower and upper bounds for that parameter.
 }
 
+\section{Constant parameters from `httk`}{
+
+`Q_totli` is the flow through the portal vein from the gut to the liver
+and is estimated in this model via [httk::tissue.data] in a species-specific manner.
+`Q_gfr` is the glomular filtration rate of kidneys. It is estimated via
+[httk::physiology.data] in a species specific manner, as is `Q_alv`,
+the alveolar pulmonary ventilation rate.
+`Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_3comp2()]
+For each of these parameters default lower bounds are +/-10% of the starting value.
+}
+
+\section{IV data, no oral data}{
+
+
+If IV dosing data are available, but no oral dosing data are available, then
+only the parameters `Vdist` and `kelim` will be estimated from the data. The
+parameters `kgutabs` and `Fgutabs` cannot be estimated from IV data alone, and
+will not be used in evaluating the model.
+}
+
+\section{Oral data, no IV data}{
+
+
+If oral dosing data are available, but no IV dosing data are available, then
+the parameters `kelim` and `kgutabs` can be estimated from the data. However,
+the parameters `Fgutabs` and `Vdist` cannot be identified separately. From
+oral data alone, only the ratio `Fgutabs/Vdist` can be identified. This ratio
+is represented by a single parameter named `Fgutabs_Vdist`. `Fgutabs` and
+`Vdist` will not be used to evaluate the model nor be estimated from data, but
+`Fgutabs_Vdist` will be estimated from data, along with `kelim` and `kgutabs`.
+}
+
+\section{Oral data and IV data}{
+
+
+If both oral and IV dosing data are available, then `Vdist`, `kelim`,
+`kgutabs`, and `Fgutabs` will all be estimated from the data.
+}
+
 \section{Blood and plasma data}{
 
 
@@ -195,6 +198,7 @@ Other built-in model functions:
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_rad}()},

@@ -64,8 +64,9 @@ estimations of these parameters are not necessary.
 `Q_totli` is the flow through the portal vein from the gut to the liver
 and is estimated in this model via [httk::tissue.data] in a species-specific manner.
 `Q_gfr` is the glomular filtration rate of kidneys. It is estimated via
-[httk::physiology.data] in a species specific manner.
-`Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_1comp()]
+[httk::physiology.data] in a species specific manner, as is `Q_alv`,
+the alveolar pulmonary ventilation rate.
+`Fup` and `Rblood2plasma` are both calculated in [httk::parameterize_3comp2()]
 For each of these parameters default lower bounds are +/-10% of the starting value.
 }
 
@@ -197,6 +198,7 @@ Other built-in model functions:
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_fup}()},
 \code{\link{get_params_1comp_rad}()},
