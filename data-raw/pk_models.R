@@ -111,10 +111,28 @@ model_1comp_rad <- pk_model(name = "model_1comp_rad",
                              params_fun_args = list(restrictive = TRUE),
                              tkstats_fun_args = NULL)
 
+model_httk_3comp2 <- pk_model(name = "model_httk_3comp2",
+                            params = c("Clint",
+                                       "Funbound.plasma"),
+                            conc_fun = "cp_httk_3comp2",
+                            auc_fun = "auc_httk_3comp2",
+                            params_fun = "get_params_httk_3comp2",
+                            tkstats_fun = "tkstats_httk_3comp2",
+                            conc_fun_args = list(restrictive = TRUE,
+                                                 this_chem = quote(Chemical),
+                                                 this_species = quote(Species)),
+                            auc_fun_args = NULL,
+                            params_fun_args = list(restrictive = TRUE,
+                                                   this_chem = quote(Chemical),
+                                                   this_species = quote(Species)),
+                            tkstats_fun_args = NULL)
+
+
 usethis::use_data(model_1comp,
                   model_1comp_cl_rest,
                   model_1comp_cl_nonrest,
                   model_1comp_fup,
+                  model_httk_3comp2,
                   model_1comp_rad,
                   model_2comp,
                   model_flat,
