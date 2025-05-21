@@ -284,7 +284,7 @@ ggplot(cvt_qb,
 
 readr::write_csv(
   x = cvt_qb,
-  file = "C:/Users/GPADILLA/tkqsars/CvTdb/CvTdb_selectData_2025May.csv"
+  file = paste0(Sys.getenv("TKQSAR_DIR"), "CvTdb_selectData_2025May.csv")
 )
 
 my_tkstats_fin <- eval_tkstats(my_pk, finite_only = FALSE) %>%
@@ -313,7 +313,7 @@ length(unique(my_preds_fin$Chemical))
 writexl::write_xlsx(
   x = list(tkstats = my_tkstats_fin,
            predictions = my_preds_fin),
-  path = "C:/Users/GPADILLA/tkqsars/CvTdb/evalTKstats_bakeoff_2025May.xlsx"
+  path = paste0(Sys.getenv("TKQSAR_DIR"), "evalTKstats_bakeoff_2025May.xlsx")
 )
 
 # treemap plot of qb_df_tracker
@@ -338,4 +338,10 @@ qb_df_tracker %>%
   theme(legend.title = element_blank(),
         legend.position = "bottom")
 
-
+readr::write_csv(
+  x = qb_df_tracker,
+  file = paste0(
+    Sys.getenv("TKQSAR_DIR"),
+    "TestChemsDashboardInfo_FilteringNotes_2025May.csv"
+  )
+)

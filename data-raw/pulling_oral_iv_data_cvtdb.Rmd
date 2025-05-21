@@ -618,7 +618,7 @@ cvt_df <- cvt_df %>%
   )
 
 quick_stats(cvt_df)
-quick_stats(cvt_2.0.0, old_version = TRUE)
+# quick_stats(cvt_2.0.0, old_version = TRUE)
 # Note unique chemical counts
 
 # Rather than hope most of these chemicals have dtxsids within CvTdb,
@@ -916,6 +916,7 @@ quick_stats(cvt_df)
 
 # Dose Units: Need mg/kg... = ug/mg = ng/ug, and kg = L
 # Conc Units: Need mg/L... = ug/mL = ng/uL = pg/nL, and kg = L, g = mL
+
 cvt_df <- cvt_df %>% mutate(
   conc_units_normalized = stringr::str_replace(
     conc_units_original, "(?<=/m?)l", "L"
@@ -964,6 +965,16 @@ cvt_df %>% filter(!(dose_level_units_original %in% equiv_mgkg),
   distinct(fk_study_id, 
            dose_level_original, dose_level_normalized,
            dose_level_units_original,
+           administration_route_normalized,
+           pmid, fk_extraction_document_id,
+           other_study_identifier) %>%
+  glimpse()
+
+cvt_df %>% filter(stringr::str_detect(dose_level_units_original, "L")) %>%
+  distinct(analyzed_chem_dtxsid, analyzed_chem_name_original,
+           dose_level_original, dose_level_normalized,
+           dose_level_units_original,
+           dose_volume, dose_volume_units,
            administration_route_normalized,
            pmid, fk_extraction_document_id,
            other_study_identifier) %>%
@@ -1054,14 +1065,6 @@ cvt_df <- cvt_df %>%
 # Fixing DOSE units
 unique(cvt_df$dose_level_units_original)
 
-cvt_df %>% 
-  filter(!(dose_level_units_original %in% equiv_mgkg),
-                  dose_level_normalized == dose_level_original) %>%
-  distinct(fk_study_id, 
-           dose_level_original, dose_level_normalized,
-           dose_level_units_original,
-           administration_route_normalized, fk_extraction_document_id)
-
 # Adjust invivPK_dose_level for non-standard units
 cvt_df %>% filter(is.na(invivPK_dose_level)) %>% count(dose_level_units_original)
 
@@ -1086,8 +1089,18 @@ cvt_df <- cvt_df %>%
         dose_level_units_original %in% "ug/kg" ~ dose_level_original * 1E-3,
       is.na(invivPK_dose_level) &
         dose_level_units_original %in% "ng/kg" ~ dose_level_original * 1E-6,
+      # There are some cases where there is a volume given (not mass normalized)
       is.na(invivPK_dose_level) &
-        dose_level_units_original %in% c("mg/kg", "ug/mL") ~ dose_level_original,
+        dose_level_units_original %in% "ug/mL" &
+        !is.na(dose_volume) & 
+        dose_volume_units %in% "mL/kg" ~ dose_level_original * dose_volume / 1E3,
+      is.na(invivPK_dose_level) &
+        dose_level_units_original %in% "ug/mL" &
+        !is.na(dose_volume) & 
+        dose_volume_units %in% "mL" &
+        species %in% "human" ~ dose_level_original * dose_volume / (75E3),
+      is.na(invivPK_dose_level) &
+        dose_level_units_original %in% "mg/kg" ~ dose_level_original,
       .default = invivPK_dose_level
     )
   )
@@ -1315,7 +1328,7 @@ my_pk <- do_prefit(my_pk)
 my_pk <- do_fit(my_pk, n_cores = 12)
 
 
-fit_pl <- plot(my_pk, best_fit = TRUE, log10_C = FALSE, use_scale_conc = TRUE)
+fit_pl <- plot(my_pk, log10_C = FALSE, use_scale_conc = TRUE)
 
 fit_pl %>% filter(Chemical %in% "DTXSID1021116", Species %in% "human") %>%
   pull(final_plot) %>% .[[1]]
@@ -1325,6 +1338,10 @@ fit_pl %>% filter(Chemical %in% "DTXSID9025617", Species %in% "rat") %>%
   pull(final_plot) %>% .[[1]]
 fit_pl %>% filter(Chemical %in% "DTXSID2021781", Species %in% "mouse") %>%
   pull(final_plot) %>% .[[1]]
+fit_pl %>% filter(Chemical %in% "DTXSID1034187") %>% # Tamoxifen sanity check
+  pull(final_plot) %>% .[[1]]
+
+get_winning_model(my_pk) %>% filter(Chemical %in% "DTXSID1034187")
 
 save(my_pk, file = "data-raw/temp_pk.rda")
 
