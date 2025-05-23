@@ -155,12 +155,10 @@ log_likelihood <- function(par,
   N_Subjects <- data$N_Subjects
   Detect <- data$Detect
   pLOQ <- data$pLOQ
-  CHEMICAL <- unique(data$Chemical)
-  SPECIES <- unique(data$Species)
 
   # Fix the modelfun_args and modelfun variables
-  modelfun_args <- modelfun[[1]][["conc_fun_args"]]
-  modelfun <- modelfun[[1]][["conc_fun"]]
+  modelfun_args <- modelfun[["conc_fun_args"]]
+  modelfun <- modelfun[["conc_fun"]]
 
   # combine parameters to be optimized and held constant
   params <- c(par, const_params)
@@ -197,10 +195,9 @@ log_likelihood <- function(par,
     # get un-transformed predicted plasma concentration vs. time for the current parameter
     # values, by dose and route
     pred <- do.call(modelfun,
-      args = these_args)
+                    args = these_args)
   }
 
-  pred[which(pred < pLOQ)] <- pLOQ[which(pred < pLOQ)]
 
   # Handles the max_conc check, needs to be separate because it should only
   # be used for fitting. Not logLik etc...
@@ -223,6 +220,7 @@ log_likelihood <- function(par,
     }
   }
 
+
   # Early Return
   # if model predicted any NA or Inf concentrations OR
   # any negative concentrations,
@@ -233,6 +231,8 @@ log_likelihood <- function(par,
     if (negative) ll <- -1 * ll
     return(ll)
   }
+
+  pred[which(pred < pLOQ)] <- pLOQ[which(pred < pLOQ)]
 
   # transform predictions and concentrations
   # dose normalization?

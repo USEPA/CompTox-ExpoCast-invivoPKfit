@@ -58,6 +58,11 @@ force_ascii_quotes <- function(x) {
 #' invivoPKfit:::string2num("12.3,4.1,10.1")
 #'
 string2num <- function(x) {
+
+  if (is.na(x)) {
+    x <- ""
+  }
+
   stopifnot(is.character(x))
 
   num <- trimws(x)
@@ -79,13 +84,18 @@ string2num <- function(x) {
 #' @examples
 #' invivoPKfit:::num2string(c(1,2.3))
 #' invivoPKfit:::num2string(NA_real_)
+#' invivoPKfit:::num2string(NA_real_, return.na = TRUE)
 #'
 #'
-num2string <- function(x) {
-  stopifnot(is.numeric(x))
+num2string <- function(x, return.na = FALSE) {
+  stopifnot(is.numeric(x) | is.na(x))
 
   if (length(x) == 1 && is.na(x)) {
+    if (return.na) {
+      return(NA)
+    } else {
     return(" ")
+    }
   }
 
   return(paste0(x, collapse = ","))

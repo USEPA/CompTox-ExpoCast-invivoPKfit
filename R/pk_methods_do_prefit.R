@@ -185,9 +185,10 @@ do_prefit.pk <- function(obj,
         dplyr::reframe(
           do.call(
             obj$stat_model[[this_model]]$params_fun,
-            args = c(list(cbind(dplyr::cur_group(),
-                                dplyr::pick(tidyselect::everything())
-            )),
+            args = append(
+              list(
+                cbind(dplyr::cur_group(), dplyr::pick(tidyselect::everything()))
+            ),
             obj$stat_model[[this_model]]$params_fun_args
             )
           )
@@ -216,7 +217,12 @@ do_prefit.pk <- function(obj,
         dplyr::filter(model %in% this_model) %>%
         dplyr::group_by(!!!obj$data_group) %>%
         dplyr::summarise(n_par = sum(optimize_param),
-                         used_par_na = any(use_param & is.na(start)))
+                         used_par_na = ifelse(
+                           grepl("httk", this_model), # Exception when "httk" models are used
+                           all(is.na(start)),
+                           any(use_param & is.na(start))
+                         )
+        )
 
       n_sigma_DF <- sigma_DF %>%
         dplyr::group_by(!!!obj$data_group) %>%

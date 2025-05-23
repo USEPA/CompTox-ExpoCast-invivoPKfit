@@ -114,17 +114,38 @@ do_fit.pk <- function(obj,
   # merge it all together
   info_nest <- dplyr::inner_join(
     dplyr::inner_join(
-      dplyr::inner_join(data_nest,
-                        par_DF_nest,
-                        by = c(data_group_vars)),
+      dplyr::inner_join(
+        data_nest,
+        par_DF_nest,
+        by = c(data_group_vars)
+      ),
       sigma_DF_nest,
-      by = c(data_group_vars)),
+      by = c(data_group_vars)
+    ),
     fit_check,
-    by = c("model", data_group_vars)) %>%
+    by = c("model", data_group_vars)
+  ) %>%
     dplyr::relocate(model, .after = data_group_vars[-1]) %>%
     dplyr::left_join(fun_models, join_by(model)) %>%
     suppressMessages()
 
+  # It is at this point when we must evaluate all quoted expressions in modelfun
+  # That is, for the concentration function arguments which is used by log_likelihood.
+
+  info_nest <- info_nest %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(
+      modelfun = purrr::map(
+        modelfun,
+        \(x) {
+          # Annoying hacking of the environments
+          x$conc_fun_args = lapply(x$conc_fun_args, eval,
+                                   parent.frame(n = 3))
+          x
+        }
+      )
+    ) %>%
+    dplyr::ungroup()
 
   this_settings_optimx <- get_settings_optimx(obj)
   these_methods <- rlang::eval_tidy(this_settings_optimx$method)

@@ -192,7 +192,7 @@
 #'  input arguments: these provide settings that will be used when the data is
 #'  pre-processed before fitting.
 #' @import tibble
-#' @importFrom rlang .data caller_env eval_tidy
+#' @importFrom rlang .data caller_env eval_tidy quo qous as_label
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @export
 
