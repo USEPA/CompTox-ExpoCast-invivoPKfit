@@ -44,6 +44,7 @@
 #' @import tidyr
 #' @import purrr
 #' @importFrom magrittr `%>%`
+#' @importFrom janitor round_to_fraction
 #' @export
 do_preprocess.pk <- function(obj, ...) {
   if (!obj$settings_preprocess$suppress.messages) {
@@ -660,6 +661,11 @@ do_preprocess.pk <- function(obj, ...) {
         )
       obs_num <- nrow(data)
     }
+
+    # Round time to nearest minute
+    message("Rounding Time (in hours) to nearest minute ",
+            "before possible conversion")
+    data$Time <- janitor::round_to_fraction(data$Time, denominator = 60)
 
     # apply time transformation
     data$Time_orig <- data$Time
