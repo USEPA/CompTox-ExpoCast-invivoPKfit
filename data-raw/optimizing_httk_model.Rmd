@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 devtools::load_all()
+library(dplyr)
 library(httk)
 ```
 
@@ -22,7 +23,7 @@ multiple iterations of the optimization procedure.
 ```{r}
 load_dawson2021()
 schems <- httk::get_cheminfo("dtxsid", species = "rat",
-                             model = "3compartment2")[50:65] |>
+                             model = "3compartment2") |>
   suppressWarnings()
 
 sum(unique(cvt$analyzed_chem_dtxsid) %in% schems)
@@ -45,27 +46,40 @@ test_pk <- pk(data = minicvt) +
   stat_model(model = c("model_flat", "model_1comp_cl_rest",
                        "model_1comp_cl_nonrest", "model_1comp_fup")) +
   settings_optimx(hessian = TRUE) +
-  scale_conc(dose_norm = TRUE, log10_trans = FALSE)
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE)
 
+test_pk <- do_data_info(test_pk)
 test_pk <- do_prefit(test_pk)
 test_pk
 gc()
 
-test_fit <- do_fit(test_pk)
+test_pk$prefit$par_DF |> View()
+
+test_fit <- do_fit(test_pk, n_cores = 8)
 winmodel <- get_winning_model(test_fit)
 View(winmodel)
+winmodel %>% ungroup() %>% count(method, model)
+get_fit(test_fit) %>%
+  filter(convcode == 0) %>%
+  ungroup() %>%
+  distinct(Chemical, Species, model, method) %>% View()
 
-pl <- plot(test_fit, use_scale_conc = TRUE, method = "bobyqa",best_fit = TRUE)
-pl$final_plot[[1]]
-pl$final_plot[[2]]
-pl$final_plot[[3]]
-pl$final_plot[[4]]
+pl <- plot(test_fit, use_scale_conc = TRUE,best_fit = FALSE, log10_C = TRUE,
+           method = "bobyqa", fit_limits = 10)
+pl %>%
+  filter(Chemical == "DTXSID0020442") %>%
+  pull(final_plot) %>% .[[1]]
 
-get_fit(test_fit) |> dplyr::filter(Chemical == "DTXSID4020458",
-                                   param_name %in% c("Fup", "Clint"),
-                                   model != "model_flat",
-                                   convcode == 0) |>
-  View()
+pl %>%
+  filter(Chemical == "DTXSID1022265") %>%
+  pull(final_plot) %>% .[[1]]
+
+
+get_fit(test_fit) %>%
+  filter(Chemical == "DTXSID0020442", model == "model_1comp_cl_nonrest",
+         param_name == "Clint", method == "L-BFGS-B") %>% View()
+
+
 
 ```
 
