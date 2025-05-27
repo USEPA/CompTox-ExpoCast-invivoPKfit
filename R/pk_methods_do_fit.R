@@ -239,10 +239,12 @@ do_fit.pk <- function(obj,
       fit = purrr::map(fit,
                        \(x) {
                          x %>%
-                           dplyr::mutate(ngatend = as.numeric(ngatend),
-                                         nhatend = as.numeric(nhatend),
-                                         hev = as.numeric(hev),
-                                         message = as.character(message)) %>%
+                           dplyr::mutate(
+                             # ngatend = as.numeric(ngatend),
+                             # nhatend = as.numeric(nhatend),
+                             # hev = as.numeric(hev),
+                             message = as.character(message)
+                           ) %>%
                            tidyr::pivot_longer(
                              cols = !c(method, value:message),
                              names_to = "param_name",

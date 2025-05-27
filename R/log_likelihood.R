@@ -157,8 +157,9 @@ log_likelihood <- function(par,
   pLOQ <- data$pLOQ
 
   # Fix the modelfun_args and modelfun variables
-  modelfun_args <- modelfun[["conc_fun_args"]]
-  modelfun <- modelfun[["conc_fun"]]
+    modelfun_args <- modelfun[["conc_fun_args"]]
+    modelfun <- modelfun[["conc_fun"]]
+
 
   # combine parameters to be optimized and held constant
   params <- c(par, const_params)
@@ -194,8 +195,7 @@ log_likelihood <- function(par,
 
     # get un-transformed predicted plasma concentration vs. time for the current parameter
     # values, by dose and route
-    pred <- do.call(modelfun,
-                    args = these_args)
+    pred <- do.call(what = modelfun, args = these_args)
   }
 
 
@@ -390,7 +390,7 @@ log_likelihood <- function(par,
 
     loglike <- c(ll_data_sigma,
                  ll_data_no_sigma)
-}
+  }
 
   # sum log-likelihoods over observations
   ll <- sum(loglike)
