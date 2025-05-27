@@ -4,10 +4,13 @@
 \alias{num2string}
 \title{Converts numeric vector to comma-delimited string representation}
 \usage{
-num2string(x)
+num2string(x, return.na = FALSE)
 }
 \arguments{
 \item{x}{A numeric vector.}
+
+\item{return.na}{A logical values that determines whether to return " " or NA when
+NA values are encountered. Default: `FALSE`.}
 }
 \value{
 A string with comma-delimited values of `x` or an 'empty' string.
@@ -18,6 +21,7 @@ Converts numeric vector to comma-delimited string representation
 \examples{
 invivoPKfit:::num2string(c(1,2.3))
 invivoPKfit:::num2string(NA_real_)
+invivoPKfit:::num2string(NA_real_, return.na = TRUE)
 
 
 }

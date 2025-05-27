@@ -10,6 +10,8 @@ cp_httk_3comp2(
   dose,
   route,
   medium = "plasma",
+  this_chem = NULL,
+  this_species = NULL,
   restrictive = TRUE
 )
 }
@@ -33,6 +35,10 @@ and `dose`, or length 1.}
 concentration is to be calculated: "blood" or "plasma". Default is "plasma".
 Must be same length as `time` and `dose`, or length 1.}
 
+\item{this_chem}{A character vector naming the chemical for calculations in `httk`.}
+
+\item{this_species}{A character vector naming the species for calculations in `httk`.}
+
 \item{restrictive}{A logical value (TRUE or FALSE. Default: FALSE) that says whether the
 assumption is that the clearance is restrictive or non-restrictive}
 }
@@ -40,8 +46,6 @@ assumption is that the clearance is restrictive or non-restrictive}
 A vector of blood or plasma concentration values  corresponding
  to `time`
  .
- @author Gilberto Padilla Mercado
- @export cp_httk_3comp2
 }
 \description{
 Calculated plasma concentrations vs time according to the `3compartment2`
@@ -50,7 +54,13 @@ model (Wambaugh, Schacht, and Ring. 2025).
 \section{Required parameters}{
 
 These are given by the \link[httk]{parameterize_3comp2} function in `httk`.
-Furthermore, they are transformed to a vector during hte prefitting process.
+Furthermore, they are transformed to a vector during the prefitting process.
+The optimized parameters are `Clint` and `Funbound.plasma`.
+}
+
+\section{Process of calculation}{
+
+The calculated plasma concentrations
 }
 
 \seealso{
@@ -72,21 +82,31 @@ Other built-in model functions:
 \code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
 \code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
+
+Other httk model functions: 
+\code{\link{get_params_httk_3comp2}()},
+\code{\link{get_starts_httk_3comp2}()}
 
 Other model concentration functions: 
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
 \code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
-\code{\link{cp_flat}()}
+\code{\link{cp_flat}()},
+\code{\link{get_params_httk_3comp2}()}
+}
+\author{
+Gilberto Padilla Mercado
 }
 \concept{built-in model functions}
 \concept{httk model functions}

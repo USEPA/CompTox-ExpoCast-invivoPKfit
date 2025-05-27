@@ -9,11 +9,11 @@ get_params_1comp_cl(
   lower_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Q_alv = NA, Kblood2air = NA, Fup =
     0, Clint = 0, Vdist = NA, Fgutabs = NA, kgutabs = NA, Rblood2plasma = NA),
   upper_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Q_alv = NA, Kblood2air = NA, Fup =
-    1, Clint = 1e+05, Vdist = NA, Fgutabs = NA, kgutabs = NA, Rblood2plasma = NA),
+    1, Clint = 500, Vdist = NA, Fgutabs = NA, kgutabs = NA, Rblood2plasma = NA),
   param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4", Q_gfr = "L/h/kg ^3/4", Q_alv =
     "L/h/kg ^3/4", Kblood2air = "unitless ratio", Fup = "unitless fraction", Clint =
-    "L/h/kg", Vdist = paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units),
-    ")"), Fgutabs = "unitless fraction", kgutabs = paste0("1/",
+    "uL/min/10^6 hepatocytes", Vdist = paste0("(", unique(Dose.Units), ")", "/", "(",
+    unique(Conc.Units), ")"), Fgutabs = "unitless fraction", kgutabs = paste0("1/",
     unique(Time_trans.Units)), Rblood2plasma = "unitless ratio"),
   restrictive = FALSE
 )
@@ -204,12 +204,14 @@ Other built-in model functions:
 \code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
 \code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 }
