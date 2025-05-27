@@ -1,4 +1,5 @@
 # qb_df is the CSV file that contains the tested chemicals for the QSAR bakeoff
+qb_df <- paste0(Sys.getenv("TKQSAR_DIR"), "TestChemsDashboardInfo.csv")
 qb_dtxsid <- qb_df$DTXSID
 
 table(qb_dtxsid %in% cvt_df$analyzed_chem_dtxsid)
