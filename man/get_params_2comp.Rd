@@ -38,13 +38,15 @@ variables in `data`.}
 }
 \value{
 A `data.frame`with the following variables:
-- `param_name`: Character: Names of the model parameters
-- `param_units`: Character: Units of the model parameters
-- `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-- `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
--`lower_bounds`: Numeric: The lower bounds for each parameter
-- `upper_bounds`: Numeric: The upper bounds for each parameter
-- `start`: Numeric: The starting guesses for each parameter
+\itemize{
+\item `param_name`: Character: Names of the model parameters
+\item `param_units`: Character: Units of the model parameters
+\item `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+\item `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+\item`lower_bounds`: Numeric: The lower bounds for each parameter
+\item `upper_bounds`: Numeric: The upper bounds for each parameter
+\item `start`: Numeric: The starting guesses for each parameter
+}
 }
 \description{
 Get parameters for 2-compartment model and determine whether each is to be
@@ -55,15 +57,18 @@ The full set of model parameters for the 2-compartment model includes `V1`,
 `kelim`, `k12`, `k21`, `kgutabs`,`Fgutabs`, and `Rblood2plasma`. Whether each one can be
 estimated from the data depends on what routes of administration are included
 in the data.
+}
+\section{IV data, no oral data}{
 
-## IV data, no oral data
 
 If IV dosing data are available, but no oral dosing data are available, then
 only the parameters `V1`, `kelim`, `k12`, and `k21` will be estimated from
 the data. The parameters `kgutabs` and `Fgutabs` cannot be estimated from IV
 data alone.
+}
 
-## Oral data, no IV data
+\section{Oral data, no IV data}{
+
 
 If oral dosing data are available, but no IV dosing data are available, then
 the parameters `kelim`, `k12`, `k21`, and `kgutabs` will be estimated from
@@ -72,27 +77,18 @@ separately. From oral data alone, only the ratio `Fgutabs/V1` can be
 identified. This ratio is represented by a single parameter named
 `Fgutabs_V1`. `Fgutabs` and `V1` will not be optimized, but `Fgutabs_V1` will
 be optimized, along with `kelim`, `k12`, `k21`, and `kgutabs`.
+}
 
-## Oral data and IV data
+\section{Oral data and IV data}{
 
 If both oral and IV dosing data are available, then `V1`, `kelim`, `k12`,
 `k21`, `kgutabs`, and `Fgutabs` will all be estimated from the data.
+}
 
-# Blood and plasma data
+\section{Default lower and upper bounds for each parameter}{
 
-If both blood and plasma data are available, then `Rblood2plasma` will be
-estimated from the data.
-
-# Only one of blood or plasma data
-
-If only one of blood or plasma data are available, then `Rblood2plasma` will be
-held constant at 1, not estimated from the data.
-
-# Default lower and upper bounds for each parameter
-
-## Default lower and upper bounds for time constants `kelim`, `kgutabs`,
-`k12`, and `k21`.
-
+\subsection{Default lower and upper bounds for time constants `kelim`, `kgutabs`,
+`k12`, and `k21`.}{
 Default bounds for time constants `kelim` and `kgutabs` are set based on
 the time scale of the available data.
 
@@ -114,30 +110,29 @@ this assumption, the correspondingelimination, absorption, and distribution
 time constants would be `log(2)/(0.5*min(Time_trans[Time_trans>0]))`.
 Therefore, the default lower bounds for `kelim`, `kgutabs`, `k12`, and `k21`
 are `log(2)/(0.5*min(Time_trans[Time_trans>0]))`.
-
-## Default lower and upper bounds for `V1`
-
+}
+\subsection{Default lower and upper bounds for `V1`}{
 By default, the lower bound for `V1` is 0.01, and the upper bound for
 `V1` is 100. These values were chosen based on professional judgment.
-
-## Default lower and upper bounds for `Fgutabs`
-
+}
+\subsection{Default lower and upper bounds for `Fgutabs`}{
 By default, the lower bound for `Fgutabs` is 0.0, and the upper bound for
 `Fgutabs` is 1. These are simply the bounds of the physically-meaningful
 range for a fraction.
-
-## Default lower and upper bounds for `Fgutabs_V1`
-
+}
+\subsection{Default lower and upper bounds for `Fgutabs_V1`}{
 By default, the lower bound for the ratio `Fgutabs_V1` is 0.01, and the
 upper bound is 100. These values were chosen based on professional judgment.
-
-## Default lower and upper bounds for `Rblood2plasma`
-
+}
+\subsection{Default lower and upper bounds for `Rblood2plasma`}{
 By default, the lower bound for the blood:plasma partition coefficient
 `Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
 based on professional judgment.
+}
+}
 
-# Starting values for each parameter
+\section{Starting values for each parameter}{
+
 
 Starting values for each parameter (starting guesses for the numerical
 optimizer) are derived from the data using [get_starts_2comp()].
@@ -146,6 +141,20 @@ If the starting values returned by [get_starts_2comp()] fall outside the
 bounds for any parameter(s), then the starting value will be reset to a value
 halfway between the lower and upper bounds for that parameter.
 }
+
+\section{Blood and plasma data}{
+
+
+If both blood and plasma data are available, then `Rblood2plasma` will be estimated from the data.
+}
+
+\section{Only one of blood or plasma data}{
+
+
+If only one of blood or plasma data are available, then `Rblood2plasma` will be
+held constant at 1, not estimated from the data.
+}
+
 \seealso{
 Other 2-compartment model functions: 
 \code{\link{auc_2comp}()},
@@ -159,27 +168,35 @@ Other get_params functions:
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_flat}()}
 
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 }

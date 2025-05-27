@@ -2,26 +2,26 @@
 #'
 #' Given a vector of time values in original units, this function selects new
 #' time units such that, when time is rescaled to the new units, the midpoint of
-#' the time vector is as close to 10 as possible.
+#' the time vector is as close to a target (default: 10) as possible.
 #'
-#' # Acceptable/understood time units in `period_units`
+#' Acceptable/understood time units in `period_units`
 #'
-#' ```
+#' \preformatted{
 #' c("picoseconds",
-#' "nanoseconds",
-#' "microseconds",
-#' "milliseconds",
-#' "seconds",
-#' "minutes",
-#' "hours",
-#' "days",
-#' "weeks",
-#' "months",
-#' "years")
-#' ```
+#'   "nanoseconds",
+#'   "microseconds",
+#'   "milliseconds",
+#'   "seconds",
+#'   "minutes",
+#'   "hours",
+#'   "days",
+#'   "weeks",
+#'   "months",
+#'   "years")
+#' }
 #'
-#' @param y A numeric vector of time values
-#' @param from The original units of `y`
+#' @param y A numeric vector of time values.
+#' @param from The original units of `y`.
 #' @param target The target value (order of magnitude) for the midpoint of rescaled time values. Default 10.
 #' @param period_units A list of acceptable/understood time units. See Details. Default `time_units`.
 #' @return Character: Automatically-selected new time units, which will be one of `period_units`.

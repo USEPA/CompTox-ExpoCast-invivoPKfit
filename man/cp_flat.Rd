@@ -35,8 +35,9 @@ Evaluates a "flat" model for concentration vs. time
 \details{
 This function is used for model comparison: does a 1- or 2-compartment TK
 model fit the data any better than this naive "flat" model?
+}
+\section{Required parameters}{
 
-# Required parameters
 
 `params` must include the following named items:
   \describe{
@@ -78,26 +79,34 @@ chemical concentration in blood plasma.
 
 \deqn{\textrm{Conc} = \frac{F_{\textrm{gutabs}} \textrm{Dose}}{V_{\textrm{dist}}}}
 }
+
 \seealso{
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 
@@ -109,7 +118,10 @@ Other flat model functions:
 Other model concentration functions: 
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
-\code{\link{cp_2comp}()}
+\code{\link{cp_1comp_rad}()},
+\code{\link{cp_2comp}()},
+\code{\link{cp_httk_3comp2}()},
+\code{\link{get_params_httk_3comp2}()}
 }
 \author{
 Caroline Ring, John Wambaugh, Chris Cook

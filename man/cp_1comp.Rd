@@ -34,8 +34,8 @@ A vector of blood or plasma concentration values  corresponding
 Calculates plasma concentrations vs. time according to the analytical solution
 for the 1-compartment model, for single bolus doses (IV and/or oral).
 }
-\details{
-# Required parameters
+\section{Required parameters}{
+
 
 `params` must include the following named items:
   \describe{
@@ -69,32 +69,41 @@ If `any(medium %in% 'blood')`, then `params` must also include
 `Rblood2plasma`, the ratio of chemical concentration in whole blood to the
 chemical concentration in blood plasma.
 }
+
 \seealso{
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 
 Other 1-compartment model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{cp_1comp_cl}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
@@ -105,8 +114,11 @@ Other 1-compartment model functions:
 
 Other model concentration functions: 
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
-\code{\link{cp_flat}()}
+\code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
+\code{\link{get_params_httk_3comp2}()}
 }
 \author{
 Caroline Ring, John Wambaugh

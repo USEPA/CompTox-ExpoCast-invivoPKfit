@@ -6,7 +6,7 @@
 \usage{
 settings_preprocess(
   routes_keep = c("oral", "iv"),
-  media_keep = c("blood", "plasma"),
+  media_keep = c("blood", "plasma", "excreta"),
   ratio_conc_dose = 1,
   impute_loq = TRUE,
   loq_group = dplyr::vars(Chemical, Species, Reference, Media),

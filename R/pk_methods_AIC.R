@@ -91,7 +91,7 @@ AIC.pk <- function(object,
   # get number of parameters (excluding any constant, non-optimized parameters)
 
   AIC <- ll %>% dplyr::group_by(!!!object$data_group, model, method) %>%
-    dplyr::mutate(AIC = (k * npar) - (2 * log_likelihood))
+    dplyr::mutate(AIC = ({{ k }} * .data$npar) - (2 * .data$log_likelihood))
 
   return(AIC)
 }

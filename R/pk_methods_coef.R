@@ -5,14 +5,13 @@
 #' This function extracts fitted model parameter values from a fitted [pk()]
 #' object.
 #'
-#' @param object A [pk()] object
-#' @param model Optional: Specify (as a `character` vector) one or more of the
-#'   fitted models whose coefficients to return. If `NULL` (the default),
-#'   coefficients will be returned for all of the models in `obj$stat_model`.
-#' @param method Optional: Specify (as a `character` vector)one or more of the
-#'   [optimx::optimx()] methods whose coefficients to return. If `NULL` (the
-#'   default), coefficients will be returned for all of the models in
-#'   `obj$settings_optimx$method`.
+#' @param object A [pk] object.
+#' @param model Optional: Specify one or more of the fitted models whose
+#'   coefficients to return. If NULL (the default), coefficients will be
+#'   returned for all of the models in `obj$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   whose coefficients to return. If NULL (the default), coefficients will be
+#'   returned for all of the models in `obj$settings_optimx$method`.
 #' @param drop_sigma Logical: `FALSE` by default. Determines whether to include
 #'   sigma in the output.
 #' @param include_NAs Logical: `FALSE` by default. Determines whether to include
@@ -38,7 +37,6 @@
 #'   `coefs_vector` summarizes all estimated parameters into a named vector.
 #'   This named vector is used in functions that call upon the model functions,
 #'   such as [predict()].
-#' @import glue
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects

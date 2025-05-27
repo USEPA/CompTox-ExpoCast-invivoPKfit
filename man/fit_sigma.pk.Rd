@@ -4,7 +4,7 @@
 \alias{fit_sigma.pk}
 \title{Hyperparameter fitting}
 \usage{
-\method{fit_sigma}{pk}(obj, preds, pred_col, k = 2, ...)
+fit_sigma.pk(obj, preds, pred_col, k = 2, ...)
 }
 \arguments{
 \item{obj}{A [pk] object.}

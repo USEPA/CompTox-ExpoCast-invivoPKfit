@@ -12,11 +12,12 @@ tkstats_1comp_cl(
   time_unit,
   conc_unit,
   vol_unit,
+  restrictive = FALSE,
   ...
 )
 }
 \arguments{
-\item{pars}{A named vector of model parameters (e.g. from [coef.pk()]).}
+\item{pars}{A named numeric vector of model parameters (e.g. from [coef.pk()]).}
 
 \item{route}{Character: The route for which to compute TK stats. Currently
 only "oral" and "iv" are supported.}
@@ -36,11 +37,14 @@ concentration for long-term daily dosing of 1 mg/kg/day.}
 
 \item{vol_unit}{Character: The units of dose.}
 
+\item{restrictive}{Logical (Default: `FALSE`). Determines whether we should
+consider the hepatic clearance as restrictive or nonrestrictive.}
+
 \item{...}{Additional arguments not currently in use.}
 }
 \value{
 A `data.frame` with two variables:
-- `param_name` = `c("CLtot", "CLtot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity")`
+- `param_name` = `c("Cltot", "Cltot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity")`
 - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed).
 }
 \description{
@@ -48,54 +52,47 @@ Calculate predicted toxicokinetic statistics for a 1-compartment model.
 This does use the parameters for the `model_1comp_cl` that are taken from
 [httk] estimates.
 }
-\details{
-# Statistics computed
+\section{Statistics computed}{
 
-## Total clearance
 
+\subsection{Total clearance}{
 \deqn{\textrm{CL}_{tot} = k_{elim} + V_{dist}}
-
-## Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day
-
+}
+\subsection{Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day}{
 The dosing interval \eqn{\tau = \frac{1}{\textrm{day}}} will be converted to
 the same units as \eqn{k_{elim}}.
 
 To convert to steady-state *blood* concentration, multiply by the
 blood-to-plasma ratio.
-
-### Oral route
-
+\subsection{Oral route}{
 \deqn{C_{ss} = \frac{F_{gutabs} V_{dist}}{k_{elim} \tau}}
-
-### Intravenous route
-
+}
+\subsection{Intravenous route}{
 \deqn{C_{ss} = \frac{1}{24 * \textrm{CL}_{tot}}}
-
-## Half-life of elimination
-
+}
+}
+\subsection{Half-life of elimination}{
 \deqn{\textrm{Halflife} = \frac{\log(2)}{k_{elim}}}
-
-## Time of peak concentration
-
+}
+\subsection{Time of peak concentration}{
 For oral route:
 
 \deqn{\frac{\log \left( \frac{k_{gutabs}}{k_{elim}} \right)}{k_{gutabs} -
 k_{elim}}}
 
 For intravenous route, time of peak concentration is always 0.
-
-## Peak concentration
-
+}
+\subsection{Peak concentration}{
 Evaluate [cp_1comp_cl()] at the time of peak concentration.
-
-## AUC evaluated at infinite time
-
+}
+\subsection{AUC evaluated at infinite time}{
 Evaluate [auc_1comp_cl()] at time = `Inf`.
-
-## AUC evaluated at the time of the last observation
-
+}
+\subsection{AUC evaluated at the time of the last observation}{
 Evaluate [auc_1comp_cl()] at time = `tlast`.
 }
+}
+
 \author{
-John Wambaugh, Caroline Ring
+John Wambaugh, Caroline Ring, Gilberto Padilla Mercado
 }

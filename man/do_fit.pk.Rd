@@ -7,7 +7,7 @@
 \method{do_fit}{pk}(obj, n_cores = NULL, rate_names = NULL, max_multiplier = NULL, ...)
 }
 \arguments{
-\item{obj}{A [pk] object.}
+\item{obj}{A `pk` object}
 
 \item{n_cores}{Number of cores used for parallel computing.}
 
@@ -16,7 +16,7 @@
 \item{max_multiplier}{Numeric value for upper prediction limit (this number multiplied
 by maximum concentrations in each experiment). Default set to NULL does not apply this limit.}
 
-\item{...}{Additional arguments. Not currently in use.}
+\item{...}{Additional arguments. Not in use currently.}
 }
 \value{
 The same [pk] object, with element `fit` containing the fitted

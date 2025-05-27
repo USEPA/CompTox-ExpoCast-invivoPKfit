@@ -12,7 +12,7 @@ tkstats_2comp(pars, route, medium, dose, time_unit, conc_unit, vol_unit, ...)
 \item{route}{Character: The route for which to compute TK stats. Currently
 only "oral" and "iv" are supported.}
 
-\item{medium}{Character: the media (tissue) for which to compute TK stats..
+\item{medium}{Character: the media (tissue) for which to compute TK stats.
 Currently only "blood" and "plasma" are supported.}
 
 \item{dose}{Numeric: A dose for which to calculate TK stats.}
@@ -37,75 +37,75 @@ A `data.frame` with two variables:
 \description{
 Calculate predicted toxicokinetic statistics for a 1-compartment model.
 }
-\details{
-# Statistics computed
+\section{Statistics computed}{
 
-## Total clearance
 
+\subsection{Total clearance}{
 \deqn{\textrm{CL}_{tot} = k_{elim} + V_{1}}
-
-## Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day
-
+}
+\subsection{Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day}{
 To convert to steady-state *blood* concentration, multiply by the
 blood-to-plasma ratio.
 
 The dosing interval \eqn{\tau = \frac{1}{\textrm{day}}} will be converted to
 the same units as \eqn{k_{elim}}.
-
-### Oral route
-
+}
+\subsection{Oral route}{
 \deqn{C_{ss} = \frac{F_{gutabs} V_{1}}{k_{elim} \tau}}
-
-### Intravenous route
-
+}
+\subsection{Intravenous route}{
 \deqn{C_{ss} = \frac{1}{\textrm{CL}_{tot} \tau}}
-
-## Half-life of elimination
-
+}
+\subsection{Half-life of elimination}{
 \deqn{\textrm{Halflife} = \frac{\log(2)}{k_{elim}}}
-
-## Time of peak concentration
-
+}
+\subsection{Time of peak concentration}{
 For oral route:
 
 \deqn{\frac{\log \left( \frac{k_{gutabs}}{k_{elim}} \right)}{k_{gutabs} -
 k_{elim}}}
 
 For intravenous route, time of peak concentration is always 0.
-
-## Peak concentration
-
+}
+\subsection{Peak concentration}{
 Evaluate [cp_1comp()] at the time of peak concentration.
-
-## AUC evaluated at infinite time
-
+}
+\subsection{AUC evaluated at infinite time}{
 Evaluate [auc_1comp()] at time = `Inf`.
-
-## AUC evaluated at the time of the last observation
-
+}
+\subsection{AUC evaluated at the time of the last observation}{
 Evaluate [auc_1comp()] at time = `tlast`.
 }
+}
+
 \seealso{
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()},
 \code{\link{transformed_params_2comp}()}
 
 Other 2-compartment model functions: 

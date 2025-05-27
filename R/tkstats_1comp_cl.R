@@ -4,109 +4,101 @@
 #' This does use the parameters for the `model_1comp_cl` that are taken from
 #' [httk] estimates.
 #'
-#' # Statistics computed
+#' @section Statistics computed:
 #'
-#' ## Total clearance
-#'
+#' \subsection{Total clearance}{
 #' \deqn{\textrm{CL}_{tot} = k_{elim} + V_{dist}}
-#'
-#' ## Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day
-#'
+#' }
+#' \subsection{Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day}{
 #' The dosing interval \eqn{\tau = \frac{1}{\textrm{day}}} will be converted to
 #' the same units as \eqn{k_{elim}}.
 #'
 #' To convert to steady-state *blood* concentration, multiply by the
 #' blood-to-plasma ratio.
-#'
-#' ### Oral route
-#'
+#' \subsection{Oral route}{
 #' \deqn{C_{ss} = \frac{F_{gutabs} V_{dist}}{k_{elim} \tau}}
-#'
-#' ### Intravenous route
-#'
+#' }
+#' \subsection{Intravenous route}{
 #' \deqn{C_{ss} = \frac{1}{24 * \textrm{CL}_{tot}}}
-#'
-#' ## Half-life of elimination
-#'
+#' }
+#' }
+#' \subsection{Half-life of elimination}{
 #' \deqn{\textrm{Halflife} = \frac{\log(2)}{k_{elim}}}
-#'
-#' ## Time of peak concentration
-#'
+#' }
+#' \subsection{Time of peak concentration}{
 #' For oral route:
 #'
 #' \deqn{\frac{\log \left( \frac{k_{gutabs}}{k_{elim}} \right)}{k_{gutabs} -
 #' k_{elim}}}
 #'
 #' For intravenous route, time of peak concentration is always 0.
-#'
-#' ## Peak concentration
-#'
+#' }
+#' \subsection{Peak concentration}{
 #' Evaluate [cp_1comp_cl()] at the time of peak concentration.
-#'
-#' ## AUC evaluated at infinite time
-#'
+#' }
+#' \subsection{AUC evaluated at infinite time}{
 #' Evaluate [auc_1comp_cl()] at time = `Inf`.
-#'
-#' ## AUC evaluated at the time of the last observation
-#'
+#' }
+#' \subsection{AUC evaluated at the time of the last observation}{
 #' Evaluate [auc_1comp_cl()] at time = `tlast`.
+#' }
 #'
-#'
-#'
-#'
-#' @param pars A named vector of model parameters (e.g. from [coef.pk()]).
-#' @param route Character: The route for which to compute TK stats. Currently
-#'  only "oral" and "iv" are supported.
-#' @param medium Character: the media (tissue) for which to compute TK stats.
-#'  Currently only "blood" and "plasma" are supported.
-#' @param dose Numeric: A dose for which to calculate TK stats.
-#' @param time_unit Character: the units of time used for the parameters `par`.
-#'  For example, if `par["kelim"]` is in units of 1/weeks, then `time_unit =
-#'  "weeks"`. If `par["kelim"]` is in units of 1/hours, then `time_unit =
-#'  "hours"`. This is used to calculate the steady-state plasma/blood
-#'  concentration for long-term daily dosing of 1 mg/kg/day.
-#' @param conc_unit Character: The units of concentration.
-#' @param vol_unit Character: The units of dose.
-#' @param ... Additional arguments not currently in use.
+#' @inheritParams tkstats_1comp
+#' @param restrictive Logical (Default: `FALSE`). Determines whether we should
+#' consider the hepatic clearance as restrictive or nonrestrictive.
 #' @return A `data.frame` with two variables:
-#' - `param_name` = `c("CLtot", "CLtot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity")`
+#' - `param_name` = `c("Cltot", "Cltot/Fgutabs", "Css", "halflife", "tmax", "Cmax", "AUC_infinity")`
 #' - `param_value` = The corresponding values for each statistic (which may be NA if that statistic could not be computed).
 #' @export
-#' @author John Wambaugh, Caroline Ring
+#' @author John Wambaugh, Caroline Ring, Gilberto Padilla Mercado
 tkstats_1comp_cl <- function(pars,
-                          route,
-                          medium,
-                          dose,
-                          time_unit,
-                          conc_unit,
-                          vol_unit,
-                          ...) {
+                             route,
+                             medium,
+                             dose,
+                             time_unit,
+                             conc_unit,
+                             vol_unit,
+                             restrictive = FALSE,
+                             ...) {
 
-  params <- fill_params_1comp(pars)
+  params <- fill_params_1comp_cl(pars)
+
+  Q_totli = Q_gfr = Q_alv = Fup = Clint = NULL
+  Kblood2air = Rblood2plasma = NULL
+  kgutabs = Vdist = Fgutabs_Vdist = NULL
 
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
-  Cl_hep <- Q_totli * Fup * Clint / (Q_totli + (Fup * Clint / Rblood2plasma))
-  CLtot <- Q_gfr + Cl_hep
+  # Set a Fup specific to the liver for clearance
+  if (!restrictive) {
+    Fup_hep <- 1
+  } else {
+    Fup_hep <- Fup
+  }
 
-  CLtot_Fgutabs <- (CLtot / Vdist) / Fgutabs_Vdist
+  Clhep <- (Q_totli * Fup_hep * Clint) / (Q_totli + (Fup_hep * Clint / Rblood2plasma))
+  Clren <- Fup * Q_gfr
+  Clair <- (Rblood2plasma * Q_alv / Kblood2air)
+  Cltot <- Clren + Clhep + Clair
+
+  Cltot_Fgutabs <- (Cltot / Vdist) / Fgutabs_Vdist
 
   # convert dose interval of (1/day) into time units
   # this is now standardized because time_units will always be hours
   dose_int <- 1 / 24
 
   Css <- dose * ifelse(route %in% "oral",
-                     Fgutabs_Vdist / (CLtot / Vdist) / dose_int,
-                     1 / (CLtot * dose_int)) *
+                     Fgutabs_Vdist / (Cltot / Vdist) / dose_int,
+                     1 / (Cltot * dose_int)) *
     ifelse(medium %in% "blood",
            Rblood2plasma,
            1)
 
-  halflife <- log(2) / (CLtot / Vdist)
+  halflife <- log(2) / (Cltot / Vdist)
 
   tmax <- ifelse(route %in% "oral",
-                 log(kgutabs / (CLtot / Vdist)) / (kgutabs - (CLtot / Vdist)),
+                 log(kgutabs / (Cltot / Vdist)) / (kgutabs - (Cltot / Vdist)),
                  0)
 
   Cmax <- cp_1comp_cl(params = pars,
@@ -121,8 +113,8 @@ tkstats_1comp_cl <- function(pars,
                        route = route,
                        medium = medium)
 
-  return(data.frame(param_name = c("CLtot",
-                                   "CLtot/Fgutabs",
+  return(data.frame(param_name = c("Cltot",
+                                   "Cltot/Fgutabs",
                                    "Css",
                                    "halflife",
                                    "tmax",
@@ -131,8 +123,8 @@ tkstats_1comp_cl <- function(pars,
                                    "Vss",
                                    "Vss/Fgutabs"
   ),
-  param_value = c(CLtot,
-                  CLtot_Fgutabs,
+  param_value = c(Cltot,
+                  Cltot_Fgutabs,
                   Css,
                   halflife,
                   tmax,
@@ -141,8 +133,8 @@ tkstats_1comp_cl <- function(pars,
                   Vdist,
                   1 / (Fgutabs_Vdist)
   ),
-  param_units = c(paste0(vol_unit, "/", time_unit), # CLtot
-                  paste0(vol_unit, "/", time_unit), # CLtot/Fgutabs
+  param_units = c(paste0(vol_unit, "/", time_unit), # Cltot
+                  paste0(vol_unit, "/", time_unit), # Cltot/Fgutabs
                   conc_unit, # Css
                   time_unit, # halflife
                   time_unit, # tmax

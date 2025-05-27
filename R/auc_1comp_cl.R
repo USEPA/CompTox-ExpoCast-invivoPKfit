@@ -59,8 +59,8 @@
 #'
 #' @return A vector of plasma AUC values (concentration*time) corresponding to `time`.
 #'
-#' @author Caroline Ring, John Wambaugh
-#' @export auc_1comp
+#' @author Caroline Ring, John Wambaugh, Gilberto Padilla Mercado
+#' @export auc_1comp_cl
 #' @family built-in model functions
 #' @family 1-compartment model functions
 #' @family model AUC functions
@@ -81,37 +81,44 @@ auc_1comp_cl <- function(params,
     stop("cp_1comp_cl(): ", check_msg)
   }
 
+  # Variables to NULL for circumventing global variable NOTE
+  Q_totli = Q_gfr = Clint = Fup = Vdist = NULL
+  Fgutabs = kgutabs = Fgutabs_Vdist = NULL
+  Rblood2plasma = NULL
+
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
 
-  CL_hep <- Q_totli * Fup * Clint / (Q_totli + (Fup * Clint / Rblood2plasma))
-  CLtot <- Q_gfr + CL_hep
+  Clhep <- (Q_totli * Fup * Clint) / (Q_totli + (Fup * Clint / Rblood2plasma))
+  Clren <- Fup * Q_gfr
+  Cltot <- Clren + Clhep
+  kelim <- Cltot / Vdist
 
   auc <- dose * ifelse(route %in% "iv",
-                       1 / (CLtot * Vdist) - # IV model
-                         exp(-time * CLtot * Vdist) /
-                         (CLtot), # iv route
-                       ifelse(rep(CLtot * Vdist != kgutabs, # oral route
+                       1 / (kelim) - # IV model
+                         exp(-time * kelim) /
+                         (Cltot), # iv route
+                       ifelse(rep(kelim != kgutabs, # oral route
                                   length(route)),
                               # equation when kelim != kgutabs
                               -1 *
                                 Fgutabs_Vdist * kgutabs *
-                                (1 / kgutabs - 1 / CLtot * Vdist) /
-                                ((-CLtot * Vdist + kgutabs)) +
+                                (1 / kgutabs - 1 / kelim) /
+                                ((-kelim + kgutabs)) +
                                 1 *
                                 Fgutabs_Vdist * kgutabs *
                                 (exp(-time * kgutabs) / kgutabs -
-                                   exp(-time * CLtot * Vdist) / CLtot * Vdist) /
-                                ((-CLtot * Vdist + kgutabs)),
+                                   exp(-time * kelim) / kelim) /
+                                ((-kelim + kgutabs)),
                               # alternate equation when kelim == kgutabs
                               1 * Fgutabs_Vdist /
                                 (kelim) +
                                 (-1 * Fgutabs_Vdist *
-                                   time * CLtot * Vdist -
+                                   time * kelim -
                                    1 * Fgutabs) *
-                                exp(-time * CLtot * Vdist) /
-                                (CLtot * Vdist)
+                                exp(-time * kelim) /
+                                (kelim)
                        )
   )
 

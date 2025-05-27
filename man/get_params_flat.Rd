@@ -33,13 +33,15 @@ variables in `data`.}
 }
 \value{
 A `data.frame`with the following variables:
-- `param_name`: Character: Names of the model parameters
-- `param_units`: Character: Units of the model parameters
-- `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-- `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
--`lower_bounds`: Numeric: The lower bounds for each parameter
-- `upper_bounds`: Numeric: The upper bounds for each parameter
-- `start`: Numeric: The starting guesses for each parameter
+\itemize{
+\item `param_name`: Character: Names of the model parameters
+\item `param_units`: Character: Units of the model parameters
+\item `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+\item `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+\item`lower_bounds`: Numeric: The lower bounds for each parameter
+\item `upper_bounds`: Numeric: The upper bounds for each parameter
+\item `start`: Numeric: The starting guesses for each parameter
+}
 }
 \description{
 The full set of model parameters for the flat model includes
@@ -47,59 +49,67 @@ The full set of model parameters for the flat model includes
 from the data depends on what routes of administration are included in the
 data.
 }
-\details{
-## IV data, no oral data
+\section{IV data, no oral data}{
+
 
 If IV dosing data are available, but no oral dosing data are available, then
 only the parameter `Vdist` will be estimated from the data. The
 parameter `Fgutabs` cannot be estimated from IV data alone and will not be used to evaluate the model.
+}
 
-## Oral data, no IV data
+\section{Oral data, no IV data}{
+
 
 If oral dosing data are available, but no IV dosing data are available, then
 the parameters `Fgutabs` and `Vdist` cannot be identified separately. From
 oral data alone, only the ratio `Fgutabs/Vdist` can be identified. This ratio
 is represented by a single parameter named `Fgutabs_Vdist`. `Fgutabs` and
 `Vdist` will not be estimated nor used in model evaluation, but `Fgutabs_Vdist` will be estimated.
+}
 
-## Oral data and IV data
+\section{Oral data and IV data}{
+
 
 If both oral and IV dosing data are available, then `Vdist` and `Fgutabs` will both be estimated from the data.
+}
 
-# Blood and plasma data
+\section{Blood and plasma data}{
+
 
 If both blood and plasma data are available, then `Rblood2plasma` will be estimated from the data.
+}
 
-# Only one of blood or plasma data
+\section{Only one of blood or plasma data}{
+
 
 If only one of blood or plasma data are available, then `Rblood2plasma` will be
 held constant at 1, not estimated from the data.
+}
 
-# Default lower and upper bounds for each parameter
+\section{Default lower and upper bounds for each parameter}{
 
-## Default lower and upper bounds for `Vdist`
-
+\subsection{Default lower and upper bounds for `Vdist`}{
 By default, the lower bound for `Vdist` is 0.01, and the upper bound for
 `Vdist` is 100. These values were chosen based on professional judgment.
-
-## Default lower and upper bounds for `Fgutabs`
-
+}
+\subsection{Default lower and upper bounds for `Fgutabs`}{
 By default, the lower bound for `Fgutabs` is 0.0, and the upper bound for
 `Fgutabs` is 1. These are simply the bounds of the physically-meaningful
 range for a fraction.
-
-## Default lower and upper bounds for `Fgutabs_Vdist`
-
+}
+\subsection{Default lower and upper bounds for `Fgutabs_Vdist`}{
 By default, the lower bound for the ratio `Fgutabs_Vdist` is 0.01, and the
 upper bound is 100. These values were chosen based on professional judgment.
-
-## Default lower and upper bounds for `Rblood2plasma`
-
+}
+\subsection{Default lower and upper bounds for `Rblood2plasma`}{
 By default, the lower bound for the blood:plasma partition coefficient
 `Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
 based on professional judgment.
+}
+}
 
-# Starting values for each parameter
+\section{Starting values for each parameter}{
+
 
 Starting values for each parameter (starting guesses for the numerical
 optimizer) are derived from the data using [get_starts_flat()].
@@ -108,6 +118,7 @@ If the starting values returned by [get_starts_flat()] fall outside the
 bounds for any parameter(s), then the starting value will be reset to a value
 halfway between the lower and upper bounds for that parameter.
 }
+
 \seealso{
 Other flat model functions: 
 \code{\link{auc_flat}()},
@@ -118,27 +129,35 @@ Other get_params functions:
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()}
 
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
+\code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 }

@@ -22,7 +22,7 @@
 #' If neither of these procedures is successful, then `NA_real_` is returned for
 #' all coefficient standard deviations.
 #'
-#' @param obj A [pk] object
+#' @param obj A [pk] object.
 #' @param model Optional: Specify one or more of the fitted models whose
 #'   coefficients to return. If NULL (the default), coefficients will be
 #'   returned for all of the models in `obj$stat_model`.
@@ -64,7 +64,7 @@ coef_sd.pk <- function(obj,
 
   #get optimized parameter vectors
   coefs_opt <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
@@ -74,7 +74,7 @@ coef_sd.pk <- function(obj,
 
   #get constant parameter vectors
   coefs_const <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
@@ -84,7 +84,7 @@ coef_sd.pk <- function(obj,
 
   #get all params used
   coefs_use <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
@@ -145,12 +145,12 @@ coef_sd.pk <- function(obj,
 
   # This setup allows for a more stable call to the model functions later on
   fun_models <- data.frame(
-    model_name = unname(sapply(obj$stat_model, \(x) {x$name})),
-    model_fun = unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
+    model = unname(sapply(obj$stat_model, \(x) {x$name})),
+    modelfun = unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
   )
 
   newdata <- dplyr::left_join(coefs, newdata, by = data_grp_vars) %>%
-    dplyr::left_join(fun_models, join_by(model == model_name))
+    dplyr::left_join(fun_models, join_by(model))
 
 
   newdata <- newdata %>%
@@ -167,7 +167,7 @@ coef_sd.pk <- function(obj,
         calc_sds_alerts(pars_opt = coefs_opt_vector,
                     pars_const = coefs_const_vector,
                     observations = observations,
-                    modelfun = model_fun,
+                    modelfun = modelfun,
                     dose_norm = obj$scales$conc$dose_norm,
                     log10_trans = obj$scales$conc$log10_trans)
       )

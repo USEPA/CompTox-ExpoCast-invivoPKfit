@@ -14,7 +14,7 @@
 #'   }
 #' }
 #'
-#' # Left-censored data
+#' @section Left-censored data:
 #'
 #' If the observed value is censored, and the predicted value is less than the
 #' reported LOQ, then the observed value is (temporarily) set equal to the
@@ -68,14 +68,14 @@
 #' @family fit evaluation metrics
 #' @family methods for fitted pk objects
 AAFE.pk <- function(obj,
-                   newdata = NULL,
-                   model = NULL,
-                   method = NULL,
-                   exclude = TRUE,
-                   use_scale_conc = FALSE,
-                   AAFE_group = NULL,
-                   sub_pLOQ = TRUE,
-                   ...) {
+                    newdata = NULL,
+                    model = NULL,
+                    method = NULL,
+                    exclude = TRUE,
+                    use_scale_conc = FALSE,
+                    AAFE_group = NULL,
+                    sub_pLOQ = TRUE,
+                    ...) {
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -115,13 +115,13 @@ AAFE.pk <- function(obj,
   # Get predictions
   # Do NOT apply any conc transformations at this stage
   # (conc transformations will be handled later)
-  preds <- predict(obj,
-                   newdata = newdata,
-                   model = model,
-                   method = method,
-                   type = "conc",
-                   exclude = exclude,
-                   use_scale_conc = FALSE)
+  preds <- predict.pk(obj,
+                      newdata = newdata,
+                      model = model,
+                      method = method,
+                      type = "conc",
+                      exclude = exclude,
+                      use_scale_conc = FALSE)
 
 
   # remove any excluded observations & corresponding predictions, if so specified
@@ -147,17 +147,24 @@ AAFE.pk <- function(obj,
   if(sub_pLOQ %in% TRUE){
     message("AAFE.pk(): Predicted conc below pLOQ substituted with pLOQ")
     new_preds <- new_preds %>%
-      dplyr::mutate(Conc_est_tmp = dplyr::if_else(Conc_est < pLOQ,
-                                              pLOQ,
-                                              Conc_est))
+      dplyr::mutate(
+        Conc_est_tmp = dplyr::if_else(
+          .data$Conc_est < pLOQ,
+          .data$pLOQ,
+          .data$Conc_est
+        )
+      )
   }
 
   #if Conc censored and Conc_est_tmp < LOQ, make fold error 1
   new_preds <- new_preds %>%
-    dplyr::mutate(Conc_tmp = dplyr::if_else(Detect %in% FALSE &
-                                              Conc_est_tmp < LOQ,
-                                            Conc_est_tmp,
-                                            Conc))
+    dplyr::mutate(
+      Conc_tmp = dplyr::if_else(
+        Detect %in% FALSE & Conc_est_tmp < LOQ,
+        Conc_est_tmp,
+        Conc
+        )
+      )
 
   # apply dose-normalization if specified
   # conditional mutate ifelse

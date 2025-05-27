@@ -9,7 +9,7 @@
 #' as unique combinations of variables in the harmonized data, by a command such
 #' as `pk(data = ...) + stat_error_model(error_group = vars(...)`.
 #'
-#' # Log-likelihood equations
+#' @section Log-likelihood equations:
 #'
 #' For chemical-species combination \eqn{i} and study \eqn{j}, define the
 #' following quantities.
@@ -40,7 +40,7 @@
 #' \eqn{\sigma_{ij}^2} is the study- and chemical-specific residual variance. (It
 #' is a hyperparameter.)
 #'
-#' ## Single-subject observations above limit of quantification (detects)
+#' @section Single-subject observations above limit of quantification (detects):
 #'
 #' This is the normal probability density function evaluated at the observed
 #' concentration, as implemented in [stats::dnorm()].
@@ -50,7 +50,7 @@
 #' \right]   \right) }
 #'
 #'
-#' ## Single-subject observations below limit of quantification (non-detects)
+#' @section Single-subject observations below limit of quantification (non-detects):
 #'
 #' This is the normal cumulative density function evaluated at the LOQ, as
 #' implemented in [stats::pnorm()]. It is the total probability of observing a
@@ -59,7 +59,7 @@
 #' \deqn{LL_{ijk} =  \log \left( \frac{1}{2} \left[ 1 + \textrm{erf} \left(
 #' \frac{\textrm{LOQ}_{ijk} - \mu_{ijk}}{\sigma_{ij} \sqrt{2}} \right) \right]  \right) }
 #'
-#' ## Multiple-subject observations above limit of quantification
+#' @section Multiple-subject observations above limit of quantification:
 #'
 #' This is the joint log-likelihood across the multiple subjects included in one
 #' observation, re-expressed in terms of the sample mean, sample SD, and number
@@ -73,7 +73,7 @@
 #'       \right)
 #'        \right]}
 #'
-#' ## Multiple-subject observations below limit of quantification
+#' @section Multiple-subject observations below limit of quantification:
 #'
 #' This case is not implemented. If sample mean concentration is reported below
 #' LOQ, then it is unclear what individual observed concentrations are
@@ -87,7 +87,7 @@
 #' multiple-subject observations below LOQ are excluded from analysis (they are
 #' marked as excluded in [preprocess_data()]).
 #'
-#' # Joint log-likelihood for a chemical and species
+#' @section Joint log-likelihood for a chemical and species:
 #'
 #' The joint log-likelihood for a chemical and species is simply the sum of
 #' log-likelihoods across observations.
@@ -156,6 +156,11 @@ log_likelihood <- function(par,
   Detect <- data$Detect
   pLOQ <- data$pLOQ
 
+  # Fix the modelfun_args and modelfun variables
+    modelfun_args <- modelfun[["conc_fun_args"]]
+    modelfun <- modelfun[["conc_fun"]]
+
+
   # combine parameters to be optimized and held constant
   params <- c(par, const_params)
 
@@ -170,22 +175,29 @@ log_likelihood <- function(par,
     pred <- data$Conc_est
 
   } else {
-
-    # get un-transformed predicted plasma concentration vs. time for the current parameter
-    # values, by dose and route
-    pred <- do.call(
-      modelfun,
-      args = list(
+    # assemble arguments for do.call
+    if (!is.list(modelfun_args)) {
+      modelfun_args <- as.list(modelfun_args)
+    } else {
+      # Need to evaluate some quoted arguments (CHEMICAL and SPECIES)
+      modelfun_args <- lapply(modelfun_args, eval)
+    }
+    these_args <- append(
+      list(
         params = model.params,
         time = Time_trans,
         dose = Dose,
         route = Route,
         medium = Media
-      )
+      ),
+      modelfun_args
     )
+
+    # get un-transformed predicted plasma concentration vs. time for the current parameter
+    # values, by dose and route
+    pred <- do.call(what = modelfun, args = these_args)
   }
 
-  pred[which(pred < pLOQ)] <- pLOQ[which(pred < pLOQ)]
 
   # Handles the max_conc check, needs to be separate because it should only
   # be used for fitting. Not logLik etc...
@@ -208,6 +220,7 @@ log_likelihood <- function(par,
     }
   }
 
+
   # Early Return
   # if model predicted any NA or Inf concentrations OR
   # any negative concentrations,
@@ -218,6 +231,8 @@ log_likelihood <- function(par,
     if (negative) ll <- -1 * ll
     return(ll)
   }
+
+  pred[which(pred < pLOQ)] <- pLOQ[which(pred < pLOQ)]
 
   # transform predictions and concentrations
   # dose normalization?
@@ -375,7 +390,7 @@ log_likelihood <- function(par,
 
     loglike <- c(ll_data_sigma,
                  ll_data_no_sigma)
-}
+  }
 
   # sum log-likelihoods over observations
   ll <- sum(loglike)

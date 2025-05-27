@@ -27,15 +27,15 @@
 #'@import purrr
 #'@import tidyr
 #'@import numDeriv
-#'@author Caroline Ring and Gilberto Padilla Mercado
+#'@author Caroline Ring, Gilberto Padilla Mercado
 #'@family methods for fitted pk objects
 #'@references Gill J, King G. (2004) What to Do When Your Hessian is Not
 #'  Invertible: Alternatives to Model Respecification in Nonlinear Estimation.
 #'  Sociological Methods & Research 33(1):54-87. DOI: 10.1177/0049124103262681
 get_hessian.pk <- function(obj,
-                       model = NULL,
-                       method = NULL,
-                       suppress.messages = TRUE, ...) {
+                           model = NULL,
+                           method = NULL,
+                           suppress.messages = TRUE, ...) {
 
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
@@ -50,7 +50,7 @@ get_hessian.pk <- function(obj,
 
   #get optimized parameter vectors
   coefs_opt <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
@@ -60,7 +60,7 @@ get_hessian.pk <- function(obj,
 
   #get constant parameter vectors
   coefs_const <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
@@ -70,7 +70,7 @@ get_hessian.pk <- function(obj,
 
   #get all params used
   coefs_use <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
@@ -79,7 +79,8 @@ get_hessian.pk <- function(obj,
 
   coefs <- coefs_opt %>%
     dplyr::left_join(coefs_const) %>%
-    dplyr::left_join(coefs_use)
+    dplyr::left_join(coefs_use) %>%
+    suppressMessages()
 
   other_vars <- ggplot2::vars(
     Value,
@@ -122,13 +123,10 @@ get_hessian.pk <- function(obj,
     dplyr::ungroup()
 
   # This setup allows for a more stable call to the model functions later on
-  fun_models <- data.frame(
-    model_name = unname(sapply(obj$stat_model, \(x) {x$name})),
-    model_fun = unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
-  )
+  fun_models <- get_stat_model(obj)
 
   newdata <- dplyr::left_join(coefs, newdata, by = data_grp_vars) %>%
-    dplyr::left_join(fun_models, join_by(model == model_name))
+    dplyr::left_join(fun_models, join_by(model))
 
 
   newdata <- newdata %>%
@@ -145,7 +143,7 @@ get_hessian.pk <- function(obj,
         calc_hessian(pars_opt = coefs_opt_vector,
                         pars_const = coefs_const_vector,
                         observations = observations,
-                        modelfun = model_fun,
+                        modelfun = modelfun,
                         dose_norm = obj$scales$conc$dose_norm,
                         log10_trans = obj$scales$conc$log10_trans)
       )

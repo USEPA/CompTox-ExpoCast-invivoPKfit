@@ -77,8 +77,9 @@ For the non-summary case (\eqn{N} single-subject observations, with all
 reduces to the familiar RMSE formula
 
 \deqn{\sqrt{\frac{1}{N} \sum_{i=1}^N (y_i - \mu_i)^2}}
+}
+\section{Left-censored data}{
 
-# Left-censored data
 
 If the observed value is censored, and the predicted value is less than the
 reported LOQ, then the observed value is (temporarily) set equal to the
@@ -86,8 +87,10 @@ predicted value, for an effective error of zero.
 
 If the observed value is censored, and the predicted value is greater than
 the reported LOQ, the the observed value is set equal to the reported LOQ.
+}
 
-# Log10 transformation
+\section{Log10 transformation}{
+
 
 If `log10_trans %in% TRUE`, then both the observed and predicted values will be
 log10-transformed before calculating the RMSE. In the case where
@@ -106,6 +109,7 @@ group \eqn{i}. \eqn{s_i} is the sample standard deviation for group \eqn{i}.
 \deqn{\textrm{log10-scale sample SD}_i = \sqrt{\log_{10} \left(1 +
 \frac{s_i^2}{\bar{y}_i^2} \right)}}
 }
+
 \author{
 Caroline Ring
 }

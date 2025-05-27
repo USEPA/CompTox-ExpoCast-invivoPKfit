@@ -8,7 +8,7 @@
 #' 10^{\frac{1}{N}\sum{log_{10} \left( \frac{\textrm{predicted}}{\textrm{observed}} \right)}}
 #' }
 #'
-#' # Left-censored data
+#' @section Left-censored data:
 #'
 #' If the observed value is censored, and the predicted value is less than the
 #' reported LOQ, then the observed value is (temporarily) set equal to the

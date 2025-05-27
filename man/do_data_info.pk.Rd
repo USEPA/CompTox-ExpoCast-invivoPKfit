@@ -7,9 +7,9 @@
 \method{do_data_info}{pk}(obj, ...)
 }
 \arguments{
-\item{obj}{An object of class [pk()].}
+\item{obj}{A `pk` object}
 
-\item{...}{Additional arguments. Not currently in use.}
+\item{...}{Additional arguments. Not in use currently.}
 }
 \value{
 Object of class [pk()] with an added `$data_info` list containing

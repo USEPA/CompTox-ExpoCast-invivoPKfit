@@ -1,27 +1,34 @@
 #' Analytical AUC for the 2-compartment model
 #'
 #' Calculate area under the plasma concentration vs. time curve for the
-#' 1-compartment model, using an analytical equation (the integral of the
-#' 1-compartment model equation with respect to time).
+#' 2-compartment model, using an analytical equation (the integral of the
+#' 2-compartment model equation with respect to time).
 #'
-#' @md
-#' @param params A named list of parameter values including the following:
-#'   * k12: Rate at which compound moves from central to peripheral
-#'   compartment, 1/h.
-#'   * k21: Rate at which compound moves from peripheral to central compartment, 1/h.
-#'   * kelim: Elimination rate, 1/h.
-#'   * V1: Apparent volume of central compartment, L/kg BW. Or see below for "Fgutabs_V1"
+#' @section Required params:
 #'
-#'   For oral administration (\code{route} FALSE), \code{params} must also include:
-#'   * Fgutabs: Oral bioavailability, unitless fraction. Or see below for "Fgutabs_V1"
-#'   * kgutabs: Rate of absorption from gut, 1/h.
+#' `params` must include the following named items:
+#'   \describe{
+#'   \item{k12}{Rate at which the compound moves from the central to peripheral compartment, 1/h.}
+#'   \item{k21}{Rate at which the compound moves from peripheral to central compartment, 1/h.}
+#'   \item{kelim}{Elimination rate, 1/h.}
+#'   \item{V1}{Apparent volume of central compartment, L/kg BW.}
+#'   }
 #'
-#'   For oral administration, in lieu of "V1" and "Fgutabs", you may instead
-#'   provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an
-#'   alternate parameterization for situations where "Fgutabs" and "V1" are not
-#'   identifiable separately (i.e. when oral data are available, but IV data are
-#'   not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
-#'   used.
+#' For oral administration (\code{route} FALSE), \code{params} must also include:
+#' \describe{
+#' \item{Fgutabs}{Oral bioavailability, unitless fraction.}
+#' \item{kgutabs}{rate of absorption from gut, 1/h.}
+#' }
+#'
+#' For oral administration, in lieu of "V1" and "Fgutabs", you may instead
+#' provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an
+#' alternate parameterization for situations where "Fgutabs" and "V1" are not
+#' identifiable separately (i.e. when oral data are available, but IV data are
+#' not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
+#' used.
+#'
+#' @param params A named list of parameter values.
+#'
 #'
 #' @param time A numeric vector of time values, in hours
 #' @param dose A numeric vector of doses in mg/kg
@@ -50,6 +57,12 @@ auc_2comp <- function(params, time, dose, route, medium = "plasma")
 
   # get transformed parameters for 2-comp model
   trans_params <- transformed_params_2comp(params)
+
+  # params used (assigned NULL to prevent global variable hiccup)
+  A_iv_unit = B_iv_unit = NULL
+  A_oral_unit = B_oral_unit = NULL
+  alpha = beta = NULL
+  Rblood2plasma = kgutabs =  NULL
 
   # for readability, assign params to variables inside this function
   for (x in names(params)) {

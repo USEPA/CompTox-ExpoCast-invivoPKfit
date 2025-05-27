@@ -4,7 +4,7 @@
 #' for the 1-compartment model, for single bolus doses (IV and/or oral).
 #'
 #'
-#' # Required parameters
+#' @section Required parameters:
 #'
 #' `params` must include the following named items:
 #'   \describe{
@@ -61,14 +61,15 @@
 #' @return A vector of blood or plasma concentration values  corresponding
 #'  to `time`.
 #'
-#' @author Caroline Ring, John Wambaugh
+#' @author Caroline Ring, John Wambaugh, Gilberto Padilla Mercado
 #'
-#' @export cp_1comp
+#' @export cp_1comp_cl
 #' @family built-in model functions
 #' @family 1-compartment model functions
 #' @family model concentration functions
 cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
                         restrictive = FALSE) {
+
   params <- fill_params_1comp_cl(params)
 
   check_msg <- check_params_1comp_cl(params = params,
@@ -79,32 +80,46 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
     stop("cp_1comp(): ", check_msg)
   }
 
+  Q_totli = Q_gfr = Q_alv = Fup = Clint = NULL
+  Kblood2air = Rblood2plasma = NULL
+  kgutabs = Vdist = Fgutabs_Vdist = NULL
 
   list2env(as.list(params), envir = as.environment(-1))
 
+
+  # Set a Fup specific to the liver for clearance
+  if (!restrictive) {
+    Fup_hep <- 1
+  } else {
+    Fup_hep <- Fup
+  }
+
   # compute total clearance
-  Clhep <- (Q_totli * Fup * Clint) / (Q_totli + (Fup * Clint / Rblood2plasma))
-  Cltot <- (Fup * Q_gfr) + Clhep
-  Cltot_Vdist <- Cltot / Vdist
+  Clint_hep <- Clint * (6.6) / 1E6 # Convert to L/hr
+  Clhep <- (Q_totli * Fup_hep * Clint_hep) / (Q_totli + (Fup_hep * Clint_hep / Rblood2plasma))
+  Clren <- Fup * Q_gfr
+  Clair <- (Rblood2plasma * Q_alv / Kblood2air)
+  Cltot <- Clren + Clhep + Clair
+  kelim <- Cltot / Vdist
 
   # compute plasma concentration
   cp <- dose * ifelse(
     route %in% "iv",
-    exp(-Cltot_Vdist * time) / Vdist,
+    exp(-kelim * time) / Vdist,
     # iv route
     ifelse(
-      rep(Cltot_Vdist != kgutabs, # oral route
+      rep(kelim != kgutabs, # oral route
           length(route)),
       # equation when kelim != kgutabs
       (Fgutabs_Vdist *
          kgutabs) /
-        (kgutabs - Cltot_Vdist) *
-        (exp(-Cltot_Vdist * time) -
+        (kgutabs - kelim) *
+        (exp(-kelim * time) -
            exp(-kgutabs * time)),
       # alternate equation when kelim == kgutabs
-      Fgutabs_Vdist * Cltot_Vdist *
+      Fgutabs_Vdist * kelim *
         time *
-        exp(-Cltot_Vdist * time)
+        exp(-kelim * time)
     )
   )
 

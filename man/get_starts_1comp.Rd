@@ -9,13 +9,15 @@ get_starts_1comp(data, par_DF)
 \arguments{
 \item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}
 
-\item{par_DF}{A `data.frame` with the following variables (e.g., as produced by [get_params_1comp()])
-- `param_name`: Character: Names of the model parameters
-- `param_units`: Character: Units of the model parameters
-- `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-- `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
--`lower_bounds`: Numeric: The lower bounds for each parameter
-- `upper_bounds`: Numeric: The upper bounds for each parameter}
+\item{par_DF}{A `data.frame` with the following variables
+\itemize{
+\item `param_name`: Character: Names of the model parameters
+\item `param_units`: Character: Units of the model parameters
+\item `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+\item `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+\item`lower_bounds`: Numeric: The lower bounds for each parameter
+\item `upper_bounds`: Numeric: The upper bounds for each parameter
+}}
 }
 \value{
 The same `data.frame` as `par_DF`, with an additional variable
@@ -49,8 +51,9 @@ First, data are filtered to exclude any non-detects.
 Then, data are split by route of administration, into an IV data set and an oral data
 set. (It is possible that either IV or oral data may not be
 available for a chemical.)
+}
+\section{Starting value for `kelim`}{
 
-# Starting value for `kelim`
 
 If IV data exist, then only IV data are used to derive starting estimates for
 `kelim`, even if oral data also exist.
@@ -68,8 +71,10 @@ midpoint of observed time values.
 Of course, this assumption is unlikely to be correct. However, we hope that it
 will yield a starting guess for `kelim` that is at least on the right order of
 magnitude.
+}
 
-# Starting value for `Vdist`
+\section{Starting value for `Vdist`}{
+
 
 If IV data exist, then only IV data are used to derive a starting estimate
 for `Vdist`.
@@ -103,8 +108,10 @@ concentration equal to `A_log10` after injecting a unit dose.
 (No starting value for `Vdist` can be derived with only oral data,
 but none is needed, because with only oral data, `Vdist` will not be estimated
 from the data).
+}
 
-# Starting value for `kgutabs`
+\section{Starting value for `kgutabs`}{
+
 
 If oral data exist (whether or not IV data also exist), then the oral data
 are used to derive a starting value for `kgutabs`.
@@ -118,8 +125,10 @@ log-transformed) peak concentration (`Cmax_log10`), are identified using [get_pe
 As a very rough guess,`tmax` is assumed to
 occur at one absorption half-life. Under this assumption, `kgutabs` is equal
 to `log(2)/tmax`, and this is taken as the starting value.
+}
 
-# Starting value for `Fgutabs_Vdist`
+\section{Starting value for `Fgutabs_Vdist`}{
+
 
 If any oral data exist (whether or not IV data also exist), then the oral data
 are used to derive a starting value for `Fgutabs_Vdist`.
@@ -140,21 +149,27 @@ value for `kelim`. So `log10(A) = Cmax_log10 + kelim*tmax`.
 
 Using the previously-derived starting values for `kgutabs` and `kelim`, then,
 the starting value for `Fgutabs_Vdist` can be derived as `A * (kgutabs-kelim)/kgutabs`.
+}
 
-# Starting value for `Fgutabs`
+\section{Starting value for `Fgutabs`}{
+
 
 If both oral and IV data exist, then the derived starting values for `Vdist`
 (from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
 yield a derived starting value for `Fgutabs`.
+}
 
-#Starting value for `Rblood2plasma`
+\section{Starting value for `Rblood2plasma`}{
+
 
 The starting value for `Rblood2plasma` is always set at a constant 1.
 }
+
 \seealso{
 Other 1-compartment model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
 \code{\link{get_params_1comp}()},
@@ -166,28 +181,37 @@ Other 1-compartment model functions:
 Other get_starts functions: 
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
-\code{\link{get_starts_flat}()}
+\code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()}
 
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 }

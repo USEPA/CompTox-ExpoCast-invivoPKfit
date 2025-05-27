@@ -26,6 +26,7 @@ fit_group <- function(data,
                       log10_trans,
                       max_mult,
                       suppress.messages) {
+
   # Rowbind par_DF and sigma_DF
   par_DF <- dplyr::bind_rows(par_DF, sigma_DF)
 
@@ -69,7 +70,6 @@ fit_group <- function(data,
       dplyr::group_by(Dose, Route, Media) %>%
       dplyr::mutate(groupCmax = max(Conc, na.rm = TRUE)) %>%
       dplyr::ungroup()
-
 
     # Now call optimx::optimx() and do the fit
     optimx_out <- suppressWarnings(

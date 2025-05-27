@@ -29,15 +29,13 @@ fit them all using the same set of instructions.
 
 When you do something like
 
-```
+\preformatted{
 pk_cvt <- pk(cvt) +
  facet_data(
- facets = vars(
- chemicals_analyzed.dsstox_substance_id,
-subjects.species_harmonized
-)
-)
-```
+   facets = vars(chemicals_analyzed.dsstox_substance_id,
+                 subjects.species_harmonized)
+ )
+}
 
 Now `pk_cvt` is an object of class `pk_faceted`: under the hood, a
 [tibble::tibble()] with one row for each group defined by a unique

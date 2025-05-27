@@ -7,7 +7,7 @@
 tkstats_1comp(pars, route, medium, dose, time_unit, conc_unit, vol_unit, ...)
 }
 \arguments{
-\item{pars}{A named vector of model parameters (e.g. from [coef.pk()]).}
+\item{pars}{A named numeric vector of model parameters (e.g. from [coef.pk()]).}
 
 \item{route}{Character: The route for which to compute TK stats. Currently
 only "oral" and "iv" are supported.}
@@ -37,54 +37,47 @@ A `data.frame` with two variables:
 \description{
 Calculate predicted toxicokinetic statistics for a 1-compartment model.
 }
-\details{
-# Statistics computed
+\section{Statistics computed}{
 
-## Total clearance
 
+\subsection{Total clearance}{
 \deqn{\textrm{CL}_{tot} = k_{elim} + V_{dist}}
-
-## Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day
-
+}
+\subsection{Steady-state plasma concentration for long-term daily dose of 1 mg/kg/day}{
 The dosing interval \eqn{\tau = \frac{1}{\textrm{day}}} will be converted to
 the same units as \eqn{k_{elim}}.
 
 To convert to steady-state *blood* concentration, multiply by the
 blood-to-plasma ratio.
-
-### Oral route
-
+\subsection{Oral route}{
 \deqn{C_{ss} = \frac{F_{gutabs} V_{dist}}{k_{elim} \tau}}
-
-### Intravenous route
-
+}
+\subsection{Intravenous route}{
 \deqn{C_{ss} = \frac{1}{24 * \textrm{CL}_{tot}}}
-
-## Half-life of elimination
-
+}
+}
+\subsection{Half-life of elimination}{
 \deqn{\textrm{Halflife} = \frac{\log(2)}{k_{elim}}}
-
-## Time of peak concentration
-
+}
+\subsection{Time of peak concentration}{
 For oral route:
 
 \deqn{\frac{\log \left( \frac{k_{gutabs}}{k_{elim}} \right)}{k_{gutabs} -
 k_{elim}}}
 
 For intravenous route, time of peak concentration is always 0.
-
-## Peak concentration
-
-Evaluate [cp_1comp()] at the time of peak concentration.
-
-## AUC evaluated at infinite time
-
-Evaluate [auc_1comp()] at time = `Inf`.
-
-## AUC evaluated at the time of the last observation
-
-Evaluate [auc_1comp()] at time = `tlast`.
 }
+\subsection{Peak concentration}{
+Evaluate [cp_1comp_cl()] at the time of peak concentration.
+}
+\subsection{AUC evaluated at infinite time}{
+Evaluate [auc_1comp_cl()] at time = `Inf`.
+}
+\subsection{AUC evaluated at the time of the last observation}{
+Evaluate [auc_1comp_cl()] at time = `tlast`.
+}
+}
+
 \author{
 John Wambaugh, Caroline Ring
 }

@@ -4,18 +4,23 @@
 \alias{get_starts_1comp_fup}
 \title{Get starting values for 1-compartment model with specific clearance}
 \usage{
-get_starts_1comp_fup(data, par_DF)
+get_starts_1comp_fup(data, par_DF, restrictive = TRUE)
 }
 \arguments{
 \item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}
 
-\item{par_DF}{A `data.frame` with the following variables (e.g., as produced by [get_params_1comp()])
-- `param_name`: Character: Names of the model parameters
-- `param_units`: Character: Units of the model parameters
-- `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-- `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
--`lower_bounds`: Numeric: The lower bounds for each parameter
-- `upper_bounds`: Numeric: The upper bounds for each parameter}
+\item{par_DF}{A `data.frame` with the following variables
+\itemize{
+\item `param_name`: Character: Names of the model parameters
+\item `param_units`: Character: Units of the model parameters
+\item `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+\item `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+\item`lower_bounds`: Numeric: The lower bounds for each parameter
+\item `upper_bounds`: Numeric: The upper bounds for each parameter
+}}
+
+\item{restrictive}{Optional boolean value which determines whether the function
+assumes restrictive (TRUE) or nonrestrictive (FALSE, default) clearance.}
 }
 \value{
 The same `data.frame` as `par_DF`, with an additional variable
@@ -120,15 +125,18 @@ the starting value for `Fgutabs_Vdist` can be derived as `A * (kgutabs-kelim)/kg
 If both oral and IV data exist, then the derived starting values for `Vdist`
 (from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
 yield a derived starting value for `Fgutabs`.
+}
+\section{Starting value for `Rblood2plasma`}{
 
-#Starting value for `Rblood2plasma`
 
 The starting value for `Rblood2plasma` is set to the value given by [httk::parameterize_gas_pbtk()].
 }
+
 \seealso{
 Other 1-compartment model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
 \code{\link{get_params_1comp}()},
@@ -140,28 +148,37 @@ Other 1-compartment model functions:
 Other get_starts functions: 
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
-\code{\link{get_starts_flat}()}
+\code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()}
 
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 }

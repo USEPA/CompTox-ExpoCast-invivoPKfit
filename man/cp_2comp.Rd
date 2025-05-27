@@ -37,22 +37,29 @@ Calculates plasma concentration according to the analytical solution for the
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
 \code{\link{auc_1comp_cl}()},
+\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
+\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
 \code{\link{get_params_1comp}()},
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
+\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
 \code{\link{get_starts_1comp_fup}()},
+\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_3comp2}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 
@@ -67,7 +74,10 @@ Other 2-compartment model functions:
 Other model concentration functions: 
 \code{\link{cp_1comp}()},
 \code{\link{cp_1comp_cl}()},
-\code{\link{cp_flat}()}
+\code{\link{cp_1comp_rad}()},
+\code{\link{cp_flat}()},
+\code{\link{cp_httk_3comp2}()},
+\code{\link{get_params_httk_3comp2}()}
 }
 \author{
 Caroline Ring, John Wambaugh

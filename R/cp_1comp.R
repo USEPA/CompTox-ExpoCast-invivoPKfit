@@ -4,7 +4,7 @@
 #' for the 1-compartment model, for single bolus doses (IV and/or oral).
 #'
 #'
-#' # Required parameters
+#' @section Required parameters:
 #'
 #' `params` must include the following named items:
 #'   \describe{
@@ -77,6 +77,8 @@ cp_1comp <- function(params,
   if (check_msg != "Parameters OK") {
     stop("cp_1comp(): ", check_msg)
   }
+
+  kelim = Vdist = kelim = kgutabs = Fgutabs_Vdist = Rblood2plasma = NULL
 
   list2env(as.list(params), envir = as.environment(-1))
 

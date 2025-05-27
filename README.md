@@ -1,4 +1,4 @@
-# R Package "invivoPKfit"
+# R Package "invivoPKfit" <img src="man/figures/logo.png" align="right" height="138" alt="" />
 
 invivoPKfit estimates the most likely parameter values for models describing the 
 pharmacokinetics (PK, that is the absorption, distribution, metabolism, and 

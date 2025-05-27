@@ -48,13 +48,13 @@
 #'  variables whose unique combinations define a group with its own error
 #'  variance. These variables refer to the `data` element of the `pk` object to
 #'  which `stat_error_model()` is added. The variables should not be quoted.
-#'  Default is `vars(Chemical, Species, Reference, Media)`.
+#'  Default is `vars(Chemical, Species, Reference)`.
 #' @param ... Additional arguments. Not currently used.
 #' @return An object of class `pk_stat_error_model`: A named list of all the
 #'  arguments to `stat_error_model`.
 #' @author Caroline Ring
 #' @export
-stat_error_model <- function(error_group = vars(Chemical, Species, Reference, Media),
+stat_error_model <- function(error_group = vars(Chemical, Species, Reference),
                              ...) {
   # get arguments and values as a list
   argg <- c(as.list(environment()), list(...))

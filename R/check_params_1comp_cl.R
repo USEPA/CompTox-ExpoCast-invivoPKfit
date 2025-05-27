@@ -1,4 +1,4 @@
-#' Check 1-compartment model parameters
+#' Check 1-compartment model parameters with specific clearance
 #'
 #' Check to make sure required parameters are present to evaluate 1-compartment
 #' model for a given route and medium
@@ -30,8 +30,11 @@ check_params_1comp_cl <- function(params,
     missing_params <- setdiff(c("Clint",
                                 "Q_gfr",
                                 "Q_totli",
+                                "Q_alv",
+                                "Kblood2air",
                                 "Fup",
                                 "Fgutabs_Vdist",
+                                "Rblood2plasma",
                                 "kgutabs"),
                               names(params)[is.finite(params)])
     if (length(missing_params) > 0) {
@@ -48,6 +51,9 @@ check_params_1comp_cl <- function(params,
     missing_params <- setdiff(c("Clint",
                                 "Q_gfr",
                                 "Q_totli",
+                                "Q_alv",
+                                "Kblood2air",
+                                "Rblood2plasma",
                                 "Fup",
                                 "Vdist"),
                               names(params)[is.finite(params)])
@@ -57,13 +63,6 @@ check_params_1comp_cl <- function(params,
                     toString(missing_params)
                     )
               )
-    }
-  }
-
-  if (any(medium %in% "blood")) {
-    if (!("Rblood2plasma" %in% names(params)[is.finite(params)])) {
-      msg <- (paste0("Error: For 1-compartment model ",
-                     "in blood: missing parameter Rblood2plasma"))
     }
   }
 

@@ -23,12 +23,11 @@
 #' [AIC()], which check the log-likelihood *without* forcing it to return finite
 #' values.
 #'
-#' @param obj A [pk] object.
+#' @inheritParams do_preprocess.pk
 #' @param n_cores Number of cores used for parallel computing.
 #' @param rate_names The names of the rate units. Leave NULL to utilize default 1/hour.
 #' @param max_multiplier Numeric value for upper prediction limit (this number multiplied
 #' by maximum concentrations in each experiment). Default set to NULL does not apply this limit.
-#' @param ... Additional arguments. Not currently in use.
 #' @return The same [pk] object, with element `fit` containing the fitted
 #'   results for each model in `stat_model`.
 #' @export
@@ -91,6 +90,7 @@ do_fit.pk <- function(obj,
     LOQ, exclude, Detect, pLOQ,
     N_Subjects, data_sigma_group, Time_trans
   )
+
   data <- data %>%
     dplyr::select(!!!obj$stat_error_model$error_group,
                   !!!req_data_vars)
@@ -109,31 +109,51 @@ do_fit.pk <- function(obj,
     dplyr::select(!c(n_par, n_sigma, n_detect, n_par_opt, fit_reason))
 
   # make a join-able data.frame with all the possible models
-  fun_models <- data.frame(
-    model_name = unname(vapply(obj$stat_model, \(x) {x$name}, character(1))),
-    modelfun = unname(vapply(obj$stat_model, \(x) {x$conc_fun}, character(1)))
-  )
+  fun_models <- get_stat_model(obj)
 
   # merge it all together
-  info_nest <- suppressMessages(dplyr::inner_join(
+  info_nest <- dplyr::inner_join(
     dplyr::inner_join(
-      dplyr::inner_join(data_nest,
-                        par_DF_nest,
-                        by = c(data_group_vars)),
+      dplyr::inner_join(
+        data_nest,
+        par_DF_nest,
+        by = c(data_group_vars)
+      ),
       sigma_DF_nest,
-      by = c(data_group_vars)),
+      by = c(data_group_vars)
+    ),
     fit_check,
-    by = c("model", data_group_vars)) %>%
+    by = c("model", data_group_vars)
+  ) %>%
     dplyr::relocate(model, .after = data_group_vars[-1]) %>%
-    dplyr::left_join(fun_models, join_by(model == model_name)))
+    dplyr::left_join(fun_models, join_by(model)) %>%
+    suppressMessages()
 
+  # It is at this point when we must evaluate all quoted expressions in modelfun
+  # That is, for the concentration function arguments which is used by log_likelihood.
+
+  info_nest <- info_nest %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(
+      modelfun = purrr::map(
+        modelfun,
+        \(x) {
+          # Annoying hacking of the environments
+          x$conc_fun_args = lapply(x$conc_fun_args, eval,
+                                   parent.frame(n = 3))
+          x
+        }
+      )
+    ) %>%
+    dplyr::ungroup()
 
   this_settings_optimx <- get_settings_optimx(obj)
+  these_methods <- rlang::eval_tidy(this_settings_optimx$method)
   dose_norm <- obj$scales$conc$dose_norm
   log10_trans <- obj$scales$conc$log10_trans
 
-  message("do_fit.pk(): Begin fitting for model(s):",
-          paste(fun_models$model_name, collapse = " "))
+  message("do_fit.pk(): Begin fitting for model(s): ",
+          paste(fun_models$model, collapse = ", "))
 
   total_cores <- parallel::detectCores()
   # Set the options for Parallel Computing
@@ -159,6 +179,8 @@ do_fit.pk <- function(obj,
             " processing cores allocated."
     )
     cluster <- multidplyr::new_cluster(n_cores)
+
+    # Here we load invivoPKfit
     if (any(.packages(all.available = TRUE) %in% "invivoPKfit")) {
       multidplyr::cluster_send(cluster, library(invivoPKfit))
     } else {
@@ -172,6 +194,7 @@ do_fit.pk <- function(obj,
     # we can likely save some memory by only passing what we need from obj
     # like this
     tidy_fit <- info_nest %>%
+      dplyr::ungroup() %>%
       dplyr::rowwise(!!!data_group, model) %>%
       multidplyr::partition(cluster) %>%
       dplyr::summarise(
@@ -185,15 +208,15 @@ do_fit.pk <- function(obj,
                              dose_norm = dose_norm,
                              log10_trans = log10_trans,
                              max_mult = max_multiplier,
-                             suppress.messages = TRUE)
-                   )
+                             suppress.messages = TRUE))
         ) %>%
       dplyr::collect() # undo the multidplyr::partition()
 
     rm(cluster)
-  } else {
 
+  } else {
     tidy_fit <- info_nest %>%
+      dplyr::ungroup() %>%
       dplyr::rowwise(!!!data_group, model) %>%
       dplyr::summarize(
         fit = list(fit_group(data = data,
@@ -210,50 +233,77 @@ do_fit.pk <- function(obj,
       )
   }
 
-  # Extract names
-  tidy_fit <- tidy_fit %>%
-    tidyr::unnest(fit) %>%
-    dplyr::mutate(ngatend = as.numeric(ngatend),
-                  nhatend = as.numeric(nhatend),
-                  hev = as.numeric(hev),
-                  message = as.character(message))
-  orig_names <- names(tidy_fit) # Saving the original names
-  # Nesting the fit_output, which should always be in consecutive columns
-  tidy_fit <- tidy_fit %>%
-    tidyr::nest(
-      fit_data = c(value:message)
-    )
 
   tidy_fit <- tidy_fit %>%
-    tidyr::pivot_longer(cols = !c(!!!data_group, model, method, fit_data),
-                        names_to = "param_name",
-                        values_to = "estimate")
-
-  # Only keep sigma values describing the data_group, and non-sigma values
-  tidy_fit <- tidy_fit %>%
-    dplyr::filter(
-      !stringr::str_detect(param_name, "sigma_") |
-      stringr::str_detect(param_name, paste(!!!obj$data_group, sep = "."))
+    dplyr::mutate(
+      fit = purrr::map(fit,
+                       \(x) {
+                         x %>%
+                           dplyr::mutate(
+                             # ngatend = as.numeric(ngatend),
+                             # nhatend = as.numeric(nhatend),
+                             # hev = as.numeric(hev),
+                             message = as.character(message)
+                           ) %>%
+                           tidyr::pivot_longer(
+                             cols = !c(method, value:message),
+                             names_to = "param_name",
+                             values_to = "estimate"
+                           ) %>%
+                           dplyr::relocate(
+                             param_name, estimate, convcode, value,
+                             .after = method
+                           )
+                       }
+      )
       )
 
-  # Making optimized sigma values their own column... not tidy otherwise
+
+  # Unnest
+  tidy_fit <- tidy_fit %>%
+    tidyr::unnest(fit)
+
+
+  # Adding the upper, lower, and starting values from sigma_DF and par_DF
   tidy_sigmas <- tidy_fit %>%
     dplyr::filter(stringr::str_detect(param_name, "sigma_")) %>%
-    dplyr::inner_join(sigma_DF %>%
+    dplyr::left_join(sigma_DF %>%
                         dplyr::select(!!!data_group,
                                       param_name, param_units,
                                       optimize_param, use_param,
-                                      lower_bound, upper_bound
+                                      lower_bound, upper_bound, start
                                       ) %>%
                         dplyr::distinct(),
                       by = c(data_group_vars, "param_name"))
 
   # Prepare non-sigma parameters
-  tidy_params <- par_DF %>% dplyr::filter(use_param) %>%
-    dplyr::left_join(tidy_fit %>%
-                       dplyr::filter(stringr::str_detect(param_name, "sigma_",
-                                                         negate = TRUE)),
-                     by = c(data_group_vars, "model", "param_name"))
+  tidy_params <- tidy_fit %>%
+    dplyr::filter(stringr::str_detect(param_name, "sigma_",
+                                      negate = TRUE)) %>%
+    dplyr::full_join(par_DF %>%
+                       dplyr::select(!!!data_group, model,
+                                     param_name, param_units,
+                                     optimize_param, use_param,
+                                     lower_bound, upper_bound, start
+                       ) %>%
+                       dplyr::filter(use_param) %>%
+                       dplyr::distinct() %>%
+                       # Add column with all possible methods to the par_DF
+                       dplyr::cross_join(
+                         data.frame(method = these_methods)
+                       ),
+                     by = c(data_group_vars, "model", "method", "param_name")) %>%
+    dplyr::group_by(!!!data_group, model, method) %>%
+    # Fill in missing values
+    tidyr::fill(convcode:message, .direction = "downup") %>%
+    dplyr::ungroup() %>%
+    # Set estimate to start if fit status was continue
+    dplyr::mutate(
+      estimate = ifelse(
+        is.na(estimate) & !(convcode %in% c(9999, -9999)),
+        start, estimate
+      )
+    )
 
   tidy_fit <- dplyr::bind_rows(tidy_sigmas, tidy_params) %>%
     dplyr::arrange(!!!data_group, model, method)
@@ -292,7 +342,7 @@ do_fit.pk <- function(obj,
                                   \(x) x * to_perhour)) %>%
       dplyr::select(-to_perhour))
 
-# Changing the final fit form so that everything is similar parDF
+# Changing the final fit form so that everything is similar par_DF
 
   # Add parameter fit flags
   obj$fit <- tidy_fit %>%
@@ -308,8 +358,7 @@ do_fit.pk <- function(obj,
       .default = "Not at bound")
     ) %>%
     dplyr::distinct() %>%
-    dplyr::select(-c(lower_bound, upper_bound)) %>%
-    tidyr::unnest(cols = fit_data)
+    dplyr::select(-c(lower_bound, upper_bound))
 
   obj$status <- status_fit # fitting complete
   message("do_fit.pk: Fitting complete")

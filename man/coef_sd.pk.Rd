@@ -7,7 +7,7 @@
 \method{coef_sd}{pk}(obj, model = NULL, method = NULL, suppress.messages = TRUE, ...)
 }
 \arguments{
-\item{obj}{A [pk] object}
+\item{obj}{A [pk] object.}
 
 \item{model}{Optional: Specify one or more of the fitted models whose
 coefficients to return. If NULL (the default), coefficients will be

@@ -7,7 +7,7 @@
 \method{coef_sd}{default}(obj, ...)
 }
 \arguments{
-\item{obj}{An object}
+\item{obj}{An object.}
 
 \item{...}{Additional arguments currently not in use.}
 }

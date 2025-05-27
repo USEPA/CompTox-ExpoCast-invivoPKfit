@@ -2,7 +2,7 @@
 #'
 #' Evaluates the area under the concentration-time curve for a "flat" model
 #'
-#' # Required parameters
+#' @section Required parameters:
 #'
 #' `params` must include the following named items:
 #'   \describe{
@@ -63,6 +63,8 @@ auc_flat <- function(time, params, dose, route, medium) {
   if (check_msg != "Parameters OK") {
     stop("cp_flat(): ", check_msg)
   }
+
+  Vdist = Fgutabs = Fgutabs_Vdist = Rblood2plasma = NULL
 
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))

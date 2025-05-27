@@ -96,19 +96,13 @@
 #' (from the IV data) and `Fgutabs_Vdist` (from the oral data) are multiplied to
 #' yield a derived starting value for `Fgutabs`.
 #'
-#' #Starting value for `Rblood2plasma`
+#' @section Starting value for `Rblood2plasma`:
 #'
 #' The starting value for `Rblood2plasma` is set to the value given by [httk::parameterize_gas_pbtk()].
 #'
-#' @param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#' @param par_DF A `data.frame` with the following variables (e.g., as produced by [get_params_1comp()])
-#' - `param_name`: Character: Names of the model parameters
-#' - `param_units`: Character: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-#' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
-#' -`lower_bounds`: Numeric: The lower bounds for each parameter
-#' - `upper_bounds`: Numeric: The upper bounds for each parameter
-#'
+#' @inheritParams get_starts_flat
+#' @param restrictive Optional boolean value which determines whether the function
+#'  assumes restrictive (TRUE) or nonrestrictive (FALSE, default) clearance.
 #' @return The same `data.frame` as `par_DF`, with an additional variable
 #'  `starts` containing the derived starting value for each parameter. If a
 #'  parameter cannot be estimated from the available data, then its starting value
@@ -120,7 +114,8 @@
 #' @family built-in model functions
 
 get_starts_1comp_fup <- function(data,
-                                 par_DF) {
+                                 par_DF,
+                                 restrictive = TRUE) {
   # initialize starting values for each parameter.
   # if no IV data exist, then Vdist starting value will remain NA.
   # if no oral data exist, then Fgutabs_Vdist and Fgutabs starting values will remain NA.
@@ -132,24 +127,35 @@ get_starts_1comp_fup <- function(data,
   kgutabs <- NA_real_
   Vdist <- NA_real_
   Fgutabs <- NA_real_
-  Fgutabs_Vdist <- NA_real_
-  Fup <- 1
+  Fup <- NA_real_
+  curr_chem <- unique(data[["Chemical"]])
 
-  Q_gfr <- httk::physiology.data %>%
-    dplyr::filter(Parameter %in% "GFR") %>%
-    tidyr::pivot_longer(cols = Mouse:Monkey,
-                        names_to = "Species",
-                        values_to = "param_value")
-  Q_gfr <- setNames(object = Q_gfr[["param_value"]],
-                         nm = tolower(Q_gfr[["Species"]]))
+  Q_gfr <- httk::physiology.data[
+    httk::physiology.data$Parameter == "GFR",
+    c("Mouse", "Rat", "Dog", "Human", "Rabbit", "Monkey")
+  ]
+  Q_gfr <- setNames(object = unlist(Q_gfr),
+                    nm = tolower(names(Q_gfr)))
 
-  Q_totli <- httk::tissue.data %>%
-    dplyr::filter(variable %in% "Flow (mL/min/kg^(3/4))",
-                  Tissue %in% "liver")
+
+  Q_totli <- httk::tissue.data[
+    httk::tissue.data$Tissue == "liver" &
+      httk::tissue.data$variable == "Flow (mL/min/kg^(3/4))",
+    c("Species", "value")
+  ]
   Q_totli <- setNames(object = Q_totli[["value"]],
-                           nm = tolower(Q_totli[["Species"]]))
+                      nm = tolower(Q_totli[["Species"]]))
 
+  Q_alv <- httk::physiology.data[
+    httk::physiology.data$Parameter == "Pulmonary Ventilation Rate",
+    c("Mouse", "Rat", "Dog", "Human", "Rabbit", "Monkey")
+  ]
+  Q_alv <- setNames(object = unlist(Q_alv),
+                    nm = tolower(names(Q_alv)))
+
+  # Get species-specific flow rates, or default to human
   names_Q_gfr <- names(Q_gfr)
+  names_Q_alv <- names(Q_alv)
   this_species <- unique(data$Species)
 
   if (this_species %in% names_Q_gfr) {
@@ -159,26 +165,53 @@ get_starts_1comp_fup <- function(data,
     Q_gfr <- Q_gfr[["human"]] * (60 / 1000)
     Q_totli <- Q_totli[["human"]] * (60 / 1000)
     message("Species not in database, using human values for Q_gfr & Q_totli")
-
   }
 
-  parm_gas <- suppressMessages(
-    suppressWarnings(
-      httk::parameterize_gas_pbtk(
-        dtxsid = unique(data[["Chemical"]]),
+  if (this_species %in% names_Q_alv) {
+    Q_alv <- Q_alv[[this_species]]
+  } else {
+    Q_alv <- Q_alv[["human"]]
+    message("Species not in database, using human values for Q_alv")
+  }
+
+  parm_gas <- tryCatch(
+    expr = {
+      httk::parameterize_3comp2(
+        dtxsid = curr_chem,
         species = this_species,
-        default.to.human = TRUE,
-        restrictive.clearance = TRUE)))
+        default.to.human = FALSE,
+        restrictive.clearance = TRUE
+      ) |>
+        suppressWarnings() |>
+        suppressMessages()
+    }, error = function(e) {
+      c("Q_totli" = NA_real_,
+        "Q_gfr" = NA_real_,
+        "Q_alv" = NA_real_,
+        "Kblood2air" = NA_real_,
+        "Fup" = NA_real_,
+        "Clint" = NA_real_,
+        "kgutabs" = NA_real_,
+        "Vdist" = NA_real_,
+        "Fgutabs" = NA_real_,
+        "Rblood2plasma" = NA_real_)
+    }
+  )
 
+  if (all(sapply(parm_gas, is.na))) {
+    starts <- parm_gas
+    par_DF$start <- starts[par_DF$param_name]
+    return(par_DF)
+  }
+
+  # Set parameters needed for model
   Fup <- parm_gas[["Funbound.plasma"]]
-
   Rblood2plasma <- parm_gas[["Rblood2plasma"]]
-
   Clint <- parm_gas[["Clint"]]
-
   Kblood2air <- parm_gas[["Kblood2air"]]
-
-  Qalvc <- parm_gas[["Qalvc"]]
+  Q_alv <- parm_gas[["Qalvc"]]
+  kgutabs <- parm_gas[["kgutabs"]]
+  Fgutabs <- parm_gas[["Fabsgut"]]
 
 
   # Get starting Concs from data
@@ -193,8 +226,21 @@ get_starts_1comp_fup <- function(data,
   podat <- subset(tmpdat,
                   Route %in% "oral")
 
-  Cl_hep <- Q_totli * Fup * Clint / (Q_totli + (Fup * Clint / Rblood2plasma))
-  Cl_tot <- Q_gfr + Cl_hep + (Rblood2plasma * Qalvc / Kblood2air)
+  # Set a Fup specific to the liver for clearance
+  if (!restrictive) {
+    Fup_hep <- 1
+  } else {
+    Fup_hep <- Fup
+  }
+
+  Clint_hep <- Clint * (6.6) / 1E6 # Convert to L/hr
+  Clhep <- Q_totli * Fup_hep * Clint_hep / (Q_totli + (Fup_hep * Clint_hep / Rblood2plasma))
+  # Need to include Fup for renal clearance
+  Clren <- Fup * Q_gfr
+  Clair <- (Rblood2plasma * Q_alv / Kblood2air)
+
+  Cltot <- Clren + Clhep + Clair
+
 
   # Quick and dirty:
   # IV data estimates, if IV data exist
@@ -205,7 +251,7 @@ get_starts_1comp_fup <- function(data,
     kelim <- log(2) / halflife
 
     # Vdist: calculate this based on Cltot/kelim
-    Vdist <- Cl_tot / kelim
+    Vdist <- Cltot / kelim
   }
 
   if (nrow(podat) > 0) {
@@ -216,33 +262,25 @@ get_starts_1comp_fup <- function(data,
     tmax <- tCmax[[1]]
     Cmax <- tCmax[[2]]
 
-    # assume peak time occurs at 1 absorption halflife
-    # so kgutabs = log(2)/tmax
-    kgutabs <- log(2) / tmax
 
     # if no IV data, then calculate kelim from oral data
     if (nrow(ivdat) == 0) {
       # and assume that midpoint of time is one half-life, so kelim = log(2)/(midpoint of time).
       halflife <- mean(range(podat$Time))
       kelim <- log(2) / halflife
-      Vdist <- Cl_tot / kelim
+      Vdist <- Cltot / kelim
     }
-
-
-    # then extrapolate back from Cmax to time 0 with slope -kelim
-    Fgutabs_Vdist <- 10^((Cmax + kelim * tmax)) * (kgutabs - kelim) / (kgutabs)
-    # if we had IV data, then we had a Vdist estimate, so we can estimate Fgutabs too
-    Fgutabs <- Fgutabs_Vdist * Vdist
   }
 
 
   starts <- c("Q_totli" = Q_totli,
               "Q_gfr" = Q_gfr,
+              "Q_alv" = Q_alv,
+              "Kblood2air" = Kblood2air,
               "Fup" = Fup,
               "Clint" = Clint,
               "kgutabs" = kgutabs,
               "Vdist" = Vdist,
-              "Fgutabs_Vdist" = Fgutabs_Vdist,
               "Fgutabs" = Fgutabs,
               "Rblood2plasma" = Rblood2plasma)
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/check_params_1comp_cl.R
 \name{check_params_1comp_cl}
 \alias{check_params_1comp_cl}
-\title{Check 1-compartment model parameters}
+\title{Check 1-compartment model parameters with specific clearance}
 \usage{
 check_params_1comp_cl(params, route, medium, ...)
 }

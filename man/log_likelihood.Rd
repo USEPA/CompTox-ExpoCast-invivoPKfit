@@ -75,8 +75,9 @@ independent, and that groups of residuals obey zero-mean normal distributions
 where each group may have a separate error variance. Error groups are defined
 as unique combinations of variables in the harmonized data, by a command such
 as `pk(data = ...) + stat_error_model(error_group = vars(...)`.
+}
+\section{Log-likelihood equations}{
 
-# Log-likelihood equations
 
 For chemical-species combination \eqn{i} and study \eqn{j}, define the
 following quantities.
@@ -106,8 +107,10 @@ evaluated at dose \eqn{d} and time \eqn{t}, with parameter vector
 
 \eqn{\sigma_{ij}^2} is the study- and chemical-specific residual variance. (It
 is a hyperparameter.)
+}
 
-## Single-subject observations above limit of quantification (detects)
+\section{Single-subject observations above limit of quantification (detects)}{
+
 
 This is the normal probability density function evaluated at the observed
 concentration, as implemented in [stats::dnorm()].
@@ -115,9 +118,10 @@ concentration, as implemented in [stats::dnorm()].
 \deqn{LL_{ijk} = \log \left( \frac{1}{\sqrt{\sigma_{ij} 2 \pi}} \exp \left[
 \frac{-1}{2} \left( \frac{y_{ijk} - \mu_{ijk}}{\sigma_{ij}} \right)^2
 \right]   \right) }
+}
 
+\section{Single-subject observations below limit of quantification (non-detects)}{
 
-## Single-subject observations below limit of quantification (non-detects)
 
 This is the normal cumulative density function evaluated at the LOQ, as
 implemented in [stats::pnorm()]. It is the total probability of observing a
@@ -125,8 +129,10 @@ concentration anywhere between 0 and the LOQ.
 
 \deqn{LL_{ijk} =  \log \left( \frac{1}{2} \left[ 1 + \textrm{erf} \left(
 \frac{\textrm{LOQ}_{ijk} - \mu_{ijk}}{\sigma_{ij} \sqrt{2}} \right) \right]  \right) }
+}
 
-## Multiple-subject observations above limit of quantification
+\section{Multiple-subject observations above limit of quantification}{
+
 
 This is the joint log-likelihood across the multiple subjects included in one
 observation, re-expressed in terms of the sample mean, sample SD, and number
@@ -139,8 +145,10 @@ of subjects for that observation. It is implemented in [dnorm_summary()].
      s_{ijk}^2 + n_{ijk} \left( y_{ijk} - \mu_{ijk} \right)^2
       \right)
        \right]}
+}
 
-## Multiple-subject observations below limit of quantification
+\section{Multiple-subject observations below limit of quantification}{
+
 
 This case is not implemented. If sample mean concentration is reported below
 LOQ, then it is unclear what individual observed concentrations are
@@ -153,8 +161,10 @@ average or median LOQ being used?  It is impossible to formulate the
 log-likelihood without knowing the answers to these questions. Therefore,
 multiple-subject observations below LOQ are excluded from analysis (they are
 marked as excluded in [preprocess_data()]).
+}
 
-# Joint log-likelihood for a chemical and species
+\section{Joint log-likelihood for a chemical and species}{
+
 
 The joint log-likelihood for a chemical and species is simply the sum of
 log-likelihoods across observations.
@@ -164,6 +174,7 @@ log-likelihoods across observations.
 This is the overall probability of the observed data, given the model and
 parameters.
 }
+
 \author{
 Caroline Ring, Gilberto Padilla Mercado
 }

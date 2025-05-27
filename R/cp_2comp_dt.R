@@ -34,7 +34,6 @@
 #'  not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
 #'  used.
 #'
-#' @author Caroline Ring, John Wambaugh
 #' @param time A numeric vector of times in hours, reflecting the time points
 #'  when concentration is measured after the corresponding single bolus dose.
 #'  Must be same length as `dose` and `route`, or length 1.
@@ -49,6 +48,7 @@
 #'  Must be same length as `time` and `dose`, or length 1.
 #' @return A vector of instantaneous rates of change of plasma concentration
 #'  values (mg/L/time) corresponding to each value in \code{time}
+#' @author Caroline Ring, John Wambaugh
 #' @export cp_2comp_dt
 #' @family built-in model functions
 #' @family 2-compartment model functions
@@ -70,6 +70,9 @@ cp_2comp_dt <- function(params, time, dose, route, medium)
   # get transformed parameters for 2-comp model
   trans_params <- transformed_params_2comp(params)
 
+  A_iv_unit = B_iv_unit = B_oral_unit = A_oral_unit = NULL
+  kgutabs = Rblood2plasma = NULL
+
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
@@ -80,7 +83,7 @@ cp_2comp_dt <- function(params, time, dose, route, medium)
   dcpdt <- dose * ifelse(route %in% "iv",
                  A_iv_unit * -alpha *
                     exp(-alpha * time) +
-                   B_iv_oral * -beta *
+                   B_iv_unit * -beta *
                     exp(-beta * time),
                 A_oral_unit * -alpha *
                    exp(-alpha * time) +

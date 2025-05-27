@@ -117,13 +117,12 @@ plot.pk <- function(x,
   conc_scale <- conc_scale_use(obj = x, use_scale_conc = use_scale_conc)
 
   if (drop_nonDetect %in% TRUE) {
-    newdata <- subset(newdata, Detect %in% TRUE)
+    newdata <- newdata[newdata$Detect %in% TRUE, ]
   }
 
-  newdata <- subset(newdata, exclude %in% FALSE)
+  newdata <- newdata[newdata$exclude %in% FALSE, ]
 
-  if (is.null(log10_C))
-    log10_C <- conc_scale$log10_trans
+  if (is.null(log10_C)) log10_C <- conc_scale$log10_trans
 
 
   if (is.null(fit_limits)) {
@@ -156,7 +155,7 @@ plot.pk <- function(x,
     }
   }
 
-
+  # Selecting variable used for time (either transformed or untransformed time)
   time_var <- ifelse(time_trans, as.name("Time_trans"), as.name("Time"))
 
   time_units_var <- ifelse(time_trans,
@@ -177,17 +176,20 @@ plot.pk <- function(x,
   obs_vars <- setdiff(
     ggplot2::vars(
     Conc,
-    Conc_SD,
-    Conc.Units,
-    Value,
-    Value.Units,
-    Detect,
-    exclude,
-    Conc_trans,
-    Conc_trans.Units,
+    Conc_SD, Conc.Units,
+    Value, Value.Units,
+    Detect, exclude,
+    Conc_trans, Conc_trans.Units,
     Reference
   ),
   x$data_group)
+
+  name_subtitle <- FALSE
+  if ("Chemical_Name" %in% names(newdata) &&
+      !identical(newdata$Chemical, newdata$Chemical_Name)) {
+    obs_vars <- union(ggplot2::vars(Chemical_Name), obs_vars)
+    name_subtitle <- TRUE
+  }
 
 
   # Default arguments and functions
@@ -199,9 +201,11 @@ plot.pk <- function(x,
     color = factor(Dose)
   )
 
-  plot_point_aes_default <- ggplot2::aes(fill = factor(Dose),
-                                         shape = Reference,
-                                         alpha = Detect)
+  plot_point_aes_default <- ggplot2::aes(
+    fill = factor(ifelse(Detect %in% "Detect", Dose, NA)),
+    shape = Reference
+  )
+
 
   plot_fit_aes_default <- ggplot2::aes(
     x = !!time_var,
@@ -257,97 +261,103 @@ plot.pk <- function(x,
 
 
   newdata <- newdata %>%
-    dplyr::mutate(observation_plot =
-                    purrr::map(observations, \(x) {
-                      # Need to write this into a mutate + map pattern function
-                      # initialize plot
-                      p <- ggplot(data = x, mapping = plot_data_aes) +
-                        geom_point(mapping = plot_point_aes, stroke = 1) + # plots points
-                        geom_errorbar(mapping = plot_data_aes)
+    dplyr::mutate(
+      observation_plot =
+        purrr::map(observations, \(x) {
 
-                      t_units <- x %>%
-                        dplyr::pull(!!time_units_var) %>%
-                        unique()
-
-                      # if alpha = Detect then we have to do some trickery to implement that
-                      # that is the objective of plot_point_aes
-                      if (rlang::as_label(plot_point_aes$alpha) %in% "Detect") {
-                        # plot the data
-                        p <- p +
-                          geom_point()
-                        # plots here are un-filled points (only inherits color variable by default)
-
-                        if ("shape" %in% c(names(plot_data_aes), names(plot_point_aes))) {
-                          # Ensure shapes can take both fill and color if alpha is set
-                          p <- p +
-                            scale_shape_manual(values = 21:25)
-                        }
-
-                        # set an alpha scale
-                        p <- p + scale_alpha_manual(
-                          values = c("Detect" = 1, "Non-Detect" = 0),
-                          breaks = c("Detect", "Non-Detect"),
-                          drop = FALSE,
-                          name = NULL
-                        )
-
-                        # Need to check whether there are two values in Detect
-                        # some might be all Non-Detect or all Detect
-                        if (length(unique(x$Detect)) > 1) {
-                          alpha_fill <- c("black", NA)
-                        } else {
-                          alpha_fill <- ifelse(unique(x$Detect) == "Detect", "black", NA)
-                        }
-                        p <- p +
-                          guides(alpha = guide_legend(
-                            override.aes = list(
-                              shape = 21,
-                              color = "black",
-                              stroke = 1,
-                              fill = alpha_fill,
-                              alpha = 1
-                            ),
-                            order = 2
-                          ))
-
-                      }
-
-                      p <- p +
-                        do.call(facet_fun, args = facet_fun_args)
-
-                      if (log10_C) {
-                        p <- p + scale_y_continuous(trans = "log10", labels = scales::label_log())
-                      }
-
-                      p +
-                        labs(
-                          #title = paste(Chemical, Species),
-                          title = paste(!!!x$data_group),
-                          x = paste0("Time (", t_units, ")"),
-                          y = ifelse(
-                            conc_scale$dose_norm,
-                            "Concentration/Dose",
-                            "Concentration"
-                          )
-                        ) +
-                        theme_bw() +
-                        theme(
-                          panel.border = element_rect(
-                            color = "black",
-                            fill = NA,
-                            linewidth = 1
-                          ),
-                          plot.title = element_text(hjust = 0.5, face = "bold"),
-                          strip.background = element_rect(
-                            fill = "white",
-                            color = "black",
-                            size = 1
-                          )
-                        )
+          # Need to write this into a mutate + map pattern function
+          # initialize plot
+          p <- ggplot(data = x, mapping = plot_data_aes) +
+            geom_point(mapping = plot_point_aes, stroke = 1) + # plots points
+            geom_errorbar(mapping = plot_data_aes, na.rm = TRUE)
 
 
+          t_units <- x %>%
+            dplyr::pull(!!time_units_var) %>%
+            unique()
 
-                    }))
+          # if alpha = Detect then we have to do some trickery to implement that
+          # that is the objective of plot_point_aes
+          if (rlang::quo_get_expr(plot_point_aes$fill) == quote(
+            factor(ifelse(Detect %in% "Detect", Dose, NA)) # The default
+          )) {
+
+            if ("shape" %in% c(names(plot_data_aes), names(plot_point_aes))) {
+              # Ensure shapes can take both fill and color if alpha is set
+              p <- p +
+                scale_shape_manual(values = 21:25)
+            }
+
+            # get limits and breaks
+            # if there is an NA, include in breaks
+            if ("Non-Detect" %in% x$Detect) {
+              alpha_breaks <- max(x$Dose, na.rm = TRUE)
+              p <- p +
+                scale_fill_discrete(
+                  na.value = "transparent",
+                  breaks = alpha_breaks,
+                  labels = "Non-Detect",
+                  guide = guide_legend(
+                    title = NULL,
+                    order = 2,
+                    override.aes = list(
+                      shape = 21,
+                      fill = NA,
+                      color = "black",
+                      stroke = 1
+                    )
+                  )
+                )
+            } else {
+              p <- p +
+                guides(fill = "none")
+            }
+          }
+
+          p <- p +
+            do.call(facet_fun, args = facet_fun_args)
+
+          if (log10_C) {
+            p <- p + scale_y_continuous(trans = "log10", labels = scales::label_log())
+          }
+
+          p <- p +
+            labs(
+              title = paste(!!!x$data_group),
+              x = paste0("Time (", t_units, ")"),
+              y = ifelse(
+                conc_scale$dose_norm,
+                "Concentration/Dose",
+                "Concentration"
+              )
+            ) +
+            theme_bw() +
+            theme(
+              panel.border = element_rect(
+                color = "black",
+                fill = NA,
+                linewidth = 1
+              ),
+              plot.title = element_text(hjust = 0.5, face = "bold"),
+              strip.background = element_rect(
+                fill = "white",
+                color = "black",
+                size = 1
+              )
+            )
+
+          # Add name if not already Chemical
+          if (name_subtitle) {
+            p <- p +
+              labs(subtitle = unique(x$Chemical_Name)) +
+              theme(plot.subtitle = element_text(hjust = 0.5))
+          }
+
+          # Return value
+          p
+        }
+        )
+    )
 
   # For predictions, interpolate time
   if (get_status(obj = x) == 5) {
@@ -362,7 +372,7 @@ plot.pk <- function(x,
               dplyr::mutate(Time_trans.Units = Time.Units)
           }
 
-          x %>%
+          x <- x %>%
             dplyr::select(!!!union(common_vars, obs_vars)) %>%
             dplyr::group_by(Dose, Route, Media) %>%
             dplyr::reframe(Time = max(Time), # Change to Time
@@ -372,29 +382,27 @@ plot.pk <- function(x,
               maxTime = max(Time),
               Time.Units = unique(Time.Units),
               Time_trans.Units = unique(Time_trans.Units)
-            ) %>%
-            tidyr::uncount(n_interp) %>%
-            dplyr::group_by(Dose, Route, Media) %>%
-            dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
-                            (dplyr::row_number() - 1))
+            )
         } else if (time_trans %in% FALSE) {
-          x %>%
+          x <- x %>%
             dplyr::select(!!!union(common_vars, obs_vars)) %>%
             dplyr::group_by(Dose, Route, Media) %>%
             dplyr::reframe(Time = max(Time), # Change to Time
                            Time.Units, Conc.Units) %>%
             dplyr::mutate(maxTime = max(Time),
-                          Time.Units = unique(Time.Units)) %>%
-            tidyr::uncount(n_interp) %>%
-            dplyr::group_by(Dose, Route, Media) %>%
-            dplyr::mutate(Time = (maxTime / (dplyr::n() - 1)) *
-                            (dplyr::row_number() - 1))
+                          Time.Units = unique(Time.Units))
         }
-      }))
+        x  %>%
+          tidyr::uncount(n_interp) %>%
+          dplyr::group_by(Dose, Route, Media) %>%
+          dplyr::mutate(Time = (.data$maxTime / (dplyr::n() - 1)) *
+                          (dplyr::row_number() - 1))
+      }, .progress = TRUE)
+      )
 
     interp_data <- interp_data %>%
-      dplyr::select(!!!x$data_group, interpolated) %>%
-      tidyr::unnest(cols = c(interpolated)) %>%
+      dplyr::select(!!!x$data_group, c("interpolated")) %>%
+      tidyr::unnest(cols = c("interpolated")) %>%
       dplyr::ungroup()
 
 
@@ -415,33 +423,35 @@ plot.pk <- function(x,
     )
 
     if (best_fit %in% TRUE) {
-      interp_data <- dplyr::left_join(get_winning_model(obj = x), interp_data)
+      interp_data <- dplyr::left_join(get_winning_model(obj = x),
+                                      interp_data) %>%
+        suppressMessages()
     }
 
     # if plotting transformed time, then transform interpolated time points
     if (time_trans %in% TRUE) {
       conversion_table <- time_conversions %>%
         dplyr::filter(
-          TimeFrom %in% interp_data$Time.Units,
-          TimeTo %in% interp_data$Time_trans.Units
+          .data$TimeFrom %in% interp_data$Time.Units,
+          .data$TimeTo %in% interp_data$Time_trans.Units
         ) %>%
         dplyr::rename(Time.Units = "TimeFrom", Time_trans.Units = "TimeTo")
 
       interp_data <- interp_data %>%
         dplyr::left_join(conversion_table,
                          by = dplyr::join_by(Time.Units, Time_trans.Units)) %>%
-        dplyr::mutate(Time_trans = Time * conversion) %>%
-        dplyr::select(!conversion)
+        dplyr::mutate(Time_trans = Time * .data$conversion) %>%
+        dplyr::select(!c("conversion"))
     }
-
-
-
 
     interp_data <- interp_data %>%
       dplyr::group_by(!!!x$data_group) %>%
       tidyr::nest(.key = "predicted")
 
-    newdata <- dplyr::left_join(newdata, interp_data)
+
+    data_group_vars <- sapply(x$data_group, rlang::as_label)
+    newdata <- dplyr::left_join(newdata, interp_data,
+                                by = c(data_group_vars))
 
     # Need to check if predicted is NULL before filtering below
     # NULL predicted values will occur when there was no adequate fit for the model
@@ -449,51 +459,58 @@ plot.pk <- function(x,
     if (limit_predicted %in% TRUE) {
       if (log10_C %in% TRUE) {
         newdata <- newdata %>%
-          dplyr::mutate(predicted = purrr::map2(observations, predicted, \(x, y) {
-            if (!is.null(y)) {
-              dplyr::filter(y,
-                            Conc_est <= (fit_limits[1] * max(x$Conc_set)),
-                            Conc_est >= (fit_limits[2] * min(x$Conc_set)))
-            } else {
-              message(paste(
-                Chemical, Species, "did not have adequate fit"
-              ))
-            }
+          dplyr::mutate(
+            predicted = purrr::map2(
+              .data$observations,
+              .data$predicted,
+              \(x, y) {
+                if (!is.null(y)) {
+                  dplyr::filter(y,
+                                Conc_est <= (fit_limits[1] * max(x$Conc_set)),
+                                Conc_est >= (fit_limits[2] * min(x$Conc_set)))
+                } else {
+                  message(paste(
+                    Chemical, Species, "did not have adequate fit"
+                  ))
+                }
 
-          }))
+              }))
       } else {
         newdata <- newdata %>%
-          dplyr::mutate(predicted = purrr::map2(observations, predicted, \(x, y) {
-            if (!is.null(y)) {
-              dplyr::filter(y, Conc_est <= (fit_limits[1] * max(x$Conc_set)))
-            } else {
-              message(paste(
-                Chemical, Species, "did not have adequate fit"
-              ))
-            }
-          }))
+          dplyr::mutate(
+            predicted = purrr::map2(
+              .data$observations,
+              .data$predicted,
+              \(x, y) {
+                if (!is.null(y)) {
+                  dplyr::filter(y, Conc_est <= (fit_limits[1] * max(x$Conc_set)))
+                } else {
+                  message(paste(
+                    Chemical, Species, "did not have adequate fit"
+                  ))
+                }
+              }))
       }
     }
 
     newdata <- newdata %>%
-      dplyr::mutate(predicted_plot = purrr::map(predicted, \(x) {
+      dplyr::mutate(predicted_plot = purrr::map(.data$predicted, \(x) {
         if (!is.null(x)) {
-        ggplot2::geom_line(data = x,
-                           mapping = plot_fit_aes,
-                           inherit.aes = FALSE)
+          ggplot2::geom_line(data = x,
+                             mapping = plot_fit_aes,
+                             inherit.aes = FALSE)
         } else {
           NULL
         }
       })) %>%
       dplyr::mutate(final_plot = purrr::map2(
-        observation_plot,
-        predicted_plot,
+        .data$observation_plot,
+        .data$predicted_plot,
         \(x, y) x + y +
           guides(
             color = guide_legend(title = "Dose", order = 1),
-            fill = "none",
             linetype = guide_legend(title = "Model & Method", order = 3),
-            shape = guide_legend(order = 4)
+            shape = guide_legend(order = 4, override.aes=list(fill = "black"))
           )
       ))
 
@@ -504,8 +521,7 @@ plot.pk <- function(x,
     message("Note that the final plots do not contain any fits")
   }
 
-  if (print_out)
-    return(newdata$final_plot)
+  if (print_out) return(newdata$final_plot)
 
   return(newdata)
 }

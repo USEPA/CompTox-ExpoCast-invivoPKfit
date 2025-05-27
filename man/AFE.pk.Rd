@@ -75,8 +75,9 @@ Average fold error is calculated as
 \deqn{
 10^{\frac{1}{N}\sum{log_{10} \left( \frac{\textrm{predicted}}{\textrm{observed}} \right)}}
 }
+}
+\section{Left-censored data}{
 
-# Left-censored data
 
 If the observed value is censored, and the predicted value is less than the
 reported LOQ, then the observed value is (temporarily) set equal to the
@@ -86,6 +87,7 @@ If the predicted value is less than the reported LOQ, then the user may
 choose whether to (temporarily) set the predicted value equal to LOQ, using
 argument `sub_pLOQ`).
 }
+
 \seealso{
 Other fit evaluation metrics: 
 \code{\link{AAFE.pk}()},

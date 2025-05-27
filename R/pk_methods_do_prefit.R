@@ -3,12 +3,12 @@
 #' Do pre-fit calculations and checks
 #'
 #' This function does the following:
-#'
-#' - Based on the error model in `stat_error_model` and the pre-processed data, determines the number of residual standard deviations ("sigmas") hyperparameters to be estimated.
-#' - Determines which "sigma" hyperparameter corresponds to each observation in the data.
-#' - Calculates lower/upper bounds and starting guesses for each "sigma" hyperparameter
-#' - For each model in `stat_model`, calls its `params_fun`, the function that, based on the data, determines whether to optimize each model parameter, and calculates lower/upper bounds and starting guesses for each model parameter to be optimized. Only non-excluded observations are passed to each model's `params_fun`.
-#'
+#' \itemize{
+#' \item Based on the error model in `stat_error_model` and the pre-processed data, determines the number of residual standard deviations ("sigmas") hyperparameters to be estimated.
+#' \item Determines which "sigma" hyperparameter corresponds to each observation in the data.
+#' \item Calculates lower/upper bounds and starting guesses for each "sigma" hyperparameter
+#' \item For each model in `stat_model`, calls its `params_fun`, the function that, based on the data, determines whether to optimize each model parameter, and calculates lower/upper bounds and starting guesses for each model parameter to be optimized. Only non-excluded observations are passed to each model's `params_fun`.
+#' }
 #'
 #' Lower bounds for each "sigma" hyperparameter are set to `sqrt(.Machine$double_eps)`.
 #'
@@ -23,8 +23,12 @@
 #'
 #' The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
 #'
-#' @param obj A `pk` object
-#' @param ... Additional arguments. Not in use.
+#' If there are less detected observations than timepoints, or if there are
+#' parameters necessary for model fitting that have missing values,
+#' these models will not be fit.
+#'
+#'
+#' @inheritParams do_preprocess.pk
 #' @return The same `pk` object, but with a new element `prefit`, containing the
 #'   results of pre-fit calculations and checks for each model and for the error
 #'   model.
@@ -88,7 +92,7 @@ do_prefit.pk <- function(obj,
   # get bounds and starting points for each error sigma to be fitted
 
   if (suppress.messages %in% FALSE) {
-    message("do_prefit.pk():",
+    message("do_prefit.pk(): ",
             "Getting bounds and starting guesses for each error SD to be fitted"
     )
   }
@@ -181,9 +185,10 @@ do_prefit.pk <- function(obj,
         dplyr::reframe(
           do.call(
             obj$stat_model[[this_model]]$params_fun,
-            args = c(list(cbind(dplyr::cur_group(),
-                                dplyr::pick(tidyselect::everything())
-            )),
+            args = append(
+              list(
+                cbind(dplyr::cur_group(), dplyr::pick(tidyselect::everything()))
+            ),
             obj$stat_model[[this_model]]$params_fun_args
             )
           )
@@ -203,15 +208,21 @@ do_prefit.pk <- function(obj,
       # check whether there are enough observations to optimize the requested parameters plus sigmas
       # number of parameters to optimize
       if (suppress.messages %in% FALSE) {
-        message("do_prefit.pk():",
+        message("do_prefit.pk(): ",
                 "Checking whether sufficient observations to fit models"
         )
       }
-
+      # Are any parameters used initialized to NA?
       n_par_DF <- par_DF_out %>%
         dplyr::filter(model %in% this_model) %>%
         dplyr::group_by(!!!obj$data_group) %>%
-        dplyr::summarise(n_par = sum(optimize_param))
+        dplyr::summarise(n_par = sum(optimize_param),
+                         used_par_na = ifelse(
+                           grepl("httk", this_model), # Exception when "httk" models are used
+                           all(is.na(start)),
+                           any(use_param & is.na(start))
+                         )
+        )
 
       n_sigma_DF <- sigma_DF %>%
         dplyr::group_by(!!!obj$data_group) %>%
@@ -237,16 +248,22 @@ do_prefit.pk <- function(obj,
       fit_check_DF <- fit_check_DF %>%
         dplyr::mutate(
           n_par_opt = n_par + n_sigma,
-          fit_decision = ifelse(n_par_opt < n_detect,
+          fit_decision = ifelse(n_par_opt < n_detect & !used_par_na,
                                 "continue",
                                 "abort"),
-          fit_reason = ifelse(n_par_opt < n_detect,
-                              paste("Number of parameters to estimate is ",
-                                    "less than number of non-excluded detected observations"),
-                              paste("Number of parameters to estimate is ",
-                                    "greater than or equal to number of non-excluded detected observations")
-                              )
-          ) %>% as.data.frame()
+          fit_reason = ifelse(
+            used_par_na,
+            "Some parameters necessary for model fitting are NA.",
+            ifelse(
+              n_par_opt < n_detect,
+              paste("Number of parameters to estimate is ",
+                    "less than number of non-excluded detected observations"),
+              paste("Number of parameters to estimate is ",
+                    "greater than or equal to number of non-excluded detected observations")
+            )
+          )
+        ) %>% as.data.frame()
+
 
       fit_check_DF
     },
@@ -254,6 +271,17 @@ do_prefit.pk <- function(obj,
     USE.NAMES = TRUE)
 
   fit_check_out <- dplyr::bind_rows(fit_check_out, .id = "model")
+  par_DF_out <- par_DF_out %>%
+    dplyr::mutate(
+      lower_bound = ifelse(
+        is.na(lower_bound) & !is.na(start),
+        start, lower_bound
+      ),
+      upper_bound = ifelse(
+        is.na(upper_bound) & !is.na(start),
+        start, upper_bound
+      )
+    )
 
   obj$prefit$par_DF <- par_DF_out
   obj$prefit$fit_check <- fit_check_out

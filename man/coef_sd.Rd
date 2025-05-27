@@ -7,7 +7,7 @@
 coef_sd(obj, model, method, suppress.messages, ...)
 }
 \arguments{
-\item{obj}{An object}
+\item{obj}{A pk object.}
 
 \item{model}{The TK model used.}
 
