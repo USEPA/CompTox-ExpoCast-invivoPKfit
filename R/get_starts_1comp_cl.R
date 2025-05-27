@@ -129,7 +129,7 @@ get_starts_1comp_cl <- function(data,
       httk::parameterize_3comp2(
         dtxsid = unique(data[["Chemical"]]),
         species = this_species,
-        default.to.human = TRUE,
+        default.to.human = FALSE,
         restrictive.clearance = restrictive
       ) |>
         suppressWarnings() |>
@@ -205,7 +205,9 @@ get_starts_1comp_cl <- function(data,
   } else {
     Fup_hep <- Fup
   }
-  Clhep <- Q_totli * Fup_hep * Clint / (Q_totli + (Fup_hep * Clint / Rblood2plasma))
+
+  Clint_hep <- Clint * (6.6) / 1E6 # Convert to L/hr
+  Clhep <- Q_totli * Fup_hep * Clint_hep / (Q_totli + (Fup_hep * Clint_hep / Rblood2plasma))
   # Need to include Fup for renal clearance
   Clren <- Fup * Q_gfr
   Clair <- (Rblood2plasma * Q_alv / Kblood2air)

@@ -80,6 +80,8 @@ string2num <- function(x) {
 #' Converts numeric vector to comma-delimited string representation
 #'
 #' @param x A numeric vector.
+#' @param return.na A logical values that determines whether to return " " or NA when
+#' NA values are encountered. Default: `FALSE`.
 #' @return A string with comma-delimited values of `x` or an 'empty' string.
 #' @examples
 #' invivoPKfit:::num2string(c(1,2.3))

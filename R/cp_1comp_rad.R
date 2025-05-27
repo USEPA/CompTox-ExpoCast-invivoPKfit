@@ -78,7 +78,8 @@ cp_1comp_rad <- function(params, time, dose, route, medium = 'plasma',
 
   # compute total clearance
   # note: Qgfr is based on plasma wheras Q_totli is based on blood
-  Clhep <- (Q_totli * Fup * Clint) / (Q_totli + (Fup * Clint / Rblood2plasma))
+  Clint_hep <- Clint * (6.6) / 1E6 # Convert to L/hr
+  Clhep <- (Q_totli * Fup * Clint_hep) / (Q_totli + (Fup * Clint_hep / Rblood2plasma))
   Clren <- Fup * Q_gfr
   Clair <- (Rblood2plasma * Q_alv / Kblood2air)
   Cltot <- Clren + Clhep + Clair

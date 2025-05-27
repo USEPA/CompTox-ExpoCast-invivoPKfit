@@ -95,7 +95,8 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
   }
 
   # compute total clearance
-  Clhep <- (Q_totli * Fup_hep * Clint) / (Q_totli + (Fup_hep * Clint / Rblood2plasma))
+  Clint_hep <- Clint * (6.6) / 1E6 # Convert to L/hr
+  Clhep <- (Q_totli * Fup_hep * Clint_hep) / (Q_totli + (Fup_hep * Clint_hep / Rblood2plasma))
   Clren <- Fup * Q_gfr
   Clair <- (Rblood2plasma * Q_alv / Kblood2air)
   Cltot <- Clren + Clhep + Clair

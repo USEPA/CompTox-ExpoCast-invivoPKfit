@@ -131,7 +131,7 @@ get_params_1comp_cl <- function(
                                Q_alv = NA,
                                Kblood2air = NA,
                                Fup = 1,
-                               Clint = 1E5,
+                               Clint = 500,
                                Vdist = NA,
                                Fgutabs = NA,
                                kgutabs = NA,
@@ -141,7 +141,7 @@ get_params_1comp_cl <- function(
                                Q_alv = "L/h/kg ^3/4",
                                Kblood2air = "unitless ratio",
                                Fup = "unitless fraction",
-                               Clint = "L/h/kg",
+                               Clint = "uL/min/10^6 hepatocytes",
                                Vdist = paste0("(", # Vdist
                                               unique(Dose.Units),
                                               ")",
