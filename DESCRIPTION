@@ -2,7 +2,7 @@ Type: Package
 Package: invivoPKfit
 Title: Fits Toxicokinetic Models to In Vivo PK Data Sets
 Version: 2.0.2
-Date: 2025-3-24
+Date: 2025-5-27
 Authors@R: c(person("John", "Wambaugh", email = "wambaugh.john@epa.gov", 
              role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4024-534X")),
              person("Caroline", "Ring", email = "Ring.Caroline@epa.gov", 
@@ -19,7 +19,7 @@ Author:
 Maintainer: John Wambaugh <wambaugh.john@epa.gov>
 Description: Takes in vivo toxicokinetic concentration-time data and fits
     parameters of 1-compartment and 2-compartment models for each
-    chemical. These methods are described in detail in "Informatics for Toxicokinetics" (submitted).
+    chemical. These methods are described in detail in "Informatics for Toxicokinetics" (2025).
 License: GPL-3
 Depends: 
     R (>= 4.1.0)
@@ -28,7 +28,6 @@ Imports:
     devtools,
     dplyr,
     ggplot2,
-    glue,
     httk,
     magrittr,
     MASS,
@@ -44,7 +43,8 @@ Imports:
     scales,
     tibble,
     tidyr,
-    tidyselect
+    tidyselect,
+    janitor
 Suggests: 
     cowplot,
     knitr,
@@ -52,6 +52,7 @@ Suggests:
     rmarkdown,
     stringr,
     testthat (>= 3.0.0),
+    glue,
     tidyverse
 VignetteBuilder: 
     knitr

@@ -37,7 +37,6 @@
 #'   `coefs_vector` summarizes all estimated parameters into a named vector.
 #'   This named vector is used in functions that call upon the model functions,
 #'   such as [predict()].
-#' @import glue
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
