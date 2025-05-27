@@ -98,7 +98,6 @@ Other built-in model functions:
 \code{\link{get_params_httk_3comp2}()},
 \code{\link{get_starts_1comp}()},
 \code{\link{get_starts_1comp_cl}()},
-\code{\link{get_starts_1comp_fup}()},
 \code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
@@ -115,8 +114,7 @@ Other 1-compartment model functions:
 \code{\link{get_params_1comp_cl}()},
 \code{\link{get_params_1comp_fup}()},
 \code{\link{get_starts_1comp}()},
-\code{\link{get_starts_1comp_cl}()},
-\code{\link{get_starts_1comp_fup}()}
+\code{\link{get_starts_1comp_cl}()}
 
 Other model concentration functions: 
 \code{\link{cp_1comp}()},
