@@ -120,6 +120,7 @@ get_params_1comp_cl <- function(
                                Q_gfr = NA,
                                Q_alv = NA,
                                Kblood2air = NA,
+                               BW = NA,
                                Fup = 0,
                                Clint = 0,
                                Vdist = NA,
@@ -130,16 +131,18 @@ get_params_1comp_cl <- function(
                                Q_gfr = NA,
                                Q_alv = NA,
                                Kblood2air = NA,
+                               BW = NA,
                                Fup = 1,
-                               Clint = 500,
+                               Clint = 1E5,
                                Vdist = NA,
                                Fgutabs = NA,
                                kgutabs = NA,
                                Rblood2plasma = NA),
-    param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4",
-                               Q_gfr = "L/h/kg ^3/4",
-                               Q_alv = "L/h/kg ^3/4",
+    param_units = ggplot2::aes(Q_totli = "L/h/kg BW^3/4",
+                               Q_gfr = "L/h/kg BW^3/4",
+                               Q_alv = "L/h/kg BW^3/4",
                                Kblood2air = "unitless ratio",
+                               BW = "kg",
                                Fup = "unitless fraction",
                                Clint = "uL/min/10^6 hepatocytes",
                                Vdist = paste0("(", # Vdist
@@ -159,6 +162,7 @@ get_params_1comp_cl <- function(
                   "Q_gfr",
                   "Q_alv",
                   "Kblood2air",
+                  "BW",
                   "Fup",
                   "Clint",
                   "Vdist",
@@ -177,6 +181,7 @@ get_params_1comp_cl <- function(
                                      Q_gfr = NA,
                                      Q_alv = NA,
                                      Kblood2air = NA,
+                                     BW = NA,
                                      Fup = 0,
                                      Clint = 0,
                                      Vdist = NA,
@@ -200,6 +205,7 @@ get_params_1comp_cl <- function(
                                      Q_gfr = NA,
                                      Q_alv = NA,
                                      Kblood2air = NA,
+                                     BW = NA,
                                      Fup = 1,
                                      Clint = 1E5,
                                      Vdist = NA,
@@ -260,7 +266,6 @@ get_params_1comp_cl <- function(
   par_DF <- get_starts_1comp_cl(data = data,
                               par_DF = par_DF,
                               restrictive = restrictive)
-
 
   # check to ensure starting values are within bounds
   # if not, then replace them by a value halfway between bounds

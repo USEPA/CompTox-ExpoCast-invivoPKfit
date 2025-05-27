@@ -80,7 +80,7 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
     stop("cp_1comp(): ", check_msg)
   }
 
-  Q_totli = Q_gfr = Q_alv = Fup = Clint = NULL
+  Q_totli = Q_gfr = Q_alv = Fup = Clint = BW = NULL
   Kblood2air = Rblood2plasma = NULL
   kgutabs = Vdist = Fgutabs_Vdist = NULL
 
@@ -93,6 +93,11 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
   } else {
     Fup_hep <- Fup
   }
+
+  # Convert L/h/kg BW^(3/4) to L/h
+  Q_totli <- Q_totli / (BW^(3/4))
+  Q_gfr <- Q_gfr / (BW^(3/4))
+  Q_alv <- Q_alv / (BW^(3/4))
 
   # compute total clearance
   Clint_hep <- Clint * (6.6) / 1E6 # Convert to L/hr
