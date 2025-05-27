@@ -221,10 +221,10 @@ logLik.pk <- function(object,
     dplyr::rowwise() %>%
     dplyr::mutate(
       log_likelihood = log_likelihood(
-        par = coefs_vector,
-        data = observations,
-        data_sigma_group = observations$data_sigma_group,
-        modelfun = modelfun,
+        par = .data$coefs_vector,
+        data = .data$observations,
+        data_sigma_group = .data$observations$data_sigma_group,
+        modelfun = .data$modelfun[[1]],
         dose_norm = conc_scale$dose_norm,
         log10_trans = conc_scale$log10_trans,
         negative = negative,

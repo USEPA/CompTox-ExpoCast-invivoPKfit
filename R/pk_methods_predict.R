@@ -179,7 +179,7 @@ predict.pk <- function(object,
           ),
           Estimate = tryCatch(
             do.call(predfun,
-                    c(
+                    append(
                       list(coefs_vector,
                            time = Time,
                            dose = .data$Dose_pred,
@@ -191,7 +191,7 @@ predict.pk <- function(object,
             error = function(err) {
               if (suppress.messages %in% FALSE) {
                 message("predict.pk(): Unable to run ",
-                        .data$predfun, " for ",
+                        predfun, " for ",
                         toString(data_group_vars),
                         " data grouping.\n",
                         "Likely an aborted fit, ",
