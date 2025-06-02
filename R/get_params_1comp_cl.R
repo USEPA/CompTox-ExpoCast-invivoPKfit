@@ -126,6 +126,7 @@ get_params_1comp_cl <- function(
                                Vdist = NA,
                                Fgutabs = NA,
                                kgutabs = NA,
+                               liver_mass = NA,
                                Rblood2plasma = NA),
     upper_bound = ggplot2::aes(Q_totli = NA,
                                Q_gfr = NA,
@@ -137,6 +138,7 @@ get_params_1comp_cl <- function(
                                Vdist = NA,
                                Fgutabs = NA,
                                kgutabs = NA,
+                               liver_mass = NA,
                                Rblood2plasma = NA),
     param_units = ggplot2::aes(Q_totli = "L/h/kg BW^3/4",
                                Q_gfr = "L/h/kg BW^3/4",
@@ -155,6 +157,7 @@ get_params_1comp_cl <- function(
                                Fgutabs = "unitless fraction", # Fgutabs
                                kgutabs = paste0("1/", # kgutabs
                                                 unique(Time_trans.Units)),
+                               liver_mass = "g/kg BW",
                                Rblood2plasma = "unitless ratio"),
     restrictive = FALSE) {
   # param names
@@ -168,6 +171,7 @@ get_params_1comp_cl <- function(
                   "Vdist",
                   "Fgutabs",
                   "kgutabs",
+                  "liver_mass",
                   "Rblood2plasma")
 
 
@@ -187,6 +191,7 @@ get_params_1comp_cl <- function(
                                      Vdist = NA,
                                      Fgutabs = NA,
                                      kgutabs = NA,
+                                     liver_mass = NA,
                                      Rblood2plasma = NA)
   # which parameters did not have lower bounds specified in the `lower_bound`
   # argument?
@@ -211,6 +216,7 @@ get_params_1comp_cl <- function(
                                      Vdist = NA,
                                      Fgutabs = NA,
                                      kgutabs = NA,
+                                     liver_mass = NA,
                                      Rblood2plasma = NA)
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
