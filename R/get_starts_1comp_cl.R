@@ -61,7 +61,7 @@
 #'  parameter cannot be estimated from the available data, then its starting value
 #'  will be `NA_real_`
 #' @import httk
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family 1-compartment model functions
 #' @family get_starts functions
 #' @family built-in model functions
@@ -140,7 +140,7 @@ get_starts_1comp_cl <- function(data,
   Rblood2plasma <- parm_gas[["Rblood2plasma"]]
   Clint <- parm_gas[["Clint"]]
   Kblood2air <- parm_gas[["Kblood2air"]]
-  Q_totli <- parm_gas[["Qliverf"]] * parm_gas[["Qcardiacc"]]
+  Q_totli <- (parm_gas[["Qliverf"]] + parm_gas[["Qgutf"]]) * parm_gas[["Qcardiacc"]]
   Q_gfr <- parm_gas[["Qgfrc"]]
   Q_alv <- parm_gas[["Qalvc"]]
   kgutabs <- parm_gas[["kgutabs"]]
@@ -173,9 +173,10 @@ get_starts_1comp_cl <- function(data,
   Q_alv_2 <- Q_alv / (BW^(3/4))
 
   Clint_hep <- Clint * (6.6) / 1E6 # Convert to L/hr
-  Clhep <- Q_totli_2 * Fup_hep * Clint_hep / (Q_totli_2 + (Fup_hep * Clint_hep / Rblood2plasma))
+  Clhep <- Q_totli_2 * (Fup_hep * Clint_hep / Rblood2plasma) /
+    (Q_totli_2 + (Fup_hep * Clint_hep / Rblood2plasma))
   # Need to include Fup for renal clearance
-  Clren <- Fup * Q_gfr_2
+  Clren <- Fup * Q_gfr_2 / Rblood2plasma
   Clair <- (Rblood2plasma * Q_alv_2 / Kblood2air)
 
   Cltot <- Clren + Clhep + Clair
