@@ -43,7 +43,6 @@
 #' @import dplyr
 #' @import tidyr
 #' @import purrr
-#' @importFrom magrittr `%>%`
 #' @importFrom janitor round_to_fraction
 #' @export
 do_preprocess.pk <- function(obj, ...) {
@@ -150,8 +149,8 @@ do_preprocess.pk <- function(obj, ...) {
     data_group <- obj$data_group
     summary_group <- obj$settings_data_info$summary_group
 
-    n_grps <- dplyr::group_by(data, !!!data_group) %>%
-      dplyr::group_keys() %>%
+    n_grps <- dplyr::group_by(data, !!!data_group) |>
+      dplyr::group_keys() |>
       dplyr::n_distinct()
 
     if (!obj$settings_preprocess$suppress.messages) {
@@ -386,7 +385,7 @@ do_preprocess.pk <- function(obj, ...) {
               "\n"
           )
         }
-        data <- dplyr::group_by(data, !!!obj$settings_preprocess$loq_group) %>%
+        data <- dplyr::group_by(data, !!!obj$settings_preprocess$loq_group) |>
           dplyr::mutate(LOQ_orig = LOQ,
                         LOQ = ifelse(is.na(LOQ_orig), {
                           if (any((Value > 0) %in% TRUE)) {
@@ -395,8 +394,8 @@ do_preprocess.pk <- function(obj, ...) {
                           } else {
                             NA_real_
                           }
-                        }, LOQ_orig)) %>%
-          dplyr::ungroup() %>%
+                        }, LOQ_orig)) |>
+          dplyr::ungroup() |>
           as.data.frame()
       }
 
@@ -482,7 +481,7 @@ do_preprocess.pk <- function(obj, ...) {
               " missing SDs will be estimated.\n"
           )
         }
-        data <- dplyr::group_by(data, !!!obj$settings_preprocess$sd_group) %>%
+        data <- dplyr::group_by(data, !!!obj$settings_preprocess$sd_group) |>
           dplyr::mutate(
             Value_SD_orig = Value_SD,
             Value_SD = ifelse(
@@ -497,8 +496,8 @@ do_preprocess.pk <- function(obj, ...) {
               ),
               Value_SD_orig
             )
-          ) %>%
-          dplyr::ungroup() %>%
+          ) |>
+          dplyr::ungroup() |>
           as.data.frame()
       }
 
@@ -532,8 +531,8 @@ do_preprocess.pk <- function(obj, ...) {
     }
 
     if (!obj$settings_preprocess$suppress.messages) {
-      n_grps <- dplyr::group_by(data, !!!data_group) %>%
-        dplyr::group_keys() %>%
+      n_grps <- dplyr::group_by(data, !!!data_group) |>
+        dplyr::group_keys() |>
         dplyr::n_distinct()
       ### display messages describing loaded data
       message(
@@ -578,8 +577,8 @@ do_preprocess.pk <- function(obj, ...) {
     }
 
     if (!obj$settings_preprocess$suppress.messages & (nrow(data) != obs_num)) {
-      n_grps <- dplyr::group_by(data, !!!data_group) %>%
-        dplyr::group_keys() %>%
+      n_grps <- dplyr::group_by(data, !!!data_group) |>
+        dplyr::group_keys() |>
         dplyr::n_distinct()
       ### display messages describing loaded data
       message("Remaining observations:", nrow(data), "\n",
@@ -613,8 +612,8 @@ do_preprocess.pk <- function(obj, ...) {
     }
 
     if (!obj$settings_preprocess$suppress.messages & (nrow(data) != obs_num)) {
-      n_grps <- dplyr::group_by(data, !!!data_group) %>%
-        dplyr::group_keys() %>%
+      n_grps <- dplyr::group_by(data, !!!data_group) |>
+        dplyr::group_keys() |>
         dplyr::n_distinct()
       ### display messages describing loaded data
       message("Remaining observations:", nrow(data), "\n",
@@ -648,8 +647,8 @@ do_preprocess.pk <- function(obj, ...) {
     }
 
     if (!obj$settings_preprocess$suppress.messages & (nrow(data) != obs_num)) {
-      n_grps <- dplyr::group_by(data, !!!data_group) %>%
-        dplyr::group_keys() %>%
+      n_grps <- dplyr::group_by(data, !!!data_group) |>
+        dplyr::group_keys() |>
         dplyr::n_distinct()
       ### display messages describing loaded data
       message("Remaining observations:", nrow(data), "\n",
@@ -687,9 +686,9 @@ do_preprocess.pk <- function(obj, ...) {
 
     # Needs to be grouped
     if (obj$scales$time$new_units %in% "auto") {
-      to_units <- data %>%
-        dplyr::group_by(!!!data_group) %>%
-        dplyr::mutate(AUTO_UNITS = auto_units(y = Time, from = Time.Units_orig)) %>%
+      to_units <- data |>
+        dplyr::group_by(!!!data_group) |>
+        dplyr::mutate(AUTO_UNITS = auto_units(y = Time, from = Time.Units_orig)) |>
         dplyr::pull(AUTO_UNITS)
     }
 
@@ -710,8 +709,8 @@ do_preprocess.pk <- function(obj, ...) {
 
       }
       data$NEW_UNITS <- to_units
-      data <- data %>%
-        dplyr::rowwise() %>%
+      data <- data |>
+        dplyr::rowwise() |>
         dplyr::mutate(Time_trans = tryCatch(
           convert_time(
             x = Time,
@@ -727,7 +726,7 @@ do_preprocess.pk <- function(obj, ...) {
             )
             return(NA_real_)
           }
-        )) %>%
+        )) |>
         dplyr::select(-NEW_UNITS)
     }
     data$Time_trans.Units <- to_units
@@ -805,9 +804,9 @@ do_preprocess.pk <- function(obj, ...) {
     )
 
     # where it is excreta make cumulative sum, if needed
-    data <- data %>%
-      group_by(!!!summary_group, Subject_ID) %>%
-      arrange(Time) %>%
+    data <- data |>
+      group_by(!!!summary_group, Subject_ID) |>
+      arrange(Time) |>
       mutate(
         Conc = ifelse(
           Media %in% "excreta",

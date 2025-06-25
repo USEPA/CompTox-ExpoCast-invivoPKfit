@@ -55,7 +55,7 @@ get_hessian.pk <- function(obj,
     method = method,
     drop_sigma = FALSE,
     include_type = "optim",
-    suppress.messages = suppress.messages) %>%
+    suppress.messages = suppress.messages) |>
     dplyr::rename(coefs_opt_vector = coefs_vector)
 
   #get constant parameter vectors
@@ -65,7 +65,7 @@ get_hessian.pk <- function(obj,
     method = method,
     drop_sigma = FALSE,
     include_type = "const",
-    suppress.messages = suppress.messages) %>%
+    suppress.messages = suppress.messages) |>
     dplyr::rename(coefs_const_vector = coefs_vector)
 
   #get all params used
@@ -77,9 +77,9 @@ get_hessian.pk <- function(obj,
     include_type = "use",
     suppress.messages = suppress.messages)
 
-  coefs <- coefs_opt %>%
-    dplyr::left_join(coefs_const) %>%
-    dplyr::left_join(coefs_use) %>%
+  coefs <- coefs_opt |>
+    dplyr::left_join(coefs_const) |>
+    dplyr::left_join(coefs_use) |>
     suppressMessages()
 
   other_vars <- ggplot2::vars(
@@ -109,35 +109,35 @@ get_hessian.pk <- function(obj,
                             pLOQ)
 
   # Convert Time_trans to hours
-  newdata <- obj$data %>%
-    dplyr::select(!!!union(obj$data_group, req_vars), !!!other_vars) %>%
+  newdata <- obj$data |>
+    dplyr::select(!!!union(obj$data_group, req_vars), !!!other_vars) |>
     # log_likelihood() takes Time_trans so this must be converted to hours
     # so it is in concordance with coef()
     dplyr::mutate(data_sigma_group = factor(data_sigma_group),
                   Time_trans = convert_time(x = Time_trans,
                                             from = Time_trans.Units,
                                             to = "hours"),
-                  Time_trans.Units = "hours") %>%
-    dplyr::group_by(!!!obj$data_group) %>%
-    tidyr::nest(.key = "observations") %>%
+                  Time_trans.Units = "hours") |>
+    dplyr::group_by(!!!obj$data_group) |>
+    tidyr::nest(.key = "observations") |>
     dplyr::ungroup()
 
   # This setup allows for a more stable call to the model functions later on
   fun_models <- get_stat_model(obj)
 
-  newdata <- dplyr::left_join(coefs, newdata, by = data_grp_vars) %>%
+  newdata <- dplyr::left_join(coefs, newdata, by = data_grp_vars) |>
     dplyr::left_join(fun_models, join_by(model))
 
 
-  newdata <- newdata %>%
-    dplyr::rowwise() %>%
-    dplyr::filter(!is.null(observations)) %>%
-    dplyr::ungroup() %>%
+  newdata <- newdata |>
+    dplyr::rowwise() |>
+    dplyr::filter(!is.null(observations)) |>
+    dplyr::ungroup() |>
     dplyr::distinct()
 
 
-  hess <- newdata %>%
-    dplyr::rowwise() %>%
+  hess <- newdata |>
+    dplyr::rowwise() |>
     dplyr::mutate(
       hessian = list(
         calc_hessian(pars_opt = coefs_opt_vector,
@@ -147,8 +147,8 @@ get_hessian.pk <- function(obj,
                         dose_norm = obj$scales$conc$dose_norm,
                         log10_trans = obj$scales$conc$log10_trans)
       )
-    )  %>%
-    dplyr::ungroup() %>%
+    )  |>
+    dplyr::ungroup() |>
     dplyr::select(model, method, !!!obj$data_group,
                   hessian)
 

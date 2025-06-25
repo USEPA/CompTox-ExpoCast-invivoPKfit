@@ -58,34 +58,34 @@ get_winning_model.pk <- function(obj,
                            newdata = newdata,
                            method = method)
 
-  pred_check <- pred_check %>%
-    dplyr::group_by(!!!obj$data_group, model, method) %>%
-    dplyr::summarize(preds_below_loq = 100 * round(sum(Conc_est < LOQ) / n(), 3)) %>%
+  pred_check <- pred_check |>
+    dplyr::group_by(!!!obj$data_group, model, method) |>
+    dplyr::summarize(preds_below_loq = 100 * round(sum(Conc_est < LOQ) / n(), 3)) |>
     dplyr::ungroup()
 
   # Get the criteria (AIC or BIC)
   model_compare <- do.call(criterion,
                            args = list(obj = obj,
                                        newdata = newdata,
-                                       method = method)) %>%
+                                       method = method)) |>
     suppressMessages()
   # Join information criteria with RMSE and prediction checks for output
-  model_compare <- model_compare %>%
+  model_compare <- model_compare |>
     left_join(
       rmse.pk(obj = obj,
               newdata = newdata,
               method = method),
       by = c(data_grp_vars, "model", "method")
-      ) %>%
+      ) |>
     left_join(pred_check,
-              c(data_grp_vars, "model", "method")) %>%
+              c(data_grp_vars, "model", "method")) |>
     suppressMessages()
 
   # return the winning model for each method
   # Winmodel should have RMSE of at least 95% of flat model
   # This will mean the fold-MSE should be at least around 90%
- winmodels <- model_compare %>%
-   dplyr::group_by(!!!obj$data_group, method) %>%
+ winmodels <- model_compare |>
+   dplyr::group_by(!!!obj$data_group, method) |>
    dplyr::mutate(
     near_flat = dplyr::if_else(
       !is.null(dplyr::pick(
@@ -97,18 +97,18 @@ get_winning_model.pk <- function(obj,
        FALSE, missing = NA)
    )
  # match the methods
- winmodels <- winmodels %>%
-   dplyr::group_by(!!!obj$data_group) %>%
-   dplyr::arrange(method, model) %>%
+ winmodels <- winmodels |>
+   dplyr::group_by(!!!obj$data_group) |>
+   dplyr::arrange(method, model) |>
    dplyr::filter(method == method)
  # Filter by lowest AIC or BIC
- winmodels <- winmodels %>%
-   dplyr::group_by(!!!obj$data_group, method) %>%
+ winmodels <- winmodels |>
+   dplyr::group_by(!!!obj$data_group, method) |>
    dplyr::slice_min(
      order_by = pick({{ criterion }}),
      n = 1,
-     with_ties = FALSE) %>%
-   dplyr::ungroup() %>%
+     with_ties = FALSE) |>
+   dplyr::ungroup() |>
    dplyr::select(!!!obj$data_group,
                  method, model, near_flat, preds_below_loq)
 

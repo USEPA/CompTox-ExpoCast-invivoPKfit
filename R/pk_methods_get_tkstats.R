@@ -88,7 +88,7 @@ get_tkstats.pk <- function(obj,
                     model = model,
                     method = method,
                     drop_sigma = TRUE,
-                    suppress_messages = TRUE) %>%
+                    suppress_messages = TRUE) |>
     dplyr::select(-c(Time.Units, Time_trans.Units))
 
   grp_vars <- sapply(tk_group,
@@ -127,8 +127,8 @@ get_tkstats.pk <- function(obj,
 
   # check that tk_group is valid: it must produce groups with a unique
   # combination of obj$data_group, Route, Media, and Dose
-  newdata_grouped <- newdata %>%
-    dplyr::group_by(!!!tk_group) %>%
+  newdata_grouped <- newdata |>
+    dplyr::group_by(!!!tk_group) |>
     dplyr::distinct(!!!obj$data_group,
                     Route,
                     Media,
@@ -137,8 +137,8 @@ get_tkstats.pk <- function(obj,
                     Dose.Units,
                     Conc.Units)
 
-  newdata_grouped_count <- newdata_grouped %>%
-    dplyr::count(name = "N") %>%
+  newdata_grouped_count <- newdata_grouped |>
+    dplyr::count(name = "N") |>
     dplyr::ungroup() # how many distinct rows per group?
 
 
@@ -148,25 +148,25 @@ get_tkstats.pk <- function(obj,
   }
 
 
-  newdata <- newdata %>%
-    dplyr::select(!!!req_vars) %>%
-    dplyr::group_by(!!!obj$data_group) %>%
+  newdata <- newdata |>
+    dplyr::select(!!!req_vars) |>
+    dplyr::group_by(!!!obj$data_group) |>
     tidyr::nest(.key = "observations")
 
   model_df <- data.frame(model = sapply(obj$stat_model, `[[`, "name"),
                          tk_fun = sapply(obj$stat_model, `[[`, "tkstats_fun"))
 
   newdata <- dplyr::left_join(all_coefs, newdata,
-                              by = data_grp_vars) %>%
-    tidyr::unnest(cols = "observations") %>%
+                              by = data_grp_vars) |>
+    tidyr::unnest(cols = "observations") |>
     dplyr::left_join(model_df, by = "model",
-                     relationship = "many-to-many") %>%
+                     relationship = "many-to-many") |>
     dplyr::distinct()
 
   # Much more efficient AND safe way of calling the TK functions
-  tkstats_all <- newdata %>%
+  tkstats_all <- newdata |>
     dplyr::rowwise(!!!obj$data_group, model, method,
-            coefs_vector, tk_fun) %>%
+            coefs_vector, tk_fun) |>
     dplyr::mutate(TKstats = list(tryCatch(
       expr = do.call(tk_fun,
                      list(
@@ -183,8 +183,8 @@ get_tkstats.pk <- function(obj,
         print(e)
       }
     )) # ending tryCatch statement
-    ) %>%
-    dplyr::ungroup() %>%
+    ) |>
+    dplyr::ungroup() |>
     tidyr::unnest(cols = TKstats)
 
 
@@ -193,20 +193,20 @@ get_tkstats.pk <- function(obj,
   # The column is filtered out after pivoting
   message("get_tkstats.pk(): Here are the units for the estimated TK statistics: ")
   print(
-    tkstats_all %>%
-      dplyr::ungroup() %>%
+    tkstats_all |>
+      dplyr::ungroup() |>
       dplyr::distinct(param_name, param_units)
   )
   }
 
-  tkstats_all <- tkstats_all %>%
-    dplyr::select(-param_units) %>%
+  tkstats_all <- tkstats_all |>
+    dplyr::select(-param_units) |>
     tidyr::pivot_wider(names_from = param_name,
-                       values_from = param_value) %>%
+                       values_from = param_value) |>
     dplyr::group_by(!!!tk_group)
 
   if (dose_norm) {
-    tkstats_all <- tkstats_all %>%
+    tkstats_all <- tkstats_all |>
       dplyr::select(!Dose)
 if(suppress.messages %in% FALSE){
     message("get_tkstats.pk(): Dose column removed because these TK statistics are dose normalized")
@@ -214,11 +214,11 @@ if(suppress.messages %in% FALSE){
   }
 
   # Final filtering of tkstats_all
-  tkstats_all <- tkstats_all[!names(tkstats_all) %in% c("coefs_vector", "tk_fun")] %>%
-    dplyr::relocate(!!!tk_group, Dose.Units, Conc.Units) %>%
+  tkstats_all <- tkstats_all[!names(tkstats_all) %in% c("coefs_vector", "tk_fun")] |>
+    dplyr::relocate(!!!tk_group, Dose.Units, Conc.Units) |>
     dplyr::ungroup()
 
-  tkstats_all <- tkstats_all %>% dplyr::distinct()
+  tkstats_all <- tkstats_all |> dplyr::distinct()
 
   return(tkstats_all)
 }

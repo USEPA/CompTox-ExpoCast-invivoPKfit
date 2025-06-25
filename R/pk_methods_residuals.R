@@ -113,8 +113,8 @@ residuals.pk <- function(object,
                 "Detect",
                 "exclude")
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
-    dplyr::select(dplyr::all_of(req_vars)) %>%
+  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) |>
+    dplyr::select(dplyr::all_of(req_vars)) |>
     dplyr::ungroup())
 
 
@@ -129,7 +129,7 @@ if(suppress.messages %in% FALSE){
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
-  resids <- new_preds %>%
+  resids <- new_preds |>
     dplyr::mutate(
       Conc_set = ifelse(rep(conc_scale$dose_norm, NROW(Dose)),
                         ifelse(rep(conc_scale$log10_trans, NROW(Dose)),
@@ -142,8 +142,8 @@ if(suppress.messages %in% FALSE){
       Residuals = ifelse(Detect %in% FALSE & Conc_est <= Conc_set,
                          0,
                          Conc_est - Conc_set),
-      .after = Conc_est) %>%
-    dplyr::ungroup() %>%
+      .after = Conc_est) |>
+    dplyr::ungroup() |>
     dplyr::distinct()
 
   return(resids)

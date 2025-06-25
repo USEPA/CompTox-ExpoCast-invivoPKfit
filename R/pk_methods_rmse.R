@@ -197,14 +197,14 @@ rmse.pk <- function(obj,
                 "pLOQ")
 
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
-    dplyr::select(dplyr::all_of(req_vars)) %>%
+  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) |>
+    dplyr::select(dplyr::all_of(req_vars)) |>
     dplyr::ungroup())
 
   #replace below-LOQ preds with pLOQ if specified
   if(sub_pLOQ %in% TRUE){
     message("rmse.pk(): Predicted conc below pLOQ substituted with pLOQ")
-    new_preds <- new_preds %>%
+    new_preds <- new_preds |>
       dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
                                    pLOQ,
                                    Conc_est))
@@ -212,7 +212,7 @@ rmse.pk <- function(obj,
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
-  rmse_df <- new_preds %>%
+  rmse_df <- new_preds |>
     dplyr::mutate(
       Conc_set = ifelse(rep(conc_scale$dose_norm,
                             NROW(Dose)),
@@ -226,17 +226,17 @@ rmse.pk <- function(obj,
                             NROW(Dose)),
                         Conc_est / Dose,
                         Conc_est)
-                        ) %>%
-    dplyr::ungroup() %>%
+                        ) |>
+    dplyr::ungroup() |>
     dplyr::group_by(!!!rmse_group,
-                    model, method) %>%
+                    model, method) |>
     dplyr::summarize(
       RMSE = calc_rmse(obs = Conc_set,
                        obs_sd = Conc_set_SD,
                        pred = Conc_est,
                        n_subj = N_Subjects,
                        detect = Detect,
-                       log10_trans = conc_scale$log10_trans)) %>%
+                       log10_trans = conc_scale$log10_trans)) |>
     dplyr::ungroup()
 
   if (conc_scale$log10_trans == FALSE) {
@@ -251,7 +251,7 @@ rmse.pk <- function(obj,
             toString(sapply(unlist(rmse_group), rlang::as_label)),
             ", method, model")
     }
-    rmse_df <- rmse_df %>% rename(RMSLE = RMSE)
+    rmse_df <- rmse_df |> rename(RMSLE = RMSE)
   }
 
   return(rmse_df)

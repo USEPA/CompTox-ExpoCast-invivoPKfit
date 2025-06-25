@@ -101,9 +101,9 @@ do_prefit.pk <- function(obj,
   sigma_lower <- sqrt(.Machine$double.eps)
 
   # Add the data_sigma_group and filter out all excluded values
-  sigma_DF <- data %>%
-    dplyr::mutate(data_sigma_group = data_sigma_group) %>%
-    dplyr::filter(exclude %in% FALSE) %>%
+  sigma_DF <- data |>
+    dplyr::mutate(data_sigma_group = data_sigma_group) |>
+    dplyr::filter(exclude %in% FALSE) |>
     # temporarily undo log10-trans, if it has been used
     # this is because combined_sd() requires NON log transformed concs
     # but we want to keep dose-normalization if it has been applied
@@ -128,8 +128,8 @@ do_prefit.pk <- function(obj,
       )
 
   # Set values for sigma upper/lower-bounds and start
-  sigma_DF <- sigma_DF %>%
-    dplyr::group_by(!!!obj$stat_error_model$error_group) %>%
+  sigma_DF <- sigma_DF |>
+    dplyr::group_by(!!!obj$stat_error_model$error_group) |>
     dplyr::summarise(max_conc = max(Conc_tmp,
                                      na.rm = TRUE),
                      param_name = paste("sigma",
@@ -145,16 +145,16 @@ do_prefit.pk <- function(obj,
                        group_n = N_Subjects,
                        unbiased = TRUE,
                        na.rm = TRUE,
-                       log10 = obj$scales$conc$log10_trans)) %>%
+                       log10 = obj$scales$conc$log10_trans)) |>
     dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
                                                  upper_bound <= lower_bound,
                                                max_conc,
-                                               upper_bound)) %>%
+                                               upper_bound)) |>
     dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
                                                  upper_bound <= lower_bound,
                                                1000,
                                                upper_bound),
-                  start = 0.1 * upper_bound) %>%
+                  start = 0.1 * upper_bound) |>
     as.data.frame()
 
   # assign rownames to sigma_DF
@@ -177,11 +177,11 @@ do_prefit.pk <- function(obj,
       # get parameters to be optimized, bounds, and starting points
       # by evaluating params_fun for this stat_model
       # pass it only the non-excluded observations
-      par_DF <- data %>%
+      par_DF <- data |>
         dplyr::filter(exclude %in% FALSE)
 
       par_DF <- dplyr::group_by(par_DF,
-                                !!!obj$data_group) %>%
+                                !!!obj$data_group) |>
         dplyr::reframe(
           do.call(
             obj$stat_model[[this_model]]$params_fun,
@@ -192,7 +192,7 @@ do_prefit.pk <- function(obj,
             obj$stat_model[[this_model]]$params_fun_args
             )
           )
-        ) %>% as.data.frame()
+        ) |> as.data.frame()
 
       par_DF
     },
@@ -213,9 +213,9 @@ do_prefit.pk <- function(obj,
         )
       }
       # Are any parameters used initialized to NA?
-      n_par_DF <- par_DF_out %>%
-        dplyr::filter(model %in% this_model) %>%
-        dplyr::group_by(!!!obj$data_group) %>%
+      n_par_DF <- par_DF_out |>
+        dplyr::filter(model %in% this_model) |>
+        dplyr::group_by(!!!obj$data_group) |>
         dplyr::summarise(n_par = sum(optimize_param),
                          used_par_na = ifelse(
                            grepl("httk", this_model), # Exception when "httk" models are used
@@ -224,13 +224,13 @@ do_prefit.pk <- function(obj,
                          )
         )
 
-      n_sigma_DF <- sigma_DF %>%
-        dplyr::group_by(!!!obj$data_group) %>%
+      n_sigma_DF <- sigma_DF |>
+        dplyr::group_by(!!!obj$data_group) |>
         dplyr::summarise(n_sigma = sum(optimize_param))
 
 
-      n_detect_DF <- get_data_summary(obj) %>%
-        dplyr::group_by(!!!obj$data_group) %>%
+      n_detect_DF <- get_data_summary(obj) |>
+        dplyr::group_by(!!!obj$data_group) |>
         dplyr::summarise(n_detect = sum(n_detect))
 
       # merge all of these together
@@ -245,7 +245,7 @@ do_prefit.pk <- function(obj,
       )
 
       # get fit decision & reasoning
-      fit_check_DF <- fit_check_DF %>%
+      fit_check_DF <- fit_check_DF |>
         dplyr::mutate(
           n_par_opt = n_par + n_sigma,
           fit_decision = ifelse(n_par_opt < n_detect & !used_par_na,
@@ -262,7 +262,7 @@ do_prefit.pk <- function(obj,
                     "greater than or equal to number of non-excluded detected observations")
             )
           )
-        ) %>% as.data.frame()
+        ) |> as.data.frame()
 
 
       fit_check_DF
@@ -271,7 +271,7 @@ do_prefit.pk <- function(obj,
     USE.NAMES = TRUE)
 
   fit_check_out <- dplyr::bind_rows(fit_check_out, .id = "model")
-  par_DF_out <- par_DF_out %>%
+  par_DF_out <- par_DF_out |>
     dplyr::mutate(
       lower_bound = ifelse(
         is.na(lower_bound) & !is.na(start),

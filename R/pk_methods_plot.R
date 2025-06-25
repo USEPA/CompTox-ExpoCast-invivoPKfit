@@ -244,9 +244,9 @@ plot.pk <- function(x,
 
   # I think ideally there should be required variables and
   # a way to ensure all the aes() variables get added
-  newdata <- newdata %>%
-    dplyr::select(!!!union(union(x$data_group, common_vars), obs_vars)) %>%
-    dplyr::rowwise() %>%
+  newdata <- newdata |>
+    dplyr::select(!!!union(union(x$data_group, common_vars), obs_vars)) |>
+    dplyr::rowwise() |>
     # apply dose-norm if specified, but do not apply log10-trans even if specified
     # (if log10-trans specified, the y axis will be log10-scaled)
     dplyr::mutate(
@@ -254,13 +254,13 @@ plot.pk <- function(x,
       Conc_set_SD = ifelse(conc_scale$dose_norm, Conc_SD / Dose, Conc_SD),
       Detect = ifelse(Detect, "Detect", "Non-Detect"),
       Dose = Dose
-    ) %>%
-    dplyr::ungroup() %>%
-    dplyr::group_by(!!!x$data_group) %>%
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::group_by(!!!x$data_group) |>
     tidyr::nest(.key = "observations")
 
 
-  newdata <- newdata %>%
+  newdata <- newdata |>
     dplyr::mutate(
       observation_plot =
         purrr::map(observations, \(x) {
@@ -272,8 +272,8 @@ plot.pk <- function(x,
             geom_errorbar(mapping = plot_data_aes, na.rm = TRUE)
 
 
-          t_units <- x %>%
-            dplyr::pull(!!time_units_var) %>%
+          t_units <- x |>
+            dplyr::pull(!!time_units_var) |>
             unique()
 
           # if alpha = Detect then we have to do some trickery to implement that
@@ -363,46 +363,46 @@ plot.pk <- function(x,
   if (get_status(obj = x) == 5) {
     interp_data <- newdata
 
-    interp_data <- interp_data %>%
+    interp_data <- interp_data |>
       dplyr::mutate(interpolated = purrr::map(observations, \(x) {
         # if needed and not present, add Time_trans.Units column
         if (time_trans %in% TRUE) {
           if (!("Time_trans.Units" %in% names(x))) {
-            x <- x %>%
+            x <- x |>
               dplyr::mutate(Time_trans.Units = Time.Units)
           }
 
-          x <- x %>%
-            dplyr::select(!!!union(common_vars, obs_vars)) %>%
-            dplyr::group_by(Dose, Route, Media) %>%
+          x <- x |>
+            dplyr::select(!!!union(common_vars, obs_vars)) |>
+            dplyr::group_by(Dose, Route, Media) |>
             dplyr::reframe(Time = max(Time), # Change to Time
                            Time.Units, Time_trans.Units,
-                           Conc.Units) %>%
+                           Conc.Units) |>
             dplyr::mutate(
               maxTime = max(Time),
               Time.Units = unique(Time.Units),
               Time_trans.Units = unique(Time_trans.Units)
             )
         } else if (time_trans %in% FALSE) {
-          x <- x %>%
-            dplyr::select(!!!union(common_vars, obs_vars)) %>%
-            dplyr::group_by(Dose, Route, Media) %>%
+          x <- x |>
+            dplyr::select(!!!union(common_vars, obs_vars)) |>
+            dplyr::group_by(Dose, Route, Media) |>
             dplyr::reframe(Time = max(Time), # Change to Time
-                           Time.Units, Conc.Units) %>%
+                           Time.Units, Conc.Units) |>
             dplyr::mutate(maxTime = max(Time),
                           Time.Units = unique(Time.Units))
         }
-        x  %>%
-          tidyr::uncount(n_interp) %>%
-          dplyr::group_by(Dose, Route, Media) %>%
+        x  |>
+          tidyr::uncount(n_interp) |>
+          dplyr::group_by(Dose, Route, Media) |>
           dplyr::mutate(Time = (.data$maxTime / (dplyr::n() - 1)) *
                           (dplyr::row_number() - 1))
       }, .progress = TRUE)
       )
 
-    interp_data <- interp_data %>%
-      dplyr::select(!!!x$data_group, c("interpolated")) %>%
-      tidyr::unnest(cols = c("interpolated")) %>%
+    interp_data <- interp_data |>
+      dplyr::select(!!!x$data_group, c("interpolated")) |>
+      tidyr::unnest(cols = c("interpolated")) |>
       dplyr::ungroup()
 
 
@@ -424,28 +424,28 @@ plot.pk <- function(x,
 
     if (best_fit %in% TRUE) {
       interp_data <- dplyr::left_join(get_winning_model(obj = x),
-                                      interp_data) %>%
+                                      interp_data) |>
         suppressMessages()
     }
 
     # if plotting transformed time, then transform interpolated time points
     if (time_trans %in% TRUE) {
-      conversion_table <- time_conversions %>%
+      conversion_table <- time_conversions |>
         dplyr::filter(
           .data$TimeFrom %in% interp_data$Time.Units,
           .data$TimeTo %in% interp_data$Time_trans.Units
-        ) %>%
+        ) |>
         dplyr::rename(Time.Units = "TimeFrom", Time_trans.Units = "TimeTo")
 
-      interp_data <- interp_data %>%
+      interp_data <- interp_data |>
         dplyr::left_join(conversion_table,
-                         by = dplyr::join_by(Time.Units, Time_trans.Units)) %>%
-        dplyr::mutate(Time_trans = Time * .data$conversion) %>%
+                         by = dplyr::join_by(Time.Units, Time_trans.Units)) |>
+        dplyr::mutate(Time_trans = Time * .data$conversion) |>
         dplyr::select(!c("conversion"))
     }
 
-    interp_data <- interp_data %>%
-      dplyr::group_by(!!!x$data_group) %>%
+    interp_data <- interp_data |>
+      dplyr::group_by(!!!x$data_group) |>
       tidyr::nest(.key = "predicted")
 
 
@@ -458,7 +458,7 @@ plot.pk <- function(x,
 
     if (limit_predicted %in% TRUE) {
       if (log10_C %in% TRUE) {
-        newdata <- newdata %>%
+        newdata <- newdata |>
           dplyr::mutate(
             predicted = purrr::map2(
               .data$observations,
@@ -476,7 +476,7 @@ plot.pk <- function(x,
 
               }))
       } else {
-        newdata <- newdata %>%
+        newdata <- newdata |>
           dplyr::mutate(
             predicted = purrr::map2(
               .data$observations,
@@ -493,7 +493,7 @@ plot.pk <- function(x,
       }
     }
 
-    newdata <- newdata %>%
+    newdata <- newdata |>
       dplyr::mutate(predicted_plot = purrr::map(.data$predicted, \(x) {
         if (!is.null(x)) {
           ggplot2::geom_line(data = x,
@@ -502,7 +502,7 @@ plot.pk <- function(x,
         } else {
           NULL
         }
-      })) %>%
+      })) |>
       dplyr::mutate(final_plot = purrr::map2(
         .data$observation_plot,
         .data$predicted_plot,
@@ -515,7 +515,7 @@ plot.pk <- function(x,
       ))
 
   } else {
-    newdata <- newdata %>%
+    newdata <- newdata |>
       dplyr::rename(final_plot = "observation_plot")
 
     message("Note that the final plots do not contain any fits")

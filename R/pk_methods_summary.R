@@ -166,22 +166,22 @@ summary.pk <- function(object, ...) {
   # goodness of fit metrics
   aic_all <- suppressMessages(AIC(object)) # Already includes logLik
   bic_all <- suppressMessages(BIC(object))
-  rmse_all <- suppressMessages(rmse(object, use_scale_conc = FALSE) %>%
-    dplyr::group_by(!!!object$data_group, model, method, Route, Media, Dose) %>%
-    dplyr::mutate(avg_rmse = mean(RMSE, na.rm = TRUE)) %>%
+  rmse_all <- suppressMessages(rmse(object, use_scale_conc = FALSE) |>
+    dplyr::group_by(!!!object$data_group, model, method, Route, Media, Dose) |>
+    dplyr::mutate(avg_rmse = mean(RMSE, na.rm = TRUE)) |>
     tidyr::nest(full_rmse = c(Time, RMSE)))
 
-  fold_errors_all <- suppressMessages(fold_error(object) %>%
-    dplyr::group_by(!!!object$data_group, model, method, Route, Media, Dose) %>%
+  fold_errors_all <- suppressMessages(fold_error(object) |>
+    dplyr::group_by(!!!object$data_group, model, method, Route, Media, Dose) |>
     dplyr::mutate(avg_FoldErr = mean(Fold_Error, na.rm = TRUE),
                   median_FoldErr = median(Fold_Error, na.rm = TRUE),
-                  within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2) / length(Fold_Error)) %>%
+                  within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2) / length(Fold_Error)) |>
     dplyr::select(Time, Fold_Error,
-                  avg_FoldErr, median_FoldErr, within_2fold) %>%
+                  avg_FoldErr, median_FoldErr, within_2fold) |>
     tidyr::nest(full_fold_errors = c(Time, Fold_Error)))
 
 
-  gof_DF <- suppressMessages(dplyr::inner_join(AIC(object), BIC(object)) %>%
+  gof_DF <- suppressMessages(dplyr::inner_join(AIC(object), BIC(object)) |>
     dplyr::right_join(dplyr::inner_join(rmse_all, fold_errors_all)))
 
 

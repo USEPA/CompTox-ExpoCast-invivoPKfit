@@ -91,21 +91,21 @@ do_fit.pk <- function(obj,
     N_Subjects, data_sigma_group, Time_trans
   )
 
-  data <- data %>%
+  data <- data |>
     dplyr::select(!!!obj$stat_error_model$error_group,
                   !!!req_data_vars)
 
   # nest the necessary data frames...
-  data_nest <- data %>%
+  data_nest <- data |>
     tidyr::nest(data = !tidyselect::all_of(data_group_vars))
 
-  par_DF_nest <- par_DF %>%
+  par_DF_nest <- par_DF |>
     tidyr::nest(par_DF = !tidyselect::all_of(c("model", data_group_vars)))
 
-  sigma_DF_nest <- sigma_DF %>%
+  sigma_DF_nest <- sigma_DF |>
     tidyr::nest(sigma_DF = !tidyselect::all_of(data_group_vars))
 
-  fit_check <- fit_check_DF %>%
+  fit_check <- fit_check_DF |>
     dplyr::select(!c(n_par, n_sigma, n_detect, n_par_opt, fit_reason))
 
   # make a join-able data.frame with all the possible models
@@ -124,16 +124,16 @@ do_fit.pk <- function(obj,
     ),
     fit_check,
     by = c("model", data_group_vars)
-  ) %>%
-    dplyr::relocate(model, .after = data_group_vars[-1]) %>%
-    dplyr::left_join(fun_models, join_by(model)) %>%
+  ) |>
+    dplyr::relocate(model, .after = data_group_vars[-1]) |>
+    dplyr::left_join(fun_models, join_by(model)) |>
     suppressMessages()
 
   # It is at this point when we must evaluate all quoted expressions in modelfun
   # That is, for the concentration function arguments which is used by log_likelihood.
 
-  info_nest <- info_nest %>%
-    dplyr::rowwise() %>%
+  info_nest <- info_nest |>
+    dplyr::rowwise() |>
     dplyr::mutate(
       modelfun = purrr::map(
         modelfun,
@@ -144,7 +144,7 @@ do_fit.pk <- function(obj,
           x
         }
       )
-    ) %>%
+    ) |>
     dplyr::ungroup()
 
   this_settings_optimx <- get_settings_optimx(obj)
@@ -193,10 +193,10 @@ do_fit.pk <- function(obj,
 
     # we can likely save some memory by only passing what we need from obj
     # like this
-    tidy_fit <- info_nest %>%
-      dplyr::ungroup() %>%
-      dplyr::rowwise(!!!data_group, model) %>%
-      multidplyr::partition(cluster) %>%
+    tidy_fit <- info_nest |>
+      dplyr::ungroup() |>
+      dplyr::rowwise(!!!data_group, model) |>
+      multidplyr::partition(cluster) |>
       dplyr::summarise(
         fit = list(fit_group(data = data,
                              par_DF = par_DF,
@@ -209,15 +209,15 @@ do_fit.pk <- function(obj,
                              log10_trans = log10_trans,
                              max_mult = max_multiplier,
                              suppress.messages = TRUE))
-        ) %>%
+        ) |>
       dplyr::collect() # undo the multidplyr::partition()
 
     rm(cluster)
 
   } else {
-    tidy_fit <- info_nest %>%
-      dplyr::ungroup() %>%
-      dplyr::rowwise(!!!data_group, model) %>%
+    tidy_fit <- info_nest |>
+      dplyr::ungroup() |>
+      dplyr::rowwise(!!!data_group, model) |>
       dplyr::summarize(
         fit = list(fit_group(data = data,
                              par_DF = par_DF,
@@ -234,22 +234,22 @@ do_fit.pk <- function(obj,
   }
 
 
-  tidy_fit <- tidy_fit %>%
+  tidy_fit <- tidy_fit |>
     dplyr::mutate(
       fit = purrr::map(fit,
                        \(x) {
-                         x %>%
+                         x |>
                            dplyr::mutate(
                              # ngatend = as.numeric(ngatend),
                              # nhatend = as.numeric(nhatend),
                              # hev = as.numeric(hev),
                              message = as.character(message)
-                           ) %>%
+                           ) |>
                            tidyr::pivot_longer(
                              cols = !c(method, value:message),
                              names_to = "param_name",
                              values_to = "estimate"
-                           ) %>%
+                           ) |>
                            dplyr::relocate(
                              param_name, estimate, convcode, value,
                              .after = method
@@ -260,43 +260,43 @@ do_fit.pk <- function(obj,
 
 
   # Unnest
-  tidy_fit <- tidy_fit %>%
+  tidy_fit <- tidy_fit |>
     tidyr::unnest(fit)
 
 
   # Adding the upper, lower, and starting values from sigma_DF and par_DF
-  tidy_sigmas <- tidy_fit %>%
-    dplyr::filter(stringr::str_detect(param_name, "sigma_")) %>%
-    dplyr::left_join(sigma_DF %>%
+  tidy_sigmas <- tidy_fit |>
+    dplyr::filter(stringr::str_detect(param_name, "sigma_")) |>
+    dplyr::left_join(sigma_DF |>
                         dplyr::select(!!!data_group,
                                       param_name, param_units,
                                       optimize_param, use_param,
                                       lower_bound, upper_bound, start
-                                      ) %>%
+                                      ) |>
                         dplyr::distinct(),
                       by = c(data_group_vars, "param_name"))
 
   # Prepare non-sigma parameters
-  tidy_params <- tidy_fit %>%
+  tidy_params <- tidy_fit |>
     dplyr::filter(stringr::str_detect(param_name, "sigma_",
-                                      negate = TRUE)) %>%
-    dplyr::full_join(par_DF %>%
+                                      negate = TRUE)) |>
+    dplyr::full_join(par_DF |>
                        dplyr::select(!!!data_group, model,
                                      param_name, param_units,
                                      optimize_param, use_param,
                                      lower_bound, upper_bound, start
-                       ) %>%
-                       dplyr::filter(use_param) %>%
-                       dplyr::distinct() %>%
+                       ) |>
+                       dplyr::filter(use_param) |>
+                       dplyr::distinct() |>
                        # Add column with all possible methods to the par_DF
                        dplyr::cross_join(
                          data.frame(method = these_methods)
                        ),
-                     by = c(data_group_vars, "model", "method", "param_name")) %>%
-    dplyr::group_by(!!!data_group, model, method) %>%
+                     by = c(data_group_vars, "model", "method", "param_name")) |>
+    dplyr::group_by(!!!data_group, model, method) |>
     # Fill in missing values
-    tidyr::fill(convcode:message, .direction = "downup") %>%
-    dplyr::ungroup() %>%
+    tidyr::fill(convcode:message, .direction = "downup") |>
+    dplyr::ungroup() |>
     # Set estimate to start if fit status was continue
     dplyr::mutate(
       estimate = ifelse(
@@ -305,7 +305,7 @@ do_fit.pk <- function(obj,
       )
     )
 
-  tidy_fit <- dplyr::bind_rows(tidy_sigmas, tidy_params) %>%
+  tidy_fit <- dplyr::bind_rows(tidy_sigmas, tidy_params) |>
     dplyr::arrange(!!!data_group, model, method)
 
   # Take rate_names
@@ -314,50 +314,50 @@ do_fit.pk <- function(obj,
           "in case time has been scaled to units other than hours before fitting"
   )
 
-  rate_names <- par_DF %>% dplyr::select(!!!obj$data_group,
+  rate_names <- par_DF |> dplyr::select(!!!obj$data_group,
                                          param_name,
-                                         param_units) %>%
-    dplyr::filter(startsWith(param_units, "1/")) %>%
-    dplyr::mutate(Time_trans.Units = stringr::str_remove(param_units, "^1/")) %>%
+                                         param_units) |>
+    dplyr::filter(startsWith(param_units, "1/")) |>
+    dplyr::mutate(Time_trans.Units = stringr::str_remove(param_units, "^1/")) |>
     dplyr::distinct()
   # Get a simple data_group and conversion rate data frame
-  rate_conversion <- rate_names %>%
-    dplyr::select(-param_name) %>% # Keep Time_trans.Units for a join
-    dplyr::group_by(Time_trans.Units) %>%
+  rate_conversion <- rate_names |>
+    dplyr::select(-param_name) |> # Keep Time_trans.Units for a join
+    dplyr::group_by(Time_trans.Units) |>
     dplyr::mutate(to_perhour = convert_time(1,
                                             from = Time_trans.Units,
                                             to = "hours",
-                                            inverse = TRUE)) %>%
-    dplyr::ungroup() %>%
+                                            inverse = TRUE)) |>
+    dplyr::ungroup() |>
     dplyr::distinct()
 
-  rate_names <- rate_names %>% dplyr::pull(param_name)
+  rate_names <- rate_names |> dplyr::pull(param_name)
 
   # Convert the rates
   tidy_fit <- suppressMessages(
-    tidy_fit %>%
+    tidy_fit |>
       dplyr::left_join(rate_conversion,
-                       by = c(data_group_vars, "param_units")) %>%
+                       by = c(data_group_vars, "param_units")) |>
       dplyr::mutate(dplyr::across(tidyselect::contains(rate_names),
-                                  \(x) x * to_perhour)) %>%
+                                  \(x) x * to_perhour)) |>
       dplyr::select(-to_perhour))
 
 # Changing the final fit form so that everything is similar par_DF
 
   # Add parameter fit flags
-  obj$fit <- tidy_fit %>%
+  obj$fit <- tidy_fit |>
     dplyr::mutate(estimate = dplyr::if_else(
       optimize_param == FALSE & use_param == TRUE,
       start,
       estimate)
-    ) %>%
+    ) |>
     dplyr::mutate(at_bound = dplyr::case_when(
       identical(estimate, lower_bound) ~ "AT LOWER BOUND",
       identical(estimate, upper_bound) ~ "AT UPPER BOUND",
       identical(estimate, start) ~ "AT START",
       .default = "Not at bound")
-    ) %>%
-    dplyr::distinct() %>%
+    ) |>
+    dplyr::distinct() |>
     dplyr::select(-c(lower_bound, upper_bound))
 
   obj$status <- status_fit # fitting complete

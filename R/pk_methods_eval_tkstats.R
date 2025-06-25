@@ -88,7 +88,7 @@ eval_tkstats.pk <- function(obj,
   if(win %in% TRUE){
   # Get the winning model for filtering
   winmodel_df <- get_winning_model.pk(obj = obj,
-                                   method = method) %>%
+                                   method = method) |>
     dplyr::select(-c(near_flat, preds_below_loq))
   }
 
@@ -101,15 +101,15 @@ eval_tkstats.pk <- function(obj,
                 exclude = exclude,
                 suppress.messages = suppress.messages)
 
-  nca_df <- nca_df %>% dplyr::select(-param_sd_z, -param_units) %>%
+  nca_df <- nca_df |> dplyr::select(-param_sd_z, -param_units) |>
     tidyr::pivot_wider(names_from = param_name,
                        values_from = param_value)
 
   if(win %in% TRUE){
-    nca_df <- nca_df %>%
+    nca_df <- nca_df |>
       dplyr::right_join(winmodel_df,
                         relationship = "many-to-many",
-                        by = c(data_grp_vars)) %>%
+                        by = c(data_grp_vars)) |>
       dplyr::relocate(model, method, .after = Media)
   }
 
@@ -122,21 +122,21 @@ eval_tkstats.pk <- function(obj,
                             tk_group = tk_group,
                             dose_norm = dose_norm,
                             exclude = exclude,
-                            suppress.messages = suppress.messages) %>%
+                            suppress.messages = suppress.messages) |>
     ungroup()
 
   if(win %in% TRUE){
-    tkstats_df <- dplyr::left_join(winmodel_df %>% dplyr::ungroup(),
+    tkstats_df <- dplyr::left_join(winmodel_df |> dplyr::ungroup(),
                                    tkstats_df,
                                    by = c(data_grp_vars, "method", "model"))
   }
 
   # prepare for merge
-  nca_df_red <- nca_df %>%
+  nca_df_red <- nca_df |>
     dplyr::rename_with(~ paste0(.x, ".nca", recycle0 = TRUE),
                        !tidyselect::any_of(c(grp_vars, "model", "method")))
 
-  tkstats_df_red <- tkstats_df %>%
+  tkstats_df_red <- tkstats_df |>
     dplyr::rename_with(~ paste0(.x, ".tkstats", recycle0 = TRUE),
                        !tidyselect::any_of(c(grp_vars,
                                              "Dose.Units", "Conc.Units",
@@ -160,7 +160,7 @@ eval_tkstats.pk <- function(obj,
 
   # Filter out infinite and NA values for AUC_infinity
   if (finite_only) {
-    tk_eval <- tk_eval %>%
+    tk_eval <- tk_eval |>
       filter(is.finite(AUC_infinity.tkstats),
              is.finite(AUC_infinity.nca))
   }

@@ -159,8 +159,8 @@ nca.pk <- function(obj,
   }
 
   # do NCA
-    nca_out <- newdata %>%
-      dplyr::group_by(!!!nca_group) %>%
+    nca_out <- newdata |>
+      dplyr::group_by(!!!nca_group) |>
       dplyr::reframe(Conc.Units = unique(Conc_nca.Units),
                      Time.Units = unique(Time.Units),
                      Dose.Units = unique(Dose.Units),
@@ -173,7 +173,7 @@ nca.pk <- function(obj,
                                 route = unique(Route[exclude %in% FALSE]),
                                 series_id = Series_ID[exclude %in% FALSE])
                      }
-      ) %>%
+      ) |>
       dplyr::mutate(
         param_units = dplyr::case_when( # derive NCA param units from data units
           param_name %in% c("AUC_tlast",
@@ -204,7 +204,7 @@ nca.pk <- function(obj,
                                          Dose.Units,
                                          ")"),
           param_name %in% "Cmax" ~ Conc.Units
-        )) %>%
+        )) |>
       dplyr::select(!c(Conc.Units,
                        Time.Units,
                        Dose.Units))

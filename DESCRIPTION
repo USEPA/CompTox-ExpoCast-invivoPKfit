@@ -29,7 +29,6 @@ Imports:
     dplyr,
     ggplot2,
     httk,
-    magrittr,
     MASS,
     Matrix,
     multidplyr (>= 0.1.3),

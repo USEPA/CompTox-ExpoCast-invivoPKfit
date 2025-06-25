@@ -66,9 +66,9 @@ fit_group <- function(data,
     }
 
     # Add the maximum concentration per Reference, Dose, Route, and Media
-    data <- data %>%
-      dplyr::group_by(Dose, Route, Media) %>%
-      dplyr::mutate(groupCmax = max(Conc, na.rm = TRUE)) %>%
+    data <- data |>
+      dplyr::group_by(Dose, Route, Media) |>
+      dplyr::mutate(groupCmax = max(Conc, na.rm = TRUE)) |>
       dplyr::ungroup()
 
     # Now call optimx::optimx() and do the fit
@@ -117,7 +117,7 @@ fit_group <- function(data,
                           "kkt1", "kkt2",
                           "xtime")
 
-          tmp <- data.frame(as.list(tmp)) %>%
+          tmp <- data.frame(as.list(tmp)) |>
             dplyr::slice(rep(seq_len(dplyr::n()),
                              each = length(method)))
 
@@ -152,7 +152,7 @@ fit_group <- function(data,
                     "convcode",
                     "kkt1", "kkt2",
                     "xtime")
-    tmp <- data.frame(as.list(tmp)) %>%
+    tmp <- data.frame(as.list(tmp)) |>
       dplyr::slice(rep(seq_len(dplyr::n()),
                        each = length(method)))
     rownames(tmp) <- method

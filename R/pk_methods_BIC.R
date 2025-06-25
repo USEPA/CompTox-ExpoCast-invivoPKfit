@@ -66,28 +66,28 @@ BIC.pk <- function(object,
 
 
   # obj$fit is a "long" data.frame with both parameters and sigma values
-  params_df <- object$fit %>%
-    dplyr::filter(optimize_param == TRUE) %>%
-    group_by(!!!object$data_group, model, method) %>%
+  params_df <- object$fit |>
+    dplyr::filter(optimize_param == TRUE) |>
+    group_by(!!!object$data_group, model, method) |>
     dplyr::summarize(npar = dplyr::n())
   data_grp_vars <- sapply(object$data_group, rlang::as_label)
 
   # BIC requires knowing how many observations each group has
-  ll <- ll %>% dplyr::rowwise() %>%
+  ll <- ll |> dplyr::rowwise() |>
     dplyr::mutate(N_ROW = nrow(observations))
 
   # Combining log-likelihood table with parameters table
-  ll <- ll %>%
+  ll <- ll |>
     dplyr::select(!!!object$data_group,
                   model, method,
                   log_likelihood,
-                  N_ROW) %>%
+                  N_ROW) |>
     dplyr::left_join(params_df, by = c(data_grp_vars, "model", "method"))
 
   # get number of parameters (excluding any constant, non-optimized parameters)
 
-  BIC <- ll %>%
-    dplyr::group_by(!!!object$data_group, model, method) %>%
+  BIC <- ll |>
+    dplyr::group_by(!!!object$data_group, model, method) |>
     dplyr::mutate(BIC = log(.data$N_ROW) * .data$npar) - (2 * .data$log_likelihood)
 
 

@@ -149,9 +149,9 @@ logLik.pk <- function(object,
       newdata$Time_trans.Units <- rep("hours", nrow(newdata))
     }
     if (!suppress.messages & (object$status < 5)) {
-      print(newdata %>%
-              dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
-              dplyr::filter(Time.Units != Time_trans.Units) %>%
+      print(newdata |>
+              dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) |>
+              dplyr::filter(Time.Units != Time_trans.Units) |>
               dplyr::distinct())
     }
   }
@@ -189,13 +189,13 @@ logLik.pk <- function(object,
                             pLOQ)
 
 
-  newdata <- suppressMessages(newdata %>%
+  newdata <- suppressMessages(newdata |>
     dplyr::select(!!!union(object$data_group, req_vars),
                   !!!other_vars))
 
-    newdata <- newdata %>%
-      dplyr::group_by(!!!object$data_group) %>%
-      tidyr::nest(.key = "observations") %>%
+    newdata <- newdata |>
+      dplyr::group_by(!!!object$data_group) |>
+      tidyr::nest(.key = "observations") |>
       dplyr::ungroup()
 
   newdata <- tidyr::expand_grid(tidyr::expand_grid(model, method),
@@ -210,15 +210,15 @@ logLik.pk <- function(object,
                                       data_grp_vars))
 
 
-  newdata <- newdata %>%
-    dplyr::rowwise() %>%
-    dplyr::filter(!is.null(observations)) %>%
-    dplyr::left_join(fun_models, join_by(model)) %>%
-    dplyr::ungroup() %>%
+  newdata <- newdata |>
+    dplyr::rowwise() |>
+    dplyr::filter(!is.null(observations)) |>
+    dplyr::left_join(fun_models, join_by(model)) |>
+    dplyr::ungroup() |>
     dplyr::distinct()
 
-  newdata <- newdata %>%
-    dplyr::rowwise() %>%
+  newdata <- newdata |>
+    dplyr::rowwise() |>
     dplyr::mutate(
       log_likelihood = log_likelihood(
         par = .data$coefs_vector,
@@ -231,11 +231,11 @@ logLik.pk <- function(object,
         force_finite = force_finite,
         suppress.messages = suppress.messages
       )
-    ) %>%
+    ) |>
     dplyr::select(-modelfun)
 
  if (drop_obs == TRUE) {
-   newdata <- newdata %>%
+   newdata <- newdata |>
      dplyr::select(-observations)
  }
 

@@ -105,14 +105,14 @@ fold_error.pk <- function(obj,
     if(suppress.messages %in% FALSE){
     message("fold_error.pk(): Predicted conc below pLOQ substituted with pLOQ")
     }
-    preds <- preds %>%
+    preds <- preds |>
       dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
                                               pLOQ,
                                               Conc_est))
   }
 
 #calculate fold error
-  preds <- preds %>%
+  preds <- preds |>
     mutate(Fold_Error = Conc_est / Conc,
            .after = Conc_est)
 

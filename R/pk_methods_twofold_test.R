@@ -99,8 +99,8 @@ twofold_test.pk <- function(obj,
 
 
   # Find how many detected observations per Chemical + Species + Route + Media + Dose
-  data_counts <- data_cvt %>%
-    dplyr::filter(Detect) %>%
+  data_counts <- data_cvt |>
+    dplyr::filter(Detect) |>
     dplyr::count(Chemical, Species, Reference,
                  Route, Media, Dose, Time, N_Subjects,
                  name = "Count")
@@ -114,7 +114,7 @@ twofold_test.pk <- function(obj,
   data_counts <- dplyr::left_join(data_counts, data_cvt,
                        by = c("Chemical", "Species", "Reference",
                               "Route", "Media", "Dose", "Time",
-                              "N_Subjects")) %>%
+                              "N_Subjects")) |>
     dplyr::mutate(data_descr = dplyr::case_when(
       (Count > 1 & N_Subjects == 1) ~ "Individual Data, Multiple Observations",
       (Count == 1 & N_Subjects == 1) ~ "Individual Data, Single Observation",
@@ -134,16 +134,16 @@ twofold_test.pk <- function(obj,
   sgroup_data <- subset(data_counts, subset = (data_descr %in% "Grouped Data w SD"))
   sgroup_nsd_data <- subset(data_counts, subset = (data_descr %in% "Grouped Data no SD"))
 
-  sgroup_data <- sgroup_data %>%
+  sgroup_data <- sgroup_data |>
     dplyr::mutate(conc_mean = Conc, conc_sd = Conc_SD)
 
-  sgroup_nsd_data <- sgroup_nsd_data %>%
+  sgroup_nsd_data <- sgroup_nsd_data |>
     dplyr::mutate(conc_mean = Conc, conc_sd = Conc_SD)
 
   # Next I will deal with individual data and
   # calculate mean and standard deviation for individual data
-  indiv_data_summary <- indiv_data %>%
-    dplyr::group_by(Chemical, Species, Reference, Route, Media, Dose, Time) %>%
+  indiv_data_summary <- indiv_data |>
+    dplyr::group_by(Chemical, Species, Reference, Route, Media, Dose, Time) |>
     dplyr::summarise(conc_mean = mean(Conc, na.rm = TRUE),
                      conc_sd = sd(Conc, na.rm = TRUE))
 
@@ -154,17 +154,17 @@ twofold_test.pk <- function(obj,
                                        names(sgroup_data)))]
 
   # Combined summarized data (indiv + sgroup)
-  total_data_summary <- dplyr::bind_rows(indiv_data_summary, sgroup_data) %>%
-    dplyr::ungroup() %>%
+  total_data_summary <- dplyr::bind_rows(indiv_data_summary, sgroup_data) |>
+    dplyr::ungroup() |>
     dplyr::mutate(twofold_95 = ((conc_mean + 2 * conc_sd) / conc_mean) <= 2)
 
-  twofold_95 <- total_data_summary %>%
-    dplyr::group_by(Route) %>%
+  twofold_95 <- total_data_summary |>
+    dplyr::group_by(Route) |>
     dplyr::summarise(within = sum(twofold_95),
                      outside = sum(!twofold_95))
-  all_95 <- total_data_summary %>%
+  all_95 <- total_data_summary |>
     dplyr::summarise(within = sum(twofold_95),
-                     outside = sum(!twofold_95)) %>%
+                     outside = sum(!twofold_95)) |>
     dplyr::mutate(Route = "All", .before = 1)
 
   twofold_95 <- dplyr::bind_rows(twofold_95, all_95)
@@ -176,22 +176,22 @@ twofold_test.pk <- function(obj,
   # Use indiv_data (id_) for individual data evaluations
   # Use total_data_summary (tds_) for summarized data evaluations
   # Add grouped mean of individual data to indiv_data
-  id_mean <- suppressMessages(dplyr::left_join(indiv_data, indiv_data_summary)) %>%
+  id_mean <- suppressMessages(dplyr::left_join(indiv_data, indiv_data_summary)) |>
     dplyr::mutate(foldConc = Conc / conc_mean)
 
   # Make a table of values with percent within or outside factors of two
   # Summarizing number of fold concentrations from the mean
-  id_twofold_route <- id_mean %>%
-    dplyr::group_by(Route) %>%
+  id_twofold_route <- id_mean |>
+    dplyr::group_by(Route) |>
     dplyr::summarise(above_twofold = sum(foldConc > 2),
                      within_twofold = sum(foldConc >= 0.5 & foldConc <= 2),
                      below_twofold = sum(foldConc < 0.5))
 
   # Also need a row for total
-  id_total_twofold <- id_mean %>%
+  id_total_twofold <- id_mean |>
     dplyr::summarise(above_twofold = sum(foldConc > 2),
                      within_twofold = sum(foldConc >= 0.5 & foldConc <= 2),
-                     below_twofold = sum(foldConc < 0.5)) %>%
+                     below_twofold = sum(foldConc < 0.5)) |>
     dplyr::mutate(Route = "All", .before = 1)
 
   ### Combine into single data.frame
@@ -217,29 +217,29 @@ twofold_test.pk <- function(obj,
                  model = model,
                  method = method,
                  sub_pLOQ = sub_pLOQ,
-                 suppress.messages = suppress.messages) %>%
-        dplyr::ungroup() %>%
-        dplyr::filter(Detect, !exclude) %>%
+                 suppress.messages = suppress.messages) |>
+        dplyr::ungroup() |>
+        dplyr::filter(Detect, !exclude) |>
         dplyr::semi_join(winmodel)
     )
 
     # Make a table of values with percent within or outside factors of two
     # Summarizing number of fold concentrations from the mean
     # Here I really only care about 1- and 2-compartment models
-    pred_twofold_summary <- pred_win %>%
-      dplyr::group_by(model, method) %>%
+    pred_twofold_summary <- pred_win |>
+      dplyr::group_by(model, method) |>
       dplyr::summarise(above_twofold = sum(Fold_Error > 2),
                        within_twofold = sum(dplyr::between(Fold_Error, 0.5, 2)),
                        below_twofold = sum(Fold_Error < 0.5))
 
     ###
     # Get totals for method
-    all_models <- pred_win %>%
-      dplyr::filter(!(model %in% "model_flat")) %>%
-      dplyr::group_by(method) %>%
+    all_models <- pred_win |>
+      dplyr::filter(!(model %in% "model_flat")) |>
+      dplyr::group_by(method) |>
       dplyr::summarise(above_twofold = sum(Fold_Error > 2),
                        within_twofold = sum(dplyr::between(Fold_Error, 0.5, 2)),
-                       below_twofold = sum(Fold_Error < 0.5)) %>%
+                       below_twofold = sum(Fold_Error < 0.5)) |>
       dplyr::mutate(model = "All non-flat", .before = 1)
 
     full_pred_twofold <- dplyr::bind_rows(pred_twofold_summary,
@@ -286,12 +286,12 @@ twofold_test.pk <- function(obj,
     )
     # Make a table of values with percent within or outside factors of two
     # Summarizing number of fold concentrations from the mean
-    data_pred_summary <- data_preds %>%
-      dplyr::group_by(model, method) %>%
+    data_pred_summary <- data_preds |>
+      dplyr::group_by(model, method) |>
       dplyr::summarise(across(c(.data$both_within:.data$data_outside), sum))
-    data_pred_summary_combo <- data_preds %>%
-      dplyr::group_by(method) %>%
-      dplyr::summarise(across(c(.data$both_within:.data$data_outside), sum)) %>%
+    data_pred_summary_combo <- data_preds |>
+      dplyr::group_by(method) |>
+      dplyr::summarise(across(c(.data$both_within:.data$data_outside), sum)) |>
       dplyr::mutate(model = "All", .before = 1)
     data_pred_summary <- dplyr::bind_rows(data_pred_summary, data_pred_summary_combo)
 
@@ -307,7 +307,7 @@ twofold_test.pk <- function(obj,
     ###
     # Here is when we take the 95% within two-fold summary data into account
     data95_preds <- dplyr::left_join(pred_win,
-                                     total_data_summary) %>%
+                                     total_data_summary) |>
       dplyr::filter(!is.na(twofold_95))
 
     data95_preds['both_within'] <- (dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
@@ -323,8 +323,8 @@ twofold_test.pk <- function(obj,
 
     # Make a table of values with percent within or outside factors of two
     # Summarizing number of fold concentrations from the mean
-    data95_pred_summary <- data95_preds %>%
-      dplyr::group_by(model, method) %>%
+    data95_pred_summary <- data95_preds |>
+      dplyr::group_by(model, method) |>
       dplyr::summarise(across(c(.data$both_within:.data$data_outside), sum))
 
     data95_pred_summary <- rowwise_calc_percentages(data95_pred_summary,

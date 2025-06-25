@@ -7,7 +7,6 @@
 #' @return Object of class [pk()] with an added `$data_info` list containing
 #' non-compartmental analysis results.
 #' @export
-#' @importFrom magrittr `%>%`
 #' @author Caroline Ring
 do_data_info.pk <- function(obj, ...) {
 
@@ -22,7 +21,7 @@ do_data_info.pk <- function(obj, ...) {
             status_data_info,
             ". Any results from later workflow stages will be lost.\n")
     # Here is where I need to implement logic for skipping if same data group
-    prev_summary <- obj$data_info$data_summary %>%
+    prev_summary <- obj$data_info$data_summary |>
       dplyr::select(Chemical:tlast_detect)
   }
 
@@ -100,11 +99,11 @@ do_data_info.pk <- function(obj, ...) {
   grp_vars_nca <- sapply(nca_group,
                          rlang::as_label)
 
-  nca_dose_norm <- nca_dose_norm_long %>%
+  nca_dose_norm <- nca_dose_norm_long |>
     tidyr::pivot_wider(id_cols = tidyselect::all_of(c(grp_vars_nca,
                                                       "dose_norm")),
                        names_from = param_name,
-                       values_from = param_value) %>%
+                       values_from = param_value) |>
     as.data.frame()
 
   # get data flags:
@@ -127,7 +126,7 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
   # Assess various flags
   df <- dplyr::inner_join(data_summary_nca,
                           nca_dose_norm,
-                          by = grp_vars_nca) %>%
+                          by = grp_vars_nca) |>
     dplyr::mutate(
       # Is tmax for oral data the first or last detected timepoint?
       data_flag = ifelse(
@@ -136,7 +135,7 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
           !is.na(tmax),
         "tmax is equal to time of first detect",
         NA_real_
-      )) %>% dplyr::mutate(
+      )) |> dplyr::mutate(
         data_flag = ifelse(
           Route %in% "oral" &
             (abs(tmax - tlast_detect) < sqrt(.Machine$double.eps)) %in% TRUE &
@@ -145,7 +144,7 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
                  "tmax is equal to time of last detect",
                  sep = " | "),
           data_flag
-        )) %>% dplyr::mutate(
+        )) |> dplyr::mutate(
           # CLtot/Fgutabs must be positive and AUC_infinity must also be positive
           data_flag = ifelse(
             (CLtot < 0) %in% TRUE |
@@ -154,7 +153,7 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
                    "CLtot or CLtot/Fgutabs is negative",
                    sep = " | "),
             data_flag)
-        ) %>% dplyr::mutate(
+        ) |> dplyr::mutate(
           data_flag = ifelse((AUC_infinity < 0) %in% TRUE,
                              paste2(data_flag,
                                     "AUC_infinity is negative",
@@ -164,9 +163,9 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
 
   # Other data flags:
   # Check for obeying dose normalization by summary_group - Dose
-  dose_norm_check <- df %>%
-    dplyr::group_by(!!!summary_group) %>%
-    dplyr::ungroup(Dose) %>%
+  dose_norm_check <- df |>
+    dplyr::group_by(!!!summary_group) |>
+    dplyr::ungroup(Dose) |>
     dplyr::reframe(
       n_dose_groups = dplyr::n_distinct(Dose),
       Cmax_fold_range = {
@@ -184,7 +183,7 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
       },
       data_flag_AUC = ifelse(AUC_fold_range > 2,
                              "AUC_infinity may not scale with dose. AUC/Dose range > 2-fold across dose groups for this group",
-                             NA_character_)) %>%
+                             NA_character_)) |>
     as.data.frame()
 
   obj$data_info <- list("data_summary" = data_summary_out,

@@ -228,8 +228,8 @@ req_vars <- unique(c(names(preds),
                      "pLOQ"))
 
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
-    dplyr::select(dplyr::all_of(req_vars)) %>%
+  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) |>
+    dplyr::select(dplyr::all_of(req_vars)) |>
     dplyr::ungroup())
 
   #replace below-LOQ preds with pLOQ if specified
@@ -237,7 +237,7 @@ req_vars <- unique(c(names(preds),
     if(suppress.messages %in% FALSE){
     message("rsq.pk(): Predicted conc below pLOQ substituted with pLOQ")
     }
-    new_preds <- new_preds %>%
+    new_preds <- new_preds |>
       dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
                                               pLOQ,
                                               Conc_est))
@@ -245,7 +245,7 @@ req_vars <- unique(c(names(preds),
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
-  rsq_df <- new_preds %>%
+  rsq_df <- new_preds |>
     dplyr::mutate(
       Conc_set = dplyr::if_else(
         rep(conc_scale$dose_norm, NROW(Conc)),
@@ -262,18 +262,18 @@ req_vars <- unique(c(names(preds),
         Conc_est / Dose,
         Conc_est
       )
-    ) %>%
-    dplyr::ungroup() %>%
+    ) |>
+    dplyr::ungroup() |>
     dplyr::group_by(!!!rsq_group,
-                    model, method) %>%
+                    model, method) |>
     dplyr::summarize(
       Rsq = calc_rsq(obs = Conc_set,
                        obs_sd = Conc_set_SD,
                        pred = Conc_est,
                        n_subj = N_Subjects,
                        detect = Detect,
-                       log10_trans = conc_scale$log10_trans)) %>%
-    # dplyr::distinct() %>%
+                       log10_trans = conc_scale$log10_trans)) |>
+    # dplyr::distinct() |>
     dplyr::ungroup()
 
   if(suppress.messages %in% FALSE){
