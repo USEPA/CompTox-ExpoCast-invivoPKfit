@@ -23,7 +23,7 @@ multiple iterations of the optimization procedure.
 ```{r}
 load_dawson2021()
 schems <- httk::get_cheminfo("dtxsid", species = "rat",
-                             model = "3compartment2") |>
+                             model = "gas_pbtk") |>
   suppressWarnings()
 
 sum(unique(cvt$analyzed_chem_dtxsid) %in% schems)
@@ -36,6 +36,23 @@ minicvt <- subset(
 
 table(minicvt$analyzed_chem_dtxsid)
 ```
+
+Initial test with regular models.
+
+```{r}
+test_pk2 <- pk(data = minicvt) + 
+  stat_error_model(error_group = vars(Chemical, Species)) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE)
+
+test_pk2 <- do_data_info(test_pk)
+test_pk2 <- do_prefit(test_pk)
+test_fit2 <- do_fit(test_pk, n_cores = 4)
+winmodel2 <- get_winning_model(test_fit)
+
+
+```
+
+
 
 First I want to try just the clearance-aware 1-compartment models
 
