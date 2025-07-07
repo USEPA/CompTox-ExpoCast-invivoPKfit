@@ -134,7 +134,7 @@ Other built-in model functions:
 \code{\link{transformed_params_2comp}()}
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }
 \concept{1-compartment model functions}
 \concept{built-in model functions}

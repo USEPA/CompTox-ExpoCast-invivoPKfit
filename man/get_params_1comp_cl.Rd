@@ -7,15 +7,16 @@
 get_params_1comp_cl(
   data,
   lower_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Q_alv = NA, Kblood2air = NA, BW =
-    NA, Fup = 0, Clint = 0, Vdist = NA, Fgutabs = NA, kgutabs = NA, Rblood2plasma = NA),
+    NA, Fup = 0, Clint = 0, Vdist = NA, Fgutabs = NA, kgutabs = NA, liver_mass = NA,
+    Rblood2plasma = NA),
   upper_bound = ggplot2::aes(Q_totli = NA, Q_gfr = NA, Q_alv = NA, Kblood2air = NA, BW =
-    NA, Fup = 1, Clint = 1e+05, Vdist = NA, Fgutabs = NA, kgutabs = NA, Rblood2plasma =
-    NA),
+    NA, Fup = 1, Clint = 1e+05, Vdist = NA, Fgutabs = NA, kgutabs = NA, liver_mass = NA,
+    Rblood2plasma = NA),
   param_units = ggplot2::aes(Q_totli = "L/h/kg BW^3/4", Q_gfr = "L/h/kg BW^3/4", Q_alv =
     "L/h/kg BW^3/4", Kblood2air = "unitless ratio", BW = "kg", Fup = "unitless fraction",
     Clint = "uL/min/10^6 hepatocytes", Vdist = paste0("(", unique(Dose.Units), ")", "/",
     "(", unique(Conc.Units), ")"), Fgutabs = "unitless fraction", kgutabs = paste0("1/",
-    unique(Time_trans.Units)), Rblood2plasma = "unitless ratio"),
+    unique(Time_trans.Units)), liver_mass = "g/kg BW", Rblood2plasma = "unitless ratio"),
   restrictive = FALSE
 )
 }

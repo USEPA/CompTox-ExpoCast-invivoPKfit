@@ -4,7 +4,7 @@
 \alias{calc_nca}
 \title{Non-compartmental analysis}
 \usage{
-calc_nca(time, conc, detect, series_id = NULL, dose, route, method = "z", ...)
+calc_nca(time, conc, detect, dose, route, series_id = NULL, method = "z", ...)
 }
 \arguments{
 \item{time}{A numeric vector of time points.}
@@ -16,17 +16,17 @@ detection/quantification), contains the measured value; if not detected
 \item{detect}{A logical vector: Whether each concentration was detected
 (above LOD/LOQ) or not.}
 
+\item{dose}{A numeric scalar: The dose for this data set.}
+
+\item{route}{A character scalar: The route of administration for this data
+set. Currently, only "oral" and "iv" are supported.}
+
 \item{series_id}{Optional: A variable that can be coerced to a factor,
 identifying individual time series (e.g., individual replicates --
 individual subjects, or replicate dose groups). Default NULL, in which case
 each observation will be assumed to have a different series ID. In other
 words, a serial sampling design will be assumed, in which each observation
 is from a different subject.}
-
-\item{dose}{A numeric scalar: The dose for this data set.}
-
-\item{route}{A character scalar: The route of administration for this data
-set. Currently, only "oral" and "iv" are supported.}
 
 \item{method}{As for [PK::nca()]: the method to use for calculation of
 confidence intervals. Default `'z'` (this differs from the [PK::nca()]
