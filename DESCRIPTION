@@ -41,9 +41,7 @@ Imports:
     stats,
     scales,
     tibble,
-    tidyr,
-    tidyselect,
-    janitor
+    tidyr
 Suggests: 
     cowplot,
     knitr,
