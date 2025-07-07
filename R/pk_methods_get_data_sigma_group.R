@@ -19,9 +19,8 @@ if (is.null(newdata)) {
   data_sigma_group <- interaction(
     lapply(
       obj$stat_error_model$error_group,
-      function(x) {
-        rlang::eval_tidy(x, data = newdata)
-      }
+      rlang::eval_tidy,
+      data = newdata
     )
   )
 

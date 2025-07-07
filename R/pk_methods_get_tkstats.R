@@ -188,15 +188,14 @@ get_tkstats.pk <- function(obj,
     tidyr::unnest(cols = TKstats)
 
 
-  if(suppress.messages %in% FALSE){
+  if (suppress.messages %in% FALSE) {
   # Print reference list of units for the parameters
   # The column is filtered out after pivoting
   message("get_tkstats.pk(): Here are the units for the estimated TK statistics: ")
-  print(
     tkstats_all |>
       dplyr::ungroup() |>
-      dplyr::distinct(param_name, param_units)
-  )
+      dplyr::distinct(param_name, param_units) |>
+      print()
   }
 
   tkstats_all <- tkstats_all |>
@@ -206,19 +205,17 @@ get_tkstats.pk <- function(obj,
     dplyr::group_by(!!!tk_group)
 
   if (dose_norm) {
-    tkstats_all <- tkstats_all |>
-      dplyr::select(!Dose)
-if(suppress.messages %in% FALSE){
-    message("get_tkstats.pk(): Dose column removed because these TK statistics are dose normalized")
-}
+    tkstats_all <- dplyr::select(tkstats_all, !Dose)
+    if (suppress.messages %in% FALSE) {
+      message("get_tkstats.pk(): Dose column removed because these TK statistics are dose normalized")
+    }
   }
 
   # Final filtering of tkstats_all
   tkstats_all <- tkstats_all[!names(tkstats_all) %in% c("coefs_vector", "tk_fun")] |>
     dplyr::relocate(!!!tk_group, Dose.Units, Conc.Units) |>
-    dplyr::ungroup()
-
-  tkstats_all <- tkstats_all |> dplyr::distinct()
+    dplyr::ungroup() |>
+    dplyr::distinct()
 
   return(tkstats_all)
 }

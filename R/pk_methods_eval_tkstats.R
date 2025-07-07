@@ -12,7 +12,7 @@
 #'   variables are `param_name` and `param_value`.) Additionally, there will be
 #'   a variable `method` denoting the [optimx::optimx()] method used to optimize
 #'   the set of model parameters used to derive each set of TK statistics.
-#' @import tidyselect
+#' @import dplyr
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado, John Wambaugh
 #' @family methods for fitted pk objects
@@ -48,7 +48,7 @@ eval_tkstats.pk <- function(obj,
   if (all(model %in% "winning")) {
     win <- TRUE
     model <- names(obj$stat_model)
-  }else{
+  } else {
     win <- FALSE
   }
   model_ok <- check_model(obj = obj, model = model)
@@ -85,7 +85,7 @@ eval_tkstats.pk <- function(obj,
     newdata$Dose <- newdata$Dose / newdata$Dose
   } # Need this transformation for get_tkstats
 
-  if(win %in% TRUE){
+  if (win %in% TRUE) {
   # Get the winning model for filtering
   winmodel_df <- get_winning_model.pk(obj = obj,
                                    method = method) |>
@@ -105,7 +105,7 @@ eval_tkstats.pk <- function(obj,
     tidyr::pivot_wider(names_from = param_name,
                        values_from = param_value)
 
-  if(win %in% TRUE){
+  if (win %in% TRUE) {
     nca_df <- nca_df |>
       dplyr::right_join(winmodel_df,
                         relationship = "many-to-many",
@@ -125,8 +125,8 @@ eval_tkstats.pk <- function(obj,
                             suppress.messages = suppress.messages) |>
     ungroup()
 
-  if(win %in% TRUE){
-    tkstats_df <- dplyr::left_join(winmodel_df |> dplyr::ungroup(),
+  if (win %in% TRUE) {
+    tkstats_df <- dplyr::left_join(dplyr::ungroup(winmodel_df),
                                    tkstats_df,
                                    by = c(data_grp_vars, "method", "model"))
   }
@@ -134,11 +134,11 @@ eval_tkstats.pk <- function(obj,
   # prepare for merge
   nca_df_red <- nca_df |>
     dplyr::rename_with(~ paste0(.x, ".nca", recycle0 = TRUE),
-                       !tidyselect::any_of(c(grp_vars, "model", "method")))
+                       !dplyr::any_of(c(grp_vars, "model", "method")))
 
   tkstats_df_red <- tkstats_df |>
     dplyr::rename_with(~ paste0(.x, ".tkstats", recycle0 = TRUE),
-                       !tidyselect::any_of(c(grp_vars,
+                       !dplyr::any_of(c(grp_vars,
                                              "Dose.Units", "Conc.Units",
                                              "Time.Units", "Time_trans.Units",
                                              "Rblood2plasma", "model", "method")

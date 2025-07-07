@@ -98,8 +98,7 @@ data_summary.pk <- function(obj,
 
     )
 
-  data_summary <- data_summary |>
-    as.data.frame()
+  data_summary <- as.data.frame(data_summary)
 
   return(data_summary)
 }

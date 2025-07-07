@@ -83,23 +83,24 @@ cp_2comp <- function(params,
   # for readability, assign transformed params to variables inside this function
   list2env(as.list(trans_params), envir = as.environment(-1))
 
+  Cp <- rep(NA_real_, length(time))
+  iv_vec <- (route == "iv")
+  or_vec <- (route == "oral")
+  blood_vec <- (medium == "blood")
+
   # get predicted concentration
-  cp <- dose * ifelse(route %in% "iv",
-                      (
-                        A_iv_unit * exp(-alpha * time)
-                        + B_iv_unit * exp(-beta * time)
-                      ),
-                      (
-                        A_oral_unit * exp(-alpha * time)
-                        + B_oral_unit * exp(-beta * time)
-                        - (A_oral_unit + B_oral_unit) * exp(-kgutabs * time)
-                      )
+  Cp[iv_vec] <- dose[iv_vec] * (
+    A_iv_unit * exp(-alpha * time[iv_vec]) +
+      B_iv_unit * exp(-beta * time[iv_vec])
   )
 
-  cp <- ifelse(medium %in% "blood",
-               Rblood2plasma * cp,
-               cp
+  Cp[or_vec] <- dose[or_vec] * (
+    (A_oral_unit * exp(-alpha * time[or_vec])) +
+      (B_oral_unit * exp(-beta * time[or_vec])) -
+      ((A_oral_unit + B_oral_unit) * exp(-kgutabs * time[or_vec]))
   )
 
-  return(cp)
+  Cp[blood_vec] <- Cp[blood_vec] * Rblood2plasma
+
+  return(Cp)
 }

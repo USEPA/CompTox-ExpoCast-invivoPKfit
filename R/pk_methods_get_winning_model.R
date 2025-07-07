@@ -89,11 +89,11 @@ get_winning_model.pk <- function(obj,
    dplyr::mutate(
     near_flat = dplyr::if_else(
       !is.null(dplyr::pick(
-        tidyselect::everything())$RMSE[which(
-          dplyr::pick(tidyselect::everything())$model == "model_flat")]),
+        dplyr::everything())$RMSE[which(
+          dplyr::pick(dplyr::everything())$model == "model_flat")]),
        all(RMSE / dplyr::pick(
-         tidyselect::everything())$RMSE[which(
-         dplyr::pick(tidyselect::everything())$model == "model_flat")] >= 0.95),
+         dplyr::everything())$RMSE[which(
+         dplyr::pick(dplyr::everything())$model == "model_flat")] >= 0.95),
        FALSE, missing = NA)
    )
  # match the methods

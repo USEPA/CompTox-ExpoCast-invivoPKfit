@@ -103,7 +103,7 @@ get_starts_1comp_cl <- function(data,
         ) |>
           tolower() |>
           trimws()
-        if (startsWith(response, 'y')) {
+        if (startsWith(response, "y")) {
           httk::parameterize_3comp2(
             dtxsid = "DTXSID7020182",
             species = this_species,

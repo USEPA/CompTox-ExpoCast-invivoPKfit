@@ -190,13 +190,11 @@ predict.pk <- function(object,
             ),
             error = function(err) {
               if (suppress.messages %in% FALSE) {
-                message("predict.pk(): Unable to run ",
-                        predfun, " for ",
-                        toString(data_group_vars),
-                        " data grouping.\n",
-                        "Likely an aborted fit, ",
-                        "it is missing estimated parameters."
-                )
+                cli_inform(c(
+                  "!" = paste("predict.pk(): Unable to run",
+                        "{predfun} for {data_group_vars} data grouping."),
+                        "!" = "Likely an aborted fit, it is missing estimated parameters."
+                ))
               }
               # Return Value
               NA_real_
@@ -220,24 +218,24 @@ predict.pk <- function(object,
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
   # note that it doesn't make sense to log10-trans AUC
     if (suppress.messages %in% FALSE) {
-      message("predict.pk(): Log10 transformation was specified, ",
-              "but was not used because `type == 'AUC'`.")
+      cli_inform(paste("predict.pk(): Log10 transformation was specified,",
+                         "but was not used because `type == 'AUC'`."))
     }
   }
 
   if (suppress.messages %in% FALSE) {
     if (conc_scale$dose_norm) {
-    message("predict.pk(): Note that the predicted values are for dose 1.0 (dose-normalized)")
+    cli_inform("predict.pk(): Note that the predicted values are for dose 1.0 (dose-normalized)")
   } else {
-    message("predict.pk(): Note that the predicted values are not dose-normalized")
+    cli_inform("predict.pk(): Note that the predicted values are not dose-normalized")
   }
   }
 
-  message("predict.pk(): These predictions have been made using un-scaled Time ",
-          "and 1/hour rate constants from coefs()")
+  cli_inform(paste("predict.pk(): These predictions have been made using un-scaled Time ",
+                   "and 1/hour rate constants from coefs()"))
 
   if (NROW(newdata) == 0L) {
-    warning("predict.pk: The output is empty, please check your input.")
+    cli_warn("predict.pk: The output is empty, please check your input.")
   }
 
   return(newdata)

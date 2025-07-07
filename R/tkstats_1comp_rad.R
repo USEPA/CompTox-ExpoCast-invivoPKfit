@@ -70,10 +70,10 @@ tkstats_1comp_rad <- function(pars,
 
 
   # Set a Fup specific to the liver for clearance
-  if (!restrictive) {
-    Fup_hep <- 1
-  } else {
+  if (restrictive) {
     Fup_hep <- Fup
+  } else {
+    Fup_hep <- 1
   }
 
   # compute total clearance

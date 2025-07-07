@@ -145,8 +145,8 @@ coef_sd.pk <- function(obj,
 
   # This setup allows for a more stable call to the model functions later on
   fun_models <- data.frame(
-    model = unname(sapply(obj$stat_model, \(x) {x$name})),
-    modelfun = unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
+    model = unname(sapply(obj$stat_model, \(x) x$name)),
+    modelfun = unname(sapply(obj$stat_model, \(x) x$conc_fun))
   )
 
   newdata <- dplyr::left_join(coefs, newdata, by = data_grp_vars) |>
@@ -181,13 +181,16 @@ coef_sd.pk <- function(obj,
   coefs_long <- newdata |>
     dplyr::select(model, method, !!!obj$data_group, coefs_vector) |>
     dplyr::group_by(model, method, !!!obj$data_group) |>
-    dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) as.list(x) |>
-                                              as.data.frame() |>
-                                              tidyr::pivot_longer(
-                                                cols = tidyselect::everything(),
-                                                names_to = "param_name",
-                                                values_to = "param_value"
-                                              ))) |>
+    dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) {
+      as.list(x) |>
+        as.data.frame() |>
+        tidyr::pivot_longer(
+          cols = dplyr::everything(),
+          names_to = "param_name",
+          values_to = "param_value"
+        )
+    }
+    )) |>
     tidyr::unnest(coefs_tibble) |>
     dplyr::ungroup() |>
     dplyr::select(-c(coefs_vector))
@@ -206,12 +209,13 @@ coef_sd.pk <- function(obj,
 
   #add information about whether each parameter was optimized or not
   #to explain why some params don't have an SD
-  param_type <- obj$fit |>
-    dplyr::select(model, method,
-                  !!!obj$data_group,
-                  param_name,
-                  optimize_param,
-                  use_param)
+  param_type <- dplyr::select(obj$fit,
+                              model,
+                              method,
+                              !!!obj$data_group,
+                              param_name,
+                              optimize_param,
+                              use_param)
 
   output <- output |>
     dplyr::left_join(param_type,

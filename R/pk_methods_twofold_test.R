@@ -123,7 +123,7 @@ twofold_test.pk <- function(obj,
       .default = NA_character_
     ))
 
-  out_list[['data_descriptors']] <- data_counts
+  out_list[["data_descriptors"]] <- data_counts
 
   # There must be at least 2 values per timepoint for individual data or else
   # Conc is equal to mean(Conc)
@@ -134,11 +134,11 @@ twofold_test.pk <- function(obj,
   sgroup_data <- subset(data_counts, subset = (data_descr %in% "Grouped Data w SD"))
   sgroup_nsd_data <- subset(data_counts, subset = (data_descr %in% "Grouped Data no SD"))
 
-  sgroup_data <- sgroup_data |>
-    dplyr::mutate(conc_mean = Conc, conc_sd = Conc_SD)
+  sgroup_data <- dplyr::mutate(sgroup_data,
+                               conc_mean = Conc, conc_sd = Conc_SD)
 
-  sgroup_nsd_data <- sgroup_nsd_data |>
-    dplyr::mutate(conc_mean = Conc, conc_sd = Conc_SD)
+  sgroup_nsd_data <- dplyr::mutate(sgroup_nsd_data,
+                                   conc_mean = Conc, conc_sd = Conc_SD)
 
   # Next I will deal with individual data and
   # calculate mean and standard deviation for individual data
@@ -204,7 +204,7 @@ twofold_test.pk <- function(obj,
   # First three outputs
   out_list[["individual_data"]] <- id_mean
   out_list[["summarized_data_test"]] <- twofold_95
-  out_list[['indiv_data_test']] <- id_total_twofold
+  out_list[["indiv_data_test"]] <- id_total_twofold
 
 # If predictions are possible
   if (status == 5) {
@@ -212,16 +212,15 @@ twofold_test.pk <- function(obj,
     winmodel <- get_winning_model(obj = obj)
 
     # Only keep detects and non-excluded (observations to compare to)
-    pred_win <- suppressMessages(
-      fold_error(obj = obj,
+    pred_win <- fold_error(obj = obj,
                  model = model,
                  method = method,
                  sub_pLOQ = sub_pLOQ,
                  suppress.messages = suppress.messages) |>
         dplyr::ungroup() |>
         dplyr::filter(Detect, !exclude) |>
-        dplyr::semi_join(winmodel)
-    )
+        dplyr::semi_join(winmodel) |>
+      suppressMessages()
 
     # Make a table of values with percent within or outside factors of two
     # Summarizing number of fold concentrations from the mean
@@ -251,8 +250,8 @@ twofold_test.pk <- function(obj,
 
     ##
     # Output these data.frames
-    out_list[['model_error_all']] <- pred_win
-    out_list[['model_error_summary']] <- full_pred_twofold
+    out_list[["model_error_all"]] <- pred_win
+    out_list[["model_error_summary"]] <- full_pred_twofold
 
     ##
     # This merge should have both Fold_Error AND foldConc
@@ -265,22 +264,22 @@ twofold_test.pk <- function(obj,
                         relationship = "many-to-many")
     )
 
-    data_preds['both_within'] <- (
+    data_preds["both_within"] <- (
       dplyr::between(data_preds$Fold_Error, 0.5, 2) &
         dplyr::between(data_preds$foldConc, 0.5, 2)
     )
 
-    data_preds['both_outside'] <- (
+    data_preds["both_outside"] <- (
       !dplyr::between(data_preds$Fold_Error, 0.5, 2) &
         !dplyr::between(data_preds$foldConc, 0.5, 2)
     )
 
-    data_preds['model_outside'] <- (
+    data_preds["model_outside"] <- (
       !dplyr::between(data_preds$Fold_Error, 0.5, 2) &
         dplyr::between(data_preds$foldConc, 0.5, 2)
     )
 
-    data_preds['data_outside'] <- (
+    data_preds["data_outside"] <- (
       dplyr::between(data_preds$Fold_Error, 0.5, 2) &
         !dplyr::between(data_preds$foldConc, 0.5, 2)
     )
@@ -299,8 +298,8 @@ twofold_test.pk <- function(obj,
                                                   group_cols = c("model",
                                                                  "method"))
 
-    out_list[['indiv_data_fold_errors']] <- data_preds
-    out_list[['indiv_data_test_fold_errors']] <- data_pred_summary
+    out_list[["indiv_data_fold_errors"]] <- data_preds
+    out_list[["indiv_data_test_fold_errors"]] <- data_pred_summary
     out_list[["fold_errors_data_descriptors"]] <- merge(pred_win, data_counts,
                                                           all.x = TRUE)
 
@@ -310,15 +309,15 @@ twofold_test.pk <- function(obj,
                                      total_data_summary) |>
       dplyr::filter(!is.na(twofold_95))
 
-    data95_preds['both_within'] <- (dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
+    data95_preds["both_within"] <- (dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
                                       (data95_preds$twofold_95))
 
-    data95_preds['both_outside'] <- (!dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
+    data95_preds["both_outside"] <- (!dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
                                        !(data95_preds$twofold_95))
 
-    data95_preds['model_outside'] <- (!dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
+    data95_preds["model_outside"] <- (!dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
                                         (data95_preds$twofold_95))
-    data95_preds['data_outside'] <- (dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
+    data95_preds["data_outside"] <- (dplyr::between(data95_preds$Fold_Error, 0.5, 2) &
                                        !(data95_preds$twofold_95))
 
     # Make a table of values with percent within or outside factors of two
@@ -331,7 +330,7 @@ twofold_test.pk <- function(obj,
                                                   group_cols = c("model",
                                                                  "method"))
 
-    out_list[['summarized_data_model_error']] <- data95_pred_summary
+    out_list[["summarized_data_model_error"]] <- data95_pred_summary
 
     ###
   } else { # This is the case where the model has not been fit
@@ -342,22 +341,22 @@ twofold_test.pk <- function(obj,
   if (!suppress.messages) {
     cat("\n\n")
     message("Data Summary of 95% of mean-normalized Concentrations within 2-fold Test")
-    print(out_list[['summarized_data_test']])
+    print(out_list[["summarized_data_test"]])
 
     # Print the summaries
-    if(suppress.messages %in% FALSE){
+    if (suppress.messages %in% FALSE) {
     cat("\n\n")
     message("Result: Individual Data Fold Concentration from Mean 2-fold Test")
-    print(out_list[['indiv_data_test']])
+    print(out_list[["indiv_data_test"]])
 
     if (status == 5) {
       cat("\n\n")
       message("Result: Model Fold Error Summary")
-      print(out_list[['model_error_summary']])
+      print(out_list[["model_error_summary"]])
 
       cat("\n\n")
       message("Result: Individual Data and Model Error Test")
-      print(out_list[['indiv_data_test_fold_errors']])
+      print(out_list[["indiv_data_test_fold_errors"]])
     }
     }
   }
@@ -389,12 +388,13 @@ rowwise_calc_percentages <- function(data,
   }
 
   # Calculate total
-  data$total <- apply(data[op_cols], 1, sum)
+  data$total <- rowSums(data[op_cols])
 
   # Calculate percentages
-  data[paste0("percent_", op_cols)] <- apply(data[op_cols], 2,
-                                             \(x) signif(100 * x / data$total,
-                                                         4))
+  data[paste0("percent_", op_cols)] <- apply(
+    data[op_cols], 2,
+    \(x) signif(100 * x / data$total, 4)
+  )
 
   return(data)
 }

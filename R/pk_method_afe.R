@@ -133,17 +133,15 @@ AFE.pk <- function(obj,
                        "pLOQ"))
 
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) |>
-                                  dplyr::select(dplyr::all_of(req_vars)) |>
-                                  dplyr::ungroup())
+  new_preds <- dplyr::left_join(preds, newdata) |>
+    dplyr::select(dplyr::all_of(req_vars)) |>
+    dplyr::ungroup() |>
+    suppressMessages()
 
   #replace below-LOQ preds with pLOQ if specified
-  if(sub_pLOQ %in% TRUE){
+  if (sub_pLOQ %in% TRUE) {
     message("AFE.pk(): Predicted conc below pLOQ substituted with pLOQ")
-    new_preds <- new_preds |>
-      dplyr::mutate(Conc_est_tmp = dplyr::if_else(Conc_est < pLOQ,
-                                              pLOQ,
-                                              Conc_est))
+    new_preds$Conc_est_tmp <- pmax(Conc_est, pLOQ)
   }
 
   #if Conc censored and Conc_est_tmp < LOQ, make fold error 1

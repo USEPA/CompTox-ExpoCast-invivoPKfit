@@ -148,11 +148,12 @@ logLik.pk <- function(object,
                                          to = "hours")
       newdata$Time_trans.Units <- rep("hours", nrow(newdata))
     }
-    if (!suppress.messages & (object$status < 5)) {
-      print(newdata |>
-              dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) |>
-              dplyr::filter(Time.Units != Time_trans.Units) |>
-              dplyr::distinct())
+    if (!suppress.messages && (object$status < 5)) {
+      newdata |>
+        dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) |>
+        dplyr::filter(Time.Units != Time_trans.Units) |>
+        dplyr::distinct() |>
+        print()
     }
   }
 
@@ -189,9 +190,10 @@ logLik.pk <- function(object,
                             pLOQ)
 
 
-  newdata <- suppressMessages(newdata |>
+  newdata <- newdata |>
     dplyr::select(!!!union(object$data_group, req_vars),
-                  !!!other_vars))
+                  !!!other_vars) |>
+    suppressMessages()
 
     newdata <- newdata |>
       dplyr::group_by(!!!object$data_group) |>
@@ -235,8 +237,7 @@ logLik.pk <- function(object,
     dplyr::select(-modelfun)
 
  if (drop_obs == TRUE) {
-   newdata <- newdata |>
-     dplyr::select(-observations)
+   newdata <- dplyr::select(newdata, -observations)
  }
 
   return(newdata)

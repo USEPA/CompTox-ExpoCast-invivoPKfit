@@ -85,35 +85,31 @@ auc_1comp <- function(params,
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
-  auc <- dose * ifelse(route %in% "iv",
-                       (# iv route
-                         1 / (Vdist * kelim)
-                         - exp(-time * kelim) / (Vdist * kelim)
-                       ), # oral route
-                       ifelse(rep(kelim != kgutabs,  length(route)),
-                              # equation when kelim != kgutabs
-                              (
-                                -Fgutabs_Vdist * kgutabs
-                                * (1 / kgutabs - 1 / kelim)
-                                / ((-kelim + kgutabs))
-                                + Fgutabs_Vdist * kgutabs
-                                * (exp(-time * kgutabs) / kgutabs
-                                   - exp(-time * kelim) / kelim)
-                                / ((-kelim + kgutabs))
-                              ),
-                              # alternate equation when kelim == kgutabs
-                              (
-                                Fgutabs_Vdist / (kelim)
-                                + (-Fgutabs_Vdist * time* kelim - Fgutabs)
-                                * exp(-time * kelim)
-                                / (kelim)
-                              )
-                       )
+  auc <- rep(NA_real_, length(time))
+  iv_vec <- (route == "iv")
+  or_eq_vec <- (route == "oral" & kelim == kgutabs)
+  or_ne_vec <- (route == "oral" & kelim != kgutabs)
+  blood_vec <- (medium == "blood")
+
+  auc[iv_vec] <- dose[iv_vec] * (1 / (Vdist * kelim)) -
+    exp(-time[iv_vec] * kelim) / (Vdist * kelim)
+
+  auc[or_eq_vec] <- dose[or_eq_vec] * (
+    -Fgutabs_Vdist * kgutabs *
+      (1 / kgutabs - 1 / kelim) / ((-kelim + kgutabs)) +
+      Fgutabs_Vdist * kgutabs *
+      (exp(-time[or_eq_vec] * kgutabs) / kgutabs -
+         exp(-time[or_eq_vec] * kelim) / kelim) / ((-kelim + kgutabs))
   )
 
-  auc <- ifelse(medium %in% "blood",
-                Rblood2plasma * auc,
-                auc)
+  auc[or_ne_vec] <- dose[or_ne_vec] * (
+    Fgutabs_Vdist / (kelim)
+    + (-Fgutabs_Vdist * time[or_ne_vec] * kelim - Fgutabs)
+    * exp(-time[or_ne_vec] * kelim)
+    / (kelim)
+  )
+
+  auc[blood_vec] <- auc[blood_vec] * Rblood2plasma
 
   return(auc)
 }

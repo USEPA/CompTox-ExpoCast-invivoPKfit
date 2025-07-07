@@ -241,22 +241,22 @@ get_params_1comp_cl <- function(
   }
 
   param_units_vect <- sapply(param_units,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   param_units_vect <- param_units_vect[param_name]
 
   lower_bound_vect <- sapply(lower_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   lower_bound_vect <- lower_bound_vect[param_name]
 
   upper_bound_vect <- sapply(upper_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   upper_bound_vect <- upper_bound_vect[param_name]
@@ -284,8 +284,8 @@ get_params_1comp_cl <- function(
   # Notify user which starts are out of bounds:
   if (any(start_low | start_high | start_nonfin)) {
 
-    oob_starts <- par_DF[start_low | start_high,][["param_name"]]
-    inf_starts <- par_DF[start_nonfin,][["param_name"]]
+    oob_starts <- par_DF[start_low | start_high, ][["param_name"]]
+    inf_starts <- par_DF[start_nonfin, ][["param_name"]]
     if (!all(start_nonfin)) {
       message("There are out of bounds starting values detected for ",
               paste(unique(data$Chemical), unique(data$Species), collapse = "|"),

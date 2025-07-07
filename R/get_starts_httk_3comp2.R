@@ -74,6 +74,9 @@ get_starts_httk_3comp2 <- function(data,
                                    this_species,
                                    restrictive) {
 
+  ## TODO: Modify this and get_params_httk_3comp2() to use gas_pbtk model
+  ## This is likely to present more stable solutions currently.
+  ## Delete this comment when done with this task
   parm_3comp2 <- tryCatch(
     expr = {
       httk::parameterize_3comp2(
@@ -95,7 +98,7 @@ get_starts_httk_3comp2 <- function(data,
         ) |>
           tolower() |>
           trimws()
-        if (startsWith(response, 'y')) {
+        if (startsWith(response, "y")) {
           httk::parameterize_3comp2(
             dtxsid = "DTXSID7020182",
             species = this_species,
@@ -152,8 +155,8 @@ get_starts_httk_3comp2 <- function(data,
 
   if (all(sapply(parm_3comp2, is.na))) {
 
-    starts["pKa_Donor"] = c(pKa_Donor = ' ')
-    starts["pKa_Accept"] = c(pKa_Accept = ' ')
+    starts["pKa_Donor"] = c(pKa_Donor = " ")
+    starts["pKa_Accept"] = c(pKa_Accept = " ")
 
     par_DF$start <- as.numeric(starts[par_DF$param_name])
     return(par_DF)
@@ -184,7 +187,7 @@ get_starts_httk_3comp2 <- function(data,
                           "lower_bound" = NA_real_,
                           "upper_bound" = NA_real_,
                           "start" = tmp_pKa_Accept)
-  # Note: Even when the pKa = ' ' = NA, there will be a pKa_[Donor/Accept]_1
+  # Note: Even when the pKa = " " = NA, there will be a pKa_[Donor/Accept]_1
 
   # Assemble the entire parameter data.frame
   par_DF$start <- as.numeric(starts[par_DF$param_name])

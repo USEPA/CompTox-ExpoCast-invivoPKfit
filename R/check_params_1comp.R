@@ -49,11 +49,9 @@ check_params_1comp <- function(params,
     }
   }
 
-  if (any(medium %in% "blood")) {
-    if (!("Rblood2plasma" %in% names(params)[is.finite(params)])) {
-      msg <- (paste0("Error: For 1-compartment model ",
-                  "in blood: missing parameter Rblood2plasma"))
-    }
+  if (any(medium %in% "blood") && !"Rblood2plasma" %in% names(params)[is.finite(params)]) {
+    msg <- (paste0("Error: For 1-compartment model ",
+                   "in blood: missing parameter Rblood2plasma"))
   }
 
   return(msg)

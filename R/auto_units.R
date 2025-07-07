@@ -98,7 +98,7 @@ auto_units <- function(y,
   delta_target_dist <- target_dist_new - target_dist
   target_dist <- target_dist_new
 
-  while (i > 1 & i < length(period_units) & delta_target_dist < 0) {
+  while (i > 1 && i < length(period_units) && delta_target_dist < 0) {
     # try the next step
     i_new <- i + dir
     y_mid_new <- midpt_log10(

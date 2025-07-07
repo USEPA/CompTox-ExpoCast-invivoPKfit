@@ -52,8 +52,7 @@
 #' @export cp_2comp_dt
 #' @family built-in model functions
 #' @family 2-compartment model functions
-cp_2comp_dt <- function(params, time, dose, route, medium)
-{
+cp_2comp_dt <- function(params, time, dose, route, medium) {
   # fill any missing parameters with NAs, and impute Fgutabs_v1 from Fgutabs and
   # V1 if necessary
   params <- fill_params_2comp(params)

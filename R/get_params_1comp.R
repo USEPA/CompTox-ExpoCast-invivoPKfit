@@ -215,22 +215,22 @@ get_params_1comp <- function(
   }
 
   param_units_vect <- sapply(param_units,
-                           function(x) rlang::eval_tidy(x,
-                                     data = data),
-                           simplify = TRUE,
-                           USE.NAMES = TRUE)
+                             rlang::eval_tidy,
+                             data = data,
+                             simplify = TRUE,
+                             USE.NAMES = TRUE)
   param_units_vect <- param_units_vect[param_name]
 
   lower_bound_vect <- sapply(lower_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   lower_bound_vect <- lower_bound_vect[param_name]
 
   upper_bound_vect <- sapply(upper_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   upper_bound_vect <- upper_bound_vect[param_name]

@@ -132,7 +132,7 @@ plot.pk <- function(x,
     }
   }
 
-  if (is.numeric(fit_limits) & length(fit_limits) <= 2) {
+  if (is.numeric(fit_limits) && length(fit_limits) <= 2) {
     limit_predicted <- TRUE
     if (log10_C) {
       if (length(fit_limits) == 1) {
@@ -146,7 +146,7 @@ plot.pk <- function(x,
       warning("No lower bound needed, Upper Bounds set to first value supplied.")
     }
   } else {
-    if (is.character(fit_limits) & (fit_limits == "none")) {
+    if (is.character(fit_limits) && (fit_limits == "none")) {
       limit_predicted <- FALSE
     } else {
       stop(

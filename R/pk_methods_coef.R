@@ -66,9 +66,7 @@ coef.pk <- function(object,
   method_ok <- check_method(obj = object, method = method)
   model_ok <- check_model(obj = object, model = model)
 
-  if(!(include_type %in% c("use",
-                           "const",
-                           "optim"))){
+  if (!(include_type %in% c("use", "const", "optim"))) {
     stop(paste0("Error in coef.pk(): `include_type` is\n",
                 deparse(substitute(include_type)),
                 "\n",
@@ -83,14 +81,15 @@ coef.pk <- function(object,
     unlist() |>
     unique()
 
-  coefs <- object$fit |>
-    dplyr::select(model, method,
-                  !!!object$data_group,
-                  param_name,
-                  estimate,
-                  convcode,
-                  optimize_param,
-                  use_param)
+  coefs <- dplyr::select(object$fit,
+                         model,
+                         method,
+                         !!!object$data_group,
+                         param_name,
+                         estimate,
+                         convcode,
+                         optimize_param,
+                         use_param)
 
   # drop the sigma parameters (not used in some functions)
   if (drop_sigma %in% TRUE) {
@@ -102,9 +101,9 @@ coef.pk <- function(object,
 
   # include NA values from aborted fits?
   if (include_NAs %in% FALSE) {
-    coefs <- coefs |>
-      dplyr::filter(!(convcode %in% 9999),
-                    !(convcode %in% -9999))
+    coefs <- dplyr::filter(coefs,
+                           !(convcode %in% 9999),
+                           !(convcode %in% -9999))
   }
 
   # Get the columns describing time units and their (possibly) transformed units
@@ -120,12 +119,12 @@ coef.pk <- function(object,
           outval <- setNames(estimate, param_name)
           #return only the selected "include_type"
           #this will be an empty vector if there are no params of the selected type
-          if(include_type %in% "use"){
+          if (include_type %in% "use") {
             list(outval[use_param %in% TRUE])
-          }else if(include_type %in% "optim"){
+          } else if (include_type %in% "optim") {
             list(outval[optimize_param %in% TRUE &
                                use_param %in% TRUE])
-          }else if(include_type %in% "const"){
+          } else if (include_type %in% "const") {
             list(outval[optimize_param %in% FALSE &
                                use_param %in% TRUE])
           }
@@ -141,17 +140,17 @@ coef.pk <- function(object,
   if (is.character(method)) {
     method_vector <- method
     if (suppress.messages %in% FALSE) {
-    message("coef.pk(): Filtering by method(s): ", paste(method, collapse = " "))
+      cli_inform("coef.pk(): Filtering by method{?s}: {method}")
     }
-    coefs_tidy <- coefs_tidy |> dplyr::filter(method %in% method_vector)
+    coefs_tidy <- dplyr::filter(coefs_tidy, method %in% method_vector)
   }
   # By models used
   if (is.character(model)) {
     model_vector <- model
     if (suppress.messages %in% FALSE) {
-      message("coef.pk(): Filtering by model(s): ", paste(model, collapse = " "))
+      cli_inform("coef.pk(): Filtering by model{?s}: {model}")
     }
-    coefs_tidy <- coefs_tidy |> dplyr::filter(model %in% model_vector)
+    coefs_tidy <- dplyr::filter(coefs_tidy, model %in% model_vector)
   }
 
   return(coefs_tidy)

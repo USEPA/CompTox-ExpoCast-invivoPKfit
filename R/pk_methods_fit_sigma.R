@@ -50,9 +50,9 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
 
   # Needs more flexible naming checks, fix in future commits
   req_names <- c(
-    'Chemical', 'Species', 'Dose', 'Route', 'Media', 'Reference',
-    'N_Subjects', 'pLOQ', 'Time', 'Conc', 'Conc_trans', 'Conc_SD',
-    'data_sigma_group', 'Detect', 'exclude'
+    "Chemical", "Species", "Dose", "Route", "Media", "Reference",
+    "N_Subjects", "pLOQ", "Time", "Conc", "Conc_trans", "Conc_SD",
+    "data_sigma_group", "Detect", "exclude"
   )
 
   data_names <- names(preds)
@@ -181,7 +181,7 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
     optimized_df,
     \(x) {
       x |>
-        tidyr::pivot_longer(cols = tidyselect::starts_with("sigma_"),
+        tidyr::pivot_longer(cols = dplyr::starts_with("sigma_"),
                             names_to = "hyperparam_name",
                             values_to = "hyperparam_value")
     }
@@ -196,7 +196,7 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
              hev = as.numeric(hev),
              model = pred_col
              ) |>
-      dplyr::relocate(tidyselect::starts_with("hyperparam_")),
+      dplyr::relocate(dplyr::starts_with("hyperparam_")),
     by = dplyr::join_by("data_sigma_group" == "hyperparam_name"))
 
   AIC_df <- final_df |>

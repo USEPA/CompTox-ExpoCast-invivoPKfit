@@ -67,7 +67,7 @@
 #' @family built-in model functions
 #' @family 1-compartment model functions
 #' @family model concentration functions
-cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
+cp_1comp_cl <- function(params, time, dose, route, medium = "plasma",
                         restrictive = FALSE) {
 
   params <- fill_params_1comp_cl(params)
@@ -88,10 +88,10 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
 
 
   # Set a Fup specific to the liver for clearance
-  if (!restrictive) {
-    Fup_hep <- 1
-  } else {
+  if (restrictive) {
     Fup_hep <- Fup
+  } else {
+    Fup_hep <- 1
   }
 
   # Convert L/h/kg BW^(3/4) to L/h

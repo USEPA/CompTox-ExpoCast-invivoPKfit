@@ -32,6 +32,8 @@
 #'
 get_params_httk_3comp2 <- function(
     data,
+    this_species,
+    this_chemical,
     lower_bound = ggplot2::aes(
       BW = NA,
       Caco2.Pab = NA,
@@ -146,8 +148,6 @@ get_params_httk_3comp2 <- function(
       Vliverc = "L/kg BW",
       Vrestc = "L/kg BW"
     ),
-    this_species,
-    this_chemical,
     restrictive = TRUE) {
 
   # parameter names
@@ -210,19 +210,19 @@ get_params_httk_3comp2 <- function(
   use_param <- rep(TRUE, length(param_name))
 
   param_units_vect <- sapply(param_units,
-                             \(x) { rlang::eval_tidy(x, data = data) },
-                             simplify = TRUE,
+                             rlang::eval_tidy,
+                             smplify = TRUE,
                              USE.NAMES = TRUE)
   param_units_vect <- param_units_vect[param_name]
 
   lower_bound_vect <- sapply(lower_bound,
-                             \(x) { rlang::eval_tidy(x, data = data) },
+                             rlang::eval_tidy,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   lower_bound_vect <- lower_bound_vect[param_name]
 
   upper_bound_vect <- sapply(upper_bound,
-                             \(x) { rlang::eval_tidy(x, data = data) },
+                             rlang::eval_tidy,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   upper_bound_vect <- upper_bound_vect[param_name]

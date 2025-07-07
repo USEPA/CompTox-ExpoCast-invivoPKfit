@@ -139,12 +139,13 @@ AAFE.pk <- function(obj,
                        "pLOQ"))
 
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) |>
-                                  dplyr::select(dplyr::all_of(req_vars)) |>
-                                  dplyr::ungroup())
+  new_preds <- dplyr::left_join(preds, newdata) |>
+    dplyr::select(dplyr::all_of(req_vars)) |>
+    dplyr::ungroup() |>
+    suppressMessages()
 
   #replace below-LOQ preds with pLOQ if specified
-  if(sub_pLOQ %in% TRUE){
+  if (sub_pLOQ %in% TRUE) {
     message("AAFE.pk(): Predicted conc below pLOQ substituted with pLOQ")
     new_preds <- new_preds |>
       dplyr::mutate(

@@ -113,32 +113,37 @@ residuals.pk <- function(object,
                 "Detect",
                 "exclude")
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) |>
+  resids <- dplyr::left_join(preds, newdata) |>
     dplyr::select(dplyr::all_of(req_vars)) |>
-    dplyr::ungroup())
+    dplyr::ungroup() |>
+    suppressMessages()
 
 
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = object,
                                use_scale_conc = use_scale_conc)
-if(suppress.messages %in% FALSE){
-  message("residuals.pk(): Residuals calculated using the following transformations: \n",
-          "Dose-normalization ", conc_scale$dose_norm, "\n",
-          "log-transformation ", conc_scale$log10_trans)
-}
+  if (suppress.messages %in% FALSE) {
+    cli_inform(c(
+      "residuals.pk(): Residuals calculated using the following transformations:",
+      "i" = "Dose-normalization: {conc_scale$dose_norm}",
+      "i" = "log-transformation: {conc_scale$log10_trans}"
+    ))
+  }
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
-  resids <- new_preds |>
+  if (conc_scale$dose_norm) {
+    resids$Conc_set <- with(resids, Conc / Dose)
+  } else {
+    resids$Conc_set <- resids$Conc
+  }
+
+  if (conc_scale$dose_norm) {
+    resids$Conc_set <- log10(resids$Conc_set)
+  }
+
+  resids <- resids |>
     dplyr::mutate(
-      Conc_set = ifelse(rep(conc_scale$dose_norm, NROW(Dose)),
-                        ifelse(rep(conc_scale$log10_trans, NROW(Dose)),
-                               log10(Conc / Dose),
-                               Conc / Dose),
-                        ifelse(rep(conc_scale$log10_trans, NROW(Dose)),
-                               log10(Conc),
-                               Conc)
-                        ),
       Residuals = ifelse(Detect %in% FALSE & Conc_est <= Conc_set,
                          0,
                          Conc_est - Conc_set),

@@ -31,6 +31,6 @@ rename2_cvt <- function(data,
   new_data <- dplyr::rename(data, tidyr::any_of(cvt_LUT))
   new_data <- dplyr::rename_with(new_data,
                                  ~ tolower(gsub("\\.|\\/", "_", .x)),
-                                 tidyselect::everything())
+                                 dplyr::everything())
   return(new_data)
 }

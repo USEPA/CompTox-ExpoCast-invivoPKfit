@@ -190,7 +190,7 @@ rsq.pk <- function(obj,
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  if(suppress.messages %in% FALSE){
+  if (suppress.messages %in% FALSE) {
   message("rsq.pk(): Calculating R-squared on transformed concentration scale. ",
           "Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
@@ -228,19 +228,17 @@ req_vars <- unique(c(names(preds),
                      "pLOQ"))
 
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) |>
+  new_preds <- dplyr::left_join(preds, newdata) |>
     dplyr::select(dplyr::all_of(req_vars)) |>
-    dplyr::ungroup())
+    dplyr::ungroup() |>
+    suppressMessages()
 
   #replace below-LOQ preds with pLOQ if specified
-  if(sub_pLOQ %in% TRUE){
-    if(suppress.messages %in% FALSE){
-    message("rsq.pk(): Predicted conc below pLOQ substituted with pLOQ")
+  if (sub_pLOQ %in% TRUE) {
+    if (suppress.messages %in% FALSE) {
+      message("rsq.pk(): Predicted conc below pLOQ substituted with pLOQ")
     }
-    new_preds <- new_preds |>
-      dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
-                                              pLOQ,
-                                              Conc_est))
+    new_preds$Conc_est <- with(new_preds, pmax(Conc_est, pLOQ))
   }
 
   # apply dose-normalization if specified
@@ -276,10 +274,10 @@ req_vars <- unique(c(names(preds),
     # dplyr::distinct() |>
     dplyr::ungroup()
 
-  if(suppress.messages %in% FALSE){
-  message("rsq.pk)(): Groups: \n",
-          toString(rsq_group_char),
-          ", method, model")
+  if (suppress.messages %in% FALSE) {
+    message("rsq.pk)(): Groups: \n",
+            toString(rsq_group_char),
+            ", method, model")
   }
 
   return(rsq_df)

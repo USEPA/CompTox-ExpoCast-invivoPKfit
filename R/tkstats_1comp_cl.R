@@ -71,10 +71,10 @@ tkstats_1comp_cl <- function(pars,
   list2env(as.list(params), envir = as.environment(-1))
 
   # Set a Fup specific to the liver for clearance
-  if (!restrictive) {
-    Fup_hep <- 1
-  } else {
+  if (restrictive) {
     Fup_hep <- Fup
+  } else {
+    Fup_hep <- 1
   }
 
   Clhep <- (Q_totli * Fup_hep * Clint) / (Q_totli + (Fup_hep * Clint / Rblood2plasma))
