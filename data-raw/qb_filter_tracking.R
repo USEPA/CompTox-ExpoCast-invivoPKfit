@@ -47,7 +47,7 @@ congruent_chems <- cvt_df |>
   ) |>
   pull(analyzed_chem_dtxsid) |> unique()
 
-incongruent_chems <- setdiff(incongruent_chems, congruent_chems)
+incongruent_chems <- base::setdiff(incongruent_chems, congruent_chems)
 
 
 qb_df_tracker <- qb_df_tracker |>
@@ -91,7 +91,7 @@ good_conc_chems <- cvt_df_qb |>
   filter(!(is.na(conc) & is.na(conc_original))) |>
   pull(analyzed_chem_dtxsid) |> unique()
 
-na_conc_chems <- setdiff(na_conc_chems, good_conc_chems)
+na_conc_chems <- base::setdiff(na_conc_chems, good_conc_chems)
 
 negative_conc_chems <- cvt_df_qb |>
   filter(!((conc < 0 | conc_original < 0) %in% FALSE)) |>
@@ -101,7 +101,7 @@ positive_conc_chems <- cvt_df_qb |>
   filter(!((conc >= 0 & conc_original >= 0) %in% FALSE)) |>
   pull(analyzed_chem_dtxsid) |> unique()
 
-negative_conc_chems <- setdiff(negative_conc_chems, positive_conc_chems)
+negative_conc_chems <- base::setdiff(negative_conc_chems, positive_conc_chems)
 
 qb_df_tracker <- qb_df_tracker |>
   mutate(
@@ -135,7 +135,7 @@ cvt_df_qb |>
   pull(analyzed_chem_dtxsid) |>
   unique() -> plbl_chem
 
-plbl_chem <- setdiff(
+plbl_chem <- base::setdiff(
   plbl_chem,
   subset(cvt_df_qb,
          subset = (conc_medium_normalized %in% c("plasma", "blood")))[["analyzed_chem_dtxsid"]]
@@ -170,7 +170,7 @@ qb_df_tracker[qb_df_tracker$include, ][["DTXSID"]] -> included_dtxsid
 winmodels <- get_winning_model(my_pk)
 count(winmodels, model)
 
-nofit_chems <- setdiff(
+nofit_chems <- base::setdiff(
   intersect(
     included_dtxsid,
     my_pk$prefit$fit_check |>
@@ -184,7 +184,7 @@ nofit_chems <- setdiff(
 )
 
 
-flat_chems <- setdiff(
+flat_chems <- base::setdiff(
   winmodels |>
     filter(model == "model_flat", Chemical %in% included_dtxsid) |>
     pull(Chemical),
@@ -209,7 +209,7 @@ qb_df_tracker <- qb_df_tracker |>
     )
   )
 
-inf_auc_chems <- setdiff(
+inf_auc_chems <- base::setdiff(
   eval_tkstats(my_pk, finite_only = FALSE) |>
     filter(is.infinite(AUC_infinity.tkstats), Chemical %in% included_dtxsid,
            model != "model_flat") |>

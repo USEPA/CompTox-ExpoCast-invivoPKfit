@@ -40,7 +40,7 @@ of DTXSIDs for:
 ```{r chemical-lists}
 human_3compchems <- unique(get_cheminfo(info = "DTXSID",
                                 species = "human",
-                                model = "3compartment2",
+                                model = "gas_pbtk",
                                 median.only = TRUE,
                                 physchem.exclude = TRUE,
                                 suppress.messages = TRUE)) %>% 
@@ -48,7 +48,7 @@ human_3compchems <- unique(get_cheminfo(info = "DTXSID",
 
 rat_3compchems <- unique(get_cheminfo(info = "DTXSID",
                                 species = "rat",
-                                model = "3compartment2",
+                                model = "gas_pbtk",
                                 median.only = TRUE,
                                 physchem.exclude = TRUE,
                                 suppress.messages = TRUE)) %>% 
