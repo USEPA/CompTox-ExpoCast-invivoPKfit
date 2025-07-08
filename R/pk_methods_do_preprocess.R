@@ -40,9 +40,6 @@
 #'   detect/nondetect; empirical tmax, time of peak concentration for oral data;
 #'   number of observations before and after empirical tmax)
 #' @author John Wambaugh, Caroline Ring, Christopher Cook, Gilberto Padilla Mercado
-#' @import dplyr
-#' @import tidyr
-#' @import purrr
 #' @export
 do_preprocess.pk <- function(obj, ...) {
   suppress_messages <- obj$settings_preprocess$suppress.messages
@@ -81,12 +78,15 @@ do_preprocess.pk <- function(obj, ...) {
         USE.NAMES = TRUE)
     )
 
-    ### Coerce Species, Route, and Media to lowercase
+    ### Coerce Species, Route, and Media to lowercasei
     if (!suppress_messages) {
       cli_inform(
         "Species, Route, and Media will be coerced to lowercase."
       )
     }
+    # Check hierarchical grouping structure
+    check_group_hierarchy(obj)
+
     data$Species <- tolower(data$Species)
     data$Route <- tolower(data$Route)
     data$Media <- tolower(data$Media)
@@ -167,14 +167,14 @@ do_preprocess.pk <- function(obj, ...) {
       old_na <- sum(is.na(data$Value) | !nzchar(data$Value))
       new_na <- sum(is.na(value_num))
       if (!suppress_messages) {
-        cli::inform(c(
+        cli::cli_inform(c(
           paste(
             "Column {.envvar Value} converted from",
             "{.cls {class(data$Value)}}",
             "to {.cls {class(value_num)}}."
           ),
           "i" = "Pre-conversion NAs and blanks: {old_na}",
-          "i" = "Post-conversion NAs and blanks: {new_na}",
+          "i" = "Post-conversion NAs and blanks: {new_na}"
         ))
       }
       data$Value <- value_num
@@ -187,14 +187,14 @@ do_preprocess.pk <- function(obj, ...) {
       old_na <- sum(is.na(data$Value_SD) | !nzchar(data$Value_SD))
       new_na <- sum(is.na(valuesd_num))
       if (!suppress_messages) {
-        cli::inform(c(
+        cli::cli_inform(c(
           paste(
             "Column {.envvar Value_SD} converted from",
             "{.cls {class(data$Value_SD)}}",
             "to {.cls {class(valuesd_num)}}."
           ),
           "i" = "Pre-conversion NAs and blanks: {old_na}",
-          "i" = "Post-conversion NAs and blanks: {new_na}",
+          "i" = "Post-conversion NAs and blanks: {new_na}"
         ))
       }
       data$Value_SD <- valuesd_num
@@ -207,14 +207,14 @@ do_preprocess.pk <- function(obj, ...) {
       old_na <- sum(is.na(data$LOQ) | !nzchar(data$LOQ))
       new_na <- sum(is.na(loq_num))
       if (!suppress_messages) {
-        cli::inform(c(
+        cli::cli_inform(c(
           paste(
             "Column {.envvar LOQ} converted from",
             "{.cls {class(data$LOQ)}}",
             "to {.cls {class(loq_num)}}."
           ),
           "i" = "Pre-conversion NAs and blanks: {old_na}",
-          "i" = "Post-conversion NAs and blanks: {new_na}",
+          "i" = "Post-conversion NAs and blanks: {new_na}"
         ))
       }
       data$LOQ <- loq_num
@@ -228,14 +228,14 @@ do_preprocess.pk <- function(obj, ...) {
       old_na <- sum(is.na(data$Dose) | !nzchar(data$Dose))
       new_na <- sum(is.na(dose_num))
       if (!suppress_messages) {
-        cli::inform(c(
+        cli::cli_inform(c(
           paste(
             "Column {.envvar Dose} converted from",
             "{.cls {class(data$Dose)}}",
             "to {.cls {class(dose_num)}}."
           ),
           "i" = "Pre-conversion NAs and blanks: {old_na}",
-          "i" = "Post-conversion NAs and blanks: {new_na}",
+          "i" = "Post-conversion NAs and blanks: {new_na}"
         ))
       }
       data$Dose <- dose_num
@@ -248,14 +248,14 @@ do_preprocess.pk <- function(obj, ...) {
       old_na <- sum(is.na(data$Time) | !nzchar(data$Time))
       new_na <- sum(is.na(time_num))
       if (!suppress_messages) {
-        cli::inform(c(
+        cli::cli_inform(c(
           paste(
             "Column {.envvar Time} converted from",
             "{.cls {class(data$Time)}}",
             "to {.cls {class(time_num)}}."
           ),
           "i" = "Pre-conversion NAs and blanks: {old_na}",
-          "i" = "Post-conversion NAs and blanks: {new_na}",
+          "i" = "Post-conversion NAs and blanks: {new_na}"
         ))
       }
       data$Time <- time_num
@@ -269,14 +269,14 @@ do_preprocess.pk <- function(obj, ...) {
                       !nzchar(data$N_Subjects))
       new_na <- sum(is.na(N_Subjects_num))
       if (!suppress_messages) {
-        cli::inform(c(
+        cli::cli_inform(c(
           paste(
             "Column {.envvar N_Subjects} converted from",
             "{.cls {class(data$N_Subjects)}}",
             "to {.cls {class(N_Subjects_num)}}."
           ),
           "i" = "Pre-conversion NAs and blanks: {old_na}",
-          "i" = "Post-conversion NAs and blanks: {new_na}",
+          "i" = "Post-conversion NAs and blanks: {new_na}"
         ))
       }
       data$N_Subjects <- N_Subjects_num
@@ -429,7 +429,7 @@ do_preprocess.pk <- function(obj, ...) {
             "{sapply(obj$settings_preprocess$sd_group, as_label)}",
             ". If all SDs are missing in a group, ",
             "SD for each observation will be imputed as",
-            " 0. ",
+            " 0. "
           ),
           "i" = "{n_sd_est} missing SD{?s} will be estimated."
         ))
@@ -519,7 +519,7 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
           "Excluding observations with N_Subjects > 1 ",
           "where reported Value is NA ",
           "(because log-likelihood for non-detect multi-subject observations ",
-          "has not been implemented). ",
+          "has not been implemented). "
         ),
           "i" = "{n_exclude} observation{?s} will be excluded."
         ))
@@ -725,7 +725,7 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
     data$Conc_SD <- data$Value_SD / ratio_conc_dose
 
     if ("Conc.Units" %in% names(data) && !suppress_messages) {
-        cli_infom(c(
+        cli_inform(c(
             "Harmonized variable `Conc.Units` already exists in data!",
             "i" = "It will be overwritten as {.code Value.Units/ratio_conc_dose}."
         ))
@@ -747,9 +747,9 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
       ))
     }
     data <- data |>
-      group_by(!!!summary_group, Subject_ID) |>
-      arrange(Time) |>
-      mutate(
+      dplyr::group_by(!!!summary_group, Subject_ID) |>
+      dplyr::arrange(Time) |>
+      dplyr::mutate(
         Conc = ifelse(
           Media %in% "excreta",
           cumsum(Conc),
@@ -792,7 +792,7 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
         ))
       }
       if ("Conc_trans.Units" %in% names(data)) {
-        cli_iform(c(
+        cli_inform(c(
           "{.emph Warning}: variable `Conc_trans.Units` already exists in the data.",
           "It will be overwritten!"
         ))
@@ -833,8 +833,9 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
     data$pLOQ <- data$LOQ
 
 
-    # add data & data info to object
-    obj$data <- ungroup(data)
+    # add data & data info to object AND a group id column
+    data <- dplyr::ungroup(data)
+    obj$data <- tidyr::unite(data, "GRP_ID", !!!data_group, remove = FALSE)
 
     if (is.null(obj$settings_preprocess$keep_data_original)) {
       obj$settings_preprocess$keep_data_original <- TRUE

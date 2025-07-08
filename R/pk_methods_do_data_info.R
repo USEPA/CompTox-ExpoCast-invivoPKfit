@@ -108,8 +108,8 @@ do_data_info.pk <- function(obj, ...) {
   }
 
   # get summary for nca_group if it is different from summary_group
-if (length(setdiff(nca_group, summary_group)) > 0 ||
-   length(setdiff(summary_group, nca_group)) > 0) {
+if (length(base::setdiff(nca_group, summary_group)) > 0 ||
+   length(base::setdiff(summary_group, nca_group)) > 0) {
   data_summary_nca <- data_summary(obj = obj,
                                    newdata = NULL,
                                    summary_group = nca_group

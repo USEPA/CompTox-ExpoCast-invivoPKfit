@@ -85,22 +85,27 @@ cp_1comp <- function(params,
   iv_vec <- (route == "iv")
   or_eq_vec <- (route == "oral" & kelim == kgutabs)
   or_ne_vec <- (route == "oral" & kelim != kgutabs)
-  blood_vec <- (medium == "blood")
 
   # compute plasma concentration
   # upon rewriting this with vectorized LUT,
   # remember that time and dose may vary along the vector
   # but parameters are single values
-  Cp[iv_vec] <- dose[iv_vec] * exp(-kelim * time[iv_vec]) / Vdist
+  if (any(iv_vec)) {
+    Cp[iv_vec] <- dose[iv_vec] * exp(-kelim * time[iv_vec]) / Vdist
+  }
 
-  Cp[or_ne_vec] <- dose[or_ne_vec] * (Fgutabs_Vdist * kgutabs) *
-    (exp(-kelim * time[or_ne_vec]) - exp(-kgutabs * time[or_ne_vec])) /
-    (kgutabs - kelim)
+  if (any(or_ne_vec)) {
+    Cp[or_ne_vec] <- dose[or_ne_vec] * (Fgutabs_Vdist * kgutabs) *
+      (exp(-kelim * time[or_ne_vec]) - exp(-kgutabs * time[or_ne_vec])) /
+      (kgutabs - kelim)
+  }
 
-  Cp[or_eq_vec] <- dose[or_eq_vec] * Fgutabs_Vdist * kelim *
-    time[or_eq_vec] * exp(-kelim * time[or_eq_vec])
+  if (any(or_eq_vec)) {
+    Cp[or_eq_vec] <- dose[or_eq_vec] * Fgutabs_Vdist * kelim *
+      time[or_eq_vec] * exp(-kelim * time[or_eq_vec])
+  }
 
-  Cp[blood_vec] <- Cp[blood_vec] * Rblood2plasma
+  Cp <- ifelse(medium %in% "blood", Cp * Rblood2plasma, Cp)
 
   return(Cp)
 }

@@ -6,6 +6,8 @@
 \usage{
 get_params_httk_3comp2(
   data,
+  this_species,
+  this_chemical,
   lower_bound = ggplot2::aes(BW = NA, Caco2.Pab = NA, Caco2.Pab.dist = NA, Clint = 0,
     Clint.dist = NA, Clmetabolismc = NA, Funbound.plasma = 0, Funbound.plasma.dist = NA,
     Funbound.plasma.adjustment = NA, Fabsgut = NA, Fhep.assay.correction = NA, hematocrit
@@ -41,13 +43,15 @@ get_params_httk_3comp2(
     "fraction", Qgutf = "fraction", Qliverf = "fraction", Qalvc = "fraction",
     Rblood2plasma = "unitless ratio", Vgutc = "L/kg BW", Vliverc = "L/kg BW", Vrestc =
     "L/kg BW"),
-  this_species,
-  this_chemical,
   restrictive = TRUE
 )
 }
 \arguments{
 \item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}
+
+\item{this_species}{A character vector naming the species for calculations in `httk`.}
+
+\item{this_chemical}{A character vector naming the chemical for calculations in `httk`.}
 
 \item{lower_bound}{A mapping specified using a call to [ggplot2::aes()],
 giving the lower bounds for each variable, as expressions which may include
@@ -60,10 +64,6 @@ variables in `data`.}
 \item{param_units}{A mapping specified using a call to [ggplot2::aes()],
 giving the units for each variable, as expressions which may include
 variables in `data`.}
-
-\item{this_species}{A character vector naming the species for calculations in `httk`.}
-
-\item{this_chemical}{A character vector naming the chemical for calculations in `httk`.}
 
 \item{restrictive}{A logical value (TRUE or FALSE. Default: FALSE) that says whether the
 assumption is that the clearance is restrictive or non-restrictive}

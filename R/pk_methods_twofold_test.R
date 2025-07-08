@@ -91,7 +91,7 @@ twofold_test.pk <- function(obj,
 
   if (!all(vital_col %in% names(data_cvt))) {
     stop("Missing the following columns:",
-         toString(setdiff(vital_col, names(data_cvt)))
+         toString(base::setdiff(vital_col, names(data_cvt)))
          )
   }
 
@@ -382,7 +382,7 @@ rowwise_calc_percentages <- function(data,
   if (!is.null(group_cols)) {
     if (is.list(group_cols)) group_cols <- unlist(group_cols)
     group_cols <- unique(group_cols)
-    op_cols <- setdiff(names(data), names(data[group_cols]))
+    op_cols <- base::setdiff(names(data), names(data[group_cols]))
   } else {
     op_cols <- names(data)
   }

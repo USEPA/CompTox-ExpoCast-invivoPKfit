@@ -27,7 +27,7 @@ check_params_1comp_cl <- function(params,
   # check for any missing parameters
   # required params for oral dose
   if (any(route %in% "oral")) {
-    missing_params <- setdiff(c("Clint",
+    missing_params <- base::setdiff(c("Clint",
                                 "Q_gfr",
                                 "Q_totli",
                                 "Q_alv",
@@ -48,7 +48,7 @@ check_params_1comp_cl <- function(params,
 
   # required params for IV dose
   if (any(route %in% "iv")) {
-    missing_params <- setdiff(c("Clint",
+    missing_params <- base::setdiff(c("Clint",
                                 "Q_gfr",
                                 "Q_totli",
                                 "Q_alv",

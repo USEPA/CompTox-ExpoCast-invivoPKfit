@@ -121,9 +121,6 @@
 #'  as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If
 #'  TRUE, then if the log-likelihood works out to be non-finite, then it will be
 #'  replaced with `.Machine$double.xmax`.
-#' @param max_multiplier Numeric, but NULL by default. Determines which multiple
-#'  of the maximum concentration to use to limit possible predictions.
-#'  Note: only use this as part of the fitting function.
 #' @param includes_preds Logical: whether `data` includes predictions.
 #' @param suppress.messages Logical.
 #' @return A log-likelihood value for the data given the parameter values in
@@ -139,7 +136,6 @@ log_likelihood <- function(par,
                            log10_trans = FALSE,
                            negative = TRUE,
                            force_finite = FALSE,
-                           max_multiplier = NULL,
                            includes_preds = FALSE,
                            suppress.messages = TRUE) {
 
@@ -157,8 +153,8 @@ log_likelihood <- function(par,
   pLOQ <- data$pLOQ
 
   # Fix the modelfun_args and modelfun variables
-    modelfun_args <- modelfun[["conc_fun_args"]]
-    modelfun <- modelfun[["conc_fun"]]
+  modelfun_args <- modelfun[["conc_fun_args"]]
+  modelfun <- modelfun[["conc_fun"]]
 
 
   # combine parameters to be optimized and held constant
@@ -170,10 +166,8 @@ log_likelihood <- function(par,
   model.params <- params[!sigma_index]
 
   if (includes_preds) {
-
     stopifnot("data must have Conc_est column." = "Conc_est" %in% names(data))
     pred <- data$Conc_est
-
   } else {
     # assemble arguments for do.call
     if (!is.list(modelfun_args)) {
@@ -197,29 +191,6 @@ log_likelihood <- function(par,
     # values, by dose and route
     pred <- do.call(what = modelfun, args = these_args)
   }
-
-
-  # Handles the max_conc check, needs to be separate because it should only
-  # be used for fitting. Not logLik etc...
-  if (!is.null(max_multiplier)) {
-    if (!is.numeric(max_multiplier)) {
-      stop("Argument max_multiplier expects a numeric value or NULL")
-    }
-    if (!("groupCmax" %in% names(data))) {
-      stop("Using max_multiplier requires a column in data named groupCmax ",
-               "which stores the maximum concentration per ",
-               "Reference, Dose, Route, and Media group.")
-    }
-
-    max_conc <- data$groupCmax * max_multiplier
-    if (any(pred >= max_conc)) {
-      ll <- -Inf
-      if (force_finite) ll <- -1 * sqrt(.Machine$double.eps)
-      if (negative) ll <- -1 * ll
-      return(ll)
-    }
-  }
-
 
   # Early Return
   # if model predicted any NA or Inf concentrations OR
@@ -268,9 +239,9 @@ log_likelihood <- function(par,
   # Reversed conditional order for clarity
   if (!any(sigma_index)) {
     stop(
-        "Could not find any parameters with 'sigma' in the name.",
-        "Param names are:",
-        toString(names(params))
+      "Could not find any parameters with 'sigma' in the name.",
+      "Param names are:",
+      toString(names(params))
     )
   } else { # There ARE sigma values
     # get sigma params
@@ -285,8 +256,6 @@ log_likelihood <- function(par,
     sigma_obs[sigma_is_na] <- NA_real_
     sigma_obs <- unlist(sigma_obs)
 
-    sigma_obs <- sigma_obs
-
     # if data_sigma_group is NA -- then assume data are equally likely to come from
     # any of the existing distributions
     # data_sigma_group may be NA if we are calculating log-likelihood for new data,
@@ -297,7 +266,7 @@ log_likelihood <- function(par,
       ll_data_sigma <- ifelse(
         N_Subjects[!sigma_is_na] == 1 & !is.na(N_Subjects[!sigma_is_na]),
         ifelse(
-          Detect[!sigma_is_na] %in% TRUE,
+          Detect[!sigma_is_na] == TRUE & !is.na(Detect[!sigma_is_na]),
           dnorm(
             x = Conc_trans[!sigma_is_na],
             mean = pred_trans[!sigma_is_na],
@@ -311,16 +280,16 @@ log_likelihood <- function(par,
             log.p = TRUE
           )
         ),
-          do.call(
-            ll_summary,
-            list(
-              mu = pred_trans[!sigma_is_na],
-              sigma = sigma_obs[!sigma_is_na],
-              x_mean = conc_natural[!sigma_is_na],
-              x_sd = conc_sd_natural[!sigma_is_na],
-              x_N = N_Subjects[!sigma_is_na],
-              log = TRUE
-            )
+        do.call(
+          ll_summary,
+          list(
+            mu = pred_trans[!sigma_is_na],
+            sigma = sigma_obs[!sigma_is_na],
+            x_mean = conc_natural[!sigma_is_na],
+            x_sd = conc_sd_natural[!sigma_is_na],
+            x_N = N_Subjects[!sigma_is_na],
+            log = TRUE
+          )
         )
       )
     } else {
@@ -331,11 +300,11 @@ log_likelihood <- function(par,
     if (any(sigma_is_na)) {
       if (isFALSE(suppress.messages)) {
         message(
-            "log_likelihood():",
-            sum(is.na(sigma_obs)),
-            "observations are not in any existing error-SD (sigma) group.",
-            "They will be treated as equally likely to be in",
-            "any of the existing error-SD groups."
+          "log_likelihood():",
+          sum(is.na(sigma_obs)),
+          "observations are not in any existing error-SD (sigma) group.",
+          "They will be treated as equally likely to be in",
+          "any of the existing error-SD groups."
         )
       }
       # Expectations: N_Subjects must be >= 1
@@ -346,7 +315,7 @@ log_likelihood <- function(par,
           ifelse(
             N_Subjects[sigma_is_na] == 1 & !is.na(N_Subjects[sigma_is_na]),
             ifelse(
-              Detect[sigma_is_na] %in% TRUE,
+              Detect[sigma_is_na] == TRUE & !is.na(Detect[sigma_is_na]),
               dnorm(
                 x = Conc_trans[sigma_is_na],
                 mean = pred_trans[sigma_is_na],
@@ -405,9 +374,9 @@ log_likelihood <- function(par,
   # then when log-likelihood is infinitely unlikely,
   # return a large negative number instead
   if (force_finite && !is.finite(ll)) {
-      # now return sqrt of .Machine$double.xmax, not just .Machine$double.xmax
-      # not taking sqrt seems to break L-BFGS-B sometimes
-      ll <- -1 * sqrt(.Machine$double.xmax)
+    # now return sqrt of .Machine$double.xmax, not just .Machine$double.xmax
+    # not taking sqrt seems to break L-BFGS-B sometimes
+    ll <- -1 * sqrt(.Machine$double.xmax)
   }
 
   # to get negative log-likelihood (e.g. for minimization)

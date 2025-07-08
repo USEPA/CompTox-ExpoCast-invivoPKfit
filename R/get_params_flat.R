@@ -125,7 +125,7 @@ get_params_flat <- function(
                                      Fgutabs_Vdist = 0.01,
                                      Rblood2plasma = 1e-2)
 
-  lower_bound_missing <- setdiff(names(lower_bound_default),
+  lower_bound_missing <- base::setdiff(names(lower_bound_default),
                                  names(lower_bound))
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
 
@@ -134,7 +134,7 @@ get_params_flat <- function(
                                     Fgutabs_Vdist = 1e2,
                                     Rblood2plasma = 100)
 
-  upper_bound_missing <- setdiff(names(upper_bound_default),
+  upper_bound_missing <- base::setdiff(names(upper_bound_default),
                                  names(upper_bound))
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
 

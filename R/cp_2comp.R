@@ -86,21 +86,24 @@ cp_2comp <- function(params,
   Cp <- rep(NA_real_, length(time))
   iv_vec <- (route == "iv")
   or_vec <- (route == "oral")
-  blood_vec <- (medium == "blood")
 
   # get predicted concentration
-  Cp[iv_vec] <- dose[iv_vec] * (
-    A_iv_unit * exp(-alpha * time[iv_vec]) +
-      B_iv_unit * exp(-beta * time[iv_vec])
-  )
+  if (any(iv_vec)) {
+    Cp[iv_vec] <- dose[iv_vec] * (
+      A_iv_unit * exp(-alpha * time[iv_vec]) +
+        B_iv_unit * exp(-beta * time[iv_vec])
+    )
+  }
 
-  Cp[or_vec] <- dose[or_vec] * (
-    (A_oral_unit * exp(-alpha * time[or_vec])) +
-      (B_oral_unit * exp(-beta * time[or_vec])) -
-      ((A_oral_unit + B_oral_unit) * exp(-kgutabs * time[or_vec]))
-  )
+  if (any(or_vec)) {
+    Cp[or_vec] <- dose[or_vec] * (
+      (A_oral_unit * exp(-alpha * time[or_vec])) +
+        (B_oral_unit * exp(-beta * time[or_vec])) -
+        ((A_oral_unit + B_oral_unit) * exp(-kgutabs * time[or_vec]))
+    )
+  }
 
-  Cp[blood_vec] <- Cp[blood_vec] * Rblood2plasma
+  Cp <- ifelse(medium %in% "blood", Cp * Rblood2plasma, Cp)
 
   return(Cp)
 }

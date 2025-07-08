@@ -23,9 +23,6 @@
 #'@return A dataframe with one row for each `data_group`, `model` and `method`.
 #'  The remaining column is a `list` column containing the Hessian for each row.
 #'@export
-#'@import dplyr
-#'@import purrr
-#'@import tidyr
 #'@import numDeriv
 #'@author Caroline Ring, Gilberto Padilla Mercado
 #'@family methods for fitted pk objects

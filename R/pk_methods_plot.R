@@ -173,7 +173,7 @@ plot.pk <- function(x,
                          ggplot2::vars(Time_trans, Time_trans.Units))
   }
 
-  obs_vars <- setdiff(
+  obs_vars <- base::setdiff(
     ggplot2::vars(
     Conc,
     Conc_SD, Conc.Units,

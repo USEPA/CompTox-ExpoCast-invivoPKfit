@@ -198,8 +198,8 @@ get_params_httk_3comp2 <- function(
   )
 
   # Fill missing lower and upper bounds
-  lower_bound_missing <- setdiff(names(lower_bound_default), names(lower_bound))
-  upper_bound_missing <- setdiff(names(upper_bound_default), names(upper_bound))
+  lower_bound_missing <- base::setdiff(names(lower_bound_default), names(lower_bound))
+  upper_bound_missing <- base::setdiff(names(upper_bound_default), names(upper_bound))
 
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]

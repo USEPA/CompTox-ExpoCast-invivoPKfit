@@ -32,7 +32,7 @@ check_newdata <- function(newdata,
     cli_abort(c(
       "check_newdata(): newdata is missing one or more required variables.",
       "i" = "Required variables: {req_vars}",
-      "x" = "Missing required variables: {setdiff(req_vars, names(newdata))}"
+      "x" = "Missing required variables: {base::setdiff(req_vars, names(newdata))}"
     ))
   }
 

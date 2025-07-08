@@ -195,7 +195,7 @@ get_params_1comp_cl <- function(
                                      Rblood2plasma = NA)
   # which parameters did not have lower bounds specified in the `lower_bound`
   # argument?
-  lower_bound_missing <- setdiff(names(lower_bound_default),
+  lower_bound_missing <- base::setdiff(names(lower_bound_default),
                                  names(lower_bound))
   # fill in the default lower bounds for any parameters that don't have them
   # defined in the `lower_bound` argument
@@ -220,7 +220,7 @@ get_params_1comp_cl <- function(
                                      Rblood2plasma = NA)
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
-  upper_bound_missing <- setdiff(names(upper_bound_default),
+  upper_bound_missing <- base::setdiff(names(upper_bound_default),
                                  names(upper_bound))
   # fill in the default upper bounds for any parameters that don't have them
   # defined in the `upper_bound` argument

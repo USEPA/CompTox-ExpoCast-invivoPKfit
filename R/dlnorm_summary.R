@@ -28,12 +28,7 @@
 #' @author Caroline Ring
 #' @export
 
-dlnorm_summary <- function(mu,
-                             sigma,
-                             x_mean,
-                             x_sd,
-                             x_N,
-                             log = FALSE) {
+dlnorm_summary <- function(mu, sigma, x_mean, x_sd, x_N, log = FALSE) {
 
   x_len <- c("x_mean" = length(x_mean),
              "x_sd" = length(x_sd),

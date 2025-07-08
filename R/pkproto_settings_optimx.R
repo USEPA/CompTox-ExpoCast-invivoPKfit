@@ -9,9 +9,8 @@
 #' @return An object of class `pk_settings`.
 #' @author Caroline Ring
 settings_optimx <- function(method = c("bobyqa", "L-BFGS-B"),
-                            itnmax = 1e6,
                             hessian = FALSE,
-                            control = list(kkt = FALSE),
+                            control = list(kkt = FALSE, maxit = 1E6),
                             ...) {
   # get arguments and values
   argg <- c(as.list(environment()), list(...))

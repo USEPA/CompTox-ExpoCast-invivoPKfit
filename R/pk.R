@@ -192,7 +192,7 @@
 #'  input arguments: these provide settings that will be used when the data is
 #'  pre-processed before fitting.
 #' @import tibble
-#' @importFrom rlang .data caller_env eval_tidy quo quos as_label
+#' @importFrom rlang .data caller_env eval_tidy as_label
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @export
 
@@ -258,7 +258,7 @@ pk <- function(data = NULL,
     Value.Units = "mg/L"
   )
 
-  missing_aes <- setdiff(names(mapping_default), names(mapping))
+  missing_aes <- base::setdiff(names(mapping_default), names(mapping))
   if (!(length(missing_aes) == 0)) {
     mapping[missing_aes] <- mapping_default[missing_aes]
     missing_mapping <- sapply(mapping_default[missing_aes],

@@ -27,7 +27,7 @@ check_params_2comp <- function(params,
   # check for any missing parameters
   # required params for oral dose
   if (any(route %in% "oral")) {
-    missing_params <- setdiff(c("kelim", "k21", "k12", "Fgutabs_V1", "kgutabs"),
+    missing_params <- base::setdiff(c("kelim", "k21", "k12", "Fgutabs_V1", "kgutabs"),
                               names(params)[is.finite(params)])
     if (length(missing_params) > 0) {
       msg <- (paste("Error: For 2-compartment oral model,",
@@ -38,7 +38,7 @@ check_params_2comp <- function(params,
 
   # required params for IV dose
   if (any(route %in% "iv")) {
-    missing_params <- setdiff(c("kelim", "V1", "k12", "k21"),
+    missing_params <- base::setdiff(c("kelim", "V1", "k12", "k21"),
                               names(params)[is.finite(params)])
     if (length(missing_params) > 0) {
       msg <- (paste("Error: For 2-compartment IV model,",

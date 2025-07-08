@@ -45,7 +45,6 @@ force_ascii_quotes <- function(x) {
   return(temp)
 }
 
-
 #' Converting comma-delimited string representations of numeric vectors to numerics
 #'
 #' @param x A character vector that represents numeric value(s)
