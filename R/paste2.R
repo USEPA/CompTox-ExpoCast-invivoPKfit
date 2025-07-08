@@ -25,10 +25,7 @@ paste2 <- function(...,
   # cbind the arguments
   argc <- do.call(cbind, arglist)
   # do sep-phase
-  out <- apply(argc,
-        1,
-        function(x) paste(x[!is.na(x)],
-                          collapse = sep))
+  out <- apply(argc, 1, function(x) paste(x[!is.na(x)], collapse = sep))
 
   # do collapse phase
   if (!is.null(collapse)) {

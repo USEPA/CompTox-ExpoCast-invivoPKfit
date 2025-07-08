@@ -85,9 +85,9 @@
 calc_nca <- function(time,
                      conc,
                      detect,
-                     series_id = NULL,
                      dose,
                      route,
+                     series_id = NULL,
                      method = "z",
                      ...) {
 

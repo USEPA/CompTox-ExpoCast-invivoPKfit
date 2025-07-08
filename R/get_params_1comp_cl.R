@@ -120,26 +120,31 @@ get_params_1comp_cl <- function(
                                Q_gfr = NA,
                                Q_alv = NA,
                                Kblood2air = NA,
+                               BW = NA,
                                Fup = 0,
                                Clint = 0,
                                Vdist = NA,
                                Fgutabs = NA,
                                kgutabs = NA,
+                               liver_mass = NA,
                                Rblood2plasma = NA),
     upper_bound = ggplot2::aes(Q_totli = NA,
                                Q_gfr = NA,
                                Q_alv = NA,
                                Kblood2air = NA,
+                               BW = NA,
                                Fup = 1,
-                               Clint = 500,
+                               Clint = 1E5,
                                Vdist = NA,
                                Fgutabs = NA,
                                kgutabs = NA,
+                               liver_mass = NA,
                                Rblood2plasma = NA),
-    param_units = ggplot2::aes(Q_totli = "L/h/kg ^3/4",
-                               Q_gfr = "L/h/kg ^3/4",
-                               Q_alv = "L/h/kg ^3/4",
+    param_units = ggplot2::aes(Q_totli = "L/h/kg BW^3/4",
+                               Q_gfr = "L/h/kg BW^3/4",
+                               Q_alv = "L/h/kg BW^3/4",
                                Kblood2air = "unitless ratio",
+                               BW = "kg",
                                Fup = "unitless fraction",
                                Clint = "uL/min/10^6 hepatocytes",
                                Vdist = paste0("(", # Vdist
@@ -152,6 +157,7 @@ get_params_1comp_cl <- function(
                                Fgutabs = "unitless fraction", # Fgutabs
                                kgutabs = paste0("1/", # kgutabs
                                                 unique(Time_trans.Units)),
+                               liver_mass = "g/kg BW",
                                Rblood2plasma = "unitless ratio"),
     restrictive = FALSE) {
   # param names
@@ -159,11 +165,13 @@ get_params_1comp_cl <- function(
                   "Q_gfr",
                   "Q_alv",
                   "Kblood2air",
+                  "BW",
                   "Fup",
                   "Clint",
                   "Vdist",
                   "Fgutabs",
                   "kgutabs",
+                  "liver_mass",
                   "Rblood2plasma")
 
 
@@ -177,15 +185,17 @@ get_params_1comp_cl <- function(
                                      Q_gfr = NA,
                                      Q_alv = NA,
                                      Kblood2air = NA,
+                                     BW = NA,
                                      Fup = 0,
                                      Clint = 0,
                                      Vdist = NA,
                                      Fgutabs = NA,
                                      kgutabs = NA,
+                                     liver_mass = NA,
                                      Rblood2plasma = NA)
   # which parameters did not have lower bounds specified in the `lower_bound`
   # argument?
-  lower_bound_missing <- setdiff(names(lower_bound_default),
+  lower_bound_missing <- base::setdiff(names(lower_bound_default),
                                  names(lower_bound))
   # fill in the default lower bounds for any parameters that don't have them
   # defined in the `lower_bound` argument
@@ -200,15 +210,17 @@ get_params_1comp_cl <- function(
                                      Q_gfr = NA,
                                      Q_alv = NA,
                                      Kblood2air = NA,
+                                     BW = NA,
                                      Fup = 1,
                                      Clint = 1E5,
                                      Vdist = NA,
                                      Fgutabs = NA,
                                      kgutabs = NA,
+                                     liver_mass = NA,
                                      Rblood2plasma = NA)
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
-  upper_bound_missing <- setdiff(names(upper_bound_default),
+  upper_bound_missing <- base::setdiff(names(upper_bound_default),
                                  names(upper_bound))
   # fill in the default upper bounds for any parameters that don't have them
   # defined in the `upper_bound` argument
@@ -229,22 +241,22 @@ get_params_1comp_cl <- function(
   }
 
   param_units_vect <- sapply(param_units,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   param_units_vect <- param_units_vect[param_name]
 
   lower_bound_vect <- sapply(lower_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   lower_bound_vect <- lower_bound_vect[param_name]
 
   upper_bound_vect <- sapply(upper_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   upper_bound_vect <- upper_bound_vect[param_name]
@@ -261,7 +273,6 @@ get_params_1comp_cl <- function(
                               par_DF = par_DF,
                               restrictive = restrictive)
 
-
   # check to ensure starting values are within bounds
   # if not, then replace them by a value halfway between bounds
   # Note here that parameter lower and upper bounds can be EQUAL to start value
@@ -273,8 +284,8 @@ get_params_1comp_cl <- function(
   # Notify user which starts are out of bounds:
   if (any(start_low | start_high | start_nonfin)) {
 
-    oob_starts <- par_DF[start_low | start_high,][["param_name"]]
-    inf_starts <- par_DF[start_nonfin,][["param_name"]]
+    oob_starts <- par_DF[start_low | start_high, ][["param_name"]]
+    inf_starts <- par_DF[start_nonfin, ][["param_name"]]
     if (!all(start_nonfin)) {
       message("There are out of bounds starting values detected for ",
               paste(unique(data$Chemical), unique(data$Species), collapse = "|"),

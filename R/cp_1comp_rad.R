@@ -57,7 +57,7 @@
 #' @family built-in model functions
 #' @family 1-compartment radiation model functions
 #' @family model concentration functions
-cp_1comp_rad <- function(params, time, dose, route, medium = 'plasma',
+cp_1comp_rad <- function(params, time, dose, route, medium = "plasma",
                         restrictive = TRUE) {
 
   params <- fill_params_1comp_cl(params)
@@ -102,7 +102,7 @@ cp_1comp_rad <- function(params, time, dose, route, medium = 'plasma',
   A_t[ive] <- dose * Frec * (1 - exp(-kelim * time[ive]))
 
   # Check "static conditions" for oral absorption
-  if (kelim != kgutabs & any(orc & ore)) {
+  if (kelim != kgutabs && any(orc & ore)) {
     A_t[orc] <- dose * (Fgutabs * kgutabs) / ((kgutabs - kelim)) *
       (exp(-kelim * time[orc]) - exp(-kgutabs * time[orc]))
 

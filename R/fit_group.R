@@ -11,8 +11,6 @@
 #'   before evaluating log-likelihood
 #' @param log10_trans TRUE or FALSE -- whether to 1og10-transform concentrations
 #'   before evaluating log-likelihood
-#' @param max_mult Multiplier for maximum acceptable value. Default set to NULL and
-#' currently unused.
 #' @param suppress.messages TRUE or FALSE -- whether to suppress messages or emit them
 #' @return An object of class `optimx` (i.e. a data.frame with fit results)
 fit_group <- function(data,
@@ -24,7 +22,6 @@ fit_group <- function(data,
                       modelfun,
                       dose_norm,
                       log10_trans,
-                      max_mult,
                       suppress.messages) {
 
   # Rowbind par_DF and sigma_DF
@@ -65,12 +62,6 @@ fit_group <- function(data,
       const_params <- NULL
     }
 
-    # Add the maximum concentration per Reference, Dose, Route, and Media
-    data <- data %>%
-      dplyr::group_by(Dose, Route, Media) %>%
-      dplyr::mutate(groupCmax = max(Conc, na.rm = TRUE)) %>%
-      dplyr::ungroup()
-
     # Now call optimx::optimx() and do the fit
     optimx_out <- suppressWarnings(
       tryCatch(
@@ -94,7 +85,6 @@ fit_group <- function(data,
                 log10_trans = log10_trans,
                 negative = TRUE,
                 force_finite = TRUE,
-                max_multiplier = max_mult,
                 suppress.messages = suppress.messages
               ) # end list()
             ) # end args = c()
@@ -117,7 +107,7 @@ fit_group <- function(data,
                           "kkt1", "kkt2",
                           "xtime")
 
-          tmp <- data.frame(as.list(tmp)) %>%
+          tmp <- data.frame(as.list(tmp)) |>
             dplyr::slice(rep(seq_len(dplyr::n()),
                              each = length(method)))
 
@@ -152,7 +142,7 @@ fit_group <- function(data,
                     "convcode",
                     "kkt1", "kkt2",
                     "xtime")
-    tmp <- data.frame(as.list(tmp)) %>%
+    tmp <- data.frame(as.list(tmp)) |>
       dplyr::slice(rep(seq_len(dplyr::n()),
                        each = length(method)))
     rownames(tmp) <- method

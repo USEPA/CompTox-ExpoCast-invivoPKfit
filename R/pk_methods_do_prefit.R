@@ -58,12 +58,12 @@ do_prefit.pk <- function(obj,
     obj <- do_data_info(obj)
   }
 
-  suppress.messages <- obj$settings_preprocess$suppress.messages
+  suppress_messages <- obj$settings_preprocess$suppress.messages
 
   data <- obj$data
 
-  if (suppress.messages %in% FALSE) {
-    message("do_prefit.pk(): Assigning error SD groups to all observations")
+  if (suppress_messages %in% FALSE) {
+    cli_inform("do_prefit.pk(): Assigning error SD groups to all observations")
   }
 
   # get the error model obj$stat_error_model, which defines the number of sigmas that will need to be optimized
@@ -75,9 +75,8 @@ do_prefit.pk <- function(obj,
   data_sigma_group <- interaction(
     lapply(
       obj$stat_error_model$error_group,
-      function(x) {
-        rlang::eval_tidy(x, data = data)
-      }
+      rlang::eval_tidy,
+      data = data
     )
   )
 
@@ -91,19 +90,21 @@ do_prefit.pk <- function(obj,
 
   # get bounds and starting points for each error sigma to be fitted
 
-  if (suppress.messages %in% FALSE) {
-    message("do_prefit.pk(): ",
+  if (suppress_messages %in% FALSE) {
+    cli_inform(c(
+      paste("do_prefit.pk(): ",
             "Getting bounds and starting guesses for each error SD to be fitted"
-    )
+      )
+    ))
   }
 
   # Set a value to square root of lowest possible value 'x' where 1+x != 1
   sigma_lower <- sqrt(.Machine$double.eps)
 
   # Add the data_sigma_group and filter out all excluded values
-  sigma_DF <- data %>%
-    dplyr::mutate(data_sigma_group = data_sigma_group) %>%
-    dplyr::filter(exclude %in% FALSE) %>%
+  sigma_DF <- data |>
+    dplyr::mutate(data_sigma_group = data_sigma_group) |>
+    dplyr::filter(exclude %in% FALSE) |>
     # temporarily undo log10-trans, if it has been used
     # this is because combined_sd() requires NON log transformed concs
     # but we want to keep dose-normalization if it has been applied
@@ -128,11 +129,9 @@ do_prefit.pk <- function(obj,
       )
 
   # Set values for sigma upper/lower-bounds and start
-  sigma_DF <- sigma_DF %>%
-    dplyr::group_by(!!!obj$stat_error_model$error_group) %>%
-    dplyr::summarise(max_conc = max(Conc_tmp,
-                                     na.rm = TRUE),
-                     param_name = paste("sigma",
+  sigma_DF <- sigma_DF |>
+    dplyr::group_by(!!!obj$stat_error_model$error_group) |>
+    dplyr::summarise(param_name = paste("sigma",
                                         unique(data_sigma_group),
                                         sep = "_"),
                      param_units = unique(Conc_tmp.Units),
@@ -145,16 +144,13 @@ do_prefit.pk <- function(obj,
                        group_n = N_Subjects,
                        unbiased = TRUE,
                        na.rm = TRUE,
-                       log10 = obj$scales$conc$log10_trans)) %>%
-    dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
-                                                 upper_bound <= lower_bound,
-                                               max_conc,
-                                               upper_bound)) %>%
-    dplyr::mutate(upper_bound = dplyr::if_else(!is.finite(upper_bound) |
-                                                 upper_bound <= lower_bound,
-                                               1000,
-                                               upper_bound),
-                  start = 0.1 * upper_bound) %>%
+                       log10 = obj$scales$conc$log10_trans)) |>
+    dplyr::mutate(
+      upper_bound = dplyr::if_else(
+        !is.finite(upper_bound) | upper_bound <= lower_bound,
+        1000,
+        upper_bound),
+      start = 0.1 * upper_bound) |>
     as.data.frame()
 
   # assign rownames to sigma_DF
@@ -163,11 +159,12 @@ do_prefit.pk <- function(obj,
   # assign sigma_DF to the `pk` object
   obj$prefit$stat_error_model$sigma_DF <- sigma_DF
 
-  if (suppress.messages %in% FALSE) {
-    message("do_prefit.pk(): ",
-            "Getting bounds and starting guesses ",
+  if (suppress_messages %in% FALSE) {
+    cli_inform(c(
+      paste("do_prefit.pk(): Getting bounds and starting guesses",
             "for all model parameters to be fitted"
-    )
+      )
+    ))
   }
 
   # for each model to be fitted:
@@ -177,22 +174,20 @@ do_prefit.pk <- function(obj,
       # get parameters to be optimized, bounds, and starting points
       # by evaluating params_fun for this stat_model
       # pass it only the non-excluded observations
-      par_DF <- data %>%
-        dplyr::filter(exclude %in% FALSE)
-
-      par_DF <- dplyr::group_by(par_DF,
-                                !!!obj$data_group) %>%
+      par_DF <- data |>
+        dplyr::filter(exclude %in% FALSE) |>
+        dplyr::group_by(!!!obj$data_group) |>
         dplyr::reframe(
           do.call(
             obj$stat_model[[this_model]]$params_fun,
             args = append(
               list(
-                cbind(dplyr::cur_group(), dplyr::pick(tidyselect::everything()))
+                cbind(dplyr::cur_group(), dplyr::pick(dplyr::everything()))
             ),
             obj$stat_model[[this_model]]$params_fun_args
             )
           )
-        ) %>% as.data.frame()
+        ) |> as.data.frame()
 
       par_DF
     },
@@ -207,30 +202,30 @@ do_prefit.pk <- function(obj,
     function(this_model) {
       # check whether there are enough observations to optimize the requested parameters plus sigmas
       # number of parameters to optimize
-      if (suppress.messages %in% FALSE) {
-        message("do_prefit.pk(): ",
-                "Checking whether sufficient observations to fit models"
+      if (suppress_messages %in% FALSE) {
+        cli_inform(
+          "do_prefit.pk(): Checking whether sufficient observations to fit models."
         )
       }
       # Are any parameters used initialized to NA?
-      n_par_DF <- par_DF_out %>%
-        dplyr::filter(model %in% this_model) %>%
-        dplyr::group_by(!!!obj$data_group) %>%
+      n_par_DF <- par_DF_out |>
+        dplyr::filter(model %in% this_model) |>
+        dplyr::group_by(!!!obj$data_group) |>
         dplyr::summarise(n_par = sum(optimize_param),
                          used_par_na = ifelse(
-                           grepl("httk", this_model), # Exception when "httk" models are used
+                           grepl("httk", this_model, fixed = TRUE), # Exception when "httk" models are used
                            all(is.na(start)),
                            any(use_param & is.na(start))
                          )
         )
 
-      n_sigma_DF <- sigma_DF %>%
-        dplyr::group_by(!!!obj$data_group) %>%
+      n_sigma_DF <- sigma_DF |>
+        dplyr::group_by(!!!obj$data_group) |>
         dplyr::summarise(n_sigma = sum(optimize_param))
 
 
-      n_detect_DF <- get_data_summary(obj) %>%
-        dplyr::group_by(!!!obj$data_group) %>%
+      n_detect_DF <- get_data_summary(obj) |>
+        dplyr::group_by(!!!obj$data_group) |>
         dplyr::summarise(n_detect = sum(n_detect))
 
       # merge all of these together
@@ -245,24 +240,22 @@ do_prefit.pk <- function(obj,
       )
 
       # get fit decision & reasoning
-      fit_check_DF <- fit_check_DF %>%
+      fit_check_DF <- fit_check_DF |>
         dplyr::mutate(
           n_par_opt = n_par + n_sigma,
           fit_decision = ifelse(n_par_opt < n_detect & !used_par_na,
                                 "continue",
                                 "abort"),
-          fit_reason = ifelse(
-            used_par_na,
-            "Some parameters necessary for model fitting are NA.",
-            ifelse(
-              n_par_opt < n_detect,
-              paste("Number of parameters to estimate is ",
-                    "less than number of non-excluded detected observations"),
-              paste("Number of parameters to estimate is ",
-                    "greater than or equal to number of non-excluded detected observations")
-            )
+          fit_reason = dplyr::case_when(
+            used_par_na ~ "Some parameters necessary for model fitting are NA.",
+            n_par_opt < n_detect ~ paste(
+              "Number of parameters to estimate is ",
+              "less than number of non-excluded detected observations"),
+            .default = paste(
+              "Number of parameters to estimate is ",
+              "greater than or equal to number of non-excluded detected observations")
           )
-        ) %>% as.data.frame()
+        ) |> as.data.frame()
 
 
       fit_check_DF
@@ -271,7 +264,7 @@ do_prefit.pk <- function(obj,
     USE.NAMES = TRUE)
 
   fit_check_out <- dplyr::bind_rows(fit_check_out, .id = "model")
-  par_DF_out <- par_DF_out %>%
+  par_DF_out <- par_DF_out |>
     dplyr::mutate(
       lower_bound = ifelse(
         is.na(lower_bound) & !is.na(start),

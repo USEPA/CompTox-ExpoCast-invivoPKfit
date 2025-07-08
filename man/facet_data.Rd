@@ -9,8 +9,7 @@ facet_data(facets = vars(Chemical, Species), ...)
 \arguments{
 \item{facets}{A set of variables or expressions quoted by [dplyr::vars()],
 defining groups of data that will each be fitted separately. These
-variables should appear in the *original* data (i.e., the `data` argument
-to [pk()]).}
+variables should appear in  the `data` argument to [pk()] after mapping variables.}
 
 \item{...}{Additional arguments, not currently used.}
 }
@@ -70,5 +69,5 @@ using the instructions provided by the user. When methods like
 resulting "faceted"
 }
 \author{
-Caroline Ring, Gilbert Padilla Mercado, Paul Kruse
+Caroline Ring, Gilberto Padilla Mercado, Paul Kruse
 }

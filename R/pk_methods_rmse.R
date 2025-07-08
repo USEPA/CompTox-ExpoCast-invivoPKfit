@@ -159,10 +159,10 @@ rmse.pk <- function(obj,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
 
-  if(suppress.messages %in% FALSE){
-  message("rmse.pk(): Computing RMSE on transformed concentration scale. Transformations used: \n",
-          "Dose-normalization ", conc_scale$dose_norm, "\n",
-          "log10-transformation ", conc_scale$log10_trans)
+  if (suppress.messages %in% FALSE) {
+    message("rmse.pk(): Computing RMSE on transformed concentration scale. Transformations used: \n",
+            "Dose-normalization ", conc_scale$dose_norm, "\n",
+            "log10-transformation ", conc_scale$log10_trans)
   }
 
   # Get predictions
@@ -197,61 +197,56 @@ rmse.pk <- function(obj,
                 "pLOQ")
 
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
-    dplyr::select(dplyr::all_of(req_vars)) %>%
-    dplyr::ungroup())
+  rmse_df <- dplyr::left_join(preds, newdata) |>
+    dplyr::select(dplyr::all_of(req_vars)) |>
+    dplyr::ungroup() |>
+    suppressMessages()
 
   #replace below-LOQ preds with pLOQ if specified
-  if(sub_pLOQ %in% TRUE){
-    message("rmse.pk(): Predicted conc below pLOQ substituted with pLOQ")
-    new_preds <- new_preds %>%
-      dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
-                                   pLOQ,
-                                   Conc_est))
+  if (sub_pLOQ %in% TRUE) {
+    cli_inform("rmse.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    rmse_df$Conc_est <- with(rmse_df, pmax(Conc_est, pLOQ))
   }
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
-  rmse_df <- new_preds %>%
-    dplyr::mutate(
-      Conc_set = ifelse(rep(conc_scale$dose_norm,
-                            NROW(Dose)),
-                        Conc / Dose,
-                        Conc),
-      Conc_set_SD = ifelse(rep(conc_scale$dose_norm,
-                               NROW(Dose)),
-                           Conc_SD / Dose,
-                           Conc_SD),
-      Conc_est = ifelse(rep(conc_scale$dose_norm,
-                            NROW(Dose)),
-                        Conc_est / Dose,
-                        Conc_est)
-                        ) %>%
-    dplyr::ungroup() %>%
-    dplyr::group_by(!!!rmse_group,
-                    model, method) %>%
+  if (conc_scale$dose_norm) {
+    rmse_df$Conc_set <- with(rmse_df, Conc / Dose)
+    rmse_df$Conc_set_SD <- with(rmse_df, Conc_SD / Dose)
+    rmse_df$Conc_est <- with(rmse_df, Conc_est / Dose)
+  } else {
+    rmse_df$Conc_set <- rmse_df$Conc
+    rmse_df$Conc_set_SD <- rmse_df$Conc_SD
+    rmse_df$Conc_est <- rmse_df$Conc_est
+  }
+
+  rmse_df <- rmse_df |>
+    dplyr::group_by(!!!rmse_group, model, method) |>
     dplyr::summarize(
       RMSE = calc_rmse(obs = Conc_set,
                        obs_sd = Conc_set_SD,
                        pred = Conc_est,
                        n_subj = N_Subjects,
                        detect = Detect,
-                       log10_trans = conc_scale$log10_trans)) %>%
+                       log10_trans = conc_scale$log10_trans)
+    ) |>
     dplyr::ungroup()
 
   if (conc_scale$log10_trans == FALSE) {
-    if(suppress.messages %in% FALSE){
-    message("rmse.pk(): RMSE calculated by groups: \n",
-            toString(sapply(unlist(rmse_group), rlang::as_label)),
-            ", method, model")
+    if (suppress.messages %in% FALSE) {
+      cli_inform(c(
+        "rmse.pk(): RMSE calculated by grouping variables:",
+        "i" = "{sapply(unlist(rmse_group), rlang::as_label)}, method, model"
+      ))
     }
   } else {
-    if(suppress.messages %in% FALSE){
-    message("rmse.pk(): RMSLE calculated by groups: \n",
-            toString(sapply(unlist(rmse_group), rlang::as_label)),
-            ", method, model")
+    if (suppress.messages %in% FALSE) {
+      cli_inform(c(
+        "rmse.pk(): RMSLE calculated by grouping variables:",
+        "i" = "{sapply(unlist(rmse_group), rlang::as_label)}, method, model"
+      ))
     }
-    rmse_df <- rmse_df %>% rename(RMSLE = RMSE)
+    rmse_df <- rename(rmse_df, RMSLE = RMSE)
   }
 
   return(rmse_df)

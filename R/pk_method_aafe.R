@@ -139,14 +139,15 @@ AAFE.pk <- function(obj,
                        "pLOQ"))
 
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
-                                  dplyr::select(dplyr::all_of(req_vars)) %>%
-                                  dplyr::ungroup())
+  new_preds <- dplyr::left_join(preds, newdata) |>
+    dplyr::select(dplyr::all_of(req_vars)) |>
+    dplyr::ungroup() |>
+    suppressMessages()
 
   #replace below-LOQ preds with pLOQ if specified
-  if(sub_pLOQ %in% TRUE){
+  if (sub_pLOQ %in% TRUE) {
     message("AAFE.pk(): Predicted conc below pLOQ substituted with pLOQ")
-    new_preds <- new_preds %>%
+    new_preds <- new_preds |>
       dplyr::mutate(
         Conc_est_tmp = dplyr::if_else(
           .data$Conc_est < pLOQ,
@@ -157,7 +158,7 @@ AAFE.pk <- function(obj,
   }
 
   #if Conc censored and Conc_est_tmp < LOQ, make fold error 1
-  new_preds <- new_preds %>%
+  new_preds <- new_preds |>
     dplyr::mutate(
       Conc_tmp = dplyr::if_else(
         Detect %in% FALSE & Conc_est_tmp < LOQ,
@@ -168,13 +169,13 @@ AAFE.pk <- function(obj,
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
-  AAFE_df <- new_preds %>%
-    dplyr::ungroup() %>%
+  AAFE_df <- new_preds |>
+    dplyr::ungroup() |>
     dplyr::group_by(!!!AAFE_group,
-                    model, method) %>%
+                    model, method) |>
     dplyr::summarize(
-      AAFE = 10^mean(abs(log10(Conc_est_tmp/Conc_tmp)))) %>%
-    # dplyr::distinct() %>%
+      AAFE = 10^mean(abs(log10(Conc_est_tmp/Conc_tmp)))) |>
+    # dplyr::distinct() |>
     dplyr::ungroup()
 
   message("AAFE.pk)(): Groups: \n",

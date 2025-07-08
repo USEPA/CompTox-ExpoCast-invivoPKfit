@@ -7,8 +7,8 @@
 #' @author Caroline Ring
 get_stat_model.pk <- function(obj, ...) {
 
-  tidyr::tibble(modelfun = obj$stat_model) %>%
-    dplyr::mutate(model = purrr::map(modelfun, \(x) {x$name})) %>%
+  tidyr::tibble(modelfun = obj$stat_model) |>
+    dplyr::mutate(model = purrr::map(modelfun, \(x) x$name)) |>
     tidyr::unnest(model)
 
 }

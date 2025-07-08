@@ -125,7 +125,7 @@ get_params_flat <- function(
                                      Fgutabs_Vdist = 0.01,
                                      Rblood2plasma = 1e-2)
 
-  lower_bound_missing <- setdiff(names(lower_bound_default),
+  lower_bound_missing <- base::setdiff(names(lower_bound_default),
                                  names(lower_bound))
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
 
@@ -134,7 +134,7 @@ get_params_flat <- function(
                                     Fgutabs_Vdist = 1e2,
                                     Rblood2plasma = 100)
 
-  upper_bound_missing <- setdiff(names(upper_bound_default),
+  upper_bound_missing <- base::setdiff(names(upper_bound_default),
                                  names(upper_bound))
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
 
@@ -171,22 +171,22 @@ if ("oral" %in% data$Route) {
 
   # get param units based on data
   param_units_vect <- sapply(param_units,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   param_units_vect <- param_units_vect[param_name]
 
   lower_bound_vect <- sapply(lower_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   lower_bound_vect <- lower_bound_vect[param_name]
 
   upper_bound_vect <- sapply(upper_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   upper_bound_vect <- upper_bound_vect[param_name]

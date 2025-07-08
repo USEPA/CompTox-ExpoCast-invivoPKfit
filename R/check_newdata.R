@@ -29,12 +29,11 @@ check_newdata <- function(newdata,
 
   # check that newdata has the required variables
   if (!(all(req_vars %in% names(newdata)))) {
-    stop("newdata is missing one or more required variables.\n",
-         "Required variables: ",
-         toString(req_vars), "\n",
-         "Missing required variables: ",
-         toString(setdiff(req_vars, names(newdata)))
-    )
+    cli_abort(c(
+      "check_newdata(): newdata is missing one or more required variables.",
+      "i" = "Required variables: {req_vars}",
+      "x" = "Missing required variables: {base::setdiff(req_vars, names(newdata))}"
+    ))
   }
 
  # check that required variables are the same type as old data
@@ -64,16 +63,18 @@ check_newdata <- function(newdata,
   if (any(has_class %in% FALSE)) {
     bad_class <- req_vars[has_class %in% FALSE]
 
-    stop(paste("The following variables in newdata have the wrong class:",
-               paste(bad_class,
-                     "-- Required class:",
-                     req_class[has_class %in% FALSE],
-                     "; newdata class:",
-                     new_class[has_class %in% FALSE],
-                     sep = " ",
-                     collapse = "\n"),
-               sep = "\n"
-               ))
+    cli_abort(c(
+      "i" = "The following variables in newdata have the wrong class:",
+      "x" = paste(
+        bad_class,
+        "-- Required class:",
+        req_class[has_class %in% FALSE],
+        "; newdata class:",
+        new_class[has_class %in% FALSE],
+        sep = " ",
+        collapse = "\n"
+      )
+    ))
   }
  # if everything is OK, return TRUE.
   return(TRUE)

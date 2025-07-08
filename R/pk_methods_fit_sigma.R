@@ -50,9 +50,9 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
 
   # Needs more flexible naming checks, fix in future commits
   req_names <- c(
-    'Chemical', 'Species', 'Dose', 'Route', 'Media', 'Reference',
-    'N_Subjects', 'pLOQ', 'Time', 'Conc', 'Conc_trans', 'Conc_SD',
-    'data_sigma_group', 'Detect', 'exclude'
+    "Chemical", "Species", "Dose", "Route", "Media", "Reference",
+    "N_Subjects", "pLOQ", "Time", "Conc", "Conc_trans", "Conc_SD",
+    "data_sigma_group", "Detect", "exclude"
   )
 
   data_names <- names(preds)
@@ -72,16 +72,16 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
 
 
   # Inner join the predictions and observations (there should be a lot of overlap)
-  sigma_df <- obj$prefit$stat_error_model$sigma_DF %>%
+  sigma_df <- obj$prefit$stat_error_model$sigma_DF |>
     dplyr::select(!!!data_group,
                   "data_sigma_group" = param_name,
-                  lower_bound, upper_bound, start) %>%
+                  lower_bound, upper_bound, start) |>
     dplyr::distinct()
 
-  data_preds <- dplyr::inner_join(data, preds) %>%
-    dplyr::select(c(req_names, pred_col)) %>%
-    dplyr::mutate(data_sigma_group = paste0("sigma_", data_sigma_group)) %>%
-    dplyr::inner_join(sigma_df) %>%
+  data_preds <- dplyr::inner_join(data, preds) |>
+    dplyr::select(c(req_names, pred_col)) |>
+    dplyr::mutate(data_sigma_group = paste0("sigma_", data_sigma_group)) |>
+    dplyr::inner_join(sigma_df) |>
     dplyr::rename("Conc_est" = !!pred_col)
 
   # Split data
@@ -154,7 +154,7 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
                           "kkt1", "kkt2",
                           "xtime")
 
-          tmp <- data.frame(as.list(tmp)) %>%
+          tmp <- data.frame(as.list(tmp)) |>
             dplyr::slice(rep(seq_len(dplyr::n()),
                              each = length(method)))
 
@@ -180,8 +180,8 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
   optimized_df <- lapply(
     optimized_df,
     \(x) {
-      x %>%
-        tidyr::pivot_longer(cols = tidyselect::starts_with("sigma_"),
+      x |>
+        tidyr::pivot_longer(cols = dplyr::starts_with("sigma_"),
                             names_to = "hyperparam_name",
                             values_to = "hyperparam_value")
     }
@@ -189,27 +189,27 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
 
   final_df <- right_join(
     sigma_df,
-    dplyr::bind_rows(optimized_df) %>%
+    dplyr::bind_rows(optimized_df) |>
       dplyr::mutate(value = -1 * value, # Negative values used in minimization
              ngatend = as.numeric(ngatend),
              nhatend = as.numeric(nhatend),
              hev = as.numeric(hev),
              model = pred_col
-             ) %>%
-      dplyr::relocate(tidyselect::starts_with("hyperparam_")),
+             ) |>
+      dplyr::relocate(dplyr::starts_with("hyperparam_")),
     by = dplyr::join_by("data_sigma_group" == "hyperparam_name"))
 
-  AIC_df <- final_df %>%
+  AIC_df <- final_df |>
     dplyr::select(!!!data_group,
                   model, method,
                   data_sigma_group,
-                  value) %>%
-    dplyr::group_by(!!!data_group, model, method) %>%
+                  value) |>
+    dplyr::group_by(!!!data_group, model, method) |>
     dplyr::summarize(ll = sum(value),
                      npar = n(),
                      data_sigma_group = c(data_sigma_group)
-    ) %>%
-    dplyr::group_by(!!!data_group, model, method) %>%
+    ) |>
+    dplyr::group_by(!!!data_group, model, method) |>
     dplyr::mutate(AIC = (k * .data$npar) - (2 * .data$ll))
   # Usually only one parameter is optimized, but sometimes there is more than one
   # sigma value per data group.

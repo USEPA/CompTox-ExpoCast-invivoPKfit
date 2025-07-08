@@ -32,10 +32,10 @@ force_ascii_quotes <- function(x) {
 
   # Make the regular expressions
   sq_regex <- paste0("(",
-                     paste0(single_quote_chars, collapse = "|"),
+                     paste(single_quote_chars, collapse = "|"),
                      ")")
   dq_regex <- paste0("(",
-                     paste0(double_quote_chars, collapse = "|"),
+                     paste(double_quote_chars, collapse = "|"),
                      ")")
 
   temp <- gsub(sq_regex, "'", x)
@@ -44,7 +44,6 @@ force_ascii_quotes <- function(x) {
   # Encoding(temp) <- "latin1"
   return(temp)
 }
-
 
 #' Converting comma-delimited string representations of numeric vectors to numerics
 #'
@@ -71,7 +70,7 @@ string2num <- function(x) {
     return(NA_real_)
   }
 
-  num <- strsplit(num, split = ",") |> unlist() |> as.numeric()
+  num <- strsplit(num, split = ",", fixed = TRUE) |> unlist() |> as.numeric()
 
   return(num)
 }
@@ -100,7 +99,7 @@ num2string <- function(x, return.na = FALSE) {
     }
   }
 
-  return(paste0(x, collapse = ","))
+  return(paste(x, collapse = ","))
 }
 
 
@@ -168,7 +167,7 @@ pseudo_cvt <- function(
 
   tmp_subject_time <- data.frame(
     Time = rep(time, each = n_subjects),
-    Subject_ID = rep(seq(1,n_subjects), n_timepoints)
+    Subject_ID = rep(seq(1, n_subjects), n_timepoints)
   )
 
   tmp_route_media <- data.frame(

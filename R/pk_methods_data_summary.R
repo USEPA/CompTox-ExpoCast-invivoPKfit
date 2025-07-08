@@ -74,7 +74,7 @@ data_summary.pk <- function(obj,
                               exclude = TRUE)
 
 
-  data_summary <- dplyr::group_by(newdata, !!!summary_group) %>%
+  data_summary <- dplyr::group_by(newdata, !!!summary_group) |>
     dplyr::reframe(
       n_obs = dplyr::n(), # summary stats on data
       n_exclude = sum(exclude %in% TRUE),
@@ -98,8 +98,7 @@ data_summary.pk <- function(obj,
 
     )
 
-  data_summary <- data_summary %>%
-    as.data.frame()
+  data_summary <- as.data.frame(data_summary)
 
   return(data_summary)
 }

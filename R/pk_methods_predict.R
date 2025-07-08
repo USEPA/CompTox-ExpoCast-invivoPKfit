@@ -75,12 +75,12 @@ predict.pk <- function(object,
     drop_sigma = TRUE,
     include_NAs = include_NAs,
     suppress.messages = suppress.messages
-  ) %>%
+  ) |>
     dplyr::select(!c(Time.Units, Time_trans.Units))
 
   # This setup allows for a more stable call to the model functions later on
   # make a join-able data.frame with all the possible models
-  fun_models <- get_stat_model.pk(object) %>%
+  fun_models <- get_stat_model.pk(object) |>
     dplyr::mutate(
       predfun = unlist(
         purrr::map(modelfun,
@@ -137,9 +137,9 @@ predict.pk <- function(object,
                                use_scale_conc = use_scale_conc)
 
   # Make observations into nested list-column
-  newdata <- newdata %>%
-    dplyr::group_by(!!!object$data_group) %>%
-    tidyr::nest(.key = "observations") %>%
+  newdata <- newdata |>
+    dplyr::group_by(!!!object$data_group) |>
+    tidyr::nest(.key = "observations") |>
     dplyr::ungroup()
 
   # Set each observation per data group with a model and method used
@@ -152,25 +152,25 @@ predict.pk <- function(object,
                                      "model", "method"))
 
   # Remove any NULL observations
-  newdata <- newdata %>%
-    dplyr::rowwise() %>%
-    dplyr::filter(!is.null(observations)) %>%
+  newdata <- newdata |>
+    dplyr::rowwise() |>
+    dplyr::filter(!is.null(observations)) |>
     dplyr::ungroup()
 
 
   # After join it is joined by model, method, Chemical, Species
   # Set a new column for the model function
-  newdata <- newdata %>%
+  newdata <- newdata |>
     dplyr::left_join(fun_models,
-                     join_by(model)) %>%
+                     join_by(model)) |>
     dplyr::distinct()
 
   # Get predictions
   # Note that the model functions only need Time, Dose, Route, and Medium
-  newdata <- newdata %>% # Rowwise drops
-    dplyr::rowwise(model, method, !!!object$data_group) %>% # Needs to include columns outside the nest
+  newdata <- newdata |> # Rowwise drops
+    dplyr::rowwise(model, method, !!!object$data_group) |> # Needs to include columns outside the nest
     dplyr::summarise(predictions = list(
-      .data$observations %>%
+      .data$observations |>
         dplyr::mutate(
           Dose_pred = dplyr::if_else(
             rep(conc_scale$dose_norm, NROW(Dose)),
@@ -190,20 +190,18 @@ predict.pk <- function(object,
             ),
             error = function(err) {
               if (suppress.messages %in% FALSE) {
-                message("predict.pk(): Unable to run ",
-                        predfun, " for ",
-                        toString(data_group_vars),
-                        " data grouping.\n",
-                        "Likely an aborted fit, ",
-                        "it is missing estimated parameters."
-                )
+                cli_inform(c(
+                  "!" = paste("predict.pk(): Unable to run",
+                        "{predfun} for {data_group_vars} data grouping."),
+                        "!" = "Likely an aborted fit, it is missing estimated parameters."
+                ))
               }
               # Return Value
               NA_real_
             }), # end tryCatch
-          .after = Conc.Units)  %>% # end dplyr::mutate
+          .after = Conc.Units)  |> # end dplyr::mutate
         dplyr::select(!c("Dose_pred"))
-    )) %>%
+    )) |>
     tidyr::unnest("predictions")
 
 
@@ -213,31 +211,31 @@ predict.pk <- function(object,
     newdata <- dplyr::rename(newdata, Conc_est = "Estimate")
   # apply log10-trans to predicted conc, if so specified
   if (conc_scale$log10_trans %in% TRUE) {
-    newdata <- newdata %>%
+    newdata <- newdata |>
       dplyr::mutate(Conc_est = log10(Conc_est))
   }
   } else if (type %in% "auc") {
     newdata <- dplyr::rename(newdata, AUC_est = "Estimate")
   # note that it doesn't make sense to log10-trans AUC
     if (suppress.messages %in% FALSE) {
-      message("predict.pk(): Log10 transformation was specified, ",
-              "but was not used because `type == 'AUC'`.")
+      cli_inform(paste("predict.pk(): Log10 transformation was specified,",
+                         "but was not used because `type == 'AUC'`."))
     }
   }
 
   if (suppress.messages %in% FALSE) {
     if (conc_scale$dose_norm) {
-    message("predict.pk(): Note that the predicted values are for dose 1.0 (dose-normalized)")
+    cli_inform("predict.pk(): Note that the predicted values are for dose 1.0 (dose-normalized)")
   } else {
-    message("predict.pk(): Note that the predicted values are not dose-normalized")
+    cli_inform("predict.pk(): Note that the predicted values are not dose-normalized")
   }
   }
 
-  message("predict.pk(): These predictions have been made using un-scaled Time ",
-          "and 1/hour rate constants from coefs()")
+  cli_inform(paste("predict.pk(): These predictions have been made using un-scaled Time ",
+                   "and 1/hour rate constants from coefs()"))
 
   if (NROW(newdata) == 0L) {
-    warning("predict.pk: The output is empty, please check your input.")
+    cli_warn("predict.pk: The output is empty, please check your input.")
   }
 
   return(newdata)

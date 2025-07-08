@@ -2097,7 +2097,7 @@ lombardo <- lombardo %>%
 
 #any left unidentified: search by name
 lombardo_missing <- lombardo %>%
-  dplyr:: filter(is.na(dtxsid))
+  dplyr::filter(is.na(dtxsid))
 
 missing_names <- lombardo_missing %>%
    dplyr::pull(Name)

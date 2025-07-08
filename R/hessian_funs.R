@@ -39,7 +39,7 @@ calc_hessian <- function(pars_opt,
                          observations,
                          modelfun,
                          dose_norm,
-                         log10_trans){
+                         log10_trans) {
   hess <- numDeriv::hessian(func = function(x, pars_const) {
     log_likelihood(par = x,
                    const_params = pars_const,
@@ -53,7 +53,7 @@ calc_hessian <- function(pars_opt,
   },
   x = pars_opt,
   pars_const = pars_const,
-  method = 'Richardson')
+  method = "Richardson")
 
   colnames(hess) <- names(pars_opt)
   rownames(hess) <- names(pars_opt)
@@ -73,7 +73,7 @@ calc_hessian <- function(pars_opt,
 #'
 #' @author Caroline Ring
 #'
-hess_sd1 <- function(m){
+hess_sd1 <- function(m) {
   as.numeric(diag(solve(m)))^(1 / 2)
 }
 
@@ -104,13 +104,12 @@ hess_sd1 <- function(m){
 #'   Invertible: Alternatives to Model Respecification in Nonlinear Estimation.
 #'   Sociological Methods & Research 33(1):54-87. DOI: 10.1177/0049124103262681
 #'
-hess_sd2 <- function(m){
+hess_sd2 <- function(m) {
      m_inv <- MASS::ginv(m)
 
      #generalized Cholesky factorization
-     suppressWarnings(
-       V <- Matrix::Cholesky(m_inv, perm = TRUE)
-     )
+     V <- Matrix::Cholesky(m_inv, perm = TRUE) |>
+       suppressWarnings()
 
      #reconstruct m_inv from the generalized Cholesky factorization
      #this should ensure positive definiteness
@@ -197,7 +196,7 @@ calc_sds_alerts <- function(pars_opt,
                             observations,
                             modelfun,
                             dose_norm,
-                            log10_trans){
+                            log10_trans) {
 #intiialize output
   output <- data.frame(param_name = names(pars_opt),
                        param_sd = rep(NA_real_, length(pars_opt)),
@@ -214,22 +213,22 @@ calc_sds_alerts <- function(pars_opt,
   #try inverting Hessian using solve() first
   hess_inv1 <- purrr::safely(hess_sd1)(hess)
 
-  if(is.null(hess_inv1$error)){  #if this succeeded (no error)
+  if (is.null(hess_inv1$error)) {  #if this succeeded (no error)
     output$param_sd <- hess_inv1$result
     output$sd_alert <- "No error in solve()."
-    if(any(!is.finite(hess_inv1$result))){  #if the result had any NaNs
+    if (!all(is.finite(hess_inv1$result))) {  #if the result had any NaNs
       output$sd_alert <- paste0(output$sd_alert,
                                 " solve() method returned NaNs. ",
                                 "Trying pseudovariance method.")
       #try pseudovariance method
       hess_inv2 <- purrr::safely(hess_sd2)(hess)
-      if(is.null(hess_inv2$error)){ #if pseudovar method succeeded:
+      if (is.null(hess_inv2$error)) { #if pseudovar method succeeded:
         #set output to the result
         output$param_sd <- hess_inv2$result
         output$sd_alert <- paste0(output$sd_alert,
                                   " No error in pseudovariance method. ",
                                   "Returning results of pseudovariance method.")
-      }else{ #if pseudovar method errored
+      } else { #if pseudovar method errored
         #record error message
         output$sd_alert <- paste0(output$sd_alert,
                                   "Error in pseudovariance method: '",
@@ -237,27 +236,27 @@ calc_sds_alerts <- function(pars_opt,
                                   "'. Returning results of solve() method.")
         output$param_sd <- hess_inv1$result
       }
-    }else{ #if hess_sd1() succeeded with no NaN
+    } else { #if hess_sd1() succeeded with no NaN
       #then set the output to the result of hess_sd1()
       output$param_sd <- hess_inv1$result
       output$sd_alert <- paste0(output$sd_alert,
                                 "Returning results of solve() method.")
     }
 
-  }else{ #if hess_sd1() errored
+  } else { #if hess_sd1() errored
     #record error message
     output$sd_alert <- paste0("Error in solve(): '",
                              as.character(hess_inv1$error),
                              "'. Trying pseudovariance method.")
     #try pseudovariance method
     hess_inv2 <- purrr::safely(hess_sd2)(hess)
-    if(is.null(hess_inv2$error)){ #if inv2 succeeded:
+    if (is.null(hess_inv2$error)) { #if inv2 succeeded:
       #set output to the result
       output$param_sd <- hess_inv2$result
       output$sd_alert <- paste0(output$sd_alert,
              " No error in pseudovariance method. ",
              "Returning results of pseudovariance method.")
-    }else{ #if pseudovar method errored, too
+    } else { #if pseudovar method errored, too
       #record error message
       output$sd_alert <- paste0(output$sd_alert,
                                 " Error in pseudovariance method: '",

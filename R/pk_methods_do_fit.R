@@ -26,8 +26,6 @@
 #' @inheritParams do_preprocess.pk
 #' @param n_cores Number of cores used for parallel computing.
 #' @param rate_names The names of the rate units. Leave NULL to utilize default 1/hour.
-#' @param max_multiplier Numeric value for upper prediction limit (this number multiplied
-#' by maximum concentrations in each experiment). Default set to NULL does not apply this limit.
 #' @return The same [pk] object, with element `fit` containing the fitted
 #'   results for each model in `stat_model`.
 #' @export
@@ -36,7 +34,6 @@
 do_fit.pk <- function(obj,
                       n_cores = NULL,
                       rate_names = NULL,
-                      max_multiplier = NULL,
                       ...) {
   # check status
   objname <- deparse(substitute(obj))
@@ -67,15 +64,26 @@ do_fit.pk <- function(obj,
     obj <- do_prefit(obj)
   }
 
-  if (!rlang::is_installed("multidplyr")) { n_cores <- NULL }
+  if (!rlang::is_installed("multidplyr")) n_cores <- NULL
 
   # pull the non-excluded observations for fitting
-  data <- subset(obj$data, exclude %in% FALSE)
+  data <- subset(obj$data, exclude == FALSE)
   data_sigma_group <- data$data_sigma_group
 
   data_group <- obj$data_group
-  data_group_vars <- sapply(data_group,
-                               rlang::as_label)
+  data_group_vars <- sapply(data_group, rlang::as_label)
+
+  error_group_vars <- sapply(obj$stat_error_model$error_group, rlang::as_label)
+
+  req_data_vars <- sapply(
+    ggplot2::vars(
+      Route, Media, Dose,
+      Conc, Conc_trans, Conc_SD,
+      LOQ, exclude, Detect, pLOQ,
+      N_Subjects, data_sigma_group, Time_trans
+    ),
+    rlang::as_label
+  )
 
   # Make all the other data prior to loading
   par_DF <- obj$prefit$par_DF
@@ -83,68 +91,58 @@ do_fit.pk <- function(obj,
   fit_check_DF <- obj$prefit$fit_check
 
 
-  # Subset data so I only have the columns needed for fitting
-  req_data_vars <- ggplot2::vars(
-    Route, Media, Dose,
-    Conc, Conc_trans, Conc_SD,
-    LOQ, exclude, Detect, pLOQ,
-    N_Subjects, data_sigma_group, Time_trans
-  )
-
-  data <- data %>%
-    dplyr::select(!!!obj$stat_error_model$error_group,
-                  !!!req_data_vars)
+  # Subset data so I only have the columns needed for fittingi
+  data <- data[union(req_data_vars, error_group_vars)]
 
   # nest the necessary data frames...
-  data_nest <- data %>%
-    tidyr::nest(data = !tidyselect::all_of(data_group_vars))
+  data_nest <- tidyr::nest(data,
+                           data = !dplyr::all_of(data_group_vars))
 
-  par_DF_nest <- par_DF %>%
-    tidyr::nest(par_DF = !tidyselect::all_of(c("model", data_group_vars)))
+  par_DF_nest <- tidyr::nest(par_DF,
+                             par_DF = !dplyr::all_of(c("model", data_group_vars)))
 
-  sigma_DF_nest <- sigma_DF %>%
-    tidyr::nest(sigma_DF = !tidyselect::all_of(data_group_vars))
+  sigma_DF_nest <- tidyr::nest(sigma_DF,
+                               sigma_DF = !dplyr::all_of(data_group_vars))
 
-  fit_check <- fit_check_DF %>%
-    dplyr::select(!c(n_par, n_sigma, n_detect, n_par_opt, fit_reason))
+  fit_check <- dplyr::select(fit_check_DF,
+                             !c(n_par, n_sigma, n_detect, n_par_opt, fit_reason))
 
   # make a join-able data.frame with all the possible models
   fun_models <- get_stat_model(obj)
 
   # merge it all together
   info_nest <- dplyr::inner_join(
+    data_nest,
+    par_DF_nest,
+    by = c(data_group_vars)
+  ) |>
     dplyr::inner_join(
-      dplyr::inner_join(
-        data_nest,
-        par_DF_nest,
-        by = c(data_group_vars)
-      ),
       sigma_DF_nest,
       by = c(data_group_vars)
-    ),
-    fit_check,
-    by = c("model", data_group_vars)
-  ) %>%
-    dplyr::relocate(model, .after = data_group_vars[-1]) %>%
-    dplyr::left_join(fun_models, join_by(model)) %>%
+    ) |>
+    dplyr::inner_join(
+      fit_check,
+      by = c("model", data_group_vars)
+    ) |>
+    dplyr::relocate(model, .after = data_group_vars[-1]) |>
+    dplyr::left_join(fun_models, join_by(model)) |>
     suppressMessages()
 
   # It is at this point when we must evaluate all quoted expressions in modelfun
   # That is, for the concentration function arguments which is used by log_likelihood.
 
-  info_nest <- info_nest %>%
-    dplyr::rowwise() %>%
+  info_nest <- info_nest |>
+    dplyr::rowwise() |>
     dplyr::mutate(
       modelfun = purrr::map(
         modelfun,
         \(x) {
           # Annoying hacking of the environments
-          x$conc_fun_args = lapply(x$conc_fun_args, eval,
-                                   parent.frame(n = 3))
+          x$conc_fun_args = lapply(x$conc_fun_args, eval, parent.frame(n = 3))
           x
         }
       )
-    ) %>%
+    ) |>
     dplyr::ungroup()
 
   this_settings_optimx <- get_settings_optimx(obj)
@@ -152,19 +150,16 @@ do_fit.pk <- function(obj,
   dose_norm <- obj$scales$conc$dose_norm
   log10_trans <- obj$scales$conc$log10_trans
 
-  message("do_fit.pk(): Begin fitting for model(s): ",
-          paste(fun_models$model, collapse = ", "))
+  cli_inform("do_fit.pk(): Begin fitting for model{?s}: {fun_models$model}")
 
   total_cores <- parallel::detectCores()
   # Set the options for Parallel Computing
   # First condition if it is FALSE don't use parallel computing (takes much longer though)
   if (!is.null(n_cores) && is.numeric(n_cores) && (n_cores != 1 || total_cores != 1)) {
-    message("do_fit.pk(): Trying to divide processes into ",
-            n_cores,
-            " processing cores"
+    cli_inform("do_fit.pk(): Trying to divide processes into {n_cores} core{?s}."
     )
 
-    if (total_cores <= n_cores & total_cores > 1) {
+    if (total_cores <= n_cores && total_cores > 1) {
       n_cores <- total_cores - 1
       message("do_fit.pk():To ensure other programs ",
               "& processes are still able to run, ",
@@ -174,9 +169,7 @@ do_fit.pk <- function(obj,
       n_cores <- n_cores
     }
 
-    message("do_fit.pk(): ",
-            n_cores,
-            " processing cores allocated."
+    cli_inform("do_fit.pk(): {n_cores} core{?s} allocated."
     )
     cluster <- multidplyr::new_cluster(n_cores)
 
@@ -193,10 +186,10 @@ do_fit.pk <- function(obj,
 
     # we can likely save some memory by only passing what we need from obj
     # like this
-    tidy_fit <- info_nest %>%
-      dplyr::ungroup() %>%
-      dplyr::rowwise(!!!data_group, model) %>%
-      multidplyr::partition(cluster) %>%
+    tidy_fit <- info_nest |>
+      dplyr::ungroup() |>
+      dplyr::rowwise(!!!data_group, model) |>
+      multidplyr::partition(cluster) |>
       dplyr::summarise(
         fit = list(fit_group(data = data,
                              par_DF = par_DF,
@@ -207,17 +200,16 @@ do_fit.pk <- function(obj,
                              modelfun = modelfun,
                              dose_norm = dose_norm,
                              log10_trans = log10_trans,
-                             max_mult = max_multiplier,
                              suppress.messages = TRUE))
-        ) %>%
+        ) |>
       dplyr::collect() # undo the multidplyr::partition()
 
     rm(cluster)
 
   } else {
-    tidy_fit <- info_nest %>%
-      dplyr::ungroup() %>%
-      dplyr::rowwise(!!!data_group, model) %>%
+    tidy_fit <- info_nest |>
+      dplyr::ungroup() |>
+      dplyr::rowwise(!!!data_group, model) |>
       dplyr::summarize(
         fit = list(fit_group(data = data,
                              par_DF = par_DF,
@@ -228,28 +220,27 @@ do_fit.pk <- function(obj,
                              modelfun = modelfun,
                              dose_norm = dose_norm,
                              log10_trans = log10_trans,
-                             max_mult = max_multiplier,
                              suppress.messages = TRUE))
       )
   }
 
 
-  tidy_fit <- tidy_fit %>%
+  tidy_fit <- tidy_fit |>
     dplyr::mutate(
       fit = purrr::map(fit,
                        \(x) {
-                         x %>%
+                         x |>
                            dplyr::mutate(
                              # ngatend = as.numeric(ngatend),
                              # nhatend = as.numeric(nhatend),
                              # hev = as.numeric(hev),
                              message = as.character(message)
-                           ) %>%
+                           ) |>
                            tidyr::pivot_longer(
                              cols = !c(method, value:message),
                              names_to = "param_name",
                              values_to = "estimate"
-                           ) %>%
+                           ) |>
                            dplyr::relocate(
                              param_name, estimate, convcode, value,
                              .after = method
@@ -260,43 +251,46 @@ do_fit.pk <- function(obj,
 
 
   # Unnest
-  tidy_fit <- tidy_fit %>%
+  tidy_fit <- tidy_fit |>
     tidyr::unnest(fit)
 
 
   # Adding the upper, lower, and starting values from sigma_DF and par_DF
-  tidy_sigmas <- tidy_fit %>%
-    dplyr::filter(stringr::str_detect(param_name, "sigma_")) %>%
-    dplyr::left_join(sigma_DF %>%
+  tidy_sigmas <- tidy_fit |>
+    dplyr::filter(stringr::str_detect(param_name,
+                                  stringr::fixed("sigma_"))
+                  ) |>
+    dplyr::left_join(sigma_DF |>
                         dplyr::select(!!!data_group,
                                       param_name, param_units,
                                       optimize_param, use_param,
                                       lower_bound, upper_bound, start
-                                      ) %>%
+                                      ) |>
                         dplyr::distinct(),
                       by = c(data_group_vars, "param_name"))
 
   # Prepare non-sigma parameters
-  tidy_params <- tidy_fit %>%
-    dplyr::filter(stringr::str_detect(param_name, "sigma_",
-                                      negate = TRUE)) %>%
-    dplyr::full_join(par_DF %>%
+  tidy_params <- tidy_fit |>
+    dplyr::filter(stringr::str_detect(param_name,
+                                  stringr::fixed("sigma_"),
+                                  negate = TRUE)) |>
+    dplyr::full_join(par_DF |>
                        dplyr::select(!!!data_group, model,
                                      param_name, param_units,
                                      optimize_param, use_param,
                                      lower_bound, upper_bound, start
-                       ) %>%
-                       dplyr::filter(use_param) %>%
-                       dplyr::distinct() %>%
+                       ) |>
+                       dplyr::filter(use_param) |>
+                       dplyr::distinct() |>
                        # Add column with all possible methods to the par_DF
                        dplyr::cross_join(
                          data.frame(method = these_methods)
                        ),
-                     by = c(data_group_vars, "model", "method", "param_name")) %>%
-    dplyr::group_by(!!!data_group, model, method) %>%
+                     by = c(data_group_vars, "model", "method", "param_name")) |>
+    dplyr::group_by(!!!data_group, model, method) |>
     # Fill in missing values
-    tidyr::fill(convcode:message, .direction = "downup") %>%
-    dplyr::ungroup() %>%
+    tidyr::fill(convcode:message, .direction = "downup") |>
+    dplyr::ungroup() |>
     # Set estimate to start if fit status was continue
     dplyr::mutate(
       estimate = ifelse(
@@ -305,62 +299,62 @@ do_fit.pk <- function(obj,
       )
     )
 
-  tidy_fit <- dplyr::bind_rows(tidy_sigmas, tidy_params) %>%
+  tidy_fit <- dplyr::bind_rows(tidy_sigmas, tidy_params) |>
     dplyr::arrange(!!!data_group, model, method)
 
   # Take rate_names
   # Parameter names don't matter, all rates should have consistent param_unit
-  message("do_fit.pk(): Now converting all rate constants to units of 1/hour, ",
-          "in case time has been scaled to units other than hours before fitting"
-  )
+  cli_inform(paste(
+    "do_fit.pk(): Now converting all rate constants to units of 1/hour,",
+    "in case time has been scaled to units other than hours before fitting."
+  ))
 
-  rate_names <- par_DF %>% dplyr::select(!!!obj$data_group,
+  rate_names <- par_DF |> dplyr::select(!!!obj$data_group,
                                          param_name,
-                                         param_units) %>%
-    dplyr::filter(startsWith(param_units, "1/")) %>%
-    dplyr::mutate(Time_trans.Units = stringr::str_remove(param_units, "^1/")) %>%
+                                         param_units) |>
+    dplyr::filter(startsWith(param_units, "1/")) |>
+    dplyr::mutate(Time_trans.Units = stringr::str_remove(param_units, "^1/")) |>
     dplyr::distinct()
   # Get a simple data_group and conversion rate data frame
-  rate_conversion <- rate_names %>%
-    dplyr::select(-param_name) %>% # Keep Time_trans.Units for a join
-    dplyr::group_by(Time_trans.Units) %>%
+  rate_conversion <- rate_names |>
+    dplyr::select(-param_name) |> # Keep Time_trans.Units for a join
+    dplyr::group_by(Time_trans.Units) |>
     dplyr::mutate(to_perhour = convert_time(1,
                                             from = Time_trans.Units,
                                             to = "hours",
-                                            inverse = TRUE)) %>%
-    dplyr::ungroup() %>%
+                                            inverse = TRUE)) |>
+    dplyr::ungroup() |>
     dplyr::distinct()
 
-  rate_names <- rate_names %>% dplyr::pull(param_name)
+  rate_names <- rate_names |> dplyr::pull(param_name)
 
   # Convert the rates
-  tidy_fit <- suppressMessages(
-    tidy_fit %>%
-      dplyr::left_join(rate_conversion,
-                       by = c(data_group_vars, "param_units")) %>%
-      dplyr::mutate(dplyr::across(tidyselect::contains(rate_names),
-                                  \(x) x * to_perhour)) %>%
-      dplyr::select(-to_perhour))
+  tidy_fit <- tidy_fit |>
+    dplyr::left_join(rate_conversion,
+                     by = c(data_group_vars, "param_units")) |>
+    dplyr::mutate(dplyr::across(dplyr::contains(rate_names),
+                                \(x) x * to_perhour)) |>
+    dplyr::select(-to_perhour) |>
+    suppressMessages()
 
 # Changing the final fit form so that everything is similar par_DF
 
   # Add parameter fit flags
-  obj$fit <- tidy_fit %>%
+  obj$fit <- tidy_fit |>
     dplyr::mutate(estimate = dplyr::if_else(
       optimize_param == FALSE & use_param == TRUE,
       start,
-      estimate)
-    ) %>%
-    dplyr::mutate(at_bound = dplyr::case_when(
-      identical(estimate, lower_bound) ~ "AT LOWER BOUND",
-      identical(estimate, upper_bound) ~ "AT UPPER BOUND",
-      identical(estimate, start) ~ "AT START",
-      .default = "Not at bound")
-    ) %>%
-    dplyr::distinct() %>%
+      estimate),
+      at_bound = dplyr::case_when(
+        identical(estimate, lower_bound) ~ "AT LOWER BOUND",
+        identical(estimate, upper_bound) ~ "AT UPPER BOUND",
+        identical(estimate, start) ~ "AT START",
+        .default = "Not at bound")
+    ) |>
+    dplyr::distinct() |>
     dplyr::select(-c(lower_bound, upper_bound))
 
   obj$status <- status_fit # fitting complete
-  message("do_fit.pk: Fitting complete")
+  cli_inform(c("v" = "do_fit.pk(): Fitting complete!"))
   return(obj)
 }

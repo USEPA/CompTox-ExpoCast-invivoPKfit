@@ -40,8 +40,7 @@
 #' @family built-in model functions
 #' @family 2-compartment model functions
 #' @family model AUC functions
-auc_2comp <- function(params, time, dose, route, medium = "plasma")
-{
+auc_2comp <- function(params, time, dose, route, medium = "plasma") {
   # fill any missing parameters with NAs, and impute Fgutabs_v1 from Fgutabs and
   # V1 if necessary
   params <- fill_params_2comp(params)
@@ -64,36 +63,29 @@ auc_2comp <- function(params, time, dose, route, medium = "plasma")
   alpha = beta = NULL
   Rblood2plasma = kgutabs =  NULL
 
-  # for readability, assign params to variables inside this function
-  for (x in names(params)) {
-    assign(x, unname(params[x]))
-  }
+  list2env(as.list(params), envir = as.environment(-1))
 
   # for readability, assign transformed params to variables inside this function
-  for (x in names(trans_params)) {
-    assign(x, unname(trans_params[x]))
-  }
+  list2env(as.list(trans_params), envir = as.environment(-1))
 
-  auc <- dose * ifelse(route %in% "iv",
-                       (
-                         A_iv_unit / alpha
-                         - A_iv_unit * exp(-time * alpha) / alpha
-                         + B_iv_unit / beta
-                         - B_iv_unit * exp(-time * beta) / beta
-                       ),
-                       (
-                         A_oral_unit / alpha
-                         - A_oral_unit * exp(-time * alpha) / alpha
-                         + B_oral_unit / beta
-                         - B_oral_unit * exp(-time * beta) / beta
-                         + (-A_oral_unit - B_oral_unit) / kgutabs
-                         - (-A_oral_unit - B_oral_unit) * exp(-time * kgutabs) / kgutabs
-                       )
+  auc <- rep(NA_real_, length(time))
+  iv_vec <- (route == "iv")
+  or_vec <- (route == "oral")
+  blood_vec <- (medium == "blood")
+
+  auc[iv_vec] <- dose[iv_vec] * (
+    (A_iv_unit / alpha) - (A_iv_unit * exp(-time * alpha) / alpha) +
+      (B_iv_unit / beta) - (B_iv_unit * exp(-time * beta) / beta)
   )
-auc <- ifelse(medium %in% "blood",
-              Rblood2plasma * auc,
-              auc
-              )
+
+  auc[or_vec] <- dose[or_vec] * (
+    (A_oral_unit / alpha) - (A_oral_unit * exp(-time[or_vec] * alpha) / alpha) +
+      (B_oral_unit / beta) - (B_oral_unit * exp(-time[or_vec] * beta) / beta) +
+      ((-A_oral_unit - B_oral_unit) / kgutabs) -
+      ((-A_oral_unit - B_oral_unit) * exp(-time[or_vec] * kgutabs) / kgutabs)
+  )
+
+  auc[blood_vec] <- auc[blood_vec] * Rblood2plasma
 
   return(auc)
 }

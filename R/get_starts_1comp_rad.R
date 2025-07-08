@@ -168,9 +168,9 @@ get_starts_1comp_rad <- function(data,
 
   # Split into IV and PO
   ivdat <- subset(tmpdat,
-                  Route %in% "iv" & Media %in% c('blood', 'plasma'))
+                  Route %in% "iv" & Media %in% c("blood", "plasma"))
   podat <- subset(tmpdat,
-                  Route %in% "oral" & Media %in% c('blood', 'plasma'))
+                  Route %in% "oral" & Media %in% c("blood", "plasma"))
 
   # Set a Fup specific to the liver for clearance
   if (!restrictive) {
@@ -219,7 +219,7 @@ get_starts_1comp_rad <- function(data,
   # Get the initial guess for fraction recovered
   # Does the excreta data have any non-detects?
   # Get the time at which the maximum cumulative concentration occurs
-  data_exc <- subset(data, subset = Media %in% 'excreta')
+  data_exc <- subset(data, subset = Media %in% "excreta")
   tmax_exc <- data_exc[
     which(data_exc[["Conc"]] == max(data_exc[["Conc"]])),
     "Time"

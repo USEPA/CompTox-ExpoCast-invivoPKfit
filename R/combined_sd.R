@@ -72,9 +72,10 @@ combined_sd <- function(group_mean,
   # repeat to match longest
   for (i in seq_along(x_len)) {
     assign(names(x_len)[i],
-           rep( # repeat the current value of each item to match the length
+           rep_len( # repeat the current value of each item to match the length
              get(names(x_len)[i]), # get the current value of each item
-             length.out = max_len)
+             max_len
+           )
     )
   }
 

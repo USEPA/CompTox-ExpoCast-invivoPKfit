@@ -190,7 +190,7 @@ rsq.pk <- function(obj,
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = obj,
                                use_scale_conc = use_scale_conc)
-  if(suppress.messages %in% FALSE){
+  if (suppress.messages %in% FALSE) {
   message("rsq.pk(): Calculating R-squared on transformed concentration scale. ",
           "Transformations used: \n",
           "Dose-normalization ", conc_scale$dose_norm, "\n",
@@ -228,24 +228,22 @@ req_vars <- unique(c(names(preds),
                      "pLOQ"))
 
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
-    dplyr::select(dplyr::all_of(req_vars)) %>%
-    dplyr::ungroup())
+  new_preds <- dplyr::left_join(preds, newdata) |>
+    dplyr::select(dplyr::all_of(req_vars)) |>
+    dplyr::ungroup() |>
+    suppressMessages()
 
   #replace below-LOQ preds with pLOQ if specified
-  if(sub_pLOQ %in% TRUE){
-    if(suppress.messages %in% FALSE){
-    message("rsq.pk(): Predicted conc below pLOQ substituted with pLOQ")
+  if (sub_pLOQ %in% TRUE) {
+    if (suppress.messages %in% FALSE) {
+      message("rsq.pk(): Predicted conc below pLOQ substituted with pLOQ")
     }
-    new_preds <- new_preds %>%
-      dplyr::mutate(Conc_est = dplyr::if_else(Conc_est < pLOQ,
-                                              pLOQ,
-                                              Conc_est))
+    new_preds$Conc_est <- with(new_preds, pmax(Conc_est, pLOQ))
   }
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
-  rsq_df <- new_preds %>%
+  rsq_df <- new_preds |>
     dplyr::mutate(
       Conc_set = dplyr::if_else(
         rep(conc_scale$dose_norm, NROW(Conc)),
@@ -262,24 +260,24 @@ req_vars <- unique(c(names(preds),
         Conc_est / Dose,
         Conc_est
       )
-    ) %>%
-    dplyr::ungroup() %>%
+    ) |>
+    dplyr::ungroup() |>
     dplyr::group_by(!!!rsq_group,
-                    model, method) %>%
+                    model, method) |>
     dplyr::summarize(
       Rsq = calc_rsq(obs = Conc_set,
                        obs_sd = Conc_set_SD,
                        pred = Conc_est,
                        n_subj = N_Subjects,
                        detect = Detect,
-                       log10_trans = conc_scale$log10_trans)) %>%
-    # dplyr::distinct() %>%
+                       log10_trans = conc_scale$log10_trans)) |>
+    # dplyr::distinct() |>
     dplyr::ungroup()
 
-  if(suppress.messages %in% FALSE){
-  message("rsq.pk)(): Groups: \n",
-          toString(rsq_group_char),
-          ", method, model")
+  if (suppress.messages %in% FALSE) {
+    message("rsq.pk)(): Groups: \n",
+            toString(rsq_group_char),
+            ", method, model")
   }
 
   return(rsq_df)

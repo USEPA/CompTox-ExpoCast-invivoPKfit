@@ -91,13 +91,9 @@ cp_flat <- function(params,
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
-  cp <- dose * ifelse(route %in% "iv",
-               1 / Vdist,
-               Fgutabs_Vdist)
+  Cp <- dose * ifelse(route %in% "iv", 1 / Vdist, Fgutabs_Vdist)
 
-  cp <- ifelse(medium %in% "blood",
-               cp * Rblood2plasma,
-               cp)
+  Cp <- ifelse(medium %in% "blood", Cp * Rblood2plasma, Cp)
 
-  return(cp)
+  return(Cp)
 }

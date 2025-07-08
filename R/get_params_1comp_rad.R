@@ -171,7 +171,7 @@ get_params_1comp_rad <- function(
                                      Frec = 0.001)
   # which parameters did not have lower bounds specified in the `lower_bound`
   # argument?
-  lower_bound_missing <- setdiff(names(lower_bound_default),
+  lower_bound_missing <- base::setdiff(names(lower_bound_default),
                                  names(lower_bound))
   # fill in the default lower bounds for any parameters that don't have them
   # defined in the `lower_bound` argument
@@ -194,7 +194,7 @@ get_params_1comp_rad <- function(
                                      Frec = 1)
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
-  upper_bound_missing <- setdiff(names(upper_bound_default),
+  upper_bound_missing <- base::setdiff(names(upper_bound_default),
                                  names(upper_bound))
   # fill in the default upper bounds for any parameters that don't have them
   # defined in the `upper_bound` argument
@@ -235,22 +235,22 @@ get_params_1comp_rad <- function(
   }
 
   param_units_vect <- sapply(param_units,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   param_units_vect <- param_units_vect[param_name]
 
   lower_bound_vect <- sapply(lower_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   lower_bound_vect <- lower_bound_vect[param_name]
 
   upper_bound_vect <- sapply(upper_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   upper_bound_vect <- upper_bound_vect[param_name]
@@ -280,8 +280,8 @@ get_params_1comp_rad <- function(
   # Notify user which starts are out of bounds:
   if (any(start_low | start_high | start_nonfin)) {
 
-    oob_starts <- par_DF[start_low | start_high,][["param_name"]]
-    inf_starts <- par_DF[start_nonfin,][["param_name"]]
+    oob_starts <- par_DF[start_low | start_high, ][["param_name"]]
+    inf_starts <- par_DF[start_nonfin, ][["param_name"]]
     if (!all(start_nonfin)) {
       message("There are out of bounds starting values detected for ",
               paste(unique(data$Chemical), unique(data$Species), collapse = "|"),

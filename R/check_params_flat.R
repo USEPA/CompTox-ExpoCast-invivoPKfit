@@ -27,7 +27,7 @@ check_params_flat <- function(params,
   # check for any missing parameters
   # required params for oral dose
   if (any(route %in% "oral")) {
-    missing_params <- setdiff("Fgutabs_Vdist",
+    missing_params <- base::setdiff("Fgutabs_Vdist",
                               names(params)[is.finite(params)])
     if (length(missing_params) > 0) {
       msg <- (paste("Error: For flat oral model,",
@@ -38,7 +38,7 @@ check_params_flat <- function(params,
 
   # required params for IV dose
   if (any(route %in% "iv")) {
-    missing_params <- setdiff("Vdist",
+    missing_params <- base::setdiff("Vdist",
                               names(params)[is.finite(params)])
     if (length(missing_params) > 0) {
       msg <- (paste("Error: For flat IV model,",
@@ -47,11 +47,9 @@ check_params_flat <- function(params,
     }
   }
 
-  if (any(medium %in% "blood")) {
-    if (!("Rblood2plasma" %in% names(params)[is.finite(params)])) {
-      msg <- (paste0("Error: For flat model ",
-                  "in blood: missing parameter Rblood2plasma"))
-    }
+  if (any(medium %in% "blood") && !"Rblood2plasma" %in% names(params)[is.finite(params)]) {
+    msg <- (paste0("Error: For flat model ",
+                   "in blood: missing parameter Rblood2plasma"))
   }
 
   return(msg)

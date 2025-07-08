@@ -4,7 +4,7 @@
 \alias{do_fit.pk}
 \title{Do fitting}
 \usage{
-\method{do_fit}{pk}(obj, n_cores = NULL, rate_names = NULL, max_multiplier = NULL, ...)
+\method{do_fit}{pk}(obj, n_cores = NULL, rate_names = NULL, ...)
 }
 \arguments{
 \item{obj}{A `pk` object}
@@ -12,9 +12,6 @@
 \item{n_cores}{Number of cores used for parallel computing.}
 
 \item{rate_names}{The names of the rate units. Leave NULL to utilize default 1/hour.}
-
-\item{max_multiplier}{Numeric value for upper prediction limit (this number multiplied
-by maximum concentrations in each experiment). Default set to NULL does not apply this limit.}
 
 \item{...}{Additional arguments. Not in use currently.}
 }

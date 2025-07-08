@@ -157,7 +157,7 @@ get_params_1comp <- function(
                                      Rblood2plasma = 1e-2)
  # which parameters did not have lower bounds specified in the `lower_bound`
  # argument?
-  lower_bound_missing <- setdiff(names(lower_bound_default),
+  lower_bound_missing <- base::setdiff(names(lower_bound_default),
                                  names(lower_bound))
   # fill in the default lower bounds for any parameters that don't have them
   # defined in the `lower_bound` argument
@@ -176,7 +176,7 @@ get_params_1comp <- function(
                                      Rblood2plasma = 100)
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
-  upper_bound_missing <- setdiff(names(upper_bound_default),
+  upper_bound_missing <- base::setdiff(names(upper_bound_default),
                                  names(upper_bound))
   # fill in the default upper bounds for any parameters that don't have them
   # defined in the `upper_bound` argument
@@ -215,22 +215,22 @@ get_params_1comp <- function(
   }
 
   param_units_vect <- sapply(param_units,
-                           function(x) rlang::eval_tidy(x,
-                                     data = data),
-                           simplify = TRUE,
-                           USE.NAMES = TRUE)
+                             rlang::eval_tidy,
+                             data = data,
+                             simplify = TRUE,
+                             USE.NAMES = TRUE)
   param_units_vect <- param_units_vect[param_name]
 
   lower_bound_vect <- sapply(lower_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   lower_bound_vect <- lower_bound_vect[param_name]
 
   upper_bound_vect <- sapply(upper_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
+                             rlang::eval_tidy,
+                             data = data,
                              simplify = TRUE,
                              USE.NAMES = TRUE)
   upper_bound_vect <- upper_bound_vect[param_name]

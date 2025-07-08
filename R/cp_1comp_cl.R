@@ -67,7 +67,7 @@
 #' @family built-in model functions
 #' @family 1-compartment model functions
 #' @family model concentration functions
-cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
+cp_1comp_cl <- function(params, time, dose, route, medium = "plasma",
                         restrictive = FALSE) {
 
   params <- fill_params_1comp_cl(params)
@@ -80,7 +80,7 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
     stop("cp_1comp(): ", check_msg)
   }
 
-  Q_totli = Q_gfr = Q_alv = Fup = Clint = NULL
+  Q_totli = Q_gfr = Q_alv = Fup = Clint = BW = liver_mass = NULL
   Kblood2air = Rblood2plasma = NULL
   kgutabs = Vdist = Fgutabs_Vdist = NULL
 
@@ -88,16 +88,23 @@ cp_1comp_cl <- function(params, time, dose, route, medium = 'plasma',
 
 
   # Set a Fup specific to the liver for clearance
-  if (!restrictive) {
-    Fup_hep <- 1
-  } else {
+  if (restrictive) {
     Fup_hep <- Fup
+  } else {
+    Fup_hep <- 1
   }
 
+  # Convert L/h/kg BW^(3/4) to L/h
+  Q_totli <- Q_totli / (BW^(3/4))
+  Q_gfr <- Q_gfr / (BW^(3/4))
+  Q_alv <- Q_alv / (BW^(3/4))
+
   # compute total clearance
-  Clint_hep <- Clint * (6.6) / 1E6 # Convert to L/hr
-  Clhep <- (Q_totli * Fup_hep * Clint_hep) / (Q_totli + (Fup_hep * Clint_hep / Rblood2plasma))
-  Clren <- Fup * Q_gfr
+  # 110 million hepatocytes per g Liver
+  Clint_hep <- Clint * (6.6 * BW * liver_mass) / 1E6 # Convert to L/hr
+  Clhep <- Q_totli * (Fup_hep * Clint_hep / Rblood2plasma) /
+    (Q_totli + (Fup_hep * Clint_hep / Rblood2plasma))
+  Clren <- Fup * Q_gfr / Rblood2plasma
   Clair <- (Rblood2plasma * Q_alv / Kblood2air)
   Cltot <- Clren + Clhep + Clair
   kelim <- Cltot / Vdist

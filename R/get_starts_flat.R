@@ -124,7 +124,7 @@ get_starts_flat <- function(data,
                                 mean(log10(Conc / Dose), na.rm = TRUE))
       Vdist_blood_log10 <- -Cmean_blood_log10
     }
-    if (has_iv_plasma %in% TRUE & has_iv_blood %in% TRUE) {
+    if (has_iv_plasma %in% TRUE && has_iv_blood %in% TRUE) {
       Rblood2plasma_iv_log10 <- Vdist_plasma_log10 - Vdist_blood_log10
     }
   }
@@ -140,7 +140,7 @@ get_starts_flat <- function(data,
       Fgutabs_Vdist_blood_log10 <- with(subset(podat, Media %in% "blood"),
                                         mean(log10(Conc / Dose), na.rm = TRUE))
     }
-    if (has_po_plasma %in% TRUE & has_po_blood %in% TRUE) {
+    if (has_po_plasma %in% TRUE && has_po_blood %in% TRUE) {
       Rblood2plasma_po_log10 <- Fgutabs_Vdist_blood_log10 + Fgutabs_Vdist_blood_log10
     }
   }
@@ -155,11 +155,11 @@ get_starts_flat <- function(data,
                               na.rm = TRUE))
   }
 
-  if (has_iv %in% TRUE & has_po %in% TRUE) {
+  if (has_iv %in% TRUE && has_po %in% TRUE) {
     Fgutabs <- Fgutabs_Vdist * Vdist
   }
 
-  if (has_plasma %in% TRUE & has_blood %in% TRUE) {
+  if (has_plasma %in% TRUE && has_blood %in% TRUE) {
     Rblood2plasma <- 10^(mean(c(Rblood2plasma_iv_log10, Rblood2plasma_po_log10),
                               na.rm = TRUE))
   }

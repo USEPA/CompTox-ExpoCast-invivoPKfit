@@ -41,7 +41,7 @@
 #' @family httk model functions
 #' @family model concentration functions
 #'
-cp_httk_3comp2 <- function(params, time, dose, route, medium = 'plasma',
+cp_httk_3comp2 <- function(params, time, dose, route, medium = "plasma",
                            this_chem = NULL, this_species = NULL,
                            restrictive = TRUE) {
 
@@ -138,8 +138,8 @@ cp_httk_3comp2 <- function(params, time, dose, route, medium = 'plasma',
 
         }, warning = function(w) {
           message("Here is a warning")
-          len_time <- length(unique(c(0,x$Time)))
-          data.frame(time = unique(c(0,x$Time)),
+          len_time <- length(unique(c(0, x$Time)))
+          data.frame(time = unique(c(0, x$Time)),
                      Cplasma = rep(-1, len_time))
 
         }, error = function(e) {
@@ -147,8 +147,8 @@ cp_httk_3comp2 <- function(params, time, dose, route, medium = 'plasma',
           message("Here is an error")
           # if there is an error, return negative values
           # this ensures this parameter set is discarded during optimization
-          len_time <- length(unique(c(0,x$Time)))
-          data.frame(time = unique(c(0,x$Time)),
+          len_time <- length(unique(c(0, x$Time)))
+          data.frame(time = unique(c(0, x$Time)),
                      Cplasma = rep(-1, len_time))
         }
       )

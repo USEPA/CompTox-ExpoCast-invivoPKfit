@@ -61,7 +61,7 @@
 #'  parameter cannot be estimated from the available data, then its starting value
 #'  will be `NA_real_`
 #' @import httk
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family 1-compartment model functions
 #' @family get_starts functions
 #' @family built-in model functions
@@ -80,50 +80,8 @@ get_starts_1comp_cl <- function(data,
   Vdist <- NA_real_
   Fgutabs <- NA_real_
   Fup <- NA_real_
-
-  Q_gfr <- httk::physiology.data[
-    httk::physiology.data$Parameter == "GFR",
-    c("Mouse", "Rat", "Dog", "Human", "Rabbit", "Monkey")
-  ]
-  Q_gfr <- setNames(object = unlist(Q_gfr),
-                    nm = tolower(names(Q_gfr)))
-
-
-  Q_totli <- httk::tissue.data[
-    httk::tissue.data$Tissue == "liver" &
-      httk::tissue.data$variable == "Flow (mL/min/kg^(3/4))",
-    c("Species", "value")
-  ]
-  Q_totli <- setNames(object = Q_totli[["value"]],
-                      nm = tolower(Q_totli[["Species"]]))
-
-  Q_alv <- httk::physiology.data[
-    httk::physiology.data$Parameter == "Pulmonary Ventilation Rate",
-    c("Mouse", "Rat", "Dog", "Human", "Rabbit", "Monkey")
-  ]
-  Q_alv <- setNames(object = unlist(Q_alv),
-                    nm = tolower(names(Q_alv)))
-
-  # Get species-specific flow rates, or default to human
-  names_Q_gfr <- names(Q_gfr)
-  names_Q_alv <- names(Q_alv)
   this_species <- unique(data$Species)
 
-  if (this_species %in% names_Q_gfr) {
-    Q_gfr <- Q_gfr[[this_species]] * (60 / 1000) # Assumes L/h/kg are standard units
-    Q_totli <- Q_totli[[this_species]] * (60 / 1000)
-  } else {
-    Q_gfr <- Q_gfr[["human"]] * (60 / 1000)
-    Q_totli <- Q_totli[["human"]] * (60 / 1000)
-    message("Species not in database, using human values for Q_gfr & Q_totli")
-  }
-
-  if (this_species %in% names_Q_alv) {
-    Q_alv <- Q_alv[[this_species]]
-  } else {
-    Q_alv <- Q_alv[["human"]]
-    message("Species not in database, using human values for Q_alv")
-  }
   parm_gas <- tryCatch(
     expr = {
       httk::parameterize_3comp2(
@@ -145,7 +103,7 @@ get_starts_1comp_cl <- function(data,
         ) |>
           tolower() |>
           trimws()
-        if (startsWith(response, 'y')) {
+        if (startsWith(response, "y")) {
           httk::parameterize_3comp2(
             dtxsid = "DTXSID7020182",
             species = this_species,
@@ -182,10 +140,20 @@ get_starts_1comp_cl <- function(data,
   Rblood2plasma <- parm_gas[["Rblood2plasma"]]
   Clint <- parm_gas[["Clint"]]
   Kblood2air <- parm_gas[["Kblood2air"]]
+  Q_totli <- (parm_gas[["Qliverf"]] + parm_gas[["Qgutf"]]) * parm_gas[["Qcardiacc"]]
+  Q_gfr <- parm_gas[["Qgfrc"]]
   Q_alv <- parm_gas[["Qalvc"]]
   kgutabs <- parm_gas[["kgutabs"]]
   Fgutabs <- parm_gas[["Fabsgut"]]
+  BW <- parm_gas[["BW"]]
 
+  liver_data <- httk::tissue.data[
+    httk::tissue.data$Tissue == "liver" &
+      tolower(httk::tissue.data$Species) == this_species,
+  ]
+
+  liver_mass <- liver_data[liver_data$variable == "Density (g/cm^3)", "value"] *
+    liver_data[liver_data$variable == "Vol (L/kg)", "value"] * 1E3 # mL to L
 
   # Get starting Concs from data
 
@@ -206,11 +174,17 @@ get_starts_1comp_cl <- function(data,
     Fup_hep <- Fup
   }
 
-  Clint_hep <- Clint * (6.6) / 1E6 # Convert to L/hr
-  Clhep <- Q_totli * Fup_hep * Clint_hep / (Q_totli + (Fup_hep * Clint_hep / Rblood2plasma))
+  # Convert L/h/kg BW^(3/4) to L/h
+  Q_totli_2 <- Q_totli / (BW^(3/4))
+  Q_gfr_2 <- Q_gfr / (BW^(3/4))
+  Q_alv_2 <- Q_alv / (BW^(3/4))
+
+  Clint_hep <- Clint * (6.6 * BW * liver_mass) / 1E6 # Convert to L/hr
+  Clhep <- Q_totli_2 * (Fup_hep * Clint_hep / Rblood2plasma) /
+    (Q_totli_2 + (Fup_hep * Clint_hep / Rblood2plasma))
   # Need to include Fup for renal clearance
-  Clren <- Fup * Q_gfr
-  Clair <- (Rblood2plasma * Q_alv / Kblood2air)
+  Clren <- Fup * Q_gfr_2 / Rblood2plasma
+  Clair <- (Rblood2plasma * Q_alv_2 / Kblood2air)
 
   Cltot <- Clren + Clhep + Clair
 
@@ -250,11 +224,13 @@ get_starts_1comp_cl <- function(data,
               "Q_gfr" = Q_gfr,
               "Q_alv" = Q_alv,
               "Kblood2air" = Kblood2air,
+              "BW" = BW,
               "Fup" = Fup,
               "Clint" = Clint,
               "kgutabs" = kgutabs,
               "Vdist" = Vdist,
               "Fgutabs" = Fgutabs,
+              "liver_mass" = liver_mass,
               "Rblood2plasma" = Rblood2plasma)
 
   par_DF$start <- starts[par_DF$param_name]

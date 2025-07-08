@@ -50,14 +50,13 @@
 #'
 #' @param facets A set of variables or expressions quoted by [dplyr::vars()],
 #'   defining groups of data that will each be fitted separately. These
-#'   variables should appear in the *original* data (i.e., the `data` argument
-#'   to [pk()]).
+#'   variables should appear in  the `data` argument to [pk()] after mapping variables.
 #' @param ... Additional arguments, not currently used.
 #' @return An object of class `c("pkproto", "pk_facet_data")`. Under the hood, a
 #'   named  `list` containing the arguments provided to this function. Almost
 #'   always added to a [pk()] object using [`+.pk`].
 #' @export
-#' @author Caroline Ring, Gilbert Padilla Mercado, Paul Kruse
+#' @author Caroline Ring, Gilberto Padilla Mercado, Paul Kruse
 facet_data <- function(facets = vars(Chemical,
                                      Species),
                      ...) {
