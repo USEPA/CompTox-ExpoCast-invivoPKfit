@@ -152,6 +152,10 @@ log_likelihood <- function(par,
   Detect <- data$Detect
   pLOQ <- data$pLOQ
 
+  # Fix any NA in N_Subjects and Detect as we do in do_preprocess.pk()
+  N_Subjects[is.na(N_Subjects)] <- 1.0
+  Detect[is.na(Detect)] <- FALSE
+
   # Fix the modelfun_args and modelfun variables
   modelfun_args <- modelfun[["conc_fun_args"]]
   modelfun <- modelfun[["conc_fun"]]
@@ -243,126 +247,110 @@ log_likelihood <- function(par,
       "Param names are:",
       toString(names(params))
     )
-  } else { # There ARE sigma values
-    # get sigma params
-    sigma_params <- as.list(params[sigma_index])
-    # match the study ID and assign each sigma to its corresponding study
-    # if study ID doesn't match anything in the sigmas, then assign NA
-    sigma_obs <- sigma_params[paste("sigma",
-                                    data_sigma_group,
-                                    sep = "_")]
+  }
 
-    sigma_is_na <- vapply(sigma_obs, is.null, logical(1))
-    sigma_obs[sigma_is_na] <- NA_real_
-    sigma_obs <- unlist(sigma_obs)
+  # There ARE sigma values
+  # get sigma params
+  sigma_params <- as.list(params[sigma_index])
+  # match the study ID and assign each sigma to its corresponding study
+  # if study ID doesn't match anything in the sigmas, then assign NA
+  sigma_obs <- sigma_params[paste("sigma", data_sigma_group, sep = "_")]
 
-    # if data_sigma_group is NA -- then assume data are equally likely to come from
-    # any of the existing distributions
-    # data_sigma_group may be NA if we are calculating log-likelihood for new data,
-    # i.e., data on which the model was not originally fitted.
-    if (!all(sigma_is_na)) {
-      # Expectations: N_Subjects must be >= 1
-      # compute log likelihoods for observations with sigmas
-      ll_data_sigma <- ifelse(
-        N_Subjects[!sigma_is_na] == 1 & !is.na(N_Subjects[!sigma_is_na]),
-        ifelse(
-          Detect[!sigma_is_na] == TRUE & !is.na(Detect[!sigma_is_na]),
+  # sigma may be implicitly "known" if there is only one sigma value
+  n_sigma_pars <- length(sigma_params)
+  sigma_is_na <- vapply(sigma_obs, is.null, logical(1))
+  sigma_obs[sigma_is_na] <- ifelse(n_sigma_pars == 1L, sigma_params, NA_real_)
+  sigma_obs <- unlist(sigma_obs)
+
+  # Refactoring to *more* vectorized version, there are six apparent conditions
+  one_subject_bool = (N_Subjects == 1)
+  # Put this in the context of either known or unknown sigmas
+  deb_ks = one_subject_bool & Detect & !sigma_is_na # known sigma
+  deb_us = one_subject_bool & Detect & sigma_is_na # unknown sigma
+  ndb_ks = one_subject_bool & !Detect & !sigma_is_na
+  ndb_us = one_subject_bool & Detect & sigma_is_na
+  nsb_ks = !(one_subject_bool | sigma_is_na)
+  nsb_us = !one_subject_bool & sigma_is_na
+
+  ll_data_sigma <- sum(
+    dnorm(
+      x = Conc_trans[deb_ks],
+      mean = pred_trans[deb_ks],
+      sd = sigma_obs[deb_ks],
+      log = TRUE
+    ),
+    pnorm(
+      q = Conc_trans[ndb_ks],
+      mean = pred_trans[ndb_ks],
+      sd = sigma_obs[ndb_ks],
+      log.p = TRUE
+    ),
+    do.call(
+      ll_summary,
+      list(
+        mu = pred_trans[nsb_ks],
+        sigma = sigma_obs[nsb_ks],
+        x_mean = conc_natural[nsb_ks],
+        x_sd = conc_sd_natural[nsb_ks],
+        x_N = N_Subjects[nsb_ks],
+        log = TRUE
+      )
+    )
+  )
+
+  # if data_sigma_group is NA -- then assume data are equally likely to come from
+  # any of the existing distributions
+  # data_sigma_group may be NA if we are calculating log-likelihood for new data,
+  # i.e., data on which the model was not originally fitted.
+  # compute log likelihoods for observations without sigmas
+  if (any(sigma_is_na)) {
+    if (isFALSE(suppress.messages)) {
+      message(
+        "log_likelihood():",
+        sum(is.na(sigma_obs)),
+        "observations are not in any existing error-SD (sigma) group.",
+        "They will be treated as equally likely to be in",
+        "any of the existing error-SD groups."
+      )
+    }
+
+    ll_data_no_sigma <- vapply(
+      unlist(sigma_params),
+      function(this_sigma) {
+        sum(
           dnorm(
-            x = Conc_trans[!sigma_is_na],
-            mean = pred_trans[!sigma_is_na],
-            sd = sigma_obs[!sigma_is_na],
+            x = Conc_trans[deb_us],
+            mean = pred_trans[deb_us],
+            sd = sigma_obs[deb_us],
             log = TRUE
           ),
           pnorm(
-            q = Conc_trans[!sigma_is_na],
-            mean = pred_trans[!sigma_is_na],
-            sd = sigma_obs[!sigma_is_na],
+            q = Conc_trans[ndb_us],
+            mean = pred_trans[ndb_us],
+            sd = sigma_obs[ndb_us],
             log.p = TRUE
-          )
-        ),
-        do.call(
-          ll_summary,
-          list(
-            mu = pred_trans[!sigma_is_na],
-            sigma = sigma_obs[!sigma_is_na],
-            x_mean = conc_natural[!sigma_is_na],
-            x_sd = conc_sd_natural[!sigma_is_na],
-            x_N = N_Subjects[!sigma_is_na],
-            log = TRUE
-          )
-        )
-      )
-    } else {
-      ll_data_sigma <- numeric(0)
-    }
-
-    # compute log likelihoods for observations without sigmas
-    if (any(sigma_is_na)) {
-      if (isFALSE(suppress.messages)) {
-        message(
-          "log_likelihood():",
-          sum(is.na(sigma_obs)),
-          "observations are not in any existing error-SD (sigma) group.",
-          "They will be treated as equally likely to be in",
-          "any of the existing error-SD groups."
-        )
-      }
-      # Expectations: N_Subjects must be >= 1
-      ll_data_no_sigma <- sapply(
-        unlist(sigma_params),
-        function(this_sigma) {
-          # place these observations in each group in turn
-          ifelse(
-            N_Subjects[sigma_is_na] == 1 & !is.na(N_Subjects[sigma_is_na]),
-            ifelse(
-              Detect[sigma_is_na] == TRUE & !is.na(Detect[sigma_is_na]),
-              dnorm(
-                x = Conc_trans[sigma_is_na],
-                mean = pred_trans[sigma_is_na],
-                sd = this_sigma,
-                log = TRUE
-              ),
-              pnorm(
-                q = Conc_trans[sigma_is_na],
-                mean = pred_trans[sigma_is_na],
-                sd = this_sigma,
-                log.p = TRUE
-              )
-            ),
-            do.call(
-              ll_summary,
-              list(
-                mu = pred_trans[sigma_is_na],
-                sigma = this_sigma,
-                x_mean = conc_natural[sigma_is_na],
-                x_sd = conc_sd_natural[sigma_is_na],
-                x_N = N_Subjects[sigma_is_na],
-                log = TRUE
-              )
+          ),
+          do.call(
+            ll_summary,
+            list(
+              mu = pred_trans[nsb_us],
+              sigma = sigma_obs[nsb_us],
+              x_mean = conc_natural[nsb_us],
+              x_sd = conc_sd_natural[nsb_us],
+              x_N = N_Subjects[nsb_us],
+              log = TRUE
             )
           )
-        }) # end sapply(unlist(sigma_params),
-
-      # the result will be a matrix with as many columns as there are sigma_params,
-      # and as many rows as there are observations without sigma groups
-      # take the row means
-      # however, there are times there is only one value
-      # so make that just equal the mean of this
-      if (is.null(dim(ll_data_no_sigma))) {
-        ll_data_no_sigma <- mean(ll_data_no_sigma)
-      } else {
-        ll_data_no_sigma <- rowMeans(ll_data_no_sigma)
-      }
-    } else {
-      ll_data_no_sigma <- numeric(0)
-    }
-
-    loglike <- c(ll_data_sigma,
-                 ll_data_no_sigma)
+        )
+      },
+      FUN.VALUE = numeric(1L)
+    ) |> mean()
+  } else {
+    ll_data_no_sigma <- numeric(0L)
   }
 
   # sum log-likelihoods over observations
-  ll <- sum(loglike)
+  ll <- sum(ll_data_sigma, ll_data_no_sigma)
   # do *not* remove NAs, because they mean this parameter combination is impossible!
 
   # If ll isn't finite,

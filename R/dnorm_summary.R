@@ -31,6 +31,9 @@ dnorm_summary <- function(mu, sigma, x_mean, x_sd, x_N, log = FALSE) {
              "mu" = length(mu),
              "sigma" = length(sigma))
 
+  # special case when no data is present
+  if (all(x_len %in% 0)) return(numeric(0L))
+
   if (any(x_len %in% 0)) {
     stop("invivopkfit::dnorm_summary(): ",
          "the following arguments have zero length: ",
