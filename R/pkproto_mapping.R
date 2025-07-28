@@ -1,7 +1,9 @@
 #' New mapping
-#' @param mapping A [ggplot2::aes()] call that maps variable names in the original data to the harmonized `invivoPKfit` variable names.
+#' @param mapping A [ggplot2::aes()] call that maps variable names in the
+#'  original data to the harmonized `invivoPKfit` variable names.
 #' @param ... Additional arguments. Currently unused.
-#' @return An object of class `uneval` containing the mapping -- see [ggplot2::aes()] for details.
+#' @return An object of class `uneval` containing the mapping -- see
+#'  [ggplot2::aes()] for details.
 #' @export
 #' @author Caroline Ring
 mapping <- function(

@@ -48,21 +48,23 @@
 #' [preprocess_data()], [data_info()], [prefit()], and [fit()] are called on the
 #' resulting "faceted"
 #'
-#' @param facets A set of variables or expressions quoted by [dplyr::vars()],
+#' @param ... A set of variables or expressions quoted by [dplyr::vars()],
 #'   defining groups of data that will each be fitted separately. These
 #'   variables should appear in  the `data` argument to [pk()] after mapping variables.
-#' @param ... Additional arguments, not currently used.
 #' @return An object of class `c("pkproto", "pk_facet_data")`. Under the hood, a
 #'   named  `list` containing the arguments provided to this function. Almost
 #'   always added to a [pk()] object using [`+.pk`].
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado, Paul Kruse
-facet_data <- function(facets = vars(Chemical,
-                                     Species),
-                     ...) {
+facet_data <- function(...) {
+
   # get arguments and values
-  argg <- c(as.list(environment()), list(...))
-  this_facet_data <- argg
+  this_facet_data <- rlang::ensyms(...)
+
+  if (inherits(this_facet_data, "try-error") || rlang::is_empty(this_facet_data)) {
+    this_facet_data <- rlang::syms(c("Chemical", "Species"))
+  }
+
   # set class
   class(this_facet_data) <- c(class(this_facet_data), "pkproto", "pk_facet_data")
 

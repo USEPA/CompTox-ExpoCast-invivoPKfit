@@ -16,30 +16,36 @@ pk(
      Time = time_hr,
     Time.Units = "hours", Value = invivPK_conc, Value.Units = "mg/L", Value_SD =
     invivPK_conc_sd, LOQ = invivPK_loq),
-  settings_preprocess_args = list(),
-  settings_data_info_args = list(),
-  settings_optimx_args = list(),
-  scale_conc_args = list(),
-  scale_time_args = list(),
-  stat_model_args = list(),
-  stat_error_model_args = list(),
-  facet_data_args = list()
+  settings_preprocess_args = alist(),
+  stat_sd_group_args = alist(),
+  stat_loq_group_args = alist(),
+  stat_nca_group_args = alist(),
+  settings_optimx_args = alist(),
+  scale_conc_args = alist(),
+  scale_time_args = alist(),
+  stat_model_args = alist(),
+  stat_error_model_args = alist(),
+  facet_data_args = alist()
 )
 }
 \arguments{
 \item{data}{A `data.frame`. The default is an empty data frame.}
 
-\item{mapping}{A mapping set up by (ab)using [ggplot2::aes()]. Call is of form
-`ggplot2::aes(new_variable = old_variable)` `new_variable` represents the
+\item{mapping}{A mapping set up using [ggplot2::aes()]. Must take the form
+`new_variable = "old_variable"` where `new_variable` represents the
 harmonized variable name that will be used within `invivopkfit`;
-`old_variable` represents the variable name in `data`. If you want to
-provide a fixed/constant value for a `new_variable` rather than taking its
-value from a variable in `data`, simply supply that fixed/constant value in
-the `old_variable` position.}
+`"old_variable"` represents the variable name in the input `data`.}
 
 \item{settings_preprocess_args}{A list of preprocessing settings.}
 
-\item{settings_data_info_args}{A list of data_info settings.}
+\item{stat_sd_group_args}{A list of variables defining group to impute sd in
+[do_preprocess.pk()]. Specified using [alist()].}
+
+\item{stat_loq_group_args}{A list of variables defining group to impute LOQ in
+[do_preprocess.pk()]. Specified using [alist()].}
+
+\item{stat_nca_group_args}{A list of variables defining group to perform NCA in
+[do_data_info.pk()]. Specified using [alist()].}
 
 \item{settings_optimx_args}{A list of optimx settings.}
 
@@ -80,7 +86,6 @@ and sets of instructions for steps in the analysis workflow:
 - settings for the numerical optimization algorithm to be used to fit any model
 - optionally: which PK model(s) should be fitted to this dataset. (You do not have to fit any PK model if you don't want to; you can instead just set up the `pk` object with data, and do non-compartmental analysis on it.)
 
-
 No data processing, model fitting, or any other analysis is done until you
 explicitly request it. Until then, the `pk` object remains just a set of data
 and instructions. This allows you to specify the instructions for each
@@ -88,7 +93,6 @@ analysis step without regard for the actual order of the analysis steps, and
 to overwrite previous instructions, without having to re-do the model fitting
 each time you add or change a set of instructions. This is particularly useful
 if you are working in interactive mode at the R console.
-
 
 
 # Mappings
@@ -133,6 +137,7 @@ internal harmonized variable names which it uses in model fitting. These
 \item `LOQ`: A `numeric` variable giving the limit of quantification applicable to this tissue concentration in units of mg/L, if available.
 \item `Value.Units`: A `character` variable giving the units of `Value`, `Value_SD`, and `LOQ`.
 }
+
 You may additionally include mappings to other variable names of your choice,
 which will appear in the `pk` object in `pk$data` after the analysis is done.
 
@@ -145,9 +150,8 @@ of the "`invivopkfit` aesthetic" variables should be mapped to a constant
 value, rather than to a variable in `data`. For example, imagine that you
 don't have a column in `data` that encodes the units of body weight, but you
 know that all body weights are provided in units of kilograms. You could
-specify `mapping = ggplot2::aes(Chemical = my_dtxsid, Species = my_species,
-Weight = my_weight, Weight.Units = "kg")` to map `Weight.Units` to a fixed
-value of "kg".
+specify `mapping = ggplot2::aes(Chemical = my_dtxsid, Weight = my_weight, Weight.Units = "kg")`
+to map `Weight.Units` to a fixed value of "kg".
 
 Finally, as with usual calls to [ggplot2::aes()], you may specify mappings as
 expressions that use variable names in `data`. For example, if the
@@ -169,6 +173,7 @@ included in `mapping`:
 \item `Time_trans`: This is `Time` with any rescaling specified in `+ scale_time()`.
 \item `Time_trans.Units`: The new units of time after any rescaling (e.g. `hours`, `days`, `weeks`,...)
 }
+
 If you do assign any of these reserved variable names in `mapping`, your
 mapping will be ignored for those reserved variable names. WARNING: If you
 have any variables with these reserved names in your original data, those
@@ -179,29 +184,25 @@ variable names in the built-in dataset [cvt]):
 
 \preformatted{
 ggplot2::aes(
-  Chemical = analyzed_chem_dtxsid,
-  Chemical_Name = analyzed_chem_name_original,
-  DTXSID = analyzed_chem_dtxsid,
-  CASRN = analyzed_chem_casrn,
-  Species = species,
-  Reference = fk_extraction_document_id,
-  Media = conc_medium_normalized,
-  Route = administration_route_normalized,
-  Dose = invivPK_dose_level,
-  Dose.Units = "mg/kg",
-  Subject_ID = fk_subject_id,
-  Series_ID = fk_series_id,
-  Study_ID = fk_study_id,
-  ConcTime_ID = conc_time_id,
-  N_Subjects = n_subjects_normalized,
-  Weight = weight_kg,
-  Weight.Units = "kg",
-  Time = time_hr,
-  Time.Units = "hours",
-  Value = invivPK_conc,
-  Value.Units = "mg/L",
-  Value_SD = invivPK_conc_sd,
-  LOQ = invivPK_loq
+  Chemical = "analyzed_chem_dtxsid",
+  Chemical_Name = "analyzed_chem_name_original",
+  DTXSID = "analyzed_chem_dtxsid",
+  CASRN = "analyzed_chem_casrn",
+  Species = "species",
+  Reference = "fk_extraction_document_id",
+  Media = "conc_medium_normalized",
+  Route = "administration_route_normalized",
+  Dose = "invivPK_dose_level",
+  Subject_ID = "fk_subject_id",
+  Series_ID = "fk_series_id",
+  Study_ID = "fk_study_id",
+  ConcTime_ID = "conc_time_id",
+  N_Subjects = "n_subjects_normalized",
+  Weight = "weight_kg",
+  Time = "time_hr",
+  Value = "invivPK_conc",
+  Value_SD = "invivPK_conc_sd",
+  LOQ = "invivPK_lo"q
 )
 }
 

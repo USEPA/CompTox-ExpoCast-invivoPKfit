@@ -61,7 +61,6 @@ tkstats_1comp <- function(pars,
                           conc_unit,
                           vol_unit,
                           ...) {
-
   params <- fill_params_1comp(pars)
 
   Fgutabs_Vdist = Rblood2plasma = Fgutabs = Vdist = NULL

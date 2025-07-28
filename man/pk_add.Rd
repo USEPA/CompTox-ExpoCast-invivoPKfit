@@ -23,8 +23,8 @@ This is the S3 generic method.
 [pk_add.pk_scales()] for the method for adding `pk_scales` objects
   (from [scale_conc()] and [scale_time()]); [pk_add.pk_settings_preprocess()]
   for the method for adding `pk_settings_preprocess` objects (from
-  [settings_preprocess()]); [pk_add.pk_settings_data_info()] for the method
-  for adding `pk_settings_data_info` objects (from [settings_data_info()]);
+  [settings_preprocess()]); [pk_add.pk_nca_group()] for the method
+  for adding `pk_nca_group` objects (from [settings_data_info()]);
   [pk_add.pk_settings_optimx()] for the method for adding
   `pk_settings_optimx` objects (from [settings_optimx()]);
   [pk_add.pk_stat_model()] for the method for adding `pk_stat_model` objects

@@ -61,7 +61,7 @@ auc_flat <- function(time, params, dose, route, medium) {
                            medium = medium)
 
   if (check_msg != "Parameters OK") {
-    stop("cp_flat(): ", check_msg)
+    cli::cli_abort(check_msg)
   }
 
   Vdist = Fgutabs = Fgutabs_Vdist = Rblood2plasma = NULL

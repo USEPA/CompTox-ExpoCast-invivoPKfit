@@ -8,44 +8,24 @@
 #'  observed concentrations (and limits of quantification), after any dose
 #'  normalization is applied. Default `FALSE`.
 #' @param ... Other arguments (not currently used)
-#' @return An object of class `pk_scales`: A named list with two elements. The
-#'  first element `name = "conc"` denotes the variable to be scaled. The second
-#'  element `value` is itself a named list of the arguments supplied to
+#' @return An object of class `pk_scales`: A named list with elements supplied to
 #'  [scale_conc()]). This object is usually added to an existing [pk()] object
 #'  using `+`. See [pk_add.pk_scales()].
 #' @export
 #' @author Caroline Ring
-scale_conc <- function(dose_norm = FALSE,
-                       log10_trans = FALSE,
-                       ...) {
+scale_conc <- function(dose_norm = FALSE, log10_trans = FALSE, ...) {
+
+  expr <- quote(.conc)
+  if (dose_norm %in% TRUE) expr <- substitute(x / Dose, env = list(x = expr))
+  if (log10_trans %in% TRUE) expr <- substitute(log10(x), env = list(x = expr))
 
   # Initialize scale_conc as a list with element "name"
   scale_conc <- list(name = "conc",
                      value = list(
                      "dose_norm" = dose_norm,
-                     "log10_trans" = log10_trans)
+                     "log10_trans" = log10_trans,
+                     "expr" = expr)
   )
-
-  # Set up expression
-  expr <- quote(.conc)
-
-  if (dose_norm %in% TRUE) {
-    # add dose normalization step to expression
-    expr <- substitute(x / Dose,
-                       list(x = expr))
-  }
-
-
-  if (log10_trans %in% TRUE) {
-    # add log transformation step to expression
-    expr <- substitute(log10(x),
-                       list(x = expr))
-  }
-
-  # enquote expr
-  scale_conc$value$expr <- rlang::new_quosure(expr = expr,
-                                              env = rlang::caller_env())
-  # this qusoure will have environment "global"
 
   # get any other arguments and values
   scale_conc$value <- c(scale_conc$value, list(...))

@@ -1,6 +1,6 @@
 #' Fill parameters for flat model
 #'
-#' @param params Named numeric vector of parameters for the flat model
+#' @param params Named list of parameters for the flat model.
 #' @return A named numeric vector of parameters, with any flat model
 #'   parameters not present in `params` filled with `NA_real_`. If any two of
 #'   `Fgutabs`, `Vdist`, and `Fgutabs_Vdist` were present in `params`, the third will
@@ -14,17 +14,21 @@ fill_params_flat <- function(params) {
                             names(params))
   params[missing_params] <- NA_real_
 
-  if (is.na(params["Fgutabs_Vdist"])) {
-    params["Fgutabs_Vdist"] <- params["Fgutabs"] / params["Vdist"]
+  has_Fgutabs <- !"Fgutabs" %in% missing_params
+  has_Vdist <- !"Vdist" %in% missing_params
+  has_Fgutabs_Vdist <- !"Fgutabs_Vdist" %in% missing_params
+
+  if (!has_Fgutabs_Vdist && has_Fgutabs && has_Vdist) {
+    params["Fgutabs_Vdist"] <- params[["Fgutabs"]] / params[["Vdist"]]
   }
 
- if (is.na(params["Fgutabs"])) {
-    params["Fgutabs"] <- params["Fgutabs_Vdist"] * params["Vdist"]
- }
+  if (!has_Fgutabs && has_Fgutabs_Vdist && has_Vdist) {
+    params["Fgutabs"] <- params[["Fgutabs_Vdist"]] * params[["Vdist"]]
+  }
 
-if (is.na(params["Vdist"])) {
-    params["Vdist"] <- params["Fgutabs"] / params["Fgutabs_Vdist"]
-}
+  if (!has_Vdist && has_Fgutabs_Vdist && has_Fgutabs) {
+    params["Vdist"] <- params[["Fgutabs"]] / params[["Fgutabs_Vdist"]]
+  }
 
   return(params)
 }

@@ -69,7 +69,7 @@ cp_2comp <- function(params,
     medium
   )
   if (check_msg != "Parameters OK") {
-    stop("cp_2comp(): ", check_msg)
+    cli::cli_abort(check_msg)
   }
 
   # get transformed parameters for 2-comp model

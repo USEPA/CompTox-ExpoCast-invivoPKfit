@@ -63,13 +63,13 @@
 #' halfway between the lower and upper bounds for that parameter.
 #'
 #' @param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#' @param lower_bound A mapping specified using a call to [ggplot2::aes()],
+#' @param lower_bound A mapping specified using a call to [alist()],
 #'  giving the lower bounds for each variable, as expressions which may include
 #'  variables in `data`.
-#' @param upper_bound A mapping specified using a call to [ggplot2::aes()],
+#' @param upper_bound A mapping specified using a call to [alist()],
 #'  giving the upper bounds for each variable, as expressions which may include
 #'  variables in `data`.
-#' @param param_units A mapping specified using a call to [ggplot2::aes()],
+#' @param param_units A mapping specified using a call to [alist()],
 #'  giving the units for each variable, as expressions which may include
 #'  variables in `data`.
 #'
@@ -90,46 +90,33 @@
 
 get_params_flat <- function(
     data,
-    lower_bound = ggplot2::aes(Vdist = 0.01,
-                               Fgutabs = 0.0,
-                               Fgutabs_Vdist = 0.01,
-                               Rblood2plasma = 1e-2),
-    upper_bound = ggplot2::aes(Vdist = 100,
-                               Fgutabs = 1,
-                               Fgutabs_Vdist = 1e2,
-                               Rblood2plasma = 100),
-    param_units = ggplot2::aes(Vdist = paste0("(", # Vdist
-                                              unique(Dose.Units),
-                                              ")",
-                                              "/",
-                                              "(",
-                                              unique(Conc.Units),
-                                              ")"),
-                               Fgutabs = "unitless fraction", # Fgutabs
-                               Fgutabs_Vdist = paste0("(", # Fgutabs_Vdist
-                                                      unique(Conc.Units),
-                                                      ")",
-                                                      "/",
-                                                      "(",
-                                                      unique(Dose.Units),
-                                                      ")"),
-                               Rblood2plasma = "unitless ratio")) {
+    lower_bound = alist(Vdist = 0.01,
+                        Fgutabs = 1E-3,
+                        Fgutabs_Vdist = 1E-5,
+                        Rblood2plasma = 1e-2),
+    upper_bound = alist(Vdist = 100,
+                        Fgutabs = 1,
+                        Fgutabs_Vdist = 1e2,
+                        Rblood2plasma = 100),
+    param_units = alist(
+      Vdist = paste0("(", unique(Dose.Units), ")/(", unique(Conc.Units), ")"),
+      Fgutabs = "unitless fraction",
+      Fgutabs_Vdist = paste0("(", unique(Conc.Units), ")/(", unique(Dose.Units), ")"),
+      Rblood2plasma = "unitless ratio")
+) {
   # param names
-  param_name <- c("Vdist",
-                  "Fgutabs",
-                  "Fgutabs_Vdist",
-                  "Rblood2plasma")
+  param_name <- c("Vdist", "Fgutabs", "Fgutabs_Vdist", "Rblood2plasma")
 
-  lower_bound_default = ggplot2::aes(Vdist = 0.01,
-                                     Fgutabs = 0,
-                                     Fgutabs_Vdist = 0.01,
+  lower_bound_default = alist(Vdist = 0.01,
+                                     Fgutabs = 1E-3,
+                                     Fgutabs_Vdist = 1E-5,
                                      Rblood2plasma = 1e-2)
 
   lower_bound_missing <- base::setdiff(names(lower_bound_default),
                                  names(lower_bound))
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
 
-  upper_bound_default = ggplot2::aes(Vdist = 100,
+  upper_bound_default = alist(Vdist = 100,
                                     Fgutabs = 1,
                                     Fgutabs_Vdist = 1e2,
                                     Rblood2plasma = 100)
@@ -191,7 +178,6 @@ if ("oral" %in% data$Route) {
                              USE.NAMES = TRUE)
   upper_bound_vect <- upper_bound_vect[param_name]
 
-
   par_DF <- data.frame("param_name" = param_name,
                        "param_units" = param_units_vect,
                        "optimize_param" = optimize_param,
@@ -210,14 +196,14 @@ if ("oral" %in% data$Route) {
   start_high <- (par_DF$start > par_DF$upper_bound) %in% TRUE
   start_nonfin <- !is.finite(par_DF$start)
 
-  par_DF[start_low | start_high | start_nonfin,
-         "start"] <- rowMeans(
-           cbind(par_DF[start_low | start_high | start_nonfin,
-                        c("lower_bound",
-                          "upper_bound")]
-                 )
-           )
+  par_DF[start_low | start_high | start_nonfin, "start"] <- rowMeans(
+    cbind(par_DF[start_low | start_high | start_nonfin,
+                 c("lower_bound",
+                   "upper_bound")]
+    )
+  )
 
+  par_DF$start <- as.list(par_DF$start)
 
   return(par_DF)
 

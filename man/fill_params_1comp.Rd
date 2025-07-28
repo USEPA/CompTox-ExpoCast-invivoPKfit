@@ -7,7 +7,7 @@
 fill_params_1comp(params)
 }
 \arguments{
-\item{params}{Named numeric vector of parameters for the 1-compartment model}
+\item{params}{Named list of parameters for the 1-compartment model.}
 }
 \value{
 A named numeric vector of parameters, with any 1-compartment model

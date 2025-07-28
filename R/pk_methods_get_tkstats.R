@@ -29,11 +29,11 @@
 #'   `Species`, `Route`, `Media`, `Dose`, `Dose.Units`, `Conc.Units`, either
 #'   `Time_trans.Units` or `Time.Units`, and any other variables named in
 #'   `tk_grouping`. Default `NULL`, to use the data in `obj$data`.
-#' @param tk_group A list of variables provided using a `dplyr::vars()` call.
+#' @param tk_group A list of variables provided using a `alist` call.
 #'   The data (either `newdata` or `obj$data`) will be grouped according to the
 #'   unique combinations of these variables. For each unique combination of
 #'   these variables in the data, a set of TK statistics will be computed. The
-#'   default is `obj$settings_data_info$summary_group`, to derive TK statistics for
+#'   default is `obj$pk_groups$nca_group`, to derive TK statistics for
 #'   the same groups of data as non-compartmental analysis statistics. With the
 #'   default, you can directly compare e.g. a model-predicted AUC_inf to the
 #'   corresponding NCA-estimated AUC_inf. However, you may specify a different
@@ -54,7 +54,7 @@
 #' @param dose_norm Logical: `TRUE` (default) specifies whether the concentrations are dose-normalized.
 #' @param suppress.messages Logical: whether to suppress message printing. If
 #'   NULL (default), uses the setting in
-#'   `obj$settings_preprocess$suppress.messages`
+#'   `obj$pk_settings$preprocess$suppress.messages`
 #' @param ... Additional arguments not currently in use.
 #' @return  A data.frame with one row for each `data_group`, `model` and `method`
 #'   with the variables in the `data.frame` returned by the `tkstats_fun` for
@@ -75,67 +75,78 @@ get_tkstats.pk <- function(obj,
                            suppress.messages = NULL,
                            ...) {
   if (is.null(suppress.messages)) {
-    suppress.messages <- obj$settings_preprocess$suppress.messages
+    suppress.messages <- obj$pk_settings$preprocess$suppress.messages
   }
 
   if (is.null(model)) model <- names(obj$stat_model)
-  if (is.null(method)) method <- obj$settings_optimx$method
+  if (is.null(method)) method <- obj$pk_settings$optimx$method
   if (is.null(newdata)) newdata <- obj$data
-  if (is.null(tk_group)) tk_group <- obj$settings_data_info$summary_group
+  if (is.null(tk_group)) tk_group <- get_nca_group.pk(obj)
 
   # Method and status check responsibility given to coef.pk
   all_coefs <- coef(obj,
-                    model = model,
-                    method = method,
-                    drop_sigma = TRUE,
-                    suppress_messages = TRUE) |>
+    model = model,
+    method = method,
+    drop_sigma = TRUE,
+    suppress_messages = TRUE
+  ) |>
     dplyr::select(-c(Time.Units, Time_trans.Units))
 
-  grp_vars <- sapply(tk_group,
-                     rlang::as_label)
-  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
+  grp_vars <- sapply(tk_group, rlang::as_label)
+  data_grp <- get_data_group.pk(obj)
+  data_grp_vars <- get_data_group.pk(obj, as_character = TRUE)
 
-  newdata_ok <- check_newdata(newdata = newdata,
-                              olddata = obj$data,
-                              req_vars = union(
-                                c("Chemical",
-                                  "Species",
-                                  "Time",
-                                  "Time.Units",
-                                  "Dose",
-                                  "Dose.Units",
-                                  "Conc.Units",
-                                  "Route",
-                                  "Media"),
-                                grp_vars),
-                              exclude = exclude)
+  newdata_ok <- check_newdata(
+    newdata = newdata,
+    olddata = obj$data,
+    req_vars = union(
+      c(
+        "Chemical",
+        "Species",
+        "Time",
+        "Time.Units",
+        "Dose",
+        "Dose.Units",
+        "Conc.Units",
+        "Route",
+        "Media"
+      ),
+      grp_vars
+    ),
+    exclude = exclude
+  )
 
   # if exclude = TRUE, remove excluded observations
   if (exclude %in% TRUE) {
     newdata <- subset(newdata, exclude %in% FALSE)
   }
 
-  req_vars <- union(tk_group,
-                    ggplot2::vars(
-                      Conc.Units,
-                      Time.Units,
-                      Dose,
-                      Dose.Units,
-                      Route,
-                      Media)
+  req_vars <- union(
+    tk_group,
+    ggplot2::vars(
+      DATA_GROUP_ID,
+      Conc.Units,
+      Time.Units,
+      Dose,
+      Dose.Units,
+      Route,
+      Media
+    )
   )
 
   # check that tk_group is valid: it must produce groups with a unique
-  # combination of obj$data_group, Route, Media, and Dose
+  # combination of data_grp, Route, Media, and Dose
   newdata_grouped <- newdata |>
     dplyr::group_by(!!!tk_group) |>
-    dplyr::distinct(!!!obj$data_group,
-                    Route,
-                    Media,
-                    Dose,
-                    Time.Units,
-                    Dose.Units,
-                    Conc.Units)
+    dplyr::distinct(
+      !!!data_grp,
+      Route,
+      Media,
+      Dose,
+      Time.Units,
+      Dose.Units,
+      Conc.Units
+    )
 
   newdata_grouped_count <- newdata_grouped |>
     dplyr::count(name = "N") |>
@@ -144,68 +155,112 @@ get_tkstats.pk <- function(obj,
 
   # if more than one distinct row per group, stop
   if (any(newdata_grouped_count$N > 1)) {
-    stop("get_tkstats.pk(): tk_group does not produce groups with unique combinations of Chemical, Species, Route, Media, and Dose.")
+    cli::cli_abort(paste(
+      "{.var tk_group} does not produce groups with unique combinations of",
+      "{data_group_vars}, Route, Media, and Dose."
+    ))
   }
-
 
   newdata <- newdata |>
     dplyr::select(!!!req_vars) |>
-    dplyr::group_by(!!!obj$data_group) |>
+    dplyr::group_by(DATA_GROUP_ID) |>
     tidyr::nest(.key = "observations")
 
-  model_df <- data.frame(model = sapply(obj$stat_model, `[[`, "name"),
-                         tk_fun = sapply(obj$stat_model, `[[`, "tkstats_fun"))
+  model_df <- get_stat_model.pk(obj) |>
+    dplyr::group_by(model) |>
+    dplyr::mutate(
+      tkstats_fun = purrr::pluck(modelfun, model, "tkstats_fun"),
+      tkstats_fun_args = list(purrr::pluck(modelfun, model, "tkstats_fun_args")),
+      .keep = "none" # because it is grouped by model, this column will still be kept
+    ) |>
+    dplyr::ungroup()
 
-  newdata <- dplyr::left_join(all_coefs, newdata,
-                              by = data_grp_vars) |>
+  newdata <- dplyr::left_join(all_coefs, newdata, by = "DATA_GROUP_ID") |>
+    dplyr::select(-dplyr::all_of(data_grp_vars)) |>
     tidyr::unnest(cols = "observations") |>
-    dplyr::left_join(model_df, by = "model",
-                     relationship = "many-to-many") |>
-    dplyr::distinct()
+    dplyr::left_join(model_df,
+      by = "model",
+      relationship = "many-to-many"
+    ) |>
+    dplyr::distinct() |>
+    dplyr::ungroup() |>
+    dplyr::arrange(DATA_GROUP_ID, model, method)
+
+  newdata$tkstats_fun_args <- purrr::imap(
+    newdata$tkstats_fun_args,
+    function(x, idx) lapply(x, rlang::eval_tidy, data = newdata[idx, ])
+  )
+
+  if (isTRUE(dose_norm)) {
+    newdata <- newdata |>
+      dplyr::mutate(Dose = 1) |>
+      dplyr::distinct()
+  }
 
   # Much more efficient AND safe way of calling the TK functions
   tkstats_all <- newdata |>
-    dplyr::rowwise(!!!obj$data_group, model, method,
-            coefs_vector, tk_fun) |>
-    dplyr::mutate(TKstats = list(tryCatch(
-      expr = do.call(tk_fun,
-                     list(
-                       pars = coefs_vector,
-                       route = Route,
-                       medium = Media,
-                       dose = ifelse(dose_norm == TRUE, 1, Dose),
-                       time_unit = "hours", # coef() is standardized now
-                       conc_unit = Conc.Units,
-                       vol_unit = "L"
-                     )),
-      error = function(e) {
-        message("get_tkstats.pk(): Failed to run:", tk_fun, "error reads: ")
-        print(e)
-      }
-    )) # ending tryCatch statement
+    dplyr::rowwise(
+      DATA_GROUP_ID,
+      !!!data_grp,
+      model, method,
+      coefs_vector
+    ) |>
+    dplyr::mutate(
+      TKstats = list(
+        tryCatch(
+          expr = do.call(
+            tkstats_fun,
+            append(
+              list(
+                pars = coefs_vector,
+                route = Route,
+                medium = Media,
+                dose = Dose,
+                time_unit = "hours", # coef() is standardized now
+                conc_unit = Conc.Units,
+                vol_unit = "L"
+              ),
+              lapply(
+                tkstats_fun_args,
+                rlang::eval_tidy,
+                data = newdata
+              )
+            )
+          ),
+          error = function(e) {
+            cli::cli_warn("get_tkstats.pk(): Failed to run: {tkstats_fun} error reads: {e}")
+          }
+        )
+      ) # ending tryCatch statement
     ) |>
     dplyr::ungroup() |>
     tidyr::unnest(cols = TKstats)
 
 
   if (suppress.messages %in% FALSE) {
-  # Print reference list of units for the parameters
-  # The column is filtered out after pivoting
-  message("get_tkstats.pk(): Here are the units for the estimated TK statistics: ")
+    # Print reference list of units for the parameters
+    # The column is filtered out after pivoting
+    message("get_tkstats.pk(): Here are the units for the estimated TK statistics: ")
     tkstats_all |>
       dplyr::ungroup() |>
-      dplyr::distinct(param_name, param_units) |>
+      dplyr::distinct(model, param_name, param_units) |>
+      tidyr::pivot_wider(
+        id_cols = param_name, names_from = model, values_from = param_units
+      ) |>
       print()
   }
 
   tkstats_all <- tkstats_all |>
-    dplyr::select(-param_units) |>
-    tidyr::pivot_wider(names_from = param_name,
-                       values_from = param_value) |>
-    dplyr::group_by(!!!tk_group)
+    dplyr::select(-c(param_units, tkstats_fun, tkstats_fun_args)) |>
+    tidyr::pivot_wider(
+      names_from = param_name,
+      values_from = param_value
+    ) |>
+    dplyr::group_by(!!!tk_group) |>
+    dplyr::ungroup(Dose)
 
   if (dose_norm) {
-    tkstats_all <- dplyr::select(tkstats_all, !Dose)
+    tkstats_all <- dplyr::select(tkstats_all, -Dose)
     if (suppress.messages %in% FALSE) {
       message("get_tkstats.pk(): Dose column removed because these TK statistics are dose normalized")
     }
@@ -213,7 +268,7 @@ get_tkstats.pk <- function(obj,
 
   # Final filtering of tkstats_all
   tkstats_all <- tkstats_all[!names(tkstats_all) %in% c("coefs_vector", "tk_fun")] |>
-    dplyr::relocate(!!!tk_group, Dose.Units, Conc.Units) |>
+    dplyr::relocate(DATA_GROUP_ID, dplyr::any_of(grp_vars), Dose.Units, Conc.Units) |>
     dplyr::ungroup() |>
     dplyr::distinct()
 

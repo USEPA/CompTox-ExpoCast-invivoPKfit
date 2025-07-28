@@ -6,7 +6,7 @@
 #' @export
 #' @author Caroline Ring
 get_settings_optimx.pk <- function(obj, ...) {
-  out <- obj$settings_optimx
+  out <- obj$pk_settings$optimx
 
   # convert char vectors into "c(...)
   out$method <- rlang::parse_expr(paste0("c(",

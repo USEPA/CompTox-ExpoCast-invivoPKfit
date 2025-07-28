@@ -17,7 +17,7 @@ the data in `obj$data`.}
 \item{method}{Character: One or more of the [optimx::optimx()] methods used in
 fitting. The winning model will be determined for each of these methods.
 Default `NULL` to get the winning model for each method in
-`obj$settings_optimx$method`.}
+`obj$pk_settings$optimx$method`.}
 
 \item{criterion}{The name of a criterion function to use for model comparison.
 Default "AIC". Must be the name of a function that (as for `AIC`) accepts

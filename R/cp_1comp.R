@@ -75,7 +75,7 @@ cp_1comp <- function(params,
   )
 
   if (check_msg != "Parameters OK") {
-    stop("cp_1comp(): ", check_msg)
+    cli::cli_abort(check_msg)
   }
 
   kelim = Vdist = kelim = kgutabs = Fgutabs_Vdist = Rblood2plasma = NULL

@@ -6,31 +6,31 @@
 \usage{
 get_params_1comp(
   data,
-  lower_bound = ggplot2::aes(kelim = log(2)/(2 * max(Time_trans)), Vdist = 0.01, Fgutabs
-    = 0, kgutabs = log(2)/(2 * max(Time_trans)), Fgutabs_Vdist = 0.01, Rblood2plasma =
+  lower_bound = alist(kelim = log(2)/(2 * max(Time_trans)), Vdist = 0.01, Fgutabs =
+    0.001, kgutabs = log(2)/(2 * max(Time_trans)), Fgutabs_Vdist = 1e-05, Rblood2plasma =
     0.01),
-  upper_bound = ggplot2::aes(kelim = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
-    Vdist = 100, Fgutabs = 1, kgutabs = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
+  upper_bound = alist(kelim = log(2)/(0.5 * min(Time_trans[Time_trans > 0])), Vdist =
+    100, Fgutabs = 1, kgutabs = log(2)/(0.5 * min(Time_trans[Time_trans > 0])),
     Fgutabs_Vdist = 100, Rblood2plasma = 100),
-  param_units = ggplot2::aes(kelim = paste0("1/", unique(Time_trans.Units)), Vdist =
-    paste0("(", unique(Dose.Units), ")", "/", "(", unique(Conc.Units), ")"), Fgutabs =
-    "unitless fraction", kgutabs = paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist
-    = paste0("(", unique(Conc.Units), ")", "/", "(", unique(Dose.Units), ")"),
-    Rblood2plasma = "unitless ratio")
+  param_units = alist(kelim = paste0("1/", unique(Time_trans.Units)), Vdist = paste0("(",
+    unique(Dose.Units), ")/(", unique(Conc.Units), ")"), Fgutabs = "unitless fraction",
+    kgutabs = paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist = paste0("(",
+    unique(Conc.Units), ")/(", unique(Dose.Units), ")"), Rblood2plasma =
+    "unitless ratio")
 )
 }
 \arguments{
 \item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}
 
-\item{lower_bound}{A mapping specified using a call to [ggplot2::aes()],
+\item{lower_bound}{A mapping specified using a call to [alist()],
 giving the lower bounds for each variable, as expressions which may include
 variables in `data`.}
 
-\item{upper_bound}{A mapping specified using a call to [ggplot2::aes()],
+\item{upper_bound}{A mapping specified using a call to [alist()],
 giving the upper bounds for each variable, as expressions which may include
 variables in `data`.}
 
-\item{param_units}{A mapping specified using a call to [ggplot2::aes()],
+\item{param_units}{A mapping specified using a call to [alist()],
 giving the units for each variable, as expressions which may include
 variables in `data`.}
 }
@@ -155,47 +155,30 @@ held constant at 1, not estimated from the data.
 \seealso{
 Other 1-compartment model functions: 
 \code{\link{auc_1comp}()},
-\code{\link{auc_1comp_cl}()},
-\code{\link{auc_1comp_rad}()},
 \code{\link{cp_1comp}()},
-\code{\link{cp_1comp_cl}()},
-\code{\link{get_params_1comp_cl}()},
-\code{\link{get_params_1comp_fup}()},
-\code{\link{get_starts_1comp}()},
-\code{\link{get_starts_1comp_cl}()}
+\code{\link{get_starts_1comp}()}
 
 Other get_params functions: 
-\code{\link{get_params_1comp_cl}()},
-\code{\link{get_params_1comp_fup}()},
-\code{\link{get_params_1comp_rad}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()}
 
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
-\code{\link{auc_1comp_cl}()},
-\code{\link{auc_1comp_rad}()},
 \code{\link{auc_2comp}()},
 \code{\link{auc_flat}()},
+\code{\link{auc_httk_gas_pbtk}()},
 \code{\link{cp_1comp}()},
-\code{\link{cp_1comp_cl}()},
-\code{\link{cp_1comp_rad}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
-\code{\link{cp_httk_3comp2}()},
-\code{\link{get_params_1comp_cl}()},
-\code{\link{get_params_1comp_fup}()},
-\code{\link{get_params_1comp_rad}()},
+\code{\link{cp_httk_gas_pbtk}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
-\code{\link{get_params_httk_3comp2}()},
+\code{\link{get_params_httk_gas_pbtk}()},
 \code{\link{get_starts_1comp}()},
-\code{\link{get_starts_1comp_cl}()},
-\code{\link{get_starts_1comp_rad}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
-\code{\link{get_starts_httk_3comp2}()},
+\code{\link{get_starts_httk_gas_pbtk}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 }

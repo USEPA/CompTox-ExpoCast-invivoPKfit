@@ -16,7 +16,7 @@
 #'  for all of the models in `obj$stat_model`.
 #'@param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'  whose coefficients to return. If NULL (the default), coefficients will be
-#'  returned for all of the models in `obj$settings_optimx$method`.
+#'  returned for all of the models in `obj$pk_settings$optimx$method`.
 #'@param suppress.messages Logical. `TRUE` (the default) to suppress informative
 #'  messages. `FALSE` to see them.
 #'@param ... Additional arguments. Not in use right now.
@@ -89,7 +89,8 @@ get_hessian.pk <- function(obj,
     exclude
   )
 
-  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
+  data_grp <- get_data_group.pk(obj)
+  data_grp_vars <-  get_data_group.pk(obj, as_character = TRUE)
 
   # Get required variables for log_likelihood()
   req_vars <- ggplot2::vars(Time,
@@ -106,8 +107,8 @@ get_hessian.pk <- function(obj,
                             pLOQ)
 
   # Convert Time_trans to hours
-  newdata <- obj$data |>
-    dplyr::select(!!!union(obj$data_group, req_vars), !!!other_vars) |>
+  newdata <- get_data(obj) |>
+    dplyr::select(!!!union(data_grp, req_vars), !!!other_vars) |>
     # log_likelihood() takes Time_trans so this must be converted to hours
     # so it is in concordance with coef()
     dplyr::mutate(data_sigma_group = factor(data_sigma_group),
@@ -115,7 +116,7 @@ get_hessian.pk <- function(obj,
                                             from = Time_trans.Units,
                                             to = "hours"),
                   Time_trans.Units = "hours") |>
-    dplyr::group_by(!!!obj$data_group) |>
+    dplyr::group_by(!!!data_grp) |>
     tidyr::nest(.key = "observations") |>
     dplyr::ungroup()
 
@@ -146,8 +147,7 @@ get_hessian.pk <- function(obj,
       )
     )  |>
     dplyr::ungroup() |>
-    dplyr::select(model, method, !!!obj$data_group,
-                  hessian)
+    dplyr::select(model, method, !!!data_grp, hessian)
 
 
   return(hess)
