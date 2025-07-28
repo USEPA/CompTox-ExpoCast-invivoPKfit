@@ -63,23 +63,26 @@
 #'  parameter cannot be estimated from the available data, then its starting value
 #'  will be `NA_real_`
 #' @import httk
-#' @author Caroline Ring
+#' @author Gilberto Padilla Mercado
 #' @family httk model functions
 #' @family get_starts functions
 #' @family built-in model functions
 #'
-get_starts_httk_3comp2 <- function(data,
-                                   par_DF,
-                                   this_chemical,
-                                   this_species,
-                                   restrictive) {
+get_starts_httk_gas_pbtk <- function(data,
+                                     par_DF,
+                                     this_chemical,
+                                     this_species,
+                                     restrictive) {
+  this_chemical <- unique(this_chemical)
+  this_species <- unique(this_species)
+  stopifnot(all(lengths(list(this_chemical, this_species)) == 1))
 
   ## TODO: Modify this and get_params_httk_3comp2() to use gas_pbtk model
   ## This is likely to present more stable solutions currently.
   ## Delete this comment when done with this task
-  parm_3comp2 <- tryCatch(
+  parm_gas_pbtk <- tryCatch(
     expr = {
-      httk::parameterize_3comp2(
+      httk::parameterize_gas_pbtk(
         dtxsid = unique(this_chemical),
         species = unique(this_species),
         default.to.human = TRUE,
@@ -99,7 +102,7 @@ get_starts_httk_3comp2 <- function(data,
           tolower() |>
           trimws()
         if (startsWith(response, "y")) {
-          httk::parameterize_3comp2(
+          httk::parameterize_gas_pbtk(
             dtxsid = "DTXSID7020182",
             species = this_species,
             default.to.human = TRUE,
@@ -109,14 +112,14 @@ get_starts_httk_3comp2 <- function(data,
             suppressMessages()
         } else {
           # Early return with all values set to NA_real_
-          c(
+          list(
             "BW" = NA_real_,
             "Caco2.Pab" = NA_real_,
-            "Caco2.Pab.dist" = NA_real_,
-            "Clint" = 0,
-            "Clint.dist" = NA_real_,
+            "Caco2.Pab.dist" = NA_character_,
+            "Clint" = NA_real_,
+            "Clint.dist" = NA_character_,
             "Clmetabolismc" = NA_real_,
-            "Funbound.plasma" = 0,
+            "Funbound.plasma" = NA_real_,
             "Funbound.plasma.dist" = NA_real_,
             "Funbound.plasma.adjustment" = NA_real_,
             "Fabsgut" = NA_real_,
@@ -125,12 +128,17 @@ get_starts_httk_3comp2 <- function(data,
             "Kgut2pu" = NA_real_,
             "Krbc2pu" = NA_real_,
             "kgutabs" = NA_real_,
+            "Kkidney2pu" = NA_real_,
+            "Klung2pu" = NA_real_,
+            "km" = NA_real_,
+            "Kmuc2air" = NA_real_,
             "Kliver2pu" = NA_real_,
             "Krest2pu" = NA_real_,
             "Kblood2air" = NA_real_,
-            "liver.density" = NA_real_,
+            "kUrtc" = NA_real_,
+            "liver.density" = 1.05,
             "logHenry" = NA_real_,
-            "million.cells.per.gliver" = NA_real_,
+            "million.cells.per.gliver" = 110,
             "MW" = NA_real_,
             "Pow" = NA_real_,
             "pKa_Donor" = NA_real_,
@@ -141,57 +149,76 @@ get_starts_httk_3comp2 <- function(data,
             "Qgutf" = NA_real_,
             "Qliverf" = NA_real_,
             "Qalvc" = NA_real_,
+            "Qkidneyf" = NA_real_,
+            "Qlungf" = NA_real_,
             "Rblood2plasma" = NA_real_,
             "Vgutc" = NA_real_,
             "Vliverc" = NA_real_,
-            "Vrestc" = NA_real_
+            "Vartc" = NA_real_,
+            "Vkidneyc" = NA_real_,
+            "Vlungc" = NA_real_,
+            "vmax" = 0,
+            "Vmucc" = NA_real_,
+            "Vvenc" = NA_real_,
+            "Vrestc" = NA_real_,
+            "KFsummary" = NA_real_,
+            "Fprotein.plasma" = NA_real_,
+            "fabs.oral" = NA_real_,
+            "Qgut_" = NA_real_,
+            "Qintesttransport" = NA_real_
           )
         }
       }
     }
   )
 
-  starts <- parm_3comp2
+  starts <- parm_gas_pbtk
+  # Following are required for calculations of 'extra' parameters.
+  stopifnot(all(!is.na(starts[c("Caco2.Pab", "Funbound.plasma", "krbc2pu", "BW", "Qgutf", "Qcardiacc")])))
 
-  if (all(sapply(parm_3comp2, is.na))) {
+  fabs.oral <- httk::calc_fabs.oral(list(Caco2.Pab = starts[["Caco2.Pab"]]),
+                                    species = this_species)
+  Fprotein.plasma <- httk::physiology.data[
+    which(httk::physiology.data[, "Parameter"] == "Plasma Protein Volume Fraction"),
+    which(tolower(colnames(httk::physiology.data)) == tolower(this_species))
+  ]
+  Kint <- 1 - Fprotein.plasma +
+    (0.37 / starts[["Funbound.plasma"]] - (1 - Fprotein.plasma))
+  KFsummary <- starts[["Krbc2pu"]] / Kint
+  Qintesttransport <- 0.1 * (starts[["BW"]] / 70)^(3/4)
 
-    starts["pKa_Donor"] = c(pKa_Donor = " ")
-    starts["pKa_Accept"] = c(pKa_Accept = " ")
+  peff <- 10^(0.4926 * log10(starts[["Caco2.Pab"]]) - 0.1454)
+  Asi <- 0.66 * starts[["BW"]] / 70
+  if (this_species == "rat") {
+    peff <- max(0, (peff + 0.1815)/(1.039 * 10))
+    Asi <- 71/(100^2)
+  }
+  CLperm <- peff * Asi * 36000
+  Qvilli <- (18 / (38.7/1000 * 60 * 15.8757)) *
+    starts[["Qcardiacc"]] * starts[["Qgutf"]] * starts[["BW"]]^(3/4)
 
-    par_DF$start <- as.numeric(starts[par_DF$param_name])
-    return(par_DF)
+  Qgut_ <- Qvilli * CLperm / (Qvilli + CLperm)
+
+
+  starts[["KFsummary"]] <- signif(KFsummary, 8)
+  starts[["Fprotein.plasma"]] <- signif(Fprotein.plasma, 8)
+  starts[["fabs.oral"]] <- signif(fabs.oral, 8)
+  starts[["Qgut_"]] <- signif(Qgut_, 8)
+  starts[["Qintesttransport"]] <- signif(Qintesttransport, 8)
+
+  # To pass check, values must not be NA, resolve in downstream functions
+  if (is.na(starts[["Caco2.Pab.dist"]])) {
+    starts[["Caco2.Pab.dist"]] <- ""
+  }
+  if (is.na(starts[["Clint.dist"]])) {
+    starts[["Clint.dist"]] <- ""
+  }
+  if (is.na(starts[["Funbound.plasma.dist"]])) {
+    starts[["Funbound.plasma.dist"]] <- ""
   }
 
-  units_pKa <- "logarithmic"
-  # Check the value of pKa_Donor and pKa_Accept
-  tmp_pKa_Donor <- string2num(starts[["pKa_Donor"]])
-  len_pKa_Donor <- length(tmp_pKa_Donor)
-  nom_pKa_Donor <- paste0("pKa_Donor", "_", seq_len(len_pKa_Donor))
-
-  df_pKa_Donor <- data.frame("param_name" = nom_pKa_Donor,
-                          "param_units" = units_pKa,
-                          "optimize_param" = FALSE,
-                          "use_param" = TRUE,
-                          "lower_bound" = NA_real_,
-                          "upper_bound" = NA_real_,
-                          "start" = tmp_pKa_Donor)
-
-  tmp_pKa_Accept <- string2num(starts[["pKa_Accept"]])
-  len_pKa_Accept <- length(tmp_pKa_Accept)
-  nom_pKa_Accept <- paste0("pKa_Accept", "_", seq_len(len_pKa_Accept))
-
-  df_pKa_Accept <- data.frame("param_name" = nom_pKa_Accept,
-                          "param_units" = units_pKa,
-                          "optimize_param" = FALSE,
-                          "use_param" = TRUE,
-                          "lower_bound" = NA_real_,
-                          "upper_bound" = NA_real_,
-                          "start" = tmp_pKa_Accept)
-  # Note: Even when the pKa = " " = NA, there will be a pKa_[Donor/Accept]_1
-
   # Assemble the entire parameter data.frame
-  par_DF$start <- as.numeric(starts[par_DF$param_name])
-  par_DF <- rbind(par_DF, df_pKa_Donor, df_pKa_Accept)
+  par_DF$start <- starts[par_DF$param_name]
   rownames(par_DF) <- NULL
 
   return(par_DF)

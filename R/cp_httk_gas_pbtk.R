@@ -1,16 +1,13 @@
-#' Wrapper for `httk`'s `3compartment2` PBPK model
+#' Calculates plasma concentration for `httk`'s `gas_pbtk` model
 #'
-#' Calculated plasma concentrations vs time according to the `3compartment2`
-#' model (Wambaugh, Schacht, and Ring. 2025).
+#' Calculated plasma concentrations vs time according to the `gas_pbtk` httk model
 #'
 #' @section Required parameters:
-#' These are given by the \link[httk]{parameterize_3comp2} function in `httk`.
+#' These are given by [httk::parameterize_gas_pbtk()].
 #' Furthermore, they are transformed to a vector during the prefitting process.
-#' The optimized parameters are `Clint` and `Funbound.plasma`.
-#'
-#'
-#' @section Process of calculation:
-#' The calculated plasma concentrations
+#' The optimized parameters are `Clint` and `Funbound.plasma`. Because
+#' these optimized parameters impact `Clmetabolismc`, `Krbc2pu`, `Rblood2plasma`
+#' and `Fabsgut`, these are recalculated at the beginning of this function.
 #'
 #'
 #' @param params A named numeric vector of model parameter values.
@@ -33,21 +30,19 @@
 #' assumption is that the clearance is restrictive or non-restrictive
 #'
 #' @return A vector of blood or plasma concentration values  corresponding
-#'  to `time`
-#'  .
+#'  to `time`.
+#'
 #' @author Gilberto Padilla Mercado
-#' @export cp_httk_3comp2
+#' @export cp_httk_gas_pbtk
 #' @family built-in model functions
 #' @family httk model functions
 #' @family model concentration functions
 #'
-cp_httk_3comp2 <- function(params, time, dose, route, medium = "plasma",
-                           this_chem = NULL, this_species = NULL,
-                           restrictive = TRUE) {
-
+cp_httk_gas_pbtk <- function(params, time, dose, route, medium = "plasma",
+                             this_chem = NULL, this_species = NULL,
+                             restrictive = TRUE) {
   # Make params into a list format
-  params <- fill_params_httk_3comp2(params)
-
+  params <- recalculate_httk_pbtk_params(params)
   # Create a data.frame to "track" the times
   full_df <- data.frame(
     Time = time/24, # convert to days
@@ -68,24 +63,6 @@ cp_httk_3comp2 <- function(params, time, dose, route, medium = "plasma",
   stopifnot(!is.null(this_chem), !is.null(this_species),
             length(this_chem) == 1, length(this_chem) == 1)
 
-
-  # Update Clmetabolismc
-  params$Clmetabolismc <- as.numeric(
-    httk::calc_hep_clearance(
-      hepatic.model = "unscaled",
-      parameters = params,
-      species = this_species,
-      suppress.messages = TRUE,
-      restrictive.clearance = restrictive)) |> suppressWarnings()
-
-  params$Rblood2plasma <- as.numeric(
-    httk::calc_rblood2plasma(
-      parameters = params,
-      species = this_species,
-      suppress.messages = TRUE
-    ) |> suppressWarnings()
-  )
-
   # Split-lapply pattern
   group_fct <- factor(with(uniq_df, paste(Dose, Route, Medium)))
   uniq_list <- split(uniq_df, group_fct) |> unname()
@@ -97,39 +74,25 @@ cp_httk_3comp2 <- function(params, time, dose, route, medium = "plasma",
       this_dose <- unique(x$Dose)
       this_route <- unique(x$Route)
       this_medium <- unique(x$Medium)
-
-      # This is in fractions of an hour
-      time_min <- unique(as.integer(x$Time * 60 * 24))
-      minute_difference <- (min(diff(unique(c(0, time_min)))))
-
-      if (any(time_min %% minute_difference != 0)) {
-        smallest_time_step <- 60
-      } else {
-        smallest_time_step <- 60 / minute_difference
-      }
-
-      max_time_days_whole <- ceiling(max(x$Time))
-
-      if (max_time_days_whole <= 2) {
-        max_time_days_whole <- 3
-      }
+      these_times <- unique(x$Time)
 
       tmp <- tryCatch(
         expr = {
-          do.call(what = httk::solve_3comp2,
+          do.call(what = httk::solve_gas_pbtk,
                   args = list(
                     parameters = params,
                     species = this_species,
                     dose = this_dose,
-                    doses.per.day = NULL, # single dose
-                    days = max_time_days_whole,
-                    tsteps = smallest_time_step,
-                    route = this_route,
+                    times = these_times,
+                    iv.dose = this_route %in% "iv",
                     restrictive.clearance = restrictive,
+                    input.units = "mg/kg",
                     output.units = "mg/L",
-                    atol = 1E-9,
-                    maxiter = 1E5,
-                    small.time = 1E-6,
+                    default.to.human = FALSE,
+                    exp.conc = 0,
+                    doses.per.day = NULL, # single dose
+                    recalc.blood2plasma = FALSE,
+                    recalc.clearance = FALSE,
                     suppress.messages = TRUE
                   )
           ) |>
@@ -161,7 +124,7 @@ cp_httk_3comp2 <- function(params, time, dose, route, medium = "plasma",
       )
 
       tmp <- data.frame(
-        Time = x$Time,
+        Time = tmp[matched_times, "time"],
         Cplasma = tmp[matched_times, "Cplasma"]
       )
 
@@ -176,8 +139,9 @@ cp_httk_3comp2 <- function(params, time, dose, route, medium = "plasma",
   out_premerge <- do.call("rbind", res)
   rownames(out_premerge) <- NULL
 
-  out <- merge(full_df, out_premerge)
+  out <- left_join(full_df, out_premerge, by = c("Time", "Dose", "Route", "Medium"))
 
+  medium <- out$Medium
   out <- out[["Cplasma"]]
 
   # Transform data if Medium == "blood"
