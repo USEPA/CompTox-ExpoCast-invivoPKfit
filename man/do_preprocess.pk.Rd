@@ -26,7 +26,7 @@ Data pre-processing for an object `obj` includes the following steps, in order:
 \itemize{
 \item Coerce data to class `data.frame` (if it is not already)
 \item Rename variables to harmonized "`invivopkfit` aesthetic" variable names, using `obj$mapping`
-\item Check that the data includes only routes in `obj$settings_preprocess$routes_keep` and media in `obj$settings_preprocess$media_keep`
+\item Check that the data includes only routes in `obj$pk_settings$preprocess$routes_keep` and media in `obj$pk_settings$preprocess$media_keep`
 \item Check that the data includes only one unit for concentration, one unit for time, and one unit for dose.
 \item Coerce `Value`, `Value_SD`, `LOQ`, `Dose`, and `Time` to numeric, if they are not already.
 \item Coerce `Species`, `Route`, and `Media` to lowercase.

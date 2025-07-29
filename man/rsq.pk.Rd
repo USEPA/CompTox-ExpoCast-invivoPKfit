@@ -62,7 +62,7 @@ the LOQ before computing R-squared. FALSE: do not.}
 
 \item{suppress.messages}{Logical: whether to suppress message printing. If
 NULL (default), uses the setting in
-`obj$settings_preprocess$suppress.messages`}
+`obj$pk_settings$preprocess$suppress.messages`}
 
 \item{...}{Additional arguments. Not currently in use.}
 }

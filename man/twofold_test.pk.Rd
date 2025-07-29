@@ -20,7 +20,7 @@
 the LOQ before computing fold errors. FALSE: do not. Only used if `obj` has been fitted and predictions are possible.}
 
 \item{suppress.messages}{Logical: whether to suppress message printing. If
-NULL (default), uses the setting in `obj$settings_preprocess$suppress.messages`.}
+NULL (default), uses the setting in `obj$pk_settings$preprocess$suppress.messages`.}
 
 \item{model}{Optional: Specify one or more of the fitted models for which to
 make predictions. If NULL (the default), predictions will be returned for
@@ -28,7 +28,7 @@ all of the models in `object$stat_model`.}
 
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 for which to make predictions. If NULL (the default), predictions will be
-returned for all of the models in `object$settings_optimx$method`.}
+returned for all of the models in `object$pk_settings$optimx$method`.}
 
 \item{...}{Additional arguments. Currently unused.}
 }

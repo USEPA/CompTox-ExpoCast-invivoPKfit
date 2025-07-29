@@ -34,7 +34,7 @@ returned for all of the models in `object$stat_model`.}
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 for which to make predictions and calculate AICs. If NULL (the default),
 log-likelihoods will be returned for all of the models in
-`object$settings_optimx$method`.}
+`object$pk_settings$optimx$method`.}
 
 \item{exclude}{Logical: `TRUE` to compute the AIC after removing any
 observations in the data marked for exclusion (if there is a variable

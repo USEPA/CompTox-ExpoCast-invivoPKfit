@@ -4,12 +4,16 @@
 \alias{do_fit.pk}
 \title{Do fitting}
 \usage{
-\method{do_fit}{pk}(obj, n_cores = NULL, rate_names = NULL, ...)
+\method{do_fit}{pk}(obj, async = FALSE, rate_names = NULL, ...)
 }
 \arguments{
 \item{obj}{A `pk` object}
 
-\item{n_cores}{Number of cores used for parallel computing.}
+\item{async}{Logical (Default: FALSE). Whether to use for parallel computing with
+the [mirai::mirai_map()] framework. If FALSE and [mirai::daemons()] are set, will use
+new parallel processing in [purrr::in_parallel()] or if none are set, then sequential
+iteration will occur. Progress bars are displayed if TRUE, or if not using parallel
+processing.}
 
 \item{rate_names}{The names of the rate units. Leave NULL to utilize default 1/hour.}
 

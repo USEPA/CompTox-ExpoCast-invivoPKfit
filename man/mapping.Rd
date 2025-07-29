@@ -19,12 +19,14 @@ mapping(
 )
 }
 \arguments{
-\item{mapping}{A [ggplot2::aes()] call that maps variable names in the original data to the harmonized `invivoPKfit` variable names.}
+\item{mapping}{A [ggplot2::aes()] call that maps variable names in the
+original data to the harmonized `invivoPKfit` variable names.}
 
 \item{...}{Additional arguments. Currently unused.}
 }
 \value{
-An object of class `uneval` containing the mapping -- see [ggplot2::aes()] for details.
+An object of class `uneval` containing the mapping -- see
+ [ggplot2::aes()] for details.
 }
 \description{
 New mapping

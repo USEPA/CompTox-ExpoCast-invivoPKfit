@@ -31,7 +31,7 @@ all of the models in `object$stat_model`.}
 
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 for which to make predictions. If NULL (the default), predictions will be
-returned for all of the models in `object$settings_optimx$method`.}
+returned for all of the models in `object$pk_settings$optimx$method`.}
 
 \item{type}{Either `"conc"` (the default) or `"auc"`. `type = "conc"`
 predicts concentrations; `type = "auc"` predicts area under the
@@ -56,7 +56,7 @@ log10-transformation will be applied.}
 
 \item{suppress.messages}{Logical: whether to suppress message printing. If
 NULL (default), uses the setting in
-`object$settings_preprocess$suppress.messages`}
+`object$pk_settings$preprocess$suppress.messages`}
 
 \item{include_NAs}{Logical: `FALSE` by default. Determines whether to include
 aborted fits which have NAs as coefficients.}
