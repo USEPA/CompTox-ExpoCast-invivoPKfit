@@ -125,6 +125,7 @@ utils::globalVariables(
     "data_sigma_group",
     "observations",
     "coefs_opt_vector",
+    "coefs_opt_vector_id",
     "coefs_const_vector",
     # get_starts
     "value",

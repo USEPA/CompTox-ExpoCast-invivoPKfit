@@ -415,52 +415,27 @@ get_settings_preprocess.default <- function(obj, ...) {
   )
 }
 
-#' get_settings_data_info()
+#' get_nca_group()
 #'
-#' This is the S3 method generic for get_settings_data_info()
+#' This is the S3 method generic for get_nca_group()
 #'
 #' @param obj An object.
 #' @param ... Additional arguments currently not in use.
 #' @return A named list of the data_info settings
-#' @seealso [get_settings_data_info.pk()] for the method for class [pk()]
+#' @seealso [get_nca_group.pk()] for the method for class [pk()]
 #' @export
-get_settings_data_info <- function(obj, ...) {
-  UseMethod("get_settings_data_info", obj)
+get_nca_group <- function(obj, ...) {
+  UseMethod("get_nca_group", obj)
 }
 
-#' Default method for get_settings_data_info()
+#' Default method for get_nca_group()
 #'
 #' @param obj An object
 #' @param ... Additional arguments currently not in use.
 #' @return An error, when a non-pk object is used for the first argument.
 #' @export
-get_settings_data_info.default <- function(obj, ...) {
-  stop("No 'get_settings_data_info' method exists for object of class",
-       toString(class(obj))
-  )
-}
-
-#' get_stat_error_model()
-#'
-#' This is the S3 method generic for get_stat_error_model()
-#'
-#' @param obj An object.
-#' @param ... Additional arguments currently not in use.
-#' @return A named list of the stat_error_model settings
-#' @seealso [get_stat_error_model.pk()] for the method for class [pk()]
-#' @export
-get_stat_error_model <- function(obj, ...) {
-  UseMethod("get_stat_error_model", obj)
-}
-
-#' Default method for get_stat_error_model()
-#'
-#' @param obj An object
-#' @param ... Additional arguments currently not in use.
-#' @return An error, when a non-pk object is used for the first argument.
-#' @export
-get_stat_error_model.default <- function(obj, ...) {
-  stop("No 'get_stat_error_model' method exists for object of class",
+get_nca_group.default <- function(obj, ...) {
+  stop("No 'get_nca_group' method exists for object of class",
        toString(class(obj))
   )
 }
@@ -473,7 +448,7 @@ get_stat_error_model.default <- function(obj, ...) {
 #' @param ... Additional arguments currently not in use.
 #' @return A `factor` vector giving the error SD group ID for each observation,
 #'   as the interaction of the factors specified in
-#'   `obj$stat_error_model$error_group`.
+#'   `obj$pk_groups$error_group`.
 #' @seealso [get_data_sigma_group.pk()] for the method for class [pk()]
 #' @export
 get_data_sigma_group <- function(obj, ...) {

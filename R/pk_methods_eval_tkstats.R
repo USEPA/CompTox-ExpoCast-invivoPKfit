@@ -24,25 +24,25 @@ eval_tkstats.pk <- function(obj,
                             tk_group = NULL,
                             exclude = TRUE,
                             dose_norm = FALSE,
-                            finite_only = TRUE,
+                            finite_only = FALSE,
                             suppress.messages = NULL,
                             ...) {
 
   if (is.null(suppress.messages)) {
-    suppress.messages <- obj$settings_preprocess$suppress.messages
+    suppress.messages <- obj$pk_settings$preprocess$suppress.messages
   }
 
   # ensure that the model has been fitted
-  check <- check_required_status(obj = obj,
-                                 required_status = status_fit)
+  check <- check_required_status(obj = obj, required_status = status_fit)
+
   if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
 
   if (is.null(model)) model <- names(obj$stat_model)
-  if (is.null(method)) method <- obj$settings_optimx$method
-  if (is.null(newdata)) newdata <- obj$data
-  if (is.null(tk_group)) tk_group <- obj$settings_data_info$summary_group
+  if (is.null(method)) method <- obj$pk_settings$optimx$method
+  if (is.null(newdata)) newdata <- get_data.pk(obj)
+  if (is.null(tk_group)) tk_group <- get_nca_group(obj)
 
   method_ok <- check_method(obj = obj, method = method)
   if (all(model %in% "winning")) {
@@ -55,9 +55,8 @@ eval_tkstats.pk <- function(obj,
 
   # Grouping variables
   grp_vars <- sapply(tk_group, rlang::as_label)
-  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
-  error_grp_vars <- sapply(obj$stat_error_model$error_group,
-                           rlang::as_label)
+  data_grp_vars <- get_data_group.pk(obj, as_character = TRUE)
+  error_grp_vars <- get_error_group.pk(obj, as_character = TRUE)
 
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
@@ -87,9 +86,9 @@ eval_tkstats.pk <- function(obj,
 
   if (win %in% TRUE) {
   # Get the winning model for filtering
-  winmodel_df <- get_winning_model.pk(obj = obj,
-                                   method = method) |>
-    dplyr::select(-c(near_flat, preds_below_loq))
+    winmodel_df <- get_winning_model.pk(obj = obj,
+                                        method = method) |>
+      dplyr::select(-c(near_flat, preds_below_loq))
   }
 
 
@@ -116,13 +115,13 @@ eval_tkstats.pk <- function(obj,
 
   # get tkstats
   tkstats_df <- get_tkstats.pk(obj = obj,
-                            newdata = newdata,
-                            model = model,
-                            method = method,
-                            tk_group = tk_group,
-                            dose_norm = dose_norm,
-                            exclude = exclude,
-                            suppress.messages = suppress.messages) |>
+                               newdata = newdata,
+                               model = model,
+                               method = method,
+                               tk_group = tk_group,
+                               dose_norm = dose_norm,
+                               exclude = exclude,
+                               suppress.messages = suppress.messages) |>
     ungroup()
 
   if (win %in% TRUE) {
@@ -134,11 +133,11 @@ eval_tkstats.pk <- function(obj,
   # prepare for merge
   nca_df_red <- nca_df |>
     dplyr::rename_with(~ paste0(.x, ".nca", recycle0 = TRUE),
-                       !dplyr::any_of(c(grp_vars, "model", "method")))
+                       !dplyr::any_of(c(grp_vars, "dose_norm", "model", "method")))
 
   tkstats_df_red <- tkstats_df |>
     dplyr::rename_with(~ paste0(.x, ".tkstats", recycle0 = TRUE),
-                       !dplyr::any_of(c(grp_vars,
+                       !dplyr::any_of(c(grp_vars, "DATA_GROUP_ID",
                                              "Dose.Units", "Conc.Units",
                                              "Time.Units", "Time_trans.Units",
                                              "Rblood2plasma", "model", "method")
@@ -153,10 +152,12 @@ eval_tkstats.pk <- function(obj,
   }
 
   # Merge the tkstats and the nca data.frames
-    tk_eval <- suppressMessages(dplyr::left_join(
+    tk_eval <- dplyr::left_join(
       tkstats_df_red,
-      nca_df_red
-      ))
+      nca_df_red,
+      by = c(grp_vars, "model", "method")
+      ) |>
+      dplyr::relocate(DATA_GROUP_ID, .before = 1L)
 
   # Filter out infinite and NA values for AUC_infinity
   if (finite_only) {

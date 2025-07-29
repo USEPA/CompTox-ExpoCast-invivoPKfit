@@ -100,7 +100,7 @@
 #'   the LOQ before computing R-squared. FALSE: do not.
 #' @param suppress.messages Logical: whether to suppress message printing. If
 #'   NULL (default), uses the setting in
-#'   `obj$settings_preprocess$suppress.messages`
+#'   `obj$pk_settings$preprocess$suppress.messages`
 #' @param ... Additional arguments. Not currently used.
 #' @return A `data.frame` with calculated RMSE as the final column. There is one row per
 #'   each model in `obj`'s [stat_model()] element, i.e. each PK model that was
@@ -122,7 +122,7 @@ rmse.pk <- function(obj,
                     suppress.messages = NULL,
                     ...) {
   if (is.null(suppress.messages)) {
-    suppress.messages <- obj$settings_preprocess$suppress.messages
+    suppress.messages <- obj$pk_settings$preprocess$suppress.messages
   }
 
   # ensure that the model has been fitted
@@ -134,8 +134,8 @@ rmse.pk <- function(obj,
 
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
-  if (is.null(newdata)) newdata <- obj$data
-  if (is.null(rmse_group)) rmse_group <- obj$data_group
+  if (is.null(newdata)) newdata <- get_data(obj)
+  if (is.null(rmse_group)) rmse_group <- get_data_group(obj)
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)

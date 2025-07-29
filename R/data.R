@@ -63,94 +63,22 @@
 #' See [params_flat()] for the function that determines bounds and starting guesses for model parameters, based on the data.
 "model_flat"
 
-#' 1-compartment model that assumes restrictive clearance
+#' Gas pbtk `httk` model for fitting `Funbound.plasma` and `Clint`
 #'
-#' The `pk_model` object defining the 1-compartment model.
-#'
-#' A `pk_model` object: under the hood, a `list` object with named elements
-#' corresponding to the arguments of [pk_model()]. See that function
-#' documentation for the definition of each element.
-#'
-#' See [cp_1comp_cl()] for the function that predicts blood/plasma concentration for a bolus dose (oral or IV).
-#'
-#' See [auc_1comp_cl()] for the function that predicts area under the concentration-time curve.
-#'
-#' See [tkstats_1comp_cl()] for the function that calculates summary toxicokinetic statistics from 1-compartment model parameters.
-#'
-#' See [params_1comp_cl()] for the function that determines bounds and starting guesses for model parameters, based on the data.
-#'
-"model_1comp_cl_rest"
-
-#' 1-compartment model that assumes non-restrictive clearance
-#'
-#' The `pk_model` object defining the 1-compartment model.
-#'
-#' A `pk_model` object: under the hood, a `list` object with named elements
-#' corresponding to the arguments of [pk_model()]. See that function
-#' documentation for the definition of each element.
-#'
-#' See [cp_1comp_cl()] for the function that predicts blood/plasma concentration for a bolus dose (oral or IV).
-#'
-#' See [auc_1comp_cl()] for the function that predicts area under the concentration-time curve.
-#'
-#' See [tkstats_1comp_cl()] for the function that calculates summary toxicokinetic statistics from 1-compartment model parameters.
-#'
-#' See [params_1comp_cl()] for the function that determines bounds and starting guesses for model parameters, based on the data.
-#'
-"model_1comp_cl_nonrest"
-
-#' 1-compartment model that assumes restrictive clearance optimizes Fup
-#'
-#' The `pk_model` object defining the 1-compartment model.
-#'
-#' A `pk_model` object: under the hood, a `list` object with named elements
-#' corresponding to the arguments of [pk_model()]. See that function
-#' documentation for the definition of each element.
-#'
-#' See [cp_1comp_cl()] for the function that predicts blood/plasma concentration for a bolus dose (oral or IV).
-#'
-#' See [auc_1comp_cl()] for the function that predicts area under the concentration-time curve.
-#'
-#' See [tkstats_1comp_cl()] for the function that calculates summary toxicokinetic statistics from 1-compartment model parameters.
-#'
-#' See [params_1comp_cl()] for the function that determines bounds and starting guesses for model parameters, based on the data.
-#'
-"model_1comp_fup"
-
-#' 1-compartment model for fitting radiolabeling experiments
-#'
-#' The `pk_model` object defining the 1-compartment model with additional `excreta`
-#' compartment.
-#'
-#' A `pk_model` object: under the hood, a `list` object with named elements
-#' corresponding to the arguments of [pk_model()]. See that function
-#' documentation for the definition of each element.
-#'
-#' See [cp_1comp_cl()] for the function that predicts blood/plasma concentration for a bolus dose (oral or IV).
-#'
-#' See [auc_1comp_cl()] for the function that predicts area under the concentration-time curve.
-#'
-#' See [tkstats_1comp_cl()] for the function that calculates summary toxicokinetic statistics from 1-compartment model parameters.
-#'
-#' See [params_1comp_cl()] for the function that determines bounds and starting guesses for model parameters, based on the data.
-#'
-"model_1comp_rad"
-
-
-#' 3-compartment `httk` model for fitting `Funbound.plasma` and `Clint`
-#'
-#' The `pk_model` object defining the "3compartment2" model from `httk`.
+#' The `pk_model` object defining the "gas_pbtk" model from `httk`, with
+#' recalculations of other "constant" parameters that depend on either
+#' `Funbound.plasma` or `Clint`.
 #'
 #' A `pk_model` object: under the hood, a `list` object with named elements
 #' corresponding to the arguments of [pk_model()]. Note that this model is currently
 #' in development and fits can be unstable due to errors arising during ODE
 #' solving. See that function documentation for the definition of each element.
 #'
-#' See [cp_httk_3comp2_cl()] for the function that predicts blood/plasma concentration for a bolus dose (oral or IV).
+#' See [cp_httk_gas_pbtk()] for the function that predicts blood/plasma concentration for a bolus dose (oral or IV).
 #'
-#' See [params_3comp2_cl()] for the function that determines bounds and starting guesses for model parameters, based on the data.
+#' See [get_params_httk_gas_pbtk()] for the function that determines bounds and starting guesses for model parameters, based on the data.
 #'
-"model_httk_3comp2"
+"model_httk_gas_pbtk"
 
 
 #' CvTdb data

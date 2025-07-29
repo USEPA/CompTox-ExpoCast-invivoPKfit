@@ -50,7 +50,7 @@
 #' @param AFE_group Default: Chemical, Species. Determines what the data
 #' grouping that is used to calculate average fold error (AFE). Should be set to lowest number
 #' of variables that still would return unique experimental conditions.
-#' Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.
+#' Input in the form of `rlang::exprs(Chemical, Species, Route, Media, Dose)`.
 #' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
 #'   the LOQ before computing AFE. FALSE: do not.
 #' @param ... Additional arguments. Not currently in use.
@@ -79,8 +79,8 @@ AFE.pk <- function(obj,
 
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
-  if (is.null(newdata)) newdata <- obj$data
-  if (is.null(AFE_group)) AFE_group <- obj$data_group
+  if (is.null(newdata)) newdata <- get_data.pk(obj)
+  if (is.null(AFE_group)) AFE_group <- get_data_group(obj)
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -132,7 +132,6 @@ AFE.pk <- function(obj,
                        "exclude",
                        "pLOQ"))
 
-
   new_preds <- dplyr::left_join(preds, newdata) |>
     dplyr::select(dplyr::all_of(req_vars)) |>
     dplyr::ungroup() |>
@@ -140,8 +139,8 @@ AFE.pk <- function(obj,
 
   #replace below-LOQ preds with pLOQ if specified
   if (sub_pLOQ %in% TRUE) {
-    message("AFE.pk(): Predicted conc below pLOQ substituted with pLOQ")
-    new_preds$Conc_est_tmp <- pmax(Conc_est, pLOQ)
+    cli::cli_inform("AFE.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    new_preds$Conc_est_tmp <- with(new_preds, pmax(Conc_est, pLOQ))
   }
 
   #if Conc censored and Conc_est_tmp < LOQ, make fold error 1
@@ -162,9 +161,8 @@ AFE.pk <- function(obj,
     # dplyr::distinct() |>
     dplyr::ungroup()
 
-  message("AFE.pk)(): Groups: \n",
-          toString(AFE_group_char),
-          ", method, model")
+  cli::cli_inform(c("AFE.pk(): Groups: {c(AFE_group_char, 'method', 'model')}",
+                    "v" = "Average Fold Error Calculated!"))
 
   return(AFE_df)
 }

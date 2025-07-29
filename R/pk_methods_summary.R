@@ -39,7 +39,7 @@ summary.pk <- function(object, ...) {
       "\n"))
 
     # data info settings
-    settings_data_info <- get_settings_data_info(object)
+    settings_data_info <- get_nca_group(object)
     cat(paste0(
       "\nData info settings:\n",
       paste(names(settings_data_info),
@@ -54,6 +54,9 @@ summary.pk <- function(object, ...) {
     cat(paste0("\nModels to be fitted:\n",
                toString(models),
                "\n"))
+
+    # data_group
+    data_grp <- get_data_group.pk(object)
 
     # stat_error_model
 
@@ -167,13 +170,13 @@ summary.pk <- function(object, ...) {
   aic_all <- suppressMessages(AIC(object)) # Already includes logLik
   bic_all <- suppressMessages(BIC(object))
   rmse_all <- rmse(object, use_scale_conc = FALSE) |>
-    dplyr::group_by(!!!object$data_group, model, method, Route, Media, Dose) |>
+    dplyr::group_by(!!!data_grp, model, method, Route, Media, Dose) |>
     dplyr::mutate(avg_rmse = mean(RMSE, na.rm = TRUE)) |>
     tidyr::nest(full_rmse = c(Time, RMSE)) |>
     suppressMessages()
 
   fold_errors_all <- fold_error(object) |>
-    dplyr::group_by(!!!object$data_group, model, method, Route, Media, Dose) |>
+    dplyr::group_by(!!!data_grp, model, method, Route, Media, Dose) |>
     dplyr::mutate(avg_FoldErr = mean(Fold_Error, na.rm = TRUE),
                   median_FoldErr = median(Fold_Error, na.rm = TRUE),
                   within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2) / length(Fold_Error)) |>

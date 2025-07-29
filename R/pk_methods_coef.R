@@ -11,7 +11,7 @@
 #'   returned for all of the models in `obj$stat_model`.
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   whose coefficients to return. If NULL (the default), coefficients will be
-#'   returned for all of the models in `obj$settings_optimx$method`.
+#'   returned for all of the models in `obj$pk_settings$optimx$method`.
 #' @param drop_sigma Logical: `FALSE` by default. Determines whether to include
 #'   sigma in the output.
 #' @param include_NAs Logical: `FALSE` by default. Determines whether to include
@@ -26,7 +26,7 @@
 #'   that were optimized and those that were held constant.) Any value other
 #'   than `"use"`, `"optim"`, or `"const"` will return an error.
 #' @param suppress.messages Logical: `NULL` by default to use the setting in
-#'   `object$settings_preprocess$suppress.messages`. Determines whether to
+#'   `object$pk_settings$preprocess$suppress.messages`. Determines whether to
 #'   display messages.
 #' @param ... Additional arguments currently not in use.
 #' @return A data.frame with a row for each `data_group` x `method` x `model`
@@ -50,8 +50,9 @@ coef.pk <- function(object,
                     ...) {
 
   if (is.null(suppress.messages)) {
-    suppress.messages <- object$settings_preprocess$suppress.messages
+    suppress.messages <- object$pk_settings$preprocess$suppress.messages
   }
+
   # Check fit status
   check <- check_required_status(obj = object,
                                  required_status = status_fit)
@@ -61,7 +62,7 @@ coef.pk <- function(object,
   if (is.null(model))
     model <- names(object$stat_model)
   if (is.null(method))
-    method <- object$settings_optimx$method
+    method <- object$pk_settings$optimx$method
 
   method_ok <- check_method(obj = object, method = method)
   model_ok <- check_model(obj = object, model = model)
@@ -74,7 +75,8 @@ coef.pk <- function(object,
                 " 'use', 'optim', or 'const'."))
   }
 
-  data_group_vars <- sapply(object$data_group, rlang::as_label)
+  data_grp <- get_data_group.pk(object)
+  data_grp_vars <- get_data_group.pk(object, as_character = TRUE)
 
   # Get a unique list of possible parameters for each model used
   possible_model_params <- sapply(object$stat_model, `[[`, "params") |>
@@ -84,10 +86,11 @@ coef.pk <- function(object,
   coefs <- dplyr::select(object$fit,
                          model,
                          method,
-                         !!!object$data_group,
+                         DATA_GROUP_ID,
+                         !!!data_grp,
                          param_name,
                          estimate,
-                         convcode,
+                         convergence,
                          optimize_param,
                          use_param)
 
@@ -102,18 +105,18 @@ coef.pk <- function(object,
   # include NA values from aborted fits?
   if (include_NAs %in% FALSE) {
     coefs <- dplyr::filter(coefs,
-                           !(convcode %in% 9999),
-                           !(convcode %in% -9999))
+                           !(convergence %in% 9999),
+                           !(convergence %in% -9999))
   }
 
   # Get the columns describing time units and their (possibly) transformed units
-  time_group <- get_data(obj = object) |>
-    dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) |>
+  time_group <- get_data.pk(obj = object) |>
+    dplyr::select(DATA_GROUP_ID, Time.Units, Time_trans.Units) |>
     dplyr::distinct()
 
-  # Create the coefs vector
+  # Create the coefs vector (which is really a list)
   coefs_tidy <- coefs |>
-    dplyr::group_by(model, method, !!!object$data_group) |>
+    dplyr::group_by(model, method, DATA_GROUP_ID, !!!data_grp) |>
     dplyr::summarise(
       coefs_vector = {
           outval <- setNames(estimate, param_name)
@@ -132,7 +135,7 @@ coef.pk <- function(object,
       ) |>
     dplyr::distinct() |>
     dplyr::left_join(time_group,
-                     by = data_group_vars) |>
+                     by = "DATA_GROUP_ID") |>
     dplyr::ungroup()
 
   # Various filtering steps and checks

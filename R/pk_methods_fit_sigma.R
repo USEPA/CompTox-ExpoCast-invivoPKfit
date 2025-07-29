@@ -39,9 +39,8 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
   # Get data groups for referencing
   data <- get_data(obj)
 
-  data_group <- obj$data_group
-  data_group_vars <- sapply(data_group,
-                            rlang::as_label)
+  data_grp <- get_data_group.pk(obj)
+  data_grp_vars <-  get_data_group.pk(obj, as_character = TRUE)
 
   # Get the scaling transformations
   this_settings_optimx <- get_settings_optimx(obj)
@@ -57,9 +56,8 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
 
   data_names <- names(preds)
   if (!all(req_names %in% data_names)) {
-    stop(
-      "Please make sure that there are the following columns names: ",
-      paste(req_names)
+    cli::cli_abort(
+      "Please make sure that there are the following columns names: {paste(req_names)}"
     )
   }
 
@@ -67,14 +65,13 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
   stopifnot(length(pred_col) == 1)
 
   if (!(pred_col %in% names(preds))) {
-    stop("Prediction column not in prediction data.frame.")
+    cli::cli_abort("Prediction column not in prediction data.frame.")
   }
 
 
   # Inner join the predictions and observations (there should be a lot of overlap)
   sigma_df <- obj$prefit$stat_error_model$sigma_DF |>
-    dplyr::select(!!!data_group,
-                  "data_sigma_group" = param_name,
+    dplyr::select(!!!data_grp, "data_sigma_group" = param_name,
                   lower_bound, upper_bound, start) |>
     dplyr::distinct()
 
@@ -150,7 +147,7 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
 
           names(tmp) <- c(names(x$param_start),
                           "value", "fevals", "gevals", "niter",
-                          "convcode",
+                          "convergence",
                           "kkt1", "kkt2",
                           "xtime")
 
@@ -200,16 +197,16 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
     by = dplyr::join_by("data_sigma_group" == "hyperparam_name"))
 
   AIC_df <- final_df |>
-    dplyr::select(!!!data_group,
+    dplyr::select(!!!data_grp,
                   model, method,
                   data_sigma_group,
                   value) |>
-    dplyr::group_by(!!!data_group, model, method) |>
+    dplyr::group_by(!!!data_grp, model, method) |>
     dplyr::summarize(ll = sum(value),
                      npar = n(),
                      data_sigma_group = c(data_sigma_group)
     ) |>
-    dplyr::group_by(!!!data_group, model, method) |>
+    dplyr::group_by(!!!data_grp, model, method) |>
     dplyr::mutate(AIC = (k * .data$npar) - (2 * .data$ll))
   # Usually only one parameter is optimized, but sometimes there is more than one
   # sigma value per data group.

@@ -77,9 +77,6 @@ get_starts_httk_gas_pbtk <- function(data,
   this_species <- unique(this_species)
   stopifnot(all(lengths(list(this_chemical, this_species)) == 1))
 
-  ## TODO: Modify this and get_params_httk_3comp2() to use gas_pbtk model
-  ## This is likely to present more stable solutions currently.
-  ## Delete this comment when done with this task
   parm_gas_pbtk <- tryCatch(
     expr = {
       httk::parameterize_gas_pbtk(

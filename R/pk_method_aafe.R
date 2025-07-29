@@ -56,7 +56,7 @@
 #' @param AAFE_group Default: Chemical, Species. Determines what the data
 #' grouping that is used to calculate absolute average fold error (AAFE). Should be set to lowest number
 #' of variables that still would return unique experimental conditions.
-#' Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.
+#' Input in the form of `rlang::exprs(Chemical, Species, Route, Media, Dose)`.
 #' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
 #'   the LOQ before computing AAFE. FALSE: do not.
 #' @param ... Additional arguments. Not currently in use.
@@ -85,8 +85,8 @@ AAFE.pk <- function(obj,
 
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
-  if (is.null(newdata)) newdata <- obj$data
-  if (is.null(AAFE_group)) AAFE_group <- obj$data_group
+  if (is.null(newdata)) newdata <- get_data.pk(obj)
+  if (is.null(AAFE_group)) AAFE_group <- get_data_group.pk(obj)
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -146,15 +146,8 @@ AAFE.pk <- function(obj,
 
   #replace below-LOQ preds with pLOQ if specified
   if (sub_pLOQ %in% TRUE) {
-    message("AAFE.pk(): Predicted conc below pLOQ substituted with pLOQ")
-    new_preds <- new_preds |>
-      dplyr::mutate(
-        Conc_est_tmp = dplyr::if_else(
-          .data$Conc_est < pLOQ,
-          .data$pLOQ,
-          .data$Conc_est
-        )
-      )
+    cli::cli_inform("AAFE.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    new_preds$Conc_est_tmp <- with(new_preds, pmax(Conc_est, pLOQ))
   }
 
   #if Conc censored and Conc_est_tmp < LOQ, make fold error 1
@@ -178,9 +171,8 @@ AAFE.pk <- function(obj,
     # dplyr::distinct() |>
     dplyr::ungroup()
 
-  message("AAFE.pk)(): Groups: \n",
-          toString(AAFE_group_char),
-          ", method, model")
+  cli::cli_inform(c("AAFE.pk(): Groups: {c(AAFE_group_char, 'method', 'model')}",
+                    "v" = "Absolute Average Fold Error Calculated!"))
 
   return(AAFE_df)
 }

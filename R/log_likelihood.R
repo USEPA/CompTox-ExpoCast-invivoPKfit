@@ -139,15 +139,16 @@ log_likelihood <- function(par,
                            includes_preds = FALSE,
                            suppress.messages = TRUE) {
 
-
   # Used variables such that there is no need to reference 'data'
+  Chemical <- unique(data$Chemical)
+  Species <- unique(data$Species)
   Time_trans <- data$Time_trans
   Dose <- data$Dose
   Route <- data$Route
   Media <- data$Media
   Conc <- data$Conc
   Conc_SD <- data$Conc_SD
-  Conc_trans <- data$Conc_trans
+  # Conc_trans <- data$Conc_trans # This is re-calculated here
   N_Subjects <- data$N_Subjects
   Detect <- data$Detect
   pLOQ <- data$pLOQ
@@ -155,11 +156,9 @@ log_likelihood <- function(par,
   # Fix any NA in N_Subjects and Detect as we do in do_preprocess.pk()
   N_Subjects[is.na(N_Subjects)] <- 1.0
   Detect[is.na(Detect)] <- FALSE
-
   # Fix the modelfun_args and modelfun variables
   modelfun_args <- modelfun[["conc_fun_args"]]
   modelfun <- modelfun[["conc_fun"]]
-
 
   # combine parameters to be optimized and held constant
   params <- c(par, const_params)
@@ -178,7 +177,8 @@ log_likelihood <- function(par,
       modelfun_args <- as.list(modelfun_args)
     } else {
       # Need to evaluate some quoted arguments (CHEMICAL and SPECIES)
-      modelfun_args <- lapply(modelfun_args, eval)
+      # Need to evaluate it correctly in pk_model
+      modelfun_args <- lapply(modelfun_args, rlang::eval_tidy, data = data)
     }
     these_args <- append(
       list(
@@ -190,7 +190,6 @@ log_likelihood <- function(par,
       ),
       modelfun_args
     )
-
     # get un-transformed predicted plasma concentration vs. time for the current parameter
     # values, by dose and route
     pred <- do.call(what = modelfun, args = these_args)
@@ -242,11 +241,10 @@ log_likelihood <- function(par,
   # defined by data_sigma_group
   # Reversed conditional order for clarity
   if (!any(sigma_index)) {
-    stop(
+    cli::cli_abort(c(
       "Could not find any parameters with 'sigma' in the name.",
-      "Param names are:",
-      toString(names(params))
-    )
+      "i" = "Parameter name{?s} are: {names(params)}"
+    ))
   }
 
   # There ARE sigma values
@@ -305,13 +303,15 @@ log_likelihood <- function(par,
   # compute log likelihoods for observations without sigmas
   if (any(sigma_is_na)) {
     if (isFALSE(suppress.messages)) {
-      message(
-        "log_likelihood():",
-        sum(is.na(sigma_obs)),
-        "observations are not in any existing error-SD (sigma) group.",
-        "They will be treated as equally likely to be in",
-        "any of the existing error-SD groups."
+      cli::cli_par()
+      cli::cli_inform(
+        c(
+          paste("log_likelihood(): {sum(sigma_is_na)}, observation{?s}",
+                "were not in any existing error-SD (sigma) group."),
+          "i" = "They will be treated as equally likely to be in any of the existing error-SD groups."
+        )
       )
+      cli::cli_end()
     }
 
     ll_data_no_sigma <- vapply(

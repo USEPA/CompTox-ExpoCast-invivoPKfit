@@ -6,19 +6,19 @@
 #'
 #' @param obj A [pk()] object
 #' @param method A user-supplied `character` vector of method names
-#' @return `TRUE` if all `method %in% obj$settings_optimx$method`; otherwise stops with an error
+#' @return `TRUE` if all `method %in% obj$pk_settings$optimx$method`; otherwise stops with an error
 #' @author Caroline Ring
 
 check_method <- function(obj, method) {
   # check that all methods are valid
-  if (all(method %in% obj$settings_optimx$method)) {
+  if (all(method %in% obj$pk_settings$optimx$method)) {
     return(TRUE)
   } else {
-    stop("All values in `method` must be found in `obj$settings_optimx$method`.\n",
-         "`method` = ", toString(method),
-         "`obj$settings_optimx$method` = ",
-         toString(obj$settings_optimx$method)
-    )
+    cli::cli_abort(c(
+      "All values in `method` must be found in `obj$pk_settings$optimx$method`.",
+      "`method` = {method}",
+      "`obj$pk_settings$optimx$method` = {obj$pk_settings$optimx$method}"
+    ))
   }
 }
 
@@ -37,10 +37,10 @@ check_model <- function(obj, model) {
   if (all(model %in% names(obj$stat_model))) {
     return(TRUE)
   } else {
-    stop("All values in `model` must be found in `names(obj$stat_model).",
-         "`model` = ", toString(model),
-         "`names(obj$stat_model)` = ",
-         toString(names(obj$stat_model))
-    )
+    cli::cli_abort(c(
+      "All values in `model` must be found in `names(obj$stat_model).",
+      "`model` = {model}",
+      "`names(obj$stat_model)` = {names(obj$stat_model)}"
+    ))
   }
 }

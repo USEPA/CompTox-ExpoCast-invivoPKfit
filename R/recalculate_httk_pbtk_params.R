@@ -97,7 +97,7 @@ recalculate_httk_pbtk_params <- function(params, dtxsid, species) {
            "fabs.oral", "Qgut_", "Qintesttransport")] <- NULL
 
   # Similar to httk:::set_httk_precision
-  params <- lapply(params, \(x) ifelse(is.numeric(x) ,round(signif(x, 4), 9), x))
+  params <- lapply(params, \(x) ifelse(is.numeric(x), round(signif(x, 4), 9), x))
 
   return(params)
 

@@ -130,7 +130,7 @@
 #'   the LOQ before computing R-squared. FALSE: do not.
 #' @param suppress.messages Logical: whether to suppress message printing. If
 #'   NULL (default), uses the setting in
-#'   `obj$settings_preprocess$suppress.messages`
+#'   `obj$pk_settings$preprocess$suppress.messages`
 #' @param ... Additional arguments. Not currently in use.
 #' @return  A dataframe with one row for each `data_group`, `model` and `method`.
 #'   The final column contains the R-squared of the model fitted by the corresponding
@@ -152,7 +152,7 @@ rsq.pk <- function(obj,
                    ...) {
 
   if (is.null(suppress.messages)) {
-    suppress.messages <- obj$settings_preprocess$suppress.messages
+    suppress.messages <- obj$pk_settings$preprocess$suppress.messages
   }
 
   # ensure that the model has been fitted
@@ -164,8 +164,8 @@ rsq.pk <- function(obj,
 
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
-  if (is.null(newdata)) newdata <- obj$data
-  if (is.null(rsq_group)) rsq_group <- obj$data_group
+  if (is.null(newdata)) newdata <- get_data.pk(obj)
+  if (is.null(rsq_group)) rsq_group <- get_data_group.pk(obj)
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)

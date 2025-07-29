@@ -6,11 +6,9 @@
 #'   the hierarchical structure expectation is not met.
 #'
 check_group_hierarchy <- function(obj) {
-  data_group <- vapply(obj$data_group, rlang::as_label, character(1))
-  error_group <- vapply(obj$stat_error_model$error_group, rlang::as_label,
-                        character(1))
-  summary_group <- vapply(obj$settings_data_info$summary_group, rlang::as_label,
-                          character(1))
+  data_group <- get_data_group.pk(obj, as_character = TRUE)
+  error_group <- get_error_group.pk(obj, as_character = TRUE)
+  summary_group <- get_nca_group.pk(obj, as_character = TRUE)
 
   ehg_check <- all(data_group %in% error_group)
   shg_check0 <- all(error_group %in% summary_group)

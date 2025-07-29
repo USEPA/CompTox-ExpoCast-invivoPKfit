@@ -1,3 +1,15 @@
+.onAttach <- function(libname, pkgname) {
+  startup <- function() {
+    cli::cli_inform(c(
+      "v" = "{.strong {.pkg invivoPKfit} v{utils::packageVersion('invivoPKfit')} has been successfully loaded!}",
+      "i" = paste("For help, please run:", cli::col_cyan("help('invivoPKfit')"))
+    ), class = "packageStartupMessage"
+    )
+  }
+
+  startup()
+}
+
 
 #' Converting common quotation mark symbols into basic ASCII forms.
 #'
@@ -102,6 +114,24 @@ num2string <- function(x, return.na = FALSE) {
   return(paste(x, collapse = ","))
 }
 
+#' Creates a string representation of a fraction
+#'
+#' Parentheses will enclose the numerator or denominator if there is already
+#' a division symbol "/" in the expression (if it is an expression or character vector).
+#'
+#' @param x Numerator.
+#' @param y Denominator.
+#'
+#' @return A character vector.
+paste_fraction <- function(x, y) {
+  paste_enclose <- function(string0) paste0("(", string0, ")")
+  px <- x
+  py <- y
+  if (grepl("/", x, fixed = TRUE)) px <- paste_enclose(x)
+  if (grepl("/", y, fixed = TRUE)) py <- paste_enclose(y)
+  paste0(px, "/", py)
+}
+
 
 
 #' Creating a simple test CvT dataset
@@ -194,3 +224,24 @@ pseudo_cvt <- function(
 
   return(tmp_cvt)
 }
+
+
+#' Creates a [cli::cli_fmt()] output for the pattern "name(x), length = "
+#'
+#' @param x A named vector with a single value for each element.
+#' @param extra A character vector that should be printed between each name and value.
+#' @return A cli::cli_fmt output list.
+#' @author Gilberto Padilla Mercado
+#'
+
+post_name_value <- function(x, extra = "") {
+  cli::cli_fmt({
+    cli::cli_ul()
+    for (k in seq_along(x)) {
+      cli::cli_li(paste("{names(x[k])},", extra, "{x[k]}"))
+    }
+    cli::cli_end()
+  })
+}
+
+
