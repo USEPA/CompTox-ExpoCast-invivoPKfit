@@ -247,7 +247,7 @@ included_dtxsid <- unique(qb_df_tracker[qb_df_tracker$include, ][["DTXSID"]])
 my_fit <- get_fit(my_pk)
 
 chems_for_qsar_bakeoff <- my_fit |>
-  filter(Chemical %in% included_dtxsid, convcode == 0,
+  filter(Chemical %in% included_dtxsid, convergence == 0,
          model %in% c("model_1comp", "model_2comp"),
          Species %in% c("human", "rat")) |>
   distinct(Chemical, Species) |>
@@ -294,7 +294,7 @@ my_tkstats_fin <- eval_tkstats(my_pk, finite_only = FALSE) |>
 my_fit_fin <- get_fit(my_pk) |>
   semi_join(chems_for_qsar_bakeoff) |>
   filter(!startsWith(param_name, "sigma_")) |>
-  select(Chemical:convcode) |> distinct() |>
+  select(Chemical:convergence) |> distinct() |>
   pivot_wider(id_cols = Chemical:method,
               names_from = param_name,
               values_from = estimate)

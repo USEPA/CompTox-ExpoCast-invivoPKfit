@@ -1084,7 +1084,7 @@ _prefit_ parameter estimations and first compare that with eventual optimized `k
 # par_DF
 this_kelim_prefit <- this_pk$prefit$par_DF %>%
   filter(
-    param_name %in% "kelim",
+    param_name %in% "kelim"
   ) %>%
   distinct(Chemical, Species, param_name, lower_bound, upper_bound, start)
 
@@ -1364,7 +1364,7 @@ df_valcomp %>%
       comparison == "B_nonrest" ~ "restrictive kelim vs httk nonrestrictive",
       comparison == "B_rest" ~ "restrictive kelim vs httk restrictive",
       comparison == "C_nonrest" ~ "nonrestrictive kelim vs httk nonrestrictive",
-      comparison == "C_rest" ~ "nonrestrictive kelim vs httk restrictive",
+      comparison == "C_rest" ~ "nonrestrictive kelim vs httk restrictive"
     ),
     comparison = factor(comparison,
                         levels = c(
