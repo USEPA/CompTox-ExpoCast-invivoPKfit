@@ -5,7 +5,7 @@
 \alias{cvtdb_original}
 \title{SQL query result (current)}
 \format{
-An object of class \code{data.frame} with 42443 rows and 56 columns.
+An object of class \code{data.frame} with 35669 rows and 59 columns.
 }
 \usage{
 cvtdb_original

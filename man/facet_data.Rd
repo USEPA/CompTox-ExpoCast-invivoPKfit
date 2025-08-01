@@ -4,14 +4,12 @@
 \alias{facet_data}
 \title{Facet a PK fit}
 \usage{
-facet_data(facets = vars(Chemical, Species), ...)
+facet_data(...)
 }
 \arguments{
-\item{facets}{A set of variables or expressions quoted by [dplyr::vars()],
+\item{...}{A set of variables or expressions quoted by [dplyr::vars()],
 defining groups of data that will each be fitted separately. These
 variables should appear in  the `data` argument to [pk()] after mapping variables.}
-
-\item{...}{Additional arguments, not currently used.}
 }
 \value{
 An object of class `c("pkproto", "pk_facet_data")`. Under the hood, a

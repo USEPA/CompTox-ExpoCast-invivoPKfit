@@ -58,7 +58,6 @@ tkstats_2comp <- function(pars,
                           vol_unit,
                           ...) {
 
-
   params <- fill_params_2comp(pars)
 
   # get transformed parameters for 2-comp model

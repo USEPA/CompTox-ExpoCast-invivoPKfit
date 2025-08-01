@@ -26,13 +26,13 @@
 #' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
 #'   the LOQ before computing fold errors. FALSE: do not. Only used if `obj` has been fitted and predictions are possible.
 #' @param suppress.messages Logical: whether to suppress message printing. If
-#'   NULL (default), uses the setting in `obj$settings_preprocess$suppress.messages`.
+#'   NULL (default), uses the setting in `obj$pk_settings$preprocess$suppress.messages`.
 #' @param model Optional: Specify one or more of the fitted models for which to
 #'   make predictions. If NULL (the default), predictions will be returned for
 #'   all of the models in `object$stat_model`.
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   for which to make predictions. If NULL (the default), predictions will be
-#'   returned for all of the models in `object$settings_optimx$method`.
+#'   returned for all of the models in `object$pk_settings$optimx$method`.
 #' @param ... Additional arguments. Currently unused.
 #'
 #' @return A list of data frames.
@@ -47,14 +47,13 @@ twofold_test.pk <- function(obj,
                             ...) {
 
   if (is.null(suppress.messages)) {
-    suppress.messages <- obj$settings_preprocess$suppress.messages
+    suppress.messages <- obj$pk_settings$preprocess$suppress.messages
   }
 
   # Check the status of the pk object
   status <- suppressMessages(get_status(obj))
   if (status < 2) {
-    stop("twofold_test.pk(): Please do data preprocessing step on this pk object",
-         " by running do_preprocess(...)"
+    cli::cli_abort("Please do data preprocessing step on this pk object by running {.fun do_preprocess}"
          )
   }
 
@@ -90,9 +89,7 @@ twofold_test.pk <- function(obj,
   )
 
   if (!all(vital_col %in% names(data_cvt))) {
-    stop("Missing the following columns:",
-         toString(base::setdiff(vital_col, names(data_cvt)))
-         )
+    cli::cli_abort("Missing the following column{?}: {base::setdiff(vital_col, names(data_cvt))}")
   }
 
   data_cvt <- data_cvt[vital_col]

@@ -6,7 +6,7 @@
 #' \itemize{
 #' \item Coerce data to class `data.frame` (if it is not already)
 #' \item Rename variables to harmonized "`invivopkfit` aesthetic" variable names, using `obj$mapping`
-#' \item Check that the data includes only routes in `obj$settings_preprocess$routes_keep` and media in `obj$settings_preprocess$media_keep`
+#' \item Check that the data includes only routes in `obj$pk_settings$preprocess$routes_keep` and media in `obj$pk_settings$preprocess$media_keep`
 #' \item Check that the data includes only one unit for concentration, one unit for time, and one unit for dose.
 #' \item Coerce `Value`, `Value_SD`, `LOQ`, `Dose`, and `Time` to numeric, if they are not already.
 #' \item Coerce `Species`, `Route`, and `Media` to lowercase.
@@ -42,7 +42,8 @@
 #' @author John Wambaugh, Caroline Ring, Christopher Cook, Gilberto Padilla Mercado
 #' @export
 do_preprocess.pk <- function(obj, ...) {
-  suppress_messages <- obj$settings_preprocess$suppress.messages
+  cli::cli_par()
+  suppress_messages <- obj$pk_settings$preprocess$suppress.messages
   if (!suppress_messages) {
     cli_inform("do_preprocess.pk(): Pre-processing data")
   }
@@ -71,14 +72,11 @@ do_preprocess.pk <- function(obj, ...) {
 
     # rename variables using the mapping
     data <- as.data.frame(
-      sapply(obj$mapping,
-        rlang::eval_tidy,
-        data_original,
-        simplify = FALSE,
-        USE.NAMES = TRUE)
+      sapply(obj$mapping, function(x)
+        rlang::eval_tidy(x, data_original), simplify = FALSE, USE.NAMES = TRUE)
     )
 
-    ### Coerce Species, Route, and Media to lowercasei
+    ### Coerce Species, Route, and Media to lowercase
     if (!suppress_messages) {
       cli_inform(
         "Species, Route, and Media will be coerced to lowercase."
@@ -86,6 +84,25 @@ do_preprocess.pk <- function(obj, ...) {
     }
     # Check hierarchical grouping structure
     check_group_hierarchy(obj)
+
+    req_vars <- rlang::exprs(
+      Chemical, Species, Route, Media, Dose, Dose.Units,
+      Value, Value_SD, Value.Units, Time, Time.Units,
+      N_Subjects, Weight, Weight.Units, LOQ,
+      Series_ID, Study_ID
+    )
+
+    all_grouping_vars <- unique(c(
+      get_data_group.pk(obj),
+      get_error_group.pk(obj),
+      get_nca_group.pk(obj),
+      obj$pk_groups$loq_group,
+      obj$pk_groups$sd_group
+    ))
+
+    data <- dplyr::select(data,
+                          !!!union(req_vars, all_grouping_vars),
+                          dplyr::all_of(names(obj$mapping)))
 
     data$Species <- tolower(data$Species)
     data$Route <- tolower(data$Route)
@@ -96,14 +113,14 @@ do_preprocess.pk <- function(obj, ...) {
     media <- unique(data$Media)
 
     if (!(
-      all(routes %in% obj$settings_preprocess$routes_keep) &&
-      all(media %in% obj$settings_preprocess$media_keep)
+      all(routes %in% obj$pk_settings$preprocess$routes_keep) &&
+      all(media %in% obj$pk_settings$preprocess$media_keep)
     )) {
       cli_abort(c(
         "do_preprocess.pk(): data contains unsupported media and/or routes.",
-        "i" = "Supported media: {obj$settings_preprocess$media_keep}",
+        "i" = "Supported media: {obj$pk_settings$preprocess$media_keep}",
         "Media in data: {media}",
-        "i" = "Supported route: {obj$settings_preprocess$routes_keep}",
+        "i" = "Supported route: {obj$pk_settings$preprocess$routes_keep}",
         "Route{?s} in data: {route}"
 
       ))
@@ -141,12 +158,14 @@ do_preprocess.pk <- function(obj, ...) {
     }
 
     # If data has passed all these initial checks, then proceed with pre-processing
-    data_group <- obj$data_group
-    summary_group <- obj$settings_data_info$summary_group
+    data_grp <- get_data_group.pk(obj)
+    data_group_chr <- get_data_group.pk(obj, as_character = TRUE)
 
-    data_group_chr <- sapply(data_group, rlang::as_label)
+    summary_group <- get_nca_group.pk(obj)
 
-    n_grps <- dplyr::group_by(data, !!!data_group) |>
+
+
+    n_grps <- dplyr::group_by(data, !!!data_grp) |>
       dplyr::group_keys() |>
       dplyr::n_distinct()
 
@@ -283,10 +302,6 @@ do_preprocess.pk <- function(obj, ...) {
       rm(N_Subjects_num, old_na, new_na)
     }
 
-    data$Value_orig <- data$Value
-    data$LOQ_orig <- data$LOQ
-    data$Value_SD_orig <- data$Value_SD
-
     # Coerce any negative Value to NA
     data[(data$Value < 0) %in% TRUE, "Value"] <- NA_real_
     if (!suppress_messages && anyNA(data$Value)) {
@@ -336,26 +351,25 @@ do_preprocess.pk <- function(obj, ...) {
 
     # Impute LOQ:
     # as calc_loq_factor * minimum non-NA value in each loq_group
-    if (obj$settings_preprocess$impute_loq %in% TRUE) {
+    if (obj$pk_settings$preprocess$impute_loq %in% TRUE) {
       if (anyNA(data$LOQ) && !suppress_messages) {
         cli_inform(c(
           paste("Estimating {sum(is.na(data$LOQ))} missing LOQ{?s} as ",
-                "{obj$settings_preprocess$calc_loq_factor}",
+                "{obj$pk_settings$preprocess$calc_loq_factor}",
                 "* minimum non-NA, non-zero Value for each unique combination of ",
-                "{sapply(obj$settings_preprocess$loq_group, as_label)}"
+                "{sapply(obj$pk_groups$loq_group, rlang::as_string)}"
           )
         ))
       }
-      data <- dplyr::group_by(data, !!!obj$settings_preprocess$loq_group) |>
-        dplyr::mutate(LOQ_orig = LOQ,
-                      LOQ = ifelse(is.na(LOQ_orig), {
+      data <- dplyr::group_by(data, !!!obj$pk_groups$loq_group) |>
+        dplyr::mutate(LOQ = ifelse(is.na(LOQ), {
                         if (any((Value > 0) %in% TRUE)) {
                           min(Value[(Value > 0) %in% TRUE], na.rm = TRUE) *
-                            obj$settings_preprocess$calc_loq_factor
+                            obj$pk_settings$preprocess$calc_loq_factor
                         } else {
                           NA_real_
                         }
-                      }, LOQ_orig)) |>
+                      }, LOQ)) |>
         dplyr::ungroup() |>
         as.data.frame()
     } # end if impute_loq %in% TRUE
@@ -392,7 +406,6 @@ do_preprocess.pk <- function(obj, ...) {
 
     # For any cases where N_Subjects is NA, impute N_Subjects = 1
     if (anyNA(data$N_Subjects)) {
-      data$N_Subjects_orig <- data$N_Subjects
       if (!suppress_messages) {
         cli_inform(c(
           "N_Subjects is NA for {sum(is.na(data$N_Subjects))} observation{?s}.",
@@ -414,8 +427,7 @@ do_preprocess.pk <- function(obj, ...) {
     }
 
     # Impute missing SDs
-    data$Value_SD_orig <- data$Value_SD
-    if (obj$settings_preprocess$impute_sd %in% TRUE) {
+    if (obj$pk_settings$preprocess$impute_sd %in% TRUE) {
       if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD)) && !suppress_messages) {
         # number of SDs to be estimated
         n_sd_est <- sum((data$N_Subjects > 1) %in% TRUE &
@@ -426,7 +438,7 @@ do_preprocess.pk <- function(obj, ...) {
             "for data points with N_Subjects > 1 as ",
             "minimum non-missing SD for each group of data",
             "given by the unique combination of variables",
-            "{sapply(obj$settings_preprocess$sd_group, as_label)}",
+            "{sapply(obj$pk_groups$sd_group, rlang::as_string)}",
             ". If all SDs are missing in a group, ",
             "SD for each observation will be imputed as",
             " 0. "
@@ -434,20 +446,16 @@ do_preprocess.pk <- function(obj, ...) {
           "i" = "{n_sd_est} missing SD{?s} will be estimated."
         ))
       }
-      data <- dplyr::group_by(data, !!!obj$settings_preprocess$sd_group) |>
+      data <- dplyr::group_by(data, !!!obj$pk_groups$sd_group) |>
         dplyr::mutate(
-          Value_SD_orig = Value_SD,
           Value_SD = ifelse(
-            is.na(Value_SD_orig) &
-              N_Subjects > 1,
+            is.na(Value_SD) & N_Subjects > 1,
             ifelse(
-              rep(all(is.na(
-                Value_SD_orig
-              )), dplyr::n()),
+              rep(all(is.na(Value_SD)), dplyr::n()),
               0,
-              min(Value_SD_orig, na.rm = TRUE)
+              min(Value_SD, na.rm = TRUE)
             ),
-            Value_SD_orig
+            Value_SD
           )
         ) |>
         dplyr::ungroup() |>
@@ -482,7 +490,7 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
     }
 
     if (!suppress_messages) {
-      n_grps <- dplyr::group_by(data, !!!data_group) |>
+      n_grps <- dplyr::group_by(data, !!!data_grp) |>
         dplyr::group_keys() |>
         dplyr::n_distinct()
       ### display messages describing loaded data
@@ -528,7 +536,7 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
     }
 
     if (!suppress_messages && (nrow(data) != obs_num)) {
-      n_grps <- dplyr::group_by(data, !!!data_group) |>
+      n_grps <- dplyr::group_by(data, !!!data_grp) |>
         dplyr::group_keys() |>
         dplyr::n_distinct()
       ### display messages describing loaded data
@@ -561,7 +569,7 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
     }
 
     if (!suppress_messages && (nrow(data) != obs_num)) {
-      n_grps <- dplyr::group_by(data, !!!data_group) |>
+      n_grps <- dplyr::group_by(data, !!!data_grp) |>
         dplyr::group_keys() |>
         dplyr::n_distinct()
       ### display messages describing loaded data
@@ -595,7 +603,7 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
     }
 
     if (!suppress_messages && (nrow(data) != obs_num)) {
-      n_grps <- dplyr::group_by(data, !!!data_group) |>
+      n_grps <- dplyr::group_by(data, !!!data_grp) |>
         dplyr::group_keys() |>
         dplyr::n_distinct()
       ### display messages describing loaded data
@@ -610,8 +618,8 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
     }
 
     # apply time transformation
-    data$Time_orig <- data$Time
-    data$Time.Units_orig <- data$Time.Units
+    # data$Time_orig <- data$Time
+    # data$Time.Units_orig <- data$Time.Units
 
     # first, default to identity transformation if none is specified
     if (is.null(obj$scales$time$new_units)) {
@@ -626,12 +634,11 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
       obj$scales$time$new_units
     )
 
-
     # Needs to be grouped
     if (obj$scales$time$new_units %in% "auto") {
       to_units <- data |>
-        dplyr::group_by(!!!data_group) |>
-        dplyr::mutate(AUTO_UNITS = auto_units(y = Time, from = Time.Units_orig)) |>
+        dplyr::group_by(!!!data_grp) |>
+        dplyr::mutate(AUTO_UNITS = auto_units(y = Time, from = Time.Units)) |>
         dplyr::pull(AUTO_UNITS)
     }
 
@@ -676,10 +683,13 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
     # Scale concentration by ratio_conc_dose
 
     if (is.null(obj$scales$conc$expr)) {
-      obj$settings_preprocess$ratio_conc_dose <- 1
+      obj$pk_settings$preprocess$ratio_conc_dose <- 1
+      obj$scales$conc$dose_norm <- FALSE
+      obj$scales$conc$log10_trans <- FALSE
+      obj$scales$conc$expr <- quote(.conc)
     }
 
-    ratio_conc_dose <- obj$settings_preprocess$ratio_conc_dose
+    ratio_conc_dose <- obj$pk_settings$preprocess$ratio_conc_dose
 
     if (!suppress_messages && !(ratio_conc_dose %in% 1)) {
       cli_inform(c(paste(
@@ -745,17 +755,18 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
           "where {.envvar Media} is excreta"
         )
       ))
-    }
-    data <- data |>
-      dplyr::group_by(!!!summary_group, Subject_ID) |>
-      dplyr::arrange(Time) |>
-      dplyr::mutate(
-        Conc = ifelse(
-          Media %in% "excreta",
-          cumsum(Conc),
-          Conc
+      data <- data |>
+        dplyr::group_by(!!!summary_group, Subject_ID) |>
+        dplyr::arrange(Time) |>
+        dplyr::mutate(
+          Conc = ifelse(
+            Media %in% "excreta",
+            cumsum(Conc),
+            Conc
+          )
         )
-      )
+    }
+
 
 
     # apply concentration transformation.
@@ -767,12 +778,6 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
     # use tidy evaluation: Specify an expression to evaluate in the context of a data.frame
     # Transform Conc (this is either the measured value or the LOQ, depending on Detect)
     # If no conc transformation specified, assume identity
-    if (is.null(obj$scales$conc$expr)) {
-      obj$scales$conc$dose_norm <- FALSE
-      obj$scales$conc$log10_trans <- FALSE
-      obj$scales$conc$expr <- rlang::new_quosure(quote(.conc), env = caller_env())
-    }
-
     if (!suppress_messages) {
       cli_inform(c(
           "Applying transformations to concentration variables:",
@@ -834,14 +839,19 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
 
 
     # add data & data info to object AND a group id column
-    data <- dplyr::ungroup(data)
-    obj$data <- tidyr::unite(data, "GRP_ID", !!!data_group, remove = FALSE)
+    data <- data |>
+      dplyr::group_by(!!!data_grp) |>
+      dplyr::mutate(DATA_GROUP_ID = dplyr::cur_group_id(), .before = 1L) |>
+      dplyr::ungroup() |>
+      dplyr::arrange(DATA_GROUP_ID)
 
-    if (is.null(obj$settings_preprocess$keep_data_original)) {
-      obj$settings_preprocess$keep_data_original <- TRUE
+    obj$data <- data
+
+    if (is.null(obj$pk_settings$preprocess$keep_data_original)) {
+      obj$pk_settings$preprocess$keep_data_original <- TRUE
     }
 
-    if (obj$settings_preprocess$keep_data_original == FALSE) {
+    if (obj$pk_settings$preprocess$keep_data_original == FALSE) {
       obj$data_original <- NULL
     }
 

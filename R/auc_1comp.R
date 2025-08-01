@@ -75,7 +75,7 @@ auc_1comp <- function(params,
                                   medium = medium)
 
   if (check_msg != "Parameters OK") {
-    stop("cp_1comp(): ", check_msg)
+    cli::cli_abort(check_msg)
   }
 
   # params used (assigned NULL to prevent global variable hiccup)

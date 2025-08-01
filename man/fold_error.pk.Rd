@@ -30,7 +30,7 @@ errors will be returned for all of the models in `obj$stat_model`.}
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 for which to make predictions and calculate RMSEs. If NULL (the default),
 fold errors will be returned for all of the models in
-`obj$settings_optimx$method`.}
+`obj$pk_settings$optimx$method`.}
 
 \item{exclude}{Logical: `TRUE` to return `NA_real_` for any observations in
 the data marked for exclusion (if there is a variable `exclude` in the
@@ -43,7 +43,7 @@ when TRUE, values below pLOQ will be replaced by pLOQ.}
 
 \item{suppress.messages}{Logical: whether to suppress message printing. If
 NULL (default), uses the setting in
-`object$settings_preprocess$suppress.messages`}
+`object$pk_settings$preprocess$suppress.messages`}
 
 \item{...}{Additional arguments. Currently not in use.}
 }

@@ -18,7 +18,7 @@ evaluated for the `obj$data`.}
 \value{
 A `factor` vector giving the error SD group ID for each observation,
   as the interaction of the factors specified in
-  `obj$stat_error_model$error_group`.
+  `obj$pk_groups$error_group`.
 }
 \description{
 Get data_sigma_group

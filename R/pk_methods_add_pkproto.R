@@ -65,8 +65,8 @@ add_pk <- function(pk_obj, pkproto_obj, objectname) {
 #' @seealso [pk_add.pk_scales()] for the method for adding `pk_scales` objects
 #'   (from [scale_conc()] and [scale_time()]); [pk_add.pk_settings_preprocess()]
 #'   for the method for adding `pk_settings_preprocess` objects (from
-#'   [settings_preprocess()]); [pk_add.pk_settings_data_info()] for the method
-#'   for adding `pk_settings_data_info` objects (from [settings_data_info()]);
+#'   [settings_preprocess()]); [pk_add.pk_nca_group()] for the method
+#'   for adding `pk_nca_group` objects (from [stat_nca_group()]);
 #'   [pk_add.pk_settings_optimx()] for the method for adding
 #'   `pk_settings_optimx` objects (from [settings_optimx()]);
 #'   [pk_add.pk_stat_model()] for the method for adding `pk_stat_model` objects
@@ -124,18 +124,20 @@ pk_subtract.default <- function(pkproto_obj, pk_obj, objectname) {
 #' @author Caroline Ring
 #' @export
 pk_add.pk_scales <- function(pkproto_obj, pk_obj, objectname) {
+
   pk_obj$scales[[pkproto_obj$name]] <- pkproto_obj$value
-  if (pk_obj$status > (status_preprocess - 1)) {
+
+  if (pk_obj$status > (status_preprocess - 1L)) {
     # with new scaling, everything will change starting from data pre-processing
     # with new data pre-processing settings, everything will change starting from
     # data pre-processing
-    pk_obj$status <- status_preprocess - 1
+    pk_obj$status <- status_preprocess - 1L
     message(objectname,
             ": Modifying data scaling resets status to level ",
-            status_preprocess - 1,
+            status_preprocess - 1L,
             "; all later stages of the workflow will need to be re-done"
     )
-    pk_obj$status <- status_preprocess - 1
+    pk_obj$status <- status_preprocess - 1L
   }
 
   return(pk_obj)
@@ -153,54 +155,56 @@ pk_add.pk_scales <- function(pkproto_obj, pk_obj, objectname) {
 pk_add.pk_settings_preprocess <- function(pkproto_obj, pk_obj, objectname) {
 
   # New settings_preprocess will *replace* existing ones
-  if (!is.null(pk_obj$settings_preprocess)) {
+  if (!is.null(pk_obj$pk_settings$preprocess)) {
     message(objectname,
             ": settings_preprocess already present; ",
             "new settings_preprocess will replace the existing one"
     )
   }
 
-  pk_obj$settings_preprocess <- pkproto_obj
-  if (pk_obj$status > (status_preprocess - 1)) {
+  pk_obj$pk_settings$preprocess <- pkproto_obj
+
+  if (pk_obj$status > (status_preprocess - 1L)) {
     # with new data pre-processing settings, everything will change starting from
     # data pre-processing
-    pk_obj$status <- status_preprocess - 1
+    pk_obj$status <- status_preprocess - 1L
     message(objectname,
             ": Modifying settings_preprocess resets status to level ",
-            status_preprocess - 1,
+            status_preprocess - 1L,
             "; all later stages of the workflow will need to be re-done"
     )
   }
   return(pk_obj)
 }
 
-#' Add a `pk_settings_data_info` object.
+#' Add a `pk_nca_group` object.
 #'
-#' @param pkproto_obj The `pk_settings_data_info` object to be added.
-#' @param pk_obj The `pk` object to which the `pk_settings_data_info` object will be added.
-#' @param objectname The name of the `pk_settings_data_info` object.
+#' @param pkproto_obj The `pk_nca_group` object to be added.
+#' @param pk_obj The `pk` object to which the `pk_nca_group` object will be added.
+#' @param objectname The name of the `pk_nca_group` object.
 #'
-#' @return The `pk` object, modified by the `pk_settings_data_info` object.
-#' @author Caroline Ring
+#' @return The `pk` object, modified by the `pk_nca_group` object.
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @export
-pk_add.pk_settings_data_info <- function(pkproto_obj, pk_obj, objectname) {
+pk_add.pk_nca_group <- function(pkproto_obj, pk_obj, objectname) {
 
-  # New settings_data_info will *replace* existing ones
-  if (!is.null(pk_obj$settings_data_info)) {
+  # New stat_nca_group will *replace* existing ones
+  if (!is.null(pk_obj$pk_groups$nca_group)) {
     message(objectname,
-            ": settings_data_info already present; ",
-            "new settings_data_info will replace the existing one"
+            ": nca_group already present; ",
+            "new nca_group will replace the existing one"
     )
   }
 
-  pk_obj$settings_data_info <- pkproto_obj
-  if (pk_obj$status > (status_preprocess - 1)) {
+  pk_obj$pk_groups$nca_group <- pkproto_obj
+
+  if (pk_obj$status > (status_preprocess - 1L)) {
     # with new data info settings, everything will change starting from
     # data info
-    pk_obj$status <- status_data_info - 1
+    pk_obj$status <- status_data_info - 1L
     message(objectname,
-            ": Modifying settings_data_info resets status to level ",
-            status_data_info - 1,
+            ": Modifying nca_group resets status to level ",
+            status_data_info - 1L,
             "; all later stages of the workflow will need to be re-done"
     )
   }
@@ -219,20 +223,21 @@ pk_add.pk_settings_data_info <- function(pkproto_obj, pk_obj, objectname) {
 pk_add.pk_settings_optimx <- function(pkproto_obj, pk_obj, objectname) {
 
   # New settings_optimx will *replace* existing ones
-  if (!is.null(pk_obj$settings_optimx)) {
+  if (!is.null(pk_obj$pk_settings$optimx)) {
     message(objectname,
             ": settings_optimx already present; ",
             "new settings_optimx will replace the existing one"
     )
   }
 
-  pk_obj$settings_optimx <- pkproto_obj
-  if (pk_obj$status > (status_prefit - 1)) {
+  pk_obj$pk_settings$optimx <- pkproto_obj
+
+  if (pk_obj$status > (status_prefit - 1L)) {
     # with new optimizer settings, data pre=processing and model pre-fitting
     # should not change, but model fitting will change
     message(objectname,
             ": Modifying settings_optimx resets status to level ",
-            (status_prefit - 1),
+            (status_prefit - 1L),
             "; all later stages of the workflow will need to be re-done"
     )
     pk_obj$status <- 3L
@@ -268,13 +273,13 @@ pk_add.pk_stat_model <- function(pkproto_obj, pk_obj, objectname) {
 
   # data pre-processing won't change with addition of new model, but model
   # pre-fit and fit will change
-  if (pk_obj$status > (status_prefit - 1)) {
+  if (pk_obj$status > (status_prefit - 1L)) {
     message(objectname,
             ": Modifying stat_model resets status to level ",
-            status_prefit - 1,
+            status_prefit - 1L,
             "; all later stages of the workflow will need to be re-done"
     )
-    pk_obj$status <- (status_prefit - 1)
+    pk_obj$status <- (status_prefit - 1L)
   }
 
   return(pk_obj)
@@ -298,17 +303,17 @@ pk_add.pk_stat_error_model <- function(pkproto_obj, pk_obj, objectname) {
     )
   }
 
-  pk_obj$stat_error_model <- pkproto_obj
+  pk_obj$pk_groups$error_group <- pkproto_obj
 
   # data pre-processing won't change with addition of a new error model, but
   # model pre-fit and fit will change
-  if (pk_obj$status > (status_prefit - 1)) {
+  if (pk_obj$status > (status_prefit - 1L)) {
     message(objectname,
             ": Modifying stat_error_model resets status to level ",
-            status_prefit - 1,
+            status_prefit - 1L,
             "; all later stages of the workflow will need to be re-done"
             )
-    pk_obj$status <- status_prefit - 1
+    pk_obj$status <- status_prefit - 1L
   }
 
   return(pk_obj)
@@ -340,13 +345,13 @@ pk_add.uneval <- function(pkproto_obj, pk_obj, objectname) {
   pk_obj$mapping <- pkproto_obj
 
   # data pre-processing and everything downstream will change
-  if (pk_obj$status > (status_preprocess - 1)) {
+  if (pk_obj$status > (status_preprocess - 1L)) {
     message(objectname,
             ": Modifying mapping resets status to level ",
-            status_preprocess - 1,
+            status_preprocess - 1L,
             "; all later stages of the workflow will need to be re-done"
             )
-    pk_obj$status <- status_preprocess - 1
+    pk_obj$status <- status_preprocess - 1L
   }
 
   return(pk_obj)
@@ -358,24 +363,73 @@ pk_add.uneval <- function(pkproto_obj, pk_obj, objectname) {
 #' @param pk_obj The [pk()] object to which the `pk_facet_data` object will be added.
 #' @param objectname The name of the `pk_facet_data` object.
 #'
-#' @return The [pk()] object, with the added `pk_facet_data`.
+#' @return The [pk()] object, with the added `pk_facet_data` in the `groups` sub-list.
 #' @author Caroline Ring
 #' @export
 pk_add.pk_facet_data <- function(pkproto_obj, pk_obj, objectname) {
 
   # data pre-processing and everything downstream will change
-  if (pk_obj$status > (status_preprocess - 1)) {
+  if (pk_obj$status > (status_preprocess - 1L)) {
     message(objectname,
             ": Modifying faceting resets status to level ",
-            status_preprocess - 1,
+            status_preprocess - 1L,
             "; all later stages of the workflow will need to be re-done"
     )
-    pk_obj$status <- status_preprocess - 1
+    pk_obj$status <- status_preprocess - 1L
   }
 
   # this will become the data_group
   # this takes the harmonized variables in the pk object
-    pk_obj$data_group <- pkproto_obj$facets
+    pk_obj$pk_groups$data_group <- pkproto_obj
     return(pk_obj)
-
 }
+
+
+#' Add loq_group
+#'
+#' @param pkproto_obj The `pk_loq_group` object to be added.
+#' @param pk_obj The [pk()] object to which the `pk_loq_group` object will be added.
+#' @param objectname The name of the `pk_loq_group` object.
+#'
+#' @return The [pk()] object, with the added `pk_loq_data` in the `groups` sub-list.
+#' @author Gilberto Padilla Mercado
+#' @export
+pk_add.pk_loq_group <- function(pkproto_obj, pk_obj, objectname) {
+  if (pk_obj$status > (status_preprocess - 1L)) {
+    message(objectname,
+            ": Modifying mapping resets status to level ",
+            status_preprocess - 1L,
+            "; all later stages of the workflow will need to be re-done"
+    )
+    pk_obj$status <- status_preprocess - 1L
+  }
+
+  # add loq to pk object 'groups' list
+  pk_obj$pk_groups$loq_group <- pkproto_obj
+  return(pk_obj)
+}
+
+#' Add sd_group
+#'
+#' @param pkproto_obj The `pk_sd_group` object to be added.
+#' @param pk_obj The [pk()] object to which the `pk_sd_group` object will be added.
+#' @param objectname The name of the `pk_sd_group` object.
+#'
+#' @return The [pk()] object, with the added `pk_sd_group` in the `groups` sub-list.
+#' @author Gilberto Padilla Mercado
+#' @export
+pk_add.pk_sd_group <- function(pkproto_obj, pk_obj, objectname) {
+  if (pk_obj$status > (status_preprocess - 1L)) {
+    message(objectname,
+            ": Modifying mapping resets status to level ",
+            status_preprocess - 1L,
+            "; all later stages of the workflow will need to be re-done"
+    )
+    pk_obj$status <- status_preprocess - 1L
+  }
+
+  # add loq to pk object 'groups' list
+  pk_obj$pk_groups$sd_group <- pkproto_obj
+  return(pk_obj)
+}
+

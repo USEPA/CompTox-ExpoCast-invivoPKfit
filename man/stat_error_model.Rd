@@ -4,16 +4,12 @@
 \alias{stat_error_model}
 \title{Error model}
 \usage{
-stat_error_model(error_group = vars(Chemical, Species, Reference), ...)
+stat_error_model(...)
 }
 \arguments{
-\item{error_group}{Defined using [dplyr::vars()]: A set of harmonized
-variables whose unique combinations define a group with its own error
-variance. These variables refer to the `data` element of the `pk` object to
-which `stat_error_model()` is added. The variables should not be quoted.
-Default is `vars(Chemical, Species, Reference)`.}
-
-\item{...}{Additional arguments. Not currently used.}
+\item{...}{A set of unquoted variables whose unique combinations define
+a group with its own error variance. These variables refer to the `data` element
+of the `pk` object. Default is `Chemical, Species, Reference`.}
 }
 \value{
 An object of class `pk_stat_error_model`: A named list of all the

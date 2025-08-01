@@ -14,13 +14,12 @@ knitr::opts_chunk$set(
   comment = "#>",
   eval = FALSE
 )
-
 ```
 
 ```{r setup}
 devtools::load_all()
 library(dplyr)
-library(parallel)
+library(mirai)
 ```
 
 
@@ -55,11 +54,8 @@ The first requirement is that the concentration vs. time data to be fit must be 
 For the sake of keeping run time reasonable, this example will include data on only two of the chemicals available in the full `cvt` dataset.
 
 ```{r}
-#select data for a single chemical and species
-my_data <- subset(cvt,
-                 analyte_dtxsid %in% c("DTXSID8031865",
-                                            "DTXSID0020442")
-                 )
+# select data for a single chemical and species
+my_data <- subset(cvt, analyzed_chem_dtxsid %in% c("DTXSID8031865", "DTXSID0020442"))
 ```
 
 ## Initialize a `pk` object
@@ -88,13 +84,15 @@ Some common harmonized variable names that will be referenced in this document a
 - Media: the medium which was collected for analysis (blood or plasma) 
 
 ```{r}
-  my_pk <- my_pk +
-  settings_preprocess(suppress.messages = FALSE,
-                      keep_data_original = TRUE)
+my_pk <- my_pk +
+  settings_preprocess(
+    suppress.messages = FALSE,
+    keep_data_original = TRUE
+  )
 ```
   
 ```{r}
-#preprocess data
+# preprocess data
 my_pk <- do_preprocess(my_pk)
 ```
 
@@ -102,10 +100,10 @@ This step adds the pre-processed data to the `pk` object in a new element named 
 
 ## Step 2: Data information
  
-Next, some summary information is gathered about each group of the data. These are things like the number of detects/non-detects, broken out by the different routes and media present in the data. This step also includes non-compartmental analysis of the data, to calculate things like the empirical Cmax (maximum concentration), empirical tmax (time of maximum concentration), and empirical AUC (area under the concentration-time curve). Instructions for this "data info" step are given in `my_pk$settings_data_info`.
+Next, some summary information is gathered about each group of the data. These are things like the number of detects/non-detects, broken out by the different routes and media present in the data. This step also includes non-compartmental analysis of the data, to calculate things like the empirical Cmax (maximum concentration), empirical tmax (time of maximum concentration), and empirical AUC (area under the concentration-time curve). Instructions for this "data info" step are given in `my_pk$pk_groups$nca_group`.
 
 ```{r}
-#get summary data info
+# get summary data info
 my_pk <- do_data_info(my_pk)
 ```
 
@@ -120,7 +118,7 @@ Next, a "pre-fitting" step is performed. This step looks at each group of the da
 - A starting guess at the value for each PK model parameter to be fitted for each group, which may be constant or may be derived from the data in some way.
 
 ```{r}
-#pre-fitting (get model parameter bounds & starting values)
+# pre-fitting (get model parameter bounds & starting values)
 my_pk <- do_prefit(my_pk)
 ```
 
@@ -131,7 +129,7 @@ This step adds the parameter lower/upper bounds and starting guesses to the `pk`
 Finally, the model fitting can be performed. Each group of the data is fitted separately. By default, three different PK models are fitted to each group: a "flat" model, a 1-compartment model, and a 2-compartment model.
 
 ```{r}
-#model fitting
+# model fitting
 my_pk <- do_fit(my_pk)
 ```
 
@@ -141,13 +139,15 @@ Note that model fitting can be sped up substantially by using parallel processin
 
 Time without parallel processing:
 ```{r}
-system.time(my_pk <- do_fit(my_pk)) #without parallel processing
+system.time(my_pk <- do_fit(my_pk)) # without parallel processing
 ```
 
 Time with parallel processing:
 ```{r}
-system.time(my_pk <- do_fit(my_pk,
-                n_cores = parallel::detectCores()-1))
+daemons(4L)
+everywhere(devtools::load_all())
+system.time(my_pk <- do_fit(my_pk))
+dameons(0L)
 ```
 
 ## Fast-forward to model fitting
@@ -155,7 +155,7 @@ system.time(my_pk <- do_fit(my_pk,
 Note that you coan just skip straight to the last step. If you call `do_fit()` on a newly-initialized `pk` object, all of the preceding steps will be done automatically. The following code will give you exactly the same results as going through each step individually as above.
 
 ```{r, eval = FALSE}
-my_pk <- pk(data = my_data) 
+my_pk <- pk(data = my_data)
 
 my_pk <- do_fit(my_pk)
 ```
@@ -177,7 +177,9 @@ The coefficients themselves are included as a list column, to accommodate the fa
 For example, this code views the coefficients for the first row of the full coefficients table:
 
 ```{r}
-coef(my_pk) %>% slice(1) %>%  mutate(as.data.frame(as.list(coefs_vector[[1]]))) %>%
+coef(my_pk) %>%
+  slice(1) %>%
+  mutate(as.data.frame(as.list(coefs_vector[[1]]))) %>%
   glimpse()
 ```
 
@@ -186,7 +188,9 @@ And this views the coefficients for row 5 (the same chemical, fitted with the 2-
 
 
 ```{r}
-coef(my_pk) %>% slice(5) %>%  mutate(as.data.frame(as.list(coefs_vector[[1]]))) %>%
+coef(my_pk) %>%
+  slice(5) %>%
+  mutate(as.data.frame(as.list(coefs_vector[[1]]))) %>%
   glimpse()
 ```
 
@@ -216,7 +220,8 @@ predict(my_pk, newdata = data.frame(
   Dose = 1,
   Route = "iv",
   Media = "plasma",
-  exclude = FALSE)) %>% glimpse()
+  exclude = FALSE
+)) %>% glimpse()
 ```
 
 ### Plots
@@ -232,9 +237,11 @@ By default, the concentration axis is scaled the same way as the data was scaled
 
 ```{r}
 p2 <- plot(my_pk,
-     use_scale_conc = list(dose_norm = TRUE,
-                           log10_trans = FALSE)
-     )
+  use_scale_conc = list(
+    dose_norm = TRUE,
+    log10_trans = FALSE
+  )
+)
 print(p2$final_plot)
 ```
 
@@ -333,8 +340,10 @@ rsq_win
 If you want to plot only the winning model, you can do so by specifying argument `best_fit = TRUE`:
 
 ```{r}
-plot(my_pk, best_fit = TRUE, use_scale_conc = list(dose_norm = TRUE,
-                                                   log10_trans = FALSE)) %>%
+plot(my_pk, best_fit = TRUE, use_scale_conc = list(
+  dose_norm = TRUE,
+  log10_trans = FALSE
+)) %>%
   pull(final_plot)
 ```
 
@@ -370,12 +379,14 @@ The `mapping` element specifies how the variable names in the original data shou
 In `ggplot2`, you would specify which variables in your data map to the standardized "aesthetic" variables `x`, `y`, `color`, `shape`, etc., using a command like this:
 
 ```{r, eval = FALSE}
-ggplot(data = my_data, 
-       aes(x = time_hr,
-           y = conc,
-           color = dose_level_normalized_corrected,
-           shape = as.factor(document_id)
-       )
+ggplot(
+  data = my_data,
+  aes(
+    x = time_hr,
+    y = conc,
+    color = dose_level_normalized_corrected,
+    shape = as.factor(document_id)
+  )
 )
 ```
 
@@ -383,33 +394,34 @@ ggplot(data = my_data,
 In `invivopkfit`, you specify which variables in your data map to the standardized variables `Chemical`, `Species`, `Time`, `Dose`, etc., using a command like this:
 
 ```{r, eval = FALSE}
-pk(data = my_data,
-   mapping = ggplot2::aes(
-                  mapping = ggplot2::aes(
-                   Chemical = analyte_dtxsid,
-                   Chemical_Name = analyte_name_original,
-                   DTXSID = analyte_dtxsid,
-                   CASRN = analyte_casrn,
-                   Species = species,
-                   Reference = fk_extraction_document_id,
-                   Media = conc_medium_normalized,
-                   Route = administration_route_normalized,
-                   Dose = invivPK_dose_level,
-                   Dose.Units = "mg/kg",
-                   Subject_ID = fk_subject_id,
-                   Series_ID = fk_series_id,
-                   Study_ID = fk_study_id,
-                   ConcTime_ID = conc_time_id,
-                   N_Subjects = n_subjects_normalized,
-                   Weight = weight_kg,
-                   Weight.Units = "kg",
-                   Time = time_hr,
-                   Time.Units = "hours",
-                   Value = invivPK_conc,
-                   Value.Units = "mg/L",
-                   Value_SD = invivPK_conc_sd,
-                   LOQ = invivPK_loq
-                 ))
+pk(
+  data = my_data,
+  mapping = ggplot2::aes(
+    Chemical = analyzed_chem_dtxsid,
+    Chemical_Name = analyzed_chem_name_original,
+    DTXSID = analyzed_chem_dtxsid,
+    CASRN = analyzed_chem_casrn,
+    Species = species,
+    Reference = fk_extraction_document_id,
+    Media = conc_medium_normalized,
+    Route = administration_route_normalized,
+    Dose = dose_level_normalized,
+    Dose.Units = "mg/kg",
+    Subject_ID = fk_subject_id,
+    Series_ID = fk_series_id,
+    Study_ID = fk_study_id,
+    ConcTime_ID = conc_time_id,
+    N_Subjects = n_subjects_normalized,
+    Weight = weight_kg,
+    Weight.Units = "kg",
+    Time = time_hr,
+    Time.Units = "hours",
+    Value = conc,
+    Value.Units = "mg/L",
+    Value_SD = conc_sd,
+    LOQ = loq
+  )
+)
 ```
 
 The above command shows the default mapping that will be applied if you don't specify a `mapping` argument when you call `pk`. It's a series of "standardized = original" pairs, where the standardized `invivoPKfit` internal variable name is on the left-hand side, and the original data variable name is on the right-hand side. Here, the original data variable names are all from CvTdb. These are variables appearing in the `invivoPKfit` built-in data object `cvt`, which contains a subset of CvTdb data.
@@ -427,7 +439,7 @@ Just as in `ggplot2`, you can specify expressions inside `aes`. This lets you sp
 For example, the mapping for `Reference` uses an expression:
 
 ```{r, eval = FALSE}
-Reference = as.character(
+Reference <- as.character(
   ifelse(
     is.na(
       documents_reference.id
@@ -436,7 +448,6 @@ Reference = as.character(
     documents_reference.id
   )
 )
-
 ```
 
 This expression says "For the standardized variable `Reference`: First look at the original variable `documents_reference.id`. If that variable is NA, then use the variable `documents_extraction.id`; otherwise, use `documents_reference.id`."
@@ -446,7 +457,7 @@ This mapping for `Reference` occurs because of the way CvTdb handles references.
 You can use expressions to specify constant values for standardized variables, as well. The default mapping contains items like this:
 
 ```{r, eval=FALSE}
-Value.Units = "mg/L"
+Value.Units <- "mg/L"
 ```
 
 This mapping says "For the standardized variable `Value.Units`: Don't take the value from any variable in the original data. Just assign the constant value `"mg/L"`to this variable."
@@ -471,7 +482,7 @@ get_status(my_pk)
 
 The data may include the results of multiple experiments for multiple chemicals, species, routes of administration, biological media, etc. You control how to split up the data into batches for fitting. Do you want to fit a PK model to all data for a given chemical and species, even if that includes more than one experiment? Do you want to fit separate PK models to each experiment? It's your choice. 
 
-Data grouping instructions are given using a function called `facet_data()` (named by analogy with `ggplot2`). You specify data grouping using a call to `dplyr::vars()`. You specify data grouping using the names of the new, standardized variables that you created using the `mapping` argument to `pk()`. Whatever variables you specify, the data will be grouped by unique combinations of those variables.
+Data grouping instructions are given using a function called `facet_data()` (named by analogy with `ggplot2`). You specify data grouping using a unqouted variable names specified in the `mapping` argument to `pk()`. Whatever variables you specify, the data will be grouped by unique combinations of those variables.
 
 The default data grouping is the result of calling the function `facet_data()` with its default arguments. In other words, 
 
@@ -482,8 +493,8 @@ my_pk <- pk(my_data)
 is the same as
 
 ```{r, eval = FALSE}
-my_pk <-   pk(my_data) +
-  facet_data(facets = dplyr::vars(Chemical, Species))
+my_pk <- pk(my_data) +
+  facet_data(Chemical, Species)
 ```
 
 This specification is the default grouping: if you just call `pk()` without adding a `+ facet_data()` specification, the data will be grouped by unique combinations of Chemical and Species.
@@ -534,7 +545,7 @@ This instructs `invivopkfit` on whether and how to try to impute missing values 
 
 ## Data information settings
 
-`my_pk$settings_data_info` provides control settings for getting summary data information, including non-compartmental analysis. Its default value is the result of calling the function `settings_data_info()` with its default arguments.
+`my_pk$pk_groups$nca_group` instructs `invivopkfit` on how to group data for calculation of summary statistics, including non-compartmental analysis (NCA).  (Later, `summary_group` is also used to instruct `invivopkfit` how to group dataa to calculate summary TK statistics predicted by the models). 
 
 In other words, 
 
@@ -547,20 +558,8 @@ is the same as
 ```{r, eval = FALSE}
 my_pk <- pk(my_data) +
   settings_preprocess() +
-  settings_data_info()
+  stat_nca_group()
 ```
-
-Here are the default arguments to `settings_data_info()`:
-
-```{r}
-formals(settings_data_info)
-```
-
-### Summary data information settings
-
-Element `summary_group` instructs `invivopkfit` on how to group data for calculation of summary statistics, including non-compartmental analysis (NCA).  (Later, `summary_group` is also used to instruct `invivopkfit` how to group dataa to calculate summary TK statistics predicted by the models). 
-
-Data will be split into groups according to unique combinations of the variables specified in `summary_group`. Then, non-compartmental analysis will be performed for each group using `PK::nca()`. 
 
 For each summary group, a few basic summary statistics will also be computed:
 
@@ -571,12 +570,12 @@ For each summary group, a few basic summary statistics will also be computed:
 
 ## Optimizer settings
 
-`my_pk$optimx_settings` provides control settings for the optimizer used to fit the model(s) to the data, which is `optimx::optimx()`. It is the result of a call to `settings_optimx()` with default arguments. In other words, just calling `pk()` by itself is the same as
+`my_pk$pk_settings$optimx` provides control settings for the optimizer used to fit the model(s) to the data, which is `optimx::optimx()`. It is the result of a call to `settings_optimx()` with default arguments. In other words, just calling `pk()` by itself is the same as
 
 ```{r, eval = FALSE}
 my_pk <- pk(my_data) +
   settings_preprocess() +
-  settings_data_info() +
+  stat_nca_group() +
   settings_optimx()
 ```
 
@@ -601,7 +600,7 @@ In general, you'll need to choose a value for `method` that names one of the opt
 ```{r, eval = FALSE}
 my_pk <- pk(my_data) +
   settings_preprocess() +
-  settings_data_info() +
+  stat_data_info() +
   settings_optimx() +
   scale_conc()
 ```
@@ -627,7 +626,7 @@ The `time` element is a result of a call to `scale_time()` with the default argu
 ```{r, eval = FALSE}
 my_pk <- pk(my_data) +
   settings_preprocess() +
-  settings_data_info() +
+  stat_nca_group() +
   settings_optimx() +
   scale_conc() +
   scale_time()
@@ -648,7 +647,7 @@ formals(scale_time)
 ```{r, eval = FALSE}
 my_pk <- pk(my_data) +
   settings_preprocess() +
-  settings_data_info() +
+  stat_nca_group() +
   settings_optimx() +
   scale_conc() +
   scale_time() +
@@ -672,9 +671,9 @@ The `model` argument is a character vector (or scalar), listing the names of one
 In other words, calling `pk()` by itself is the same as calling
 
 ```{r, eval = FALSE}
-my_pk <-pk(my_data) +
+my_pk <- pk(my_data) +
   settings_preprocess() +
-  settings_data_info() +
+  stat_nca_group() +
   settings_optimx() +
   scale_conc() +
   scale_time() +
@@ -705,7 +704,7 @@ This type of analysis fits each Chemical and Species data group, but sets error 
 ```{r, eval=FALSE}
 hier_pk <- my_pk +
   facet_data(ggplot2::vars(Chemical, Species)) +
-  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+  stat_error_model(error_group = vars(Chemical, Species, Reference))
 ```
 
 
@@ -715,7 +714,7 @@ This type of analysis fits each Chemical and Species data group, and sets error 
 ```{r, eval=FALSE}
 pooled_pk <- my_pk +
   facet_data(dplyr::vars(Chemical, Species)) +
-  stat_error_model(error_group = vars(Chemical, Species)) 
+  stat_error_model(error_group = vars(Chemical, Species))
 ```
 
 ### "Separate" analysis
@@ -724,7 +723,7 @@ This type of analysis fits each unique combination of Chemical, Species, and Ref
 ```{r, eval=FALSE}
 separate_pk <- my_pk +
   facet_data(dplyr::vars(Chemical, Species, Reference)) +
-  stat_error_model(error_group = vars(Chemical, Species, Reference)) 
+  stat_error_model(error_group = vars(Chemical, Species, Reference))
 ```
 
 # Providing new instructions for a `pk` object
@@ -746,17 +745,19 @@ Note that it will throw messages about replacing existing instructions. These ar
 
 ```{r}
 my_pk <- pk(my_data) +
-    #instructions to use an error model that puts all observations in the same group
+  # instructions to use an error model that puts all observations in the same group
   stat_error_model(error_group = ggplot2::vars(Chemical, Species)) +
-  #instructions for concentration scaling/transformation
-  scale_conc(dose_norm = TRUE,
-             log10_trans = TRUE) +
-  #instructions for time rescaling
+  # instructions for concentration scaling/transformation
+  scale_conc(
+    dose_norm = TRUE,
+    log10_trans = TRUE
+  ) +
+  # instructions for time rescaling
   scale_time(new_units = "auto") +
-  #instructions to use only one method for optimx::optimx()
+  # instructions to use only one method for optimx::optimx()
   settings_optimx(method = "L-BFGS-B") +
-  #instructions to impute missing LOQs slightly differently
-  settings_preprocess(calc_loq_factor = 0.5) 
+  # instructions to impute missing LOQs slightly differently
+  settings_preprocess(calc_loq_factor = 0.5)
 ```
 
 # Checking the current instructions for a `pk` object
@@ -793,10 +794,10 @@ get_data_group(my_pk)
 get_settings_preprocess(my_pk)
 ```
 
-## Check `settings_data_info`
+## Check `nca_group`
 
 ```{r}
-get_settings_data_info(my_pk)
+get_nca_group(my_pk)
 ```
 
 ## Check `settings_optimx`
@@ -909,12 +910,12 @@ names(my_pk)
 A new element `data_info` has been added. This element is itself a named list containing elements `data_summary`, `data_flags`, `dose_norm_check`, and `nca`. You can extract these elements using the following functions:
 
 ```{r}
-my_data_info <- get_data_info(my_pk) #extracts the `data_info` element as a named list
+my_data_info <- get_data_info(my_pk) # extracts the `data_info` element as a named list
 names(my_data_info)
 ```
 
 ```{r}
-my_nca <- get_nca(my_pk) #extracts the `data_info$nca` element specifically
+my_nca <- get_nca(my_pk) # extracts the `data_info$nca` element specifically
 ```
 
 ## Pre-fitting
@@ -986,13 +987,15 @@ Let's say I've created a `pk` object. I don't apply any scalings/transformations
 The status of the newly-created `pk` object is 1.
 
 ```{r}
-my_pk <- pk(data = my_data) + #initialize a `pk` object
-  stat_model(model = c("model_flat",
-                       "model_1comp",
-                       "model_2comp")) + #add PK models to fit
-  settings_optimx(method = "L-BFGS-B") #use only this optimx::optimx() algorithm
+my_pk <- pk(data = my_data) + # initialize a `pk` object
+  stat_model(model = c(
+    "model_flat",
+    "model_1comp",
+    "model_2comp"
+  )) + # add PK models to fit
+  settings_optimx(method = "L-BFGS-B") # use only this optimx::optimx() algorithm
 
-get_status(my_pk) #status is 1
+get_status(my_pk) # status is 1
 ```
 
 Now I do all the steps up to step 5. (If you just call `do_fit()`, it will fast-forward through all the steps.)
@@ -1005,7 +1008,7 @@ get_status(my_pk)
 I can now extract the AIC for my fitted models.
 
 ```{r}
-AIC(my_pk, suppress.messages = TRUE) 
+AIC(my_pk, suppress.messages = TRUE)
 ```
 
 
@@ -1024,7 +1027,7 @@ get_status(my_pk)
 This means that I can't do anything that requires a fully fitted model -- not until I re-do all the workflow steps.
 
 ```{r, error = TRUE}
-coef(my_pk) #throws an error
+coef(my_pk) # throws an error
 ```
 
 In effect, `invivopkfit` throws out any fit results that were made before I changed the concentration scaling.
@@ -1037,29 +1040,29 @@ get_status(my_pk)
 ```
 
 ```{r}
-AIC(my_pk, suppress.messages = TRUE) 
+AIC(my_pk, suppress.messages = TRUE)
 ```
 
 
 If I wanted to keep my original fit results, and also create a new `pk` object that was the same except for the concentration scaling, then I should copy my `pk` object into a new variable and modify the new one.
 
 ```{r}
-#fit a pk object
+# fit a pk object
 my_pk <- pk(data = my_data) +
   settings_preprocess(suppress.messages = TRUE)
 
 my_pk <- do_fit(my_pk)
 
-get_status(my_pk) #status is now 5
+get_status(my_pk) # status is now 5
 
-#copy it to a new variable
+# copy it to a new variable
 my_pk_new <- my_pk
 
-#and modify scale_conc() on the new copy
+# and modify scale_conc() on the new copy
 my_pk_new <- my_pk + scale_conc(dose_norm = TRUE)
 
-get_status(my_pk_new) #status has been reset to 1 for the new copy
-get_status(my_pk) #but status of the original is still 5
+get_status(my_pk_new) # status has been reset to 1 for the new copy
+get_status(my_pk) # but status of the original is still 5
 ```
 
 
@@ -1068,22 +1071,22 @@ get_status(my_pk) #but status of the original is still 5
 Compare fits made using different data transformations.
 
 ```{r}
-#suppress messages
+# suppress messages
 my_pk <- my_pk + settings_preprocess(suppress.messages = TRUE)
 
-#dose normalization, no log transformation
+# dose normalization, no log transformation
 pk1 <- my_pk + scale_conc(dose_norm = TRUE, log10_trans = FALSE)
 
-#log transformation, no dose normalization
+# log transformation, no dose normalization
 pk2 <- my_pk + scale_conc(dose_norm = FALSE, log10_trans = TRUE)
 
-#both normalization and log transformation
+# both normalization and log transformation
 pk3 <- my_pk + scale_conc(dose_norm = TRUE, log10_trans = TRUE)
 
-#do fits
-pk1 <- do_fit(pk1, n_cores = parallel::detectCores()-1)
-pk2 <- do_fit(pk2, n_cores = parallel::detectCores()-1)
-pk3 <- do_fit(pk3, n_cores = parallel::detectCores()-1)
+# do fits
+pk1 <- do_fit(pk1, n_cores = parallel::detectCores() - 1)
+pk2 <- do_fit(pk2, n_cores = parallel::detectCores() - 1)
+pk3 <- do_fit(pk3, n_cores = parallel::detectCores() - 1)
 ```
 
 Plot the results.
@@ -1103,18 +1106,24 @@ plot(pk3) %>% pull(final_plot)
 Note that by default, each one has been plotted using its own concentration transformation. We can plot them all in the same way to compare better: dose-normalize the concentration axis, but do not log-transform it.
 
 ```{r}
-plot(pk1, use_scale_conc = list(dose_norm = TRUE,
-                                log10_trans = FALSE)) %>% pull(final_plot)
+plot(pk1, use_scale_conc = list(
+  dose_norm = TRUE,
+  log10_trans = FALSE
+)) %>% pull(final_plot)
 ```
 
 ```{r}
-plot(pk2, use_scale_conc = list(dose_norm = TRUE,
-                                log10_trans = FALSE)) %>% pull(final_plot)
+plot(pk2, use_scale_conc = list(
+  dose_norm = TRUE,
+  log10_trans = FALSE
+)) %>% pull(final_plot)
 ```
 
 ```{r}
-plot(pk3, use_scale_conc = list(dose_norm = TRUE,
-                                log10_trans = FALSE)) %>% pull(final_plot)
+plot(pk3, use_scale_conc = list(
+  dose_norm = TRUE,
+  log10_trans = FALSE
+)) %>% pull(final_plot)
 ```
 
 
@@ -1129,18 +1138,22 @@ pk_pool <- my_pk +
   stat_error_model(error_group = vars(Chemical, Species))
 
 
-pk_hier <- do_fit(pk_hier, n_cores = parallel::detectCores()-1)
-pk_pool <- do_fit(pk_pool, n_cores = parallel::detectCores()-1)
+pk_hier <- do_fit(pk_hier, n_cores = parallel::detectCores() - 1)
+pk_pool <- do_fit(pk_pool, n_cores = parallel::detectCores() - 1)
 ```
 
 ```{r}
-plot(pk_hier, use_scale_conc = list(dose_norm = TRUE,
-                                log10_trans = FALSE)) %>% pull(final_plot)
+plot(pk_hier, use_scale_conc = list(
+  dose_norm = TRUE,
+  log10_trans = FALSE
+)) %>% pull(final_plot)
 ```
 
 ```{r}
-plot(pk_pool, use_scale_conc = list(dose_norm = TRUE,
-                                log10_trans = FALSE)) %>% pull(final_plot)
+plot(pk_pool, use_scale_conc = list(
+  dose_norm = TRUE,
+  log10_trans = FALSE
+)) %>% pull(final_plot)
 ```
 
 

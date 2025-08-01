@@ -39,11 +39,11 @@ summary.pk <- function(object, ...) {
       "\n"))
 
     # data info settings
-    settings_data_info <- get_settings_data_info(object)
+    nca_group <- get_nca_group(object)
     cat(paste0(
       "\nData info settings:\n",
-      paste(names(settings_data_info),
-            settings_data_info,
+      paste(names(nca_group),
+            nca_group,
             sep = " = ",
             collapse = "\n"),
       "\n"))
@@ -54,6 +54,9 @@ summary.pk <- function(object, ...) {
     cat(paste0("\nModels to be fitted:\n",
                toString(models),
                "\n"))
+
+    # data_group
+    data_grp <- get_data_group.pk(object)
 
     # stat_error_model
 
@@ -101,9 +104,9 @@ summary.pk <- function(object, ...) {
                                        instruction_value = sapply(settings_preprocess,
                                                                   rlang::as_label))
 
-  settings_data_info_DF <- data.frame(instructions_category = "settings_data_info",
-                                      instruction_name = names(settings_data_info),
-                                      instruction_value = sapply(settings_data_info,
+  nca_group_DF <- data.frame(instructions_category = "nca_group",
+                                      instruction_name = names(nca_group),
+                                      instruction_value = sapply(nca_group,
                                                                  rlang::as_label))
 
   settings_optimx_DF <- data.frame(instructions_category = "settings_optimx",
@@ -127,7 +130,7 @@ summary.pk <- function(object, ...) {
 
   instructions_DF <- do.call(rbind,
                              list(settings_preprocess_DF,
-                                  settings_data_info_DF,
+                                  nca_group_DF,
                                   scale_conc_DF,
                                   scale_time_DF,
                                   stat_error_model_DF,
@@ -167,13 +170,13 @@ summary.pk <- function(object, ...) {
   aic_all <- suppressMessages(AIC(object)) # Already includes logLik
   bic_all <- suppressMessages(BIC(object))
   rmse_all <- rmse(object, use_scale_conc = FALSE) |>
-    dplyr::group_by(!!!object$data_group, model, method, Route, Media, Dose) |>
+    dplyr::group_by(!!!data_grp, model, method, Route, Media, Dose) |>
     dplyr::mutate(avg_rmse = mean(RMSE, na.rm = TRUE)) |>
     tidyr::nest(full_rmse = c(Time, RMSE)) |>
     suppressMessages()
 
   fold_errors_all <- fold_error(object) |>
-    dplyr::group_by(!!!object$data_group, model, method, Route, Media, Dose) |>
+    dplyr::group_by(!!!data_grp, model, method, Route, Media, Dose) |>
     dplyr::mutate(avg_FoldErr = mean(Fold_Error, na.rm = TRUE),
                   median_FoldErr = median(Fold_Error, na.rm = TRUE),
                   within_2fold = sum(Fold_Error >= 0.5 & Fold_Error <= 2) / length(Fold_Error)) |>

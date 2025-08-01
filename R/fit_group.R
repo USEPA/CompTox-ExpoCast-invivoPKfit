@@ -23,6 +23,22 @@ fit_group <- function(data,
                       dose_norm,
                       log10_trans,
                       suppress.messages) {
+  # get params to be held constant, if any
+  if (any(par_DF$optimize_param %in% FALSE & par_DF$use_param %in% TRUE)) {
+    const_params <- par_DF[which(!par_DF$optimize_param & par_DF$use_param),
+                           "start", drop = TRUE]
+    names(const_params) <- par_DF[
+      which(!par_DF$optimize_param & par_DF$use_param),
+      "param_name",
+      drop = TRUE
+    ]
+  } else {
+    const_params <- NULL
+  }
+
+  # Now par_DF should only be optimized parameters, and unnest the start values
+  par_DF <- par_DF |> dplyr::filter(optimize_param) |>
+    tidyr::unnest(cols = start)
 
   # Rowbind par_DF and sigma_DF
   par_DF <- dplyr::bind_rows(par_DF, sigma_DF)
@@ -49,25 +65,14 @@ fit_group <- function(data,
     names(upper_params) <- opt_param_names
 
 
-    # get params to be held constant, if any
-    if (any(par_DF$optimize_param %in% FALSE & par_DF$use_param %in% TRUE)) {
-      const_params <- par_DF[which(!par_DF$optimize_param & par_DF$use_param),
-                             "start", drop = TRUE]
-      names(const_params) <- par_DF[
-        which(!par_DF$optimize_param & par_DF$use_param),
-        "param_name",
-        drop = TRUE
-      ]
-    } else {
-      const_params <- NULL
-    }
+
 
     # Now call optimx::optimx() and do the fit
     optimx_out <- suppressWarnings(
       tryCatch(
         expr = {
           tmp <- do.call(
-            optimx::optimx,
+            optimx::opm,
             args = c(
               list(par = opt_params,
                    fn = log_likelihood,
@@ -102,8 +107,8 @@ fit_group <- function(data,
                    NA_real_)
 
           names(tmp) <- c(names(opt_params),
-                          "value", "fevals", "gevals", "niter",
-                          "convcode",
+                          "value", "fevals", "gevals", "hevals",
+                          "convergence",
                           "kkt1", "kkt2",
                           "xtime")
 
@@ -138,8 +143,8 @@ fit_group <- function(data,
              rep(NA, 2),
              NA_real_)
     names(tmp) <- c(names(opt_params),
-                    "value", "fevals", "gevals", "niter",
-                    "convcode",
+                    "value", "fevals", "gevals", "hevals",
+                    "convergence",
                     "kkt1", "kkt2",
                     "xtime")
     tmp <- data.frame(as.list(tmp)) |>

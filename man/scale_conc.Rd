@@ -18,9 +18,7 @@ normalization is applied. Default `FALSE`.}
 \item{...}{Other arguments (not currently used)}
 }
 \value{
-An object of class `pk_scales`: A named list with two elements. The
- first element `name = "conc"` denotes the variable to be scaled. The second
- element `value` is itself a named list of the arguments supplied to
+An object of class `pk_scales`: A named list with elements supplied to
  [scale_conc()]). This object is usually added to an existing [pk()] object
  using `+`. See [pk_add.pk_scales()].
 }

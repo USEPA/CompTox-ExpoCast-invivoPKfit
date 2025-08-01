@@ -45,13 +45,13 @@ calc_hessian <- function(pars_opt,
                    const_params = pars_const,
                    data = observations,
                    data_sigma_group = observations$data_sigma_group,
-                   modelfun = modelfun,
+                   modelfun = modelfun[[1]],
                    dose_norm = dose_norm,
                    log10_trans = log10_trans,
                    negative = TRUE,
                    force_finite = TRUE)
   },
-  x = pars_opt,
+  x = setNames(as.numeric(pars_opt), names(pars_opt)),
   pars_const = pars_const,
   method = "Richardson")
 
@@ -197,7 +197,7 @@ calc_sds_alerts <- function(pars_opt,
                             modelfun,
                             dose_norm,
                             log10_trans) {
-#intiialize output
+  #intiialize output
   output <- data.frame(param_name = names(pars_opt),
                        param_sd = rep(NA_real_, length(pars_opt)),
                        sd_alert = rep("", length(pars_opt)))

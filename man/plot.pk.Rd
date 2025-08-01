@@ -38,7 +38,7 @@ plotted for these models. Default `NULL` to plot fits for all models in
 `x$stat_model`.}
 
 \item{method}{Character: One or more of the [optimx::optimx()] methods used.
-Default `NULL` to plot fits for all methods in `x$settings_optimx$method`.}
+Default `NULL` to plot fits for all methods in `x$pk_settings$optimx$method`.}
 
 \item{use_scale_conc}{Possible values: `TRUE`, `FALSE`, or a named list with
 elements `dose_norm` and `log10_trans` which themselves should be either

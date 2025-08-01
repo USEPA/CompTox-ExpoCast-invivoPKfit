@@ -23,6 +23,7 @@ check_params_2comp <- function(params,
                                ...) {
 
   msg <- "Parameters OK"
+  params <- unlist(params)
 
   # check for any missing parameters
   # required params for oral dose
@@ -30,9 +31,9 @@ check_params_2comp <- function(params,
     missing_params <- base::setdiff(c("kelim", "k21", "k12", "Fgutabs_V1", "kgutabs"),
                               names(params)[is.finite(params)])
     if (length(missing_params) > 0) {
-      msg <- (paste("Error: For 2-compartment oral model,",
-                 "missing parameters:",
-                 toString(missing_params)))
+      msg <- cli::cli_fmt(
+        cli::cli_text("For 2-compartment oral model, missing parameters: {missing_params}")
+      )
     }
   }
 
@@ -41,15 +42,16 @@ check_params_2comp <- function(params,
     missing_params <- base::setdiff(c("kelim", "V1", "k12", "k21"),
                               names(params)[is.finite(params)])
     if (length(missing_params) > 0) {
-      msg <- (paste("Error: For 2-compartment IV model,",
-                 "missing parameters:",
-                 toString(missing_params)))
+      msg <- cli::cli_fmt(
+        cli::cli_text("For 2-compartment IV model, missing parameters: {missing_params}")
+      )
     }
   }
 
   if (any(medium %in% "blood") && !"Rblood2plasma" %in% names(params)[is.finite(params)]) {
-    msg <- (paste0("Error: For 2-compartment model ",
-                   "in blood: missing parameter Rblood2plasma"))
+    msg <- cli::cli_fmt(
+      cli::cli_text("For 2-compartment model with blood data, missing parameter: Rblood2plasma")
+    )
   }
 
   return(msg)

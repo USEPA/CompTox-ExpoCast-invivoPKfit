@@ -4,10 +4,14 @@
 \alias{get_data_group.pk}
 \title{Get data grouping}
 \usage{
-\method{get_data_group}{pk}(obj, ...)
+\method{get_data_group}{pk}(obj, as_character = FALSE, ...)
 }
 \arguments{
-\item{obj}{An initialized `pk` object}
+\item{obj}{An initialized `pk` object.}
+
+\item{as_character}{Logical (Default: `FALSE`). Determines whether to return a
+character vector. If set to `FALSE`, a list of expressions containing the `data_group`
+variables is returned.}
 
 \item{...}{Additional arguments not currently in use.}
 }

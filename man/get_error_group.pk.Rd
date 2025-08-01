@@ -4,10 +4,14 @@
 \alias{get_error_group.pk}
 \title{Get error group}
 \usage{
-\method{get_error_group}{pk}(obj, ...)
+\method{get_error_group}{pk}(obj, as_character = FALSE, ...)
 }
 \arguments{
-\item{obj}{A [pk()] object}
+\item{obj}{A [pk()] object.}
+
+\item{as_character}{Logical (Default: `FALSE`). Determines whether to return a
+character vector. If set to `FALSE`, a list of expressions containing the `data_group`
+variables is returned.}
 
 \item{...}{Additional arguments. Not in use currently.}
 }

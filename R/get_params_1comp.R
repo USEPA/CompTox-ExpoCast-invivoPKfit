@@ -104,61 +104,53 @@
 
 get_params_1comp <- function(
     data,
-    lower_bound = ggplot2::aes(kelim = log(2) / (2 * max(Time_trans)),
-                               Vdist = 0.01,
-                               Fgutabs = 0.0,
-                               kgutabs = log(2) / (2 * max(Time_trans)),
-                               Fgutabs_Vdist = 0.01,
-                               Rblood2plasma = 1e-2),
-    upper_bound = ggplot2::aes(kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                               Vdist = 100,
-                               Fgutabs = 1,
-                               kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                               Fgutabs_Vdist = 1e2,
-                               Rblood2plasma = 100),
-    param_units = ggplot2::aes(kelim = paste0("1/", # kelim
-                                              unique(Time_trans.Units)),
-                               Vdist = paste0("(", # Vdist
-                                              unique(Dose.Units),
-                                              ")",
-                                              "/",
-                                              "(",
-                                              unique(Conc.Units),
-                                              ")"),
-                               Fgutabs = "unitless fraction", # Fgutabs
-                               kgutabs = paste0("1/", # kgutabs
-                                                unique(Time_trans.Units)),
-                               Fgutabs_Vdist = paste0("(", # Fgutabs_Vdist
-                                                      unique(Conc.Units),
-                                                      ")",
-                                                      "/",
-                                                      "(",
-                                                      unique(Dose.Units),
-                                                      ")"),
-                               Rblood2plasma = "unitless ratio")) {
+    lower_bound = alist(
+      kelim = log(2) / (2 * max(Time_trans)),
+      Vdist = 0.01,
+      Fgutabs = 1E-3,
+      kgutabs = log(2) / (2 * max(Time_trans)),
+      Fgutabs_Vdist = 1E-5,
+      Rblood2plasma = 1e-2
+    ),
+    upper_bound = alist(
+      kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+      Vdist = 100.0,
+      Fgutabs = 1.0,
+      kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+      Fgutabs_Vdist = 100,
+      Rblood2plasma = 100
+    ),
+    param_units = alist(
+      kelim = paste0("1/", unique(Time_trans.Units)),
+      Vdist = paste0("(", unique(Dose.Units), ")/(", unique(Conc.Units), ")"),
+      Fgutabs = "unitless fraction",
+      kgutabs = paste0("1/", unique(Time_trans.Units)),
+      Fgutabs_Vdist = paste0("(", unique(Conc.Units), ")/(", unique(Dose.Units), ")"),
+      Rblood2plasma = "unitless ratio")
+) {
   # param names
   param_name <- c("kelim",
-                   "Vdist",
-                   "Fgutabs",
-                   "kgutabs",
-                   "Fgutabs_Vdist",
-                   "Rblood2plasma")
+                  "Vdist",
+                  "Fgutabs",
+                  "kgutabs",
+                  "Fgutabs_Vdist",
+                  "Rblood2plasma")
 
- # Default lower bounds, to be used in case the user specified a non-default
- # value for the `lower_bound` argument, but did not specify expressions for all
- # parameters. Any parameters not specified in the `lower_bound` argument will
- # take their default lower bounds defined here. This should be the same as the
- # default value for the `lower_bound` argument.
-  lower_bound_default = ggplot2::aes(kelim = log(2) / (2 * max(Time_trans)),
-                                     Vdist = 0.01,
-                                     Fgutabs = 0,
-                                     kgutabs = log(2) / (2 * max(Time_trans)),
-                                     Fgutabs_Vdist = 0.01,
-                                     Rblood2plasma = 1e-2)
- # which parameters did not have lower bounds specified in the `lower_bound`
- # argument?
+  # Default lower bounds, to be used in case the user specified a non-default
+  # value for the `lower_bound` argument, but did not specify expressions for all
+  # parameters. Any parameters not specified in the `lower_bound` argument will
+  # take their default lower bounds defined here. This should be the same as the
+  # default value for the `lower_bound` argument.
+  lower_bound_default = alist(kelim = log(2) / (2 * max(Time_trans)),
+                              Vdist = 0.01,
+                              Fgutabs = 1E-3,
+                              kgutabs = log(2) / (2 * max(Time_trans)),
+                              Fgutabs_Vdist = 1E-5,
+                              Rblood2plasma = 1e-2)
+  # which parameters did not have lower bounds specified in the `lower_bound`
+  # argument?
   lower_bound_missing <- base::setdiff(names(lower_bound_default),
-                                 names(lower_bound))
+                                       names(lower_bound))
   # fill in the default lower bounds for any parameters that don't have them
   # defined in the `lower_bound` argument
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
@@ -168,16 +160,16 @@ get_params_1comp <- function(
   # parameters. Any parameters not specified in the `upper_bound` argument will
   # take their default upper bounds defined here. This should be the same as the
   # default value for the `upper_bound` argument.
-  upper_bound_default = ggplot2::aes(kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                                     Vdist = 100,
-                                     Fgutabs = 1,
-                                     kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                                     Fgutabs_Vdist = 1e2,
-                                     Rblood2plasma = 100)
+  upper_bound_default = alist(kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+                              Vdist = 100,
+                              Fgutabs = 1,
+                              kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+                              Fgutabs_Vdist = 1e2,
+                              Rblood2plasma = 100)
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
   upper_bound_missing <- base::setdiff(names(upper_bound_default),
-                                 names(upper_bound))
+                                       names(upper_bound))
   # fill in the default upper bounds for any parameters that don't have them
   # defined in the `upper_bound` argument
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
@@ -244,7 +236,7 @@ get_params_1comp <- function(
 
   # now get starting values
   par_DF <- get_starts_1comp(data = data,
-                              par_DF = par_DF)
+                             par_DF = par_DF)
 
 
   # check to ensure starting values are within bounds
@@ -260,7 +252,8 @@ get_params_1comp <- function(
                           "upper_bound")]
            )
          )
-
+  # Make into a list
+  par_DF$start <- as.list(par_DF$start)
 
   return(par_DF)
 

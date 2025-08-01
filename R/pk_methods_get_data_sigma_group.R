@@ -7,18 +7,18 @@
 #' @param ... Additional arguments. Not currently in use.
 #' @return A `factor` vector giving the error SD group ID for each observation,
 #'   as the interaction of the factors specified in
-#'   `obj$stat_error_model$error_group`.
+#'   `obj$pk_groups$error_group`.
 #' @export
 #' @author Caroline Ring
 get_data_sigma_group.pk <- function(obj,
                                     newdata = NULL, ...) {
 if (is.null(newdata)) {
-  newdata <- obj$data
+  newdata <- get_data(obj)
 }
 
   data_sigma_group <- interaction(
     lapply(
-      obj$stat_error_model$error_group,
+      obj$pk_groups$error_group,
       rlang::eval_tidy,
       data = newdata
     )

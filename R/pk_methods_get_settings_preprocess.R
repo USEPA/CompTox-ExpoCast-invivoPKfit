@@ -6,7 +6,7 @@
 #' @export
 #' @author Caroline Ring
 get_settings_preprocess.pk <- function(obj, ...) {
-  out <- obj$settings_preprocess
+  out <- obj$pk_settings$preprocess
   # convert char vectors into "c(...)
   out$routes_keep <- rlang::parse_expr(paste0("c(",
                                               "'",

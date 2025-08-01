@@ -2,7 +2,7 @@ Type: Package
 Package: invivoPKfit
 Title: Fits Toxicokinetic Models to In Vivo PK Data Sets
 Version: 2.0.2
-Date: 2025-7-8
+Date: 2025-8-1
 Authors@R: c(person("John", "Wambaugh", email = "wambaugh.john@epa.gov", 
              role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4024-534X")),
              person("Caroline", "Ring", email = "Ring.Caroline@epa.gov", 
@@ -26,17 +26,16 @@ Depends:
 Imports: 
     cli,
     dplyr,
-    devtools,
     ggplot2,
     httk,
     MASS,
     Matrix,
-    multidplyr (>= 0.1.3),
+    mirai,
     numDeriv,
     optimx,
     PK,
     pracma,
-    purrr,
+    purrr (>= 1.1.0),
     rlang,
     stats,
     scales,

@@ -54,7 +54,7 @@ log10-transformation will be applied.}
 
 \item{suppress.messages}{Logical: whether to suppress message printing. If
 NULL (default), uses the setting in
-`object$settings_preprocess$suppress.messages`}
+`object$pk_settings$preprocess$suppress.messages`}
 
 \item{...}{Additional arguments not currently used.}
 }

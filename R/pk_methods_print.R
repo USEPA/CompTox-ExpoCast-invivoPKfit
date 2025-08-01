@@ -11,12 +11,11 @@
 print.pk <- function(x, ...) {
 
   status <- get_status(x, suppress.messages = FALSE)
-  data_group_vars <- sapply(x$data_group, rlang::as_label)
-  error_group_vars <- sapply(x$stat_error_model$error_group, rlang::as_label)
+  data_grp_vars <- get_data_group.pk(x, as_character = TRUE)
+  error_group_vars <- get_error_group.pk(x, as_character = TRUE)
   models_present <- names(x$stat_model)
   scale_conc <- get_scale_conc(x)
   scale_time <- get_scale_time(x)
-  summary_group_vars <- sapply(x$settings_data_info$summary_group, rlang::as_label)
 
   if (status > 1) {
     cat("Input data size:\n",
@@ -25,12 +24,12 @@ print.pk <- function(x, ...) {
     cat("Unique Species: ", length(unique(x$data$Species)), "\n")
     cat("Unique Routes: ", length(unique(x$data$Route)), "\n")
     cat("Unique Mediums: ", length(unique(x$data$Media)), "\n\n")
-    if (all(error_group_vars %in% data_group_vars)) {
+    if (all(error_group_vars %in% data_grp_vars)) {
       cat("The error model is pooled.\n")
     } else {
       cat("The error model is hierarchical.\n")
     }
-    cat("Data Group:\t", toString(data_group_vars), "\n")
+    cat("Data Group:\t", toString(data_grp_vars), "\n")
     cat("Error Group:\t", toString(error_group_vars), "\n")
     cat("Scaling:\n\t",
         "Dose-normalization? ", scale_conc$dose_norm, "\n\t",
@@ -57,14 +56,14 @@ print.pk <- function(x, ...) {
   }
 
   if (status == 5) {
-    fit_results <- x$fit[c(data_group_vars,
-                           "model", "method", "xtime", "convcode", "message")]
+    fit_results <- x$fit[c(data_grp_vars,
+                           "model", "method", "xtime", "convergence", "message")]
     fit_results <- unique(fit_results)
     cat("Fitted object summary:\n")
     cat("Average time per Data Group: ",
         signif(mean(fit_results$xtime, na.rm = TRUE), 3), "\n")
     cat("Number of non-zero convergence codes: ",
-        sum(fit_results$convcode != 0), "\n\n")
+        sum(fit_results$convergence != 0), "\n\n")
 
   }
 

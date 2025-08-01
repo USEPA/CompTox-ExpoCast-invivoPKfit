@@ -29,7 +29,7 @@ The data (either `newdata` or `obj$data`) will be grouped according to the
 unique combinations of these variables. For each unique combination of
 these variables in the data, a set of TK statistics will be computed. The
 default is `NULL`, to use the same data grouping that was set in
-[stat_nca()] for the `pk` object. However, you may specify a different data
+[stat_nca_group()] for the `pk` object. However, you may specify a different data
 grouping if you wish.}
 
 \item{exclude}{Logical: `TRUE` to group the data for NCA after removing any
@@ -44,7 +44,7 @@ concentrations.}
 
 \item{suppress.messages}{Logical: whether to suppress message printing. If
 NULL (default), uses the setting in
-`obj$settings_preprocess$suppress.messages`}
+`obj$pk_settings$preprocess$suppress.messages`}
 
 \item{...}{Additional arguments. Currently not in use.}
 }

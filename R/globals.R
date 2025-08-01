@@ -1,6 +1,7 @@
 utils::globalVariables(
   c(
     # Data variables
+    "DATA_GROUP_ID",
     "Chemical",
     "Species",
     "Reference",
@@ -36,6 +37,8 @@ utils::globalVariables(
     "Conc_SD_tmp",
     "Conc_nca",
     "Conc_nca.Units",
+    "Weight",
+    "Weight.Units",
     # Built in data
     "status_init",
     "status_fit",
@@ -45,17 +48,15 @@ utils::globalVariables(
     "status_data_info",
     "status_prefit",
     "model_1comp",
-    "model_1comp_cl",
-    "model_1comp_cl_rest",
-    "model_1comp_cl_nonrest",
     "model_2comp",
     "model_flat",
+    "model_httk_gas_pbtk",
     #
     "model",
     "method",
     "modelfun",
-    "predfun",
-    "predfun_args",
+    "pred_fun",
+    "pred_fun_args",
     "fit_decision",
     "n_par",
     "n_sigma",
@@ -72,7 +73,7 @@ utils::globalVariables(
     "value",
     "lower_bound",
     "upper_bound",
-    "convcode",
+    "convergence",
     "optimize_param",
     "use_param",
     "conc_mean",
@@ -86,6 +87,9 @@ utils::globalVariables(
     "param_sd",
     "sd_alert",
     "coefs_tibble",
+    "suppress.messages",
+    "data_grp",
+    "data_grp_vars",
     # preprocess
     "LOQ_orig",
     "Value",
@@ -102,7 +106,8 @@ utils::globalVariables(
     "Cmax",
     "Cmax_fold_range",
     "AUC_fold_range",
-    "tk_fun",
+    "tkstats_fun",
+    "tkstats_fun_args",
     "TKstats",
     # eval_tkstats
     "new_flat",
@@ -120,6 +125,7 @@ utils::globalVariables(
     "data_sigma_group",
     "observations",
     "coefs_opt_vector",
+    "coefs_opt_vector_id",
     "coefs_const_vector",
     # get_starts
     "value",
@@ -140,7 +146,7 @@ utils::globalVariables(
     "fk_extraction_document_id",
     "conc_medium_normalized",
     "administration_route_normalized",
-    "invivPK_dose_level",
+    "dose_level_normalized",
     "fk_subject_id",
     "fk_series_id",
     "fk_study_id",
@@ -148,9 +154,9 @@ utils::globalVariables(
     "n_subjects_normalized",
     "weight_kg",
     "time_hr",
-    "invivPK_conc",
-    "invivPK_conc_sd",
-    "invivPK_loq",
+    "conc",
+    "conc_sd",
+    "loq",
     "N_ROW",
     # external function definitions
     "approx",
@@ -164,6 +170,8 @@ utils::globalVariables(
     "median",
     "start",
     "uniroot",
+    ".progress",
+    ".stop",
     add = FALSE
   )
 )

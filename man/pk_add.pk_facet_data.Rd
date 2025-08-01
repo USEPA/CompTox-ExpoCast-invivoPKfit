@@ -14,7 +14,7 @@
 \item{objectname}{The name of the `pk_facet_data` object.}
 }
 \value{
-The [pk()] object, with the added `pk_facet_data`.
+The [pk()] object, with the added `pk_facet_data` in the `groups` sub-list.
 }
 \description{
 Add facet_data()

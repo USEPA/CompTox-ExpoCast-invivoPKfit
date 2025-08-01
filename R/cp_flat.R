@@ -83,7 +83,7 @@ cp_flat <- function(params,
                             medium = medium)
 
   if (check_msg != "Parameters OK") {
-    stop("cp_flat(): ", check_msg)
+    cli_abort(check_msg)
   }
 
   Vdist = Fgutabs_Vdist = Rblood2plasma = NULL

@@ -1,3 +1,15 @@
+.onAttach <- function(libname, pkgname) {
+  startup <- function() {
+    cli::cli_inform(c(
+      "v" = "{.strong {.pkg invivoPKfit} v{utils::packageVersion('invivoPKfit')} has been successfully loaded!}",
+      "i" = paste("For help, please run:", cli::col_cyan("help('invivoPKfit')"))
+    ), class = "packageStartupMessage"
+    )
+  }
+
+  startup()
+}
+
 
 #' Converting common quotation mark symbols into basic ASCII forms.
 #'
@@ -102,6 +114,52 @@ num2string <- function(x, return.na = FALSE) {
   return(paste(x, collapse = ","))
 }
 
+#' Creates a string representation of a fraction
+#'
+#' Parentheses will enclose the numerator or denominator if there is already
+#' a division symbol "/" in the expression (if it is an expression or character vector).
+#'
+#' @param x Numerator.
+#' @param y Denominator.
+#'
+#' @return A character vector.
+paste_fraction <- function(x, y) {
+  paste_enclose <- function(string0) paste0("(", string0, ")")
+  px <- x
+  py <- y
+  if (grepl("/", x, fixed = TRUE)) px <- paste_enclose(x)
+  if (grepl("/", y, fixed = TRUE)) py <- paste_enclose(y)
+  paste0(px, "/", py)
+}
+
+
+#' Wrapper for [dplyr::case_match()] that accepts named lists as arguments
+#' @param .x A vector to match against. In a data context, a column.
+#' @param .lst A named list in the form `old_value = new_value`.
+#' @param .default Value to be used when there are no values. Suggest setting it to `.x`
+#' @return A vector of replaced values
+case_match_lst <- function(.x, .lst, .default = NULL) {
+
+  stopifnot(rlang::is_named(.lst))
+
+  dplyr::case_match(
+    .x,
+    !!!lapply(paste0("\"", names(.lst),"\"~\"", .lst, "\""), stats::as.formula),
+    .default = .default
+  )
+}
+
+
+#' Wrapper for [stringr::str_replace_all()] which replaces whole words.
+#' @param .x A vector to match against.
+#' @param .lst A named vector in the form `old_value = new_value`.
+#' @return A character vector with values substituted in.
+str_replace_lst <- function(.x, .lst) {
+
+  stopifnot(rlang::is_named(.lst))
+
+  stringr::str_replace_all(.x, setNames(.lst, paste0("^", names(.lst), "$")))
+}
 
 
 #' Creating a simple test CvT dataset
@@ -194,3 +252,24 @@ pseudo_cvt <- function(
 
   return(tmp_cvt)
 }
+
+
+#' Creates a [cli::cli_fmt()] output for the pattern "name(x), length = "
+#'
+#' @param x A named vector with a single value for each element.
+#' @param extra A character vector that should be printed between each name and value.
+#' @return A cli::cli_fmt output list.
+#' @author Gilberto Padilla Mercado
+#'
+
+post_name_value <- function(x, extra = "") {
+  cli::cli_fmt({
+    cli::cli_ul()
+    for (k in seq_along(x)) {
+      cli::cli_li(paste("{names(x[k])},", extra, "{x[k]}"))
+    }
+    cli::cli_end()
+  })
+}
+
+

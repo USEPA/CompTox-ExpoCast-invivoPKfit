@@ -213,7 +213,7 @@ standard_httk_preds <- function(dtxsid,
   # Decided to do both Clearances in one go
   # parameterization to be able to explicitly force human clint and fup
 
-  if (is.null(parameters) | !all(c("par_rest", "par_nonrest") %in% names(parameters))) {
+  if (is.null(parameters) || !all(c("par_rest", "par_nonrest") %in% names(parameters))) {
     parameters <- standard_parameterization(
       dtxsid = dtxsid,
       species = species,
@@ -285,7 +285,7 @@ standard_httk_mc <- function(
 ) {
   IV.DOSE <- ifelse(route == "iv", TRUE, FALSE)
 
-  if (is.null(parameters) | !all(c("par_rest", "par_nonrest") %in% names(parameters))) {
+  if (is.null(parameters) || !all(c("par_rest", "par_nonrest") %in% names(parameters))) {
     parameters <- standard_parameterization(
       dtxsid = dtxsid,
       species = species,

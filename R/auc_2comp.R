@@ -51,7 +51,7 @@ auc_2comp <- function(params, time, dose, route, medium = "plasma") {
                                   medium)
 
   if (check_msg != "Parameters OK") {
-    stop("auc_2comp():", check_msg)
+    cli::cli_abort(check_msg)
   }
 
   # get transformed parameters for 2-comp model

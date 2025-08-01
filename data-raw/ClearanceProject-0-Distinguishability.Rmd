@@ -18,13 +18,14 @@ library(tidyselect)
 library(ggplot2)
 library(patchwork)
 library(parallel)
+library(mirai)
+library(ctxR)
 ```
 
 # Purpose
 
 ```{r set_parameters}
 THIS_CHEMICAL = "DTXSID3024289" # A chemical to test
-# THIS_CHEMICAL = "DTXSID50873382" # Warfarin
 DOSE = 25
 SPECIES = "Rat"
 ROUTE = "oral"
@@ -38,6 +39,7 @@ SPECIES_TEXT <- ifelse(SPECIES != "Human" && HUMAN_CLINT_FUP,
                        paste0(SPECIES, "_parHuman"),
                        SPECIES)
 INVITROUV = NULL
+
 INVITROUV_TEXT = NULL
 if (!is.null(INVITROUV)) {
   INVITROUV_TEXT = "_usedINVITRO"
@@ -46,7 +48,7 @@ if (!is.null(INVITROUV)) {
 
 ```{r get_chems}
 chems_available <- get_cheminfo(info = "dtxsid", species = SPECIES,
-                                model = "gas_pbtk") |> suppressWarnings()
+                                model = "gas_pbtk", suppress.messages = TRUE)
 ```
 
 ```{r helper_functions}
@@ -109,7 +111,7 @@ conc_fun_wsamples <- function(
 
 ```
 
-
+#### Testing
 
 ```{r runs}
 
@@ -181,6 +183,8 @@ two sets of TK curves. I will call this the
 **distinguishability**.
 
 
+#### Testing
+
 ```{r testing_overlap}
 # Overlap testing
 # mat must have rownames and first row must be "Time"
@@ -243,6 +247,8 @@ for (this_chem in TEST_CHEMICALS) {
 
 
 ```
+
+#### Set-up assessment functions
 
 We need to assess the distinguishability in a standard manner, with a few 
 considerations. We can assess human and rat at arbitrary doses and coefficients
@@ -526,14 +532,20 @@ While some missing data will be incorporated in this analysis,
 this will not include data where Total Clearance is not known for 2 of 3 sources.
 
 
-```{r}
+```{r lombardo_sipes}
+
+load(file = "data-raw/CYP_Sipes2017.Rdata")
+
 lombardo <- readxl::read_xlsx(
   paste0(Sys.getenv("FIG_DIR"),
          "Lombardo2018-Supplemental_82966_revised_corrected.xlsx"),
-  skip = 8) |> janitor::clean_names()
+  skip = 8) |> 
+  janitor::clean_names() |>
+  left_join(chem.physical_and_invitro.data[c("CAS", "DTXSID")],
+            by = join_by(cas_number == CAS))
 
 table(
-  lombardo$cas_number %in% suppressWarnings(get_cheminfo("CAS", model = "gas_pbtk"))
+  lombardo$DTXSID %in% suppressWarnings(get_cheminfo("DTXSID", model = "gas_pbtk"))
 )
 
 ```
@@ -654,16 +666,16 @@ temp_lst <- do.call(rbind, temp_lst)
 
 temp_data3 <- left_join(temp_data2, temp_lst, relationship = "many-to-one")
 saveRDS(temp_data3,
-        paste0("data-raw/", SPECIES_TEXT, "_HTTK_preds_CvTdata.rds")
+        paste0("data-raw/RCdata/", SPECIES_TEXT, "_HTTK_preds_CvTdata.rds")
 )
 ```
 
 
 ```{r bin-compare}
 # Get the bins
-bindf_rat <- readRDS("data-raw/Rat_oral_simulation_bins.rds") |>
+bindf_rat <- readRDS("data-raw/RCdata/Rat_oral_simulation_bins.rds") |>
   subset(select = c("DTXSID", "Bin"))
-bindf_rat_parhuman <- readRDS("data-raw/Rat_parHuman_oral_simulation_bins.rds") |>
+bindf_rat_parhuman <- readRDS("data-raw/RCdata/Rat_parHuman_oral_simulation_bins.rds") |>
   subset(select = c("DTXSID", "Bin"))
 
 
@@ -691,14 +703,76 @@ temp_data3 |>
        title = afe_formula) +
   scale_x_log10(labels = scales::label_log()) + scale_y_log10(labels = scales::label_log()) +
   theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5),
-        legend.position = "bottom",
-        legend.title.position = "top")
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "bottom",
+    legend.title.position = "top",
+    legend.title = element_text(hjust = 0.5)
+  )
+
+# For this figure, try reducing bins to Distinguishable and Not Distinguishable
 
 ggsave(filename = paste0(Sys.getenv("FIG_DIR"), "AFE_CvT_HTTK_predictions_",
                          SPECIES_TEXT, INVITROUV_TEXT,
                          ".png"),
        width = 5, height = 5)
+
+```
+
+```{r}
+rat_physchem <- filter(
+  chem.physical_and_invitro.data,
+  DTXSID %in% bindf_rat$DTXSID
+) |>
+  select(
+    DTXSID,
+    logHenry, logMA, logP, logPwa, logWSol,
+    Rat.Clint, Rat.Funbound.plasma,
+    # pKa_Accept, pKa_Donor, Chemical.Class,
+    MP, MW
+  ) |>
+  mutate(
+    across(starts_with("Rat."), as.numeric)
+  )
+
+lombardo_trim <- lombardo |>
+  filter(!is.na(DTXSID)) |>
+  select(
+    DTXSID,
+    human_v_dss_l_kg,
+    human_cl_m_l_min_kg,
+    terminal_t1_2_h,
+    hba, hbd,
+    moka_ion_state7_4
+  ) |>
+  mutate(moka_ion_state7_4 = factor(moka_ion_state7_4))
+
+tree_rat <- bindf_rat |>
+  left_join(cyp_data, by = join_by(DTXSID == Chemical)) |>
+  left_join(rat_physchem, by = join_by(DTXSID)) |>
+  # left_join(lombardo_trim, by = join_by(DTXSID)) |>
+  select(-c(DTXSID, CAS)) |>
+  filter(!Bin %in% "ND_MC_mid") |> # Only one observation, don't want it to throw of tree
+  mutate(
+    Bin = factor(Bin),
+    Bin = forcats::fct_other(
+      Bin,
+      keep = "Distinguished", 
+      other_level = "Not Distinguishable" 
+    )
+  )
+
+table(tree_rat$Bin) 
+# Quite unbalanced, by we can try to upsampling/downsampling
+
+fit_tree_rat <- rpart::rpart(Bin ~ ., data = tree_rat)
+rpart.plot::rpart.plot(fit_tree_rat)
+preds_tree <- predict(fit_tree_rat, tree_rat, type = "class")
+caret::confusionMatrix(preds_tree, tree_rat$Bin, positive = 'Distinguished')
+
+# adjusted Clint   = Clint / Fu_hep... make sure I am using this value
+# randomForest < TRY
+# Potentially, add uncertainty factor for bins (Rest vs Non)
 
 ```
 

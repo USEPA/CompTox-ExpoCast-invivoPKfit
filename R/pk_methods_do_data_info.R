@@ -9,7 +9,7 @@
 #' @export
 #' @author Caroline Ring
 do_data_info.pk <- function(obj, ...) {
-  suppress_messages <- obj$settings_preprocess$suppress.messages
+  suppress_messages <- obj$pk_settings$preprocess$suppress.messages
   # check status
   objname <- deparse(substitute(obj))
   status <- obj$status
@@ -23,6 +23,7 @@ do_data_info.pk <- function(obj, ...) {
     # Here is where I need to implement logic for skipping if same data group
     prev_summary <- dplyr::select(obj$data_info$data_summary, Chemical:tlast_detect)
   }
+  cli::cli_par()
 
   # if preprocessing not already done, do it
   if (obj$status < status_preprocess) {
@@ -33,7 +34,7 @@ do_data_info.pk <- function(obj, ...) {
     cli_inform("do_data_info.pk(): Getting data summary info.")
   }
 
-  data <- obj$data
+  data <- get_data.pk(obj)
 
   # get data summary
   if (suppress_messages %in% FALSE) {
@@ -42,7 +43,7 @@ do_data_info.pk <- function(obj, ...) {
 
   # grouping for data summary:
 
-  summary_group <- obj$settings_data_info$summary_group
+  summary_group <- get_nca_group.pk(obj)
 
   data_summary_out <- data_summary(obj = obj,
                                    newdata = NULL,
@@ -66,7 +67,7 @@ do_data_info.pk <- function(obj, ...) {
   }
 
   # if Dose, Route and Media not already in summary_group, add them for this
-  grp_vars_summary <- sapply(summary_group, rlang::as_label)
+  grp_vars_summary <- get_nca_group.pk(obj, as_character = TRUE)
 
   if (all(c("Dose", "Route", "Media") %in% grp_vars_summary)) {
     nca_group <- summary_group
@@ -92,11 +93,9 @@ do_data_info.pk <- function(obj, ...) {
                             dose_norm = TRUE)
 
   # pivot wider
-  grp_vars_nca <- sapply(nca_group, rlang::as_label)
-
   nca_dose_norm <- nca_dose_norm_long |>
     tidyr::pivot_wider(
-      id_cols = dplyr::all_of(c(grp_vars_nca, "dose_norm")),
+      id_cols = dplyr::all_of(c(grp_vars_summary, "dose_norm")),
       names_from = param_name,
       values_from = param_value
     ) |>
@@ -122,7 +121,7 @@ if (length(base::setdiff(nca_group, summary_group)) > 0 ||
   # Assess various flags
   df <- dplyr::inner_join(data_summary_nca,
                           nca_dose_norm,
-                          by = grp_vars_nca) |>
+                          by = grp_vars_summary) |>
     dplyr::mutate(
       # Is tmax for oral data the first or last detected timepoint?
       data_flag = ifelse(

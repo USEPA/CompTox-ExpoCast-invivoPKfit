@@ -34,7 +34,7 @@
 #'   to the unique combinations of these variables. For each unique combination
 #'   of these variables in the data, a set of summary statistics will be
 #'   computed. The default is `NULL`, to use the same data grouping that was set
-#'   in [stat_nca()] for the `pk` object. However, you may specify a different
+#'   in [stat_nca_group()] for the `pk` object. However, you may specify a different
 #'   data grouping if you wish.
 #' @param ... Additional arguments. Not in use.
 #' @return A `data.frame` with variables including all the grouping variables in
@@ -50,10 +50,10 @@ data_summary.pk <- function(obj,
                             ...) {
 
   if (is.null(summary_group)) {
-    summary_group <- obj$settings_data_info$summary_group
+    summary_group <- get_nca_group.pk(obj)
   }
 
-  if (is.null(newdata)) newdata <- obj$data
+  if (is.null(newdata)) newdata <- get_data.pk(obj)
 
   grp_vars <- sapply(summary_group,
                      rlang::as_label)

@@ -54,9 +54,11 @@ An object of class `pk_model`. Effectively, a named list containing
  all of the arguments provided to this function.
 }
 \description{
-# `conc_fun` requirements
+Create a new `pk_model` object
 }
-\details{
+\section{`conc_fun` requirements}{
+
+
 `conc_fun` should be a function that takes the following arguments, and
 returns a numeric vector of predicted tissue concentrations:
 
@@ -67,16 +69,20 @@ returns a numeric vector of predicted tissue concentrations:
 - `medium`: The tissue in which concentration is to be predicted. Currently, only `'blood'` and `'plasma'` are supported.
 
 See [cp_1comp()], [cp_2comp()], [cp_flat()] for examples.
+}
 
-#`auc_fun` requirements
+\section{`auc_fun` requirements}{
+
 
 `auc_fun` should be a function that takes the same arguments as `conc_fun`,
 and returns a numeric vector of predicted tissue AUCs (area under the
 concentration-time curve).
 
 See [auc_1comp()], [auc_2comp()], [auc_flat()] for examples.
+}
 
-# `params_fun` requirements
+\section{`params_fun` requirements}{
+
 
 `params_fun` should be a function whose first argument is a `data.frame`,
 which will be the pre-processed data using `invivopkfit` harmonized variable
@@ -88,14 +94,16 @@ following variables:
 - `param_units`: Character vector, listing units of each model parameter
 - `optimize_param`: Logical (TRUE/FALSE), whether each parameter is to be estimated given the available data
 - `use_param`: Logical (TRUE/FALSE), whether each parameter is to be used in the model even if it is not estimated (i.e., if a parameter value is to be held constant while the others are estimated, then `optimize_param` should be FALSE but `use_param` should be TRUE)
--`lower_bound`: Numerical. Lower bounds for each parameter. May be `-Inf` if no lower bound.  If `optimize_param` or `use_param` is FALSE, thenthe corresponding `lower_bound` will be ignored (because the parameter is not being estimated from the data).
+-`lower_bound`: Numerical. Lower bounds for each parameter. May be `-Inf` if no lower bound.  If `optimize_param` or `use_param` is FALSE, then the corresponding `lower_bound` will be ignored (because the parameter is not being estimated from the data).
 - `upper_bound`: Numerical. Upper bounds for each parameter. May be `Inf` if no upper bound. If `optimize_param` or `use_param` is FALSE, then the corresponding `upper_bound` will be ignored (because the parameter is not being estimated from the data).
 - `start`: Numerical. Starting values for estimating each parameter. If `optimize_param` is FALSE and `use_param` is TRUE, then the parameter will be held constant at the corresponding value in `start`. If `use_param` is FALSE, then the corresponding `start` will be ignored.
 
 See [get_params_flat()], [get_params_1comp()], [get_params_2comp()] for
 examples.
+}
 
-# `tkstats_fun` requirements
+\section{`tkstats_fun` requirements}{
+
 
 `tkstats_fun` should be a function which accepts a vector of model parameter
 values and calculates derived summary toxicokinetic statistics (e.g. total
@@ -142,6 +150,7 @@ shouldn't crash without them, but the results won't be very useful. And TK
 stats compiled across models will not be easy to compare if the models use
 different names for the statistics.
 }
+
 \author{
 Caroline Ring
 }

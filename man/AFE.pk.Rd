@@ -54,7 +54,7 @@ log10-transformation will be applied.}
 \item{AFE_group}{Default: Chemical, Species. Determines what the data
 grouping that is used to calculate average fold error (AFE). Should be set to lowest number
 of variables that still would return unique experimental conditions.
-Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.}
+Input in the form of `rlang::exprs(Chemical, Species, Route, Media, Dose)`.}
 
 \item{sub_pLOQ}{TRUE (default): Substitute all predictions below the LOQ with
 the LOQ before computing AFE. FALSE: do not.}

@@ -15,7 +15,7 @@
 #' @param method Character: One or more of the [optimx::optimx()] methods used in
 #'  fitting. The winning model will be determined for each of these methods.
 #'  Default `NULL` to get the winning model for each method in
-#'  `obj$settings_optimx$method`.
+#'  `obj$pk_settings$optimx$method`.
 #' @param criterion The name of a criterion function to use for model comparison.
 #'  Default "AIC". Must be the name of a function that (as for `AIC`) accepts
 #'  arguments `obj`, `newdata`, `method` and `model` (may accept other
@@ -40,26 +40,28 @@ get_winning_model.pk <- function(obj,
     stop(attr(check, "msg"))
   }
 
-  if (is.null(method)) method <- obj$settings_optimx$method
+  if (is.null(method)) method <- obj$pk_settings$optimx$method
   # AIC and logLik will take newdata = NULL
 
 
   # check that all methods are valid
-  if (!(all(method %in% obj$settings_optimx$method))) {
-    stop(paste("All values in `method` must be found in `obj$settings_optimx$method.",
-               paste0("`method` = ", paste(method, sep = ", ")),
-               paste0("`obj$settings_optimx$method` = ", paste(obj$settings_optimx$method)),
-               sep = "\n"))
+  if (!(all(method %in% obj$pk_settings$optimx$method))) {
+    cli::cli_abort(c(
+      "All values in `method` must be found in `obj$pk_settings$optimx$method.",
+      "`method` = {method}",
+      "`obj$pk_settings$optimx$method` = {obj$pk_settings$optimx$method}"
+      ))
   }
 
-  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
+  data_grp <- get_data_group.pk(obj)
+  data_grp_vars <-  get_data_group.pk(obj, as_character = TRUE)
 
   pred_check <- predict.pk(object = obj,
                            newdata = newdata,
                            method = method)
 
   pred_check <- pred_check |>
-    dplyr::group_by(!!!obj$data_group, model, method) |>
+    dplyr::group_by(!!!data_grp, model, method) |>
     dplyr::summarize(preds_below_loq = 100 * round(sum(Conc_est < LOQ) / n(), 3)) |>
     dplyr::ungroup()
 
@@ -69,23 +71,21 @@ get_winning_model.pk <- function(obj,
                                        newdata = newdata,
                                        method = method)) |>
     suppressMessages()
+
   # Join information criteria with RMSE and prediction checks for output
   model_compare <- model_compare |>
     left_join(
-      rmse.pk(obj = obj,
-              newdata = newdata,
-              method = method),
+      rmse.pk(obj = obj, newdata = newdata, method = method, suppress.messages = TRUE),
       by = c(data_grp_vars, "model", "method")
       ) |>
     left_join(pred_check,
-              c(data_grp_vars, "model", "method")) |>
-    suppressMessages()
+              c(data_grp_vars, "model", "method"))
 
   # return the winning model for each method
   # Winmodel should have RMSE of at least 95% of flat model
   # This will mean the fold-MSE should be at least around 90%
  winmodels <- model_compare |>
-   dplyr::group_by(!!!obj$data_group, method) |>
+   dplyr::group_by(!!!data_grp, method) |>
    dplyr::mutate(
     near_flat = dplyr::if_else(
       !is.null(dplyr::pick(
@@ -98,19 +98,20 @@ get_winning_model.pk <- function(obj,
    )
  # match the methods
  winmodels <- winmodels |>
-   dplyr::group_by(!!!obj$data_group) |>
+   dplyr::group_by(!!!data_grp) |>
    dplyr::arrange(method, model) |>
    dplyr::filter(method == method)
  # Filter by lowest AIC or BIC
  winmodels <- winmodels |>
-   dplyr::group_by(!!!obj$data_group, method) |>
+   dplyr::group_by(!!!data_grp, method) |>
    dplyr::slice_min(
      order_by = pick({{ criterion }}),
      n = 1,
      with_ties = FALSE) |>
    dplyr::ungroup() |>
-   dplyr::select(!!!obj$data_group,
-                 method, model, near_flat, preds_below_loq)
+   dplyr::select(!!!data_grp,
+                 method, model,
+                 near_flat, preds_below_loq)
 
   return(winmodels)
 
