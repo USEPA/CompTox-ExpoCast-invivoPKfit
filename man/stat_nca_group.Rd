@@ -13,7 +13,7 @@ will be performed separately on each group. Default `Chemical,
 Species, Reference, Route, Media, Dose`.}
 }
 \value{
-An object of class `c(pkproto, pk_settings_data_info)`
+An object of class `c(pkproto, pk_nca_group)`
 }
 \description{
 NCA group

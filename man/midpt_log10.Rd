@@ -10,7 +10,7 @@ midpt_log10(x)
 \item{x}{A numeric vector}
 }
 \value{
-The log10-scaled midpoint, calculated as `log10(mean(range(x))`
+The log10-scaled midpoint, calculated as `log10(mean(range(x, na.rm = TRUE))`
 }
 \description{
 Log10-scaled midpoint
