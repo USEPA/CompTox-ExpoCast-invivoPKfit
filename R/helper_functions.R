@@ -133,6 +133,34 @@ paste_fraction <- function(x, y) {
 }
 
 
+#' Wrapper for [dplyr::case_match()] that accepts named lists as arguments
+#' @param .x A vector to match against. In a data context, a column.
+#' @param .lst A named list in the form `old_value = new_value`.
+#' @param .default Value to be used when there are no values. Suggest setting it to `.x`
+#' @return A vector of replaced values
+case_match_lst <- function(.x, .lst, .default = NULL) {
+
+  stopifnot(rlang::is_named(.lst))
+
+  dplyr::case_match(
+    .x,
+    !!!lapply(paste0("\"", names(.lst),"\"~\"", .lst, "\""), stats::as.formula),
+    .default = .default
+  )
+}
+
+
+#' Wrapper for [stringr::str_replace_all()] which replaces whole words.
+#' @param .x A vector to match against.
+#' @param .lst A named vector in the form `old_value = new_value`.
+#' @return A character vector with values substituted in.
+str_replace_lst <- function(.x, .lst) {
+
+  stopifnot(rlang::is_named(.lst))
+
+  stringr::str_replace_all(.x, setNames(.lst, paste0("^", names(.lst), "$")))
+}
+
 
 #' Creating a simple test CvT dataset
 #'

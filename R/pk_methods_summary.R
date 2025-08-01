@@ -39,11 +39,11 @@ summary.pk <- function(object, ...) {
       "\n"))
 
     # data info settings
-    settings_data_info <- get_nca_group(object)
+    nca_group <- get_nca_group(object)
     cat(paste0(
       "\nData info settings:\n",
-      paste(names(settings_data_info),
-            settings_data_info,
+      paste(names(nca_group),
+            nca_group,
             sep = " = ",
             collapse = "\n"),
       "\n"))
@@ -104,9 +104,9 @@ summary.pk <- function(object, ...) {
                                        instruction_value = sapply(settings_preprocess,
                                                                   rlang::as_label))
 
-  settings_data_info_DF <- data.frame(instructions_category = "settings_data_info",
-                                      instruction_name = names(settings_data_info),
-                                      instruction_value = sapply(settings_data_info,
+  nca_group_DF <- data.frame(instructions_category = "nca_group",
+                                      instruction_name = names(nca_group),
+                                      instruction_value = sapply(nca_group,
                                                                  rlang::as_label))
 
   settings_optimx_DF <- data.frame(instructions_category = "settings_optimx",
@@ -130,7 +130,7 @@ summary.pk <- function(object, ...) {
 
   instructions_DF <- do.call(rbind,
                              list(settings_preprocess_DF,
-                                  settings_data_info_DF,
+                                  nca_group_DF,
                                   scale_conc_DF,
                                   scale_time_DF,
                                   stat_error_model_DF,

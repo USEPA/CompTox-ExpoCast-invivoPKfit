@@ -139,7 +139,7 @@ cp_httk_gas_pbtk <- function(params, time, dose, route, medium = "plasma",
   out_premerge <- do.call("rbind", res)
   rownames(out_premerge) <- NULL
 
-  out <- left_join(full_df, out_premerge, by = c("Time", "Dose", "Route", "Medium"))
+  out <- dplyr::left_join(full_df, out_premerge, by = c("Time", "Dose", "Route", "Medium"))
 
   medium <- out$Medium
   out <- out[["Cplasma"]]

@@ -259,11 +259,8 @@ get_tkstats.pk <- function(obj,
     dplyr::group_by(!!!tk_group) |>
     dplyr::ungroup(Dose)
 
-  if (dose_norm) {
-    tkstats_all <- dplyr::select(tkstats_all, -Dose)
-    if (suppress.messages %in% FALSE) {
-      message("get_tkstats.pk(): Dose column removed because these TK statistics are dose normalized")
-    }
+  if (dose_norm && suppress.messages %in% FALSE) {
+    message("get_tkstats.pk(): Dose column removed because these TK statistics are dose normalized")
   }
 
   # Final filtering of tkstats_all

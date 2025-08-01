@@ -634,7 +634,6 @@ if (any((data$N_Subjects > 1) %in% TRUE & is.na(data$Value_SD))) {
       obj$scales$time$new_units
     )
 
-
     # Needs to be grouped
     if (obj$scales$time$new_units %in% "auto") {
       to_units <- data |>

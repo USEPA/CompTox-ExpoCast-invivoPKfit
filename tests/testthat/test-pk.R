@@ -26,7 +26,7 @@ test_that(
                    Reference = fk_extraction_document_id,
                    Media = conc_medium_normalized,
                    Route = administration_route_normalized,
-                   Dose = invivPK_dose_level,
+                   Dose = dose_level_normalized,
                    Dose.Units = "mg/kg",
                    Subject_ID = fk_subject_id,
                    Series_ID = fk_series_id,
@@ -37,10 +37,10 @@ test_that(
                    Weight.Units = "kg",
                    Time = time_hr,
                    Time.Units = "hours",
-                   Value = invivPK_conc,
+                   Value = conc,
                    Value.Units = "mg/L",
-                   Value_SD = invivPK_conc_sd,
-                   LOQ = invivPK_loq
+                   Value_SD = conc_sd,
+                   LOQ = loq
                  ),
                  ignore_attr = TRUE)
   })

@@ -4,7 +4,7 @@
 #'   to unique combinations of these variables, and non-compartmental analysis
 #'   will be performed separately on each group. Default `Chemical,
 #'   Species, Reference, Route, Media, Dose`.
-#' @return An object of class `c(pkproto, pk_settings_data_info)`
+#' @return An object of class `c(pkproto, pk_nca_group)`
 #' @export
 stat_nca_group <- function(...) {
   # get arguments and values

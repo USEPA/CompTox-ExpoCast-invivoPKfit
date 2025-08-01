@@ -123,7 +123,7 @@ auto_units <- function(y,
 #' Log10-scaled midpoint
 #'
 #' @param x A numeric vector
-#' @return The log10-scaled midpoint, calculated as `log10(mean(range(x))`
+#' @return The log10-scaled midpoint, calculated as `log10(mean(range(x, na.rm = TRUE))`
 midpt_log10 <- function(x) {
-  log10(mean(range(x)))
+  log10(mean(range(x, na.rm = TRUE)))
 }

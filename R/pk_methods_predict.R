@@ -189,10 +189,10 @@ predict.pk <- function(object,
               pred_fun,
               append(
                 list(coefs_vector,
-                  time = Time,
-                  dose = .data$Dose_pred,
-                  route = Route,
-                  medium = Media
+                     time = Time,
+                     dose = .data$Dose_pred,
+                     route = Route,
+                     medium = Media
                 ),
                 pred_fun_args
               )

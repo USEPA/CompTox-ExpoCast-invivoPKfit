@@ -66,7 +66,7 @@ add_pk <- function(pk_obj, pkproto_obj, objectname) {
 #'   (from [scale_conc()] and [scale_time()]); [pk_add.pk_settings_preprocess()]
 #'   for the method for adding `pk_settings_preprocess` objects (from
 #'   [settings_preprocess()]); [pk_add.pk_nca_group()] for the method
-#'   for adding `pk_nca_group` objects (from [settings_data_info()]);
+#'   for adding `pk_nca_group` objects (from [stat_nca_group()]);
 #'   [pk_add.pk_settings_optimx()] for the method for adding
 #'   `pk_settings_optimx` objects (from [settings_optimx()]);
 #'   [pk_add.pk_stat_model()] for the method for adding `pk_stat_model` objects
@@ -188,7 +188,7 @@ pk_add.pk_settings_preprocess <- function(pkproto_obj, pk_obj, objectname) {
 #' @export
 pk_add.pk_nca_group <- function(pkproto_obj, pk_obj, objectname) {
 
-  # New settings_data_info will *replace* existing ones
+  # New stat_nca_group will *replace* existing ones
   if (!is.null(pk_obj$pk_groups$nca_group)) {
     message(objectname,
             ": nca_group already present; ",

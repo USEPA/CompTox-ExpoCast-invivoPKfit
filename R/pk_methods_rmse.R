@@ -126,8 +126,10 @@ rmse.pk <- function(obj,
   }
 
   # ensure that the model has been fitted
-  check <- check_required_status(obj = obj,
-                                 required_status = status_fit)
+  check <- check_required_status(
+    obj = obj,
+    required_status = status_fit
+  )
   if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
@@ -141,45 +143,54 @@ rmse.pk <- function(obj,
   model_ok <- check_model(obj = obj, model = model)
 
 
-  newdata_ok <- check_newdata(newdata = newdata,
-                              olddata = obj$data,
-                              req_vars = c("Time",
-                                           "Time.Units",
-                                           "Dose",
-                                           "Route",
-                                           "Media",
-                                           "Conc",
-                                           "Conc_SD",
-                                           "N_Subjects",
-                                           "LOQ",
-                                           "Detect"),
-                              exclude = exclude)
+  newdata_ok <- check_newdata(
+    newdata = newdata,
+    olddata = obj$data,
+    req_vars = c(
+      "Time",
+      "Time.Units",
+      "Dose",
+      "Route",
+      "Media",
+      "Conc",
+      "Conc_SD",
+      "N_Subjects",
+      "LOQ",
+      "Detect"
+    ),
+    exclude = exclude
+  )
 
   # Conc_trans columns will contain transformed values,
-  conc_scale <- conc_scale_use(obj = obj,
-                               use_scale_conc = use_scale_conc)
+  conc_scale <- conc_scale_use(
+    obj = obj,
+    use_scale_conc = use_scale_conc
+  )
 
   if (suppress.messages %in% FALSE) {
-    message("rmse.pk(): Computing RMSE on transformed concentration scale. Transformations used: \n",
-            "Dose-normalization ", conc_scale$dose_norm, "\n",
-            "log10-transformation ", conc_scale$log10_trans)
+    message(
+      "rmse.pk(): Computing RMSE on transformed concentration scale. Transformations used: \n",
+      "Dose-normalization ", conc_scale$dose_norm, "\n",
+      "log10-transformation ", conc_scale$log10_trans
+    )
   }
 
   # Get predictions
   # do NOT apply transformations at this stage
   preds <- predict(obj,
-                   newdata = newdata,
-                   model = model,
-                   method = method,
-                   type = "conc",
-                   exclude = exclude,
-                   use_scale_conc = FALSE,
-                   suppress.messages = suppress.messages)
+    newdata = newdata,
+    model = model,
+    method = method,
+    type = "conc",
+    exclude = exclude,
+    use_scale_conc = FALSE,
+    suppress.messages = suppress.messages
+  )
 
 
   # remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE && "exclude" %in% names(newdata)) {
-      newdata <- subset(newdata, exclude %in% FALSE)
+    newdata <- subset(newdata, exclude %in% FALSE)
   }
 
 
@@ -188,13 +199,15 @@ rmse.pk <- function(obj,
   # Note that we take the NON-transformed concentrations.
   # Any dose-normalization will be done in the next step.
   # Any log10 transformations will be handled within the calc_rmse() function.
-  req_vars <- c(names(preds),
-                "Conc",
-                "Conc_SD",
-                "N_Subjects",
-                "Detect",
-                "exclude",
-                "pLOQ")
+  req_vars <- c(
+    names(preds),
+    "Conc",
+    "Conc_SD",
+    "N_Subjects",
+    "Detect",
+    "exclude",
+    "pLOQ"
+  )
 
 
   rmse_df <- dplyr::left_join(preds, newdata) |>
@@ -202,9 +215,11 @@ rmse.pk <- function(obj,
     dplyr::ungroup() |>
     suppressMessages()
 
-  #replace below-LOQ preds with pLOQ if specified
+  # replace below-LOQ preds with pLOQ if specified
   if (sub_pLOQ %in% TRUE) {
-    cli_inform("rmse.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    if (!suppress.messages) {
+      cli_inform("rmse.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    }
     rmse_df$Conc_est <- with(rmse_df, pmax(Conc_est, pLOQ))
   }
 
@@ -223,12 +238,14 @@ rmse.pk <- function(obj,
   rmse_df <- rmse_df |>
     dplyr::group_by(!!!rmse_group, model, method) |>
     dplyr::summarize(
-      RMSE = calc_rmse(obs = Conc_set,
-                       obs_sd = Conc_set_SD,
-                       pred = Conc_est,
-                       n_subj = N_Subjects,
-                       detect = Detect,
-                       log10_trans = conc_scale$log10_trans)
+      RMSE = calc_rmse(
+        obs = Conc_set,
+        obs_sd = Conc_set_SD,
+        pred = Conc_est,
+        n_subj = N_Subjects,
+        detect = Detect,
+        log10_trans = conc_scale$log10_trans
+      )
     ) |>
     dplyr::ungroup()
 

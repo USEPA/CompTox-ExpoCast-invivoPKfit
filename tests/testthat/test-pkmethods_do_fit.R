@@ -2,11 +2,13 @@ test_that(
   "fitting possible using 'auto' time units proceed without error",
   code = {
     test_pk <- pk(
-      data = subset(cvt, analyzed_chem_dtxsid %in% "DTXSID5048265")
+      data = subset(cvt, analyzed_chem_dtxsid %in% c("DTXSID5048265", "DTXSID3031860"))
     ) + scale_time(new_units = "auto")
     expect_no_error(test_pk <- do_fit(test_pk))
   }
 )
+
+
 
 
 
