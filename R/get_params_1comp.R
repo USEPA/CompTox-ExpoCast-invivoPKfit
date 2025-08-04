@@ -104,22 +104,8 @@
 
 get_params_1comp <- function(
     data,
-    lower_bound = alist(
-      kelim = log(2) / (2 * max(Time_trans)),
-      Vdist = 0.01,
-      Fgutabs = 1E-3,
-      kgutabs = log(2) / (2 * max(Time_trans)),
-      Fgutabs_Vdist = 1E-5,
-      Rblood2plasma = 1e-2
-    ),
-    upper_bound = alist(
-      kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-      Vdist = 100.0,
-      Fgutabs = 1.0,
-      kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-      Fgutabs_Vdist = 100,
-      Rblood2plasma = 100
-    ),
+    lower_bound = NULL,
+    upper_bound = NULL,
     param_units = alist(
       kelim = paste0("1/", unique(Time_trans.Units)),
       Vdist = paste0("(", unique(Dose.Units), ")/(", unique(Conc.Units), ")"),
@@ -141,12 +127,14 @@ get_params_1comp <- function(
   # parameters. Any parameters not specified in the `lower_bound` argument will
   # take their default lower bounds defined here. This should be the same as the
   # default value for the `lower_bound` argument.
-  lower_bound_default = alist(kelim = log(2) / (2 * max(Time_trans)),
-                              Vdist = 0.01,
-                              Fgutabs = 1E-3,
-                              kgutabs = log(2) / (2 * max(Time_trans)),
-                              Fgutabs_Vdist = 1E-5,
-                              Rblood2plasma = 1e-2)
+  lower_bound_default = alist(
+    kelim = log(2) / (2 * max(Time_trans)),
+    Vdist = 0.01,
+    Fgutabs = 1E-3,
+    kgutabs = log(2) / (2 * max(Time_trans)),
+    Fgutabs_Vdist = 1E-5,
+    Rblood2plasma = 1e-2
+  )
   # which parameters did not have lower bounds specified in the `lower_bound`
   # argument?
   lower_bound_missing <- base::setdiff(names(lower_bound_default),
@@ -160,12 +148,15 @@ get_params_1comp <- function(
   # parameters. Any parameters not specified in the `upper_bound` argument will
   # take their default upper bounds defined here. This should be the same as the
   # default value for the `upper_bound` argument.
-  upper_bound_default = alist(kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                              Vdist = 100,
-                              Fgutabs = 1,
-                              kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                              Fgutabs_Vdist = 1e2,
-                              Rblood2plasma = 100)
+  upper_bound_default = alist(
+    kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+    Vdist = 100,
+    Fgutabs = 1,
+    kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+    Fgutabs_Vdist = 1e2,
+    Rblood2plasma = 100
+  )
+
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
   upper_bound_missing <- base::setdiff(names(upper_bound_default),
@@ -174,6 +165,7 @@ get_params_1comp <- function(
   # defined in the `upper_bound` argument
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
 
+  # Set the parameters to optimize and use here
   # initialize optimization: start with optimize = TRUE for all params
   optimize_param <- rep(TRUE, length(param_name))
 

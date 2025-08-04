@@ -6,9 +6,8 @@
 \usage{
 get_params_flat(
   data,
-  lower_bound = alist(Vdist = 0.01, Fgutabs = 0.001, Fgutabs_Vdist = 1e-05, Rblood2plasma
-    = 0.01),
-  upper_bound = alist(Vdist = 100, Fgutabs = 1, Fgutabs_Vdist = 100, Rblood2plasma = 100),
+  lower_bound = NULL,
+  upper_bound = NULL,
   param_units = alist(Vdist = paste0("(", unique(Dose.Units), ")/(", unique(Conc.Units),
     ")"), Fgutabs = "unitless fraction", Fgutabs_Vdist = paste0("(", unique(Conc.Units),
     ")/(", unique(Dose.Units), ")"), Rblood2plasma = "unitless ratio")
@@ -148,7 +147,7 @@ Other built-in model functions:
 \code{\link{transformed_params_2comp}()}
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }
 \concept{built-in model functions}
 \concept{flat model functions}

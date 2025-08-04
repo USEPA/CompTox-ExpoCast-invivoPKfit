@@ -105,26 +105,8 @@
 
 get_params_2comp <- function(
     data,
-    lower_bound = alist(
-      kelim = log(2) / (2 * max(Time_trans)),
-      k12 = log(2) / (2 * max(Time_trans)),
-      k21 = log(2) / (2 * max(Time_trans)),
-      V1 = 0.01,
-      Fgutabs = 1E-3,
-      kgutabs = log(2) / (2 * max(Time_trans)),
-      Fgutabs_V1 = 1E-5,
-      Rblood2plasma = 1e-2
-    ),
-    upper_bound = alist(
-      kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-      k12 = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-      k21 = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-      V1 = 100.0,
-      Fgutabs = 1.0,
-      kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-      Fgutabs_V1 = 1e2,
-      Rblood2plasma = 100
-    ),
+    lower_bound = NULL,
+    upper_bound = NULL,
     param_units = alist(
       kelim = paste0("1/", unique(Time_trans.Units)),
       V1 = paste0("(", unique(Dose.Units), ")/(", unique(Conc.Units), ")"),
@@ -151,14 +133,17 @@ get_params_2comp <- function(
   # parameters. Any parameters not specified in the `lower_bound` argument will
   # take their default lower bounds defined here. This should be the same as the
   # default value for the `lower_bound` argument.
-  lower_bound_default <- alist(kelim = log(2) / (2 * max(Time_trans)),
-                               k12 = log(2) / (2 * max(Time_trans)),
-                               k21 = log(2) / (2 * max(Time_trans)),
-                               V1 = 0.01,
-                               Fgutabs = 1E-3,
-                               kgutabs = log(2) / (2 * max(Time_trans)),
-                               Fgutabs_V1 = 1E-5,
-                               Rblood2plasma = 1e-2)
+  lower_bound_default <- alist(
+    kelim = log(2) / (2 * max(Time_trans)),
+    k12 = log(2) / (2 * max(Time_trans)),
+    k21 = log(2) / (2 * max(Time_trans)),
+    V1 = 0.01,
+    Fgutabs = 1E-3,
+    kgutabs = log(2) / (2 * max(Time_trans)),
+    Fgutabs_V1 = 1E-5,
+    Rblood2plasma = 1e-2
+  )
+
   # which parameters did not have lower bounds specified in the `lower_bound`
   # argument?
   lower_bound_missing <- base::setdiff(names(lower_bound_default),
@@ -172,14 +157,17 @@ get_params_2comp <- function(
   # parameters. Any parameters not specified in the `upper_bound` argument will
   # take their default upper bounds defined here. This should be the same as the
   # default value for the `upper_bound` argument.
-  upper_bound_default <- alist(kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                               k12 = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                               k21 = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                               V1 = 100.0,
-                               Fgutabs = 1.0,
-                               kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                               Fgutabs_V1 = 1e2,
-                               Rblood2plasma = 100)
+  upper_bound_default <- alist(
+    kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+    k12 = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+    k21 = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+    V1 = 100.0,
+    Fgutabs = 1.0,
+    kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+    Fgutabs_V1 = 1e2,
+    Rblood2plasma = 100
+  )
+
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
   upper_bound_missing <- base::setdiff(names(upper_bound_default),

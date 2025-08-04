@@ -83,53 +83,50 @@
 #' \item `upper_bounds`: Numeric: The upper bounds for each parameter
 #' \item `start`: Numeric: The starting guesses for each parameter
 #' }
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family flat model functions
 #' @family get_params functions
 #' @family built-in model functions
 
 get_params_flat <- function(
     data,
-    lower_bound = alist(Vdist = 0.01,
-                        Fgutabs = 1E-3,
-                        Fgutabs_Vdist = 1E-5,
-                        Rblood2plasma = 1e-2),
-    upper_bound = alist(Vdist = 100,
-                        Fgutabs = 1,
-                        Fgutabs_Vdist = 1e2,
-                        Rblood2plasma = 100),
+    lower_bound = NULL,
+    upper_bound = NULL,
     param_units = alist(
       Vdist = paste0("(", unique(Dose.Units), ")/(", unique(Conc.Units), ")"),
       Fgutabs = "unitless fraction",
       Fgutabs_Vdist = paste0("(", unique(Conc.Units), ")/(", unique(Dose.Units), ")"),
-      Rblood2plasma = "unitless ratio")
+      Rblood2plasma = "unitless ratio"
+    )
 ) {
   # param names
   param_name <- c("Vdist", "Fgutabs", "Fgutabs_Vdist", "Rblood2plasma")
 
-  lower_bound_default = alist(Vdist = 0.01,
-                                     Fgutabs = 1E-3,
-                                     Fgutabs_Vdist = 1E-5,
-                                     Rblood2plasma = 1e-2)
+  lower_bound_default = alist(
+    Vdist = 0.01,
+    Fgutabs = 1E-3,
+    Fgutabs_Vdist = 1E-5,
+    Rblood2plasma = 1e-2
+  )
 
   lower_bound_missing <- base::setdiff(names(lower_bound_default),
                                  names(lower_bound))
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
 
-  upper_bound_default = alist(Vdist = 100,
-                                    Fgutabs = 1,
-                                    Fgutabs_Vdist = 1e2,
-                                    Rblood2plasma = 100)
+  upper_bound_default = alist(
+    Vdist = 100,
+    Fgutabs = 1,
+    Fgutabs_Vdist = 1e2,
+    Rblood2plasma = 100
+  )
 
   upper_bound_missing <- base::setdiff(names(upper_bound_default),
                                  names(upper_bound))
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
 
-
+  # Set the parameters to optimize and use here
   optimize_param <- rep(TRUE, length(param_name))
-
   use_param <- rep(TRUE, length(param_name))
-
 
 if ("oral" %in% data$Route) {
   # if yes oral data:

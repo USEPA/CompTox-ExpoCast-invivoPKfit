@@ -6,30 +6,8 @@
 \usage{
 get_params_httk_gas_pbtk(
   data,
-  lower_bound = alist(BW = NA, Caco2.Pab = NA, Caco2.Pab.dist = NA, Clint = 0, Clint.dist
-    = NA, Clmetabolismc = NA, Funbound.plasma = 0, Funbound.plasma.dist = NA,
-    Funbound.plasma.adjustment = NA, Fabsgut = NA, Fhep.assay.correction = NA, hematocrit
-    = NA, Kgut2pu = NA, Krbc2pu = NA, kgutabs = NA, Kkidney2pu = NA, Klung2pu = NA, km =
-    NA, Kmuc2air = NA, Kliver2pu = NA, Krest2pu = NA, Kblood2air = NA, kUrtc = NA,
-    liver.density = NA, logHenry = NA, million.cells.per.gliver = NA, MW = NA, Pow = NA,
-    pKa_Donor = NA, pKa_Accept = NA, 
-     MA = NA, Qcardiacc = NA, Qgfrc = NA, Qgutf =
-    NA, Qliverf = NA, Qalvc = NA, Qkidneyf = NA, Qlungf = NA, Rblood2plasma = NA, Vgutc =
-    NA, Vliverc = NA, Vartc = NA, Vkidneyc = NA, Vlungc = NA, vmax = NA, Vmucc = NA,
-    Vvenc = NA, Vrestc = NA, KFsummary = NA, Fprotein.plasma = NA, fabs.oral = NA, Qgut_
-    = NA, Qintesttransport = NA),
-  upper_bound = alist(BW = NA, Caco2.Pab = NA, Caco2.Pab.dist = NA, Clint = 1000,
-    Clint.dist = NA, Clmetabolismc = NA, Funbound.plasma = 1, Funbound.plasma.dist = NA,
-    Funbound.plasma.adjustment = NA, Fabsgut = NA, Fhep.assay.correction = NA, hematocrit
-    = NA, Kgut2pu = NA, Krbc2pu = NA, kgutabs = NA, Kkidney2pu = NA, Klung2pu = NA, km =
-    NA, Kmuc2air = NA, Kliver2pu = NA, Krest2pu = NA, Kblood2air = NA, kUrtc = NA,
-    liver.density = NA, logHenry = NA, million.cells.per.gliver = NA, MW = NA, Pow = NA,
-    pKa_Donor = NA, 
-     pKa_Accept = NA, MA = NA, Qcardiacc = NA, Qgfrc = NA, Qgutf =
-    NA, Qliverf = NA, Qalvc = NA, Qkidneyf = NA, Qlungf = NA, Rblood2plasma = NA, Vgutc =
-    NA, Vliverc = NA, Vartc = NA, Vkidneyc = NA, Vlungc = NA, vmax = NA, Vmucc = NA,
-    Vvenc = NA, Vrestc = NA, KFsummary = NA, Fprotein.plasma = NA, fabs.oral = NA, Qgut_
-    = NA, Qintesttransport = NA),
+  lower_bound = NULL,
+  upper_bound = NULL,
   param_units = alist(BW = "kg", Caco2.Pab = "1E-6 cm/s", Caco2.Pab.dist = "1E-6 cm/s",
     Clint = "uL/min/10^6 hepatocytes", Clint.dist = "uL/min/10^6 hepatocytes",
     Clmetabolismc = "L/h/kg BW", Funbound.plasma = "unitless fraction",

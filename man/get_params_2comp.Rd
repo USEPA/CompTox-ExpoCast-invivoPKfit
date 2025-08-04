@@ -6,13 +6,8 @@
 \usage{
 get_params_2comp(
   data,
-  lower_bound = alist(kelim = log(2)/(2 * max(Time_trans)), k12 = log(2)/(2 *
-    max(Time_trans)), k21 = log(2)/(2 * max(Time_trans)), V1 = 0.01, Fgutabs = 0.001,
-    kgutabs = log(2)/(2 * max(Time_trans)), Fgutabs_V1 = 1e-05, Rblood2plasma = 0.01),
-  upper_bound = alist(kelim = log(2)/(0.5 * min(Time_trans[Time_trans > 0])), k12 =
-    log(2)/(0.5 * min(Time_trans[Time_trans > 0])), k21 = log(2)/(0.5 *
-    min(Time_trans[Time_trans > 0])), V1 = 100, Fgutabs = 1, kgutabs = log(2)/(0.5 *
-    min(Time_trans[Time_trans > 0])), Fgutabs_V1 = 100, Rblood2plasma = 100),
+  lower_bound = NULL,
+  upper_bound = NULL,
   param_units = alist(kelim = paste0("1/", unique(Time_trans.Units)), V1 = paste0("(",
     unique(Dose.Units), ")/(", unique(Conc.Units), ")"), k21 = paste0("1/",
     unique(Time_trans.Units)), k12 = paste0("1/", unique(Time_trans.Units)), Fgutabs =
