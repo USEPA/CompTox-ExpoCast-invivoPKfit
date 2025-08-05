@@ -105,6 +105,8 @@
 #'  `data` (see Details). Default `NULL`.
 #' @param tkstats_fun_args A named list: any additional arguments to `tkstats_fun` other than
 #'  `data`, `medium`, `route` (see Details). Default NULL.
+#' @param param_groups A named list: each named element is paired with a character
+#'  vector that contains one or more parameters in `params`.
 #' @param ... Additional arguments (not currently implemented).
 #' @return An object of class `pk_model`. Effectively, a named list containing
 #'  all of the arguments provided to this function.
@@ -167,7 +169,7 @@ set_params_optimize <- function(model, params = "default") {
 #' Set model parameter starts
 #'
 #' @param model An object of class `pk_model`.
-#' @param params A character vector with any of the parameters in `model$params`,
+#' @param starts A character vector with any of the parameters in `model$params`,
 #'  or the name of any of the parameter groups in `model$param_groups`.
 #'
 #' @returns An object of class `pk_model` with set/updated `param_fun_args` to

@@ -9,7 +9,7 @@ set_params_starts(model, starts)
 \arguments{
 \item{model}{An object of class `pk_model`.}
 
-\item{params}{A character vector with any of the parameters in `model$params`,
+\item{starts}{A character vector with any of the parameters in `model$params`,
 or the name of any of the parameter groups in `model$param_groups`.}
 }
 \value{

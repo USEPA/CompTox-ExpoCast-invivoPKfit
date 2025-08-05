@@ -48,6 +48,9 @@ listed in Details. Default `NULL`.}
 \item{tkstats_fun_args}{A named list: any additional arguments to `tkstats_fun` other than
 `data`, `medium`, `route` (see Details). Default NULL.}
 
+\item{param_groups}{A named list: each named element is paired with a character
+vector that contains one or more parameters in `params`.}
+
 \item{...}{Additional arguments (not currently implemented).}
 }
 \value{
