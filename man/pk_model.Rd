@@ -15,6 +15,7 @@ pk_model(
   auc_fun_args = NULL,
   params_fun_args = NULL,
   tkstats_fun_args = NULL,
+  param_groups = NULL,
   ...
 )
 }
