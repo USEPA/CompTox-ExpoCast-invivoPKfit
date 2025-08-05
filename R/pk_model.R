@@ -120,6 +120,7 @@ pk_model <- function(name,
                      auc_fun_args = NULL,
                      params_fun_args = NULL,
                      tkstats_fun_args = NULL,
+                     param_groups = NULL,
                      ...) {
   # get arguments and values as a list
   argg <- c(as.list(environment()), list(...))
@@ -127,4 +128,131 @@ pk_model <- function(name,
   # set class
   class(this_model) <- c(class(this_model), "pk_model")
   return(this_model)
+}
+
+
+#' Checks whether object is of class `pk_model`
+#'
+#' @param obj An object.
+#'
+#' @returns Logical. Whether `obj` is a `pk_model`.
+is.pk_model <- function(obj) {
+  return(inherits(obj, "pk_model"))
+}
+
+#' Set model parameters to optimize
+#'
+#' @param model An object of class `pk_model`.
+#' @param params A character vector with any of the parameters in `model$params`,
+#'  or the name of any of the parameter groups in `model$param_groups`.
+#'
+#' @returns An object of class `pk_model` with set/updated `param_fun_args` to
+#' include `pars_to_optimize` argument specifying the parameters to be optimized.
+#' @export
+#' @author Gilberto Padilla Mercado
+#'
+set_params_optimize <- function(model, params = "default") {
+  stopifnot(is.pk_model(model))
+  params <- check_model_params(params, model)
+
+  cli::cli_inform(
+    c("v" = "Setting {params} to be optimized for {model$name}")
+  )
+
+  model$params_fun_args$pars_to_optimize <- params
+  return(model)
+}
+
+
+#' Set model parameter starts
+#'
+#' @param model An object of class `pk_model`.
+#' @param params A character vector with any of the parameters in `model$params`,
+#'  or the name of any of the parameter groups in `model$param_groups`.
+#'
+#' @returns An object of class `pk_model` with set/updated `param_fun_args` to
+#' include `pars_to_optimize` argument specifying the parameters to be optimized.
+#' @export
+#' @author Gilberto Padilla Mercado
+#'
+set_params_starts <- function(model, starts) {
+  if (!is.list(starts) || is.null(names(starts))) {
+    cli::cli_abort("`starts` must be a list of name-value pairs corresponding with parameters in `model`")
+  }
+
+  param_names <- check_model_params(names(starts), model)
+  starts <- starts[param_names]
+
+  model$param_fun_args$param_starts <- starts
+  return(model)
+}
+
+
+#' Switch between model parameters to optimize
+#'
+#' @param model An object of class `pk_model`.
+#'
+#' @returns An object of class `pk_model` with set/updated `param_fun_args` to
+#' include `pars_to_optimize` argument specifying the parameters to be optimized.
+#' @export
+#' @author Gilberto Padilla Mercado
+toggle_clearance_mode <- function(model) {
+  stopifnot(is.pk_model(model))
+  # Models must have "_args" components for concentration, auc, and
+  arg_lists <- grep("_args", names(model), fixed = TRUE, value = TRUE)
+
+  # Have to toggle various argument lists potentially
+  toggle_count <- 0L
+  for (these_args in arg_lists) {
+    if ("restrictive" %in% names(model[[these_args]])) {
+      cli::cli_inform(
+        c("i" = "Setting {these_args} to {!model[[these_args]]$restrictive}")
+      )
+      model[[these_args]]$restrictive <- !model[[these_args]]$restrictive
+      toggle_count <- toggle_count + 1L
+    }
+  }
+
+  cli::cli_inform(
+    c("i" = "{no(toggle_count)} model argument{?s} {?was/were} changed.")
+  )
+
+  return(model)
+}
+
+
+check_model_params <- function(params, model) {
+
+  if (any(params %in% names(model$param_groups))) {
+    if (length(params) > 1L) {
+      params <- params[(params %in% names(model$param_groups))][1]
+      cli::cli_warn(c(
+        "Multiple values for {.var params} found, along with a parameter group.",
+        "i" = "Taking first parameter group in vector: {params}."
+      ))
+    }
+    params <- model$param_groups[[params]]
+  }
+
+  if (!all(params %in% model$params)) {
+    # Just have a descriptive warning
+    # Group to exclude
+    pgroup <- base::setdiff(params, model$params)
+    # Update params
+    params <- base::intersect(params, model$params)
+
+    # Throw error if no parameters are left!
+    if (length(params) == 0L) {
+      cli::cli_abort("None of the parameters specified in `params` are in this model.")
+    }
+
+    cli::cli_warn(
+      c(
+        "Not all `params` in the possible parameter or parameter groups available.",
+        "!" = "Removing the following: {pgroup}.",
+        "i" = "Keeping the following parameters: {params}."
+      )
+    )
+  }
+  return(params)
 }
