@@ -1356,7 +1356,7 @@ my_pk <- my_pk +
     keep_data_original = TRUE,
     suppress.messages = TRUE
   ) +
-  scale_conc(dose_norm = TRUE, log10_trans = TRUE)
+  scale_conc(dose_norm = FALSE, log10_trans = FALSE)
 
 my_pk <- do_preprocess(my_pk)
 apply(my_pk$data, 2, \(x) {
@@ -1366,10 +1366,10 @@ apply(my_pk$data, 2, \(x) {
 my_pk <- do_data_info(my_pk)
 my_pk <- do_prefit(my_pk)
 
-mirai::daemons(8)
+mirai::daemons(8L)
 mirai::everywhere(devtools::load_all())
 my_pk <- do_fit(my_pk, async = TRUE)
-mirai::daemons(0)
+mirai::daemons(0L)
 
 
 fit_pl <- plot(my_pk, use_scale_conc = FALSE)
@@ -1435,13 +1435,31 @@ eval_tkstats(my_pk) |> pull(DATA_GROUP_ID) |> unique() |> length()
 
 save(my_pk, file = "data-raw/temp_pk.rda")
 
-write_csv(
-  eval_tkstats(my_pk),
-  file = paste0(
-    Sys.getenv("FIG_DIR"),
-    "2025_07_31_eval_tkstats.csv"
+my_tkstats <- eval_tkstats(my_pk, dose_norm = TRUE)
+my_fit <- get_fit(my_pk)
+my_wm <- get_winning_model(my_pk)
+
+
+my_fit |>
+  select(DATA_GROUP_ID:param_name, estimate) |>
+  inner_join(my_wm, by = c("Chemical", "Species", "method", "model")) |>
+  select(-c(near_flat, preds_below_loq)) |>
+  filter(stringr::str_detect(param_name, "sigma_", negate = TRUE)) |>
+  mutate(
+    estimate = purrr::map_dbl(
+      estimate,
+      \(x) ifelse(is.null(x), NA_real_, as.numeric(x))
+    )
+  ) |> 
+  tidyr::pivot_wider(names_from = param_name, values_from = estimate) |> 
+  inner_join(my_tkstats,
+             by = join_by(DATA_GROUP_ID, model, method, Chemical, Species)) |>
+  readr::write_csv(
+    file = paste0(
+      Sys.getenv("FIG_DIR"),
+      "20250805_pk000_evalTKstats.csv"
+    )
   )
-)
 
 
 
