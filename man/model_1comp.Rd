@@ -5,7 +5,7 @@
 \alias{model_1comp}
 \title{1-compartment model}
 \format{
-An object of class \code{list} (inherits from \code{pk_model}) of length 10.
+An object of class \code{list} (inherits from \code{pk_model}) of length 11.
 }
 \usage{
 model_1comp

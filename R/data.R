@@ -63,16 +63,16 @@
 #' See [params_flat()] for the function that determines bounds and starting guesses for model parameters, based on the data.
 "model_flat"
 
-#' Gas pbtk `httk` model for fitting `Funbound.plasma` and `Clint`
+#' Gas pbtk `httk` model
 #'
 #' The `pk_model` object defining the "gas_pbtk" model from `httk`, with
-#' recalculations of other "constant" parameters that depend on either
-#' `Funbound.plasma` or `Clint`.
+#' recalculations of other "constant" parameters that depend on optimized parameters.
 #'
 #' A `pk_model` object: under the hood, a `list` object with named elements
-#' corresponding to the arguments of [pk_model()]. Note that this model is currently
-#' in development and fits can be unstable due to errors arising during ODE
-#' solving. See that function documentation for the definition of each element.
+#' corresponding to the arguments of [pk_model()]. The default set of parameters
+#' to optimize are `Clint` and `Funbound.plasma`, but users can also fit partition coefficients.
+#' Note that fitting may present instability during ODE solving step.
+#' See that function documentation for the definition of each element.
 #'
 #' See [cp_httk_gas_pbtk()] for the function that predicts blood/plasma concentration for a bolus dose (oral or IV).
 #'
