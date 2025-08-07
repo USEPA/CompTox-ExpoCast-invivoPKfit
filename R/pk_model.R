@@ -185,7 +185,7 @@ set_params_starts <- function(model, starts) {
   param_names <- check_model_params(names(starts), model)
   starts <- starts[param_names]
 
-  model$param_fun_args$param_starts <- starts
+  model$params_fun_args$param_starts <- starts
   return(model)
 }
 
@@ -221,6 +221,25 @@ toggle_clearance_mode <- function(model) {
 
   return(model)
 }
+
+
+#' Sets the `name` element for models to the `pk_model` object name in the environment
+#'
+#' When creating new `pk_model` objects, the name of the 'base' model is kept.
+#' Please use this function to 'reset' the name of the new `pk_model` object.
+#'
+#' @param model A `pk_model` object.
+#'
+#' @returns an object of class `pk_model` with `name` matching it's name in the environment.
+#' @export
+#' @author Gilberto Padilla Mercado
+adjust_model_name <- function(model) {
+  stopifnot(is.pk_model(model))
+  cli::cli_inform("Changing `model$name` from {model$name} to {deparse(substitute(model))}")
+  model$name <- deparse(substitute(model))
+  return(model)
+}
+
 
 
 check_model_params <- function(params, model) {

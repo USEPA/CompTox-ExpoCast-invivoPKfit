@@ -31,7 +31,8 @@ get_params_httk_gas_pbtk(
     "max reaction velocity 1/min", Vmucc = "L/kg BW", Vvenc = "L/kg BW", Vrestc =
     "L/kg BW", KFsummary = "unitless", Fprotein.plasma = "fraction", fabs.oral =
     "fraction", Qgut_ = "fraction", Qintesttransport = "fraction"),
-  restrictive = TRUE
+  restrictive = TRUE,
+  ...
 )
 }
 \arguments{
@@ -51,6 +52,8 @@ variables in `data`.}
 
 \item{restrictive}{A logical value (TRUE or FALSE. Default: FALSE) that says whether the
 assumption is that the clearance is restrictive or non-restrictive}
+
+\item{...}{Other parameters that can be specified in `pk_model`.}
 }
 \value{
 A vector of blood or plasma concentration values  corresponding

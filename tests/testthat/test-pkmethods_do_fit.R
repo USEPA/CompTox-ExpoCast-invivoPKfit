@@ -33,7 +33,7 @@ test_that(
         cvt,
         analyzed_chem_dtxsid %in% c("DTXSID0020232", "DTXSID2023309") & species %in% "rat"
       )
-    )
+    ) + stat_model(model = c("model_flat", "model_1comp", "model_2comp", "model_httk_gas_pbtk"))
     expect_no_error(test_pk <- do_fit(test_pk))
   }
 )

@@ -4,8 +4,12 @@ devtools::load_all()
 model_1comp <- pk_model(
   name = "model_1comp",
   params = c(
-    "kelim", "Vdist", "Fgutabs",
-    "kgutabs", "Fgutabs_Vdist", "Rblood2plasma"
+    "kelim",
+    "Vdist",
+    "Fgutabs",
+    "kgutabs",
+    "Fgutabs_Vdist",
+    "Rblood2plasma"
   ),
   conc_fun = "cp_1comp",
   auc_fun = "auc_1comp",
@@ -16,8 +20,12 @@ model_1comp <- pk_model(
   params_fun_args = NULL,
   param_groups = list(
     default = c(
-      "kelim", "Vdist", "Fgutabs",
-      "kgutabs", "Fgutabs_Vdist", "Rblood2plasma"
+      "kelim",
+      "Vdist",
+      "Fgutabs",
+      "kgutabs",
+      "Fgutabs_Vdist",
+      "Rblood2plasma"
     ),
     rates = c("kelim", "kgutabs")
   ),
@@ -28,8 +36,14 @@ model_1comp <- pk_model(
 model_2comp <- pk_model(
   name = "model_2comp",
   params = c(
-    "kelim", "k12", "k21", "V1", "Fgutabs",
-    "kgutabs", "Fgutabs_V1", "Rblood2plasma"
+    "kelim",
+    "k12",
+    "k21",
+    "V1",
+    "Fgutabs",
+    "kgutabs",
+    "Fgutabs_V1",
+    "Rblood2plasma"
   ),
   conc_fun = "cp_2comp",
   auc_fun = "auc_2comp",
@@ -40,8 +54,14 @@ model_2comp <- pk_model(
   params_fun_args = NULL,
   param_groups = list(
     default = c(
-      "kelim", "k12", "k21", "V1", "Fgutabs",
-      "kgutabs", "Fgutabs_V1", "Rblood2plasma"
+      "kelim",
+      "k12",
+      "k21",
+      "V1",
+      "Fgutabs",
+      "kgutabs",
+      "Fgutabs_V1",
+      "Rblood2plasma"
     ),
     rates = c("kelim", "k12", "k21", "kgutabs")
   ),
@@ -51,8 +71,10 @@ model_2comp <- pk_model(
 model_flat <- pk_model(
   name = "model_flat",
   params = c(
-    "Vdist", "Fgutabs",
-    "Fgutabs_Vdist", "Rblood2plasma"
+    "Vdist",
+    "Fgutabs",
+    "Fgutabs_Vdist",
+    "Rblood2plasma"
   ),
   conc_fun = "cp_flat",
   auc_fun = "auc_flat",
@@ -63,8 +85,10 @@ model_flat <- pk_model(
   params_fun_args = NULL,
   param_groups = list(
     default = c(
-      "Vdist", "Fgutabs",
-      "Fgutabs_Vdist", "Rblood2plasma"
+      "Vdist",
+      "Fgutabs",
+      "Fgutabs_Vdist",
+      "Rblood2plasma"
     )
   ),
   tkstats_fun_args = NULL

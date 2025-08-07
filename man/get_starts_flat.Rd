@@ -4,7 +4,7 @@
 \alias{get_starts_flat}
 \title{Get starting values for flat model}
 \usage{
-get_starts_flat(data, par_DF)
+get_starts_flat(data, par_DF, ...)
 }
 \arguments{
 \item{data}{The data set to be fitted (e.g. the result of [preprocess_data()])}
@@ -18,6 +18,9 @@ get_starts_flat(data, par_DF)
 \item`lower_bounds`: Numeric: The lower bounds for each parameter
 \item `upper_bounds`: Numeric: The upper bounds for each parameter
 }}
+
+\item{...}{Additional parameters, currently only list of character vectors describing
+parameters to optimize or parameter start values.}
 }
 \value{
 The same `data.frame` as `par_DF`, with an additional variable
@@ -110,7 +113,7 @@ Other built-in model functions:
 \code{\link{transformed_params_2comp}()}
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }
 \concept{built-in model functions}
 \concept{flat model functions}

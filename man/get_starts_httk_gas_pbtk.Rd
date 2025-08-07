@@ -9,7 +9,8 @@ get_starts_httk_gas_pbtk(
   par_DF,
   this_chemical,
   this_species,
-  restrictive
+  restrictive,
+  ...
 )
 }
 \arguments{
@@ -31,6 +32,9 @@ get_starts_httk_gas_pbtk(
 
 \item{restrictive}{A boolean value determinining whether to assume restrictive
 or non-restrictive clearance when getting starting values.}
+
+\item{...}{Additional parameters, currently only list of character vectors describing
+parameters to optimize or parameter start values.}
 }
 \value{
 The same `data.frame` as `par_DF`, with an additional variable

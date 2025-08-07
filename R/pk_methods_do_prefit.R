@@ -179,7 +179,7 @@ do_prefit.pk <- function(obj, ...) {
             function(x) {
               fx <- subset(x, exclude %in% FALSE)
               fx <- do.call(
-                obj$stat_model[[this_model]]$params_fun,
+                what = obj$stat_model[[this_model]]$params_fun,
                 args = append(list(data = fx), obj$stat_model[[this_model]]$params_fun_args)
               )
               # Output must have the DATA_GROUP_ID

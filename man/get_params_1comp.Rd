@@ -12,7 +12,8 @@ get_params_1comp(
     unique(Dose.Units), ")/(", unique(Conc.Units), ")"), Fgutabs = "unitless fraction",
     kgutabs = paste0("1/", unique(Time_trans.Units)), Fgutabs_Vdist = paste0("(",
     unique(Conc.Units), ")/(", unique(Dose.Units), ")"), Rblood2plasma =
-    "unitless ratio")
+    "unitless ratio"),
+  ...
 )
 }
 \arguments{
@@ -29,6 +30,8 @@ variables in `data`.}
 \item{param_units}{A mapping specified using a call to [alist()],
 giving the units for each variable, as expressions which may include
 variables in `data`.}
+
+\item{...}{Other parameters that can be specified in `pk_model`.}
 }
 \value{
 A `data.frame`with the following variables:

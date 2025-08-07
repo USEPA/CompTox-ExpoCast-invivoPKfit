@@ -7,16 +7,7 @@
 #' These are given by the \link[httk]{parameterize_3comp2} function in `httk`.
 #' Furthermore, they are transformed to a vector during hte prefitting process.
 #'
-#' @param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#' @param lower_bound A mapping specified using a call to [alist()],
-#'  giving the lower bounds for each variable, as expressions which may include
-#'  variables in `data`.
-#' @param upper_bound A mapping specified using a call to [alist()],
-#'  giving the upper bounds for each variable, as expressions which may include
-#'  variables in `data`.
-#' @param param_units A mapping specified using a call to [alist()],
-#'  giving the units for each variable, as expressions which may include
-#'  variables in `data`.
+#' @inheritParams get_params_flat
 #' @param restrictive A logical value (TRUE or FALSE. Default: FALSE) that says whether the
 #' assumption is that the clearance is restrictive or non-restrictive
 #'
@@ -87,12 +78,14 @@ get_params_httk_gas_pbtk <- function(
       Qgut_ = "fraction",
       Qintesttransport = "fraction"
     ),
-    restrictive = TRUE) {
-
+    restrictive = TRUE,
+    ...) {
   stopifnot(c("Chemical", "Species") %in% names(data))
 
-  this_species = data[["Species"]]
-  this_chemical = data[["Chemical"]]
+  # Collect extra parameters
+  this_species <- data[["Species"]]
+  this_chemical <- data[["Chemical"]]
+  dots <- list(...)
 
   # Default lower and upper bounds
   lower_bound_default <- alist(
@@ -271,41 +264,59 @@ get_params_httk_gas_pbtk <- function(
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
 
   # initialize optimization and use
-  optimize_param <- rep(FALSE, length(param_name))
-  optimize_param[param_name %in% c("Clint", "Funbound.plasma")] <- TRUE
-  use_param <- rep(TRUE, length(param_name))
+  optimize_param <- rep_len(FALSE, length(param_name))
+  use_param <- rep_len(TRUE, length(param_name))
+
+  if ("pars_to_optimize" %in% names(dots)) {
+    pars_to_optimize <- dots[["pars_to_optimize"]]
+    optimize_param[param_name %in% pars_to_optimize] <- TRUE
+
+    if (all(optimize_param == FALSE)) {
+      cli::cli_warn("No parameters to optimize specified.")
+    }
+  } else {
+    optimize_param[param_name %in% c("Clint", "Funbound.plasma")] <- TRUE
+  }
 
   param_units_vect <- sapply(param_units,
-                             rlang::eval_tidy,
-                             simplify = TRUE,
-                             USE.NAMES = TRUE)
+    rlang::eval_tidy,
+    simplify = TRUE,
+    USE.NAMES = TRUE
+  )
   param_units_vect <- param_units_vect[param_name]
 
   lower_bound_vect <- sapply(lower_bound,
-                             rlang::eval_tidy,
-                             simplify = TRUE,
-                             USE.NAMES = TRUE)
+    rlang::eval_tidy,
+    simplify = TRUE,
+    USE.NAMES = TRUE
+  )
   lower_bound_vect <- lower_bound_vect[param_name]
 
   upper_bound_vect <- sapply(upper_bound,
-                             rlang::eval_tidy,
-                             simplify = TRUE,
-                             USE.NAMES = TRUE)
+    rlang::eval_tidy,
+    simplify = TRUE,
+    USE.NAMES = TRUE
+  )
   upper_bound_vect <- upper_bound_vect[param_name]
 
-  par_DF <- data.frame("param_name" = param_name,
-                       "param_units" = param_units_vect,
-                       "optimize_param" = optimize_param,
-                       "use_param" = use_param,
-                       "lower_bound" = lower_bound_vect,
-                       "upper_bound" = upper_bound_vect)
+  par_DF <- data.frame(
+    "param_name" = param_name,
+    "param_units" = param_units_vect,
+    "optimize_param" = optimize_param,
+    "use_param" = use_param,
+    "lower_bound" = lower_bound_vect,
+    "upper_bound" = upper_bound_vect
+  )
 
   # now get starting values
-  par_DF <- get_starts_httk_gas_pbtk(data = data,
-                                     par_DF = par_DF,
-                                     this_species = this_species,
-                                     this_chemical = this_chemical,
-                                     restrictive = restrictive)
+  par_DF <- get_starts_httk_gas_pbtk(
+    data = data,
+    par_DF = par_DF,
+    this_species = this_species,
+    this_chemical = this_chemical,
+    restrictive = restrictive,
+    ...
+  )
 
   return(par_DF)
 }

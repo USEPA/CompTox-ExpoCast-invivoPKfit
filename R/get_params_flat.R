@@ -72,6 +72,7 @@
 #' @param param_units A mapping specified using a call to [alist()],
 #'  giving the units for each variable, as expressions which may include
 #'  variables in `data`.
+#' @param ... Other parameters that can be specified in `pk_model`.
 #'
 #' @return A `data.frame`with the following variables:
 #' \itemize{
@@ -97,55 +98,82 @@ get_params_flat <- function(
       Fgutabs = "unitless fraction",
       Fgutabs_Vdist = paste0("(", unique(Conc.Units), ")/(", unique(Dose.Units), ")"),
       Rblood2plasma = "unitless ratio"
-    )
-) {
+    ),
+    ...) {
   # param names
   param_name <- c("Vdist", "Fgutabs", "Fgutabs_Vdist", "Rblood2plasma")
 
-  lower_bound_default = alist(
+  # Collect extra parameters
+  dots <- list(...)
+
+  lower_bound_default <- alist(
     Vdist = 0.01,
     Fgutabs = 1E-3,
     Fgutabs_Vdist = 1E-5,
     Rblood2plasma = 1e-2
   )
 
-  lower_bound_missing <- base::setdiff(names(lower_bound_default),
-                                 names(lower_bound))
+  lower_bound_missing <- base::setdiff(
+    names(lower_bound_default),
+    names(lower_bound)
+  )
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
 
-  upper_bound_default = alist(
+  upper_bound_default <- alist(
     Vdist = 100,
     Fgutabs = 1,
     Fgutabs_Vdist = 1e2,
     Rblood2plasma = 100
   )
 
-  upper_bound_missing <- base::setdiff(names(upper_bound_default),
-                                 names(upper_bound))
+  upper_bound_missing <- base::setdiff(
+    names(upper_bound_default),
+    names(upper_bound)
+  )
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
 
   # Set the parameters to optimize and use here
-  optimize_param <- rep(TRUE, length(param_name))
-  use_param <- rep(TRUE, length(param_name))
+  optimize_param <- rep_len(TRUE, length(param_name))
+  use_param <- rep_len(TRUE, length(param_name))
 
-if ("oral" %in% data$Route) {
-  # if yes oral data:
-  if ("iv" %in% data$Route) {
+  has_oral <- "oral" %in% data$Route
+  has_iv <- "iv" %in% data$Route
+
+  if ("pars_to_optimize" %in% names(dots)) {
+    pars_to_optimize <- dots[["pars_to_optimize"]]
+    pars_to_hold <- setdiff(param_name, pars_to_optimize)
+    optimize_param[param_name %in% pars_to_hold] <- FALSE
+
+    if (xor(has_oral, has_iv) &&
+      "Fgutabs" %in% pars_to_optimize &&
+      !"Fgutabs_Vdist" %in% pars_to_optimize) {
+      cli::cli_warn("`Fgutabs` will not be optimized due to contraints in data: Route")
+    }
+    if (length(pars_to_hold) == length(param_name)) {
+      cli::cli_warn("No parameters to optimize specified.")
+    }
+  }
+
+  # Three mutually exclusive conditions based on Route:
+  if (has_oral && has_iv) {
     # if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
     optimize_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
     use_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
-  } else {
+  }
+
+  if (has_iv && !has_oral) {
+    # if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_Vdist,
+    # and they won't be used.
+    optimize_param[param_name %in% c("Fgutabs", "Fgutabs_Vdist")] <- FALSE
+    use_param[param_name %in% c("Fgutabs", "Fgutabs_Vdist")] <- FALSE
+  }
+
+  if (has_oral && !has_iv) {
     # if oral ONLY:
     # cannot fit Fgutabs and Vdist separately, so turn them off.
     optimize_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
     use_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
   }
-} else {
-  # if no oral data, can't fit Fgutabs, or Fgutabs_Vdist,
-  # and they won't be used.
-  optimize_param[param_name %in% c("Fgutabs", "Fgutabs_Vdist")] <- FALSE
-  use_param[param_name %in% c("Fgutabs", "Fgutabs_Vdist")] <- FALSE
-}
 
   # if both "blood" and "plasma" are not in data,
   # then Rblood2plasma will not be optimized
@@ -155,37 +183,41 @@ if ("oral" %in% data$Route) {
 
   # get param units based on data
   param_units_vect <- sapply(param_units,
-                             rlang::eval_tidy,
-                             data = data,
-                             simplify = TRUE,
-                             USE.NAMES = TRUE)
+    rlang::eval_tidy,
+    data = data,
+    simplify = TRUE,
+    USE.NAMES = TRUE
+  )
   param_units_vect <- param_units_vect[param_name]
 
   lower_bound_vect <- sapply(lower_bound,
-                             rlang::eval_tidy,
-                             data = data,
-                             simplify = TRUE,
-                             USE.NAMES = TRUE)
+    rlang::eval_tidy,
+    data = data,
+    simplify = TRUE,
+    USE.NAMES = TRUE
+  )
   lower_bound_vect <- lower_bound_vect[param_name]
 
   upper_bound_vect <- sapply(upper_bound,
-                             rlang::eval_tidy,
-                             data = data,
-                             simplify = TRUE,
-                             USE.NAMES = TRUE)
+    rlang::eval_tidy,
+    data = data,
+    simplify = TRUE,
+    USE.NAMES = TRUE
+  )
   upper_bound_vect <- upper_bound_vect[param_name]
 
-  par_DF <- data.frame("param_name" = param_name,
-                       "param_units" = param_units_vect,
-                       "optimize_param" = optimize_param,
-                       "use_param" = use_param,
-                       "lower_bound" = lower_bound_vect,
-                       "upper_bound" = upper_bound_vect)
+  par_DF <- data.frame(
+    "param_name" = param_name,
+    "param_units" = param_units_vect,
+    "optimize_param" = optimize_param,
+    "use_param" = use_param,
+    "lower_bound" = lower_bound_vect,
+    "upper_bound" = upper_bound_vect
+  )
 
   rownames(par_DF) <- par_DF$param_name
 
-  par_DF <- get_starts_flat(data = data,
-                            par_DF = par_DF)
+  par_DF <- get_starts_flat(data = data, par_DF = par_DF, ...)
 
   # check to ensure starting values are within bounds
   # if not, then replace them by a value halfway between bounds
@@ -194,14 +226,16 @@ if ("oral" %in% data$Route) {
   start_nonfin <- !is.finite(par_DF$start)
 
   par_DF[start_low | start_high | start_nonfin, "start"] <- rowMeans(
-    cbind(par_DF[start_low | start_high | start_nonfin,
-                 c("lower_bound",
-                   "upper_bound")]
-    )
+    cbind(par_DF[
+      start_low | start_high | start_nonfin,
+      c(
+        "lower_bound",
+        "upper_bound"
+      )
+    ])
   )
 
   par_DF$start <- as.list(par_DF$start)
 
   return(par_DF)
-
 }

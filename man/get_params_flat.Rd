@@ -10,7 +10,8 @@ get_params_flat(
   upper_bound = NULL,
   param_units = alist(Vdist = paste0("(", unique(Dose.Units), ")/(", unique(Conc.Units),
     ")"), Fgutabs = "unitless fraction", Fgutabs_Vdist = paste0("(", unique(Conc.Units),
-    ")/(", unique(Dose.Units), ")"), Rblood2plasma = "unitless ratio")
+    ")/(", unique(Dose.Units), ")"), Rblood2plasma = "unitless ratio"),
+  ...
 )
 }
 \arguments{
@@ -27,6 +28,8 @@ variables in `data`.}
 \item{param_units}{A mapping specified using a call to [alist()],
 giving the units for each variable, as expressions which may include
 variables in `data`.}
+
+\item{...}{Other parameters that can be specified in `pk_model`.}
 }
 \value{
 A `data.frame`with the following variables:

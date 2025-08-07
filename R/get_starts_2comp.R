@@ -112,12 +112,11 @@
 #'  parameter cannot be estimated from the available data, then its starting value
 #'  will be `NA_real_`
 #' @import httk
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family 2-compartment model functions
 #' @family get_starts functions
 #' @family built-in model functions
-get_starts_2comp <- function(data,
-                             par_DF) {
+get_starts_2comp <- function(data, par_DF, ...) {
 
   kelim <- NA_real_
   kgutabs <- NA_real_
@@ -127,8 +126,7 @@ get_starts_2comp <- function(data,
   k21 <- NA_real_
   Fgutabs <- NA_real_
   Rblood2plasma <- 1
-
-  # Get starting Concs from data
+  dots <- list(...)
 
   # Get starting Concs from data
 
@@ -191,6 +189,14 @@ get_starts_2comp <- function(data,
   # arbitrary until I implement something more sophisticated
   k21 <- 0.1
   k12 <- 0.5
+
+  # Set starts if needed/available
+  if ("param_starts" %in% names(dots)) {
+    param_starts_to_set <- dots[["param_starts"]]
+    for (this_par in names(param_starts_to_set)) {
+      assign(this_par, param_starts_to_set[[this_par]])
+    }
+  }
 
   starts <- c("kelim" = kelim,
               "kgutabs" = kgutabs,

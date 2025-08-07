@@ -72,10 +72,12 @@ get_starts_httk_gas_pbtk <- function(data,
                                      par_DF,
                                      this_chemical,
                                      this_species,
-                                     restrictive) {
+                                     restrictive,
+                                     ...) {
   this_chemical <- unique(this_chemical)
   this_species <- unique(this_species)
   stopifnot(all(lengths(list(this_chemical, this_species)) == 1))
+  dots <- list(...)
 
   parm_gas_pbtk <- tryCatch(
     expr = {
@@ -175,17 +177,21 @@ get_starts_httk_gas_pbtk <- function(data,
 
   fabs.oral <- httk::calc_fabs.oral(list(Caco2.Pab = starts[["Caco2.Pab"]]),
                                     species = this_species)
+
   Fprotein.plasma <- httk::physiology.data[
     which(httk::physiology.data[, "Parameter"] == "Plasma Protein Volume Fraction"),
     which(tolower(colnames(httk::physiology.data)) == tolower(this_species))
   ]
+
   Kint <- 1 - Fprotein.plasma +
     (0.37 / starts[["Funbound.plasma"]] - (1 - Fprotein.plasma))
+
   KFsummary <- starts[["Krbc2pu"]] / Kint
   Qintesttransport <- 0.1 * (starts[["BW"]] / 70)^(3/4)
 
   peff <- 10^(0.4926 * log10(starts[["Caco2.Pab"]]) - 0.1454)
   Asi <- 0.66 * starts[["BW"]] / 70
+
   if (this_species == "rat") {
     peff <- max(0, (peff + 0.1815)/(1.039 * 10))
     Asi <- 71/(100^2)
@@ -195,7 +201,6 @@ get_starts_httk_gas_pbtk <- function(data,
     starts[["Qcardiacc"]] * starts[["Qgutf"]] * starts[["BW"]]^(3/4)
 
   Qgut_ <- Qvilli * CLperm / (Qvilli + CLperm)
-
 
   starts[["KFsummary"]] <- signif(KFsummary, 8)
   starts[["Fprotein.plasma"]] <- signif(Fprotein.plasma, 8)

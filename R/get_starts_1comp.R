@@ -132,13 +132,12 @@
 #'  parameter cannot be estimated from the available data, then its starting value
 #'  will be `NA_real_`
 #' @import httk
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family 1-compartment model functions
 #' @family get_starts functions
 #' @family built-in model functions
 #'
-get_starts_1comp <- function(data,
-                             par_DF) {
+get_starts_1comp <- function(data, par_DF, ...) {
  # initialize starting values for each parameter.
   # if no IV data exist, then Vdist starting value will remain NA.
   # if no oral data exist, then Fgutabs_Vdist and Fgutabs starting values will remain NA.
@@ -149,6 +148,7 @@ get_starts_1comp <- function(data,
   Fgutabs_Vdist <- NA_real_
   Fgutabs <- NA_real_
   Rblood2plasma <- 1
+  dots <- list(...)
 
   # Get starting Concs from data
 
@@ -203,6 +203,14 @@ if (nrow(ivdat) > 0) {
     if (nrow(ivdat) > 0) {
       # if we had IV data, then we had a Vdist estimate, so we can estimate Fgutabs too
       Fgutabs <- Fgutabs_Vdist * Vdist
+    }
+  }
+
+  # Set starts if needed/available
+  if ("param_starts" %in% names(dots)) {
+    param_starts_to_set <- dots[["param_starts"]]
+    for (this_par in names(param_starts_to_set)) {
+      assign(this_par, param_starts_to_set[[this_par]])
     }
   }
 

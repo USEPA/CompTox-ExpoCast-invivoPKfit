@@ -59,46 +59,40 @@
 #' \item`lower_bounds`: Numeric: The lower bounds for each parameter
 #' \item `upper_bounds`: Numeric: The upper bounds for each parameter
 #' }
+#' @param ... Additional parameters, currently only list of character vectors describing
+#'  parameters to optimize or parameter start values.
 #' @return The same `data.frame` as `par_DF`, with an additional variable
 #'  `starts` containing the derived starting value for each parameter. If a
 #'  parameter cannot be estimated from the available data, then its starting value
 #'  will be `NA_real_`
 #'
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family flat model functions
 #' @family get_starts functions
 #' @family built-in model functions
 #'
-get_starts_flat <- function(data,
-                            par_DF) {
-
+get_starts_flat <- function(data, par_DF, ...) {
   Vdist <- NA_real_
   Fgutabs_Vdist <- NA_real_
   Fgutabs <- NA_real_
   Rblood2plasma <- 1
+  dots <- list(...)
 
   # Work only with detects for these rough estimates
-  tmpdat <- subset(data,
-                   Detect %in% TRUE)
+  tmpdat <- subset(data, Detect %in% TRUE)
 
   # Split into IV and PO
-  ivdat <- subset(tmpdat,
-                  Route %in% "iv")
-  podat <- subset(tmpdat,
-                  Route %in% "oral")
+  ivdat <- subset(tmpdat, Route %in% "iv")
+  podat <- subset(tmpdat, Route %in% "oral")
 
   has_iv <- any(tmpdat$Route %in% "iv")
   has_po <- any(tmpdat$Route %in% "oral")
   has_plasma <- any(tmpdat$Media %in% "plasma")
   has_blood <- any(tmpdat$Media %in% "blood")
-  has_iv_plasma <- any(tmpdat$Media %in% "plasma" &
-                      tmpdat$Route %in% "iv")
-  has_iv_blood <- any(tmpdat$Media %in% "blood" &
-                         tmpdat$Route %in% "iv")
-  has_po_plasma <- any(tmpdat$Media %in% "plasma" &
-                         tmpdat$Route %in% "oral")
-  has_po_blood <- any(tmpdat$Media %in% "blood" &
-                        tmpdat$Route %in% "oral")
+  has_iv_plasma <- any(tmpdat$Media %in% "plasma" & tmpdat$Route %in% "iv")
+  has_iv_blood <- any(tmpdat$Media %in% "blood" & tmpdat$Route %in% "iv")
+  has_po_plasma <- any(tmpdat$Media %in% "plasma" & tmpdat$Route %in% "oral")
+  has_po_blood <- any(tmpdat$Media %in% "blood" & tmpdat$Route %in% "oral")
 
   Vdist_plasma_log10 <- NA_real_
   Vdist_blood_log10 <- NA_real_
@@ -112,16 +106,22 @@ get_starts_flat <- function(data,
   if (has_iv %in% TRUE) {
     if (has_iv_plasma %in% TRUE) {
       # get Vdist for plasma
-      Cmean_plasma_log10 <- with(subset(ivdat, Media %in% "plasma"),
-                                 mean(log10(Conc / Dose), na.rm = TRUE))
+      Cmean_plasma_log10 <- with(
+        subset(ivdat, Media %in% "plasma"),
+        mean(log10(Conc / Dose), na.rm = TRUE)
+      )
       Vdist_plasma_log10 <- -Cmean_plasma_log10
     }
     if (has_iv_blood %in% TRUE) { # if both blood and plasma IV data, estimate Rblood2plasma
       # get Vdist for blood
 
-      Cmean_blood_log10 <- with(subset(ivdat,
-                                       Media %in% "blood"),
-                                mean(log10(Conc / Dose), na.rm = TRUE))
+      Cmean_blood_log10 <- with(
+        subset(
+          ivdat,
+          Media %in% "blood"
+        ),
+        mean(log10(Conc / Dose), na.rm = TRUE)
+      )
       Vdist_blood_log10 <- -Cmean_blood_log10
     }
     if (has_iv_plasma %in% TRUE && has_iv_blood %in% TRUE) {
@@ -132,13 +132,15 @@ get_starts_flat <- function(data,
   if (has_po %in% TRUE) {
     if (has_po_plasma %in% TRUE) {
       # get Fgutabs_Vdist for plasma
-      Fgutabs_Vdist_plasma_log10 <- with(subset(podat, Media %in% "plasma"),
-                                         mean(log10(Conc / Dose), na.rm = TRUE))
+      Fgutabs_Vdist_plasma_log10 <- with(
+        subset(podat, Media %in% "plasma"), mean(log10(Conc / Dose), na.rm = TRUE)
+      )
     }
     if (has_po_blood %in% TRUE) {
       # get Fgutabs_Vdist for blood
-      Fgutabs_Vdist_blood_log10 <- with(subset(podat, Media %in% "blood"),
-                                        mean(log10(Conc / Dose), na.rm = TRUE))
+      Fgutabs_Vdist_blood_log10 <- with(
+        subset(podat, Media %in% "blood"), mean(log10(Conc / Dose), na.rm = TRUE)
+      )
     }
     if (has_po_plasma %in% TRUE && has_po_blood %in% TRUE) {
       Rblood2plasma_po_log10 <- Fgutabs_Vdist_blood_log10 + Fgutabs_Vdist_blood_log10
@@ -147,12 +149,14 @@ get_starts_flat <- function(data,
 
   if (has_iv %in% TRUE) {
     Vdist <- 10^(mean(c(Vdist_plasma_log10, Vdist_blood_log10),
-                      na.rm = TRUE))
+      na.rm = TRUE
+    ))
   }
 
   if (has_po %in% TRUE) {
     Fgutabs_Vdist <- 10^(mean(c(Fgutabs_Vdist_plasma_log10, Fgutabs_Vdist_blood_log10),
-                              na.rm = TRUE))
+      na.rm = TRUE
+    ))
   }
 
   if (has_iv %in% TRUE && has_po %in% TRUE) {
@@ -161,7 +165,16 @@ get_starts_flat <- function(data,
 
   if (has_plasma %in% TRUE && has_blood %in% TRUE) {
     Rblood2plasma <- 10^(mean(c(Rblood2plasma_iv_log10, Rblood2plasma_po_log10),
-                              na.rm = TRUE))
+      na.rm = TRUE
+    ))
+  }
+
+  # Set starts if needed/available
+  if ("param_starts" %in% names(dots)) {
+    param_starts_to_set <- dots[["param_starts"]]
+    for (this_par in names(param_starts_to_set)) {
+      assign(this_par, param_starts_to_set[[this_par]])
+    }
   }
 
   # update starting Concs
