@@ -26,7 +26,9 @@ fit_group <- function(data,
   # get params to be held constant, if any
   if (any(par_DF$optimize_param %in% FALSE & par_DF$use_param %in% TRUE)) {
     const_params <- par_DF[which(!par_DF$optimize_param & par_DF$use_param),
-                           "start", drop = TRUE]
+      "start",
+      drop = TRUE
+    ]
     names(const_params) <- par_DF[
       which(!par_DF$optimize_param & par_DF$use_param),
       "param_name",
@@ -37,7 +39,8 @@ fit_group <- function(data,
   }
 
   # Now par_DF should only be optimized parameters, and unnest the start values
-  par_DF <- par_DF |> dplyr::filter(optimize_param) |>
+  par_DF <- par_DF |>
+    dplyr::filter(optimize_param) |>
     tidyr::unnest(cols = start)
 
   # Rowbind par_DF and sigma_DF
@@ -47,21 +50,24 @@ fit_group <- function(data,
   # since this series of assignments only return ordered vectors, possible to optimize a little
   # also optimized parameter names was repeated, simply put into variable
   opt_param_names <- par_DF[which(par_DF$optimize_param), "param_name",
-                            drop = TRUE]
+    drop = TRUE
+  ]
 
   opt_params <- par_DF[which(par_DF$optimize_param), "start",
-                       drop = TRUE]
+    drop = TRUE
+  ]
 
   names(opt_params) <- opt_param_names
 
   if (fit_decision %in% "continue") {
-
     lower_params <- par_DF[which(par_DF$optimize_param), "lower_bound",
-                           drop = TRUE]
+      drop = TRUE
+    ]
     names(lower_params) <- opt_param_names
 
     upper_params <- par_DF[which(par_DF$optimize_param), "upper_bound",
-                           drop = TRUE]
+      drop = TRUE
+    ]
     names(upper_params) <- opt_param_names
 
 
@@ -74,10 +80,12 @@ fit_group <- function(data,
           tmp <- do.call(
             optimx::opm,
             args = c(
-              list(par = opt_params,
-                   fn = log_likelihood,
-                   lower = lower_params,
-                   upper = upper_params),
+              list(
+                par = opt_params,
+                fn = log_likelihood,
+                lower = lower_params,
+                upper = upper_params
+              ),
               # method and control
               settings_optimx,
               # ... additional args to log_likelihood
@@ -100,56 +108,67 @@ fit_group <- function(data,
         },
         error = function(err) {
           method <- rlang::eval_tidy(settings_optimx$method)
-          tmp <- c(rep(NA_real_, length(opt_params)),
-                   rep(NA_real_, 4),
-                   -9999,
-                   rep(NA, 2),
-                   NA_real_)
+          tmp <- c(
+            rep(NA_real_, length(opt_params)),
+            rep(NA_real_, 4),
+            -9999,
+            rep(NA, 2),
+            NA_real_
+          )
 
-          names(tmp) <- c(names(opt_params),
-                          "value", "fevals", "gevals", "hevals",
-                          "convergence",
-                          "kkt1", "kkt2",
-                          "xtime")
+          names(tmp) <- c(
+            names(opt_params),
+            "value", "fevals", "gevals", "hevals",
+            "convergence",
+            "kkt1", "kkt2",
+            "xtime"
+          )
 
           tmp <- data.frame(as.list(tmp)) |>
             dplyr::slice(rep(seq_len(dplyr::n()),
-                             each = length(method)))
+              each = length(method)
+            ))
 
           rownames(tmp) <- method
           tmp$method <- rownames(tmp)
 
           details <- as.data.frame(
-            cbind(method = as.list(method),
-                  ngatend = as.list(rep(NA_real_, length(method))),
-                  nhatend = as.list(rep(NA_real_, length(method))),
-                  hev = as.list(rep(NA_real_, length(method))),
-                  message = as.list(rep(err$message,
-                                        length(method)))
+            cbind(
+              method = as.list(method),
+              ngatend = as.list(rep_len(NA_real_, length(method))),
+              nhatend = as.list(rep_len(NA_real_, length(method))),
+              hev = as.list(rep_len(NA_real_, length(method))),
+              message = as.list(rep_len(err$message, length(method)))
             )
           )
           rownames(details) <- method
           tmp <- merge(tmp, details)
 
           return(tmp)
-        }) # end tryCatch()
+        }
+      ) # end tryCatch()
     ) # end suppressWarnings()
     out <- optimx_out
   } else { # if status for this model was "abort", then abort fit and return NULL
     method <- rlang::eval_tidy(settings_optimx$method)
-    tmp <- c(rep(NA_real_, length(opt_params)),
-             rep(NA_real_, 4),
-             9999,
-             rep(NA, 2),
-             NA_real_)
-    names(tmp) <- c(names(opt_params),
-                    "value", "fevals", "gevals", "hevals",
-                    "convergence",
-                    "kkt1", "kkt2",
-                    "xtime")
+    tmp <- c(
+      rep(NA_real_, length(opt_params)),
+      rep(NA_real_, 4),
+      9999,
+      rep(NA, 2),
+      NA_real_
+    )
+    names(tmp) <- c(
+      names(opt_params),
+      "value", "fevals", "gevals", "hevals",
+      "convergence",
+      "kkt1", "kkt2",
+      "xtime"
+    )
     tmp <- data.frame(as.list(tmp)) |>
       dplyr::slice(rep(seq_len(dplyr::n()),
-                       each = length(method)))
+        each = length(method)
+      ))
     rownames(tmp) <- method
     tmp$method <- rownames(tmp)
 
@@ -157,12 +176,12 @@ fit_group <- function(data,
     attr(tmp, "npar") <- length(opt_params)
     attr(tmp, "follow.on") <- FALSE
     details <- as.data.frame(
-      cbind(method = as.list(method),
-            ngatend = as.list(rep(NA_real_, length(method))),
-            nhatend = as.list(rep(NA_real_, length(method))),
-            hev = as.list(rep(NA_real_, length(method))),
-            message = as.list(rep("Fit status was 'abort'",
-                                  length(method)))
+      cbind(
+        method = as.list(method),
+        ngatend = as.list(rep_len(NA_real_, length(method))),
+        nhatend = as.list(rep_len(NA_real_, length(method))),
+        hev = as.list(rep_len(NA_real_, length(method))),
+        message = as.list(rep_len("Fit status was 'abort'", length(method)))
       )
     )
     rownames(details) <- method

@@ -68,7 +68,7 @@ auc_2comp <- function(params, time, dose, route, medium = "plasma") {
   # for readability, assign transformed params to variables inside this function
   list2env(as.list(trans_params), envir = as.environment(-1))
 
-  auc <- rep(NA_real_, length(time))
+  auc <- rep_len(NA_real_, length(time))
   iv_vec <- (route == "iv")
   or_vec <- (route == "oral")
   blood_vec <- (medium == "blood")

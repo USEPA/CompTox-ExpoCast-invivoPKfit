@@ -152,19 +152,17 @@ fit_sigma.pk <- function(obj, preds, pred_col, k = 2, ...) {
                           "xtime")
 
           tmp <- data.frame(as.list(tmp)) |>
-            dplyr::slice(rep(seq_len(dplyr::n()),
-                             each = length(method)))
+            dplyr::slice(rep(seq_len(dplyr::n()), each = length(method)))
 
           rownames(tmp) <- method
           tmp$method <- rownames(tmp)
 
           details <- as.data.frame(
             cbind(method = as.list(method),
-                  ngatend = as.list(rep(NA_real_, length(method))),
-                  nhatend = as.list(rep(NA_real_, length(method))),
-                  hev = as.list(rep(NA_real_, length(method))),
-                  message = as.list(rep(err$message,
-                                        length(method)))
+                  ngatend = as.list(rep_len(NA_real_, length(method))),
+                  nhatend = as.list(rep_len(NA_real_, length(method))),
+                  hev = as.list(rep_len(NA_real_, length(method))),
+                  message = as.list(rep_len(err$message, length(method)))
             )
           )
           rownames(details) <- method

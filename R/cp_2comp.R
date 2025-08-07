@@ -83,7 +83,7 @@ cp_2comp <- function(params,
   # for readability, assign transformed params to variables inside this function
   list2env(as.list(trans_params), envir = as.environment(-1))
 
-  Cp <- rep(NA_real_, length(time))
+  Cp <- rep_len(NA_real_, length(time))
   iv_vec <- (route == "iv")
   or_vec <- (route == "oral")
 

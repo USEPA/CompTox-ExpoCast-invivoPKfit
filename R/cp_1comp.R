@@ -81,7 +81,7 @@ cp_1comp <- function(params,
   kelim = Vdist = kelim = kgutabs = Fgutabs_Vdist = Rblood2plasma = NULL
 
   list2env(as.list(params), envir = as.environment(-1))
-  Cp <- rep(NA_real_, length(time))
+  Cp <- rep_len(NA_real_, length(time))
   iv_vec <- (route == "iv")
   or_eq_vec <- (route == "oral" & kelim == kgutabs)
   or_ne_vec <- (route == "oral" & kelim != kgutabs)

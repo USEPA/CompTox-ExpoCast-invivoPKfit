@@ -98,7 +98,7 @@ calc_nca <- function(time,
     dose <- unique(dose)
 
     if (is.null(series_id)) {
-      series_id <- rep(NA_integer_, length(conc))
+      series_id <- rep_len(NA_integer_, length(conc))
     }
 
     # order everything by increasing time
@@ -131,7 +131,7 @@ calc_nca <- function(time,
     # if there is only one observation per time
     # then pretend all observations are from the same id
     if (all(obs_per_time %in% 1)) {
-      series_id <- rep(1L, length(time))
+      series_id <- rep_len(1L, length(time))
     }
 
     obs_per_time <- table(time)
@@ -263,8 +263,8 @@ calc_nca <- function(time,
     pk_out["Vss", ] <- NA_real_
     # fill in CLtot and MRT as NA
     pk_out <- rbind(pk_out,
-                    "CLtot" = rep(NA_real_, ncol(pk_out)),
-                    "MRT" = rep(NA_real_, ncol(pk_out)))
+                    "CLtot" = rep_len(NA_real_, ncol(pk_out)),
+                    "MRT" = rep_len(NA_real_, ncol(pk_out)))
   } else {
     rownames(pk_out) <- c("AUC_tlast",
                           "AUC_infinity",
@@ -275,8 +275,8 @@ calc_nca <- function(time,
                           "Vss")
     # fill in oral-only params as NA
     pk_out <- rbind(pk_out,
-                    "CLtot/Fgutabs" = rep(NA_real_, ncol(pk_out)),
-                    "MTT" = rep(NA_real_, ncol(pk_out)))
+                    "CLtot/Fgutabs" = rep_len(NA_real_, ncol(pk_out)),
+                    "MTT" = rep_len(NA_real_, ncol(pk_out)))
   }
 
 
@@ -284,8 +284,8 @@ calc_nca <- function(time,
   peak <- unlist(get_peak(x = time, y = conc))
 
   pk_out <- rbind(pk_out,
-                  "tmax" = c(peak[1], rep(NA_real_, ncol(pk_out) - 1)),
-                  "Cmax" = c(peak[2], rep(NA_real_, ncol(pk_out) - 1))
+                  "tmax" = c(peak[1], rep_len(NA_real_, ncol(pk_out) - 1)),
+                  "Cmax" = c(peak[2], rep_len(NA_real_, ncol(pk_out) - 1))
   )
 
   # convert to data.frame

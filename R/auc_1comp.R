@@ -85,7 +85,7 @@ auc_1comp <- function(params,
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
-  auc <- rep(NA_real_, length(time))
+  auc <- rep_len(NA_real_, length(time))
   iv_vec <- (route == "iv")
   or_eq_vec <- (route == "oral" & kelim == kgutabs)
   or_ne_vec <- (route == "oral" & kelim != kgutabs)

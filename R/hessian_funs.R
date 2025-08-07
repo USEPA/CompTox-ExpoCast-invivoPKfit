@@ -199,8 +199,8 @@ calc_sds_alerts <- function(pars_opt,
                             log10_trans) {
   #intiialize output
   output <- data.frame(param_name = names(pars_opt),
-                       param_sd = rep(NA_real_, length(pars_opt)),
-                       sd_alert = rep("", length(pars_opt)))
+                       param_sd = rep_len(NA_real_, length(pars_opt)),
+                       sd_alert = rep_len("", length(pars_opt)))
 
 #calculate Hessian matrix for negative log-likelihood function
   hess <- calc_hessian(pars_opt = pars_opt,
@@ -263,7 +263,7 @@ calc_sds_alerts <- function(pars_opt,
                                 as.character(hess_inv2$error),
                                 "'. Returning NAs.")
       #set output to NAs
-      output$param_sd <- rep(NA_real_, nrow(hess))
+      output$param_sd <- rep_len(NA_real_, nrow(hess))
     }
   }
 
