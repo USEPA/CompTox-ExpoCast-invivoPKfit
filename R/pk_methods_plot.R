@@ -125,7 +125,7 @@ plot.pk <- function(x,
 
 
   if (is.null(fit_limits)) {
-    fit_limits <- c(2.25, 0.05)
+    fit_limits <- c(1.25, 0.05)
     if (log10_C) {
       fit_limits[1] <- 5
     }
