@@ -172,6 +172,14 @@ get_starts_httk_gas_pbtk <- function(data,
   )
 
   starts <- parm_gas_pbtk
+  # Set starts if needed/available
+  if ("param_starts" %in% names(dots)) {
+    param_starts_to_set <- dots[["param_starts"]]
+    for (this_par in names(param_starts_to_set)) {
+      assign(this_par, param_starts_to_set[[this_par]])
+    }
+  }
+
   # Following are required for calculations of 'extra' parameters.
   stopifnot(all(!is.na(starts[c("Caco2.Pab", "Funbound.plasma", "krbc2pu", "BW", "Qgutf", "Qcardiacc")])))
 
