@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_starts_httk_gas_pbtk.R
 \name{get_starts_httk_gas_pbtk}
 \alias{get_starts_httk_gas_pbtk}
-\title{Get starting values for 1-compartment model with specific clearance}
+\title{Get starting values for httk `gas_pbtk` model with specific clearance}
 \usage{
 get_starts_httk_gas_pbtk(
   data,
@@ -43,61 +43,21 @@ The same `data.frame` as `par_DF`, with an additional variable
  will be `NA_real_`
 }
 \description{
-Derive starting values for 1-compartment model parameters from available data
+Derive starting values for PBTK model parameters from available data
 }
 \details{
-This function is called internally by [get_params_1comp_cl()] and should
+This function is called internally by [get_params_httk_gas_pbtk()] and should
 generally not be called directly by the user.
 
-The full set of model parameters for the 1-compartment model includes `Vdist`,
-`kelim`, `kgutabs`, `Fgutabs`, and `Rblood2plasma`.
-However, in this version of the one-compartment model,
-we use the liver, alveolar glomerular flow rates (`Q_totli`, `Q_alv`, and `Q_gfr`,
-respectively) provided by [httk].
-Other parameters provided by [httk] include:
-`Fup`, `Clint`, `Kblood2air`, `Rblood2plasma`, `kgutabs`, and `Fgutabs`.
+The full set of model parameters is given by the \link[httk]{parameterize_3comp2} function in `httk`.
 
-`Vdist` is calculated from estimated total clearance and `kelim`, which is
-calculated from the data.
-
-The numerical optimizer requires starting guesses for the value of each
-parameter to be estimated from the data.
-
-These are intended to be *very* rough starting guesses, so the algorithm here
-is extremely naive. This function is not itself intended to produce valid
-estimates for any of the model parameters, and it is highly unlikely to do so.
+Not all of the parameters are intended to be optimized. Currently, only `Clint`,
+`Funbound.plasma`, or any of the model's partitioning coefficients can be optimized.
 }
-\section{Estimation of `kelim`}{
+\section{Additional parameters}{
 
-
-First, data are filtered to exclude any non-detects.
-
-Then, data are split by route of administration, into an IV data set and an oral data
-set. (It is possible that either IV or oral data may not be
-available for a chemical.)
-If IV data exist, then only IV data are used to derive starting estimates for
-`kelim`, even if oral data also exist.
-
-If only oral data exist, then the oral data are used to derive a starting
-estimate for `kelim`.
-
-Whichever data set is used (IV or oral), the starting value for `kelim` is
-derived by assuming that the range of observed time values in the data set
-spans two elimination half-lives. This implies that the elimination half-life
-is equal to the midpoint of observed time values, and that the starting value
-for the elimination time constant `kelim` is therefore `log(2)` divided by the
-midpoint of observed time values.
-
-Of course, this assumption is unlikely to be correct. However, we hope that it
-will yield a starting guess for `kelim` that is at least on the right order of
-magnitude.
-}
-
-\section{Starting value for `Vdist`}{
-
-
-Using a calculated value for total clearance, `Cltot`, `Vdist` is estimated
-by dividing this by the estimation of `kelim`.
+There are also additional parameters calculated to allow recalculation of parameters
+during fitting. These include `fabs.oral`, `Fprotein.plasma`, and `Qintestinetrasport`.
 }
 
 \seealso{

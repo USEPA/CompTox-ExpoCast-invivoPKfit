@@ -147,3 +147,32 @@ test_that(
     )
   }
 )
+
+test_that(
+  "Checking that partitioning coefficients can be fit",
+  {
+    test_bespoke <- function() {
+      test_model_gas <- set_params_optimize(
+        model = model_httk_gas_pbtk,
+        params = "partition_coefficients"
+      )
+      test_model_gas <- adjust_model_name(test_model_gas)
+
+      test_pk <- pk(
+        data = subset(
+          cvt,
+          analyzed_chem_dtxsid %in% c("DTXSID0020232", "DTXSID2023309") & species %in% "rat"
+        )
+      ) + stat_model(c("model_flat", "model_httk_gas_pbtk", "test_model_gas"))
+
+      expect_no_error(
+        test_pk <- do_fit.pk(test_pk)
+      )
+
+      return(test_pk)
+    }
+
+    expect_no_error(test_fit <- test_bespoke())
+  }
+)
+

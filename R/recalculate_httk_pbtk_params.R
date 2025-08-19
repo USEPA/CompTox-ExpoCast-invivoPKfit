@@ -18,9 +18,9 @@
 #' \eqn{\frac{L}{hr\cdot kg\ BW}}
 #'
 #'
-#' @section krbc2pu:
+#' @section Krbc2pu:
 #' The formula to recalculate this parameter is as follows:
-#' \deqn{krbc2pu = Fint\times Kint\times KAPPAcell2pu\times Fcell\times Kcell}
+#' \deqn{Krbc2pu = Fint\times Kint\times KAPPAcell2pu\times Fcell\times Kcell}
 #' where Fint, Fcell, and Kcell are taken or calculated from values in [httk::tissue.data],
 #' and KAPPAcell2pu is estimated once during [httk::calc_ionization()] and
 #' [httk::parameterize_schmitt()].
@@ -53,6 +53,13 @@
 #' \deqn{Asi = 0.66\times BW/70 \text{ or } 71/100^2 \text{ when Species == "rat"}}
 #' \deqn{Qintesttransport = 0.1\times\left(\frac{BW}{70}\right)^{3/4}}
 #'
+#' @section Optimizing `Funbound.plasma` or `Krbc2pu`:
+#' If partitioning coefficients are optimized, Funbound.plasma will be estimated
+#' from given Krbc2pu. This conditional calculation is done by testing whether
+#' Funbound.plasma (given by the previous `Kint` and `KFsummary` parameters) has
+#' changed (reassigned a new value by the optimizer). If so, then the
+#' `Krbc2pu` will be re-calculated.
+#'
 #'
 #' @param params A list of parameter = value pairs that will be used in calculations.
 #' @param dtxsid The DTXSID of a chemical, by default taken from the 'Chemical' column in the data.
@@ -63,16 +70,24 @@
 #'
 recalculate_httk_pbtk_params <- function(params, dtxsid, species) {
 
-  KFsummary <- Fprotein.plasma <- fabs.oral <- hematocrit <-  Qgut_ <- Qintesttransport <- NULL
-  Clint <- million.cells.per.gliver <- Vliverc <- liver.density <- Funbound.plasma <- BW <- NULL
+  KFsummary <- Kint <- Fprotein.plasma <- NULL
+  fabs.oral <- hematocrit <-  Qgut_ <- Qintesttransport <- NULL
+  Clint <- million.cells.per.gliver <- Vliverc <- liver.density <- NULL
+  Funbound.plasma <- BW <- NULL
 
   list2env(as.list(params), envir = as.environment(-1))
 
   Clmetabolismc <- Clint * million.cells.per.gliver *
     Vliverc * 1E3 * liver.density * Funbound.plasma * 60 * 1E-6
 
-  Kint <- 1 - Fprotein.plasma + (0.37 / Funbound.plasma - (1 - Fprotein.plasma))
-  Krbc2pu <- KFsummary * Kint
+  tmp_fup <- 0.37 / (Kint + (1.37 * (1 - Fprotein.plasma)))
+  if (isTRUE(Funbound.plasma == tmp_fup)) {
+    Kint <- Krbc2pu / KFsummary
+    Funbound.plasma <- 0.37 / (Kint + (1.37 * (1 - Fprotein.plasma)))
+  } else {
+    Kint <- 1 - Fprotein.plasma + (0.37 * (1 / Funbound.plasma - (1 - Fprotein.plasma)))
+    Krbc2pu <- KFsummary * Kint
+  }
 
   Rblood2plasma <- 1 - hematocrit + (hematocrit * Krbc2pu * Funbound.plasma)
 

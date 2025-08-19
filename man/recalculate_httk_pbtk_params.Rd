@@ -36,10 +36,10 @@ there are some unit conversions included to give final units in
 \eqn{\frac{L}{hr\cdot kg\ BW}}
 }
 
-\section{krbc2pu}{
+\section{Krbc2pu}{
 
 The formula to recalculate this parameter is as follows:
-\deqn{krbc2pu = Fint\times Kint\times KAPPAcell2pu\times Fcell\times Kcell}
+\deqn{Krbc2pu = Fint\times Kint\times KAPPAcell2pu\times Fcell\times Kcell}
 where Fint, Fcell, and Kcell are taken or calculated from values in [httk::tissue.data],
 and KAPPAcell2pu is estimated once during [httk::calc_ionization()] and
 [httk::parameterize_schmitt()].
@@ -73,5 +73,14 @@ and
 \frac{p_{eff} + 1.815}{1.039}\text{ when Species == "rat"}}
 \deqn{Asi = 0.66\times BW/70 \text{ or } 71/100^2 \text{ when Species == "rat"}}
 \deqn{Qintesttransport = 0.1\times\left(\frac{BW}{70}\right)^{3/4}}
+}
+
+\section{Optimizing `Funbound.plasma` or `Krbc2pu`}{
+
+If partitioning coefficients are optimized, Funbound.plasma will be estimated
+from given Krbc2pu. This conditional calculation is done by testing whether
+Funbound.plasma (given by the previous `Kint` and `KFsummary` parameters) has
+changed (reassigned a new value by the optimizer). If so, then the
+`Krbc2pu` will be re-calculated.
 }
 

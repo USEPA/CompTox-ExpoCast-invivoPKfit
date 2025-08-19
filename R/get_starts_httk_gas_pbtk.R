@@ -1,56 +1,18 @@
-#' Get starting values for 1-compartment model with specific clearance
+#' Get starting values for httk `gas_pbtk` model with specific clearance
 #'
-#' Derive starting values for 1-compartment model parameters from available data
+#' Derive starting values for PBTK model parameters from available data
 #'
-#' This function is called internally by [get_params_1comp_cl()] and should
+#' This function is called internally by [get_params_httk_gas_pbtk()] and should
 #' generally not be called directly by the user.
 #'
-#' The full set of model parameters for the 1-compartment model includes `Vdist`,
-#' `kelim`, `kgutabs`, `Fgutabs`, and `Rblood2plasma`.
-#' However, in this version of the one-compartment model,
-#' we use the liver, alveolar glomerular flow rates (`Q_totli`, `Q_alv`, and `Q_gfr`,
-#' respectively) provided by [httk].
-#' Other parameters provided by [httk] include:
-#' `Fup`, `Clint`, `Kblood2air`, `Rblood2plasma`, `kgutabs`, and `Fgutabs`.
+#' The full set of model parameters is given by the \link[httk]{parameterize_3comp2} function in `httk`.
 #'
-#' `Vdist` is calculated from estimated total clearance and `kelim`, which is
-#' calculated from the data.
+#' Not all of the parameters are intended to be optimized. Currently, only `Clint`,
+#' `Funbound.plasma`, or any of the model's partitioning coefficients can be optimized.
 #'
-#' The numerical optimizer requires starting guesses for the value of each
-#' parameter to be estimated from the data.
-#'
-#' These are intended to be *very* rough starting guesses, so the algorithm here
-#' is extremely naive. This function is not itself intended to produce valid
-#' estimates for any of the model parameters, and it is highly unlikely to do so.
-#'
-#' @section Estimation of `kelim`:
-#'
-#' First, data are filtered to exclude any non-detects.
-#'
-#' Then, data are split by route of administration, into an IV data set and an oral data
-#' set. (It is possible that either IV or oral data may not be
-#' available for a chemical.)
-#' If IV data exist, then only IV data are used to derive starting estimates for
-#' `kelim`, even if oral data also exist.
-#'
-#' If only oral data exist, then the oral data are used to derive a starting
-#' estimate for `kelim`.
-#'
-#' Whichever data set is used (IV or oral), the starting value for `kelim` is
-#' derived by assuming that the range of observed time values in the data set
-#' spans two elimination half-lives. This implies that the elimination half-life
-#' is equal to the midpoint of observed time values, and that the starting value
-#' for the elimination time constant `kelim` is therefore `log(2)` divided by the
-#' midpoint of observed time values.
-#'
-#' Of course, this assumption is unlikely to be correct. However, we hope that it
-#' will yield a starting guess for `kelim` that is at least on the right order of
-#' magnitude.
-#'
-#' @section Starting value for `Vdist`:
-#'
-#' Using a calculated value for total clearance, `Cltot`, `Vdist` is estimated
-#' by dividing this by the estimation of `kelim`.
+#' @section Additional parameters:
+#' There are also additional parameters calculated to allow recalculation of parameters
+#' during fitting. These include `fabs.oral`, `Fprotein.plasma`, and `Qintestinetrasport`.
 #'
 #' @inheritParams get_starts_flat
 #' @param this_chemical A character vector naming the chemical for calculations in `httk`.
@@ -181,10 +143,11 @@ get_starts_httk_gas_pbtk <- function(data,
   }
 
   # Following are required for calculations of 'extra' parameters.
-  stopifnot(all(!is.na(starts[c("Caco2.Pab", "Funbound.plasma", "krbc2pu", "BW", "Qgutf", "Qcardiacc")])))
+  stopifnot(all(!is.na(starts[c("Caco2.Pab", "Funbound.plasma", "Krbc2pu", "BW", "Qgutf", "Qcardiacc")])))
 
   fabs.oral <- httk::calc_fabs.oral(list(Caco2.Pab = starts[["Caco2.Pab"]]),
-                                    species = this_species)
+    species = this_species
+  )
 
   Fprotein.plasma <- httk::physiology.data[
     which(httk::physiology.data[, "Parameter"] == "Plasma Protein Volume Fraction"),
@@ -192,21 +155,21 @@ get_starts_httk_gas_pbtk <- function(data,
   ]
 
   Kint <- 1 - Fprotein.plasma +
-    (0.37 / starts[["Funbound.plasma"]] - (1 - Fprotein.plasma))
+    (0.37 * (1 / starts[["Funbound.plasma"]] - (1 - Fprotein.plasma)))
 
   KFsummary <- starts[["Krbc2pu"]] / Kint
-  Qintesttransport <- 0.1 * (starts[["BW"]] / 70)^(3/4)
+  Qintesttransport <- 0.1 * (starts[["BW"]] / 70)^(3 / 4)
 
   peff <- 10^(0.4926 * log10(starts[["Caco2.Pab"]]) - 0.1454)
   Asi <- 0.66 * starts[["BW"]] / 70
 
   if (this_species == "rat") {
-    peff <- max(0, (peff + 0.1815)/(1.039 * 10))
-    Asi <- 71/(100^2)
+    peff <- max(0, (peff + 0.1815) / (1.039 * 10))
+    Asi <- 71 / (100^2)
   }
   CLperm <- peff * Asi * 36000
-  Qvilli <- (18 / (38.7/1000 * 60 * 15.8757)) *
-    starts[["Qcardiacc"]] * starts[["Qgutf"]] * starts[["BW"]]^(3/4)
+  Qvilli <- (18 / (38.7 / 1000 * 60 * 15.8757)) *
+    starts[["Qcardiacc"]] * starts[["Qgutf"]] * starts[["BW"]]^(3 / 4)
 
   Qgut_ <- Qvilli * CLperm / (Qvilli + CLperm)
 
@@ -230,6 +193,32 @@ get_starts_httk_gas_pbtk <- function(data,
   # Assemble the entire parameter data.frame
   par_DF$start <- starts[par_DF$param_name]
   rownames(par_DF) <- NULL
+
+  # Set the upper and lower bounds for the partitioning coefficients
+  # Values are taken from Pearce 2017
+  # When values were not readily available, it was set to 0.46
+  part_sd <- c(
+    "Kgut2pu" = 0.479,
+    "Krbc2pu" = 0.286,
+    "Kkidney2pu" = 0.438,
+    "Klung2pu" = 0.528,
+    "Kmuc2air" = 0.46,
+    "Kliver2pu" = 0.563,
+    "Kblood2air" = 0.46,
+    "Krest2pu" = 0.46
+  )
+
+  # Multiply starting values by (1 +/- CV)
+  for (this_part in names(part_sd)) {
+    par_DF[
+      par_DF$param_name == this_part, "upper_bound"
+    ] <- par_DF[par_DF$param_name == this_part, "start"][[1]] * (1 + part_sd[[this_part]])
+
+    par_DF[
+      par_DF$param_name == this_part, "lower_bound"
+    ] <- par_DF[par_DF$param_name == this_part, "start"][[1]] * (1 - part_sd[[this_part]])
+  }
+
 
   return(par_DF)
 }
