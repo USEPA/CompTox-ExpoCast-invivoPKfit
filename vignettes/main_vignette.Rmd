@@ -19,6 +19,7 @@ knitr::opts_chunk$set(
 ```{r setup}
 devtools::load_all()
 library(dplyr)
+library(tidyr)
 library(mirai)
 ```
 
@@ -35,15 +36,15 @@ Just as the basic unit of `ggplot2` is a `ggplot` object, the basic unit of `inv
 
 Just as a `ggplot2` object is essentially a data set with various instructions about how to visualize that data set,  a `pk` object is essentially a data set with various instructions about how to fit PK models to that data set.
 
-You provide a set of instructions for building a `ggplot2` plot by adding `geom`, `stat`, `scale`, etc. commands to a `ggplot2` object using the `+` command (like `ggplot(my_data, aes(x=x, y=y)) + geom_point()`). Similarly, you provide a set of instructions for fitting an `invivopkfit` PK model by adding `settings`, `stat`, `scale` commands to a `pk` object.
+You provide a set of instructions for building a `ggplot2` plot by adding `geom`, `stat`, `scale`, etc. commands to a `ggplot2` object using the `+` command (like `ggplot(my_data, aes(x=x, y=y)) + geom_point()`). Similarly, you provide a set of instructions for fitting an `invivoPKfit` PK model by adding `settings`, `stat`, `scale` commands to a `pk` object.
 
-In `ggplot2`, you can add the instructions in any order. You can overwrite old instructions by adding new ones, if you change your mind. The package will internally re-order the instructions in the correct order to build the plot. `invivopkfit` works exactly the same way.
+In `ggplot2`, you can add the instructions in any order. You can overwrite old instructions by adding new ones, if you change your mind. The package will internally re-order the instructions in the correct order to build the plot. `invivoPKfit` works exactly the same way.
 
 And just as `ggplot2` doesn't actually build the plot until you issue a `print` command, `invivoPKfit` doesn't actually fit the model until you issue  a `fit` command.
 
 # The model fitting workflow
 
-Here's a basic example to illustrate the steps of the `invivopkfit` workflow.
+Here's a basic example to illustrate the steps of the `invivoPKfit` workflow.
 
 ## Select data to be fit
 
@@ -55,7 +56,8 @@ For the sake of keeping run time reasonable, this example will include data on o
 
 ```{r}
 # select data for a single chemical and species
-my_data <- subset(cvt, analyzed_chem_dtxsid %in% c("DTXSID8031865", "DTXSID0020442"))
+my_data <- subset(cvt,
+                  analyzed_chem_dtxsid %in% c("DTXSID8031865", "DTXSID0020442"))
 ```
 
 ## Initialize a `pk` object
@@ -177,20 +179,20 @@ The coefficients themselves are included as a list column, to accommodate the fa
 For example, this code views the coefficients for the first row of the full coefficients table:
 
 ```{r}
-coef(my_pk) %>%
-  slice(1) %>%
-  mutate(as.data.frame(as.list(coefs_vector[[1]]))) %>%
+coef(my_pk) |>
+  slice_head(n = 1) |>
+  unnest_wider(coefs_vector) |> 
   glimpse()
 ```
 
 
-And this views the coefficients for row 5 (the same chemical, fitted with the 2-compartment model instead of the 1-compartment). Note that there are more coefficients, and they have different names, compared to the 1-comaprtment model.
+And this views the coefficients for row 5 (the same chemical, fitted with the 2-compartment model instead of the 1-compartment). Note that there are more coefficients, and they have different names, compared to the 1-compartment model.
 
 
 ```{r}
-coef(my_pk) %>%
-  slice(5) %>%
-  mutate(as.data.frame(as.list(coefs_vector[[1]]))) %>%
+coef(my_pk) |>
+  slice_head(n = 5) |> 
+  unnest_wider(coefs_vector) |> 
   glimpse()
 ```
 
@@ -198,14 +200,14 @@ You can extract the residuals using `residuals()` (for the observations in the o
 
 ```{r}
 my_resids <- residuals(my_pk)
-my_resids %>% glimpse()
+my_resids |> glimpse()
 ```
 
 You can get the predicted values (for the time points, doses, and routes in the original data) using `predict()`. The result is a `tibble`, one for each fitted model; the variable `Conc_est` contains the predictions.
 
 ```{r}
 my_preds <- predict(my_pk)
-my_preds %>% glimpse()
+my_preds |> glimpse()
 ```
 
 If instead you want to get predicted values for new data (new timepoints, doses, or routes), you can do this by providing argument `newdata`, but you need to include the variables for the data group!
@@ -221,7 +223,7 @@ predict(my_pk, newdata = data.frame(
   Route = "iv",
   Media = "plasma",
   exclude = FALSE
-)) %>% glimpse()
+)) |> glimpse()
 ```
 
 ### Plots
@@ -295,7 +297,7 @@ You can get the pre-processed data frame itself:
 
 ```{r}
 data_proc <- get_data(my_pk)
-data_proc %>% glimpse()
+data_proc |> glimpse()
 ```
 
 And you can get summary information about the pre-processed data:
@@ -304,7 +306,7 @@ And you can get summary information about the pre-processed data:
 my_data_info <- get_data_info(my_pk)
 names(my_data_info)
 
-my_data_info$data_flags %>% glimpse()
+my_data_info$data_flags |> glimpse()
 ```
 
 ### Toxicokinetic statistics
@@ -313,7 +315,7 @@ You can compute derived toxicokinetic statistics, such as total clearance rate, 
 
 ```{r}
 my_tkstats <- get_tkstats(my_pk, suppress.messages = TRUE)
-my_tkstats %>% glimpse()
+my_tkstats |> glimpse()
 ```
 
 ### Winning model
@@ -332,7 +334,7 @@ For example, here is R-squared for the winning model only:
 ```{r}
 rsq_df <- rsq(my_pk)
 
-rsq_win <- wm %>% dplyr::left_join(rsq_df)
+rsq_win <- wm |> dplyr::left_join(rsq_df)
 
 rsq_win
 ```
@@ -343,7 +345,7 @@ If you want to plot only the winning model, you can do so by specifying argument
 plot(my_pk, best_fit = TRUE, use_scale_conc = list(
   dose_norm = TRUE,
   log10_trans = FALSE
-)) %>%
+)) |>
   pull(final_plot)
 ```
 
@@ -482,7 +484,7 @@ get_status(my_pk)
 
 The data may include the results of multiple experiments for multiple chemicals, species, routes of administration, biological media, etc. You control how to split up the data into batches for fitting. Do you want to fit a PK model to all data for a given chemical and species, even if that includes more than one experiment? Do you want to fit separate PK models to each experiment? It's your choice. 
 
-Data grouping instructions are given using a function called `facet_data()` (named by analogy with `ggplot2`). You specify data grouping using a unqouted variable names specified in the `mapping` argument to `pk()`. Whatever variables you specify, the data will be grouped by unique combinations of those variables.
+Data grouping instructions are given using a function called `facet_data()` (named by analogy with `ggplot2`). You specify data grouping using an *unqouted* variable names specified in the `mapping` argument to `pk()`. Whatever variables you specify, the data will be grouped by unique combinations of those variables.
 
 The default data grouping is the result of calling the function `facet_data()` with its default arguments. In other words, 
 
@@ -545,7 +547,7 @@ This instructs `invivopkfit` on whether and how to try to impute missing values 
 
 ## Data information settings
 
-`my_pk$pk_groups$nca_group` instructs `invivopkfit` on how to group data for calculation of summary statistics, including non-compartmental analysis (NCA).  (Later, `summary_group` is also used to instruct `invivopkfit` how to group dataa to calculate summary TK statistics predicted by the models). 
+`my_pk$pk_groups$nca_group` instructs `invivopkfit` on how to group data for calculation of summary statistics, including non-compartmental analysis (NCA).
 
 In other words, 
 
@@ -663,7 +665,6 @@ formals(stat_model)
 The `model` argument is a character vector (or scalar), listing the names of one or more models to fit to the data. The default value lists the three models that are already implemented and built in to `invivopkfit`. 
 
 
-
 ## Error model to apply during fitting
 
 `my_pk$stat_error_model` lists the error model to apply during fitting. This is the result of a call to `stat_error_model()` with its default arguments.
@@ -687,11 +688,11 @@ Here are the default arguments to `stat_error_model()`:
 formals(stat_error_model)
 ```
 
-There is only one default argument: `error_group`. It is specified, just like data grouping in `facet_data()`, using a call to `dplyr::vars()`.
+There is only one default argument: `error_group`. It is specified, just like data grouping in `facet_data()`, using unquoted variables.
 
 This specifies the error model as, essentially, a fixed-effects model. Within each data group, the data are further split into subgroups according to unique combinations of the variables specified in `error_group`. Residual errors within each error subgroup are assumed to be independent and identically distributed according to a zero-mean normal distribution with a standard deviation that is unique to that error subgroup. 
 
-The error standard deviations for each error subgroup are hyperparameters of the model. They will be estimated from the data simultaneously with the model parameters for each data group. The argument `error_group` defines the number of different error subhgroups, and therefore the numnber of error SD hyperparameters that need to be estimated.
+The error standard deviations for each error subgroup are hyper-parameters of the model. They will be estimated from the data simultaneously with the model parameters for each data group. The argument `error_group` defines the number of different error subhgroups, and therefore the numnber of error SD hyperparameters that need to be estimated.
 
 If you specify `error_group` to be the same as the data group, then that simply means there is only one error group within each data group, and therefore only one error standard deviation for that data group.
 
@@ -886,7 +887,7 @@ names(my_pk)
 Notice that a new element `data` has been added to the end. This contains the pre-processed data. You can access it using the function `get_data()`.
 
 ```{r}
-get_data(my_pk) %>% glimpse()
+get_data(my_pk) |> glimpse()
 ```
 
 Notice that the variables `Value` and `LOQ` have been translated into `Conc` and `Detect`. If `Value < LOQ` then `Detect = FALSE`; otherwise `Detect = TRUE`. If `Detect = FALSE`, then `Conc = LOQ`; otherwise, `Conc = Value`. This is just a different way of presenting the same information, but it's a bit easier to handle with some of the internal calculations of `invivoPKfit`.
@@ -931,27 +932,27 @@ names(my_pk)
 An new list element `prefit` has been added. It can be extracted using the function `get_prefit()`. It is itself a named list, with one element for every PK model to be fitted to the data.
 
 ```{r}
-get_prefit(my_pk) %>% names()
+get_prefit(my_pk) |> names()
 ```
 
 Element `prefit$stat_error_model` has one element `sigma_DF`, which gives the starting values and lower/upper bounds for the error-group-specific standard deviations.
 
 ```{r}
-my_pk$prefit$stat_error_model$sigma_DF %>% glimpse()
+my_pk$prefit$stat_error_model$sigma_DF |> glimpse()
 ```
 
 
 Element `prefit$par_DF` gives the starting values and lower/upper bounds for each parameter of each model to be fit.
 
 ```{r}
-my_pk$prefit$par_DF %>% glimpse()
+my_pk$prefit$par_DF |> glimpse()
 ```
 
 Element `fit_check` gives information about whether each fit should be attempted (i.e., whether there are enough observations).
 
 
 ```{r}
-my_pk$prefit$fit_check %>% glimpse()
+my_pk$prefit$fit_check |> glimpse()
 ```
 
 
@@ -968,7 +969,7 @@ names(my_pk)
 The `pk` object now contains a new element `fit`. This is a `tibble` containing information about the fit for each data group, each PK model, and each optimization method. This table includes most of the outputs of `optimx::optimx()`, including information about convergence. It lists each parameter for each model (as in `my_pk$prefit$parDF`), including error-group specific sigmas (as in `my_pk$prefit$stat_error_model$sigmaDF`), and gives the final maximum-likelihood estimate for that parameter. Additionally, it provides information about whether each parameter estimate was at a lower or upper bound.
 
 ```{r}
-get_fit(my_pk) %>% glimpse()
+get_fit(my_pk) |> glimpse()
 ```
 
 
@@ -1092,15 +1093,15 @@ pk3 <- do_fit(pk3, n_cores = parallel::detectCores() - 1)
 Plot the results.
 
 ```{r}
-plot(pk1) %>% pull(final_plot)
+plot(pk1) |> pull(final_plot)
 ```
 
 ```{r}
-plot(pk2) %>% pull(final_plot)
+plot(pk2) |> pull(final_plot)
 ```
 
 ```{r}
-plot(pk3) %>% pull(final_plot)
+plot(pk3) |> pull(final_plot)
 ```
 
 Note that by default, each one has been plotted using its own concentration transformation. We can plot them all in the same way to compare better: dose-normalize the concentration axis, but do not log-transform it.
@@ -1109,21 +1110,21 @@ Note that by default, each one has been plotted using its own concentration tran
 plot(pk1, use_scale_conc = list(
   dose_norm = TRUE,
   log10_trans = FALSE
-)) %>% pull(final_plot)
+)) |> pull(final_plot)
 ```
 
 ```{r}
 plot(pk2, use_scale_conc = list(
   dose_norm = TRUE,
   log10_trans = FALSE
-)) %>% pull(final_plot)
+)) |> pull(final_plot)
 ```
 
 ```{r}
 plot(pk3, use_scale_conc = list(
   dose_norm = TRUE,
   log10_trans = FALSE
-)) %>% pull(final_plot)
+)) |> pull(final_plot)
 ```
 
 
@@ -1146,14 +1147,14 @@ pk_pool <- do_fit(pk_pool, n_cores = parallel::detectCores() - 1)
 plot(pk_hier, use_scale_conc = list(
   dose_norm = TRUE,
   log10_trans = FALSE
-)) %>% pull(final_plot)
+)) |> pull(final_plot)
 ```
 
 ```{r}
 plot(pk_pool, use_scale_conc = list(
   dose_norm = TRUE,
   log10_trans = FALSE
-)) %>% pull(final_plot)
+)) |> pull(final_plot)
 ```
 
 
@@ -1174,6 +1175,8 @@ Each model is an object of class `pk_model`, which is simply a named list giving
 - `auc_fun_args`: Any additional arguments to the function in `auc_fun`  
 - `params_fun_args`: Any additional arguments to the function in `params_fun`  
 - `tkstats_fun_args` : Any additional arguments to the function in `tkstats_fun`  
+- `param_groups`: A named list of character vectors that associate particular
+parameters which users may want to optimize as a group.
 
 For example, here is the list for the built-in model `model_1comp`:
 
@@ -1276,8 +1279,44 @@ It is recommended (although not required) that the function return at least the 
 
 The recommendation to return these statistics, using these names, is intended to make it easier to compare TK statistics across models, and to compare TK statistics to the results of non-compartmental analysis. If these names are not used, then some outputs of `eval_tkstats()` will not be very useful. The automated comparison of TK stats from the winning model to the results of non-compartmental analysis relies on these names being present in the output of `tkstats_fun` to match the names of the statistics output from NCA; it shouldn't crash without them, but the results won't be very useful. And TK stats compiled across models will not be easy to compare if the models use different names for the statistics.
 
-For examples, see `tkstats_1comp()`, `tkstats_2comp()`.
+For examples, see `tkstats_1comp()`, `tkstats_2comp()`.  
+
+### Simplified model modification interface
+
+In some cases, re-writing an entirely new `pk_model` is necessary, but we
+acknowledge that it may be sufficient to make smaller modifications to existing
+models. As of version 2.0.2 of `invivoPKfit`, we have included functionality
+to set optimized parameters or initial values with the
+`set_params_optimize` and `set_params_start` functions.
+Additionally, we recommend to give a unique model object name to modified models,
+and pass this new model through `adjust_model_name` so that it is recognized by
+`invivoPKfit`.
+
+Here is an example of making a new 2-compartment model which only optimizes the
+`k12` and `k21` rate parameters and gives the parameter `V1` a value of 1.
+
+```{r model-setting}
+new_2comp <- set_params_optimize(model_2comp, params = c("k12", "k21")) |> 
+  set_params_starts(starts = list(V1 = 1)) 
+new_2comp <- adjust_model_name(new_2comp)
+
+new_pk <- my_pk +
+  stat_model(model = c("model_flat", "model_2comp", "new_2comp")) +
+  settings_optimx(method = "bobyqa")
+
+new_pk <- do_fit(new_pk)
+
+get_fit(new_pk) |>
+  filter(model == "new_2comp") |>
+  glimpse()
+```
+
+Another addition to this function family is `toggle_clearance_mode()`, which
+allows users to change the default hepatic clearance assumption in
+`model_httk_gas_pbtk`, which is restrictive clearance.
+
 
 ## Caveats
 
 Currently, some functions in `invivopkfit` may assume particular units for the data, and therefore particular units for the fitted model parameters. For example, time is generally assumed to be in units of hours. We plan to relax these assumptions in future releases of `invivoPKfit`.
+

@@ -151,6 +151,7 @@ is.pk_model <- function(obj) {
 #' @returns An object of class `pk_model` with set/updated `param_fun_args` to
 #' include `pars_to_optimize` argument specifying the parameters to be optimized.
 #' @export
+#' @family pk_model modifiers
 #' @author Gilberto Padilla Mercado
 #'
 set_params_optimize <- function(model, params = "default") {
@@ -175,6 +176,7 @@ set_params_optimize <- function(model, params = "default") {
 #' @returns An object of class `pk_model` with set/updated `param_fun_args` to
 #' include `pars_to_optimize` argument specifying the parameters to be optimized.
 #' @export
+#' @family pk_model modifiers
 #' @author Gilberto Padilla Mercado
 #'
 set_params_starts <- function(model, starts) {
@@ -197,6 +199,7 @@ set_params_starts <- function(model, starts) {
 #' @returns An object of class `pk_model` with set/updated `param_fun_args` to
 #' include `pars_to_optimize` argument specifying the parameters to be optimized.
 #' @export
+#' @family pk_model modifiers
 #' @author Gilberto Padilla Mercado
 toggle_clearance_mode <- function(model) {
   stopifnot(is.pk_model(model))
@@ -232,6 +235,7 @@ toggle_clearance_mode <- function(model) {
 #'
 #' @returns an object of class `pk_model` with `name` matching it's name in the environment.
 #' @export
+#' @family pk_model modifiers
 #' @author Gilberto Padilla Mercado
 adjust_model_name <- function(model) {
   stopifnot(is.pk_model(model))
@@ -241,7 +245,7 @@ adjust_model_name <- function(model) {
 }
 
 
-
+# Internal helper function
 check_model_params <- function(params, model) {
 
   if (any(params %in% names(model$param_groups))) {

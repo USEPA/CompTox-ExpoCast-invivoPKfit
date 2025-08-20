@@ -16,6 +16,13 @@ an object of class `pk_model` with `name` matching it's name in the environment.
 When creating new `pk_model` objects, the name of the 'base' model is kept.
 Please use this function to 'reset' the name of the new `pk_model` object.
 }
+\seealso{
+Other pk_model modifiers: 
+\code{\link{set_params_optimize}()},
+\code{\link{set_params_starts}()},
+\code{\link{toggle_clearance_mode}()}
+}
 \author{
 Gilberto Padilla Mercado
 }
+\concept{pk_model modifiers}

@@ -19,6 +19,13 @@ include `pars_to_optimize` argument specifying the parameters to be optimized.
 \description{
 Set model parameters to optimize
 }
+\seealso{
+Other pk_model modifiers: 
+\code{\link{adjust_model_name}()},
+\code{\link{set_params_starts}()},
+\code{\link{toggle_clearance_mode}()}
+}
 \author{
 Gilberto Padilla Mercado
 }
+\concept{pk_model modifiers}

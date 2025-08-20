@@ -16,6 +16,13 @@ include `pars_to_optimize` argument specifying the parameters to be optimized.
 \description{
 Switch between model parameters to optimize
 }
+\seealso{
+Other pk_model modifiers: 
+\code{\link{adjust_model_name}()},
+\code{\link{set_params_optimize}()},
+\code{\link{set_params_starts}()}
+}
 \author{
 Gilberto Padilla Mercado
 }
+\concept{pk_model modifiers}
