@@ -5,7 +5,7 @@ test_that(
       data = subset(cvt,
                     analyzed_chem_dtxsid %in% "DTXSID3061635"
       )
-    )
+    ) + settings_preprocess(suppress.messages = TRUE)
     expect_no_error(do_preprocess(my_pk))
   }
 )
@@ -15,7 +15,7 @@ test_that(
   {
     my_pk <- pk(
       data = NULL
-    )
+    ) + settings_preprocess(suppress.messages = TRUE)
     expect_warning(do_preprocess(my_pk),
                    regexp = "do_preprocess.pk(): Original data is NULL",
                    fixed = TRUE)
@@ -28,7 +28,7 @@ test_that(
     my_pk <- pk(
       data = subset(cvt,
                     analyzed_chem_dtxsid %in% "DTXSID3061635"
-      ))
+      )) + settings_preprocess(suppress.messages = TRUE)
     my_pk <- do_preprocess(my_pk)
     expect_true("data" %in% names(my_pk))
   }
@@ -41,7 +41,7 @@ test_that(
       data = subset(cvt,
                     analyzed_chem_dtxsid %in% "DTXSID3061635"
       )
-    )
+    ) + settings_preprocess(suppress.messages = TRUE)
     my_pk <- do_preprocess(my_pk)
     required_vars <- c("Chemical",
                        "Species",
