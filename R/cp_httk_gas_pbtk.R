@@ -102,14 +102,14 @@ cp_httk_gas_pbtk <- function(params, time, dose, route, medium = "plasma",
             subset(select = c("time", "Cplasma"))
 
         }, warning = function(w) {
-          message("Here is a warning")
+          message("cp_httk_gas_pbtk: httk::solve_gas_pbtk() has thrown a warning. Please check output of this operation!")
           len_time <- length(unique(c(0, x$Time)))
           data.frame(time = unique(c(0, x$Time)),
                      Cplasma = rep(-1, len_time))
 
         }, error = function(e) {
 
-          message("Here is an error")
+          message("cp_httk_gas_pbtk: An error in httk::solve_gas_pbtk() has occured. Please check output of this operation!")
           # if there is an error, return negative values
           # this ensures this parameter set is discarded during optimization
           len_time <- length(unique(c(0, x$Time)))
