@@ -12,7 +12,8 @@ cp_httk_gas_pbtk(
   medium = "plasma",
   this_chem = NULL,
   this_species = NULL,
-  restrictive = TRUE
+  restrictive = TRUE,
+  ...
 )
 }
 \arguments{
@@ -41,6 +42,9 @@ Must be same length as `time` and `dose`, or length 1.}
 
 \item{restrictive}{A logical value (TRUE or FALSE. Default: FALSE) that says whether the
 assumption is that the clearance is restrictive or non-restrictive}
+
+\item{...}{Additional parameters. Currently only used for determining if
+Funbound.plasma or Krbc2pu should be held constant.}
 }
 \value{
 A vector of blood or plasma concentration values  corresponding

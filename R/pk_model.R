@@ -158,11 +158,24 @@ set_params_optimize <- function(model, params = "default") {
   stopifnot(is.pk_model(model))
   params <- check_model_params(params, model)
 
+  if (all(c("Krbc2pu", "Funbound.plasma") %in% params)) {
+    cli::cli_inform("Prioritizing Funbound.plasma for optimization. Holding Krbc2pu.")
+    params <- params[!params %in% "Krbc2pu"]
+  }
+
+  if (any(c("Krbc2pu", "Funbound.plasma") %in% params)) {
+    model$optimize_fun_args$held_param <- setdiff(
+      c("Krbc2pu", "Funbound.plasma"),
+      params
+    )
+  }
+
   cli::cli_inform(
     c("v" = "Setting {params} to be optimized for {model$name}")
   )
 
   model$params_fun_args$pars_to_optimize <- params
+
   return(model)
 }
 

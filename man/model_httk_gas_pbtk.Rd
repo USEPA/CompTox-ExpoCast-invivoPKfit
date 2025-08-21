@@ -5,7 +5,7 @@
 \alias{model_httk_gas_pbtk}
 \title{Gas pbtk `httk` model}
 \format{
-An object of class \code{list} (inherits from \code{pk_model}) of length 11.
+An object of class \code{list} (inherits from \code{pk_model}) of length 12.
 }
 \usage{
 model_httk_gas_pbtk

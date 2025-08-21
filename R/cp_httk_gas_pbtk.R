@@ -28,6 +28,8 @@
 #' @param this_species A character vector naming the species for calculations in `httk`.
 #' @param restrictive A logical value (TRUE or FALSE. Default: FALSE) that says whether the
 #' assumption is that the clearance is restrictive or non-restrictive
+#' @param ... Additional parameters. Currently only used for determining if
+#'  Funbound.plasma or Krbc2pu should be held constant.
 #'
 #' @return A vector of blood or plasma concentration values  corresponding
 #'  to `time`.
@@ -40,9 +42,9 @@
 #'
 cp_httk_gas_pbtk <- function(params, time, dose, route, medium = "plasma",
                              this_chem = NULL, this_species = NULL,
-                             restrictive = TRUE) {
+                             restrictive = TRUE, ...) {
   # Make params into a list format
-  params <- recalculate_httk_pbtk_params(params)
+  params <- recalculate_httk_pbtk_params(params, ...)
   # Create a data.frame to "track" the times
   full_df <- data.frame(
     Time = time/24, # convert to days

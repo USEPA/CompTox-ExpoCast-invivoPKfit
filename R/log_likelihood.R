@@ -158,6 +158,7 @@ log_likelihood <- function(par,
   Detect[is.na(Detect)] <- FALSE
   # Fix the modelfun_args and modelfun variables
   modelfun_args <- modelfun[["conc_fun_args"]]
+  optimized_args <- modelfun$optimize_fun_args
   modelfun <- modelfun[["conc_fun"]]
 
   # combine parameters to be optimized and held constant
@@ -180,7 +181,7 @@ log_likelihood <- function(par,
       # Need to evaluate it correctly in pk_model
       modelfun_args <- lapply(modelfun_args, rlang::eval_tidy, data = data)
     }
-    these_args <- append(
+    these_args <- c(
       list(
         params = model.params,
         time = Time_trans,
@@ -188,7 +189,8 @@ log_likelihood <- function(par,
         route = Route,
         medium = Media
       ),
-      modelfun_args
+      modelfun_args,
+      optimized_args
     )
     # get un-transformed predicted plasma concentration vs. time for the current parameter
     # values, by dose and route

@@ -160,7 +160,11 @@ model_httk_gas_pbtk <- pk_model(
     this_chem = Chemical,
     this_species = Species
   ),
-  auc_fun_args = NULL,
+  auc_fun_args = alist(
+    restrictive = TRUE,
+    this_chem = Chemical,
+    this_species = Species
+  ),
   params_fun_args = list(restrictive = TRUE),
   param_groups = list(
     default = c("Clint", "Funbound.plasma"),
@@ -184,7 +188,8 @@ model_httk_gas_pbtk <- pk_model(
 ) |> set_params_optimize()
 
 
-usethis::use_data(model_1comp,
+usethis::use_data(
+  model_1comp,
   model_2comp,
   model_flat,
   model_httk_gas_pbtk,

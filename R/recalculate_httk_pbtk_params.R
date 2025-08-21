@@ -64,11 +64,15 @@
 #' @param params A list of parameter = value pairs that will be used in calculations.
 #' @param dtxsid The DTXSID of a chemical, by default taken from the 'Chemical' column in the data.
 #' @param species The species of a subject, by default taken from the 'Species' column in the data.
+#' @param held_param A character vector or length 1. Either "Krbc2pu" or "Funbound.plasma",
+#' used to determine the conditional calculation of the parameter Kint. When NULL
+#' (default) it will skip the recalculation entirely (as it should when outside fitting
+#' process).
 #'
 #' @returns An updated list of parameters
 #' @export
 #'
-recalculate_httk_pbtk_params <- function(params, dtxsid, species) {
+recalculate_httk_pbtk_params <- function(params, dtxsid, species, held_param = NULL) {
 
   KFsummary <- Kint <- Fprotein.plasma <- NULL
   fabs.oral <- hematocrit <-  Qgut_ <- Qintesttransport <- NULL
@@ -80,13 +84,12 @@ recalculate_httk_pbtk_params <- function(params, dtxsid, species) {
   Clmetabolismc <- Clint * million.cells.per.gliver *
     Vliverc * 1E3 * liver.density * Funbound.plasma * 60 * 1E-6
 
-  tmp_fup <- 0.37 / (Kint + (1.37 * (1 - Fprotein.plasma)))
-  if (isTRUE(Funbound.plasma == tmp_fup)) {
-    Kint <- Krbc2pu / KFsummary
-    Funbound.plasma <- 0.37 / (Kint + (1.37 * (1 - Fprotein.plasma)))
-  } else {
+  if (!is.null(held_param) && held_param == "Krbc2pu") {
     Kint <- 1 - Fprotein.plasma + (0.37 * (1 / Funbound.plasma - (1 - Fprotein.plasma)))
     Krbc2pu <- KFsummary * Kint
+  } else if (!is.null(held_param) && held_param == "Krbc2pu") {
+    Kint <- Krbc2pu / KFsummary
+    Funbound.plasma <- 0.37 / (Kint + (1.37 * (1 - Fprotein.plasma)))
   }
 
   Rblood2plasma <- 1 - hematocrit + (hematocrit * Krbc2pu * Funbound.plasma)

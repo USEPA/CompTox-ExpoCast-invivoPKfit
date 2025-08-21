@@ -4,7 +4,7 @@
 \alias{recalculate_httk_pbtk_params}
 \title{Recalculating parameters for `httk`'s pbtk or gas_pbtk model}
 \usage{
-recalculate_httk_pbtk_params(params, dtxsid, species)
+recalculate_httk_pbtk_params(params, dtxsid, species, held_param = NULL)
 }
 \arguments{
 \item{params}{A list of parameter = value pairs that will be used in calculations.}
@@ -12,6 +12,11 @@ recalculate_httk_pbtk_params(params, dtxsid, species)
 \item{dtxsid}{The DTXSID of a chemical, by default taken from the 'Chemical' column in the data.}
 
 \item{species}{The species of a subject, by default taken from the 'Species' column in the data.}
+
+\item{held_param}{A character vector or length 1. Either "Krbc2pu" or "Funbound.plasma",
+used to determine the conditional calculation of the parameter Kint. When NULL
+(default) it will skip the recalculation entirely (as it should when outside fitting
+process).}
 }
 \value{
 An updated list of parameters

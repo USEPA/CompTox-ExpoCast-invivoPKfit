@@ -70,9 +70,6 @@ fit_group <- function(data,
     ]
     names(upper_params) <- opt_param_names
 
-
-
-
     # Now call optimx::optimx() and do the fit
     optimx_out <- suppressWarnings(
       tryCatch(
