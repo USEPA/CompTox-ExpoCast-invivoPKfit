@@ -206,17 +206,20 @@ get_starts_httk_gas_pbtk <- function(data,
     "Kliver2pu" = 0.563,
     "Kblood2air" = 0.46,
     "Krest2pu" = 0.46
-  )
+  ) * 1.96 # Because we want 2 SDs
 
   # Multiply starting values by (1 +/- CV)
   for (this_part in names(part_sd)) {
     par_DF[
       par_DF$param_name == this_part, "upper_bound"
-    ] <- par_DF[par_DF$param_name == this_part, "start"][[1]] * (1 + part_sd[[this_part]])
-
+    ] <- 10^(
+      log10(par_DF[par_DF$param_name == this_part, "start"][[1]]) + part_sd[[this_part]]
+    )
     par_DF[
       par_DF$param_name == this_part, "lower_bound"
-    ] <- par_DF[par_DF$param_name == this_part, "start"][[1]] * (1 - part_sd[[this_part]])
+    ] <- 10^(
+      log10(par_DF[par_DF$param_name == this_part, "start"][[1]]) - part_sd[[this_part]]
+    )
   }
 
 

@@ -87,7 +87,7 @@ recalculate_httk_pbtk_params <- function(params, dtxsid, species, held_param = N
   if (!is.null(held_param) && held_param == "Krbc2pu") {
     Kint <- 1 - Fprotein.plasma + (0.37 * (1 / Funbound.plasma - (1 - Fprotein.plasma)))
     Krbc2pu <- KFsummary * Kint
-  } else if (!is.null(held_param) && held_param == "Krbc2pu") {
+  } else if (!is.null(held_param) && held_param == "Funbound.plasma") {
     Kint <- Krbc2pu / KFsummary
     Funbound.plasma <- 0.37 / (Kint + (1.37 * (1 - Fprotein.plasma)))
   }
