@@ -54,7 +54,7 @@ log10-transformation will be applied.}
 \item{AFE_group}{Default: Chemical, Species. Determines what the data
 grouping that is used to calculate average fold error (AFE). Should be set to lowest number
 of variables that still would return unique experimental conditions.
-Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.}
+Input in the form of `rlang::exprs(Chemical, Species, Route, Media, Dose)`.}
 
 \item{sub_pLOQ}{TRUE (default): Substitute all predictions below the LOQ with
 the LOQ before computing AFE. FALSE: do not.}
@@ -75,8 +75,9 @@ Average fold error is calculated as
 \deqn{
 10^{\frac{1}{N}\sum{log_{10} \left( \frac{\textrm{predicted}}{\textrm{observed}} \right)}}
 }
+}
+\section{Left-censored data}{
 
-# Left-censored data
 
 If the observed value is censored, and the predicted value is less than the
 reported LOQ, then the observed value is (temporarily) set equal to the
@@ -86,6 +87,7 @@ If the predicted value is less than the reported LOQ, then the user may
 choose whether to (temporarily) set the predicted value equal to LOQ, using
 argument `sub_pLOQ`).
 }
+
 \seealso{
 Other fit evaluation metrics: 
 \code{\link{AAFE.pk}()},

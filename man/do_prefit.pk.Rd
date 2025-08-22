@@ -9,7 +9,7 @@
 \arguments{
 \item{obj}{A `pk` object}
 
-\item{...}{Additional arguments. Not in use.}
+\item{...}{Additional arguments. Not in use currently.}
 }
 \value{
 The same `pk` object, but with a new element `prefit`, containing the
@@ -21,12 +21,12 @@ Do pre-fit calculations and checks
 }
 \details{
 This function does the following:
-
-- Based on the error model in `stat_error_model` and the pre-processed data, determines the number of residual standard deviations ("sigmas") hyperparameters to be estimated.
-- Determines which "sigma" hyperparameter corresponds to each observation in the data.
-- Calculates lower/upper bounds and starting guesses for each "sigma" hyperparameter
-- For each model in `stat_model`, calls its `params_fun`, the function that, based on the data, determines whether to optimize each model parameter, and calculates lower/upper bounds and starting guesses for each model parameter to be optimized. Only non-excluded observations are passed to each model's `params_fun`.
-
+\itemize{
+\item Based on the error group in `pk_groups` and the pre-processed data, determines the number of residual standard deviations ("sigmas") hyperparameters to be estimated.
+\item Determines which "sigma" hyperparameter corresponds to each observation in the data.
+\item Calculates lower/upper bounds and starting guesses for each "sigma" hyperparameter
+\item For each model in `stat_model`, calls its `params_fun`, the function that, based on the data, determines whether to optimize each model parameter, and calculates lower/upper bounds and starting guesses for each model parameter to be optimized. Only non-excluded observations are passed to each model's `params_fun`.
+}
 
 Lower bounds for each "sigma" hyperparameter are set to `sqrt(.Machine$double_eps)`.
 
@@ -40,6 +40,10 @@ value less than the lower bound, then a constant value of 1000 is
 substituted.
 
 The starting guess for each "sigma" hyperparameter is one-tenth of the upper bound.
+
+If there are less detected observations than timepoints, or if there are
+parameters necessary for model fitting that have missing values,
+these models will not be fit.
 }
 \author{
 Caroline Ring

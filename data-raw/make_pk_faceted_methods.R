@@ -11,7 +11,7 @@ pk_methods_names <- gsub(x=pk_methods_names,
 
 #these behave differently (they modify in place)
 #and I have created these manually.
-pk_methods_names <- setdiff(pk_methods_names,
+pk_methods_names <- base::setdiff(pk_methods_names,
                             c("preprocess_data",
                               "data_info",
                               "prefit",

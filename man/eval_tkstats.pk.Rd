@@ -7,12 +7,12 @@
 \method{eval_tkstats}{pk}(
   obj,
   newdata = NULL,
-  model = NULL,
+  model = "winning",
   method = NULL,
   tk_group = NULL,
   exclude = TRUE,
   dose_norm = FALSE,
-  finite_only = TRUE,
+  finite_only = FALSE,
   suppress.messages = NULL,
   ...
 )
@@ -33,11 +33,11 @@ return TK stats for all models.}
 \item{method}{Character: One or more of the [optimx::optimx()] methods used.
 Default `NULL` to return TK stats for all methods.}
 
-\item{tk_group}{A list of variables provided using a `dplyr::vars()` call.
+\item{tk_group}{A list of variables provided using a `alist` call.
 The data (either `newdata` or `obj$data`) will be grouped according to the
 unique combinations of these variables. For each unique combination of
 these variables in the data, a set of TK statistics will be computed. The
-default is `obj$settings_data_info$summary_group`, to derive TK statistics for
+default is `obj$pk_groups$nca_group`, to derive TK statistics for
 the same groups of data as non-compartmental analysis statistics. With the
 default, you can directly compare e.g. a model-predicted AUC_inf to the
 corresponding NCA-estimated AUC_inf. However, you may specify a different
@@ -48,32 +48,20 @@ stats per group.}
 
 \item{exclude}{Logical: `TRUE` to get the TK groupings after removing any
 observations in the data marked for exclusion (if there is a variable
-`exclude` in the data, an observation is marked for exclusion when `TRUE`).
+`exclude` in the data, an observation is marked for exclusion when  `TRUE`).
 `FALSE` to include all observations when getting the TK
 groupings, regardless of exclusion status. Default `TRUE`.}
 
-\item{dose_norm}{Logical: `TRUE` (default) to dose-normalize before
-calculating both the NCA statistics and the fitted TK statistics (i.e. all
-dose-dependent statistics will be for a unit dose of 1 mg/kg, including
-Cmax, AUC, Css). `FALSE` to calculate NCA and fitted TK stats separately
-for each dose group (you must specify `Dose` as one of the variables in
-`tk_group` for this to work). If `dose_norm` is `TRUE` and you also specify
-`Dose` as one of the `tk_group` variables, then the dose part of the
-grouping will be ignored in the output. (If `TRUE`, under
-the hood, this function will temporarily overwrite the `Dose` column in its
-local copy of `newdata` with 1's. This doesn't affect the data outside of
-this function. But it means that any values in the `Dose` variable of
-`newdata` will be ignored if `TRUE`.)}
+\item{dose_norm}{Logical: `TRUE` (default) specifies whether the concentrations are dose-normalized.}
 
-\item{finite_only}{Logical: `TRUE` (default) returns only rows (observations)
-for which AUC is finite in both `nca` and `tkstats`. This also means it will
-by default never return instances where winning model == `model_flat`.}
+\item{finite_only}{Logical (Default: TRUE). If FALSE, will include non-finite values
+for `AUC_infinity` from both compartmental and noncompartmental analysis.}
 
 \item{suppress.messages}{Logical: whether to suppress message printing. If
 NULL (default), uses the setting in
-`obj$settings_preprocess$suppress.messages`}
+`obj$pk_settings$preprocess$suppress.messages`}
 
-\item{...}{Additional arguments. Currently not in use.}
+\item{...}{Additional arguments not currently in use.}
 }
 \value{
 A `data.frame` with one  row for each "winning" model in

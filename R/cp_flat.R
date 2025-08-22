@@ -5,7 +5,7 @@
 #' This function is used for model comparison: does a 1- or 2-compartment TK
 #' model fit the data any better than this naive "flat" model?
 #'
-#' # Required parameters
+#' @section Required parameters:
 #'
 #' `params` must include the following named items:
 #'   \describe{
@@ -75,6 +75,7 @@ cp_flat <- function(params,
                     dose,
                     route,
                     medium = "plasma") {
+
   params <- fill_params_flat(params)
 
   check_msg <- check_params_flat(params = params,
@@ -82,19 +83,17 @@ cp_flat <- function(params,
                             medium = medium)
 
   if (check_msg != "Parameters OK") {
-    stop("cp_flat(): ", check_msg)
+    cli_abort(check_msg)
   }
+
+  Vdist = Fgutabs_Vdist = Rblood2plasma = NULL
 
   # for readability, assign params to variables inside this function
   list2env(as.list(params), envir = as.environment(-1))
 
-  cp <- dose * ifelse(route %in% "iv",
-               1 / Vdist,
-               Fgutabs_Vdist)
+  Cp <- dose * ifelse(route %in% "iv", 1 / Vdist, Fgutabs_Vdist)
 
-  cp <- ifelse(medium %in% "blood",
-               cp * Rblood2plasma,
-               cp)
+  Cp <- ifelse(medium %in% "blood", Cp * Rblood2plasma, Cp)
 
-  return(cp)
+  return(Cp)
 }

@@ -6,13 +6,12 @@
 \usage{
 settings_preprocess(
   routes_keep = c("oral", "iv"),
-  media_keep = c("blood", "plasma"),
+  media_keep = c("blood", "plasma", "excreta"),
   ratio_conc_dose = 1,
   impute_loq = TRUE,
-  loq_group = dplyr::vars(Chemical, Species, Reference, Media),
   calc_loq_factor = 0.9,
   impute_sd = TRUE,
-  sd_group = dplyr::vars(Chemical, Species, Reference, Media),
+  keep_data_original = TRUE,
   suppress.messages = FALSE,
   ...
 )
@@ -32,13 +31,6 @@ same mass units are used for both.}
 
 \item{impute_loq}{TRUE or FALSE: Whether to impute missing LOQ values.}
 
-\item{loq_group}{A list of variables, specified using a call to
-[dplyr::vars()]. These should be harmonized variable names. Unique
-combinations of these variables define groups of data. Within each group,
-any missing LOQ values will be imputed as the minimum detected Value in the
-group, multiplied by `calc_loq_factor`. Default is `dplyr::vars(Chemical,
-Species, Reference, Media)`.}
-
 \item{calc_loq_factor}{A numeric factor used for imputing missing LOQ.
 Within each group defined in `loq_group`, any missing LOQ values will be
 imputed as the minimum detected Value in the group, multiplied by
@@ -46,12 +38,7 @@ imputed as the minimum detected Value in the group, multiplied by
 
 \item{impute_sd}{TRUE or FALSE: Whether to impute missing SD values.}
 
-\item{sd_group}{A list of variables, specified using a call to
-[dplyr::vars()]. These should be harmonized variable names. Unique
-combinations of these variables define groups of data. Within each group,
-any missing SD values will be imputed as the minimum non-missing SD value
-in the group. Default is `dplyr::vars(Chemical, Species, Reference,
-Media)`.}
+\item{keep_data_original}{TRUE or FALSE: Whether to keep original data after pre-processing.}
 
 \item{suppress.messages}{TRUE or FALSE: Whether to suppress verbose messages.
 Default FALSE.}

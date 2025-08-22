@@ -7,27 +7,7 @@
 auc_2comp(params, time, dose, route, medium = "plasma")
 }
 \arguments{
-\item{params}{A named list of parameter values including the following:
-\itemize{
-\item k12: Rate at which compound moves from central to peripheral
-compartment, 1/h.
-\item k21: Rate at which compound moves from peripheral to central compartment, 1/h.
-\item kelim: Elimination rate, 1/h.
-\item V1: Apparent volume of central compartment, L/kg BW. Or see below for "Fgutabs_V1"
-}
-
-For oral administration (\code{route} FALSE), \code{params} must also include:
-\itemize{
-\item Fgutabs: Oral bioavailability, unitless fraction. Or see below for "Fgutabs_V1"
-\item kgutabs: Rate of absorption from gut, 1/h.
-}
-
-For oral administration, in lieu of "V1" and "Fgutabs", you may instead
-provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an
-alternate parameterization for situations where "Fgutabs" and "V1" are not
-identifiable separately (i.e. when oral data are available, but IV data are
-not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
-used.}
+\item{params}{A named list of parameter values.}
 
 \item{time}{A numeric vector of time values, in hours}
 
@@ -38,33 +18,56 @@ used.}
 \item{medium}{A character string that determines the measured media. Default: "plasma".}
 }
 \value{
-A vector of plasma AUC values, evaluated at each time point in \code{time}.
+A vector of plasma AUC values, evaluated at each time point in `time`.
 }
 \description{
 Calculate area under the plasma concentration vs. time curve for the
-1-compartment model, using an analytical equation (the integral of the
-1-compartment model equation with respect to time).
+2-compartment model, using an analytical equation (the integral of the
+2-compartment model equation with respect to time).
 }
+\section{Required params}{
+
+
+`params` must include the following named items:
+  \describe{
+  \item{k12}{Rate at which the compound moves from the central to peripheral compartment, 1/h.}
+  \item{k21}{Rate at which the compound moves from peripheral to central compartment, 1/h.}
+  \item{kelim}{Elimination rate, 1/h.}
+  \item{V1}{Apparent volume of central compartment, L/kg BW.}
+  }
+
+For oral administration (\code{route} FALSE), \code{params} must also include:
+\describe{
+\item{Fgutabs}{Oral bioavailability, unitless fraction.}
+\item{kgutabs}{rate of absorption from gut, 1/h.}
+}
+
+For oral administration, in lieu of "V1" and "Fgutabs", you may instead
+provide "Fgutabs_V1", the ratio of Fgutabs to V1 (1/L). This is an
+alternate parameterization for situations where "Fgutabs" and "V1" are not
+identifiable separately (i.e. when oral data are available, but IV data are
+not). If "Fgutabs" and "V1" are provided, then "Fgutabs_V1" will not be
+used.
+}
+
 \seealso{
 Other built-in model functions: 
 \code{\link{auc_1comp}()},
-\code{\link{auc_1comp_cl}()},
 \code{\link{auc_flat}()},
+\code{\link{auc_httk_gas_pbtk}()},
 \code{\link{cp_1comp}()},
-\code{\link{cp_1comp_cl}()},
 \code{\link{cp_2comp}()},
 \code{\link{cp_2comp_dt}()},
 \code{\link{cp_flat}()},
+\code{\link{cp_httk_gas_pbtk}()},
 \code{\link{get_params_1comp}()},
-\code{\link{get_params_1comp_cl}()},
-\code{\link{get_params_1comp_fup}()},
 \code{\link{get_params_2comp}()},
 \code{\link{get_params_flat}()},
+\code{\link{get_params_httk_gas_pbtk}()},
 \code{\link{get_starts_1comp}()},
-\code{\link{get_starts_1comp_cl}()},
-\code{\link{get_starts_1comp_fup}()},
 \code{\link{get_starts_2comp}()},
 \code{\link{get_starts_flat}()},
+\code{\link{get_starts_httk_gas_pbtk}()},
 \code{\link{tkstats_2comp}()},
 \code{\link{transformed_params_2comp}()}
 
@@ -78,7 +81,6 @@ Other 2-compartment model functions:
 
 Other model AUC functions: 
 \code{\link{auc_1comp}()},
-\code{\link{auc_1comp_cl}()},
 \code{\link{auc_flat}()}
 }
 \author{

@@ -28,12 +28,7 @@
 #' @author Caroline Ring
 #' @export
 
-dlnorm_summary <- function(mu,
-                             sigma,
-                             x_mean,
-                             x_sd,
-                             x_N,
-                             log = FALSE) {
+dlnorm_summary <- function(mu, sigma, x_mean, x_sd, x_N, log = FALSE) {
 
   x_len <- c("x_mean" = length(x_mean),
              "x_sd" = length(x_sd),
@@ -41,11 +36,11 @@ dlnorm_summary <- function(mu,
              "mu" = length(mu),
              "sigma" = length(sigma))
 
+  # special case when no data is present
+  if (all(x_len %in% 0)) return(numeric(0L))
+
   if (any(x_len %in% 0)) {
-    stop("invivopkfit::dnorm_summary(): ",
-         "the following arguments have zero length: ",
-         toString(names(x_len)[x_len %in% 0])
-    )
+    cli::cli_abort("The following arguments have zero length:  {names(x_len)[x_len %in% 0]}")
   }
 
   max_len <- max(x_len)
@@ -55,23 +50,20 @@ dlnorm_summary <- function(mu,
 
 
   if (any(bad_len)) {
-    warning("invivopkfit::dnorm_summary(): ",
-            "the following inputs do not have matching lengths: ",
-            paste(paste0(names(x_len)[bad_len], " length = ", x_len[bad_len]),
-                  collapse = "\n"
-            ),
-            "\n They will be repeated to match the length of the longest input,",
-            names(x_len)[which_max_len],
-            " length = ",
-            max_len,
-            "."
-    )
+    cli::cli_warn(c(
+      "The following inputs do not have matching lengths: ",
+      post_name_value(x_len[bad_len], extra = "length ="),
+      "They will be repeated to match the length of the longest input:",
+      post_name_value(x_len[which_max_len], extra = "length =")
+    ))
+
     # repeat to match longest
     for (i in seq_along(x_len)) {
       assign(names(x_len)[i],
-             rep( # repeat the current value of each item to match the length
+             rep_len( # repeat the current value of each item to match the length
                get(names(x_len)[i]), # get the current value of each item
-               length.out = max_len)
+               max_len
+             )
       )
     }
   }

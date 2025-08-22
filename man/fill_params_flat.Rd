@@ -7,7 +7,7 @@
 fill_params_flat(params)
 }
 \arguments{
-\item{params}{Named numeric vector of parameters for the flat model}
+\item{params}{Named list of parameters for the flat model.}
 }
 \value{
 A named numeric vector of parameters, with any flat model

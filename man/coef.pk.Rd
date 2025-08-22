@@ -16,16 +16,15 @@
 )
 }
 \arguments{
-\item{object}{A [pk()] object}
+\item{object}{A [pk] object.}
 
-\item{model}{Optional: Specify (as a `character` vector) one or more of the
-fitted models whose coefficients to return. If `NULL` (the default),
-coefficients will be returned for all of the models in `obj$stat_model`.}
+\item{model}{Optional: Specify one or more of the fitted models whose
+coefficients to return. If NULL (the default), coefficients will be
+returned for all of the models in `obj$stat_model`.}
 
-\item{method}{Optional: Specify (as a `character` vector)one or more of the
-[optimx::optimx()] methods whose coefficients to return. If `NULL` (the
-default), coefficients will be returned for all of the models in
-`obj$settings_optimx$method`.}
+\item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
+whose coefficients to return. If NULL (the default), coefficients will be
+returned for all of the models in `obj$pk_settings$optimx$method`.}
 
 \item{drop_sigma}{Logical: `FALSE` by default. Determines whether to include
 sigma in the output.}
@@ -44,7 +43,7 @@ that were optimized and those that were held constant.) Any value other
 than `"use"`, `"optim"`, or `"const"` will return an error.}
 
 \item{suppress.messages}{Logical: `NULL` by default to use the setting in
-`object$settings_preprocess$suppress.messages`. Determines whether to
+`object$pk_settings$preprocess$suppress.messages`. Determines whether to
 display messages.}
 
 \item{...}{Additional arguments currently not in use.}

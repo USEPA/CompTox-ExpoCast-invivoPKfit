@@ -5,7 +5,7 @@
 \alias{model_flat}
 \title{Flat model}
 \format{
-An object of class \code{list} (inherits from \code{pk_model}) of length 10.
+An object of class \code{list} (inherits from \code{pk_model}) of length 11.
 }
 \usage{
 model_flat

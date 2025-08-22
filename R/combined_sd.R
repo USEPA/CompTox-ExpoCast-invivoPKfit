@@ -29,6 +29,7 @@
 #' @return Numeric: the standard deviation of the combined population (i.e. if
 #'   all the groups were concatenated into one large group).
 #' @author Caroline Ring
+
 combined_sd <- function(group_mean,
                         group_sd,
                         group_n,
@@ -41,9 +42,8 @@ combined_sd <- function(group_mean,
              "group_n" = length(group_n))
 
   if (any(x_len %in% 0)) {
-    stop("invivopkfit::combined_sd(): ",
-         "the following arguments have zero length: ",
-         toString(names(x_len)[x_len %in% 0])
+    cli::cli_abort(
+      "The following arguments have zero length: {names(x_len)[x_len %in% 0]}"
     )
   }
 
@@ -54,26 +54,21 @@ combined_sd <- function(group_mean,
 
 
   if (any(bad_len)) {
-    warning(
-      "invivopkfit::combined_sd():",
-      "the following inputs do not have matching lengths: ",
-      paste(paste0(names(x_len)[bad_len], " length = ", x_len[bad_len]),
-            collapse = "\n"
-      ),
-      "\n They will be repeated to match the length of the longest input,",
-      names(x_len)[which_max_len],
-      " length = ",
-      max_len,
-      "."
-    )
+    cli::cli_warn(c(
+      "The following inputs do not have matching lengths: ",
+      post_name_value(x_len[bad_len], extra = "length ="),
+      "They will be repeated to match the length of the longest input:",
+      post_name_value(x_len[which_max_len], extra = "length =")
+    ))
   }
 
   # repeat to match longest
   for (i in seq_along(x_len)) {
     assign(names(x_len)[i],
-           rep( # repeat the current value of each item to match the length
+           rep_len( # repeat the current value of each item to match the length
              get(names(x_len)[i]), # get the current value of each item
-             length.out = max_len)
+             max_len
+           )
     )
   }
 

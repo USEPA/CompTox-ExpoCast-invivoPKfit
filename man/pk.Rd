@@ -6,39 +6,46 @@
 \usage{
 pk(
   data = NULL,
-  mapping = ggplot2::aes(Chemical = analyte_dtxsid, Chemical_Name =
-    analyte_name_original, DTXSID = analyte_dtxsid, CASRN = analyte_casrn, Species =
-    species, Reference = fk_extraction_document_id, Media = conc_medium_normalized, Route
-    = administration_route_normalized, Dose = invivPK_dose_level, Dose.Units = "mg/kg",
-    Subject_ID = fk_subject_id, Series_ID = fk_series_id, Study_ID = fk_study_id,
-    ConcTime_ID = conc_time_id, N_Subjects = n_subjects_normalized, Weight = weight_kg,
-    Weight.Units = "kg", Time = time_hr, 
-     Time.Units = "hours", Value =
-    invivPK_conc, Value.Units = "mg/L", Value_SD = invivPK_conc_sd, LOQ = invivPK_loq),
-  settings_preprocess_args = list(),
-  settings_data_info_args = list(),
-  settings_optimx_args = list(),
-  scale_conc_args = list(),
-  scale_time_args = list(),
-  stat_model_args = list(),
-  stat_error_model_args = list(),
-  facet_data_args = list()
+  mapping = ggplot2::aes(Chemical = analyzed_chem_dtxsid, Chemical_Name =
+    analyzed_chem_name_original, DTXSID = analyzed_chem_dtxsid, CASRN =
+    analyzed_chem_casrn, Species = species, Reference = fk_extraction_document_id, Media
+    = conc_medium_normalized, Route = administration_route_normalized, Dose =
+    dose_level_normalized, Dose.Units = "mg/kg", Subject_ID = fk_subject_id, Series_ID =
+    fk_series_id, Study_ID = fk_study_id, ConcTime_ID = conc_time_id, N_Subjects =
+    n_subjects_normalized, Weight = weight_kg, Weight.Units = "kg", 
+     Time = time_hr,
+    Time.Units = "hours", Value = conc, Value.Units = "mg/L", Value_SD = conc_sd, LOQ =
+    loq),
+  settings_preprocess_args = alist(),
+  stat_sd_group_args = alist(),
+  stat_loq_group_args = alist(),
+  stat_nca_group_args = alist(),
+  settings_optimx_args = alist(),
+  scale_conc_args = alist(),
+  scale_time_args = alist(),
+  stat_model_args = alist(),
+  stat_error_model_args = alist(),
+  facet_data_args = alist()
 )
 }
 \arguments{
 \item{data}{A `data.frame`. The default is an empty data frame.}
 
-\item{mapping}{A mapping set up by (ab)using [ggplot2::aes()]. Call is of form
-`ggplot2::aes(new_variable = old_variable)` `new_variable` represents the
+\item{mapping}{A mapping set up using [ggplot2::aes()]. Must take the form
+`new_variable = "old_variable"` where `new_variable` represents the
 harmonized variable name that will be used within `invivopkfit`;
-`old_variable` represents the variable name in `data`. If you want to
-provide a fixed/constant value for a `new_variable` rather than taking its
-value from a variable in `data`, simply supply that fixed/constant value in
-the `old_variable` position.}
+`"old_variable"` represents the variable name in the input `data`.}
 
 \item{settings_preprocess_args}{A list of preprocessing settings.}
 
-\item{settings_data_info_args}{A list of data_info settings.}
+\item{stat_sd_group_args}{A list of variables defining group to impute sd in
+[do_preprocess.pk()]. Specified using [alist()].}
+
+\item{stat_loq_group_args}{A list of variables defining group to impute LOQ in
+[do_preprocess.pk()]. Specified using [alist()].}
+
+\item{stat_nca_group_args}{A list of variables defining group to perform NCA in
+[do_data_info.pk()]. Specified using [alist()].}
 
 \item{settings_optimx_args}{A list of optimx settings.}
 
@@ -79,7 +86,6 @@ and sets of instructions for steps in the analysis workflow:
 - settings for the numerical optimization algorithm to be used to fit any model
 - optionally: which PK model(s) should be fitted to this dataset. (You do not have to fit any PK model if you don't want to; you can instead just set up the `pk` object with data, and do non-compartmental analysis on it.)
 
-
 No data processing, model fitting, or any other analysis is done until you
 explicitly request it. Until then, the `pk` object remains just a set of data
 and instructions. This allows you to specify the instructions for each
@@ -87,7 +93,6 @@ analysis step without regard for the actual order of the analysis steps, and
 to overwrite previous instructions, without having to re-do the model fitting
 each time you add or change a set of instructions. This is particularly useful
 if you are working in interactive mode at the R console.
-
 
 
 # Mappings
@@ -113,23 +118,25 @@ harmonized variable names which it uses for plotting: *e.g.*, `x`, `y`,
 internal harmonized variable names which it uses in model fitting. These
 "`invivopkfit` aesthetic" variables are as follows:
 
-- `Chemical`: A `character` variable containing the chemical identifier. All rows of `data` should have the same value for `Chemical`.
-- `Species`: A `character` variable containing the name of the species for which the data was measured.  All rows of `data` should have the same value for `Species`.
-- `Reference`: A `character` variable containing a unique identifier for the data reference (e.g., a single publication).
-- `Subject`: A `character` variable containing a unique identifier for the subject associated with each observation (an individual animal or group of animals).
-- `N_Subjects`: A `numeric` variable; an integer giving the number of individual animals represented by this observation. (Some data sets report tissue concentrations for individual animals, in which case `N_Subjects` will be 1; others report average tissue concentrations for groups of multiple animals, in which case `N_Subjects` will be greater than 1.)
-- `Weight`: A `numeric` variable giving the subject's body weight.
-- `Weight.Units`: A `character` variable giving the units of body weight.
-- `Route`: A `character` variable denoting the route of administration. Either `po` (oral) or `iv` (intravenous). Other routes are not currently supported.
-- `Dose`: A `numeric` variable giving the dose administered.
-- `Dose.Units`: A `character` variable giving the units of the administered doses.
-- `Time`: A `numeric` variable giving the time of tissue collection.
-- `Time.Units`: A `numeric` variable giving the units of `Time`.
-- `Media`: A `character` variable giving the tissue that was analyzed. Either `blood` or `plasma`. Other tissues are not currently supported.
-- `Value`: A `numeric` variable giving the tissue concentration in units of mg/L. If `N_Subjects > 1`, `Value` is assumed to represent the mean tissue concentration for this group of subjects. If the tissue concentration was below the limit of quantification (LOQ), this value may be `NA_real_`.
-- `Value_SD`: A `numeric` variable giving the standard deviation of the tissue concentration in units of mg/L, if available and relevant. If `N_Subjects > 1`, `Value_SD` is assumed to represent the standard deviation of tissue concentrations for this group of subjects. If `N_Subjects == 1`, then `Value_SD` may be `NA_real_`.
-- `LOQ`: A `numeric` variable giving the limit of quantification applicable to this tissue concentration in units of mg/L, if available.
-- `Value.Units`: A `character` variable giving the units of `Value`, `Value_SD`, and `LOQ`.
+\itemize{
+\item `Chemical`: A `character` variable containing the chemical identifier. All rows of `data` should have the same value for `Chemical`.
+\item `Species`: A `character` variable containing the name of the species for which the data was measured.  All rows of `data` should have the same value for `Species`.
+\item `Reference`: A `character` variable containing a unique identifier for the data reference (e.g., a single publication).
+\item `Subject`: A `character` variable containing a unique identifier for the subject associated with each observation (an individual animal or group of animals).
+\item `N_Subjects`: A `numeric` variable; an integer giving the number of individual animals represented by this observation. (Some data sets report tissue concentrations for individual animals, in which case `N_Subjects` will be 1; others report average tissue concentrations for groups of multiple animals, in which case `N_Subjects` will be greater than 1.)
+\item `Weight`: A `numeric` variable giving the subject's body weight.
+\item `Weight.Units`: A `character` variable giving the units of body weight.
+\item `Route`: A `character` variable denoting the route of administration. Either `po` (oral) or `iv` (intravenous). Other routes are not currently supported.
+\item `Dose`: A `numeric` variable giving the dose administered.
+\item `Dose.Units`: A `character` variable giving the units of the administered doses.
+\item `Time`: A `numeric` variable giving the time of tissue collection.
+\item `Time.Units`: A `numeric` variable giving the units of `Time`.
+\item `Media`: A `character` variable giving the tissue that was analyzed. Either `blood`, `plasma`, or `excreta`. Other tissues are not currently supported.
+\item `Value`: A `numeric` variable giving the tissue concentration in units of mg/L. If `N_Subjects > 1`, `Value` is assumed to represent the mean tissue concentration for this group of subjects. If the tissue concentration was below the limit of quantification (LOQ), this value may be `NA_real_`.
+\item `Value_SD`: A `numeric` variable giving the standard deviation of the tissue concentration in units of mg/L, if available and relevant. If `N_Subjects > 1`, `Value_SD` is assumed to represent the standard deviation of tissue concentrations for this group of subjects. If `N_Subjects == 1`, then `Value_SD` may be `NA_real_`.
+\item `LOQ`: A `numeric` variable giving the limit of quantification applicable to this tissue concentration in units of mg/L, if available.
+\item `Value.Units`: A `character` variable giving the units of `Value`, `Value_SD`, and `LOQ`.
+}
 
 You may additionally include mappings to other variable names of your choice,
 which will appear in the `pk` object in `pk$data` after the analysis is done.
@@ -143,9 +150,8 @@ of the "`invivopkfit` aesthetic" variables should be mapped to a constant
 value, rather than to a variable in `data`. For example, imagine that you
 don't have a column in `data` that encodes the units of body weight, but you
 know that all body weights are provided in units of kilograms. You could
-specify `mapping = ggplot2::aes(Chemical = my_dtxsid, Species = my_species,
-Weight = my_weight, Weight.Units = "kg")` to map `Weight.Units` to a fixed
-value of "kg".
+specify `mapping = ggplot2::aes(Chemical = my_dtxsid, Weight = my_weight, Weight.Units = "kg")`
+to map `Weight.Units` to a fixed value of "kg".
 
 Finally, as with usual calls to [ggplot2::aes()], you may specify mappings as
 expressions that use variable names in `data`. For example, if the
@@ -157,15 +163,16 @@ Species = tolower(my_species)`.
 The following "aesthetics" variable names are reserved for internal use (i.e.,
 they are automatically assigned by [preprocess_data.pk()], and should *not* be
 included in `mapping`:
-
-- `Conc`: This is assigned as the greater of `Value` and `LOQ`, with NAs removed.
-- `Conc_SD`: This is set equal to `Value_SD`.
-- `Detect`: This is a logical variable, `TRUE` if `Conc > LOQ` and `FALSE` otherwise.
-- `Conc_trans`: This is `Conc` with all scalings and transformations applied as specified in `+ scale_conc()`.
-- `Conc_SD_trans`: This is `Conc_SD` with all scalings and transformations applied as specified in `+ scale_conc()`.
-- `Conc_trans.Units`: Automatically-derived from `Conc.Units` with any scalings and transformations applied. If dose normalization is requested, then `Dose.Units` is also used to automatically derive the resulting `Conc_trans.Units`. For example, if both dose-normalization and [log10()] transformation are requested, and `Conc.Units = 'mg/L'` and `Dose.Units = 'mg/kg`, then `Conc_trans.Units = log10((mg/L)/(mg/kg))`.
-- `Time_trans`: This is `Time` with any rescaling specified in `+ scale_time()`.
-- `Time_trans.Units`: The new units of time after any rescaling (e.g. `hours`, `days`, `weeks`,...)
+\itemize{
+\item `Conc`: This is assigned as the greater of `Value` and `LOQ`, with NAs removed.
+\item `Conc_SD`: This is set equal to `Value_SD`.
+\item `Detect`: This is a logical variable, `TRUE` if `Conc > LOQ` and `FALSE` otherwise.
+\item `Conc_trans`: This is `Conc` with all scalings and transformations applied as specified in `+ scale_conc()`.
+\item `Conc_SD_trans`: This is `Conc_SD` with all scalings and transformations applied as specified in `+ scale_conc()`.
+\item `Conc_trans.Units`: Automatically-derived from `Conc.Units` with any scalings and transformations applied. If dose normalization is requested, then `Dose.Units` is also used to automatically derive the resulting `Conc_trans.Units`. For example, if both dose-normalization and [log10()] transformation are requested, and `Conc.Units = 'mg/L'` and `Dose.Units = 'mg/kg`, then `Conc_trans.Units = log10((mg/L)/(mg/kg))`.
+\item `Time_trans`: This is `Time` with any rescaling specified in `+ scale_time()`.
+\item `Time_trans.Units`: The new units of time after any rescaling (e.g. `hours`, `days`, `weeks`,...)
+}
 
 If you do assign any of these reserved variable names in `mapping`, your
 mapping will be ignored for those reserved variable names. WARNING: If you
@@ -175,37 +182,35 @@ original variables will be dropped by [preprocess_data.pk()].
 The default value of `mapping` is the following (which refers to original
 variable names in the built-in dataset [cvt]):
 
-```
+\preformatted{
 ggplot2::aes(
-Chemical = chemicals_analyzed.dsstox_substance_id,
-DTXSID = chemicals_analyzed.dsstox_substance_id,
-CASRN = chemicals_analyzed.dsstox_casrn,
-Species = subjects.species,
-Reference = as.character(ifelse(is.na(documents_reference.id),
-                                documents_extraction.id,
-                                documents_reference.id)),
-Media = series.conc_medium_normalized,
-Route = studies.administration_route_normalized,
-Dose = studies.dose_level_normalized,
-Dose.Units = "mg/kg",
-Subject = subjects.id,
-N_Subjects =  series.n_subjects_in_series,
-Weight = subjects.weight_kg,
-Weight.Units = "kg",
-Time = conc_time_values.time_hr,
-Time.Units = "hours",
-Value = conc_time_values.conc,
-Value.Units = "mg/L",
-LOQ = series.loq_normalized,
-Value_SD  = conc_time_values.conc_sd_normalized
+  Chemical = "analyzed_chem_dtxsid",
+  Chemical_Name = "analyzed_chem_name_original",
+  DTXSID = "analyzed_chem_dtxsid",
+  CASRN = "analyzed_chem_casrn",
+  Species = "species",
+  Reference = "fk_extraction_document_id",
+  Media = "conc_medium_normalized",
+  Route = "administration_route_normalized",
+  Dose = "invivPK_dose_level",
+  Subject_ID = "fk_subject_id",
+  Series_ID = "fk_series_id",
+  Study_ID = "fk_study_id",
+  ConcTime_ID = "conc_time_id",
+  N_Subjects = "n_subjects_normalized",
+  Weight = "weight_kg",
+  Time = "time_hr",
+  Value = "invivPK_conc",
+  Value_SD = "invivPK_conc_sd",
+  LOQ = "invivPK_lo"q
 )
-```
+}
 
 # Data
 
 `Route` values should be either `"oral"` (oral bolus administration) or `"iv"`
-(IV bolus administration), and `Media` values should be either `"blood"` or
-`"plasma"`.
+(IV bolus administration), and `Media` values should be either `"blood"`,
+`"plasma"`, or `"excreta"`.
 
 If `data` contains data for more than one `Chemical` and `Species`, then you
 should use [facet_data()] to run a "faceted" analysis. A faceted analysis will
@@ -227,5 +232,5 @@ object, e.g. [summary.pk()], [coef.pk()], [coef_sd.pk()], [predict.pk()],
 [residuals.pk()], [nca.pk()]).
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }

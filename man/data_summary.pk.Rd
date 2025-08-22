@@ -21,7 +21,7 @@ call. The data (either `newdata` or `obj$data`) will be grouped according
 to the unique combinations of these variables. For each unique combination
 of these variables in the data, a set of summary statistics will be
 computed. The default is `NULL`, to use the same data grouping that was set
-in [stat_nca()] for the `pk` object. However, you may specify a different
+in [stat_nca_group()] for the `pk` object. However, you may specify a different
 data grouping if you wish.}
 
 \item{...}{Additional arguments. Not in use.}
@@ -43,18 +43,19 @@ optionally, new groupings). If you provide both `newdata` and
 will simply be doing data summary *de novo* (which may be what you want).
 
 Summary statistics include, for each group:
-
-- `n_obs`: the number of observations
-- `n_exclude`: The number of excluded observations
-- `n_detect`: The number of non-excluded detected observations
-- `n_series_id`: The number of unique series IDs
-- `n_timepts`: The number of unique time points
-- `n_ref`: The number of unique reference IDs
-- `tlast`: The time of the latest non-excluded observation
-- `tlast_detect`: The time of the latest non-excluded detected observation
-- `tfirst`: The time of the earliest non-excluded observation
-- `tfirst_detect`: The time of the earliest non-excluded detected observation
+\itemize{
+\item `n_obs`: the number of observations
+\item `n_exclude`: The number of excluded observations
+\item `n_detect`: The number of non-excluded detected observations
+\item `n_series_id`: The number of unique series IDs
+\item `n_timepts`: The number of unique time points
+\item `n_ref`: The number of unique reference IDs
+\item `tlast`: The time of the latest non-excluded observation
+\item `tlast_detect`: The time of the latest non-excluded detected observation
+\item `tfirst`: The time of the earliest non-excluded observation
+\item `tfirst_detect`: The time of the earliest non-excluded detected observation
+}
 }
 \author{
-Caroline Ring
+Caroline Ring, Gilberto Padilla Mercado
 }

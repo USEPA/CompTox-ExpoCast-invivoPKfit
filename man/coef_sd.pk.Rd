@@ -7,7 +7,7 @@
 \method{coef_sd}{pk}(obj, model = NULL, method = NULL, suppress.messages = TRUE, ...)
 }
 \arguments{
-\item{obj}{A [pk] object}
+\item{obj}{A [pk] object.}
 
 \item{model}{Optional: Specify one or more of the fitted models whose
 coefficients to return. If NULL (the default), coefficients will be
@@ -15,7 +15,7 @@ returned for all of the models in `obj$stat_model`.}
 
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 whose coefficients to return. If NULL (the default), coefficients will be
-returned for all of the models in `obj$settings_optimx$method`.}
+returned for all of the models in `obj$pk_settings$optimx$method`.}
 
 \item{suppress.messages}{Logical. `TRUE` (the default) to suppress
 informative messages. `FALSE` to see them.}
@@ -25,7 +25,8 @@ informative messages. `FALSE` to see them.}
 \value{
 A dataframe with one row for each `data_group`, `model` and `method`.
   The remaining columns include the parameters & hyperparameters as returned
-  by [coef.pk()], as well as their calculated standard deviations.
+  by [coef.pk()], as well as their calculated standard deviations. Note that this
+  will only return parameters that where optimized.
 }
 \description{
 Extract coefficient/parameter standard deviations from a fitted `pk` object

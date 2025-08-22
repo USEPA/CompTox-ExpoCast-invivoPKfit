@@ -8,15 +8,15 @@
 #' calls [get_peak()] to calculate the peak concentration and time of peak
 #' concentration.
 #'
-#' # Automatic detection of study design
+#' @section Automatic detection of study design:
 #'
 #' [PK::nca()] understands three different study designs, and requires the user
 #' to specify which one is being used.
-#'
-#' - `ssd`: Serial sampling design. Each observation is from a different subject.
-#' - `complete`: Every subject was observed at every time point.
-#' - `batch`: Each subject was observed at multiple time points, but not at every time point.
-#'
+#' \itemize{
+#' \item `ssd`: Serial sampling design. Each observation is from a different subject.
+#' \item `complete`: Every subject was observed at every time point.
+#' \item `batch`: Each subject was observed at multiple time points, but not at every time point.
+#' }
 #' To automatically detect which study design is applicable, this function first
 #' sorts the data by increasing time. Then, a table of time vs. series ID is
 #' created, with 1 indicating that a measurement exists for the corresponding
@@ -29,33 +29,33 @@
 #' table, then it is a complete sampling design. Otherwise, it is a batch
 #' sampling design.
 #'
-#' # Parameters estimated by NCA
+#' @section Parameters estimated by NCA:
+#' \itemize{
+#' \item `AUC_infinity`: The area under the concentration-time curve, extrapolated out to infinite time. Estimated using the trapezoidal rule, with a tail area correction calculated using the slope of the last 3 data points (by default).
+#' \item `AUC_tlast`: The area under the concentration-time curve, calculated at the last observed time point. Estimated using the trapezoidal rule.
+#' \item `AUMC_infinity`: The area under the concentration-time first moment curve (the area under the AUC vs. time), extrapolated out to infinite time. Estimated using the trapezoidal rule, with a tail area correction calculated using the slope of the last 3 data points (by default).
+#' \item `CLtot`: The total clearance rate.  Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, and only `CLtot/Fgutabs` is calculated.
+#' \item `CLtot/Fgutabs`: The total clearance rate, normalized by the oral bioavailability. Only calculated for `route == 'oral'`. If `route == 'iv'`, this is `NA_real_`, and only `CLtot/` is calculated.
+#' \item `Cmax`: The peak concentration. For `route == 'iv'`, this is expected to be the concentration at the earliest time; for `route == 'oral'`, it is not. This and `tmax` are calculated using [get_peak()], not by [PK::nca()].
+#' \item `halflife`: The half-life of elimination.  Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, because half-life estimates are not valid for oral data.
+#' \item `MRT`: The mean residence time. Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, and only `MTT` is calculated.
+#' \item `MTT`: The mean transit time (the sum of MRT and mean absorption time). Only calculated for `route == 'oral'`. If `route == 'iv'`, this is `NA_real_`, and only `MRT` is calculated.
+#' \item`tmax`: The time of peak concentration. For `route == 'iv'`, this is expected to be the earliest time; for `route == 'oral'`, it is not.  This and `Cmax` are calculated using [get_peak()], not by [PK::nca()].
+#' \item `Vss`: The volume of distribution at steady state (`AUMC_infinity/AUC_infinity^2`). If `route == 'oral'`, this is `NA_real_`, because `Vss` estimates are not valid for oral data.
+#' }
 #'
-#' - `AUC_infinity`: The area under the concentration-time curve, extrapolated out to infinite time. Estimated using the trapezoidal rule, with a tail area correction calculated using the slope of the last 3 data points (by default).
-#' - `AUC_tlast`: The area under the concentration-time curve, calculated at the last observed time point. Estimated using the trapezoidal rule.
-#' - `AUMC_infinity`: The area under the concentration-time first moment curve (the area under the AUC vs. time), extrapolated out to infinite time. Estimated using the trapezoidal rule, with a tail area correction calculated using the slope of the last 3 data points (by default).
-#' - `CLtot`: The total clearance rate.  Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, and only `CLtot/Fgutabs` is calculated.
-#' - `CLtot/Fgutabs`: The total clearance rate, normalized by the oral bioavailability. Only calculated for `route == 'oral'`. If `route == 'iv'`, this is `NA_real_`, and only `CLtot/` is calculated.
-#' - `Cmax`: The peak concentration. For `route == 'iv'`, this is expected to be the concentration at the earliest time; for `route == 'oral'`, it is not. This and `tmax` are calculated using [get_peak()], not by [PK::nca()].
-#' - `halflife`: The half-life of elimination.  Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, because half-life estimates are not valid for oral data.
-#' - `MRT`: The mean residence time. Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, and only `MTT` is calculated.
-#' - `MTT`: The mean transit time (the sum of MRT and mean absorption time). Only calculated for `route == 'oral'`. If `route == 'iv'`, this is `NA_real_`, and only `MRT` is calculated.
-#'  -`tmax`: The time of peak concentration. For `route == 'iv'`, this is expected to be the earliest time; for `route == 'oral'`, it is not.  This and `Cmax` are calculated using [get_peak()], not by [PK::nca()].
-#' - `Vss`: The volume of distribution at steady state (`AUMC_infinity/AUC_infinity^2`). If `route == 'oral'`, this is `NA_real_`, because `Vss` estimates are not valid for oral data.
-#'
-#' # Output
+#' @section Output details:
 #'
 #' The output is a data.frame with 9 rows (one for each NCA parameter) and a
 #' number of variables equal to `length(method) + 3`.
 #'
 #' The variables are
-#'
-#'  - `design`: The automatically-detected design. One of `ssd`, `complete`, or `batch` (or `NA_character_` if no analysis could be done).
-#'  - `param_name`: The name of each NCA parameter.
-#'  - `param_value`: The value of each NCA parameter.
-#'  - `param_sd_[method]`: The parameter standard error estimated by the corresponding method.
-#'
-#'
+#' \itemize{
+#'  \item `design`: The automatically-detected design. One of `ssd`, `complete`, or `batch` (or `NA_character_` if no analysis could be done).
+#'  \item `param_name`: The name of each NCA parameter.
+#'  \item `param_value`: The value of each NCA parameter.
+#'  \item `param_sd_[method]`: The parameter standard error estimated by the corresponding method.
+#' }
 #'
 #' @param time A numeric vector of time points.
 #' @param conc A numeric vector of concentrations. If detected (above limit of
@@ -78,19 +78,18 @@
 #' @param ... Other arguments that will be passed to [PK::nca()] (other than
 #'   `data`, `design`, and `method`: *i.e.*, `n.tail`, `nsample`)
 #' @return A `data.frame` with 9 rows and `length(method) + 3` variables. See
-#'   Details.
+#'   Output details.
 #' @export
 #' @import PK
 #' @author Caroline Ring
 calc_nca <- function(time,
-                    conc,
-                    detect,
-                   series_id = NULL,
-                   dose,
-                   route,
-                   method = "z",
-                   ...) {
-
+                     conc,
+                     detect,
+                     dose,
+                     route,
+                     series_id = NULL,
+                     method = "z",
+                     ...) {
 
   if (length(time) > 0 && length(conc) > 0 && length(dose) > 0 &&
       !all(is.na(time)) && !all(is.na(conc)) && !all(is.na(dose)) &&
@@ -99,7 +98,7 @@ calc_nca <- function(time,
     dose <- unique(dose)
 
     if (is.null(series_id)) {
-      series_id <- rep(NA_integer_, length(conc))
+      series_id <- rep_len(NA_integer_, length(conc))
     }
 
     # order everything by increasing time
@@ -132,7 +131,7 @@ calc_nca <- function(time,
     # if there is only one observation per time
     # then pretend all observations are from the same id
     if (all(obs_per_time %in% 1)) {
-      series_id <- rep(1L, length(time))
+      series_id <- rep_len(1L, length(time))
     }
 
     obs_per_time <- table(time)
@@ -154,20 +153,24 @@ calc_nca <- function(time,
       min_time_nz <- min(time[time > 0])
       min_time_step <- min(diff(time))
 
-      time_split <- sapply(time_split,
-                           function(this_time) {
-                             if (length(this_time) == 1) {
-                               this_time
-                             } else {
-                               # add a small fuzz factor: spread times evenly along 1/100 of smallest time step
-                               this_time + seq(from = this_time[1] - 0.005*min_time_step,
-                                               to = this_time[1] + 0.005*min_time_step,
-                                               length.out = length(this_time)
-                                               )
-                             }
-                           })
+      time_split <- sapply(
+        time_split,
+        function(this_time) {
+          if (length(this_time) == 1) {
+            this_time
+          } else {
+            # add a small fuzz factor: spread times evenly along 1/100 of smallest time step
+            this_time + seq(from = this_time[1] - 0.005*min_time_step,
+                            to = this_time[1] + 0.005*min_time_step,
+                            length.out = length(this_time)
+            )
+          }
+        }
+      )
+
       time <- unsplit(time_split, time)
       design <- "complete"
+
     } else if (all(obs_per_time > 1) && length(unique(obs_per_seriesID)) > 1) {
       # multiple observations for every time point, but not all subjects at every time point
       # note this will break if there is 1 time point for some subjects and multiple for others
@@ -260,8 +263,8 @@ calc_nca <- function(time,
     pk_out["Vss", ] <- NA_real_
     # fill in CLtot and MRT as NA
     pk_out <- rbind(pk_out,
-                    "CLtot" = rep(NA_real_, ncol(pk_out)),
-                    "MRT" = rep(NA_real_, ncol(pk_out)))
+                    "CLtot" = rep_len(NA_real_, ncol(pk_out)),
+                    "MRT" = rep_len(NA_real_, ncol(pk_out)))
   } else {
     rownames(pk_out) <- c("AUC_tlast",
                           "AUC_infinity",
@@ -272,8 +275,8 @@ calc_nca <- function(time,
                           "Vss")
     # fill in oral-only params as NA
     pk_out <- rbind(pk_out,
-                    "CLtot/Fgutabs" = rep(NA_real_, ncol(pk_out)),
-                    "MTT" = rep(NA_real_, ncol(pk_out)))
+                    "CLtot/Fgutabs" = rep_len(NA_real_, ncol(pk_out)),
+                    "MTT" = rep_len(NA_real_, ncol(pk_out)))
   }
 
 
@@ -281,8 +284,8 @@ calc_nca <- function(time,
   peak <- unlist(get_peak(x = time, y = conc))
 
   pk_out <- rbind(pk_out,
-                  "tmax" = c(peak[1], rep(NA_real_, ncol(pk_out) - 1)),
-                  "Cmax" = c(peak[2], rep(NA_real_, ncol(pk_out) - 1))
+                  "tmax" = c(peak[1], rep_len(NA_real_, ncol(pk_out) - 1)),
+                  "Cmax" = c(peak[2], rep_len(NA_real_, ncol(pk_out) - 1))
   )
 
   # convert to data.frame

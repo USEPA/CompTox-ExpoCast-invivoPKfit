@@ -22,23 +22,21 @@
 #' If neither of these procedures is successful, then `NA_real_` is returned for
 #' all coefficient standard deviations.
 #'
-#' @param obj A [pk] object
+#' @param obj A [pk] object.
 #' @param model Optional: Specify one or more of the fitted models whose
 #'   coefficients to return. If NULL (the default), coefficients will be
 #'   returned for all of the models in `obj$stat_model`.
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   whose coefficients to return. If NULL (the default), coefficients will be
-#'   returned for all of the models in `obj$settings_optimx$method`.
+#'   returned for all of the models in `obj$pk_settings$optimx$method`.
 #' @param suppress.messages Logical. `TRUE` (the default) to suppress
 #'   informative messages. `FALSE` to see them.
 #' @param ... Additional arguments. Not in use right now.
 #' @return A dataframe with one row for each `data_group`, `model` and `method`.
 #'   The remaining columns include the parameters & hyperparameters as returned
-#'   by [coef.pk()], as well as their calculated standard deviations.
+#'   by [coef.pk()], as well as their calculated standard deviations. Note that this
+#'   will only return parameters that where optimized.
 #' @export
-#' @import dplyr
-#' @import purrr
-#' @import tidyr
 #' @author Caroline Ring and Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
 #' @references Gill J, King G. (2004) What to Do When Your Hessian is Not
@@ -56,7 +54,8 @@ coef_sd.pk <- function(obj,
     stop(attr(check, "msg"))
   }
 
-  data_grp_vars <- sapply(obj$data_group, rlang::as_label)
+  data_grp <- get_data_group.pk(obj)
+  data_grp_vars <- get_data_group.pk(obj, as_character = TRUE)
 
   # get coefs data.frame for each model and method
   # but exclude non-optimized parameters and sigma values for error_group
@@ -64,46 +63,49 @@ coef_sd.pk <- function(obj,
 
   #get optimized parameter vectors
   coefs_opt <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
     include_type = "optim",
-    suppress.messages = suppress.messages) %>%
+    suppress.messages = suppress.messages) |>
     dplyr::rename(coefs_opt_vector = coefs_vector)
 
   #get constant parameter vectors
   coefs_const <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
     include_type = "const",
-    suppress.messages = suppress.messages) %>%
+    suppress.messages = suppress.messages) |>
     dplyr::rename(coefs_const_vector = coefs_vector)
 
   #get all params used
   coefs_use <- coef(
-    obj = obj,
+    object = obj,
     model = model,
     method = method,
     drop_sigma = FALSE,
     include_type = "use",
     suppress.messages = suppress.messages)
 
-  coefs <- coefs_opt %>%
+  coefs <- coefs_opt |>
     dplyr::left_join(coefs_const,
                      by = c("model", "method",
+                            "DATA_GROUP_ID",
                             data_grp_vars,
                             "Time.Units",
-                            "Time_trans.Units")) %>%
+                            "Time_trans.Units")) |>
     dplyr::left_join(coefs_use,
                      by = c("model", "method",
+                            "DATA_GROUP_ID",
                             data_grp_vars,
                             "Time.Units",
                             "Time_trans.Units"))
 
   other_vars <- ggplot2::vars(
+    DATA_GROUP_ID,
     Value,
     Value.Units,
     Time_trans.Units,
@@ -112,8 +114,6 @@ coef_sd.pk <- function(obj,
     data_sigma_group,
     exclude
   )
-
-
 
   # Get required variables for log_likelihood()
   req_vars <- ggplot2::vars(Time,
@@ -130,95 +130,62 @@ coef_sd.pk <- function(obj,
                             pLOQ)
 
   # Convert Time_trans to hours
-  newdata <- obj$data %>%
-    dplyr::select(!!!union(obj$data_group, req_vars), !!!other_vars) %>%
+  newdata <- get_data.pk(obj) |>
+    dplyr::select(!!!union(data_grp, req_vars), !!!other_vars) |>
     # log_likelihood() takes Time_trans so this must be converted to hours
     # so it is in concordance with coef()
     dplyr::mutate(data_sigma_group = factor(data_sigma_group),
                   Time_trans = convert_time(x = Time_trans,
                                             from = Time_trans.Units,
                                             to = "hours"),
-                  Time_trans.Units = "hours") %>%
-    dplyr::group_by(!!!obj$data_group) %>%
-    tidyr::nest(.key = "observations") %>%
+                  Time_trans.Units = "hours") |>
+    dplyr::group_by(DATA_GROUP_ID) |>
+    tidyr::nest(.key = "observations") |>
     dplyr::ungroup()
 
   # This setup allows for a more stable call to the model functions later on
-  fun_models <- data.frame(
-    model_name = unname(sapply(obj$stat_model, \(x) {x$name})),
-    model_fun = unname(sapply(obj$stat_model, \(x) {x$conc_fun}))
-  )
+  fun_models <- fun_models <- get_stat_model(obj)
 
-  newdata <- dplyr::left_join(coefs, newdata, by = data_grp_vars) %>%
-    dplyr::left_join(fun_models, join_by(model == model_name))
+  newdata <- dplyr::left_join(coefs,
+                              newdata,
+                              by = "DATA_GROUP_ID") |>
+    dplyr::left_join(fun_models, join_by(model))
 
 
-  newdata <- newdata %>%
-    dplyr::rowwise() %>%
-    dplyr::filter(!is.null(observations)) %>%
-    dplyr::ungroup() %>%
+  newdata <- newdata |>
+    dplyr::rowwise() |>
+    dplyr::filter(!is.null(observations)) |>
+    dplyr::ungroup() |>
     dplyr::distinct()
 
-
-  sds_alerts <- newdata %>%
-    dplyr::rowwise() %>%
+  sds_alerts <- newdata |>
+    dplyr::rowwise() |>
     dplyr::mutate(
       sd_tbl = list(
         calc_sds_alerts(pars_opt = coefs_opt_vector,
-                    pars_const = coefs_const_vector,
-                    observations = observations,
-                    modelfun = model_fun,
-                    dose_norm = obj$scales$conc$dose_norm,
-                    log10_trans = obj$scales$conc$log10_trans)
+                        pars_const = coefs_const_vector,
+                        observations = observations,
+                        modelfun = modelfun,
+                        dose_norm = obj$scales$conc$dose_norm,
+                        log10_trans = obj$scales$conc$log10_trans)
       )
-    )  %>%
-    tidyr::unnest(sd_tbl) %>%
-    dplyr::ungroup() %>%
-    dplyr::select(model, method, !!!obj$data_group,
+    )  |>
+    tidyr::unnest(sd_tbl) |>
+    dplyr::ungroup() |>
+    dplyr::select(model, method, DATA_GROUP_ID, !!!data_grp,
                   param_name, param_sd, sd_alert)
 
+coefs_opt_longer <- coefs_opt |>
+  tidyr::unnest_longer(coefs_opt_vector) |>
+  rename(param_name = coefs_opt_vector_id, param_value = coefs_opt_vector)
 
-  coefs_long <- newdata %>%
-    dplyr::select(model, method, !!!obj$data_group, coefs_vector) %>%
-    dplyr::group_by(model, method, !!!obj$data_group) %>%
-    dplyr::mutate(coefs_tibble = purrr::map(coefs_vector, \(x) as.list(x) %>%
-                                              as.data.frame() %>%
-                                              tidyr::pivot_longer(
-                                                cols = tidyselect::everything(),
-                                                names_to = "param_name",
-                                                values_to = "param_value"
-                                              ))) %>%
-    tidyr::unnest(coefs_tibble) %>%
-    dplyr::ungroup() %>%
-    dplyr::select(-c(coefs_vector))
-
-  output <- coefs_long %>%
-    dplyr::left_join(sds_alerts,
-                     by = c("model", "method",
-                                 data_grp_vars,
-                            "param_name")) %>%
-  dplyr::ungroup() %>%
-    dplyr::distinct() %>%
+  output <- sds_alerts |>
+    dplyr::left_join(coefs_opt_longer) |>
+    dplyr::distinct() |>
     dplyr::mutate(param_value = dplyr::na_if(param_value, NaN),
-                  param_sd = dplyr::na_if(param_sd, NaN)) %>%
-    dplyr::select(model, method, !!!obj$data_group,
+                  param_sd = dplyr::na_if(param_sd, NaN)) |>
+    dplyr::select(model, method, DATA_GROUP_ID, !!!data_grp,
                   param_name, param_value, param_sd, sd_alert)
-
-  #add information about whether each parameter was optimized or not
-  #to explain why some params don't have an SD
-  param_type <- obj$fit %>%
-    dplyr::select(model, method,
-                  !!!obj$data_group,
-                  param_name,
-                  optimize_param,
-                  use_param)
-
-  output <- output %>%
-    dplyr::left_join(param_type,
-                     by = c("model", "method",
-                            data_grp_vars,
-                            "param_name"))
-
 
   return(output)
 

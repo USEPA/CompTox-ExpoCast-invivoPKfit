@@ -8,22 +8,18 @@
 A `data.frame` with 13937 rows and 61 variables:
 \describe{
   \item{conc_time_id}{Unique database identifier for each CvT observation.}
+  \item{fk_series_id}{Unique database identifier for experimental series.}
   \item{time_original}{Timepoint in original units.}
   \item{time_hr}{Timepoint in hours.}
   \item{conc_original}{Concentration in original units.}
   \item{conc_sd_original}{Standard deviation of concentration in original units.}
   \item{conc}{Concentration in normalized units.}
   \item{conc_sd}{Standard deviation of concentration in normalized units.}
-  \item{fk_series_id}{Unique database identifier for experimental series.}
-  \item{analyte_name_original}{Original analyte name.}
-  \item{analyte_dtxsid}{DTXSID of chemical analyte.}
-  \item{analyte_casrn}{CASRN of chemical analyte.}
   \item{fk_analyzed_chemical_id}{Unique database identifier for analyte.}
-  \item{fk_test_chemical_id}{Unique database identifier for tested chemical.}
-  \item{test_substance_dtxsid}{DTXSID of tested chemical.}
-  \item{analyte_name_secondary_original}{Alternative names for analyte.}
-  \item{conc_medium_normalized}{Standardized media names, blood or plasma.}
-  \item{conc_medium_original}{Original media names.}
+  \item{analyzed_chem_dtxsid}{DTXSID of chemical analyte.}
+  \item{analyzed_chem_name_original}{Original analyte name.}
+  \item{analyzed_chem_casrn}{CASRN of chemical analyte.}
+  \item{analyzed_chem_name}{Preferred name for analyte.}
   \item{time_units_original}{Original time units.}
   \item{conc_units_original}{Original concentration units.}
   \item{conc_units_normalized}{Normalized concentration units.}
@@ -35,6 +31,10 @@ A `data.frame` with 13937 rows and 61 variables:
   \item{fk_study_id}{Unique database identifier for each study.}
   \item{administration_route_normalized}{Route of exposure/administration, either oral or iv.}
   \item{fk_dosed_chemical_id}{Unique database identifier for dosed chemical.}
+  \item{dosed_chem_dtxsid}{DTXSID of dosed chemical.}
+  \item{dosed_chem_name_original}{Original dosed chemical name.}
+  \item{dosed_chem_casrn}{CASRN of dosed chemical.}
+  \item{dosed_chem_name}{Preferred name for dosed chemical.}
   \item{dose_volume}{Volume of dose.}
   \item{dose_volume_units}{Units for dose_volume.}
   \item{dose_vehicle}{If available, specifies what vehicle was used CvT experiment.}
@@ -45,6 +45,8 @@ A `data.frame` with 13937 rows and 61 variables:
   \item{dose_level_normalized}{Dose levels in normalized units.}
   \item{dose_level_original}{Dose levels in original units.}
   \item{dose_level_units_original}{Units for dose_level_original.}
+  \item{conc_medium_normalized}{Standardized media names, blood or plasma.}
+  \item{conc_medium_original}{Original media names.}
   \item{fk_subject_id}{Unique database identifier for each subject.}
   \item{weight_kg}{Subject weight, in kilograms.}
   \item{species}{Subject species.}

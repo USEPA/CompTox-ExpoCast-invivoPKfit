@@ -4,15 +4,12 @@
 \alias{facet_data}
 \title{Facet a PK fit}
 \usage{
-facet_data(facets = vars(Chemical, Species), ...)
+facet_data(...)
 }
 \arguments{
-\item{facets}{A set of variables or expressions quoted by [dplyr::vars()],
+\item{...}{A set of variables or expressions quoted by [dplyr::vars()],
 defining groups of data that will each be fitted separately. These
-variables should appear in the *original* data (i.e., the `data` argument
-to [pk()]).}
-
-\item{...}{Additional arguments, not currently used.}
+variables should appear in  the `data` argument to [pk()] after mapping variables.}
 }
 \value{
 An object of class `c("pkproto", "pk_facet_data")`. Under the hood, a
@@ -29,15 +26,13 @@ fit them all using the same set of instructions.
 
 When you do something like
 
-```
+\preformatted{
 pk_cvt <- pk(cvt) +
  facet_data(
- facets = vars(
- chemicals_analyzed.dsstox_substance_id,
-subjects.species_harmonized
-)
-)
-```
+   facets = vars(chemicals_analyzed.dsstox_substance_id,
+                 subjects.species_harmonized)
+ )
+}
 
 Now `pk_cvt` is an object of class `pk_faceted`: under the hood, a
 [tibble::tibble()] with one row for each group defined by a unique
@@ -72,5 +67,5 @@ using the instructions provided by the user. When methods like
 resulting "faceted"
 }
 \author{
-Caroline Ring, Gilbert Padilla Mercado, Paul Kruse
+Caroline Ring, Gilberto Padilla Mercado, Paul Kruse
 }

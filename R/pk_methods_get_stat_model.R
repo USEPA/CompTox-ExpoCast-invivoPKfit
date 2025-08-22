@@ -6,5 +6,9 @@
 #' @export
 #' @author Caroline Ring
 get_stat_model.pk <- function(obj, ...) {
-  obj$stat_model
+
+  tidyr::tibble(modelfun = obj$stat_model) |>
+    dplyr::mutate(model = purrr::map(modelfun, \(x) x$name)) |>
+    tidyr::unnest(model)
+
 }

@@ -23,7 +23,7 @@
 #' @param method Optional: Specify one or more of the [optimx::optimx()] methods
 #'   for which to make predictions and calculate AICs. If NULL (the default),
 #'   log-likelihoods will be returned for all of the models in
-#'   `object$settings_optimx$method`.
+#'   `object$pk_settings$optimx$method`.
 #' @param exclude Logical: `TRUE` to compute the AIC after removing any
 #'   observations in the data marked for exclusion (if there is a variable
 #'   `exclude` in the data, an observation is marked for exclusion when `exclude
@@ -31,9 +31,9 @@
 #'   status. Default `TRUE`.
 #' @param drop_obs Logical: `TRUE` to drop the observations column in the output
 #' of [logLik()].
-#' @param ... Additional argument. Not in use.
 #' @param k Default 2. The `k` parameter in the log-likelihood formula (see
 #'   Details). Must be named if used.
+#' @param ... Additional argument. Not in use.
 #' @return A data.frame with log-likelihood values and calculated AIC using `newdata`.
 #'   There is one row for each model in `obj`'s [stat_model()] element and
 #'   each [optimx::optimx()] method (specified in [settings_optimx()]).
@@ -59,7 +59,11 @@ AIC.pk <- function(object,
   }
 
   if (is.null(model)) model <- names(object$stat_model)
-  if (is.null(method)) method <- object$settings_optimx$method
+  if (is.null(method)) method <- object$pk_settings$optimx$method
+
+  data_grp <- get_data_group.pk(object)
+  data_grp_vars <- get_data_group.pk(object, as_character = TRUE)
+
 
   # get log-likelihoods
   ll <- logLik(object = object,
@@ -73,24 +77,24 @@ AIC.pk <- function(object,
 
 
   # obj$fit is a "long" data.frame with both parameters and sigma values
-  params_df <- object$fit %>%
-    group_by(!!!object$data_group, model, method) %>%
+  params_df <- object$fit |>
+    dplyr::filter(optimize_param == TRUE) |> # Only include optimized parameters
+    group_by(!!!data_grp, model, method) |>
     dplyr::summarize(npar = dplyr::n())
-  data_grp_vars <- sapply(object$data_group, rlang::as_label)
 
 
   # Combining log-likelihood table with parameters table
-  ll <- ll %>%
-    dplyr::select(!!!object$data_group,
+  ll <- ll |>
+    dplyr::select(!!!data_grp,
                   model, method,
-                  log_likelihood) %>%
+                  log_likelihood) |>
     dplyr::left_join(params_df, by = c(data_grp_vars, "model", "method"))
 
 
   # get number of parameters (excluding any constant, non-optimized parameters)
 
-  AIC <- ll %>% dplyr::group_by(!!!object$data_group, model, method) %>%
-    dplyr::mutate(AIC = (k * npar) - (2 * log_likelihood))
+  AIC <- ll |> dplyr::group_by(!!!data_grp, model, method) |>
+    dplyr::mutate(AIC = ({{ k }} * .data$npar) - (2 * .data$log_likelihood))
 
   return(AIC)
 }

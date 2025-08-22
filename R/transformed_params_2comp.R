@@ -12,7 +12,7 @@
 transformed_params_2comp <- function(params,
                                      ...) {
 
-  Fgutabs_V1 <- NULL
+  Fgutabs_V1 = V1 = kelim = k12 = k21 = kgutabs = NULL
 
   list2env(as.list(params), envir = as.environment(-1))
 

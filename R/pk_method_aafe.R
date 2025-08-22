@@ -14,7 +14,7 @@
 #'   }
 #' }
 #'
-#' # Left-censored data
+#' @section Left-censored data:
 #'
 #' If the observed value is censored, and the predicted value is less than the
 #' reported LOQ, then the observed value is (temporarily) set equal to the
@@ -56,7 +56,7 @@
 #' @param AAFE_group Default: Chemical, Species. Determines what the data
 #' grouping that is used to calculate absolute average fold error (AAFE). Should be set to lowest number
 #' of variables that still would return unique experimental conditions.
-#' Input in the form of `ggplot2::vars(Chemical, Species, Route, Media, Dose)`.
+#' Input in the form of `rlang::exprs(Chemical, Species, Route, Media, Dose)`.
 #' @param sub_pLOQ TRUE (default): Substitute all predictions below the LOQ with
 #'   the LOQ before computing AAFE. FALSE: do not.
 #' @param ... Additional arguments. Not currently in use.
@@ -68,14 +68,14 @@
 #' @family fit evaluation metrics
 #' @family methods for fitted pk objects
 AAFE.pk <- function(obj,
-                   newdata = NULL,
-                   model = NULL,
-                   method = NULL,
-                   exclude = TRUE,
-                   use_scale_conc = FALSE,
-                   AAFE_group = NULL,
-                   sub_pLOQ = TRUE,
-                   ...) {
+                    newdata = NULL,
+                    model = NULL,
+                    method = NULL,
+                    exclude = TRUE,
+                    use_scale_conc = FALSE,
+                    AAFE_group = NULL,
+                    sub_pLOQ = TRUE,
+                    ...) {
   # ensure that the model has been fitted
   check <- check_required_status(obj = obj,
                                  required_status = status_fit)
@@ -85,8 +85,8 @@ AAFE.pk <- function(obj,
 
   if (is.null(model)) model <- names(obj$stat_model)
   if (is.null(method)) method <- obj$optimx_settings$method
-  if (is.null(newdata)) newdata <- obj$data
-  if (is.null(AAFE_group)) AAFE_group <- obj$data_group
+  if (is.null(newdata)) newdata <- get_data.pk(obj)
+  if (is.null(AAFE_group)) AAFE_group <- get_data_group.pk(obj)
 
   method_ok <- check_method(obj = obj, method = method)
   model_ok <- check_model(obj = obj, model = model)
@@ -115,13 +115,13 @@ AAFE.pk <- function(obj,
   # Get predictions
   # Do NOT apply any conc transformations at this stage
   # (conc transformations will be handled later)
-  preds <- predict(obj,
-                   newdata = newdata,
-                   model = model,
-                   method = method,
-                   type = "conc",
-                   exclude = exclude,
-                   use_scale_conc = FALSE)
+  preds <- predict.pk(obj,
+                      newdata = newdata,
+                      model = model,
+                      method = method,
+                      type = "conc",
+                      exclude = exclude,
+                      use_scale_conc = FALSE)
 
 
   # remove any excluded observations & corresponding predictions, if so specified
@@ -139,40 +139,40 @@ AAFE.pk <- function(obj,
                        "pLOQ"))
 
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
-                                  dplyr::select(dplyr::all_of(req_vars)) %>%
-                                  dplyr::ungroup())
+  new_preds <- dplyr::left_join(preds, newdata) |>
+    dplyr::select(dplyr::all_of(req_vars)) |>
+    dplyr::ungroup() |>
+    suppressMessages()
 
   #replace below-LOQ preds with pLOQ if specified
-  if(sub_pLOQ %in% TRUE){
-    message("AAFE.pk(): Predicted conc below pLOQ substituted with pLOQ")
-    new_preds <- new_preds %>%
-      dplyr::mutate(Conc_est_tmp = dplyr::if_else(Conc_est < pLOQ,
-                                              pLOQ,
-                                              Conc_est))
+  if (sub_pLOQ %in% TRUE) {
+    cli::cli_inform("AAFE.pk(): Predicted conc below pLOQ substituted with pLOQ")
+    new_preds$Conc_est_tmp <- with(new_preds, pmax(Conc_est, pLOQ))
   }
 
   #if Conc censored and Conc_est_tmp < LOQ, make fold error 1
-  new_preds <- new_preds %>%
-    dplyr::mutate(Conc_tmp = dplyr::if_else(Detect %in% FALSE &
-                                              Conc_est_tmp < LOQ,
-                                            Conc_est_tmp,
-                                            Conc))
+  new_preds <- new_preds |>
+    dplyr::mutate(
+      Conc_tmp = dplyr::if_else(
+        Detect %in% FALSE & Conc_est_tmp < LOQ,
+        Conc_est_tmp,
+        Conc
+        )
+      )
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
-  AAFE_df <- new_preds %>%
-    dplyr::ungroup() %>%
+  AAFE_df <- new_preds |>
+    dplyr::ungroup() |>
     dplyr::group_by(!!!AAFE_group,
-                    model, method) %>%
+                    model, method) |>
     dplyr::summarize(
-      AAFE = 10^mean(abs(log10(Conc_est_tmp/Conc_tmp)))) %>%
-    # dplyr::distinct() %>%
+      AAFE = 10^mean(abs(log10(Conc_est_tmp/Conc_tmp)))) |>
+    # dplyr::distinct() |>
     dplyr::ungroup()
 
-  message("AAFE.pk)(): Groups: \n",
-          toString(AAFE_group_char),
-          ", method, model")
+  cli::cli_inform(c("AAFE.pk(): Groups: {c(AAFE_group_char, 'method', 'model')}",
+                    "v" = "Absolute Average Fold Error Calculated!"))
 
   return(AAFE_df)
 }

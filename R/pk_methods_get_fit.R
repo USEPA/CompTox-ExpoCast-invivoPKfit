@@ -29,8 +29,7 @@ get_fit.pk <- function(obj,
                        model = NULL,
                        ...) {
 
-  check <- check_required_status(obj = obj,
-                                 required_status = status_fit)
+  check <- check_required_status(obj = obj, required_status = status_fit)
   if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }

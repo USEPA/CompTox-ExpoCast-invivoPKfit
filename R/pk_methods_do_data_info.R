@@ -2,16 +2,14 @@
 #'
 #' Calculate summary data information, including non-compartmental analysis.
 #'
+#' @inheritParams do_preprocess.pk
 #'
-#' @param obj An object of class [pk()].
-#' @param ... Additional arguments. Not currently in use.
 #' @return Object of class [pk()] with an added `$data_info` list containing
 #' non-compartmental analysis results.
 #' @export
-#' @importFrom magrittr `%>%`
 #' @author Caroline Ring
 do_data_info.pk <- function(obj, ...) {
-
+  suppress_messages <- obj$pk_settings$preprocess$suppress.messages
   # check status
   objname <- deparse(substitute(obj))
   status <- obj$status
@@ -23,40 +21,40 @@ do_data_info.pk <- function(obj, ...) {
             status_data_info,
             ". Any results from later workflow stages will be lost.\n")
     # Here is where I need to implement logic for skipping if same data group
-    prev_summary <- obj$data_info$data_summary %>%
-      dplyr::select(Chemical:tlast_detect)
+    prev_summary <- dplyr::select(obj$data_info$data_summary, Chemical:tlast_detect)
   }
+  cli::cli_par()
 
   # if preprocessing not already done, do it
   if (obj$status < status_preprocess) {
     obj <- do_preprocess(obj)
   }
 
-  if (obj$settings_preprocess$suppress.messages %in% FALSE) {
-    message("do_data_info.pk(): Getting data summary info\n")
+  if (suppress_messages %in% FALSE) {
+    cli_inform("do_data_info.pk(): Getting data summary info.")
   }
 
-  data <- obj$data
+  data <- get_data.pk(obj)
 
   # get data summary
-  if (obj$settings_preprocess$suppress.messages %in% FALSE) {
-    message("do_data_info.pk(): Getting data summary statistics\n")
+  if (suppress_messages %in% FALSE) {
+    cli_inform("do_data_info.pk(): Getting data summary statistics.")
   }
 
   # grouping for data summary:
 
-  summary_group <- obj$settings_data_info$summary_group
+  summary_group <- get_nca_group.pk(obj)
 
   data_summary_out <- data_summary(obj = obj,
                                    newdata = NULL,
                                    summary_group = summary_group
   )
+
   # Here is step two of determining whether old data group is the same as "new" one
   if (status >= status_data_info) {
     id_summary <- identical(data_summary_out, prev_summary)
     if (id_summary) {
-      message("Any changes made do not affect the outcome ",
-              "of the non-compartmental analysis!\n")
+      cli_warn("Any changes made do not affect the outcome of the non-compartmental analysis!")
       return(obj)
     }
   }
@@ -64,54 +62,53 @@ do_data_info.pk <- function(obj, ...) {
   # do NCA dose-normalized
   # for purposes of some data flags
 
-  if (obj$settings_preprocess$suppress.messages %in% FALSE) {
-    message("do_data_info.pk(): Doing dose-normalized non-compartmental analysis\n")
+  if (suppress_messages %in% FALSE) {
+    cli_inform("do_data_info.pk(): Doing dose-normalized non-compartmental analysis.")
   }
 
   # if Dose, Route and Media not already in summary_group, add them for this
-  grp_vars_summary <- sapply(summary_group,
-                             rlang::as_label)
+  grp_vars_summary <- get_nca_group.pk(obj, as_character = TRUE)
 
   if (all(c("Dose", "Route", "Media") %in% grp_vars_summary)) {
     nca_group <- summary_group
 
   } else {
-    if (obj$settings_preprocess$suppress.messages %in% FALSE) {
-      message(paste0("Grouping for NCA must include Dose, Route, and Media, but ",
-                     "summary_group is: ",
-                     toString(grp_vars_summary),
-                     "\n",
-                     "Dose, Route, and/or Media are being added to the grouping for purposes of NCA."))
+    if (suppress_messages %in% FALSE) {
+      cli_inform(c(
+        paste("Grouping for NCA must include Dose, Route, and Media,",
+              "but summary_group is: {grp_vars_summary}"),
+        "Dose, Route, and/or Media are being added to the grouping for purposes of NCA."))
     }
-    nca_group <- union(summary_group,
-                       vars(Dose, Route, Media))
+    nca_group <- union(summary_group, vars(Dose, Route, Media))
   }
 
+  # Filter out any data from non-blood/plasma media collected
+  # data <- dplyr::filter(data, Route %in% c("blood", "plasma"))
+
+  # Do NCA
   nca_dose_norm_long <- nca(obj = obj,
-                       newdata = NULL,
-                       nca_group = nca_group,
-                       exclude = TRUE,
-                       dose_norm = TRUE)
+                            newdata = data,
+                            nca_group = nca_group,
+                            exclude = TRUE,
+                            dose_norm = TRUE)
 
   # pivot wider
-  grp_vars_nca <- sapply(nca_group,
-                         rlang::as_label)
-
-  nca_dose_norm <- nca_dose_norm_long %>%
-    tidyr::pivot_wider(id_cols = tidyselect::all_of(c(grp_vars_nca,
-                                                      "dose_norm")),
-                       names_from = param_name,
-                       values_from = param_value) %>%
+  nca_dose_norm <- nca_dose_norm_long |>
+    tidyr::pivot_wider(
+      id_cols = dplyr::all_of(c(grp_vars_summary, "dose_norm")),
+      names_from = param_name,
+      values_from = param_value
+    ) |>
     as.data.frame()
 
   # get data flags:
-  if (obj$settings_preprocess$suppress.messages %in% FALSE) {
-    message("do_data_info.pk(): Getting data flags based on NCA\n")
+  if (suppress_messages %in% FALSE) {
+    cli_inform("do_data_info.pk(): Getting data flags based on NCA.")
   }
 
   # get summary for nca_group if it is different from summary_group
-if (length(setdiff(nca_group, summary_group)) > 0 |
-   length(setdiff(summary_group, nca_group)) > 0) {
+if (length(base::setdiff(nca_group, summary_group)) > 0 ||
+   length(base::setdiff(summary_group, nca_group)) > 0) {
   data_summary_nca <- data_summary(obj = obj,
                                    newdata = NULL,
                                    summary_group = nca_group
@@ -124,7 +121,7 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
   # Assess various flags
   df <- dplyr::inner_join(data_summary_nca,
                           nca_dose_norm,
-                          by = grp_vars_nca) %>%
+                          by = grp_vars_summary) |>
     dplyr::mutate(
       # Is tmax for oral data the first or last detected timepoint?
       data_flag = ifelse(
@@ -133,7 +130,7 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
           !is.na(tmax),
         "tmax is equal to time of first detect",
         NA_real_
-      )) %>% dplyr::mutate(
+      )) |> dplyr::mutate(
         data_flag = ifelse(
           Route %in% "oral" &
             (abs(tmax - tlast_detect) < sqrt(.Machine$double.eps)) %in% TRUE &
@@ -142,33 +139,33 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
                  "tmax is equal to time of last detect",
                  sep = " | "),
           data_flag
-        )) %>% dplyr::mutate(
-          # CLtot/Fgutabs must be positive and AUC_infinity must also be positive
-          data_flag = ifelse(
-            (CLtot < 0) %in% TRUE |
-              (`CLtot/Fgutabs` < 0) %in% TRUE,
-            paste2(data_flag,
-                   "CLtot or CLtot/Fgutabs is negative",
-                   sep = " | "),
-            data_flag)
-        ) %>% dplyr::mutate(
-          data_flag = ifelse((AUC_infinity < 0) %in% TRUE,
-                             paste2(data_flag,
-                                    "AUC_infinity is negative",
-                                    sep = " | "),
-                             data_flag)
-        )
+        ),
+        # CLtot/Fgutabs must be positive and AUC_infinity must also be positive
+        data_flag = ifelse(
+          (CLtot < 0) %in% TRUE |
+            (`CLtot/Fgutabs` < 0) %in% TRUE,
+          paste2(data_flag,
+                 "CLtot or CLtot/Fgutabs is negative",
+                 sep = " | "),
+          data_flag
+          ),
+        data_flag = ifelse((AUC_infinity < 0) %in% TRUE,
+                           paste2(data_flag,
+                                  "AUC_infinity is negative",
+                                  sep = " | "),
+                           data_flag)
+      )
 
   # Other data flags:
   # Check for obeying dose normalization by summary_group - Dose
-  dose_norm_check <- df %>%
-    dplyr::group_by(!!!summary_group) %>%
-    dplyr::ungroup(Dose) %>%
+  dose_norm_check <- df |>
+    dplyr::group_by(!!!summary_group) |>
+    dplyr::ungroup(Dose) |>
     dplyr::reframe(
       n_dose_groups = dplyr::n_distinct(Dose),
       Cmax_fold_range = {
         tmprange <- suppressWarnings(range(`Cmax`, na.rm = TRUE))
-        if (all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
+        if (!any(is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
         tmprange[2] / tmprange[1]
       },
       data_flag_Cmax = ifelse(Cmax_fold_range > 2,
@@ -176,12 +173,12 @@ if (length(setdiff(nca_group, summary_group)) > 0 |
                               NA_character_),
       AUC_fold_range = {
         tmprange <- suppressWarnings(range(`AUC_infinity`, na.rm = TRUE))
-        if (all(!is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
+        if (!any(is.finite(tmprange))) tmprange <- c(NA_real_, NA_real_)
         tmprange[2] / tmprange[1]
       },
       data_flag_AUC = ifelse(AUC_fold_range > 2,
                              "AUC_infinity may not scale with dose. AUC/Dose range > 2-fold across dose groups for this group",
-                             NA_character_)) %>%
+                             NA_character_)) |>
     as.data.frame()
 
   obj$data_info <- list("data_summary" = data_summary_out,

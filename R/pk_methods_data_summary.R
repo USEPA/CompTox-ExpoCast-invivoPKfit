@@ -9,18 +9,18 @@
 #' will simply be doing data summary *de novo* (which may be what you want).
 #'
 #' Summary statistics include, for each group:
-#'
-#' - `n_obs`: the number of observations
-#' - `n_exclude`: The number of excluded observations
-#' - `n_detect`: The number of non-excluded detected observations
-#' - `n_series_id`: The number of unique series IDs
-#' - `n_timepts`: The number of unique time points
-#' - `n_ref`: The number of unique reference IDs
-#' - `tlast`: The time of the latest non-excluded observation
-#' - `tlast_detect`: The time of the latest non-excluded detected observation
-#' - `tfirst`: The time of the earliest non-excluded observation
-#' - `tfirst_detect`: The time of the earliest non-excluded detected observation
-#'
+#' \itemize{
+#' \item `n_obs`: the number of observations
+#' \item `n_exclude`: The number of excluded observations
+#' \item `n_detect`: The number of non-excluded detected observations
+#' \item `n_series_id`: The number of unique series IDs
+#' \item `n_timepts`: The number of unique time points
+#' \item `n_ref`: The number of unique reference IDs
+#' \item `tlast`: The time of the latest non-excluded observation
+#' \item `tlast_detect`: The time of the latest non-excluded detected observation
+#' \item `tfirst`: The time of the earliest non-excluded observation
+#' \item `tfirst_detect`: The time of the earliest non-excluded detected observation
+#' }
 #'
 #' @param obj A [pk()] model object. Must be fitted, or the function will exit
 #'   with an error.
@@ -34,7 +34,7 @@
 #'   to the unique combinations of these variables. For each unique combination
 #'   of these variables in the data, a set of summary statistics will be
 #'   computed. The default is `NULL`, to use the same data grouping that was set
-#'   in [stat_nca()] for the `pk` object. However, you may specify a different
+#'   in [stat_nca_group()] for the `pk` object. However, you may specify a different
 #'   data grouping if you wish.
 #' @param ... Additional arguments. Not in use.
 #' @return A `data.frame` with variables including all the grouping variables in
@@ -42,7 +42,7 @@
 #'   statistic; see Details); `param_value` (the summary statistic value);  `param_units`
 #'   (the units of the summary statistic, derived from the units of the data).
 #' @export
-#' @author Caroline Ring
+#' @author Caroline Ring, Gilberto Padilla Mercado
 
 data_summary.pk <- function(obj,
                             newdata = NULL,
@@ -50,10 +50,10 @@ data_summary.pk <- function(obj,
                             ...) {
 
   if (is.null(summary_group)) {
-    summary_group <- obj$settings_data_info$summary_group
+    summary_group <- get_nca_group.pk(obj)
   }
 
-  if (is.null(newdata)) newdata <- obj$data
+  if (is.null(newdata)) newdata <- get_data.pk(obj)
 
   grp_vars <- sapply(summary_group,
                      rlang::as_label)
@@ -74,7 +74,7 @@ data_summary.pk <- function(obj,
                               exclude = TRUE)
 
 
-  data_summary <- dplyr::group_by(newdata, !!!summary_group) %>%
+  data_summary <- dplyr::group_by(newdata, !!!summary_group) |>
     dplyr::reframe(
       n_obs = dplyr::n(), # summary stats on data
       n_exclude = sum(exclude %in% TRUE),
@@ -98,8 +98,7 @@ data_summary.pk <- function(obj,
 
     )
 
-  data_summary <- data_summary %>%
-    as.data.frame()
+  data_summary <- as.data.frame(data_summary)
 
   return(data_summary)
 }

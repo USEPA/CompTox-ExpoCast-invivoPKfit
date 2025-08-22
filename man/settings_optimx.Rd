@@ -6,21 +6,18 @@
 \usage{
 settings_optimx(
   method = c("bobyqa", "L-BFGS-B"),
-  itnmax = 1e+06,
   hessian = FALSE,
-  control = list(kkt = FALSE),
+  control = list(kkt = FALSE, maxit = 1e+07),
   ...
 )
 }
 \arguments{
 \item{method}{The name(s) of optimization methods to be used. See
-[optimx::optimx()] for options. Default is `"bobyqa"`.}
+[optimx::opm()] for options. Default is `"bobyqa"` and `"L-BFGS-B"`.}
 
-\item{itnmax}{The maximum number of iterations; as in [optimx::optimx()].}
+\item{hessian}{Whether to compute the Hessian at the final set of parameters; as in [optimx::opm()].}
 
-\item{hessian}{Whether to compute the Hessian at the final set of parameters; as in [optimx::optimx()].}
-
-\item{control}{A list of control parameters for the optimizer; see [optimx::optimx()] for options and details.}
+\item{control}{A list of control parameters for the optimizer; see [optimx::opm()] for options and details.}
 
 \item{...}{Additional arguments not currently implemented.}
 }

@@ -7,7 +7,7 @@
 check_params_1comp(params, route, medium, ...)
 }
 \arguments{
-\item{params}{A named numeric vector of parameters for the 1-compartment model.}
+\item{params}{A named numeric list of parameters for the 1-compartment model.}
 
 \item{route}{A character vector of routes: "iv" and/or "oral".}
 

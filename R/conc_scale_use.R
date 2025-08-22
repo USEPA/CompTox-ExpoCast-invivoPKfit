@@ -26,21 +26,24 @@ conc_scale_use <- function(use_scale_conc,
     log10_trans <- FALSE
   } else {
     if (!is.list(use_scale_conc)) {
-      stop("use_scale_conc must be either TRUE, FALSE, ",
-           "or a list like `list(dose_norm = TRUE/FALSE, ",
-           "log10_trans = TRUE/FALSE)`")
+      cli::cli_abort(paste0(
+        "{.var use_scale_conc} must be either TRUE, FALSE, or a list like ",
+        "{.var list(dose_norm = TRUE/FALSE, log10_trans = TRUE/FALSE)`"
+      ))
     }
 
     if (!all(c("dose_norm", "log10_trans") %in% names(use_scale_conc))) {
-      stop("use_scale_conc must be either TRUE, FALSE, ",
-           "or a list like `list(dose_norm = TRUE/FALSE, ",
-           "log10_trans = TRUE/FALSE)`")
+      cli_abort(paste0(
+        "When {.var use_scale_conc} is a list, it must be named include both ",
+           "{.val dose_norm} and {.val log10_trans} set to TRUE or FALSE."
+        ))
     }
 
     if (!all(sapply(use_scale_conc[c("dose_norm", "log10_trans")], is.logical))) {
-      stop("use_scale_conc must be either TRUE, FALSE, ",
-           "or a list like `list(dose_norm = TRUE/FALSE, ",
-           "log10_trans = TRUE/FALSE)`")
+      cli_abort(paste0(
+        "When {.var use_scale_conc} is a list with both {.val dose_norm} and {.val log10_trans}",
+        "named elements, these must be set to TRUE or FALSE."
+      ))
     }
 
     dose_norm <- use_scale_conc$dose_norm

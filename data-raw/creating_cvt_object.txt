@@ -1,0 +1,158 @@
+Creating the `cvt` data object for invivoPKfit, after SQL query.
+Column changes:
+• Set `time_original`, `time_hr`, `conc_original`, `conc_sd_original`, `conc`, `conc_sd`, `dose_level_original`,
+`dose_level_normalized`, and `loq` to numeric type.
+• Set `year` to character type.
+• Set `species` and `sex` to lowercase.
+• Set `radiolabeled` to logical.
+• Normalized some chemicals names. (See code for details)
+• If `dose_volume_units` was 'NR' or 'ND' set this to NA.
+• Replaced ' / ', with '/' and 'ml' with 'mL' for `dose_volume_units`.
+• Set `dose_duration` to first number and converted to numeric.
+• Trimmed whitespace around `dose_duration_units`.
+• Extracted integer average from `n_subjects_in_series` and set 'NR' to NA.
+
+Found chemicals that were missidentified as not radiolabeled.
+• Dosed Chemical IDs = (710, 1108)
+• Filtered out radiolabeled data.
+
+Fixed the following misspellings [old: new] :
+paracetmol: paracetamol
+deacetyl diltiazem: desacetyl diltaiazem
+deacetyl n-monodesmethyl diltiazem: desacetyl n-monodesmethyl diltiazem
+2,2',4,4',5,5'-hexachlorobiphenyl: 2,4,5,2',4',5'-hexachlorobiphenyl
+valproate \(vpa\): valproic acid
+clotiapine: clothiapine
+Added missing DTXSIDs:
+4,4'-sulfonylbisphenol-d8: DTXSID3022409
+(+-)-metoprolol tartrate: DTXSID9037248
+antipyrene: DTXSID6021117
+3'-azido-3'-deoxythymidine: DTXSID8020127
+2,4,5,2',4',5'-hexachlorobiphenyl: DTXSID2032180
+fluorotelomer acid 7+3: DTXSID20874028
+valproic acid: DTXSID6023733
+s-(-)-metoprolol: DTXSID60230861
+r-(+)-metoprolol: DTXSID20230862
+paracetamol: DTXSID2020006
+
+Filtered out observations where `analyzed_chem_dtxsid` is still NA.
+
+Changed DTXSIDs based on chemical names to match unsalted chemical:
+methadone hydrochloride: DTXSID7023273
+ammonium perfluorooctanoate: DTXSID40892486
+sodium nitrite: DTXSID5024219
+potassium perfluorobutanesulfonate: DTXSID5030030
+potassium perfluorohexanesulfonate: DTXSID80873012
+bosentan: DTXSID7046627
+hexobarbital: DTXSID9023122
+quinidine: DTXSID4023549
+tamoxifen citrate: DTXSID1034187
+sodium nitrite: DTXSID5024219
+imipramine hydrochloride: DTXSID1043881
+ondansetron hydrochloride dihydrate: DTXSID8023393
+thiopental sodium: DTXSID1023653
+phenobarbital: DTXSID5021122
+phenobarbital sodium: DTXSID5021122
+
+Changed DTXSID based on original chemical name to match unsalted chemical:
+formetanate hydrochloride: DTXSID9041990
+propamocarb hydrochloride: DTXSID1040295
+pyrithiobac sodium: DTXSID3037703
+tamoxifen citrate: DTXSID1034187
+valproic acid: DTXSID6023733
+r-(+)-metoprolol: DTXSID20230862
+s-(-)-metoprolol: DTXSID60230861
+
+Now, when dosed and analyzed chemical DTXSIDs are identical, replace fk_dosed_chemical_id with
+fk_analyzed_chemical_id.
+
+Filtering out:
+• Missing `analyzed_chem_dtxsid`
+• Data where the analyzed chemicals and dosed chemicals are different
+
+Only keeping:
+• Plasma or blood medium collected.
+
+Filtering out:
+• Experiments missing concentration values altogether.
+
+Preparing concentration (and LOQ) units for validation:
+• Replacing lowercase 'l' at end of unit into upper case 'L' for liters.
+• Replacing 'µ' character with 'u' to standardize unit labels.
+• Filtering out any observations with NA values in both `conc` and `conc_original`.
+
+Only keeping:
+• Observations with non-NA `conc` values.
+• Observations with `conc_units_original` ends with 'g'.
+
+Calculating missing concentrations when `conc_units_original` is per *grams:
+• When blood is measured, multiply by 1.05 and metric scaling factor.
+• When plasma is measured, multiply by 1.025 and metric scaling factor.
+
+Calculating missing LOQs:
+• For NTP study 'K02922', loq units are actually 'ng/mL'
+• When units are in 'pg/mL', multiply by 10^-6
+• When units are in 'ug/L', 'ng/mL', or 'ng', multiply by 10^-3
+• When blood is measured and `loq_units` are per gram, multiply by 1.05 and metric scaling factor.
+• When plasma is measured and `loq_units` are per gram, multiply by 1.025 and metric scaling factor.
+
+Removing observations with missing dose values.
+
+Filtering out all non-positive or non-zero timepoints.
+
+Removing chemical entries with less than 5 unique timepoints.
+This eliminates the following chemicals:
+• trans-4-hydroxytamoxifen
+• sertraline
+• vaniprevir
+• 1,4-butanediol
+• desloratadine
+• lenalidomide
+• m-cresol
+• tamoxifen
+
+Only data with analyzed chemical dtxsid will be considered.
+---- Statistics on the current data ----
+Total number of data points: 22182
+Unique Species and data counts:
+dog: 51
+hamster: 201
+human: 155
+mouse: 6818
+rabbit: 17
+rat: 14940
+Number of unique studies: 709
+Number of unique series: 13676
+Number of unique chemicals: 259
+
+Original Dose Units: 11
+Normalized Dose Units: 1
+Original Conc Units: 12
+Normalized Conc Units: 1
+
+Data by unique route of administration:
+iv: 6843
+oral: 15339
+
+Data by unique medium collected:
+blood: 2773
+plasma: 19409
+
+Data by unique curation set:
+3M_PFAS_TK: 1024
+CVT_dermal: 14
+CVT_dermal, ICF_to_Jira, tkkb: 33
+CVT_Legacy: 460
+CVT_Showa: 2541
+doc_reextraction: 562
+doc_reextraction, NTP, subject_doc_group_split: 4360
+doc_reextraction, subject_doc_group_split: 1280
+inhalation: 73
+July2024_QC_Push, NTP, QC_reextraction: 10145
+NTP: 1026
+PCB: 172
+PFAS_PIP: 425
+PFOS_PFOA_PIP: 19
+tk_params_icf: 48
+
+Created: 2025-08-12

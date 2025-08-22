@@ -89,7 +89,7 @@ logLik.pk <- function(object,
                       exclude = TRUE,
                       drop_obs = TRUE, ...) {
 
-  suppress.messages <- object$settings_preprocess$suppress.messages
+  suppress.messages <- object$pk_settings$preprocess$suppress.messages
 
   # ensure that the model has been fitted
   check <- check_required_status(obj = object,
@@ -97,13 +97,20 @@ logLik.pk <- function(object,
   if (!(check %in% TRUE)) {
     stop(attr(check, "msg"))
   }
+
+  err_grp_vars <- get_error_group.pk(object, as_character = TRUE)
+
+  data_grp <- get_data_group.pk(object)
+  data_grp_vars <- get_data_group.pk(object, as_character = TRUE)
+
+
   other_vars <- NULL
   if (is.null(model)) model <- names(object$stat_model)
-  if (is.null(method)) method <- object$settings_optimx$method
+  if (is.null(method)) method <- object$pk_settings$optimx$method
   if (is.null(newdata)) {
     newdata <- object$data
 
-    other_vars <- ggplot2::vars(
+    other_vars <- rlang::exprs(
       Conc,
       Conc.Units,
       Time_trans.Units,
@@ -112,30 +119,41 @@ logLik.pk <- function(object,
       data_sigma_group,
       exclude
     )
+  } else {
+    precheck_newdata <- check_newdata(
+      newdata, object$data,
+      req_vars = c("Time", "Time.Units")
+    )
+    newdata <- newdata |>
+      mutate(
+        Time = convert_time(Time, from = Time.Units, to = "hours"),
+        data_sigma_group = NA_character_
+      )
+
+    other_vars <- rlang::exprs(
+      Conc.Units,
+      data_sigma_group
+    )
   }
 
   method_ok <- check_method(obj = object, method = method)
   model_ok <- check_model(obj = object, model = model)
 
   # check variables in newdata
-# including error grouping variables
-  err_grp_vars <- sapply(eval(get_error_group(object)),
-                         rlang::as_label)
-  data_grp_vars <- sapply(eval(get_data_group(object)),
-                         rlang::as_label)
-
-  newdata_ok <- check_newdata(newdata = newdata,
-                              olddata = object$data,
-                              req_vars = union(c("Time",
-                                           "Dose",
-                                           "Route",
-                                           "Media",
-                                           "Conc",
-                                           "Detect",
-                                           "Conc_SD",
-                                           "N_Subjects"),
-                                err_grp_vars),
-                              exclude = exclude)
+  # including error grouping variables
+  newdata_ok <- check_newdata(
+    newdata = newdata,
+    olddata = object$data,
+    req_vars = union(c("Time",
+                       "Dose",
+                       "Route",
+                       "Media",
+                       "Conc",
+                       "Detect",
+                       "N_Subjects"),
+                     err_grp_vars),
+    exclude = exclude
+  )
 
   # time_scale_check
   if (!all(newdata$Time_trans.Units %in% "hours")) {
@@ -148,18 +166,18 @@ logLik.pk <- function(object,
                                          to = "hours")
       newdata$Time_trans.Units <- rep("hours", nrow(newdata))
     }
-    if (!suppress.messages & (object$status < 5)) {
-      print(newdata %>%
-              dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
-              dplyr::filter(Time.Units != Time_trans.Units) %>%
-              dplyr::distinct())
+    if (!suppress.messages && (object$status < 5)) {
+      newdata |>
+        dplyr::select(!!!data_grp, Time.Units, Time_trans.Units) |>
+        dplyr::filter(Time.Units != Time_trans.Units) |>
+        dplyr::distinct() |>
+        print()
     }
   }
 
 
   # get transformations to apply
-  conc_scale <- conc_scale_use(obj = object,
-                               use_scale_conc = TRUE)
+  conc_scale <- conc_scale_use(obj = object, use_scale_conc = TRUE)
 
   # remove any excluded observations & corresponding predictions, if so specified
   if (exclude %in% TRUE && "exclude" %in% names(newdata)) {
@@ -169,76 +187,72 @@ logLik.pk <- function(object,
   # get coefs data.frame for each model and method
   # must include sigma value
   coefs <- coef(
-    obj = object,
+    object = object,
     model = model,
     method = method,
     drop_sigma = FALSE,
     suppress_message = TRUE)
 
-  req_vars <- ggplot2::vars(Time,
-                            Time.Units,
-                            Time_trans,
-                            Time_trans.Units,
-                            Dose,
-                            Route,
-                            Media,
-                            Conc,
-                            Conc_SD,
-                            N_Subjects,
-                            Detect,
-                            pLOQ)
+  req_vars <- rlang::exprs(Time,
+                           Time.Units,
+                           Time_trans,
+                           Time_trans.Units,
+                           Dose,
+                           Route,
+                           Media,
+                           Conc,
+                           Conc_SD,
+                           N_Subjects,
+                           data_sigma_group,
+                           Detect,
+                           pLOQ)
 
+  newdata <- newdata |>
+    dplyr::select("DATA_GROUP_ID", !!!union(data_grp, req_vars),
+                  !!!other_vars)
 
-
-  newdata <- suppressMessages(newdata %>%
-    dplyr::select(!!!union(object$data_group, req_vars),
-                  !!!other_vars))
-
-
-
-
-    newdata <- newdata %>%
-      dplyr::group_by(!!!object$data_group) %>%
-      tidyr::nest(.key = "observations") %>%
+    newdata <- newdata |>
+      dplyr::group_by(DATA_GROUP_ID) |>
+      tidyr::nest(.key = "observations") |>
       dplyr::ungroup()
-
 
   newdata <- tidyr::expand_grid(tidyr::expand_grid(model, method),
                                 newdata)
+
   # This setup allows for a more stable call to the model functions later on
-  fun_models <- data.frame(
-    model_name = unname(sapply(object$stat_model, \(x) {x$name})),
-    model_fun = unname(sapply(object$stat_model, \(x) {x$conc_fun}))
-  )
+  # make a join-able data.frame with all the possible models
+  fun_models <- get_stat_model(object)
 
   newdata <- dplyr::left_join(coefs, newdata,
-                              by = c("model", "method",
-                                      data_grp_vars))
+                              by = c("model", "method", "DATA_GROUP_ID"))
 
 
-  newdata <- newdata %>%
-    dplyr::rowwise() %>%
-    dplyr::filter(!is.null(observations)) %>%
-    dplyr::left_join(fun_models, join_by(model == model_name)) %>%
-    dplyr::ungroup() %>%
+  newdata <- newdata |>
+    dplyr::rowwise() |>
+    dplyr::filter(!is.null(observations)) |>
+    dplyr::left_join(fun_models, join_by(model)) |>
+    dplyr::ungroup() |>
     dplyr::distinct()
 
-  newdata <- newdata %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(log_likelihood = log_likelihood(
-      par = coefs_vector,
-      data = observations,
-      data_sigma_group = observations$data_sigma_group,
-      modelfun = model_fun,
-      dose_norm = conc_scale$dose_norm,
-      log10_trans = conc_scale$log10_trans,
-      negative = negative,
-      force_finite = force_finite,
-      suppress.messages = suppress.messages))
+  newdata <- newdata |>
+    dplyr::rowwise() |>
+    dplyr::mutate(
+      log_likelihood = log_likelihood(
+        par = .data$coefs_vector,
+        data = .data$observations,
+        data_sigma_group = .data$observations$data_sigma_group,
+        modelfun = .data$modelfun[[1]],
+        dose_norm = conc_scale$dose_norm,
+        log10_trans = conc_scale$log10_trans,
+        negative = negative,
+        force_finite = force_finite,
+        suppress.messages = suppress.messages
+      )
+    ) |>
+    dplyr::select(-modelfun)
 
  if (drop_obs == TRUE) {
-   newdata <- newdata %>%
-     dplyr::select(-observations)
+   newdata <- dplyr::select(newdata, -observations)
  }
 
   return(newdata)

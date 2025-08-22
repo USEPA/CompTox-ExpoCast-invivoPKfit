@@ -1,0 +1,199 @@
+---
+title: "Optimizing httk's 3comp2 model"
+author: "Gilberto Padilla Mercado"
+date: "2025-05-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+devtools::load_all()
+library(dplyr)
+library(httk)
+```
+
+# Purpose
+
+This documents how to optimize `Clint` and `Funbound.plasma` using
+_invivoPKfit_ and _httk_'s `3compartment2` model. There are
+a couple of issues mainly stemming from the fact that the solver often
+returns an error from the underlying FORTRAN code used in `deSolve` in
+multiple iterations of the optimization procedure.
+
+```{r}
+load_dawson2021()
+schems <- httk::get_cheminfo("dtxsid", species = "rat",
+                             model = "gas_pbtk") |>
+  suppressWarnings()
+
+sum(unique(cvt$analyzed_chem_dtxsid) %in% schems)
+
+minicvt <- subset(
+  cvt,
+  species == "rat" &
+    analyzed_chem_dtxsid %in% schems
+)
+
+table(minicvt$analyzed_chem_dtxsid)
+```
+
+Initial test with regular models.
+
+```{r}
+test_pk2 <- pk(data = minicvt) + 
+  stat_error_model(error_group = vars(Chemical, Species)) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE)
+
+test_pk2 <- do_data_info(test_pk)
+test_pk2 <- do_prefit(test_pk)
+test_fit2 <- do_fit(test_pk, n_cores = 4)
+winmodel2 <- get_winning_model(test_fit)
+
+
+```
+
+
+
+First I want to try just the clearance-aware 1-compartment models
+
+
+```{r}
+test_pk <- pk(data = minicvt) + 
+  stat_error_model(error_group = vars(Chemical, Species)) +
+  stat_model(model = c("model_flat", "model_1comp_cl_rest",
+                       "model_1comp_cl_nonrest", "model_1comp_fup")) +
+  settings_optimx(hessian = TRUE) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE)
+
+test_pk <- do_data_info(test_pk)
+test_pk <- do_prefit(test_pk)
+test_pk
+gc()
+
+test_fit <- do_fit(test_pk, n_cores = 4)
+winmodel <- get_winning_model(test_fit)
+winmodel %>% ungroup() %>% count(method, model)
+View(winmodel)
+get_fit(test_fit) %>%
+  filter(convcode == 0) %>%
+  ungroup() %>%
+  distinct(Chemical, Species, model, method) %>% View()
+
+pl <- plot(test_fit, use_scale_conc = FALSE,
+           best_fit = FALSE, log10_C = FALSE,
+           method = "L-BFGS-B")
+
+winmodel %>%
+  filter(model != "model_flat") %>%
+  distinct(Chemical, model)
+
+pl %>%
+  filter(Chemical == "DTXSID0020442") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID2020139") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID4020458") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID4022527") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID4032405") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID5023320") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID6022923") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID7046627") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID8020541") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID8032673") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID9020584") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID9032329") %>%
+  pull(final_plot) %>% .[[1]]
+
+pl %>%
+  filter(Chemical == "DTXSID1022265") %>%
+  pull(final_plot) %>% .[[1]]
+
+
+get_fit(test_fit) %>%
+  filter(Chemical == "DTXSID0020442", model == "model_1comp_cl_nonrest",
+         param_name == "Clint", method == "L-BFGS-B") %>% View()
+
+get_fit(test_fit) %>%
+  semi_join(winmodel) %>%
+  filter(model != "model_flat", optimize_param) %>%
+  mutate(diff_est = estimate - start) %>%
+  View("diffs")
+
+get_fit(test_fit) %>%
+  semi_join(winmodel) %>%
+  filter(model != "model_flat", optimize_param,
+         convcode == 0) %>%
+  mutate(diff_est = estimate - start) %>%
+  filter(stringr::str_detect(param_name, "sigma_", negate = TRUE)) %>%
+  group_by(model, method, param_name) %>%
+  summarize(avg_diff = mean(diff_est),
+            min_diff = min(diff_est),
+            max_diff = max(diff_est)) 
+
+```
+
+
+We have a list of things to try:
+
+[] Are the timepoints causing issues? Run and stop with initial parameters.
+[] Should we only optimize one parameter? Modify `get_params_httk_3comp2` function.
+
+
+
+```{r}
+
+test_pk <- pk(data = minicvt) + 
+  stat_error_model(error_group = vars(Chemical, Species)) +
+  stat_model(model = c("model_flat", "model_httk_3comp2")) +
+  settings_optimx(hessian = TRUE) +
+  scale_conc(dose_norm = TRUE, log10_trans = FALSE)
+
+test_pk <- do_prefit(test_pk)
+test_pk
+gc()
+
+test_fit <- do_fit(test_pk)
+
+```
+
+```{r}
+preds <- predict(test_fit)
+
+my_fit <- get_fit(test_fit) |>
+  dplyr::filter(optimize_param)
+
+View(transform(my_fit, opt_diff = start - estimate))
+
+```
+

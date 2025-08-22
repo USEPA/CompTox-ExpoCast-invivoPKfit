@@ -49,9 +49,9 @@ get_status.pk <- function(obj, suppress.messages = NULL, ...) {
   }
 
   if (is.null(suppress.messages)) {
-    suppress.messages <- obj$settings_preprocess$suppress.messages
+    suppress.messages <- obj$pk_settings$preprocess$suppress.messages
   }
-  if (suppress.messages == FALSE) {
+  if (!suppress.messages) {
     out <- obj_status
     msg <- paste(
       paste0("Status of pk object ", objname, ":"),

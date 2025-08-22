@@ -15,7 +15,7 @@ for all of the models in `obj$stat_model`.}
 
 \item{method}{Optional: Specify one or more of the [optimx::optimx()] methods
 whose coefficients to return. If NULL (the default), coefficients will be
-returned for all of the models in `obj$settings_optimx$method`.}
+returned for all of the models in `obj$pk_settings$optimx$method`.}
 
 \item{suppress.messages}{Logical. `TRUE` (the default) to suppress informative
 messages. `FALSE` to see them.}
@@ -60,6 +60,6 @@ Other methods for fitted pk objects:
 \code{\link{rsq.pk}()}
 }
 \author{
-Caroline Ring and Gilberto Padilla Mercado
+Caroline Ring, Gilberto Padilla Mercado
 }
 \concept{methods for fitted pk objects}

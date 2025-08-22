@@ -69,34 +69,41 @@ cp_2comp <- function(params,
     medium
   )
   if (check_msg != "Parameters OK") {
-    stop("cp_2comp(): ", check_msg)
+    cli::cli_abort(check_msg)
   }
 
   # get transformed parameters for 2-comp model
   trans_params <- transformed_params_2comp(params)
+
+  A_iv_unit = B_iv_unit = alpha = beta = A_oral_unit = B_oral_unit = NULL
+  kgutabs = Rblood2plasma = NULL
 
   list2env(as.list(params), envir = as.environment(-1))
 
   # for readability, assign transformed params to variables inside this function
   list2env(as.list(trans_params), envir = as.environment(-1))
 
+  Cp <- rep_len(NA_real_, length(time))
+  iv_vec <- (route == "iv")
+  or_vec <- (route == "oral")
+
   # get predicted concentration
-  cp <- dose * ifelse(route %in% "iv",
-                      (
-                        A_iv_unit * exp(-alpha * time)
-                        + B_iv_unit * exp(-beta * time)
-                      ),
-                      (
-                        A_oral_unit * exp(-alpha * time)
-                        + B_oral_unit * exp(-beta * time)
-                        - (A_oral_unit + B_oral_unit) * exp(-kgutabs * time)
-                      )
-  )
+  if (any(iv_vec)) {
+    Cp[iv_vec] <- dose[iv_vec] * (
+      A_iv_unit * exp(-alpha * time[iv_vec]) +
+        B_iv_unit * exp(-beta * time[iv_vec])
+    )
+  }
 
-  cp <- ifelse(medium %in% "blood",
-               Rblood2plasma * cp,
-               cp
-  )
+  if (any(or_vec)) {
+    Cp[or_vec] <- dose[or_vec] * (
+      (A_oral_unit * exp(-alpha * time[or_vec])) +
+        (B_oral_unit * exp(-beta * time[or_vec])) -
+        ((A_oral_unit + B_oral_unit) * exp(-kgutabs * time[or_vec]))
+    )
+  }
 
-  return(cp)
+  Cp <- ifelse(medium %in% "blood", Cp * Rblood2plasma, Cp)
+
+  return(Cp)
 }

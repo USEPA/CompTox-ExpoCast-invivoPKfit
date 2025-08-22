@@ -20,7 +20,7 @@
 #'   unique combinations of these variables. For each unique combination of
 #'   these variables in the data, a set of TK statistics will be computed. The
 #'   default is `NULL`, to use the same data grouping that was set in
-#'   [stat_nca()] for the `pk` object. However, you may specify a different data
+#'   [stat_nca_group()] for the `pk` object. However, you may specify a different data
 #'   grouping if you wish.
 #' @param exclude Logical: `TRUE` to group the data for NCA after removing any
 #'   observations in the data marked for exclusion (if there is a variable
@@ -32,7 +32,7 @@
 #'   concentrations.
 #' @param suppress.messages Logical: whether to suppress message printing. If
 #'   NULL (default), uses the setting in
-#'   `obj$settings_preprocess$suppress.messages`
+#'   `obj$pk_settings$preprocess$suppress.messages`
 #' @param ... Additional arguments. Currently not in use.
 #' @return A `data.frame` with variables including all the grouping variables in
 #'   `nca_group`, `nca_group_id`; `design` (the auto-detected study design for
@@ -52,14 +52,14 @@ nca.pk <- function(obj,
                    ...) {
 
   if (is.null(suppress.messages)) {
-    suppress.messages <- obj$settings_preprocess$suppress.messages
+    suppress.messages <- obj$pk_settings$preprocess$suppress.messages
   }
 
   if (is.null(nca_group)) {
-    nca_group <- obj$settings_data_info$summary_group
+    nca_group <- get_nca_group.pk(obj)
   }
 
-  if (is.null(newdata)) newdata <- obj$data
+  if (is.null(newdata)) newdata <- get_data(obj)
 
   grp_vars <- sapply(nca_group,
                      rlang::as_label)
@@ -93,7 +93,7 @@ nca.pk <- function(obj,
     }
   }
 
-  if (dose_norm %in% TRUE) {
+  if (!dose_norm %in% TRUE) {
   newdata_ok <- check_newdata(newdata = newdata,
                               olddata = obj$data,
                               req_vars = union(
@@ -148,32 +148,32 @@ nca.pk <- function(obj,
   }
 
   if (suppress.messages %in% FALSE) {
-    message(paste("nca.pk(): Doing",
-                                  ifelse(dose_norm %in% TRUE,
-                                         "dose-normalized",
-                                         "non-dose-normalized"),
-                                  "NCA by the following grouping:",
-                  toString(grp_vars)
-                  )
-            )
+    cli::cli_inform(
+      paste("nca.pk(): Doing",
+            ifelse(isTRUE(dose_norm),
+                   "dose-normalized",
+                   "non-dose-normalized"),
+            "NCA by the following grouping{?s}: {grp_vars}"
+      )
+    )
   }
 
   # do NCA
-    nca_out <- newdata %>%
-      dplyr::group_by(!!!nca_group) %>%
+    nca_out <- newdata |>
+      dplyr::group_by(!!!nca_group) |>
       dplyr::reframe(Conc.Units = unique(Conc_nca.Units),
                      Time.Units = unique(Time.Units),
                      Dose.Units = unique(Dose.Units),
                      dose_norm = dose_norm,
                      {
                        calc_nca(time = Time[exclude %in% FALSE], # calculate NCA
-                                dose = Dose_nca[exclude %in% FALSE],
+                                dose = .data$Dose_nca[exclude %in% FALSE],
                                 conc = Conc_nca[exclude %in% FALSE],
                                 detect = Detect[exclude %in% FALSE],
                                 route = unique(Route[exclude %in% FALSE]),
                                 series_id = Series_ID[exclude %in% FALSE])
                      }
-      ) %>%
+      ) |>
       dplyr::mutate(
         param_units = dplyr::case_when( # derive NCA param units from data units
           param_name %in% c("AUC_tlast",
@@ -204,8 +204,8 @@ nca.pk <- function(obj,
                                          Dose.Units,
                                          ")"),
           param_name %in% "Cmax" ~ Conc.Units
-        )) %>%
-      dplyr::select(-c(Conc.Units,
+        )) |>
+      dplyr::select(!c(Conc.Units,
                        Time.Units,
                        Dose.Units))
 

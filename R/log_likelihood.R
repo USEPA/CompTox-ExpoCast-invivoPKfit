@@ -9,7 +9,7 @@
 #' as unique combinations of variables in the harmonized data, by a command such
 #' as `pk(data = ...) + stat_error_model(error_group = vars(...)`.
 #'
-#' # Log-likelihood equations
+#' @section Log-likelihood equations:
 #'
 #' For chemical-species combination \eqn{i} and study \eqn{j}, define the
 #' following quantities.
@@ -40,7 +40,7 @@
 #' \eqn{\sigma_{ij}^2} is the study- and chemical-specific residual variance. (It
 #' is a hyperparameter.)
 #'
-#' ## Single-subject observations above limit of quantification (detects)
+#' @section Single-subject observations above limit of quantification (detects):
 #'
 #' This is the normal probability density function evaluated at the observed
 #' concentration, as implemented in [stats::dnorm()].
@@ -50,7 +50,7 @@
 #' \right]   \right) }
 #'
 #'
-#' ## Single-subject observations below limit of quantification (non-detects)
+#' @section Single-subject observations below limit of quantification (non-detects):
 #'
 #' This is the normal cumulative density function evaluated at the LOQ, as
 #' implemented in [stats::pnorm()]. It is the total probability of observing a
@@ -59,7 +59,7 @@
 #' \deqn{LL_{ijk} =  \log \left( \frac{1}{2} \left[ 1 + \textrm{erf} \left(
 #' \frac{\textrm{LOQ}_{ijk} - \mu_{ijk}}{\sigma_{ij} \sqrt{2}} \right) \right]  \right) }
 #'
-#' ## Multiple-subject observations above limit of quantification
+#' @section Multiple-subject observations above limit of quantification:
 #'
 #' This is the joint log-likelihood across the multiple subjects included in one
 #' observation, re-expressed in terms of the sample mean, sample SD, and number
@@ -73,7 +73,7 @@
 #'       \right)
 #'        \right]}
 #'
-#' ## Multiple-subject observations below limit of quantification
+#' @section Multiple-subject observations below limit of quantification:
 #'
 #' This case is not implemented. If sample mean concentration is reported below
 #' LOQ, then it is unclear what individual observed concentrations are
@@ -87,7 +87,7 @@
 #' multiple-subject observations below LOQ are excluded from analysis (they are
 #' marked as excluded in [preprocess_data()]).
 #'
-#' # Joint log-likelihood for a chemical and species
+#' @section Joint log-likelihood for a chemical and species:
 #'
 #' The joint log-likelihood for a chemical and species is simply the sum of
 #' log-likelihoods across observations.
@@ -121,9 +121,7 @@
 #'  as required by method `L-BFGS-B` in [optimx::optimx()]). Default FALSE. If
 #'  TRUE, then if the log-likelihood works out to be non-finite, then it will be
 #'  replaced with `.Machine$double.xmax`.
-#' @param max_multiplier Numeric, but NULL by default. Determines which multiple
-#'  of the maximum concentration to use to limit possible predictions.
-#'  Note: only use this as part of the fitting function.
+#' @param includes_preds Logical: whether `data` includes predictions.
 #' @param suppress.messages Logical.
 #' @return A log-likelihood value for the data given the parameter values in
 #'  params
@@ -138,8 +136,30 @@ log_likelihood <- function(par,
                            log10_trans = FALSE,
                            negative = TRUE,
                            force_finite = FALSE,
-                           max_multiplier = NULL,
+                           includes_preds = FALSE,
                            suppress.messages = TRUE) {
+
+  # Used variables such that there is no need to reference 'data'
+  Chemical <- unique(data$Chemical)
+  Species <- unique(data$Species)
+  Time_trans <- data$Time_trans
+  Dose <- data$Dose
+  Route <- data$Route
+  Media <- data$Media
+  Conc <- data$Conc
+  Conc_SD <- data$Conc_SD
+  # Conc_trans <- data$Conc_trans # This is re-calculated here
+  N_Subjects <- data$N_Subjects
+  Detect <- data$Detect
+  pLOQ <- data$pLOQ
+
+  # Fix any NA in N_Subjects and Detect as we do in do_preprocess.pk()
+  N_Subjects[is.na(N_Subjects)] <- 1.0
+  Detect[is.na(Detect)] <- FALSE
+  # Fix the modelfun_args and modelfun variables
+  modelfun_args <- modelfun[["conc_fun_args"]]
+  optimized_args <- modelfun$optimize_fun_args
+  modelfun <- modelfun[["conc_fun"]]
 
   # combine parameters to be optimized and held constant
   params <- c(par, const_params)
@@ -149,53 +169,32 @@ log_likelihood <- function(par,
   sigma_index <- startsWith(names(params), prefix = "sigma")
   model.params <- params[!sigma_index]
 
-  # Used variables such that there is no need to reference 'data'
-  Time_trans <- data$Time_trans
-  Dose <- data$Dose
-  Route <- data$Route
-  Media <- data$Media
-  Conc <- data$Conc
-  Conc_SD <- data$Conc_SD
-  Conc_trans <- data$Conc_trans
-  N_Subjects <- data$N_Subjects
-  Detect <- data$Detect
-  pLOQ <- data$pLOQ
-
-
-  # get un-transformed predicted plasma concentration vs. time for the current parameter
-  # values, by dose and route
-  pred <- do.call(
-    modelfun,
-    args = list(
-      params = model.params,
-      time = Time_trans,
-      dose = Dose,
-      route = Route,
-      medium = Media
+  if (includes_preds) {
+    stopifnot("data must have Conc_est column." = "Conc_est" %in% names(data))
+    pred <- data$Conc_est
+  } else {
+    # assemble arguments for do.call
+    if (!is.list(modelfun_args)) {
+      modelfun_args <- as.list(modelfun_args)
+    } else {
+      # Need to evaluate some quoted arguments (CHEMICAL and SPECIES)
+      # Need to evaluate it correctly in pk_model
+      modelfun_args <- lapply(modelfun_args, rlang::eval_tidy, data = data)
+    }
+    these_args <- c(
+      list(
+        params = model.params,
+        time = Time_trans,
+        dose = Dose,
+        route = Route,
+        medium = Media
+      ),
+      modelfun_args,
+      optimized_args
     )
-  )
-
-  pred[which(pred < pLOQ)] <- pLOQ[which(pred < pLOQ)]
-
-  # Handles the max_conc check, needs to be separate because it should only
-  # be used for fitting. Not logLik etc...
-  if (!is.null(max_multiplier)) {
-    if (!is.numeric(max_multiplier)) {
-      stop("Argument max_multiplier expects a numeric value or NULL")
-    }
-    if (!("groupCmax" %in% names(data))) {
-      stop("Using max_multiplier requires a column in data named groupCmax ",
-               "which stores the maximum concentration per ",
-               "Reference, Dose, Route, and Media group.")
-    }
-
-    max_conc <- data$groupCmax * max_multiplier
-    if (any(pred >= max_conc)) {
-      ll <- -Inf
-      if (force_finite) ll <- -1 * sqrt(.Machine$double.eps)
-      if (negative) ll <- -1 * ll
-      return(ll)
-    }
+    # get un-transformed predicted plasma concentration vs. time for the current parameter
+    # values, by dose and route
+    pred <- do.call(what = modelfun, args = these_args)
   }
 
   # Early Return
@@ -208,6 +207,8 @@ log_likelihood <- function(par,
     if (negative) ll <- -1 * ll
     return(ll)
   }
+
+  pred[which(pred < pLOQ)] <- pLOQ[which(pred < pLOQ)]
 
   # transform predictions and concentrations
   # dose normalization?
@@ -242,133 +243,116 @@ log_likelihood <- function(par,
   # defined by data_sigma_group
   # Reversed conditional order for clarity
   if (!any(sigma_index)) {
-    stop(
-        "Could not find any parameters with 'sigma' in the name.",
-        "Param names are:",
-        toString(names(params))
+    cli::cli_abort(c(
+      "Could not find any parameters with 'sigma' in the name.",
+      "i" = "Parameter name{?s} are: {names(params)}"
+    ))
+  }
+
+  # There ARE sigma values
+  # get sigma params
+  sigma_params <- as.list(params[sigma_index])
+  # match the study ID and assign each sigma to its corresponding study
+  # if study ID doesn't match anything in the sigmas, then assign NA
+  sigma_obs <- sigma_params[paste("sigma", data_sigma_group, sep = "_")]
+
+  # sigma may be implicitly "known" if there is only one sigma value
+  n_sigma_pars <- length(sigma_params)
+  sigma_is_na <- vapply(sigma_obs, is.null, logical(1))
+  sigma_obs[sigma_is_na] <- ifelse(n_sigma_pars == 1L, sigma_params, NA_real_)
+  sigma_obs <- unlist(sigma_obs)
+
+  # Refactoring to *more* vectorized version, there are six apparent conditions
+  one_subject_bool = (N_Subjects == 1)
+  # Put this in the context of either known or unknown sigmas
+  deb_ks = one_subject_bool & Detect & !sigma_is_na # known sigma
+  deb_us = one_subject_bool & Detect & sigma_is_na # unknown sigma
+  ndb_ks = one_subject_bool & !Detect & !sigma_is_na
+  ndb_us = one_subject_bool & Detect & sigma_is_na
+  nsb_ks = !(one_subject_bool | sigma_is_na)
+  nsb_us = !one_subject_bool & sigma_is_na
+
+  ll_data_sigma <- sum(
+    dnorm(
+      x = Conc_trans[deb_ks],
+      mean = pred_trans[deb_ks],
+      sd = sigma_obs[deb_ks],
+      log = TRUE
+    ),
+    pnorm(
+      q = Conc_trans[ndb_ks],
+      mean = pred_trans[ndb_ks],
+      sd = sigma_obs[ndb_ks],
+      log.p = TRUE
+    ),
+    do.call(
+      ll_summary,
+      list(
+        mu = pred_trans[nsb_ks],
+        sigma = sigma_obs[nsb_ks],
+        x_mean = conc_natural[nsb_ks],
+        x_sd = conc_sd_natural[nsb_ks],
+        x_N = N_Subjects[nsb_ks],
+        log = TRUE
+      )
     )
-  } else { # There ARE sigma values
-    # get sigma params
-    sigma_params <- as.list(params[sigma_index])
-    # match the study ID and assign each sigma to its corresponding study
-    # if study ID doesn't match anything in the sigmas, then assign NA
-    sigma_obs <- sigma_params[paste("sigma",
-                                    data_sigma_group,
-                                    sep = "_")]
+  )
 
-    sigma_is_na <- vapply(sigma_obs, is.null, logical(1))
-    sigma_obs[sigma_is_na] <- NA_real_
-    sigma_obs <- unlist(sigma_obs)
+  # if data_sigma_group is NA -- then assume data are equally likely to come from
+  # any of the existing distributions
+  # data_sigma_group may be NA if we are calculating log-likelihood for new data,
+  # i.e., data on which the model was not originally fitted.
+  # compute log likelihoods for observations without sigmas
+  if (any(sigma_is_na)) {
+    if (isFALSE(suppress.messages)) {
+      cli::cli_par()
+      cli::cli_inform(
+        c(
+          paste("log_likelihood(): {sum(sigma_is_na)}, observation{?s}",
+                "were not in any existing error-SD (sigma) group."),
+          "i" = "They will be treated as equally likely to be in any of the existing error-SD groups."
+        )
+      )
+      cli::cli_end()
+    }
 
-    sigma_obs <- sigma_obs
-
-    # if data_sigma_group is NA -- then assume data are equally likely to come from
-    # any of the existing distributions
-    # data_sigma_group may be NA if we are calculating log-likelihood for new data,
-    # i.e., data on which the model was not originally fitted.
-    if (!all(sigma_is_na)) {
-      # Expectations: N_Subjects must be >= 1
-      # compute log likelihoods for observations with sigmas
-      ll_data_sigma <- ifelse(
-        N_Subjects[!sigma_is_na] == 1 & !is.na(N_Subjects[!sigma_is_na]),
-        ifelse(
-          Detect[!sigma_is_na] %in% TRUE,
+    ll_data_no_sigma <- vapply(
+      unlist(sigma_params),
+      function(this_sigma) {
+        sum(
           dnorm(
-            x = Conc_trans[!sigma_is_na],
-            mean = pred_trans[!sigma_is_na],
-            sd = sigma_obs[!sigma_is_na],
+            x = Conc_trans[deb_us],
+            mean = pred_trans[deb_us],
+            sd = sigma_obs[deb_us],
             log = TRUE
           ),
           pnorm(
-            q = Conc_trans[!sigma_is_na],
-            mean = pred_trans[!sigma_is_na],
-            sd = sigma_obs[!sigma_is_na],
+            q = Conc_trans[ndb_us],
+            mean = pred_trans[ndb_us],
+            sd = sigma_obs[ndb_us],
             log.p = TRUE
-          )
-        ),
+          ),
           do.call(
             ll_summary,
             list(
-              mu = pred_trans[!sigma_is_na],
-              sigma = sigma_obs[!sigma_is_na],
-              x_mean = conc_natural[!sigma_is_na],
-              x_sd = conc_sd_natural[!sigma_is_na],
-              x_N = N_Subjects[!sigma_is_na],
+              mu = pred_trans[nsb_us],
+              sigma = sigma_obs[nsb_us],
+              x_mean = conc_natural[nsb_us],
+              x_sd = conc_sd_natural[nsb_us],
+              x_N = N_Subjects[nsb_us],
               log = TRUE
             )
-        )
-      )
-    } else {
-      ll_data_sigma <- numeric(0)
-    }
-
-    # compute log likelihoods for observations without sigmas
-    if (any(sigma_is_na)) {
-      if (isFALSE(suppress.messages)) {
-        message(
-            "log_likelihood():",
-            sum(is.na(sigma_obs)),
-            "observations are not in any existing error-SD (sigma) group.",
-            "They will be treated as equally likely to be in",
-            "any of the existing error-SD groups."
-        )
-      }
-      # Expectations: N_Subjects must be >= 1
-      ll_data_no_sigma <- sapply(
-        unlist(sigma_params),
-        function(this_sigma) {
-          # place these observations in each group in turn
-          ifelse(
-            N_Subjects[sigma_is_na] == 1 & !is.na(N_Subjects[sigma_is_na]),
-            ifelse(
-              Detect[sigma_is_na] %in% TRUE,
-              dnorm(
-                x = Conc_trans[sigma_is_na],
-                mean = pred_trans[sigma_is_na],
-                sd = this_sigma,
-                log = TRUE
-              ),
-              pnorm(
-                q = Conc_trans[sigma_is_na],
-                mean = pred_trans[sigma_is_na],
-                sd = this_sigma,
-                log.p = TRUE
-              )
-            ),
-            do.call(
-              ll_summary,
-              list(
-                mu = pred_trans[sigma_is_na],
-                sigma = this_sigma,
-                x_mean = conc_natural[sigma_is_na],
-                x_sd = conc_sd_natural[sigma_is_na],
-                x_N = N_Subjects[sigma_is_na],
-                log = TRUE
-              )
-            )
           )
-        }) # end sapply(unlist(sigma_params),
-
-      # the result will be a matrix with as many columns as there are sigma_params,
-      # and as many rows as there are observations without sigma groups
-      # take the row means
-      # however, there are times there is only one value
-      # so make that just equal the mean of this
-      if (is.null(dim(ll_data_no_sigma))) {
-        ll_data_no_sigma <- mean(ll_data_no_sigma)
-      } else {
-        ll_data_no_sigma <- rowMeans(ll_data_no_sigma)
-      }
-    } else {
-      ll_data_no_sigma <- numeric(0)
-    }
-
-    loglike <- c(ll_data_sigma,
-                 ll_data_no_sigma)
-}
+        )
+      },
+      FUN.VALUE = numeric(1L)
+    ) |> mean()
+  } else {
+    ll_data_no_sigma <- numeric(0L)
+  }
 
   # sum log-likelihoods over observations
-  ll <- sum(loglike)
+  ll <- sum(ll_data_sigma, ll_data_no_sigma)
   # do *not* remove NAs, because they mean this parameter combination is impossible!
 
   # If ll isn't finite,
@@ -380,9 +364,9 @@ log_likelihood <- function(par,
   # then when log-likelihood is infinitely unlikely,
   # return a large negative number instead
   if (force_finite && !is.finite(ll)) {
-      # now return sqrt of .Machine$double.xmax, not just .Machine$double.xmax
-      # not taking sqrt seems to break L-BFGS-B sometimes
-      ll <- -1 * sqrt(.Machine$double.xmax)
+    # now return sqrt of .Machine$double.xmax, not just .Machine$double.xmax
+    # not taking sqrt seems to break L-BFGS-B sometimes
+    ll <- -1 * sqrt(.Machine$double.xmax)
   }
 
   # to get negative log-likelihood (e.g. for minimization)

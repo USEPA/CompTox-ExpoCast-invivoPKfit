@@ -1,4 +1,4 @@
-# R Package "invivoPKfit"
+# R Package "invivoPKfit" <img src="man/figures/logo.png" align="right" height="138" alt="" />
 
 invivoPKfit estimates the most likely parameter values for models describing the 
 pharmacokinetics (PK, that is the absorption, distribution, metabolism, and 
@@ -27,7 +27,10 @@ If the observation is that the concentration was below a limit of quantitation (
 In this case we add to the likelihood all the probability from zero to the limit of quantitation
 We use the cumulative distribution function of the log-normal distribution for this:
 
-CDF(LOQ, ������, ������) =1/2+1/2 ������������������((ln⁡������������������−������)/(√2 ������))
+
+$$
+CDF(LOQ, \mu, \sigma) = \frac{1}{2} + \frac{1}{2} \rm{erf}\left(\frac{ln(LOQ) - \mu}{\sigma\sqrt{2}}\right)
+$$
 
 We separate the observations into those above the LOQ and below the LOQ, above the LOQ we use the log-normal density, below the LOQ we use the CDF
 
@@ -63,7 +66,7 @@ Yamaoka, Kiyoshi, Terumichi Nakagawa, and Toyozo Uno. "Application of Akaike's i
 ### Dependencies
 
 * Users will need the freely available R statistical computing language: <https://www.r-project.org/>
-* Users will likely want a development environment like RStudio: <https://www.rstudio.com/products/rstudio/download/>
+* Users will likely want a development environment like RStudio: <https://posit.co/download/rstudio-desktop/>
 
 ### Installing
 

@@ -4,7 +4,7 @@
 \alias{calc_nca}
 \title{Non-compartmental analysis}
 \usage{
-calc_nca(time, conc, detect, series_id = NULL, dose, route, method = "z", ...)
+calc_nca(time, conc, detect, dose, route, series_id = NULL, method = "z", ...)
 }
 \arguments{
 \item{time}{A numeric vector of time points.}
@@ -16,17 +16,17 @@ detection/quantification), contains the measured value; if not detected
 \item{detect}{A logical vector: Whether each concentration was detected
 (above LOD/LOQ) or not.}
 
+\item{dose}{A numeric scalar: The dose for this data set.}
+
+\item{route}{A character scalar: The route of administration for this data
+set. Currently, only "oral" and "iv" are supported.}
+
 \item{series_id}{Optional: A variable that can be coerced to a factor,
 identifying individual time series (e.g., individual replicates --
 individual subjects, or replicate dose groups). Default NULL, in which case
 each observation will be assumed to have a different series ID. In other
 words, a serial sampling design will be assumed, in which each observation
 is from a different subject.}
-
-\item{dose}{A numeric scalar: The dose for this data set.}
-
-\item{route}{A character scalar: The route of administration for this data
-set. Currently, only "oral" and "iv" are supported.}
 
 \item{method}{As for [PK::nca()]: the method to use for calculation of
 confidence intervals. Default `'z'` (this differs from the [PK::nca()]
@@ -37,7 +37,7 @@ default).}
 }
 \value{
 A `data.frame` with 9 rows and `length(method) + 3` variables. See
-  Details.
+  Output details.
 }
 \description{
 Do non-compartmental analysis on a single-dose set of concentration vs. time
@@ -48,16 +48,17 @@ This function is a wrapper around [PK::nca()] to do non-compartmental
 analysis, after automatically detecting the study design. It additionally
 calls [get_peak()] to calculate the peak concentration and time of peak
 concentration.
+}
+\section{Automatic detection of study design}{
 
-# Automatic detection of study design
 
 [PK::nca()] understands three different study designs, and requires the user
 to specify which one is being used.
-
-- `ssd`: Serial sampling design. Each observation is from a different subject.
-- `complete`: Every subject was observed at every time point.
-- `batch`: Each subject was observed at multiple time points, but not at every time point.
-
+\itemize{
+\item `ssd`: Serial sampling design. Each observation is from a different subject.
+\item `complete`: Every subject was observed at every time point.
+\item `batch`: Each subject was observed at multiple time points, but not at every time point.
+}
 To automatically detect which study design is applicable, this function first
 sorts the data by increasing time. Then, a table of time vs. series ID is
 created, with 1 indicating that a measurement exists for the corresponding
@@ -69,33 +70,40 @@ some time points and only one observation for other time points, it is a
 batch design. If the column sums are all equal to the number of rows of the
 table, then it is a complete sampling design. Otherwise, it is a batch
 sampling design.
+}
 
-# Parameters estimated by NCA
+\section{Parameters estimated by NCA}{
 
-- `AUC_infinity`: The area under the concentration-time curve, extrapolated out to infinite time. Estimated using the trapezoidal rule, with a tail area correction calculated using the slope of the last 3 data points (by default).
-- `AUC_tlast`: The area under the concentration-time curve, calculated at the last observed time point. Estimated using the trapezoidal rule.
-- `AUMC_infinity`: The area under the concentration-time first moment curve (the area under the AUC vs. time), extrapolated out to infinite time. Estimated using the trapezoidal rule, with a tail area correction calculated using the slope of the last 3 data points (by default).
-- `CLtot`: The total clearance rate.  Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, and only `CLtot/Fgutabs` is calculated.
-- `CLtot/Fgutabs`: The total clearance rate, normalized by the oral bioavailability. Only calculated for `route == 'oral'`. If `route == 'iv'`, this is `NA_real_`, and only `CLtot/` is calculated.
-- `Cmax`: The peak concentration. For `route == 'iv'`, this is expected to be the concentration at the earliest time; for `route == 'oral'`, it is not. This and `tmax` are calculated using [get_peak()], not by [PK::nca()].
-- `halflife`: The half-life of elimination.  Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, because half-life estimates are not valid for oral data.
-- `MRT`: The mean residence time. Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, and only `MTT` is calculated.
-- `MTT`: The mean transit time (the sum of MRT and mean absorption time). Only calculated for `route == 'oral'`. If `route == 'iv'`, this is `NA_real_`, and only `MRT` is calculated.
- -`tmax`: The time of peak concentration. For `route == 'iv'`, this is expected to be the earliest time; for `route == 'oral'`, it is not.  This and `Cmax` are calculated using [get_peak()], not by [PK::nca()].
-- `Vss`: The volume of distribution at steady state (`AUMC_infinity/AUC_infinity^2`). If `route == 'oral'`, this is `NA_real_`, because `Vss` estimates are not valid for oral data.
+\itemize{
+\item `AUC_infinity`: The area under the concentration-time curve, extrapolated out to infinite time. Estimated using the trapezoidal rule, with a tail area correction calculated using the slope of the last 3 data points (by default).
+\item `AUC_tlast`: The area under the concentration-time curve, calculated at the last observed time point. Estimated using the trapezoidal rule.
+\item `AUMC_infinity`: The area under the concentration-time first moment curve (the area under the AUC vs. time), extrapolated out to infinite time. Estimated using the trapezoidal rule, with a tail area correction calculated using the slope of the last 3 data points (by default).
+\item `CLtot`: The total clearance rate.  Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, and only `CLtot/Fgutabs` is calculated.
+\item `CLtot/Fgutabs`: The total clearance rate, normalized by the oral bioavailability. Only calculated for `route == 'oral'`. If `route == 'iv'`, this is `NA_real_`, and only `CLtot/` is calculated.
+\item `Cmax`: The peak concentration. For `route == 'iv'`, this is expected to be the concentration at the earliest time; for `route == 'oral'`, it is not. This and `tmax` are calculated using [get_peak()], not by [PK::nca()].
+\item `halflife`: The half-life of elimination.  Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, because half-life estimates are not valid for oral data.
+\item `MRT`: The mean residence time. Only calculated for `route == 'iv'`. If `route == 'oral'`, this is `NA_real_`, and only `MTT` is calculated.
+\item `MTT`: The mean transit time (the sum of MRT and mean absorption time). Only calculated for `route == 'oral'`. If `route == 'iv'`, this is `NA_real_`, and only `MRT` is calculated.
+\item`tmax`: The time of peak concentration. For `route == 'iv'`, this is expected to be the earliest time; for `route == 'oral'`, it is not.  This and `Cmax` are calculated using [get_peak()], not by [PK::nca()].
+\item `Vss`: The volume of distribution at steady state (`AUMC_infinity/AUC_infinity^2`). If `route == 'oral'`, this is `NA_real_`, because `Vss` estimates are not valid for oral data.
+}
+}
 
-# Output
+\section{Output details}{
+
 
 The output is a data.frame with 9 rows (one for each NCA parameter) and a
 number of variables equal to `length(method) + 3`.
 
 The variables are
-
- - `design`: The automatically-detected design. One of `ssd`, `complete`, or `batch` (or `NA_character_` if no analysis could be done).
- - `param_name`: The name of each NCA parameter.
- - `param_value`: The value of each NCA parameter.
- - `param_sd_[method]`: The parameter standard error estimated by the corresponding method.
+\itemize{
+ \item `design`: The automatically-detected design. One of `ssd`, `complete`, or `batch` (or `NA_character_` if no analysis could be done).
+ \item `param_name`: The name of each NCA parameter.
+ \item `param_value`: The value of each NCA parameter.
+ \item `param_sd_[method]`: The parameter standard error estimated by the corresponding method.
 }
+}
+
 \author{
 Caroline Ring
 }

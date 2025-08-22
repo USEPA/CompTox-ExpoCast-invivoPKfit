@@ -7,10 +7,10 @@
 fill_params_2comp(params)
 }
 \arguments{
-\item{params}{Named numeric vector of parameters for the 2-compartment model}
+\item{params}{Named list of parameters for the 2-compartment model.}
 }
 \value{
-A named numeric vector of parameters, with any 2-compartment model
+A named numeric list of parameters, with any 2-compartment model
   parameters not present in `params` filled with `NA_real_`. If any two of
   `Fgutabs`, `V1`, and `Fgutabs_V1` were present in `params`, the third will
   be imputed to agree with the other two.

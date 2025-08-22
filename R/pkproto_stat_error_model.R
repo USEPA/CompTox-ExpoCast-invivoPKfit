@@ -44,23 +44,23 @@
 #' this checking is done automatically. But it is useful to be aware of this, in
 #' case you are trying to figure out why your fit was aborted due to insufficient data availability.)
 #'
-#' @param error_group Defined using [dplyr::vars()]: A set of harmonized
-#'  variables whose unique combinations define a group with its own error
-#'  variance. These variables refer to the `data` element of the `pk` object to
-#'  which `stat_error_model()` is added. The variables should not be quoted.
-#'  Default is `vars(Chemical, Species, Reference, Media)`.
-#' @param ... Additional arguments. Not currently used.
+#' @param ... A set of unquoted variables whose unique combinations define
+#'  a group with its own error variance. These variables refer to the `data` element
+#'  of the `pk` object. Default is `Chemical, Species, Reference`.
 #' @return An object of class `pk_stat_error_model`: A named list of all the
 #'  arguments to `stat_error_model`.
 #' @author Caroline Ring
 #' @export
-stat_error_model <- function(error_group = vars(Chemical, Species, Reference, Media),
-                             ...) {
-  # get arguments and values as a list
-  argg <- c(as.list(environment()), list(...))
-  this_error_model <- argg
-  class(this_error_model) <- c(class(this_error_model),
+stat_error_model <- function(...) {
+
+  # get arguments and values
+  this_error_group <- try(rlang::ensyms(...))
+  if (inherits(this_error_group, "try-error") || rlang::is_empty(this_error_group)) {
+    this_error_group <- rlang::syms(c("Chemical", "Species", "Reference"))
+  } else {
+  }
+  class(this_error_group) <- c(class(this_error_group),
                                "pkproto",
                                "pk_stat_error_model")
-  return(this_error_model)
+  return(this_error_group)
 }

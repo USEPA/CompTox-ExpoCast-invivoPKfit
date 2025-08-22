@@ -41,7 +41,7 @@
 #'   log10-transformation will be applied.
 #' @param suppress.messages Logical: whether to suppress message printing. If
 #'   NULL (default), uses the setting in
-#'   `object$settings_preprocess$suppress.messages`
+#'   `object$pk_settings$preprocess$suppress.messages`
 #' @param ... Additional arguments not currently used.
 #' @return A data.frame with the final column being calculated residuals.
 #'   There is one row per each [optimx::optimx()] methods (specified in
@@ -64,7 +64,7 @@ residuals.pk <- function(object,
                          suppress.messages = NULL,
                          ...) {
   if (is.null(suppress.messages)) {
-    suppress.messages <- object$settings_preprocess$suppress.messages
+    suppress.messages <- object$pk_settings$preprocess$suppress.messages
   }
 
   # ensure that the model has been fitted
@@ -75,7 +75,7 @@ residuals.pk <- function(object,
   }
 
   if (is.null(model)) model <- names(object$stat_model)
-  if (is.null(method)) method <- object$settings_optimx$method
+  if (is.null(method)) method <- object$pk_settings$optimx$method
   if (is.null(newdata)) newdata <- object$data
 
   method_ok <- check_method(obj = object, method = method)
@@ -113,37 +113,42 @@ residuals.pk <- function(object,
                 "Detect",
                 "exclude")
 
-  new_preds <- suppressMessages(dplyr::left_join(preds, newdata) %>%
-    dplyr::select(dplyr::all_of(req_vars)) %>%
-    dplyr::ungroup())
+  resids <- dplyr::left_join(preds, newdata) |>
+    dplyr::select(dplyr::all_of(req_vars)) |>
+    dplyr::ungroup() |>
+    suppressMessages()
 
 
   # Conc_trans columns will contain transformed values,
   conc_scale <- conc_scale_use(obj = object,
                                use_scale_conc = use_scale_conc)
-if(suppress.messages %in% FALSE){
-  message("residuals.pk(): Residuals calculated using the following transformations: \n",
-          "Dose-normalization ", conc_scale$dose_norm, "\n",
-          "log-transformation ", conc_scale$log10_trans)
-}
+  if (suppress.messages %in% FALSE) {
+    cli_inform(c(
+      "residuals.pk(): Residuals calculated using the following transformations:",
+      "i" = "Dose-normalization: {conc_scale$dose_norm}",
+      "i" = "log-transformation: {conc_scale$log10_trans}"
+    ))
+  }
 
   # apply dose-normalization if specified
   # conditional mutate ifelse
-  resids <- new_preds %>%
+  if (conc_scale$dose_norm) {
+    resids$Conc_set <- with(resids, Conc / Dose)
+  } else {
+    resids$Conc_set <- resids$Conc
+  }
+
+  if (conc_scale$dose_norm) {
+    resids$Conc_set <- log10(resids$Conc_set)
+  }
+
+  resids <- resids |>
     dplyr::mutate(
-      Conc_set = ifelse(rep(conc_scale$dose_norm, NROW(Dose)),
-                        ifelse(rep(conc_scale$log10_trans, NROW(Dose)),
-                               log10(Conc / Dose),
-                               Conc / Dose),
-                        ifelse(rep(conc_scale$log10_trans, NROW(Dose)),
-                               log10(Conc),
-                               Conc)
-                        ),
       Residuals = ifelse(Detect %in% FALSE & Conc_est <= Conc_set,
                          0,
                          Conc_est - Conc_set),
-      .after = Conc_est) %>%
-    dplyr::ungroup() %>%
+      .after = Conc_est) |>
+    dplyr::ungroup() |>
     dplyr::distinct()
 
   return(resids)

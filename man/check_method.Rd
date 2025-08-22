@@ -12,7 +12,7 @@ check_method(obj, method)
 \item{method}{A user-supplied `character` vector of method names}
 }
 \value{
-`TRUE` if all `method %in% obj$settings_optimx$method`; otherwise stops with an error
+`TRUE` if all `method %in% obj$pk_settings$optimx$method`; otherwise stops with an error
 }
 \description{
 Check methods for validity

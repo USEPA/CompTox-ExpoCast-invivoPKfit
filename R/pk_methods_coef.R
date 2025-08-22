@@ -5,14 +5,13 @@
 #' This function extracts fitted model parameter values from a fitted [pk()]
 #' object.
 #'
-#' @param object A [pk()] object
-#' @param model Optional: Specify (as a `character` vector) one or more of the
-#'   fitted models whose coefficients to return. If `NULL` (the default),
-#'   coefficients will be returned for all of the models in `obj$stat_model`.
-#' @param method Optional: Specify (as a `character` vector)one or more of the
-#'   [optimx::optimx()] methods whose coefficients to return. If `NULL` (the
-#'   default), coefficients will be returned for all of the models in
-#'   `obj$settings_optimx$method`.
+#' @param object A [pk] object.
+#' @param model Optional: Specify one or more of the fitted models whose
+#'   coefficients to return. If NULL (the default), coefficients will be
+#'   returned for all of the models in `obj$stat_model`.
+#' @param method Optional: Specify one or more of the [optimx::optimx()] methods
+#'   whose coefficients to return. If NULL (the default), coefficients will be
+#'   returned for all of the models in `obj$pk_settings$optimx$method`.
 #' @param drop_sigma Logical: `FALSE` by default. Determines whether to include
 #'   sigma in the output.
 #' @param include_NAs Logical: `FALSE` by default. Determines whether to include
@@ -27,7 +26,7 @@
 #'   that were optimized and those that were held constant.) Any value other
 #'   than `"use"`, `"optim"`, or `"const"` will return an error.
 #' @param suppress.messages Logical: `NULL` by default to use the setting in
-#'   `object$settings_preprocess$suppress.messages`. Determines whether to
+#'   `object$pk_settings$preprocess$suppress.messages`. Determines whether to
 #'   display messages.
 #' @param ... Additional arguments currently not in use.
 #' @return A data.frame with a row for each `data_group` x `method` x `model`
@@ -38,7 +37,6 @@
 #'   `coefs_vector` summarizes all estimated parameters into a named vector.
 #'   This named vector is used in functions that call upon the model functions,
 #'   such as [predict()].
-#' @import glue
 #' @export
 #' @author Caroline Ring, Gilberto Padilla Mercado
 #' @family methods for fitted pk objects
@@ -52,8 +50,9 @@ coef.pk <- function(object,
                     ...) {
 
   if (is.null(suppress.messages)) {
-    suppress.messages <- object$settings_preprocess$suppress.messages
+    suppress.messages <- object$pk_settings$preprocess$suppress.messages
   }
+
   # Check fit status
   check <- check_required_status(obj = object,
                                  required_status = status_fit)
@@ -63,14 +62,12 @@ coef.pk <- function(object,
   if (is.null(model))
     model <- names(object$stat_model)
   if (is.null(method))
-    method <- object$settings_optimx$method
+    method <- object$pk_settings$optimx$method
 
   method_ok <- check_method(obj = object, method = method)
   model_ok <- check_model(obj = object, model = model)
 
-  if(!(include_type %in% c("use",
-                           "const",
-                           "optim"))){
+  if (!(include_type %in% c("use", "const", "optim"))) {
     stop(paste0("Error in coef.pk(): `include_type` is\n",
                 deparse(substitute(include_type)),
                 "\n",
@@ -78,25 +75,28 @@ coef.pk <- function(object,
                 " 'use', 'optim', or 'const'."))
   }
 
-  data_group_vars <- sapply(object$data_group, rlang::as_label)
+  data_grp <- get_data_group.pk(object)
+  data_grp_vars <- get_data_group.pk(object, as_character = TRUE)
 
   # Get a unique list of possible parameters for each model used
-  possible_model_params <- sapply(object$stat_model, `[[`, "params") %>%
-    unlist() %>%
+  possible_model_params <- sapply(object$stat_model, `[[`, "params") |>
+    unlist() |>
     unique()
 
-  coefs <- object$fit %>%
-    dplyr::select(model, method,
-                  !!!object$data_group,
-                  param_name,
-                  estimate,
-                  convcode,
-                  optimize_param,
-                  use_param)
+  coefs <- dplyr::select(object$fit,
+                         model,
+                         method,
+                         DATA_GROUP_ID,
+                         !!!data_grp,
+                         param_name,
+                         estimate,
+                         convergence,
+                         optimize_param,
+                         use_param)
 
   # drop the sigma parameters (not used in some functions)
   if (drop_sigma %in% TRUE) {
-    coefs <- coefs %>%
+    coefs <- coefs |>
       dplyr::filter(
         !startsWith(param_name, "sigma_")
       )
@@ -104,38 +104,38 @@ coef.pk <- function(object,
 
   # include NA values from aborted fits?
   if (include_NAs %in% FALSE) {
-    coefs <- coefs %>%
-      dplyr::filter(!(convcode %in% 9999),
-                    !(convcode %in% -9999))
+    coefs <- dplyr::filter(coefs,
+                           !(convergence %in% 9999),
+                           !(convergence %in% -9999))
   }
 
   # Get the columns describing time units and their (possibly) transformed units
-  time_group <- get_data(obj = object) %>%
-    dplyr::select(!!!object$data_group, Time.Units, Time_trans.Units) %>%
+  time_group <- get_data.pk(obj = object) |>
+    dplyr::select(DATA_GROUP_ID, Time.Units, Time_trans.Units) |>
     dplyr::distinct()
 
-  # Create the coefs vector
-  coefs_tidy <- coefs %>%
-    dplyr::group_by(model, method, !!!object$data_group) %>%
+  # Create the coefs vector (which is really a list)
+  coefs_tidy <- coefs |>
+    dplyr::group_by(model, method, DATA_GROUP_ID, !!!data_grp) |>
     dplyr::summarise(
       coefs_vector = {
           outval <- setNames(estimate, param_name)
           #return only the selected "include_type"
           #this will be an empty vector if there are no params of the selected type
-          if(include_type %in% "use"){
+          if (include_type %in% "use") {
             list(outval[use_param %in% TRUE])
-          }else if(include_type %in% "optim"){
+          } else if (include_type %in% "optim") {
             list(outval[optimize_param %in% TRUE &
                                use_param %in% TRUE])
-          }else if(include_type %in% "const"){
+          } else if (include_type %in% "const") {
             list(outval[optimize_param %in% FALSE &
                                use_param %in% TRUE])
           }
         }
-      ) %>%
-    dplyr::distinct() %>%
+      ) |>
+    dplyr::distinct() |>
     dplyr::left_join(time_group,
-                     by = data_group_vars) %>%
+                     by = "DATA_GROUP_ID") |>
     dplyr::ungroup()
 
   # Various filtering steps and checks
@@ -143,17 +143,17 @@ coef.pk <- function(object,
   if (is.character(method)) {
     method_vector <- method
     if (suppress.messages %in% FALSE) {
-    message("coef.pk(): Filtering by method(s): ", paste(method, collapse = " "))
+      cli_inform("coef.pk(): Filtering by method{?s}: {method}")
     }
-    coefs_tidy <- coefs_tidy %>% dplyr::filter(method %in% method_vector)
+    coefs_tidy <- dplyr::filter(coefs_tidy, method %in% method_vector)
   }
   # By models used
   if (is.character(model)) {
     model_vector <- model
     if (suppress.messages %in% FALSE) {
-      message("coef.pk(): Filtering by model(s): ", paste(model, collapse = " "))
+      cli_inform("coef.pk(): Filtering by model{?s}: {model}")
     }
-    coefs_tidy <- coefs_tidy %>% dplyr::filter(model %in% model_vector)
+    coefs_tidy <- dplyr::filter(coefs_tidy, model %in% model_vector)
   }
 
   return(coefs_tidy)

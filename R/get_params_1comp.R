@@ -8,14 +8,14 @@
 #' estimated from the data depends on what routes of administration are included
 #' in the data.
 #'
-#' # IV data, no oral data
+#' @section IV data, no oral data:
 #'
 #' If IV dosing data are available, but no oral dosing data are available, then
 #' only the parameters `Vdist` and `kelim` will be estimated from the data. The
 #' parameters `kgutabs` and `Fgutabs` cannot be estimated from IV data alone, and
 #' will not be used in evaluating the model.
 #'
-#' # Oral data, no IV data
+#' @section Oral data, no IV data:
 #'
 #' If oral dosing data are available, but no IV dosing data are available, then
 #' the parameters `kelim` and `kgutabs` can be estimated from the data. However,
@@ -25,25 +25,16 @@
 #' `Vdist` will not be used to evaluate the model nor be estimated from data, but
 #' `Fgutabs_Vdist` will be estimated from data, along with `kelim` and `kgutabs`.
 #'
-#' # Oral data and IV data
+#' @section Oral data and IV data:
 #'
 #' If both oral and IV dosing data are available, then `Vdist`, `kelim`,
 #' `kgutabs`, and `Fgutabs` will all be estimated from the data.
 #'
-#' # Blood and plasma data
+#' @inheritSection get_params_flat Blood and plasma data
+#' @inheritSection get_params_flat Only one of blood or plasma data
 #'
-#' If both blood and plasma data are available, then `Rblood2plasma` will be
-#' estimated from the data.
-#'
-#' # Only one of blood or plasma data
-#'
-#' If only one of blood or plasma data are available, then `Rblood2plasma` will be
-#' held constant at 1, not estimated from the data.
-#'
-#' # Default lower and upper bounds for each parameter
-#'
-#' ## Default lower and upper bounds for `kelim` and `kgutabs`
-#'
+#' @section Default lower and upper bounds for each parameter:
+#' \subsection{Default lower and upper bounds for `kelim` and `kgutabs`}{
 #' Default bounds for time constants `kelim` and `kgutabs` are set based on
 #' the time scale of the available data.
 #'
@@ -64,30 +55,28 @@
 #' `log(2)/(0.5*min(Time_trans[Time_trans>0]))`. Therefore, the default lower
 #' bounds for `kelim` and `kgutabs` are
 #' `log(2)/(0.5*min(Time_trans[Time_trans>0]))`.
-#'
-#' ## Default lower and upper bounds for `Vdist`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Vdist`}{
 #' By default, the lower bound for `Vdist` is 0.01, and the upper bound for
 #' `Vdist` is 100. These values were chosen based on professional judgment.
-#'
-#' ## Default lower and upper bounds for `Fgutabs`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Fgutabs`}{
 #' By default, the lower bound for `Fgutabs` is 0.0, and the upper bound for
 #' `Fgutabs` is 1. These are simply the bounds of the physically-meaningful
 #' range for a fraction.
-#'
-#' ## Default lower and upper bounds for `Fgutabs_Vdist`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Fgutabs_Vdist`}{
 #' By default, the lower bound for the ratio `Fgutabs_Vdist` is 0.01, and the
 #' upper bound is 100. These values were chosen based on professional judgment.
-#'
-#' ## Default lower and upper bounds for `Rblood2plasma`
-#'
+#' }
+#' \subsection{Default lower and upper bounds for `Rblood2plasma`}{
 #' By default, the lower bound for the blood:plasma partition coefficient
 #' `Rblood2plasma` is 0.01, and the upper bound is 100. These values were chosen
 #' based on professional judgment.
+#' }
 #'
-#' # Starting values for each parameter
+#'
+#' @section Starting values for each parameter:
 #'
 #' Starting values for each parameter (starting guesses for the numerical
 #' optimizer) are derived from the data using [get_starts_1comp()].
@@ -96,24 +85,18 @@
 #' bounds for any parameter(s), then the starting value will be reset to a value
 #' halfway between the lower and upper bounds for that parameter.
 #'
-#' @param data The data set to be fitted (e.g. the result of [preprocess_data()])
-#' @param lower_bound A mapping specified using a call to [ggplot2::aes()],
-#'  giving the lower bounds for each variable, as expressions which may include
-#'  variables in `data`.
-#' @param upper_bound A mapping specified using a call to [ggplot2::aes()],
-#'  giving the upper bounds for each variable, as expressions which may include
-#'  variables in `data`.
-#' @param param_units A mapping specified using a call to [ggplot2::aes()],
-#'  giving the units for each variable, as expressions which may include
-#'  variables in `data`.
+#' @inheritParams get_params_flat
+#'
 #' @return A `data.frame`with the following variables:
-#' - `param_name`: Character: Names of the model parameters
-#' - `param_units`: Character: Units of the model parameters
-#' - `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
-#' - `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
-#' -`lower_bounds`: Numeric: The lower bounds for each parameter
-#' - `upper_bounds`: Numeric: The upper bounds for each parameter
-#' - `start`: Numeric: The starting guesses for each parameter
+#' \itemize{
+#' \item `param_name`: Character: Names of the model parameters
+#' \item `param_units`: Character: Units of the model parameters
+#' \item `optimize_param`: TRUE if each parameter is to be estimated from the data; FALSE otherwise
+#' \item `use_param`: TRUE if each parameter is to be used in evaluating the model; FALSE otherwise
+#' \item`lower_bounds`: Numeric: The lower bounds for each parameter
+#' \item `upper_bounds`: Numeric: The upper bounds for each parameter
+#' \item `start`: Numeric: The starting guesses for each parameter
+#' }
 #' @author Caroline Ring
 #' @family 1-compartment model functions
 #' @family get_params functions
@@ -121,61 +104,50 @@
 
 get_params_1comp <- function(
     data,
-    lower_bound = ggplot2::aes(kelim = log(2) / (2 * max(Time_trans)),
-                               Vdist = 0.01,
-                               Fgutabs = 0.0,
-                               kgutabs = log(2) / (2 * max(Time_trans)),
-                               Fgutabs_Vdist = 0.01,
-                               Rblood2plasma = 1e-2),
-    upper_bound = ggplot2::aes(kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                               Vdist = 100,
-                               Fgutabs = 1,
-                               kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                               Fgutabs_Vdist = 1e2,
-                               Rblood2plasma = 100),
-    param_units = ggplot2::aes(kelim = paste0("1/", # kelim
-                                              unique(Time_trans.Units)),
-                               Vdist = paste0("(", # Vdist
-                                              unique(Dose.Units),
-                                              ")",
-                                              "/",
-                                              "(",
-                                              unique(Conc.Units),
-                                              ")"),
-                               Fgutabs = "unitless fraction", # Fgutabs
-                               kgutabs = paste0("1/", # kgutabs
-                                                unique(Time_trans.Units)),
-                               Fgutabs_Vdist = paste0("(", # Fgutabs_Vdist
-                                                      unique(Conc.Units),
-                                                      ")",
-                                                      "/",
-                                                      "(",
-                                                      unique(Dose.Units),
-                                                      ")"),
-                               Rblood2plasma = "unitless ratio")) {
+    lower_bound = NULL,
+    upper_bound = NULL,
+    param_units = alist(
+      kelim = paste0("1/", unique(Time_trans.Units)),
+      Vdist = paste0("(", unique(Dose.Units), ")/(", unique(Conc.Units), ")"),
+      Fgutabs = "unitless fraction",
+      kgutabs = paste0("1/", unique(Time_trans.Units)),
+      Fgutabs_Vdist = paste0("(", unique(Conc.Units), ")/(", unique(Dose.Units), ")"),
+      Rblood2plasma = "unitless ratio"
+    ),
+    ...) {
   # param names
-  param_name <- c("kelim",
-                   "Vdist",
-                   "Fgutabs",
-                   "kgutabs",
-                   "Fgutabs_Vdist",
-                   "Rblood2plasma")
+  param_name <- c(
+    "kelim",
+    "Vdist",
+    "Fgutabs",
+    "kgutabs",
+    "Fgutabs_Vdist",
+    "Rblood2plasma"
+  )
 
- # Default lower bounds, to be used in case the user specified a non-default
- # value for the `lower_bound` argument, but did not specify expressions for all
- # parameters. Any parameters not specified in the `lower_bound` argument will
- # take their default lower bounds defined here. This should be the same as the
- # default value for the `lower_bound` argument.
-  lower_bound_default = ggplot2::aes(kelim = log(2) / (2 * max(Time_trans)),
-                                     Vdist = 0.01,
-                                     Fgutabs = 0,
-                                     kgutabs = log(2) / (2 * max(Time_trans)),
-                                     Fgutabs_Vdist = 0.01,
-                                     Rblood2plasma = 1e-2)
- # which parameters did not have lower bounds specified in the `lower_bound`
- # argument?
-  lower_bound_missing <- setdiff(names(lower_bound_default),
-                                 names(lower_bound))
+  # Collect extra parameters
+  dots <- list(...)
+
+
+  # Default lower bounds, to be used in case the user specified a non-default
+  # value for the `lower_bound` argument, but did not specify expressions for all
+  # parameters. Any parameters not specified in the `lower_bound` argument will
+  # take their default lower bounds defined here. This should be the same as the
+  # default value for the `lower_bound` argument.
+  lower_bound_default <- alist(
+    kelim = log(2) / (2 * max(Time_trans)),
+    Vdist = 0.01,
+    Fgutabs = 1E-3,
+    kgutabs = log(2) / (2 * max(Time_trans)),
+    Fgutabs_Vdist = 1E-5,
+    Rblood2plasma = 1e-2
+  )
+  # which parameters did not have lower bounds specified in the `lower_bound`
+  # argument?
+  lower_bound_missing <- base::setdiff(
+    names(lower_bound_default),
+    names(lower_bound)
+  )
   # fill in the default lower bounds for any parameters that don't have them
   # defined in the `lower_bound` argument
   lower_bound[lower_bound_missing] <- lower_bound_default[lower_bound_missing]
@@ -185,44 +157,69 @@ get_params_1comp <- function(
   # parameters. Any parameters not specified in the `upper_bound` argument will
   # take their default upper bounds defined here. This should be the same as the
   # default value for the `upper_bound` argument.
-  upper_bound_default = ggplot2::aes(kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                                     Vdist = 100,
-                                     Fgutabs = 1,
-                                     kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
-                                     Fgutabs_Vdist = 1e2,
-                                     Rblood2plasma = 100)
+  upper_bound_default <- alist(
+    kelim = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+    Vdist = 100,
+    Fgutabs = 1,
+    kgutabs = log(2) / (0.5 * min(Time_trans[Time_trans > 0])),
+    Fgutabs_Vdist = 1e2,
+    Rblood2plasma = 100
+  )
+
   # which parameters did not have upper bounds specified in the `upper_bound`
   # argument?
-  upper_bound_missing <- setdiff(names(upper_bound_default),
-                                 names(upper_bound))
+  upper_bound_missing <- base::setdiff(
+    names(upper_bound_default),
+    names(upper_bound)
+  )
   # fill in the default upper bounds for any parameters that don't have them
   # defined in the `upper_bound` argument
   upper_bound[upper_bound_missing] <- upper_bound_default[upper_bound_missing]
 
+  # Set the parameters to optimize and use here
   # initialize optimization: start with optimize = TRUE for all params
-  optimize_param <- rep(TRUE, length(param_name))
+  optimize_param <- rep_len(TRUE, length(param_name))
 
   # initialize whether each param is used: start with use = TRUE for all params
-  use_param <- rep(TRUE, length(param_name))
+  use_param <- rep_len(TRUE, length(param_name))
 
-  # now follow the logic described in the documentation for this function:
-  if ("oral" %in% data$Route) {
-    # if yes oral data:
-    if ("iv" %in% data$Route) {
-      # if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
-      optimize_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
-      use_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
-    } else {
-      # if oral ONLY:
-      # cannot fit Fgutabs and Vdist separately, so turn them off.
-      optimize_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
-      use_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
+  has_oral <- "oral" %in% data$Route
+  has_iv <- "iv" %in% data$Route
+
+  if ("pars_to_optimize" %in% names(dots)) {
+    pars_to_optimize <- dots[["pars_to_optimize"]]
+    pars_to_hold <- setdiff(param_name, pars_to_optimize)
+    optimize_param[param_name %in% pars_to_hold] <- FALSE
+
+    if (xor(has_oral, has_iv) &&
+      "Fgutabs" %in% pars_to_optimize &&
+      !"Fgutabs_Vdist" %in% pars_to_optimize) {
+      cli::cli_warn("`Fgutabs` will not be optimized due to contraints in data: Route")
     }
-  } else {
+    if (length(pars_to_hold) == length(param_name)) {
+      cli::cli_warn("No parameters to optimize specified.")
+    }
+  }
+
+  # Three mutually exclusive conditions based on Route:
+  if (has_oral && has_iv) {
+    # if both oral and IV data, Fgutabs and Vdist can be fit separately, so turn off Fgutabs_Vdist
+    optimize_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
+    use_param[param_name %in% "Fgutabs_Vdist"] <- FALSE
+  }
+
+  if (has_iv && !has_oral) {
     # if no oral data, can't fit kgutabs, Fgutabs, or Fgutabs_Vdist,
     # and they won't be used.
     optimize_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
     use_param[param_name %in% c("kgutabs", "Fgutabs", "Fgutabs_Vdist")] <- FALSE
+  }
+
+  if (has_oral && !has_iv) {
+    # if oral ONLY:
+    # cannot fit Fgutabs and Vdist separately, so turn them off.
+    optimize_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
+    use_param[param_name %in% c("Fgutabs", "Vdist")] <- FALSE
   }
 
   # if both "blood" and "plasma" are not in data,
@@ -231,37 +228,44 @@ get_params_1comp <- function(
     optimize_param[param_name %in% "Rblood2plasma"] <- FALSE
   }
 
+
+
+
   param_units_vect <- sapply(param_units,
-                           function(x) rlang::eval_tidy(x,
-                                     data = data),
-                           simplify = TRUE,
-                           USE.NAMES = TRUE)
+    rlang::eval_tidy,
+    data = data,
+    simplify = TRUE,
+    USE.NAMES = TRUE
+  )
   param_units_vect <- param_units_vect[param_name]
 
   lower_bound_vect <- sapply(lower_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
-                             simplify = TRUE,
-                             USE.NAMES = TRUE)
+    rlang::eval_tidy,
+    data = data,
+    simplify = TRUE,
+    USE.NAMES = TRUE
+  )
   lower_bound_vect <- lower_bound_vect[param_name]
 
   upper_bound_vect <- sapply(upper_bound,
-                             function(x) rlang::eval_tidy(x,
-                                                          data = data),
-                             simplify = TRUE,
-                             USE.NAMES = TRUE)
+    rlang::eval_tidy,
+    data = data,
+    simplify = TRUE,
+    USE.NAMES = TRUE
+  )
   upper_bound_vect <- upper_bound_vect[param_name]
 
-  par_DF <- data.frame("param_name" = param_name,
-                       "param_units" = param_units_vect,
-                       "optimize_param" = optimize_param,
-                       "use_param" = use_param,
-                       "lower_bound" = lower_bound_vect,
-                       "upper_bound" = upper_bound_vect)
+  par_DF <- data.frame(
+    "param_name" = param_name,
+    "param_units" = param_units_vect,
+    "optimize_param" = optimize_param,
+    "use_param" = use_param,
+    "lower_bound" = lower_bound_vect,
+    "upper_bound" = upper_bound_vect
+  )
 
   # now get starting values
-  par_DF <- get_starts_1comp(data = data,
-                              par_DF = par_DF)
+  par_DF <- get_starts_1comp(data = data, par_DF = par_DF, ...)
 
 
   # check to ensure starting values are within bounds
@@ -270,15 +274,20 @@ get_params_1comp <- function(
   start_high <- (par_DF$start > par_DF$upper_bound) %in% TRUE
   start_nonfin <- !is.finite(par_DF$start)
 
-  par_DF[start_low | start_high | start_nonfin,
-         "start"] <- rowMeans(
-           cbind(par_DF[start_low | start_high | start_nonfin,
-                        c("lower_bound",
-                          "upper_bound")]
-           )
-         )
-
+  par_DF[
+    start_low | start_high | start_nonfin,
+    "start"
+  ] <- rowMeans(
+    cbind(par_DF[
+      start_low | start_high | start_nonfin,
+      c(
+        "lower_bound",
+        "upper_bound"
+      )
+    ])
+  )
+  # Make into a list
+  par_DF$start <- as.list(par_DF$start)
 
   return(par_DF)
-
 }

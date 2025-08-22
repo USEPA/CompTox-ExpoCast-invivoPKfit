@@ -38,7 +38,7 @@ plotted for these models. Default `NULL` to plot fits for all models in
 `x$stat_model`.}
 
 \item{method}{Character: One or more of the [optimx::optimx()] methods used.
-Default `NULL` to plot fits for all methods in `x$settings_optimx$method`.}
+Default `NULL` to plot fits for all methods in `x$pk_settings$optimx$method`.}
 
 \item{use_scale_conc}{Possible values: `TRUE`, `FALSE`, or a named list with
 elements `dose_norm` and `log10_trans` which themselves should be either
@@ -51,7 +51,7 @@ log10_trans = ...)`, then the specified dose normalization and/or
 log10-transformation will be applied to the y-axis (concentration axis) of
 the plots.}
 
-\item{time_trans}{Default `FLASE`. Determines whether time values will be transformed.}
+\item{time_trans}{Default `FALSE`. Determines whether time values will be transformed.}
 
 \item{log10_C}{Default `NULL`. Determines whether y-axis (concentration) should
 be log10 transformed. Takes `TRUE` or `FALSE` values. Otherwise it defaults

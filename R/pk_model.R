@@ -1,6 +1,6 @@
 #' Create a new `pk_model` object
 #'
-#' # `conc_fun` requirements
+#' @section `conc_fun` requirements:
 #'
 #' `conc_fun` should be a function that takes the following arguments, and
 #' returns a numeric vector of predicted tissue concentrations:
@@ -13,7 +13,7 @@
 #'
 #' See [cp_1comp()], [cp_2comp()], [cp_flat()] for examples.
 #'
-#' #`auc_fun` requirements
+#' @section `auc_fun` requirements:
 #'
 #' `auc_fun` should be a function that takes the same arguments as `conc_fun`,
 #' and returns a numeric vector of predicted tissue AUCs (area under the
@@ -21,7 +21,7 @@
 #'
 #' See [auc_1comp()], [auc_2comp()], [auc_flat()] for examples.
 #'
-#' # `params_fun` requirements
+#' @section `params_fun` requirements:
 #'
 #' `params_fun` should be a function whose first argument is a `data.frame`,
 #' which will be the pre-processed data using `invivopkfit` harmonized variable
@@ -33,14 +33,14 @@
 #' - `param_units`: Character vector, listing units of each model parameter
 #' - `optimize_param`: Logical (TRUE/FALSE), whether each parameter is to be estimated given the available data
 #' - `use_param`: Logical (TRUE/FALSE), whether each parameter is to be used in the model even if it is not estimated (i.e., if a parameter value is to be held constant while the others are estimated, then `optimize_param` should be FALSE but `use_param` should be TRUE)
-#' -`lower_bound`: Numerical. Lower bounds for each parameter. May be `-Inf` if no lower bound.  If `optimize_param` or `use_param` is FALSE, thenthe corresponding `lower_bound` will be ignored (because the parameter is not being estimated from the data).
+#' -`lower_bound`: Numerical. Lower bounds for each parameter. May be `-Inf` if no lower bound.  If `optimize_param` or `use_param` is FALSE, then the corresponding `lower_bound` will be ignored (because the parameter is not being estimated from the data).
 #' - `upper_bound`: Numerical. Upper bounds for each parameter. May be `Inf` if no upper bound. If `optimize_param` or `use_param` is FALSE, then the corresponding `upper_bound` will be ignored (because the parameter is not being estimated from the data).
 #' - `start`: Numerical. Starting values for estimating each parameter. If `optimize_param` is FALSE and `use_param` is TRUE, then the parameter will be held constant at the corresponding value in `start`. If `use_param` is FALSE, then the corresponding `start` will be ignored.
 #'
 #' See [get_params_flat()], [get_params_1comp()], [get_params_2comp()] for
 #' examples.
 #'
-#' # `tkstats_fun` requirements
+#' @section `tkstats_fun` requirements:
 #'
 #' `tkstats_fun` should be a function which accepts a vector of model parameter
 #' values and calculates derived summary toxicokinetic statistics (e.g. total
@@ -105,6 +105,8 @@
 #'  `data` (see Details). Default `NULL`.
 #' @param tkstats_fun_args A named list: any additional arguments to `tkstats_fun` other than
 #'  `data`, `medium`, `route` (see Details). Default NULL.
+#' @param param_groups A named list: each named element is paired with a character
+#'  vector that contains one or more parameters in `params`.
 #' @param ... Additional arguments (not currently implemented).
 #' @return An object of class `pk_model`. Effectively, a named list containing
 #'  all of the arguments provided to this function.
@@ -120,6 +122,7 @@ pk_model <- function(name,
                      auc_fun_args = NULL,
                      params_fun_args = NULL,
                      tkstats_fun_args = NULL,
+                     param_groups = NULL,
                      ...) {
   # get arguments and values as a list
   argg <- c(as.list(environment()), list(...))
@@ -127,4 +130,167 @@ pk_model <- function(name,
   # set class
   class(this_model) <- c(class(this_model), "pk_model")
   return(this_model)
+}
+
+
+#' Checks whether object is of class `pk_model`
+#'
+#' @param obj An object.
+#'
+#' @returns Logical. Whether `obj` is a `pk_model`.
+is.pk_model <- function(obj) {
+  return(inherits(obj, "pk_model"))
+}
+
+#' Set model parameters to optimize
+#'
+#' @param model An object of class `pk_model`.
+#' @param params A character vector with any of the parameters in `model$params`,
+#'  or the name of any of the parameter groups in `model$param_groups`.
+#'
+#' @returns An object of class `pk_model` with set/updated `param_fun_args` to
+#' include `pars_to_optimize` argument specifying the parameters to be optimized.
+#' @export
+#' @family pk_model modifiers
+#' @author Gilberto Padilla Mercado
+#'
+set_params_optimize <- function(model, params = "default") {
+  stopifnot(is.pk_model(model))
+  params <- check_model_params(params, model)
+
+  if (all(c("Krbc2pu", "Funbound.plasma") %in% params)) {
+    cli::cli_inform("Prioritizing Funbound.plasma for optimization. Holding Krbc2pu.")
+    params <- params[!params %in% "Krbc2pu"]
+  }
+
+  if (any(c("Krbc2pu", "Funbound.plasma") %in% params)) {
+    model$optimize_fun_args$held_param <- setdiff(
+      c("Krbc2pu", "Funbound.plasma"),
+      params
+    )
+  }
+
+  cli::cli_inform(
+    c("v" = "Setting {params} to be optimized for {model$name}")
+  )
+
+  model$params_fun_args$pars_to_optimize <- params
+
+  return(model)
+}
+
+
+#' Set model parameter starts
+#'
+#' @param model An object of class `pk_model`.
+#' @param starts A character vector with any of the parameters in `model$params`,
+#'  or the name of any of the parameter groups in `model$param_groups`.
+#'
+#' @returns An object of class `pk_model` with set/updated `param_fun_args` to
+#' include `pars_to_optimize` argument specifying the parameters to be optimized.
+#' @export
+#' @family pk_model modifiers
+#' @author Gilberto Padilla Mercado
+#'
+set_params_starts <- function(model, starts) {
+  if (!is.list(starts) || is.null(names(starts))) {
+    cli::cli_abort("`starts` must be a list of name-value pairs corresponding with parameters in `model`")
+  }
+
+  param_names <- check_model_params(names(starts), model)
+  starts <- starts[param_names]
+
+  model$params_fun_args$param_starts <- starts
+  return(model)
+}
+
+
+#' Switch between model parameters to optimize
+#'
+#' @param model An object of class `pk_model`.
+#'
+#' @returns An object of class `pk_model` with set/updated `param_fun_args` to
+#' include `pars_to_optimize` argument specifying the parameters to be optimized.
+#' @export
+#' @family pk_model modifiers
+#' @author Gilberto Padilla Mercado
+toggle_clearance_mode <- function(model) {
+  stopifnot(is.pk_model(model))
+  # Models must have "_args" components for concentration, auc, and
+  arg_lists <- grep("_args", names(model), fixed = TRUE, value = TRUE)
+
+  # Have to toggle various argument lists potentially
+  toggle_count <- 0L
+  for (these_args in arg_lists) {
+    if ("restrictive" %in% names(model[[these_args]])) {
+      cli::cli_inform(
+        c("i" = "Setting {these_args} to {!model[[these_args]]$restrictive}")
+      )
+      model[[these_args]]$restrictive <- !model[[these_args]]$restrictive
+      toggle_count <- toggle_count + 1L
+    }
+  }
+
+  cli::cli_inform(
+    c("i" = "{no(toggle_count)} model argument{?s} {?was/were} changed.")
+  )
+
+  return(model)
+}
+
+
+#' Sets the `name` element for models to the `pk_model` object name in the environment
+#'
+#' When creating new `pk_model` objects, the name of the 'base' model is kept.
+#' Please use this function to 'reset' the name of the new `pk_model` object.
+#'
+#' @param model A `pk_model` object.
+#'
+#' @returns an object of class `pk_model` with `name` matching it's name in the environment.
+#' @export
+#' @family pk_model modifiers
+#' @author Gilberto Padilla Mercado
+adjust_model_name <- function(model) {
+  stopifnot(is.pk_model(model))
+  cli::cli_inform("Changing `model$name` from {model$name} to {deparse(substitute(model))}")
+  model$name <- deparse(substitute(model))
+  return(model)
+}
+
+
+# Internal helper function
+check_model_params <- function(params, model) {
+
+  if (any(params %in% names(model$param_groups))) {
+    if (length(params) > 1L) {
+      params <- params[(params %in% names(model$param_groups))][1]
+      cli::cli_warn(c(
+        "Multiple values for {.var params} found, along with a parameter group.",
+        "i" = "Taking first parameter group in vector: {params}."
+      ))
+    }
+    params <- model$param_groups[[params]]
+  }
+
+  if (!all(params %in% model$params)) {
+    # Just have a descriptive warning
+    # Group to exclude
+    pgroup <- base::setdiff(params, model$params)
+    # Update params
+    params <- base::intersect(params, model$params)
+
+    # Throw error if no parameters are left!
+    if (length(params) == 0L) {
+      cli::cli_abort("None of the parameters specified in `params` are in this model.")
+    }
+
+    cli::cli_warn(
+      c(
+        "Not all `params` in the possible parameter or parameter groups available.",
+        "!" = "Removing the following: {pgroup}.",
+        "i" = "Keeping the following parameters: {params}."
+      )
+    )
+  }
+  return(params)
 }

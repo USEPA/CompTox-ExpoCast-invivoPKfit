@@ -6,7 +6,7 @@
 #' @export
 #' @author Caroline Ring
 get_settings_preprocess.pk <- function(obj, ...) {
-  out <- obj$settings_preprocess
+  out <- obj$pk_settings$preprocess
   # convert char vectors into "c(...)
   out$routes_keep <- rlang::parse_expr(paste0("c(",
                                               "'",
@@ -21,14 +21,13 @@ get_settings_preprocess.pk <- function(obj, ...) {
   # convert lists of quosures into "vars(...)"
   out$loq_group <- rlang::parse_expr(
     paste0("vars(",
-           toString(sapply(out$loq_group,
-                           function(x) rlang::as_label(x))),
+           toString(sapply(out$loq_group, rlang::as_label)),
            ")")
   )
 
   out$sd_group <- rlang::parse_expr(
     paste0("vars(",
-           toString(sapply(out$sd_group, function(x) rlang::as_label(x))),
+           toString(sapply(out$sd_group, rlang::as_label)),
            ")")
   )
 

@@ -13,8 +13,8 @@ stat_model <- function(model = c("model_flat", "model_1comp", "model_2comp"),
   for (this_model in model) {
     this_stat_model[[this_model]] <- list()
     # check whether an object exists by this name
-    if (exists(this_model)) {
-      this_model_obj <- get(this_model)
+    if (exists(this_model, envir = rlang::caller_env())) {
+      this_model_obj <- get(this_model, envir = rlang::caller_env())
       # Check whether this is an object of class `pk_model`
       if (inherits(this_model_obj, "pk_model")) {
         # if so, add it to the list
