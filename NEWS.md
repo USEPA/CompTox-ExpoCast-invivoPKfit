@@ -9,7 +9,9 @@ parallel or distributed computing is desired.
 the latter two have their own separate `pkproto` object setups: `stat_sd_group()` and `stat_loq_group()`.  
 * Parameter starts and and estimates are stored as singular values in a `list-column`,
 which allows character vector constant parameters for calls to more complex PBTK models,
-see `model_httk_gas_pbtk`.
+see `model_httk_gas_pbtk`.  
+* Users may now set specific parameters to optimize and specific start values using the new functions
+`set_params_optimize()` and `set_params_starts()`.
 * Updated `cvt` object to align with latest CvTdb release.
 
 
