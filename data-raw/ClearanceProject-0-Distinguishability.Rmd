@@ -10,8 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r library_loading}
-# June 6, 2025 8AM: Using httk-dev/HTTK-293 branch
-# June 6, 2025 3PM: Using httk-dev/dev branch
 source("data-raw/RC_comparison_bkgd.R")
 library(dplyr)
 library(tidyselect)
@@ -24,6 +22,23 @@ library(ctxR)
 
 # Purpose
 
+Here I want to understand whether selecting the restrictive or nonrestrictive
+mode of clearance makes *distinguishable* differences in the predictions. This
+is somewhat similar to discerning whether this parameter is structurally 
+identifiable. The way I will do this is to take a sampled distribution for
+Clint and Funbound.plasma then compare the 95% confidence intervals between the
+estimates, labeling these parameters **Distinguishable** when there is
+a *10%* (or lower) chance a sampled prediction would overlap between the
+restrictive and nonrestrictive.
+There are two reasons why this is quite strict threshold:
+for a single bolus exposure/treatment, the differences over time collapse to
+zero (or realistically, the limit of detection) and when determining distinguishability I would like to ensure that it is as clearly distinguishable as
+possible.
+The latter reasoning does pose a risk of false negatives (calling something
+non-distinguishable in error) but this is partly assuaged by the motivation to
+find a robust training set for a QSAR or QSAR-like model of clearance.
+The non-distinguishable set will also play a role in the model.
+
 ```{r set_parameters}
 THIS_CHEMICAL = "DTXSID3024289" # A chemical to test
 DOSE = 25
@@ -34,7 +49,7 @@ TIMES = c(seq(0, 23.75, by = 0.25), seq(24, 72, by = 6),
 SAMPLES = 1000
 VARPARS = list(Clint = 0.1)
 CENSORPARS = list(Funbound.plasma = list(cv = 0.1, lod = 1E-5))
-HUMAN_CLINT_FUP = TRUE
+HUMAN_CLINT_FUP = FALSE
 SPECIES_TEXT <- ifelse(SPECIES != "Human" && HUMAN_CLINT_FUP,
                        paste0(SPECIES, "_parHuman"),
                        SPECIES)
@@ -49,66 +64,6 @@ if (!is.null(INVITROUV)) {
 ```{r get_chems}
 chems_available <- get_cheminfo(info = "dtxsid", species = SPECIES,
                                 model = "gas_pbtk", suppress.messages = TRUE)
-```
-
-```{r helper_functions}
-# Get all simulations (restrictive and nonrestrictive)
-conc_fun_wsamples <- function(
-    # Parameterizing args
-    dtxsid,
-    species = "Human",
-    default_to_human = FALSE,
-    force_human = FALSE,
-    # Solving args
-    dose = 20, 
-    route = "iv",
-    times = seq(0, 48, by = 1)/24,
-    # MC sampler args
-    vary.params = NULL,
-    censored.params = NULL,
-    samples = 1000
-) {
-  # Decided to do both Clearances in one go
-  # parameterization to be able to explicitly force human clint and fup
-  
-  # Parameterize
-  gas_pars <- standard_parameterization(
-    dtxsid = dtxsid,
-    species = species,
-    default_to_human = default_to_human,
-    force_human = force_human
-  )
-  
-  # SOLVE NUMERICALLY
-  numerical_solution <- standard_httk_preds(parameters = gas_pars,
-                                            species = species,
-                                            default_to_human = default_to_human,
-                                            force_human = force_human,
-                                            dose = dose,
-                                            route = route,
-                                            times = times)
-  
-  mc_solutions <- standard_httk_mc(parameters = gas_pars,
-                                   species = species,
-                                   default_to_human = default_to_human,
-                                   force_human = force_human,
-                                   dose = dose,
-                                   route = route,
-                                   times = times,
-                                   vary.params = vary.params,
-                                   censored.params = censored.params,
-                                   samples = samples)
-
-  # Merge the solutions
-  tmp <- merge(numerical_solution, mc_solutions)
-  tmp <- subset(tmp, Time %in% times)
-  
-  # Time from days to hours
-  tmp$Time <- janitor::round_to_fraction(tmp$Time * 24, denominator = 60)
-
-  return(tmp)
-}
-
 ```
 
 #### Testing
@@ -243,20 +198,17 @@ for (this_chem in TEST_CHEMICALS) {
   )
   Sys.sleep(10)
 }
-
-
-
 ```
 
-#### Set-up assessment functions
+#### Assesing all chemicals
 
 We need to assess the distinguishability in a standard manner, with a few 
 considerations. We can assess human and rat at arbitrary doses and coefficients
 of variation for `Clint` and `Funbound.plasma`. However, there may be specific
-doses and CVs for which we want to test. Note that there are 
+doses and CVs for which we want to test.
 
-```{r all_chems_fun}
-
+```{r helper_functions}
+# Function for standardized assessment of restrictive and non-restrictive
 assessment_fun <- function(
     x,
     species = SPECIES,
@@ -279,11 +231,11 @@ assessment_fun <- function(
     censored.params = censored.params,
     force_human = force_human
   ) |> try()
-  
+
   if (inherits(p_df, "try-error")) return("Error at solving")
-  
+
   p_df <- p_df[-2, ] # Remove small time increment
-  
+
   if (identical(p_df[["Sol_R"]], p_df[["Sol_N"]])) {
     # Not distinguishable by numerical solution
     hep_extr <- parameterize_gas_pbtk(
@@ -293,11 +245,11 @@ assessment_fun <- function(
       force.human.clint.fup = force_human,
       Caco2.options = list(overwrite.invivo = TRUE)
     ) |> try()
-    
+
     if (inherits(hep_extr, "try-error")) return("Error at  parameterizing")
-    
+
     hep_extr <- with(
-      hep_extr, 
+      hep_extr,
       Clmetabolismc / (Qcardiacc * Qliverf)
     )
     if (hep_extr < 0.3) {
@@ -312,10 +264,10 @@ assessment_fun <- function(
     # Change to "Identifiable"
     return(setNames("Distinguished", x))
   } else if (any(with(p_df, u95_N > l95_R))) {
-    mcmat <- data.matrix(p_df[c("Time", 
-                                  "l95_R", "u95_R",
-                                  "l95_N", "u95_N")])
-    
+    mcmat <- data.matrix(p_df[c("Time",
+                                "l95_R", "u95_R",
+                                "l95_N", "u95_N")])
+
     this_auc_R <- calc_overlap(mcmat[, c("Time", "l95_R", "u95_R")])
     this_auc_N <- calc_overlap(mcmat[, c("Time", "l95_N", "u95_N")])
     this_auc_B <- min(
@@ -323,7 +275,7 @@ assessment_fun <- function(
       calc_overlap(mcmat[, c("Time", "l95_R", "u95_N")])
     )
     prob_auc <- signif(this_auc_B / (this_auc_R + this_auc_N - this_auc_B), 4)
-    
+
     if (!is.nan(prob_auc) && prob_auc > 0.1) {
       # Not distinguishable by Monte Carlo simulations
       hep_extr <- parameterize_gas_pbtk(
@@ -333,11 +285,11 @@ assessment_fun <- function(
         force.human.clint.fup = force_human,
         Caco2.options = list(overwrite.invivo = TRUE)
       ) |> try()
-      
+
       if (inherits(hep_extr, "try-error")) return("Error at parameterizing")
-      
+
       hep_extr <- with(
-        hep_extr, 
+        hep_extr,
         Clmetabolismc / (Qcardiacc * Qliverf)
       )
       if (hep_extr < 0.3) {
@@ -364,7 +316,7 @@ plotting_fun <- function(
     samples = SAMPLES,
     vary.params = VARPARS,
     censored.params = CENSORPARS,
-    force_human = HUMAN_CLINT_FUP  
+    force_human = HUMAN_CLINT_FUP
 ) {
   p_df <- conc_fun_wsamples(
     dtxsid = x,
@@ -380,9 +332,9 @@ plotting_fun <- function(
   p_df <- p_df[-2, ] # Remove small time increment
   p_df_rmse <- signif(sum(with(p_df, (Sol_R - MED_R)^2)) / NROW(p_df), 3)
   title_txt <- paste(unlist(get_chem_id(dtxsid = x))[2:3], collapse = "\n")
-  
+
   if (identical(p_df[["Sol_R"]], p_df[["Sol_N"]])) {
-    
+
     pl <- ggplot(p_df, aes(x = Time)) +
       geom_line(aes(y = Sol_R)) +
       geom_line(aes(y = MED_R), linetype = "44", color = "purple") +
@@ -392,12 +344,12 @@ plotting_fun <- function(
       scale_x_continuous(breaks = seq(0,120, by = 12)) +
       theme_bw() +
       theme(plot.title = element_text(hjust = 0.5))
-    
+
   } else {
-    mcmat <- data.matrix(p_df[c("Time", 
-                                  "l95_R", "u95_R",
-                                  "l95_N", "u95_N")])
-    
+    mcmat <- data.matrix(p_df[c("Time",
+                                "l95_R", "u95_R",
+                                "l95_N", "u95_N")])
+
     this_auc_R <- calc_overlap(mcmat[, c("Time", "l95_R", "u95_R")])
     this_auc_N <- calc_overlap(mcmat[, c("Time", "l95_N", "u95_N")])
     this_auc_B <- min(
@@ -418,26 +370,26 @@ plotting_fun <- function(
                 linetype = "44", color = "cyan4") +
       labs(title = title_txt,
            subtitle = paste0(paste("Overlap:", round(prob_auc*100, 3), "%"),
-                            "\n",
-                            paste("RMSE:", signif(p_df_rmse, 5))),
+                             "\n",
+                             paste("RMSE:", signif(p_df_rmse, 5))),
            y = "Concentration (mg/L)") +
       scale_x_continuous(breaks = seq(0,120, by = 12)) +
       theme_bw() +
       theme(plot.title = element_text(hjust = 0.5))
   }
   return(pl)
-  
-}
 
+}
 ```
+
 
 
 ```{r parallel_sims}
 # Parallelized simulation assessment
-detectCores() # 16 cores, use 12
+detectCores() # 16 cores, use 10
 gc()
 
-clust <- makeCluster(14L)
+clust <- makeCluster(12L)
 clusterEvalQ(clust, library("httk"))
 clusterExport(clust, c("get_95CI_mc", "conc_fun_wsamples", "calc_overlap"))
 clusterExport(clust, c("standard_parameterization", "standard_httk_preds",
@@ -453,6 +405,7 @@ system.time(
 )
 stopCluster(clust)
 
+# low, hi, mid refer to the hepatic extraction coefficient.
 table(sim_bins)
 table(grepl("ND_SO_", sim_bins))
 sum(table(sim_bins))
@@ -462,7 +415,10 @@ head(bindf)
 rownames(bindf) <- NULL
 
 saveRDS(bindf,
-        paste0("data-raw/", SPECIES_TEXT, "_", ROUTE, INVITROUV_TEXT,
+        paste0("data-raw/RCdata/",
+               SPECIES_TEXT, "_",
+               ROUTE,
+               INVITROUV_TEXT,
                "_simulation_bins.rds")
 )
 
@@ -472,10 +428,8 @@ gc()
 ```
 
 
-
-
 ```{r plot_all_chems}
-# Parallelized simulation assessment
+# Parallelize simulation assessment
 clust <- makeCluster(12L)
 clusterEvalQ(clust, library("httk"))
 clusterEvalQ(clust, library("ggplot2"))
@@ -493,14 +447,18 @@ stopCluster(clust)
 length(seq_along(sim_pls))
 gc()
 
-pdf(file = paste0(Sys.getenv("FIG_DIR"), "RestNonRest_",SPECIES_TEXT,
+pdf(file = paste0(Sys.getenv("FIG_DIR"),
+                  "RestrictiveClearance_Analysis/RestNonRest_",
+                  SPECIES_TEXT,
                   ROUTE,"_Comparison_gasPBTK.pdf"),
     paper = "usr", bg = "white")
-for (i in seq_along(sim_pls)) {
+
+for (i in cli::cli_progress_along(sim_pls)) {
   print(sim_pls[[i]])
 }
 dev.off()
 rm(sim_pls)
+rm(clust)
 gc()
 
 ```
@@ -533,7 +491,7 @@ this will not include data where Total Clearance is not known for 2 of 3 sources
 
 
 ```{r lombardo_sipes}
-
+# Run the `external-data` chunk in ClearanceProject-1-Data.Rmd
 load(file = "data-raw/CYP_Sipes2017.Rdata")
 
 lombardo <- readxl::read_xlsx(
@@ -570,70 +528,7 @@ temp_data <- subset(temp_data, select = c("DTXSID",
   distinct()
 ```
 
-```{r data-specific-parameterization}
-# Each x is a grouped split of a data.frame
-# Using a factor of DTXSID, Species, Media, Route, Dose
-invivo_prediction <- function(
-    x,
-    vary.params = VARPARS,
-    censored.params = CENSORPARS,
-    force_human = HUMAN_CLINT_FUP
-) {
-  dtxsid <- unique(x[["DTXSID"]])
-  species <- tools::toTitleCase(unique(x[['Species']]))
-  media <- unique(x[['Media']])
-  route <- unique(x[['Route']])
-  dose <- unique(x[['Dose']])
-  times <- unique(x[['Time']])/24 # Multiple values (in hours)
-  
-  invivo_preds <- conc_fun_wsamples(
-    dtxsid = dtxsid,
-    species = species,
-    dose = dose,
-    route = route,
-    times = times,
-    samples = 1000,
-    force_human = force_human,
-    vary.params = vary.params,
-    censored.params = censored.params
-  ) |> try()
-  
-  if (inherits(invivo_preds, "try-error")) return(NULL)
-  
-  # If measured media is blood need to divide CPLASMA results by Rblood2plasma
-  if (media == "blood") {
-    Rb2p <- standard_parameterization(
-      dtxsid = dtxsid, 
-      species = species,
-      force_human = force_human
-    )[['par_rest']][['Rblood2plasma']]
-    
-    browser()
-    cols2convert <- apply(
-      expand.grid(c("Sol", "l95", "MED", "u95"), c("_R", "_N")),
-      MARGIN = 1,
-      paste0, collapse = ""
-      )
-    
-    invivo_preds <- invivo_preds |>
-      dplyr::mutate(dplyr::across(dplyr::all_of(cols2convert), function(x) x / Rb2p))
-  }
-  
-  cbind(
-    data.frame(
-    DTXSID = dtxsid,
-    Species = tolower(species),
-    Dose = dose,
-    Route = route,
-    Media = media
-    ),
-    as.data.frame(censored.params),
-    as.data.frame(vary.params),
-    invivo_preds
-  )
-}
 
-```
 
 ```{r run_invivo_preds}
 temp_data2 <- subset(temp_data, DTXSID %in% chems_available & Species == "rat")
@@ -655,7 +550,7 @@ clusterExport(clust, c("chem.physical_and_invitro.data"))
 clusterExport(clust, c("VARPARS", "CENSORPARS", "HUMAN_CLINT_FUP"))
 
 system.time(
-  temp_lst <- parLapply(clust, temp_lst, invivo_prediction)
+  temp_lst <- parLapply(clust, temp_lst, cvt_httk_predictions)
 )
 stopCluster(clust)
 
@@ -766,9 +661,22 @@ table(tree_rat$Bin)
 # Quite unbalanced, by we can try to upsampling/downsampling
 
 fit_tree_rat <- rpart::rpart(Bin ~ ., data = tree_rat)
+
+png(
+  filename = paste0(
+    Sys.getenv("FIG_DIR"),
+    "RestrictiveClearance_Analysis/Rat_Tree.png"
+  ),
+  width = 4, height = 3, units = "in", bg = "white",
+  res = 200
+)
 rpart.plot::rpart.plot(fit_tree_rat)
+dev.off()
+
 preds_tree <- predict(fit_tree_rat, tree_rat, type = "class")
 caret::confusionMatrix(preds_tree, tree_rat$Bin, positive = 'Distinguished')
+
+saveRDS(fit_tree_rat, file = "data-raw/RCdata/fit_tree_rat.rds")
 
 # adjusted Clint   = Clint / Fu_hep... make sure I am using this value
 # randomForest < TRY

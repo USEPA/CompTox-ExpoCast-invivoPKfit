@@ -1,0 +1,208 @@
+---
+title: "Clearance Project - 1 - Data Generation"
+author: "Gilberto Padilla Mercado"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+This vignette creates and describes data for downstream analysis.
+
+```{r library_loading}
+today <- format(Sys.Date(), "%d%b%Y")
+devtools::load_all()
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(ctxR)
+library(ComplexHeatmap, quietly = TRUE)
+library(ggalluvial)
+library(flextable)
+library(reticulate)
+library(patchwork)
+source("data-raw/RC_comparison_bkgd.R") # httk & dawson_2021 loaded here
+```
+
+
+This code chunk creates and `.RData` file that contains character vectors
+of DTXSIDs for:
+
+1. All chemicals with human parameterization available for a 3-compartment model w/ inhalation.  
+2. All chemicals with rat parameterization available for a 3-compartment model w/ inhalation.  
+3. All chemicals with human and rat plasma concentration over time data.  
+
+
+
+```{r chemical-lists}
+human_chems <- unique(get_cheminfo(
+  info = "DTXSID",
+  species = "human",
+  model = "gas_pbtk",
+  physchem.exclude = TRUE,
+  suppress.messages = TRUE
+)) %>%
+  suppressWarnings()
+
+rat_chems <- unique(get_cheminfo(
+  info = "DTXSID",
+  species = "rat",
+  model = "gas_pbtk",
+  physchem.exclude = TRUE,
+  suppress.messages = TRUE
+)) %>%
+  suppressWarnings()
+
+cvt_plasma_chems <- cvt %>%
+  filter(
+    species %in% c("human", "rat"),
+    conc_medium_normalized == "plasma"
+  ) %>%
+  pull(analyzed_chem_dtxsid) %>%
+  unique()
+
+
+# These are the chemicals we can evaluate!
+target_chems_human <- intersect(
+  cvt_plasma_chems,
+  human_chems
+)
+target_chems_rat <- intersect(
+  cvt_plasma_chems,
+  rat_chems
+)
+
+# save in an .Rdata file
+save(target_chems_human, target_chems_rat,
+  human_chems, rat_chems,
+  cvt_plasma_chems,
+  file = "data-raw/chem_lists.RData"
+)
+```
+
+Below read in some external data which is publicly available already.
+ 
+- `red_assay_res` is the named object that contains the data from the RED assay
+including the dissociation constant $K_d$ for plasma protein binding.  
+- `chem_info` is a combined data.frame from calls to `get_chemical_details_batch`
+and `get_chem_info_batch`. This uses the `ctxR` API to fetch chemical information
+such as physio-chemical properties and SMILES from the CompTox dashboard.  
+- `cyp_data` is data from Sipes 2017 predicting the CLint fraction for each CYP enzyme.
+- `functional_uses_all` is a list of functional use categories for each chemical
+from the Chemical and Products Database.
+
+```{r external_data}
+# Here we load Kd/binding affinity data
+red_assay_res <- readRDS("data-raw/2019-05-06-REDassay_HTTK.rds")
+
+# ctxR download of all chemicals in gas_pbtk model
+# Chemical info and properties (averaging the latter by chemical and experimental/predicted)
+chem_info <- get_chemical_details_batch(
+  DTXSID = human_chems,
+  rate_limit = 0L
+) %>%
+  filter(!is.na(smiles))
+# 9086 total unique chemicals with SMILES data
+
+chem_properties <- get_chem_info_batch(
+  DTXSID = chem_info$dtxsid,
+  type = "",
+  rate_limit = 0L,
+  verbose = TRUE
+)
+# This takes a minute or so... save a reference RDS file to load
+# Also get rid of any that don't have SMILES
+chem_info %>%
+  distinct(
+    dtxsid, preferredName,
+    qsarReadySmiles, monoisotopicMass
+  ) %>%
+  right_join(chem_properties) %>%
+  filter(!is.na(qsarReadySmiles)) %>%
+  saveRDS(file = "data-raw/RCdata/ctxR_3comp2_cheminfo.rds")
+
+# Sipes 2017 data
+cyp_data <- readr::read_csv(paste0(
+  Sys.getenv("FIG_DIR"),
+  "RestrictiveClearance_Analysis/",
+  "CLint_CYP_Sipes2017.csv"
+)) %>%
+  left_join(
+    chem.physical_and_invitro.data %>%
+      select(CAS = CAS, Chemical = DTXSID) %>%
+      distinct()
+  ) %>%
+  select(Chemical, CAS, starts_with("MET_")) %>%
+  filter(!is.na(Chemical))
+names(cyp_data) <- c(
+  "Chemical", "CAS", "CYP1A2",
+  "CYP2C9", "CYP2C19", "CYP2D6", "CYP3A4"
+)
+# Functional use categories from CPdat
+functional_uses_all <- readr::read_csv(paste0(
+  Sys.getenv("FIG_DIR"), "RestrictiveClearance_Analysis/",
+  "ChemExpo_bulk_functional_uses_20250304.csv"
+))
+
+save(cyp_data,
+  file = "data-raw/CYP_Sipes2017.Rdata"
+)
+```
+
+Next we fit the plasma data from CvTdb, which we already have in the `invivoPKfit`
+package using `cvt` object. We also get a few downstream statistics and save them
+in an `.RData` file.
+
+```{r inivopkfit}
+# Here we fit CvTdb data that has plasma measurements
+# Only use plasma for simplicity
+this_pk <- pk(cvt %>%
+  dplyr::filter(conc_medium_normalized == "plasma")) +
+  settings_optimx(method = "bobyqa") +
+  facet_data(vars(Chemical, Species)) +
+  settings_preprocess(
+    keep_data_original = TRUE,
+    suppress.messages = FALSE
+  ) +
+  scale_conc(dose_norm = TRUE, log10_trans = TRUE) +
+  stat_error_model(error_group = vars(Chemical, Species))
+
+this_pk <- do_prefit(this_pk)
+this_pk <- do_fit(this_pk, n_cores = 14)
+saveRDS(this_pk, "data-raw/plasma_CvTfits.rds")
+
+# Related files for pre-calculated:
+# tkstats, winning model, AIC, coef_sd, predictions, etc...
+this_winmodel <- get_winning_model(this_pk)
+
+this_tkstats <- eval_tkstats(this_pk,
+  model = c("model_1comp", "model_2comp"),
+  finite_only = TRUE,
+  dose_norm = TRUE
+) %>%
+  inner_join(this_winmodel)
+colnames(this_tkstats) <- gsub("/", "_", colnames(this_tkstats))
+
+winning_preds <- predict(this_pk) %>%
+  semi_join(this_winmodel) %>%
+  distinct(
+    Chemical, Species, Chemical_Name,
+    model, method, Dose, Media, Route, Reference, pLOQ, Time,
+    N_Subjects, Conc, Conc_est
+  )
+this_AIC <- AIC(this_pk)
+this_coef_win <- coef(this_pk) %>% semi_join(this_winmodel)
+this_coef_fit <- this_pk$fit %>% semi_join(this_winmodel)
+this_coef_sd_win <- coef_sd(this_pk) %>% semi_join(this_winmodel)
+
+save(this_winmodel, this_tkstats, winning_preds,
+  this_AIC, this_coef_win, this_coef_fit, this_coef_sd_win,
+  file = "data-raw/plasma_CvTfits_data.RData"
+)
+```
+
+ We already have the fits from the previous vignette!
+

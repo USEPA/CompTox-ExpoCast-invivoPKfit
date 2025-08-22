@@ -161,7 +161,7 @@ calc_overlap <- function(mat) {
 }
 
 
-# Parameterize the parameters
+# Parameterize both restrictive and non-restrictive gas_pbtk
 standard_parameterization <- function(dtxsid, species = "Human",
                                       default_to_human = FALSE,
                                       force_human = FALSE,
@@ -201,6 +201,7 @@ standard_parameterization <- function(dtxsid, species = "Human",
   list(par_rest = par_rest, par_nonrest = par_nonrest)
 }
 
+# Get the httk predictions for restrictive and nonrestrictive clearance
 standard_httk_preds <- function(dtxsid,
                                 parameters = NULL,
                                 species = "Human",
@@ -267,6 +268,7 @@ standard_httk_preds <- function(dtxsid,
   return(merge(numerical_solution_rest, numerical_solution_nonrest))
 }
 
+# Get httk predictions with MC sampling of select parameters
 standard_httk_mc <- function(
     # Parameterizing args
   dtxsid,
@@ -385,30 +387,24 @@ standard_httk_mc <- function(
   return(merge(mc_solution_rest, mc_solution_nonrest))
 }
 
-# Meant to take in a data.frame with Chemical, Species, Dose, Route, Time columns
-# Chemical, Species, Dose, and Route must be unique values
-# Times is expected to be in hour, will be converted to days in function
-cvt_httk_predictions <- function(
+# Get all simulations (restrictive and nonrestrictive)
+conc_fun_wsamples <- function(
     # Parameterizing args
-  cvt.data,
+  dtxsid,
+  species = "Human",
   default_to_human = FALSE,
-  force_human = FALSE
+  force_human = FALSE,
+  # Solving args
+  dose = 20,
+  route = "iv",
+  times = seq(0, 48, by = 1)/24,
+  # MC sampler args
+  vary.params = NULL,
+  censored.params = NULL,
+  samples = 1000
 ) {
-
-  stopifnot(c("Chemical", "Species", "Dose", "Route", "Time") %in% names(cvt.data))
-
-  dtxsid <- unique(cvt.data[["Chemical"]])
-  species <- unique(cvt.data[["Species"]])
-  dose <- unique(cvt.data[["Dose"]])
-  route <- unique(cvt.data[["Route"]])
-  times <- unique(cvt.data[["Time"]])/24
-
-  is_unique <- function(x) {
-    length(unique(x)) == 1
-  }
-
-  stopifnot(is_unique(dtxsid), is_unique(species),
-            is_unique(dose), is_unique(route))
+  # Decided to do both Clearances in one go
+  # parameterization to be able to explicitly force human clint and fup
 
   # Parameterize
   gas_pars <- standard_parameterization(
@@ -427,316 +423,102 @@ cvt_httk_predictions <- function(
                                             route = route,
                                             times = times)
 
-  return(numerical_solution)
+  mc_solutions <- standard_httk_mc(parameters = gas_pars,
+                                   species = species,
+                                   default_to_human = default_to_human,
+                                   force_human = force_human,
+                                   dose = dose,
+                                   route = route,
+                                   times = times,
+                                   vary.params = vary.params,
+                                   censored.params = censored.params,
+                                   samples = samples)
 
+  # Merge the solutions
+  tmp <- merge(numerical_solution, mc_solutions)
+  tmp <- subset(tmp, Time %in% times)
+
+  # Time from days to hours
+  tmp$Time <- janitor::round_to_fraction(tmp$Time * 24, denominator = 60)
+
+  return(tmp)
 }
 
 
-#
-# parameterize_all <- function(species = "human", all = FALSE) {
-#   if (isTRUE(all)) {
-#     sp_chems <- httk::get_cheminfo(info = "DTXSID",
-#                                    species = species,
-#                                    model = "gas_pbtk",
-#                                    median.only = TRUE,
-#                                    default.to.human = FALSE,
-#                                    physchem.exclude = TRUE,
-#                                    suppress.messages = TRUE)
-#   } else {
-#     sp_chems <- get_common_chems(species = species)
-#   }
-#   function(human_clint_fup = FALSE) {
-#     if (isTRUE(human_clint_fup)) {
-#       if (isTRUE(all)) {
-#         sp_chems <- httk::get_cheminfo(info = "DTXSID",
-#                                        species = "human",
-#                                        model = "gas_pbtk",
-#                                        median.only = TRUE,
-#                                        physchem.exclude = TRUE,
-#                                        suppress.messages = TRUE)
-#       } else {
-#         sp_chems <- get_common_chems(species = "human")
-#       }
-#     } else {
-#       human_clint_fup <- FALSE
-#     }
-#     message(glue::glue("Total number of chemicals loaded: {length(sp_chems)}"))
-#     message(glue::glue("Fup & Clint set to Human values? {human_clint_fup}"))
-#
-#     # Get restrictive and non-restrictive parameters
-#     params_r <- tryCatch(
-#       expr = {
-#         sapply(sp_chems,
-#                \(x) {
-#                  httk::parameterize_gas_pbtk(
-#                    dtxsid = x,
-#                    species = species,
-#                    restrictive.clearance = TRUE,
-#                    default.to.human = human_clint_fup,
-#                    force.human.clint.fup = human_clint_fup,
-#                    suppress.messages = TRUE)
-#                },
-#                simplify = FALSE,
-#                USE.NAMES = TRUE
-#         )
-#       }, error = function(msg) {
-#         message("Not possible to parameterize_3comp2 for all dtxsid ",
-#                 "try to use default.to.human = TRUE.")
-#       }
-#     )
-#
-#     params_nr <- tryCatch(
-#       expr = {
-#         sapply(sp_chems,
-#                \(x) {
-#                  httk::parameterize_gas_pbtk(
-#                    dtxsid = x,
-#                    species = species,
-#                    restrictive.clearance = FALSE,
-#                    default.to.human = human_clint_fup,
-#                    force.human.clint.fup = human_clint_fup,
-#                    suppress.messages = TRUE)
-#                },
-#                simplify = FALSE,
-#                USE.NAMES = TRUE
-#         )
-#       }, error = function(msg) {
-#         message("Not possible to parameterize_3comp2 for all dtxsid ",
-#                 "try to use default.to.human = TRUE.")
-#       }
-#     )
-#
-#     if (any(is.na(params_r)) || any(is.na(params_nr))) {
-#       stop("Params not calculated for all DTXSIDs!")
-#     }
-#
-#     # Collate the parameters in a data.frame
-#     extr_params_r <- nlist2df(params_r)
-#     extr_params_nr <- nlist2df(params_nr)
-#
-#     # Specify changed parameters between restrictive and non-restrictive
-#     names(extr_params_r)[which(
-#       names(extr_params_r) %in% c("Clmetabolismc","Fabsgut")
-#     )] <- paste(
-#       names(extr_params_r)[which(
-#         names(extr_params_r) %in% c("Clmetabolismc","Fabsgut")
-#       )],
-#       "restrictive",
-#       sep = ".")
-#
-#     names(extr_params_nr)[which(
-#       names(extr_params_nr) %in% c("Clmetabolismc","Fabsgut")
-#     )] <- paste(
-#       names(extr_params_nr)[which(
-#         names(extr_params_nr) %in% c("Clmetabolismc","Fabsgut")
-#       )],
-#       "nonrestrictive",
-#       sep = ".")
-#
-#     # Get the additional Vdist (in case we need it) for each
-#     # This is the same for either clearance type (in this model)
-#     vdist_params <- data.frame(
-#       Chemical = names(params_r),
-#       Vdist_r = vapply(params_r,
-#                        \(x) {
-#                          httk::calc_vdist(
-#                            parameters = x,
-#                            species = species,
-#                            default.to.human = FALSE,
-#                            suppress.messages = TRUE)
-#                        }, FUN.VALUE = numeric(1),
-#                        USE.NAMES = TRUE
-#       )
-#     )
-#
-#     extr_params <- cbind(
-#       data.frame(forced_human_values = human_clint_fup),
-#       merge(
-#         merge(extr_params_r, extr_params_nr),
-#         vdist_params
-#       )
-#     )
-#
-#     # Calculate restrictive or nonrestrictive clearance using the
-#     # appropriate parameterization
-#     restrictive_clearance <- data.frame(
-#       Chemical = names(params_r),
-#       CLtot_restrictive = vapply(params_r,
-#                                  \(x) {
-#                                    httk::calc_total_clearance(
-#                                      parameters = x,
-#                                      species = species,
-#                                      model = "gas_pbtk",
-#                                      suppress.messages = TRUE,
-#                                      restrictive.clearance = TRUE
-#                                    )
-#                                  },
-#                                  FUN.VALUE = double(1)
-#       )
-#     )
-#     nonrestrictive_clearance <- data.frame(
-#       Chemical = names(params_nr),
-#       CLtot_nonrestrictive = vapply(params_nr,
-#                                  \(x) {
-#                                    httk::calc_total_clearance(
-#                                      parameters = x,
-#                                      species = species,
-#                                      model = "gas_pbtk",
-#                                      suppress.messages = TRUE,
-#                                      restrictive.clearance = FALSE
-#                                    )
-#                                  },
-#                                  FUN.VALUE = double(1)
-#       )
-#     )
-#
-#     # Get half-lives of each chemical
-#     restrictive_halflife <- data.frame(
-#       Chemical = names(params_nr),
-#       halflife_restrictive = vapply(params_r,
-#                                     \(x) {
-#                                       httk::calc_half_life(
-#                                         parameters = x,
-#                                         species = species,
-#                                         model = "gas_pbtk",
-#                                         suppress.messages = TRUE,
-#                                         restrictive.clearance = TRUE
-#                                       )
-#                                     },
-#                                     FUN.VALUE = double(1)
-#       )
-#     )
-#
-#     nonrestrictive_halflife <- data.frame(
-#       Chemical = names(params_nr),
-#       halflife_nonrestrictive = vapply(params_nr,
-#                                        \(x) {
-#                                          httk::calc_half_life(
-#                                            parameters = x,
-#                                            species = species,
-#                                            model = "gas_pbtk",
-#                                            suppress.messages = TRUE,
-#                                            restrictive.clearance = FALSE
-#                                          )
-#                                        },
-#                                        FUN.VALUE = double(1)
-#       )
-#     )
-#
-#     # Assemble the clearance and halflife data.frame
-#     clearance_df <- merge(
-#       data.frame(
-#         Chemical = sp_chems,
-#         Species = species
-#       ),
-#       merge(
-#         merge(restrictive_clearance, nonrestrictive_clearance),
-#         merge(restrictive_halflife,nonrestrictive_halflife)
-#       )
-#     )
-#
-#     # Return a list
-#     return(list(param_df = extr_params,
-#                 clearance_df = clearance_df,
-#                 named_params_restrictive = params_r,
-#                 named_params_nonrestrictive = params_nr,
-#                 species = unique(species)))
-#   }
-#   # Implicitly returns the function above
-# }
-#
-# parameterize_rat <- parameterize_all(species = "rat")
-# parameterize_human <- parameterize_all(species = "human")
-#
-# get_httk_preds <- function(parameters, pk_obj, species = "human") {
-#   pk_df <- unique.data.frame(
-#     subset(
-#       get_data(pk_obj),
-#       subset = (
-#         Media %in% "plasma" &
-#           Species %in% species &
-#           Chemical %in% names(parameters) &
-#           exclude %in% FALSE &
-#           Detect %in% TRUE
-#       ),
-#       select = c(
-#         Chemical, Species, Dose, Route, Media, Reference,
-#         N_Subjects, pLOQ, Time, Conc, Conc_trans, Conc_SD,
-#         data_sigma_group, Detect, exclude
-#       )
-#     )
-#   )
-#   pk_data <- unique.data.frame(
-#     pk_df[
-#       c("Chemical", "Species", "Dose", "Route", "Reference",
-#         "pLOQ", "Time")
-#     ]
-#   )
-#   group_factor <- factor(
-#     with(pk_data, paste(Chemical, Species, Dose, Reference, pLOQ, Route))
-#   )
-#   pk_data <- split(pk_data, group_factor)
-#
-#   pk_dlist <- lapply(pk_data,
-#                      \(x) {
-#                        this_params <- parameters[[unique(x$Chemical)]]
-#
-#                        tmp_solution <- suppressWarnings(
-#                          httk::solve_3comp2(
-#                            parameters = this_params,
-#                            dose = unique(x$Dose),
-#                            exp.conc = 0,
-#                            iv.dose = unique("iv" %in% x$Route),
-#                            times = unique(c(0, x$Time/24)),
-#                            input.units = "mg/kg",
-#                            output.units = "mg/L",
-#                            species = unique(stringr::str_to_title(x$Species)),
-#                            suppress.messages = TRUE
-#                          )
-#                        )
-#
-#                        retdf <- data.frame(
-#                          Time = round(tmp_solution[, "time"]*24, digits = 5),
-#                          httk_Preds = pmax(
-#                            tmp_solution[, "Cplasma"],
-#                            unique(x$pLOQ)
-#                          )
-#                        )
-#
-#                        # This resolves the need to match the times
-#                        merge(x, retdf)
-#                      }
-#   )
-#   return(merge(pk_df, do.call(rbind, pk_dlist)))
-# }
-#
-# css_httk_batch <- function(param_list,
-#                            restrictive = TRUE) {
-#   stopifnot(is.logical(restrictive))
-#
-#   css_list_r <- vapply(
-#     param_list,
-#     \(x) {
-#       calc_analytic_css_3comp2(parameters = x,
-#                                restrictive.clearance = restrictive)
-#     },
-#     FUN.VALUE = numeric(1L)
-#   )
-#   css_list_names <- names(param_list)
-#
-#   css_df <- data.frame(Chemical = css_list_names,
-#                        Css_httk = css_list_r)
-#   if (restrictive) {
-#     css_df <- rename(css_df, Css_httk_r = Css_httk)
-#   } else {
-#     css_df <- rename(css_df, Css_httk_nr = Css_httk)
-#   }
-#   return(css_df)
-# }
-#
-#
-# filter_targets <- function(.data, .targets = target_chems_human) {
-#   stopifnot("Chemical" %in% names(.data))
-#   dplyr::filter(.data = .data, Chemical %in% .targets)
-#
-# }
+# Meant to take in a data.frame with Chemical, Species, Dose, Route, Time columns
+# Chemical, Species, Dose, and Route must be unique values
+# Times is expected to be in hour, will be converted to days in function
+cvt_httk_predictions <- function(
+  x,
+  vary.params = VARPARS,
+  censored.params = CENSORPARS,
+  default_to_human = FALSE,
+  force_human = FALSE
+) {
+
+  stopifnot(c(
+    "DTXSID", "Species", "Dose",
+    "Media", "Route", "Time"
+    ) %in% names(x))
+
+  dtxsid <- unique(x[["DTXSID"]])
+  species <- tools::toTitleCase(unique(x[['Species']]))
+  media <- unique(x[['Media']])
+  route <- unique(x[['Route']])
+  dose <- unique(x[['Dose']])
+  times <- unique(x[['Time']])/24 # Multiple values (in hours)
+
+  is_unique <- function(x) {
+    length(unique(x)) == 1
+  }
+
+  stopifnot(is_unique(dtxsid), is_unique(species),
+            is_unique(dose), is_unique(route))
+
+  invivo_preds <- conc_fun_wsamples(
+    dtxsid = dtxsid,
+    species = species,
+    dose = dose,
+    route = route,
+    times = times,
+    samples = 1000,
+    force_human = force_human,
+    vary.params = vary.params,
+    censored.params = censored.params
+  ) |> try()
+
+  if (inherits(invivo_preds, "try-error")) return(NULL)
+
+  # If measured media is blood need to divide CPLASMA results by Rblood2plasma
+  if (media == "blood") {
+    Rb2p <- standard_parameterization(
+      dtxsid = dtxsid,
+      species = species,
+      force_human = force_human
+    )[['par_rest']][['Rblood2plasma']]
+
+    cols2convert <- apply(
+      expand.grid(c("Sol", "l95", "MED", "u95"), c("_R", "_N")),
+      MARGIN = 1,
+      paste0, collapse = ""
+    )
+
+    invivo_preds <- invivo_preds |>
+      dplyr::mutate(dplyr::across(dplyr::all_of(cols2convert), function(x) x / Rb2p))
+  }
+
+  cbind(
+    data.frame(
+      DTXSID = dtxsid,
+      Species = tolower(species),
+      Dose = dose,
+      Route = route,
+      Media = media
+    ),
+    as.data.frame(censored.params),
+    as.data.frame(vary.params),
+    invivo_preds
+  )
+
+}
+
